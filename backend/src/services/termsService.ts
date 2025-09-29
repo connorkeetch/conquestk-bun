@@ -136,7 +136,7 @@ export class TermsService {
               'Maps must be playable and balanced',
               'Territory boundaries must be clear and unambiguous',
               'Maps must have proper adjacency connections',
-              'Continent bonuses must be reasonable',
+              'Sector bonuses must be reasonable',
             ],
           },
           {

@@ -50,7 +50,8 @@ export class GameEngine {
     const territories = baseTerritories.map((t) => ({
       id: t.id,
       name: t.name,
-      continent: t.continent,
+      // Prefer sector; fall back to legacy continent name if present
+      sector: (t.sector || t.continent || 'unknown') as string,
       ownerId: null,
       armies: 0,
       adjacentTerritories: [...t.adjacentTerritories],
@@ -71,10 +72,12 @@ export class GameEngine {
 
     const hydratedConfig: GameConfiguration = {
       ...gameConfig,
-      continentBonuses:
-        gameConfig.continentBonuses && gameConfig.continentBonuses.length > 0
-          ? gameConfig.continentBonuses
-          : mapOverrides.continentBonuses,
+      sectorBonuses:
+        gameConfig.sectorBonuses && gameConfig.sectorBonuses.length > 0
+          ? gameConfig.sectorBonuses
+          : gameConfig.continentBonuses && gameConfig.continentBonuses.length > 0
+            ? gameConfig.continentBonuses
+            : mapOverrides.continentBonuses,
     }
 
     const treasureConfig = this.ensureTreasureConfig(hydratedConfig)
@@ -367,34 +370,40 @@ export class GameEngine {
     // Base armies: 3 minimum, or territories/3 (rounded down)
     let armies = Math.max(3, Math.floor(territoryCount / 3))
 
-    // Add continent bonuses
-    armies += this.calculateContinentBonuses(playerTerritories, allTerritories, gameConfig)
+    // Add sector (formerly continent) bonuses
+    armies += this.calculateSectorBonuses(playerTerritories, allTerritories, gameConfig)
 
     return armies
   }
 
-  private calculateContinentBonuses(
+  private calculateSectorBonuses(
     playerTerritories: string[],
     allTerritories: Territory[],
     gameConfig?: GameConfiguration,
   ): number {
     let bonusArmies = 0
 
-    // Use continent bonuses from game config if available
-    if (gameConfig?.continentBonuses) {
-      // Dynamic continent bonuses from database (custom maps)
-      for (const continent of gameConfig.continentBonuses) {
-        const playerOwnsAll = continent.territories.every((territoryId) =>
+    // Use configured bonuses if explicitly provided. If continentBonuses is provided (even empty),
+    // prefer it; otherwise fall back to sectorBonuses.
+    const configuredBonuses = gameConfig
+      ? gameConfig.continentBonuses !== undefined
+        ? gameConfig.continentBonuses
+        : gameConfig.sectorBonuses
+      : undefined
+    if (Array.isArray(configuredBonuses) && configuredBonuses.length > 0) {
+      // Dynamic sector bonuses from database (custom maps)
+      for (const sector of configuredBonuses) {
+        const playerOwnsAll = sector.territories.every((territoryId) =>
           playerTerritories.includes(territoryId),
         )
 
         if (playerOwnsAll) {
-          bonusArmies += continent.bonusArmies
+          bonusArmies += sector.bonusArmies
         }
       }
     } else {
-      // Fallback to classic Risk continent bonuses
-      const classicContinentBonuses: { [continent: string]: number } = {
+      // Fallback to classic Risk sector (continent) bonuses
+      const classicSectorBonuses: { [sector: string]: number } = {
         'north-america': 5,
         'south-america': 2,
         europe: 5,
@@ -403,24 +412,25 @@ export class GameEngine {
         australia: 2,
       }
 
-      const continents: { [continent: string]: string[] } = {}
+      const sectors: { [sector: string]: string[] } = {}
 
-      // Group territories by continent
+      // Group territories by sector
       for (const territory of allTerritories) {
-        if (!continents[territory.continent]) {
-          continents[territory.continent] = []
+        const sec = (territory.sector || territory.continent || 'unknown') as string
+        if (!sectors[sec]) {
+          sectors[sec] = []
         }
-        continents[territory.continent].push(territory.id)
+        sectors[sec].push(territory.id)
       }
 
-      // Check each continent for complete control
-      for (const [continent, territories] of Object.entries(continents)) {
+      // Check each sector for complete control
+      for (const [sector, territories] of Object.entries(sectors)) {
         const playerOwnsAll = territories.every((territoryId) =>
           playerTerritories.includes(territoryId),
         )
 
-        if (playerOwnsAll && classicContinentBonuses[continent]) {
-          bonusArmies += classicContinentBonuses[continent]
+        if (playerOwnsAll && classicSectorBonuses[sector]) {
+          bonusArmies += classicSectorBonuses[sector]
         }
       }
     }

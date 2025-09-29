@@ -444,8 +444,10 @@ export class GameService {
     }
 
     const loaded = await loadMapForEngine(config.mapId)
-    // Ensure continent bonuses are present in config (for UI and calculations)
-    if (!config.continentBonuses || config.continentBonuses.length === 0) {
+    // Ensure sector bonuses are present in config (for UI and calculations)
+    if (!config.sectorBonuses || config.sectorBonuses.length === 0) {
+      // Backward compatibility: populate both
+      config.sectorBonuses = loaded.continentBonuses
       config.continentBonuses = loaded.continentBonuses
     }
 

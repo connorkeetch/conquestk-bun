@@ -109,7 +109,7 @@ describe('gameSlice', () => {
         {
           id: 'alaska',
           name: 'Alaska',
-          continent: 'north_america',
+          sector: 'north_america',
           ownerId: 'player1',
           armies: 3,
           adjacentTerritories: ['kamchatka'],
@@ -198,7 +198,7 @@ describe('gameSlice', () => {
           {
             id: 'alpha',
             name: 'Alpha',
-            continent: 'north_america',
+            sector: 'north_america',
             ownerId: 'player1',
             armies: 3,
             adjacentTerritories: ['beta'],
@@ -206,7 +206,7 @@ describe('gameSlice', () => {
           {
             id: 'beta',
             name: 'Beta',
-            continent: 'north_america',
+            sector: 'north_america',
             ownerId: 'player2',
             armies: 2,
             adjacentTerritories: ['alpha'],
@@ -266,7 +266,7 @@ describe('gameSlice', () => {
           {
             id: 'alpha',
             name: 'Alpha',
-            continent: 'north_america',
+            sector: 'north_america',
             ownerId: 'player1',
             armies: 3,
             adjacentTerritories: ['beta'],
@@ -274,7 +274,7 @@ describe('gameSlice', () => {
           {
             id: 'beta',
             name: 'Beta',
-            continent: 'north_america',
+            sector: 'north_america',
             ownerId: 'player2',
             armies: 2,
             adjacentTerritories: ['alpha'],

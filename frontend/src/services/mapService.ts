@@ -266,11 +266,19 @@ export const mapService = {
     return response.data
   },
 
+  async createSector(
+    mapId: string,
+    sectorData: { name: string; bonusArmies: number; color?: string },
+  ): Promise<unknown> {
+    const response = await api.post(`/maps/${mapId}/sectors`, sectorData)
+    return response.data
+  },
+  // Backward-compat alias
   async createContinent(
     mapId: string,
     continentData: CreateContinentRequest,
   ): Promise<MapContinent> {
-    const response = await api.post(`/maps/${mapId}/continents`, continentData)
+    const response = await api.post(`/maps/${mapId}/sectors`, continentData)
     return response.data
   },
 

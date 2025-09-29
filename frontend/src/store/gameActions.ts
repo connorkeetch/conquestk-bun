@@ -377,7 +377,7 @@ export const calculateReinforcementArmies = (playerId: string, gameState: GameSt
   const territoryCount = playerTerritories.length
   const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
 
-  // TODO: Add continent bonuses
+  // TODO: Add sector bonuses
   // const continentBonuses = calculateContinentBonuses(playerId, gameState);
 
   return baseArmies

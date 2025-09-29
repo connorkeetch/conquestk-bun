@@ -12,6 +12,7 @@ type ProfileData = {
 
 type MapTerritory = {
   name?: string
+  sector?: string
   continent?: string
   [key: string]: unknown
 }
@@ -155,7 +156,11 @@ export function sanitizeMapData<T extends MapData>(mapData: Nullable<T>): Nullab
     sanitized.territories = sanitized.territories.map((territory) => ({
       ...territory,
       name: territory?.name ? sanitizeText(territory.name) : '',
-      continent: territory?.continent ? sanitizeText(territory.continent) : '',
+      sector: (territory as unknown as { sector?: string; continent?: string })?.sector
+        ? sanitizeText((territory as unknown as { sector?: string }).sector as string)
+        : (territory as unknown as { continent?: string })?.continent
+          ? sanitizeText((territory as unknown as { continent?: string }).continent as string)
+          : '',
     })) as T['territories']
   }
 

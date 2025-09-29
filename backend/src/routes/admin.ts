@@ -1354,7 +1354,7 @@ router.get(
           COALESCE(AVG(mr.rating), 0) as "ratingAverage",
           COUNT(DISTINCT mr.id) as "ratingCount",
           (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as "territoryCount",
-          (SELECT COUNT(DISTINCT continent) FROM map_territories WHERE map_id = m.id AND continent IS NOT NULL) as "continentCount"
+          (SELECT COUNT(DISTINCT sector) FROM map_territories WHERE map_id = m.id AND sector IS NOT NULL) as "continentCount"
         FROM maps m
         LEFT JOIN users u ON m.creator_id = u.id
         LEFT JOIN game_rooms gr ON gr.map_id = m.id
@@ -1653,7 +1653,7 @@ router.post(
       if (territoriesResult.rows.length > 0) {
         for (const territory of territoriesResult.rows) {
           await dbQuery(
-            `INSERT INTO map_territories (map_id, name, polygon, center_x, center_y, continent, army_position, metadata)
+            `INSERT INTO map_territories (map_id, name, polygon, center_x, center_y, sector, army_position, metadata)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [
               clonedMap.id,
@@ -1661,7 +1661,7 @@ router.post(
               territory.polygon,
               territory.center_x,
               territory.center_y,
-              territory.continent,
+              territory.sector ?? territory.continent,
               territory.army_position,
               territory.metadata,
             ],

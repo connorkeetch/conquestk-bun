@@ -1,9 +1,9 @@
 import type {
   AIDifficulty,
   Metal,
+  SectorBonus,
   TreasureConfig,
   TreasureState,
-  SectorBonus,
 } from '@risk-game/shared/types'
 
 export type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'

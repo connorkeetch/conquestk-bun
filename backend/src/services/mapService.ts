@@ -3,23 +3,23 @@ import { getClient, query } from '../config/database'
 import type { ContinentBonus } from '../types/game'
 import type {
   ConnectionRequirements,
-  ContinentSpecialRules,
   Coordinate,
   CreateAdjacencyRequest,
   CreateMapRequest,
   CreateTerritoryRequest,
   CustomMap,
   GameMode,
-  MapContinent,
   MapMetadataPayload,
   MapRating,
   MapSearchFilters,
   MapSearchResult,
+  MapSector,
   MapStatus,
   MapTerritory,
   MetadataAdjacencyInput,
-  MetadataContinentInput,
+  MetadataSectorInput,
   MetadataTerritoryInput,
+  SectorSpecialRules,
   TerritoryAbilityType,
   TerritoryAdjacency,
   TerritoryModifierMetadata,
@@ -63,13 +63,13 @@ interface TerritoryRow {
   map_id: string
   name: string
   polygon_data: string | null
-  continent: string | null
+  sector: string | null
   is_capital: boolean
   capital_for_players?: string | null
   created_at: string | Date
 }
 
-interface ContinentRow {
+interface SectorRow {
   id: string
   map_id: string
   name: string
@@ -201,7 +201,7 @@ export class MapService {
       logger.info(`Created new map: ${map.name} (${map.id}) with metadata:`, {
         hasMetadata: !!mapData.metadata,
         territories: mapData.metadata?.territories?.length || 0,
-        continents: mapData.metadata?.continents?.length || 0,
+        sectors: (mapData.metadata as MapMetadataPayload | undefined)?.sectors?.length || 0,
       })
 
       // Add to content approval queue for admin review
@@ -235,7 +235,7 @@ export class MapService {
             mapData.name,
             mapData.description || null,
             userId,
-            normalizedImageUrl || null,
+            this.normalizePublicImageUrl(mapData.imageUrl) || null,
             mapData.imageWidth || 800,
             mapData.imageHeight || 600,
             mapData.isPublic || false,
@@ -301,8 +301,8 @@ export class MapService {
       const rawTerritories: MetadataTerritoryInput[] = Array.isArray(metadata.territories)
         ? (metadata.territories as MetadataTerritoryInput[])
         : []
-      const continents: MetadataContinentInput[] = Array.isArray(metadata.continents)
-        ? metadata.continents
+      const sectors: MetadataSectorInput[] = Array.isArray((metadata as MapMetadataPayload).sectors)
+        ? ((metadata as MapMetadataPayload).sectors as MetadataSectorInput[])
         : []
 
       const width = typeof metadata.width === 'number' && metadata.width > 0 ? metadata.width : 1
@@ -395,20 +395,20 @@ export class MapService {
 
       await client.query('DELETE FROM territory_adjacencies WHERE map_id = $1', [mapId])
       await client.query('DELETE FROM map_territories WHERE map_id = $1', [mapId])
-      await client.query('DELETE FROM map_continents WHERE map_id = $1', [mapId])
+      await client.query('DELETE FROM map_sectors WHERE map_id = $1', [mapId])
       await client.query('DELETE FROM map_territory_modifiers WHERE map_id = $1', [mapId])
 
-      for (const continent of continents) {
+      for (const sector of sectors) {
         await client.query(
           `
-          INSERT INTO map_continents (map_id, name, bonus_troops, color)
+          INSERT INTO map_sectors (map_id, name, bonus_troops, color)
           VALUES ($1, $2, $3, $4)
         `,
           [
             mapId,
-            continent.name || continent.id || 'Continent',
-            typeof continent.bonus === 'number' ? continent.bonus : 0,
-            continent.color || null,
+            sector.name || sector.id || 'Sector',
+            typeof sector.bonus === 'number' ? sector.bonus : 0,
+            sector.color || null,
           ],
         )
       }
@@ -437,11 +437,11 @@ export class MapService {
         await client.query(
           `
           INSERT INTO map_territories (
-            map_id, name, polygon_data, continent, is_capital, capital_for_players
+            map_id, name, polygon_data, sector, is_capital, capital_for_players
           ) VALUES ($1, $2, $3, $4, $5, $6)
           ON CONFLICT (map_id, name) DO UPDATE SET
             polygon_data = EXCLUDED.polygon_data,
-            continent = EXCLUDED.continent,
+            sector = EXCLUDED.sector,
             is_capital = EXCLUDED.is_capital,
             capital_for_players = EXCLUDED.capital_for_players
         `,
@@ -462,7 +462,10 @@ export class MapService {
                 y: territory.normalizedY ?? 0,
               },
             }),
-            territory.continentId || null,
+            // Accept either sectorId or legacy continentId
+            (territory as unknown as { sectorId?: string }).sectorId ||
+              (territory as unknown as { continentId?: string }).continentId ||
+              null,
             territory.isCapital === true,
             JSON.stringify(assignedPlayers),
           ],
@@ -497,13 +500,10 @@ export class MapService {
   }
 
   /**
-   * Update an existing map's structural content (territories, continents, adjacencies, modifiers)
+   * Update an existing map's structural content (territories, sectors, adjacencies, modifiers)
    * from editor metadata. Admin or collaborators with edit rights may call this.
    */
-  async updateMapContentFromMetadata(
-    mapId: string,
-    metadata: MapMetadataPayload,
-  ): Promise<void> {
+  async updateMapContentFromMetadata(mapId: string, metadata: MapMetadataPayload): Promise<void> {
     const client = await getClient()
     try {
       await this.synchronizeMapStructure(client, mapId, metadata)
@@ -707,7 +707,7 @@ export class MapService {
 
   async getMapWithFullData(mapId: string): Promise<{
     map: CustomMap
-    continents: MapContinent[]
+    sectors: MapSector[]
     territories: MapTerritory[]
     adjacencies: TerritoryAdjacency[]
     gameMode?: GameMode
@@ -715,13 +715,13 @@ export class MapService {
     const map = await this.getMap(mapId)
     if (!map) return null
 
-    const [continents, territories, adjacencies] = await Promise.all([
-      this.getMapContinents(mapId),
+    const [sectors, territories, adjacencies] = await Promise.all([
+      this.getMapSectors(mapId),
       this.getMapTerritories(mapId),
       this.getMapAdjacencies(mapId),
     ])
 
-    return { map, continents, territories, adjacencies }
+    return { map, sectors, territories, adjacencies }
   }
 
   async updateCapitalTerritories(
@@ -862,7 +862,7 @@ export class MapService {
       }
       if (updates.imageUrl !== undefined) {
         updateFields.push(`image_url = $${++paramCount}`)
-        updateValues.push(this.normalizePublicImageUrl(updates.imageUrl))
+        updateValues.push(this.normalizePublicImageUrl(updates.imageUrl) || null)
       }
       if (updates.imageWidth !== undefined) {
         updateFields.push(`image_width = $${++paramCount}`)
@@ -1013,7 +1013,7 @@ export class MapService {
       const result = await client.query(
         `
         INSERT INTO map_territories (
-          map_id, name, polygon_data, continent, is_capital
+          map_id, name, polygon_data, sector, is_capital
         ) VALUES ($1, $2, $3, $4, $5)
         RETURNING *
       `,
@@ -1021,7 +1021,9 @@ export class MapService {
           territoryData.mapId,
           territoryData.name,
           JSON.stringify(territoryData.boundaryCoords || []),
-          territoryData.continentId || null,
+          (territoryData as unknown as { sectorId?: string; continentId?: string }).sectorId ||
+            (territoryData as unknown as { continentId?: string }).continentId ||
+            null,
           false, // is_capital default
         ],
       )
@@ -1057,9 +1059,10 @@ export class MapService {
         updateFields.push(`name = $${++paramCount}`)
         updateValues.push(updates.name)
       }
-      if (updates.continentId !== undefined) {
-        updateFields.push(`continent = $${++paramCount}`)
-        updateValues.push(updates.continentId)
+      const updSector = updates as unknown as { sectorId?: string; continentId?: string }
+      if (updSector.sectorId !== undefined || updSector.continentId !== undefined) {
+        updateFields.push(`sector = $${++paramCount}`)
+        updateValues.push(updSector.sectorId ?? updSector.continentId ?? null)
       }
       if (updates.boundaryCoords) {
         updateFields.push(`polygon_data = $${++paramCount}`)
@@ -1094,51 +1097,49 @@ export class MapService {
     }
   }
 
-  // ============= CONTINENT OPERATIONS =============
+  // ============= SECTOR OPERATIONS =============
 
-  async createContinent(
+  async createSector(
     mapId: string,
     name: string,
     bonusArmies: number,
     color?: string,
-  ): Promise<MapContinent> {
+  ): Promise<MapSector> {
     const client = await getClient()
     try {
       const result = await client.query(
         `
-        INSERT INTO map_continents (map_id, name, bonus_armies, color)
+        INSERT INTO map_sectors (map_id, name, bonus_troops, color)
         VALUES ($1, $2, $3, $4)
         RETURNING *
       `,
         [mapId, name, bonusArmies, color || '#cccccc'],
       )
 
-      return this.formatContinentFromDb(result.rows[0] as ContinentRow)
+      return this.formatSectorFromDb(result.rows[0] as SectorRow)
     } finally {
       if (client.release) client.release()
     }
   }
 
-  async getMapContinents(mapId: string): Promise<MapContinent[]> {
-    const result = await query('SELECT * FROM map_continents WHERE map_id = $1 ORDER BY name', [
-      mapId,
-    ])
-    return result.rows.map((row) => this.formatContinentFromDb(row as ContinentRow))
+  async getMapSectors(mapId: string): Promise<MapSector[]> {
+    const result = await query('SELECT * FROM map_sectors WHERE map_id = $1 ORDER BY name', [mapId])
+    return result.rows.map((row) => this.formatSectorFromDb(row as SectorRow))
   }
 
-  async getMapContinentBonuses(mapId: string): Promise<ContinentBonus[]> {
+  async getMapSectorBonuses(mapId: string): Promise<ContinentBonus[]> {
     const result = await query(
       `
       SELECT 
-        mc.id,
-        mc.name,
-        mc.bonus_armies,
+        ms.id,
+        ms.name,
+        ms.bonus_troops AS bonus_armies,
         STRING_AGG(mt.id::text, ',' ORDER BY mt.name) AS territories
-      FROM map_continents mc
-      LEFT JOIN map_territories mt ON mc.name = mt.continent
-      WHERE mc.map_id = $1
-      GROUP BY mc.id, mc.name, mc.bonus_armies
-      ORDER BY mc.name
+      FROM map_sectors ms
+      LEFT JOIN map_territories mt ON ms.name = mt.sector
+      WHERE ms.map_id = $1
+      GROUP BY ms.id, ms.name, ms.bonus_troops
+      ORDER BY ms.name
     `,
       [mapId],
     )
@@ -1567,7 +1568,7 @@ export class MapService {
       mapId: territoryRow.map_id,
       territoryId: territoryRow.id,
       name: territoryRow.name,
-      continentId: territoryRow.continent ?? undefined,
+      sectorId: territoryRow.sector ?? undefined,
       boundaryCoords,
       armyPosition,
       abilityTypeId: undefined, // No ability_type_id in schema
@@ -1578,19 +1579,19 @@ export class MapService {
     }
   }
 
-  private formatContinentFromDb(row: ContinentRow): MapContinent {
-    const continentRow = row
+  private formatSectorFromDb(row: SectorRow): MapSector {
+    const sectorRow = row
 
-    const specialRules = this.parseOptionalJson<ContinentSpecialRules>(continentRow.special_rules)
+    const specialRules = this.parseOptionalJson<SectorSpecialRules>(sectorRow.special_rules)
 
     return {
-      id: continentRow.id,
-      mapId: continentRow.map_id,
-      name: continentRow.name,
-      bonusArmies: continentRow.bonus_troops,
-      color: continentRow.color ?? '#cccccc',
+      id: sectorRow.id,
+      mapId: sectorRow.map_id,
+      name: sectorRow.name,
+      bonusArmies: sectorRow.bonus_troops,
+      color: sectorRow.color ?? '#cccccc',
       specialRules,
-      createdAt: new Date(continentRow.created_at),
+      createdAt: new Date(sectorRow.created_at),
     }
   }
 

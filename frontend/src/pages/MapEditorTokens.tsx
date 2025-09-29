@@ -623,7 +623,7 @@ export default function MapEditorTokens() {
   const [searchParams] = useSearchParams()
   const [draftId, setDraftId] = useState<string | null>(null)
   const [publishedMapId, setPublishedMapId] = useState<string | null>(null)
-  const [isAdminContext, setIsAdminContext] = useState(false)
+  const [_isAdminContext, setIsAdminContext] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showDraftsList, setShowDraftsList] = useState(false)
   const [availableDrafts, setAvailableDrafts] = useState<MapDraftResponse[]>([])
@@ -2426,7 +2426,7 @@ export default function MapEditorTokens() {
                   placed
                 </div>
                 <div className={state.continents.length > 0 ? 'text-green-400' : 'text-muted'}>
-                  {state.continents.length > 0 ? '✓' : '○'} {state.continents.length} continents
+                  {state.continents.length > 0 ? '✓' : '○'} {state.continents.length} sectors
                   created
                 </div>
                 <div
@@ -2688,7 +2688,7 @@ export default function MapEditorTokens() {
                   onChange={(e) => setSelectedContinentId(e.target.value || null)}
                   className="w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
-                  <option value="">No Continent (Unassigned)</option>
+                  <option value="">No Sector (Unassigned)</option>
                   {state.continents.map((continent) => (
                     <option key={continent.id} value={continent.id}>
                       {continent.name}
@@ -3004,7 +3004,10 @@ export default function MapEditorTokens() {
                                         <div className="grid grid-cols-2 gap-2">
                                           {/* X control with nudgers */}
                                           <div>
-                                            <label className="text-[11px] text-muted uppercase tracking-wide" htmlFor={`territory-x-${territory.id}`}>
+                                            <label
+                                              className="text-[11px] text-muted uppercase tracking-wide"
+                                              htmlFor={`territory-x-${territory.id}`}
+                                            >
                                               X
                                             </label>
                                             <div className="flex items-center gap-1">
@@ -3017,11 +3020,19 @@ export default function MapEditorTokens() {
                                                     territories: prev.territories.map((t) =>
                                                       t.id === territory.id
                                                         ? (() => {
-                                                            const nextX = Math.max(0, (t.x ?? 0) - 1)
+                                                            const nextX = Math.max(
+                                                              0,
+                                                              (t.x ?? 0) - 1,
+                                                            )
                                                             return {
                                                               ...t,
                                                               x: nextX,
-                                                              normalizedX: clamp01(nextX / (prev.mapWidth > 0 ? prev.mapWidth : 1)),
+                                                              normalizedX: clamp01(
+                                                                nextX /
+                                                                  (prev.mapWidth > 0
+                                                                    ? prev.mapWidth
+                                                                    : 1),
+                                                              ),
                                                             }
                                                           })()
                                                         : t,
@@ -3037,20 +3048,43 @@ export default function MapEditorTokens() {
                                                 type="number"
                                                 step={positionMode === 'px' ? 1 : 0.001}
                                                 min={0}
-                                                max={positionMode === 'px' ? Math.max(0, state.mapWidth) : 1}
-                                                value={positionMode === 'px' ? Math.round(territory.x) : Number((territory.normalizedX ?? (territory.x / (state.mapWidth || 1))).toFixed(3))}
+                                                max={
+                                                  positionMode === 'px'
+                                                    ? Math.max(0, state.mapWidth)
+                                                    : 1
+                                                }
+                                                value={
+                                                  positionMode === 'px'
+                                                    ? Math.round(territory.x)
+                                                    : Number(
+                                                        (
+                                                          territory.normalizedX ??
+                                                          territory.x / (state.mapWidth || 1)
+                                                        ).toFixed(3),
+                                                      )
+                                                }
                                                 onChange={(e) => {
                                                   const raw = Number(e.target.value)
                                                   if (!Number.isFinite(raw)) return
                                                   setState((prev) => {
-                                                    const width = prev.mapWidth > 0 ? prev.mapWidth : 1
+                                                    const width =
+                                                      prev.mapWidth > 0 ? prev.mapWidth : 1
                                                     if (positionMode === 'px') {
-                                                      const clamped = Math.min(Math.max(raw, 0), Math.max(1, width))
+                                                      const clamped = Math.min(
+                                                        Math.max(raw, 0),
+                                                        Math.max(1, width),
+                                                      )
                                                       return {
                                                         ...prev,
                                                         territories: prev.territories.map((t) =>
                                                           t.id === territory.id
-                                                            ? { ...t, x: clamped, normalizedX: clamp01(clamped / width) }
+                                                            ? {
+                                                                ...t,
+                                                                x: clamped,
+                                                                normalizedX: clamp01(
+                                                                  clamped / width,
+                                                                ),
+                                                              }
                                                             : t,
                                                         ),
                                                       }
@@ -3061,7 +3095,9 @@ export default function MapEditorTokens() {
                                                     return {
                                                       ...prev,
                                                       territories: prev.territories.map((t) =>
-                                                        t.id === territory.id ? { ...t, x: px, normalizedX: norm } : t,
+                                                        t.id === territory.id
+                                                          ? { ...t, x: px, normalizedX: norm }
+                                                          : t,
                                                       ),
                                                     }
                                                   })
@@ -3077,8 +3113,12 @@ export default function MapEditorTokens() {
                                                     territories: prev.territories.map((t) =>
                                                       t.id === territory.id
                                                         ? (() => {
-                                                            const width = prev.mapWidth > 0 ? prev.mapWidth : 1
-                                                            const nextX = Math.min(width, (t.x ?? 0) + 1)
+                                                            const width =
+                                                              prev.mapWidth > 0 ? prev.mapWidth : 1
+                                                            const nextX = Math.min(
+                                                              width,
+                                                              (t.x ?? 0) + 1,
+                                                            )
                                                             return {
                                                               ...t,
                                                               x: nextX,
@@ -3098,7 +3138,10 @@ export default function MapEditorTokens() {
 
                                           {/* Y control with nudgers */}
                                           <div>
-                                            <label className="text-[11px] text-muted uppercase tracking-wide" htmlFor={`territory-y-${territory.id}`}>
+                                            <label
+                                              className="text-[11px] text-muted uppercase tracking-wide"
+                                              htmlFor={`territory-y-${territory.id}`}
+                                            >
                                               Y
                                             </label>
                                             <div className="flex items-center gap-1">
@@ -3111,11 +3154,19 @@ export default function MapEditorTokens() {
                                                     territories: prev.territories.map((t) =>
                                                       t.id === territory.id
                                                         ? (() => {
-                                                            const nextY = Math.max(0, (t.y ?? 0) - 1)
+                                                            const nextY = Math.max(
+                                                              0,
+                                                              (t.y ?? 0) - 1,
+                                                            )
                                                             return {
                                                               ...t,
                                                               y: nextY,
-                                                              normalizedY: clamp01(nextY / (prev.mapHeight > 0 ? prev.mapHeight : 1)),
+                                                              normalizedY: clamp01(
+                                                                nextY /
+                                                                  (prev.mapHeight > 0
+                                                                    ? prev.mapHeight
+                                                                    : 1),
+                                                              ),
                                                             }
                                                           })()
                                                         : t,
@@ -3131,20 +3182,43 @@ export default function MapEditorTokens() {
                                                 type="number"
                                                 step={positionMode === 'px' ? 1 : 0.001}
                                                 min={0}
-                                                max={positionMode === 'px' ? Math.max(0, state.mapHeight) : 1}
-                                                value={positionMode === 'px' ? Math.round(territory.y) : Number((territory.normalizedY ?? (territory.y / (state.mapHeight || 1))).toFixed(3))}
+                                                max={
+                                                  positionMode === 'px'
+                                                    ? Math.max(0, state.mapHeight)
+                                                    : 1
+                                                }
+                                                value={
+                                                  positionMode === 'px'
+                                                    ? Math.round(territory.y)
+                                                    : Number(
+                                                        (
+                                                          territory.normalizedY ??
+                                                          territory.y / (state.mapHeight || 1)
+                                                        ).toFixed(3),
+                                                      )
+                                                }
                                                 onChange={(e) => {
                                                   const raw = Number(e.target.value)
                                                   if (!Number.isFinite(raw)) return
                                                   setState((prev) => {
-                                                    const height = prev.mapHeight > 0 ? prev.mapHeight : 1
+                                                    const height =
+                                                      prev.mapHeight > 0 ? prev.mapHeight : 1
                                                     if (positionMode === 'px') {
-                                                      const clamped = Math.min(Math.max(raw, 0), Math.max(1, height))
+                                                      const clamped = Math.min(
+                                                        Math.max(raw, 0),
+                                                        Math.max(1, height),
+                                                      )
                                                       return {
                                                         ...prev,
                                                         territories: prev.territories.map((t) =>
                                                           t.id === territory.id
-                                                            ? { ...t, y: clamped, normalizedY: clamp01(clamped / height) }
+                                                            ? {
+                                                                ...t,
+                                                                y: clamped,
+                                                                normalizedY: clamp01(
+                                                                  clamped / height,
+                                                                ),
+                                                              }
                                                             : t,
                                                         ),
                                                       }
@@ -3154,7 +3228,9 @@ export default function MapEditorTokens() {
                                                     return {
                                                       ...prev,
                                                       territories: prev.territories.map((t) =>
-                                                        t.id === territory.id ? { ...t, y: px, normalizedY: norm } : t,
+                                                        t.id === territory.id
+                                                          ? { ...t, y: px, normalizedY: norm }
+                                                          : t,
                                                       ),
                                                     }
                                                   })
@@ -3170,8 +3246,14 @@ export default function MapEditorTokens() {
                                                     territories: prev.territories.map((t) =>
                                                       t.id === territory.id
                                                         ? (() => {
-                                                            const height = prev.mapHeight > 0 ? prev.mapHeight : 1
-                                                            const nextY = Math.min(height, (t.y ?? 0) + 1)
+                                                            const height =
+                                                              prev.mapHeight > 0
+                                                                ? prev.mapHeight
+                                                                : 1
+                                                            const nextY = Math.min(
+                                                              height,
+                                                              (t.y ?? 0) + 1,
+                                                            )
                                                             return {
                                                               ...t,
                                                               y: nextY,
@@ -3191,7 +3273,8 @@ export default function MapEditorTokens() {
                                         </div>
 
                                         <p className="text-[11px] text-muted">
-                                          Tip: use arrow keys in the number fields for precise moves.
+                                          Tip: use arrow keys in the number fields for precise
+                                          moves.
                                         </p>
                                       </div>
                                     </div>

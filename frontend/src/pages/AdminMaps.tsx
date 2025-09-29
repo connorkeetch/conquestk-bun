@@ -49,13 +49,15 @@ interface Map {
   reviewNotes?: string
   rejectionReason?: string
   territoryCount?: number
+  sectorCount?: number
+  // Backward compat
   continentCount?: number
 }
 
 interface RawTerritoryRecord {
   id: string
   name?: string
-  continent?: string | null
+  sector?: string | null
   polygon_data?: unknown
   metadata?: unknown
   army_position?: unknown
@@ -386,9 +388,10 @@ export const AdminMaps: React.FC = () => {
                 uniq.add(key)
               })
               const total = uniq.size
-              const n = typeof m.territoryCount === 'number' && m.territoryCount > 0
-                ? m.territoryCount
-                : details.data.territories?.length || 0
+              const n =
+                typeof m.territoryCount === 'number' && m.territoryCount > 0
+                  ? m.territoryCount
+                  : details.data.territories?.length || 0
               const average = n > 0 ? (total * 2) / n : 0
               updates[m.id] = { total, average }
             } catch {
@@ -461,7 +464,14 @@ export const AdminMaps: React.FC = () => {
             const nameValue = record.name
             const xValue = record.x
             const yValue = record.y
-            const continentValue = record.continentId ?? record.continent
+            const groups = record as {
+              sectorId?: string
+              continentId?: string
+              sector?: string
+              continent?: string
+            }
+            const continentValue =
+              groups.sectorId ?? groups.continentId ?? groups.sector ?? groups.continent
 
             if (typeof idValue !== 'string') {
               return null
@@ -472,7 +482,7 @@ export const AdminMaps: React.FC = () => {
               name: typeof nameValue === 'string' ? nameValue : undefined,
               x: typeof xValue === 'number' ? xValue : undefined,
               y: typeof yValue === 'number' ? yValue : undefined,
-              continent: typeof continentValue === 'string' ? continentValue : null,
+              sector: typeof continentValue === 'string' ? continentValue : null,
               polygon_data: record,
             }
           })
@@ -703,7 +713,7 @@ export const AdminMaps: React.FC = () => {
         left: number
         top: number
         isCapital: boolean
-        continent: string | null | undefined
+        sector: string | null | undefined
       }>
     }
 
@@ -729,7 +739,10 @@ export const AdminMaps: React.FC = () => {
           left,
           top,
           isCapital: isCapitalTerritory(territory),
-          continent: territory.continent ?? null,
+          sector:
+            (territory as unknown as { sector?: string }).sector ??
+            (territory as unknown as { continent?: string }).continent ??
+            null,
         }
       })
       .filter((token): token is NonNullable<typeof token> => token !== null)
@@ -738,11 +751,17 @@ export const AdminMaps: React.FC = () => {
   // Compute adjacency lines and stats for preview
   const previewConnections = useMemo(() => {
     if (!previewDetails || previewDetails.adjacencies.length === 0) {
-      return { lines: [] as Array<{ id: string; x1: number; y1: number; x2: number; y2: number }>, total: 0, average: 0 }
+      return {
+        lines: [] as Array<{ id: string; x1: number; y1: number; x2: number; y2: number }>,
+        total: 0,
+        average: 0,
+      }
     }
 
     const posById = new Map<string, { x: number; y: number }>()
-    previewTokens.forEach((t) => posById.set(t.id, { x: t.left, y: t.top }))
+    for (const t of previewTokens) {
+      posById.set(t.id, { x: t.left, y: t.top })
+    }
 
     const seen = new Set<string>()
     const degree = new Map<string, number>()
@@ -932,7 +951,7 @@ export const AdminMaps: React.FC = () => {
                       Territories
                     </th>
                     <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
-                      Continents
+                      Sectors
                     </th>
                     <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Connections
@@ -1040,7 +1059,11 @@ export const AdminMaps: React.FC = () => {
                         </td>
                         <td>
                           <div className="text-sm text-muted">
-                            {typeof map.continentCount === 'number' ? map.continentCount : 'N/A'}
+                            {typeof map.sectorCount === 'number'
+                              ? map.sectorCount
+                              : typeof map.continentCount === 'number'
+                                ? map.continentCount
+                                : 'N/A'}
                           </div>
                         </td>
                         <td>
@@ -1421,11 +1444,14 @@ export const AdminMaps: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted">Continents</p>
+                  <p className="text-xs uppercase tracking-wide text-muted">Sectors</p>
                   <p className="mt-1 text-sm text-[color:var(--heading)]">
-                    {typeof previewMap.continentCount === 'number'
-                      ? previewMap.continentCount
-                      : 'N/A'}
+                    {typeof (previewMap as unknown as { sectorCount?: number }).sectorCount ===
+                    'number'
+                      ? (previewMap as unknown as { sectorCount?: number }).sectorCount
+                      : typeof previewMap.continentCount === 'number'
+                        ? previewMap.continentCount
+                        : 'N/A'}
                   </p>
                 </div>
                 <div>
@@ -1504,7 +1530,13 @@ export const AdminMaps: React.FC = () => {
 
                       {/* Visualize connections behind tokens */}
                       {previewConnections.lines.length > 0 && (
-                        <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%" preserveAspectRatio="none">
+                        <svg
+                          className="absolute inset-0 pointer-events-none"
+                          width="100%"
+                          height="100%"
+                          preserveAspectRatio="none"
+                          aria-hidden="true"
+                        >
                           {previewConnections.lines.map((line) => (
                             <line
                               key={line.id}
@@ -1587,9 +1619,7 @@ export const AdminMaps: React.FC = () => {
                   {previewConnections && (
                     <div className="mt-2 text-xs text-muted">
                       <div>Total connections: {previewConnections.total}</div>
-                      <div>
-                        Average per territory: {previewConnections.average.toFixed(1)}
-                      </div>
+                      <div>Average per territory: {previewConnections.average.toFixed(1)}</div>
                     </div>
                   )}
 

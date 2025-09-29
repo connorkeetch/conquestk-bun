@@ -130,11 +130,9 @@ const validateCreateTerritory = [
     .withMessage('Army position Y must be a positive integer'),
 ]
 
-const validateCreateContinent = [
+const validateCreateSector = [
   param('mapId').isUUID().withMessage('Invalid map ID'),
-  body('name')
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Continent name must be 1-100 characters'),
+  body('name').isLength({ min: 1, max: 100 }).withMessage('Sector name must be 1-100 characters'),
   body('bonusArmies').isInt({ min: 0, max: 20 }).withMessage('Bonus armies must be 0-20'),
   body('color').optional().isHexColor().withMessage('Color must be a valid hex color'),
 ]
@@ -248,7 +246,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         m.tags,
         m.created_at,
         (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as territory_count,
-        (SELECT COUNT(DISTINCT continent) FROM map_territories WHERE map_id = m.id AND continent IS NOT NULL) as continent_count
+        (SELECT COUNT(DISTINCT sector) FROM map_territories WHERE map_id = m.id AND sector IS NOT NULL) as sector_count
       FROM maps m
       LEFT JOIN users u ON m.creator_id = u.id
       WHERE m.status = 'approved'
@@ -271,7 +269,8 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         name: row.name,
         description: row.description || '',
         territory_count: parseInt(row.territory_count, 10) || 0,
-        continent_count: parseInt(row.continent_count, 10) || 0,
+        sector_count: parseInt(row.sector_count, 10) || 0,
+        continent_count: parseInt(row.sector_count, 10) || 0,
         min_players: row.min_players || 2,
         max_players: row.max_players || 6,
         is_featured: row.is_featured || false,
@@ -332,7 +331,7 @@ router.get('/', async (req: Request, res: Response) => {
         m.created_at,
         m.status,
         (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as territory_count,
-        (SELECT COUNT(DISTINCT continent) FROM map_territories WHERE map_id = m.id AND continent IS NOT NULL) as continent_count
+        (SELECT COUNT(DISTINCT sector) FROM map_territories WHERE map_id = m.id AND sector IS NOT NULL) as sector_count
       FROM maps m
       LEFT JOIN users u ON m.creator_id = u.id
       WHERE 1=1
@@ -395,7 +394,8 @@ router.get('/', async (req: Request, res: Response) => {
       createdAt: row.created_at,
       status: row.status,
       territoryCount: parseInt(row.territory_count, 10) || 0,
-      continentCount: parseInt(row.continent_count, 10) || 0,
+      sectorCount: parseInt(row.sector_count, 10) || 0,
+      continentCount: parseInt(row.sector_count, 10) || 0,
     }))
 
     // Get total count for pagination
@@ -729,15 +729,18 @@ router.post(
       if (req.body.metadata) {
         metadata = parseJsonField<MapMetadataPayload | null>(req.body.metadata, null)
         if (metadata) {
+          const sectorsLen = Array.isArray((metadata as unknown as { sectors?: unknown[] }).sectors)
+            ? ((metadata as unknown as { sectors?: unknown[] }).sectors as unknown[]).length
+            : 0
           logger.info('Parsed metadata:', {
             territories: metadata.territories?.length || 0,
-            continents: metadata.continents?.length || 0,
+            sectors: sectorsLen,
           })
         } else if (req.body.metadata) {
           logger.error('Failed to parse metadata')
           return res.status(400).json({
             error: 'Invalid metadata format',
-            details: 'The map data (territories and continents) could not be parsed',
+            details: 'The map data (territories and sectors) could not be parsed',
           })
         }
       }
@@ -878,11 +881,11 @@ router.delete(
 
 // ============= TERRITORY MANAGEMENT =============
 
-// Create continent
+// Create sector
 router.post(
-  '/:mapId/continents',
+  '/:mapId/sectors',
   authenticateToken,
-  validateCreateContinent,
+  validateCreateSector,
   checkValidation,
   async (req: Request, res: Response) => {
     const userId = req.userId
@@ -895,14 +898,14 @@ router.post(
         userId,
         isAdmin: req.user?.isAdmin,
       })
-      const continent = await mapService.createContinent(
+      const sector = await mapService.createSector(
         req.params.mapId,
         req.body.name,
         req.body.bonusArmies,
         req.body.color,
       )
 
-      return res.status(201).json(continent)
+      return res.status(201).json(sector)
     } catch (error) {
       if (error instanceof MapPermissionError) {
         return res.status(403).json({ error: error.message })
@@ -910,8 +913,35 @@ router.post(
       if (error instanceof MapNotFoundError) {
         return res.status(404).json({ error: 'Map not found' })
       }
-      handleRouteError(error, req, 'Failed to create continent', 500, { mapId: req.params.mapId })
-      return res.status(500).json({ error: 'Failed to create continent' })
+      handleRouteError(error, req, 'Failed to create sector', 500, { mapId: req.params.mapId })
+      return res.status(500).json({ error: 'Failed to create sector' })
+    }
+  },
+)
+
+// Backward-compatible alias for older clients
+router.post(
+  '/:mapId/continents',
+  authenticateToken,
+  validateCreateSector,
+  checkValidation,
+  async (req: Request, res: Response) => {
+    // Manually invoke create sector handler
+    try {
+      req.url = `/${req.params.mapId}/sectors`
+      // Re-run through router
+      const sector = await mapService.createSector(
+        req.params.mapId,
+        req.body.name,
+        req.body.bonusArmies,
+        req.body.color,
+      )
+      return res.status(201).json(sector)
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to create sector (compat)', 500, {
+        mapId: req.params.mapId,
+      })
+      return res.status(500).json({ error: 'Failed to create sector' })
     }
   },
 )
@@ -933,11 +963,12 @@ router.post(
         userId,
         isAdmin: req.user?.isAdmin,
       })
+      const bodyWithSectors = req.body as unknown as { sectorId?: string; continentId?: string }
       const territory = await mapService.createTerritory({
         mapId: req.params.mapId,
         territoryId: req.body.territoryId,
         name: req.body.name,
-        continentId: req.body.continentId,
+        sectorId: bodyWithSectors.sectorId ?? bodyWithSectors.continentId,
         boundaryCoords: req.body.boundaryCoords,
         armyPosition: req.body.armyPosition,
         abilityTypeId: req.body.abilityTypeId,

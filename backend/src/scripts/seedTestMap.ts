@@ -31,34 +31,34 @@ async function seedTestMap() {
     ],
   )
 
-  // Create continents
-  const continentMap = new Map()
-  for (const continent of testWorldMap.continents) {
-    const continentId = uuidv4()
-    continentMap.set(continent.name, continentId)
+  // Create sectors
+  const sectorMap = new Map<string, string>()
+  for (const sector of testWorldMap.sectors) {
+    const sectorId = uuidv4()
+    sectorMap.set(sector.name, sectorId)
 
     await query(
-      `INSERT INTO map_continents (
-          id, map_id, name, color, bonus_armies
+      `INSERT INTO map_sectors (
+          id, map_id, name, color, bonus_troops
         ) VALUES ($1, $2, $3, $4, $5)`,
-      [continentId, mapId, continent.name, continent.color, continent.bonusArmies],
+      [sectorId, mapId, sector.name, sector.color, sector.bonusArmies],
     )
   }
 
   // Create territories
-  const territoryMap = new Map()
+  const territoryMap = new Map<string, string>()
   for (const territory of testWorldMap.territories) {
     const territoryId = uuidv4()
     territoryMap.set(territory.name, territoryId)
 
-    const continentName = testWorldMap.continents.find((c) =>
-      c.territories?.includes(territory.name),
+    const sectorName = testWorldMap.sectors.find(
+      (c) => Array.isArray(c.territories) && c.territories.includes(territory.name),
     )?.name
 
     await query(
       `INSERT INTO map_territories (
           id, map_id, territory_id, name, boundary_coords, 
-          army_position_x, army_position_y, continent_id
+          army_position_x, army_position_y, sector_id
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         territoryId,
@@ -68,7 +68,7 @@ async function seedTestMap() {
         JSON.stringify(territory.boundaryCoords),
         territory.armyPosition.x,
         territory.armyPosition.y,
-        continentName ? continentMap.get(continentName) : null,
+        sectorName ? sectorMap.get(sectorName) : null,
       ],
     )
   }
