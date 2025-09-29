@@ -1730,20 +1730,9 @@ router.delete(
 
       res.json({ message: 'Map deleted successfully' })
     } catch (error) {
-      // If DB prevents deletion due to FK references (historical results), return a clear 409
-      const pgCode = (error as any)?.code as string | undefined
-      const constraint = (error as any)?.constraint as string | undefined
-      if (pgCode === '23503') {
-        return res.status(409).json({
-          error: 'Cannot delete map with historical game results',
-          code: 'MAP_DELETE_CONFLICT',
-          detail:
-            'This map is referenced by completed games. Consider archiving it instead to preserve history.',
-          constraint,
-        })
-      }
-
-      handleRouteError(error, req, 'Failed to delete map', 500, { mapId: req.params.mapId })
+      handleRouteError(error, req, 'Failed to delete map', 500, {
+        mapId: req.params.mapId,
+      })
       res.status(500).json({ error: 'Failed to delete map' })
     }
   },
