@@ -204,7 +204,13 @@ export const mapService = {
 
   async getMap(mapId: string): Promise<FullMapData> {
     const response = await api.get(`/maps/${mapId}`)
-    return response.data
+    const obj = response.data as Record<string, unknown>
+    const sectors = obj.sectors
+    const continents = obj.continents
+    if (Array.isArray(sectors) && !Array.isArray(continents)) {
+      ;(obj as { continents: unknown[] }).continents = sectors as unknown[]
+    }
+    return obj as unknown as FullMapData
   },
 
   async validateMapServer(mapId: string): Promise<{ isValid: boolean; errors: string[] }> {

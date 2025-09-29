@@ -55,7 +55,7 @@ This is the same payload our editor and workflow use (`MapMetadataPayload` embed
     {
       "id": "frozen_wastes",
       "name": "Frozen Wastes",
-      "continentId": "northern_lands",
+      "sectorId": "northern_lands",
       // Pixel coordinates (origin top-left); normalized fields optional
       "armyPosition": { "x": 150, "y": 80 },
       // For polygonal territories provide boundary points; omit for token-only
@@ -71,13 +71,13 @@ This is the same payload our editor and workflow use (`MapMetadataPayload` embed
     {
       "id": "ice_peaks",
       "name": "Ice Peaks",
-      "continentId": "northern_lands",
+      "sectorId": "northern_lands",
       "armyPosition": { "x": 300, "y": 80 },
       "connections": ["frozen_wastes", "tundra_plains", "mountain_pass"]
     }
   ],
 
-  "continents": [
+  "sectors": [
     { "id": "northern_lands", "name": "Northern Lands", "bonus": 3, "color": "#4CAF50" },
     { "id": "central_kingdoms", "name": "Central Kingdoms", "bonus": 4, "color": "#2196F3" }
   ],
@@ -116,7 +116,7 @@ Notes:
 
 ## Validation we run on import
 
-- Unique territory and continent IDs
+- Unique territory and sector IDs
 - Every territory linked at least once (no isolated nodes)
 - Graph connectivity (one connected component)
 - Adjacencies reference valid territory IDs
@@ -129,7 +129,7 @@ We’ll return a per-map report listing any issues and fixes applied.
 
 ## How we ingest it
 
-- We read each `map.json`, upload the image to asset storage, and create the map via the workflow (`maps` + `map_territories` + `map_continents` + `territory_adjacencies`).
+- We read each `map.json`, upload the image to asset storage, and create the map via the workflow (`maps` + `map_territories` + `map_sectors` + `territory_adjacencies`).
 - The entire authoring payload is stored in `maps.metadata` so the in-app editor can round-trip edits later.
 
 ---
@@ -147,4 +147,3 @@ We’ll return a per-map report listing any issues and fixes applied.
 - IDs are consistent across territories, adjacencies, and capitals
 - Every territory has at least one connection
 - Zip the top-level folder and share it via a link
-

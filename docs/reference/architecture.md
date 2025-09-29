@@ -49,7 +49,7 @@ _Last updated: January 2026_
 - Global state lives in `frontend/src/store`, with slices for auth, gameplay, chat, map editing, and notifications.
 - API access is centralized in `frontend/src/services/api.ts` and specialized wrappers (e.g., `mapWorkflowService.ts`) that respect the shared types and handle optimistic updates.
 - Real-time updates arrive through `socket.io-client` (`frontend/src/services/socket.ts`) and reconcile through slice-specific reducers that apply backend deltas.
-- The map editor is token-based (`MapEditorTokens.tsx`), supporting territory tokens, continents, adjacency management, and capital assignment backed by autosave and approval submission flows.
+- The map editor is token-based (`MapEditorTokens.tsx`), supporting territory tokens, sectors, adjacency management, and capital assignment backed by autosave and approval submission flows.
 - The canonical in-game view is `GameRoom` at `/room/:roomId`. Spectating is supported by appending `?spectate=true` to the room URL. Admins using `?spectate=true` can bypass fog-of-war for diagnostics. The legacy `/game/:gameId` route has been removed.
 - A progressive web app shell registers `public/sw.js` for gameplay turn notifications; map approval + DM push payload fan-out is tracked as an outstanding task.
 
