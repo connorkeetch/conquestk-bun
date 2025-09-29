@@ -2982,6 +2982,87 @@ export default function MapEditorTokens() {
                                       <p className="text-xs text-muted">
                                         Highlighted territories update live on the canvas.
                                       </p>
+
+                                      {/* Position controls */}
+                                      <div className="grid grid-cols-2 gap-2 mt-2">
+                                        <div>
+                                          <label
+                                            className="text-[11px] text-muted uppercase tracking-wide"
+                                            htmlFor={`territory-x-${territory.id}`}
+                                          >
+                                            X
+                                          </label>
+                                          <input
+                                            id={`territory-x-${territory.id}`}
+                                            type="number"
+                                            step={1}
+                                            min={0}
+                                            max={Math.max(0, state.mapWidth)}
+                                            value={Math.round(territory.x)}
+                                            onChange={(e) => {
+                                              const raw = Number(e.target.value)
+                                              const clamped = Number.isFinite(raw)
+                                                ? Math.min(Math.max(raw, 0), Math.max(1, state.mapWidth))
+                                                : 0
+                                              setState((prev) => ({
+                                                ...prev,
+                                                territories: prev.territories.map((t) =>
+                                                  t.id === territory.id
+                                                    ? {
+                                                        ...t,
+                                                        x: clamped,
+                                                        normalizedX: clamp01(
+                                                          clamped / (prev.mapWidth > 0 ? prev.mapWidth : 1),
+                                                        ),
+                                                      }
+                                                    : t,
+                                                ),
+                                              }))
+                                            }}
+                                            className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label
+                                            className="text-[11px] text-muted uppercase tracking-wide"
+                                            htmlFor={`territory-y-${territory.id}`}
+                                          >
+                                            Y
+                                          </label>
+                                          <input
+                                            id={`territory-y-${territory.id}`}
+                                            type="number"
+                                            step={1}
+                                            min={0}
+                                            max={Math.max(0, state.mapHeight)}
+                                            value={Math.round(territory.y)}
+                                            onChange={(e) => {
+                                              const raw = Number(e.target.value)
+                                              const clamped = Number.isFinite(raw)
+                                                ? Math.min(Math.max(raw, 0), Math.max(1, state.mapHeight))
+                                                : 0
+                                              setState((prev) => ({
+                                                ...prev,
+                                                territories: prev.territories.map((t) =>
+                                                  t.id === territory.id
+                                                    ? {
+                                                        ...t,
+                                                        y: clamped,
+                                                        normalizedY: clamp01(
+                                                          clamped / (prev.mapHeight > 0 ? prev.mapHeight : 1),
+                                                        ),
+                                                      }
+                                                    : t,
+                                                ),
+                                              }))
+                                            }}
+                                            className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                          />
+                                        </div>
+                                      </div>
+                                      <p className="text-[11px] text-muted">
+                                        Tip: use arrow keys in the number fields for precise moves.
+                                      </p>
                                     </div>
                                   )}
                                 </div>
