@@ -177,8 +177,16 @@ export default function ResponsiveMapContainer({
       0,
       Math.min(display.height - el.clientHeight, fy - el.clientHeight / 2),
     )
-    el.scrollLeft = targetX
-    el.scrollTop = targetY
+    // Smooth scroll when supported
+    const anyEl = el as unknown as {
+      scrollTo?: (opts: { left: number; top: number; behavior?: 'auto' | 'smooth' }) => void
+    }
+    if (typeof anyEl.scrollTo === 'function') {
+      anyEl.scrollTo({ left: targetX, top: targetY, behavior: 'smooth' })
+    } else {
+      el.scrollLeft = targetX
+      el.scrollTop = targetY
+    }
   }, [focus, display.width, display.height, mapWidth, mapHeight])
 
   return (

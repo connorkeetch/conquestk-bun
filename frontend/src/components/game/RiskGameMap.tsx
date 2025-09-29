@@ -127,6 +127,18 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
               validTargets={validTargets}
               pendingAction={pendingAction}
             />
+            {focusCoords && (
+              <div
+                className="absolute pointer-events-none z-10"
+                style={{
+                  left: `${(focusCoords.x / CLASSIC_MAP_WIDTH) * 100}%`,
+                  top: `${(focusCoords.y / CLASSIC_MAP_HEIGHT) * 100}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <div className="w-10 h-10 rounded-full border-2 border-cyan-300/80 animate-ping" />
+              </div>
+            )}
             {oddsTooltip && (
               <div
                 role="tooltip"
@@ -161,6 +173,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
             playerColors={playerColors}
             pendingAction={pendingAction}
             validTargets={validTargets}
+            focus={focusCoords}
           />
         )}
 
