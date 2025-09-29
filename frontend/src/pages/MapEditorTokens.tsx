@@ -3035,8 +3035,8 @@ export default function MapEditorTokens() {
                                           </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-2">
-                                          {/* X control with nudgers */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                          {/* X position */}
                                           <div>
                                             <label
                                               className="text-[11px] text-muted uppercase tracking-wide"
@@ -3044,39 +3044,7 @@ export default function MapEditorTokens() {
                                             >
                                               X
                                             </label>
-                                            <div className="flex items-center gap-1">
-                                              <button
-                                                type="button"
-                                                className="rounded border border-border px-2 py-1 text-xs"
-                                                onClick={() => {
-                                                  setState((prev) => ({
-                                                    ...prev,
-                                                    territories: prev.territories.map((t) =>
-                                                      t.id === territory.id
-                                                        ? (() => {
-                                                            const nextX = Math.max(
-                                                              0,
-                                                              (t.x ?? 0) - 1,
-                                                            )
-                                                            return {
-                                                              ...t,
-                                                              x: nextX,
-                                                              normalizedX: clamp01(
-                                                                nextX /
-                                                                  (prev.mapWidth > 0
-                                                                    ? prev.mapWidth
-                                                                    : 1),
-                                                              ),
-                                                            }
-                                                          })()
-                                                        : t,
-                                                    ),
-                                                  }))
-                                                }}
-                                                title="-1 px"
-                                              >
-                                                −
-                                              </button>
+                                            <div>
                                               <input
                                                 id={`territory-x-${territory.id}`}
                                                 type="number"
@@ -3136,41 +3104,12 @@ export default function MapEditorTokens() {
                                                     }
                                                   })
                                                 }}
-                                                className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                                className="no-spinners w-full rounded border border-border bg-surface-1 px-3 py-2 text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                                               />
-                                              <button
-                                                type="button"
-                                                className="rounded border border-border px-2 py-1 text-xs"
-                                                onClick={() => {
-                                                  setState((prev) => ({
-                                                    ...prev,
-                                                    territories: prev.territories.map((t) =>
-                                                      t.id === territory.id
-                                                        ? (() => {
-                                                            const width =
-                                                              prev.mapWidth > 0 ? prev.mapWidth : 1
-                                                            const nextX = Math.min(
-                                                              width,
-                                                              (t.x ?? 0) + 1,
-                                                            )
-                                                            return {
-                                                              ...t,
-                                                              x: nextX,
-                                                              normalizedX: clamp01(nextX / width),
-                                                            }
-                                                          })()
-                                                        : t,
-                                                    ),
-                                                  }))
-                                                }}
-                                                title="+1 px"
-                                              >
-                                                +
-                                              </button>
                                             </div>
                                           </div>
 
-                                          {/* Y control with nudgers */}
+                                          {/* Y position */}
                                           <div>
                                             <label
                                               className="text-[11px] text-muted uppercase tracking-wide"
@@ -3178,39 +3117,7 @@ export default function MapEditorTokens() {
                                             >
                                               Y
                                             </label>
-                                            <div className="flex items-center gap-1">
-                                              <button
-                                                type="button"
-                                                className="rounded border border-border px-2 py-1 text-xs"
-                                                onClick={() => {
-                                                  setState((prev) => ({
-                                                    ...prev,
-                                                    territories: prev.territories.map((t) =>
-                                                      t.id === territory.id
-                                                        ? (() => {
-                                                            const nextY = Math.max(
-                                                              0,
-                                                              (t.y ?? 0) - 1,
-                                                            )
-                                                            return {
-                                                              ...t,
-                                                              y: nextY,
-                                                              normalizedY: clamp01(
-                                                                nextY /
-                                                                  (prev.mapHeight > 0
-                                                                    ? prev.mapHeight
-                                                                    : 1),
-                                                              ),
-                                                            }
-                                                          })()
-                                                        : t,
-                                                    ),
-                                                  }))
-                                                }}
-                                                title="-1 px"
-                                              >
-                                                −
-                                              </button>
+                                            <div>
                                               <input
                                                 id={`territory-y-${territory.id}`}
                                                 type="number"
@@ -3269,39 +3176,8 @@ export default function MapEditorTokens() {
                                                     }
                                                   })
                                                 }}
-                                                className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                                className="no-spinners w-full rounded border border-border bg-surface-1 px-3 py-2 text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                                               />
-                                              <button
-                                                type="button"
-                                                className="rounded border border-border px-2 py-1 text-xs"
-                                                onClick={() => {
-                                                  setState((prev) => ({
-                                                    ...prev,
-                                                    territories: prev.territories.map((t) =>
-                                                      t.id === territory.id
-                                                        ? (() => {
-                                                            const height =
-                                                              prev.mapHeight > 0
-                                                                ? prev.mapHeight
-                                                                : 1
-                                                            const nextY = Math.min(
-                                                              height,
-                                                              (t.y ?? 0) + 1,
-                                                            )
-                                                            return {
-                                                              ...t,
-                                                              y: nextY,
-                                                              normalizedY: clamp01(nextY / height),
-                                                            }
-                                                          })()
-                                                        : t,
-                                                    ),
-                                                  }))
-                                                }}
-                                                title="+1 px"
-                                              >
-                                                +
-                                              </button>
                                             </div>
                                           </div>
                                         </div>
@@ -3602,6 +3478,14 @@ export default function MapEditorTokens() {
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-4">
+      {/* Local styles: hide spinner arrows on numeric inputs with .no-spinners */}
+      <style>
+        {`
+        .no-spinners::-webkit-outer-spin-button,
+        .no-spinners::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-spinners { -moz-appearance: textfield; appearance: textfield; }
+        `}
+      </style>
       {/* Load Draft Dialog - Local Storage */}
       {showLoadDraftDialog && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
