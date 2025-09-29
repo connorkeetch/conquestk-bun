@@ -67,8 +67,14 @@ export default function AdminGames() {
     try {
       switch (actionModal.action) {
         case 'spectate':
-          // Open game in spectator mode
-          window.open(`/game/${actionModal.game.id}?spectate=true`, '_blank')
+          // Open the actual game room in spectator mode (no dedicated spectator page)
+          // Prefer roomCode if available so URLs match player-facing links
+          {
+            const roomRef =
+              (typeof actionModal.game.roomCode === 'number' && actionModal.game.roomCode) ||
+              actionModal.game.id
+            window.open(`/room/${roomRef}?spectate=true`, '_blank')
+          }
           break
         case 'force_end':
           if (!actionNotes.trim()) {
@@ -374,7 +380,7 @@ export default function AdminGames() {
                         onClick={() => openActionModal(game, 'spectate')}
                         className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
                       >
-                        👁️ Spectate
+                        👁️ Open (spectate)
                       </button>
 
                       {game.status === 'active' && (
@@ -453,7 +459,7 @@ export default function AdminGames() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface-1 rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">
-              {actionModal.action === 'spectate' && '👁️ Spectate Game'}
+              {actionModal.action === 'spectate' && '👁️ Open Game (spectate)'}
               {actionModal.action === 'force_end' && '🛑 Force End Game'}
               {actionModal.action === 'pause' && '⏸️ Pause Game'}
               {actionModal.action === 'resume' && '▶️ Resume Game'}
@@ -518,7 +524,7 @@ export default function AdminGames() {
                           : 'bg-gray-600 hover:bg-surface-2'
                 }`}
               >
-                {actionModal.action === 'spectate' && '👁️ Open Spectator View'}
+                {actionModal.action === 'spectate' && '👁️ Open Game (spectate)'}
                 {actionModal.action === 'force_end' && '🛑 Force End Game'}
                 {actionModal.action === 'pause' && '⏸️ Pause Game'}
                 {actionModal.action === 'resume' && '▶️ Resume Game'}
