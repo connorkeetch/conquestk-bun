@@ -339,8 +339,7 @@ export const AdminMaps: React.FC = () => {
   const mapNameId = useId()
   const mapStatusId = useId()
   const mapDescriptionId = useId()
-  const mapMinPlayersId = useId()
-  const mapMaxPlayersId = useId()
+  // Removed unused min/max player input IDs
   const mapFeaturedId = useId()
   const mapPublicId = useId()
   const mapVipOnlyId = useId()

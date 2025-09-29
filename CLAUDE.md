@@ -90,6 +90,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - Theme switching relies on CSS variables in `frontend/src/app.css`; toggle the `data-theme` attribute instead of inline styles.
 - The map editor UI lives in `frontend/src/pages/MapEditorTokens.tsx` with detailed format docs in `docs/guides/map-format.md`.
 - Resolve CDN assets through `resolveAssetPath` (`frontend/src/utils/assets.ts`); set `VITE_ASSET_BASE_URL` in every environment (including local dev) because the repo no longer ships audio or hero media.
+- For the Game Room, lobby, and phase UX flows, follow `docs/planning/game-room-plan.md`.
 
 ## Database & admin utilities
 - Always create a new numbered migration for schema changes and test with `cd backend && npm run migrate` before finishing.
@@ -125,6 +126,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - `docs/operations/troubleshooting.md` – common operational fixes.
 - `docs/planning/roadmap.md` & `docs/planning/go-live-plan.md` – active priorities and launch blockers.
 - `docs/planning/codebase-cleanup.md` – technical-debt backlog.
+- `docs/planning/game-room-plan.md` – canonical Game Room UI/UX plan; consult when implementing room, lobby, phases, and timers.
 
 ## Environment configuration
 ### Core variables (`backend/.env`)
