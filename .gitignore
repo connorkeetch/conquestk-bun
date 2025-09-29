@@ -190,3 +190,10 @@ frontend/public/audio-files/
 
 # Local artifact (do not commit)
 maps-package.zip
+
+# Map import working directory (local only)
+World-Classic/
+map-uploads/
+
+# Windows ADS metadata files that can appear from downloads
+*.Zone.Identifier
