@@ -11,6 +11,7 @@ export interface UIRoomState {
   animationSpeed: AnimationSpeed
   overlays: { continents: boolean; attackable: boolean; threat: boolean }
   connectionStatus: 'connected' | 'connecting' | 'disconnected'
+  conquestOverlay?: { fromId: string; toId: string } | null
 }
 
 const initialState: UIRoomState = {
@@ -22,6 +23,7 @@ const initialState: UIRoomState = {
   animationSpeed: 'normal',
   overlays: { continents: false, attackable: false, threat: false },
   connectionStatus: 'connected',
+  conquestOverlay: null,
 }
 
 const uiRoomSlice = createSlice({
@@ -70,6 +72,12 @@ const uiRoomSlice = createSlice({
     setConnectionStatus(state, action: PayloadAction<UIRoomState['connectionStatus']>) {
       state.connectionStatus = action.payload
     },
+    showConquestOverlay(state, action: PayloadAction<{ fromId: string; toId: string }>) {
+      state.conquestOverlay = { fromId: action.payload.fromId, toId: action.payload.toId }
+    },
+    hideConquestOverlay(state) {
+      state.conquestOverlay = null
+    },
     hydrateFromStorage(state) {
       try {
         const speed = localStorage.getItem('ui.animationSpeed') as AnimationSpeed | null
@@ -107,6 +115,8 @@ export const {
   setAttackCommit,
   setOverlay,
   setConnectionStatus,
+  showConquestOverlay,
+  hideConquestOverlay,
   hydrateFromStorage,
 } = uiRoomSlice.actions
 
