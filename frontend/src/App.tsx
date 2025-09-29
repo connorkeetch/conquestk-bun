@@ -22,7 +22,6 @@ const ClanDetailPage = lazyWithRetry(() => import('./pages/ClanDetailPage'))
 
 import ForgotPassword from './pages/ForgotPassword'
 
-const GamePage = lazyWithRetry(() => import('./pages/GamePage'))
 const GameRoom = lazyWithRetry(() => import('./pages/GameRoom'))
 
 // Public Pages
@@ -429,7 +428,6 @@ function App() {
               </AuthGuard>
             }
           />
-
           {/* Games Management */}
           <Route
             path="/games"
@@ -447,45 +445,6 @@ function App() {
               </AuthGuard>
             }
           />
-
-          {/* Individual Game (Full-screen) */}
-          <Route
-            path="/game/:gameId"
-            element={
-              <AuthGuard>
-                <GameErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <div className="min-h-screen flex items-center justify-center">
-                        <div className="spinner"></div>
-                      </div>
-                    }
-                  >
-                    <GamePage />
-                  </Suspense>
-                </GameErrorBoundary>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/game/:gameId/:section"
-            element={
-              <AuthGuard>
-                <GameErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <div className="min-h-screen flex items-center justify-center">
-                        <div className="spinner"></div>
-                      </div>
-                    }
-                  >
-                    <GamePage />
-                  </Suspense>
-                </GameErrorBoundary>
-              </AuthGuard>
-            }
-          />
-
           {/* Game Creation */}
           <Route
             path="/create"

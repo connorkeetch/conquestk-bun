@@ -5,7 +5,7 @@ import { gameService } from '../services/gameService'
 import type { GameRoom } from '../types/gameRoom'
 
 const GameListPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'spectate'>('active')
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active')
   const [userGames, setUserGames] = useState<GameRoom[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -153,13 +153,6 @@ const GameListPage: React.FC = () => {
         >
           ✅ Completed
         </button>
-        <button
-          type="button"
-          className={`tab ${activeTab === 'spectate' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('spectate')}
-        >
-          👁️ Spectate
-        </button>
       </div>
 
       {/* Content Area */}
@@ -218,11 +211,7 @@ const GameListPage: React.FC = () => {
                           </div>
                         </div>
                         <Link
-                          to={
-                            game.status === 'active'
-                              ? `/game/${game.roomCode ?? game.id}`
-                              : `/room/${game.roomCode ?? game.id}`
-                          }
+                          to={`/room/${game.roomCode ?? game.id}`}
                           className={`btn ${game.status === 'lobby' ? 'btn-primary' : 'btn-secondary'}`}
                         >
                           {game.status === 'lobby'
@@ -300,13 +289,7 @@ const GameListPage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'spectate' && (
-          <div className="text-center text-muted py-16">
-            <div className="text-6xl mb-4">👁️</div>
-            <p className="text-lg">Live game spectating will be implemented here</p>
-            <p className="text-sm mt-2">This will show public games you can watch</p>
-          </div>
-        )}
+        {/* Spectate tab removed; spectating is handled directly via room URLs */}
       </div>
     </div>
   )

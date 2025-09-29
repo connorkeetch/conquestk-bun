@@ -1182,11 +1182,17 @@ const LobbyPage: React.FC = () => {
                               📋 View Lobby
                             </Link>
                           ) : game.status === 'active' ? (
-                            <Link to={`/game/${game.id}`} className="btn btn-success btn-sm">
+                            <Link
+                              to={`/room/${game.roomCode ?? game.id}`}
+                              className="btn btn-success btn-sm"
+                            >
                               {game.isYourTurn ? '🎯 Play Turn' : '👁️ View Game'}
                             </Link>
                           ) : (
-                            <Link to={`/game/${game.id}`} className="btn btn-secondary btn-sm">
+                            <Link
+                              to={`/room/${game.roomCode ?? game.id}`}
+                              className="btn btn-secondary btn-sm"
+                            >
                               📊 View Results
                             </Link>
                           )}

@@ -34,7 +34,8 @@
     "flags:sync:runtime": "node dist/scripts/checkFeatureFlags.js --apply",
     "purge:messages": "ts-node src/scripts/purgeMessaging.ts",
     "purge:messages:yes": "ts-node src/scripts/purgeMessaging.ts --yes",
-    "purge:messages:include-blocks": "ts-node src/scripts/purgeMessaging.ts --yes --include-user-blocks"
+    "purge:messages:include-blocks": "ts-node src/scripts/purgeMessaging.ts --yes --include-user-blocks",
+    "maps:import": "ts-node src/scripts/importMapsPackage.ts"
   },
   "dependencies": {
     "@risk-game/shared": "file:../shared",
@@ -48,6 +49,7 @@
     "@types/nodemailer": "^7.0.1",
     "@types/sharp": "^0.31.1",
     "@types/validator": "^13.15.3",
+    "adm-zip": "^0.5.12",
     "bad-words": "^4.0.0",
     "bcryptjs": "^3.0.2",
     "bull": "^4.16.5",
