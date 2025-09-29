@@ -43,6 +43,7 @@ export interface CreateGameData {
   // Additional room options persisted to DB
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   turnTimerSeconds?: number
+  timeBankSeconds?: number
 }
 
 export interface JoinGameResponse {

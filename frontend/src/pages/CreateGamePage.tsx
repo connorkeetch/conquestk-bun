@@ -228,6 +228,8 @@ const CreateGamePage: React.FC = () => {
   >('adjacent')
   const [selectedColor, setSelectedColor] = useState<PlayerColor>(preferredColor)
   const [turnTimeLimit, setTurnTimeLimit] = useState(24 * 60) // in minutes
+  const [timeBankMinutes, setTimeBankMinutes] = useState<number>(0)
+  const timeBankId = useId()
   const [useTerritoryModifiers, setUseTerritoryModifiers] = useState<boolean>(false)
   // Hidden Treasures (new ruleset) UI state
   const [treasurePayoutMode, setTreasurePayoutMode] = useState<
@@ -624,6 +626,8 @@ const CreateGamePage: React.FC = () => {
         fogOfWar,
         turnTimerSeconds:
           typeof turnTimeLimit === 'number' ? Math.trunc(turnTimeLimit * 60) : undefined,
+        timeBankSeconds:
+          typeof timeBankMinutes === 'number' ? Math.max(0, Math.trunc(timeBankMinutes * 60)) : 0,
         allowTeamPlay: finalTeams > 0,
         teamMode: finalTeams > 0 ? 'teams' : 'none',
         numberOfTeams: finalTeams > 0 ? finalTeams : undefined,
@@ -828,6 +832,33 @@ const CreateGamePage: React.FC = () => {
                 <p className="text-xs text-muted mt-1">Players will need this code to join</p>
               </div>
             )}
+          </div>
+        </OptionCard>
+
+        {/* 3b. Time Bank (optional) */}
+        <OptionCard number="3b" title="Time Bank (optional)">
+          <div className="space-y-3">
+            <p className="text-xs text-muted">
+              Extra time players can dip into when their turn timer runs out. Set to 0 to disable.
+            </p>
+            <div className="flex items-center gap-3">
+              <label className="text-sm" htmlFor={timeBankId}>
+                Minutes:
+              </label>
+              <input
+                id={timeBankId}
+                type="number"
+                min={0}
+                step={5}
+                className="form-input w-24 text-center"
+                value={timeBankMinutes}
+                onChange={(e) =>
+                  setTimeBankMinutes(Math.max(0, Number.parseInt(e.target.value, 10) || 0))
+                }
+                title="Total time bank per player (minutes)"
+              />
+              <span className="text-xs text-muted">e.g. 0, 5, 15, 30</span>
+            </div>
           </div>
         </OptionCard>
 
