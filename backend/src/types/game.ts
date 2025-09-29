@@ -1,4 +1,10 @@
-import type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'
+import type {
+  AIDifficulty,
+  Metal,
+  TreasureConfig,
+  TreasureState,
+  SectorBonus,
+} from '@risk-game/shared/types'
 
 export type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'
 
@@ -55,7 +61,10 @@ export interface GamePlayer {
 export interface Territory {
   id: string
   name: string
-  continent: string
+  // Sector (formerly "continent")
+  sector: string
+  /** @deprecated use `sector` */
+  continent?: string
   ownerId: string | null
   armies: number
   adjacentTerritories: string[]
@@ -170,19 +179,17 @@ export interface GameConfiguration {
   maxPlayers: number
   mapId?: string
   gameMode?: string
-  continentBonuses?: ContinentBonus[]
+  // Sector bonuses (formerly continent bonuses)
+  sectorBonuses?: SectorBonus[]
+  /** @deprecated use `sectorBonuses` */
+  continentBonuses?: SectorBonus[]
   useTerritoryModifiers?: boolean
   modifierDistribution?: ModifierDistribution
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   treasureConfig?: TreasureConfig
 }
 
-export interface ContinentBonus {
-  id: string
-  name: string
-  bonusArmies: number
-  territories: string[]
-}
+export type ContinentBonus = SectorBonus
 
 export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
 

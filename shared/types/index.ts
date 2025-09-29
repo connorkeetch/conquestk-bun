@@ -104,7 +104,13 @@ export interface Territory {
   name: string
   ownerId: string | null
   armies: number
+  // Sector (formerly "continent")
+  sector?: string
+  sectorId?: string
+  // Backward compatibility: keep deprecated fields for older payloads
+  /** @deprecated use `sector` */
   continent?: string
+  /** @deprecated use `sectorId` */
   continentId?: string
   isCapital?: boolean
   abilities?: TerritoryAbility[]
@@ -230,7 +236,10 @@ export interface GameConfiguration {
   maxPlayers: number
   mapId?: string
   gameMode?: string
-  continentBonuses?: ContinentBonus[]
+  // Sector bonuses (formerly continent bonuses)
+  sectorBonuses?: SectorBonus[]
+  /** @deprecated use `sectorBonuses` */
+  continentBonuses?: SectorBonus[]
   useTerritoryModifiers?: boolean
   modifierDistribution?: ModifierDistribution
   turnTimer?: number
@@ -245,12 +254,15 @@ export interface GameConfiguration {
 
 export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
 
-export interface ContinentBonus {
+export interface SectorBonus {
   id: string
   name: string
   bonusArmies: number
   territories: string[]
 }
+
+// Backward compatibility alias
+export type ContinentBonus = SectorBonus
 
 export type ModifierDistribution = 'none' | 'sparse' | 'balanced' | 'abundant' | 'custom'
 

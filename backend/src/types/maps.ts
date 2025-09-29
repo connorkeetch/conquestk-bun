@@ -76,17 +76,17 @@ export interface MapGameMode {
   isRecommended: boolean
 }
 
-export interface MapContinent {
+export interface MapSector {
   id: string
   mapId: string
   name: string
   bonusArmies: number
   color: string
-  specialRules?: ContinentSpecialRules
+  specialRules?: SectorSpecialRules
   createdAt: Date
 }
 
-export interface ContinentSpecialRules {
+export interface SectorSpecialRules {
   seasonalEffects?: boolean
   resourceGeneration?: string
   movementRestrictions?: string[]
@@ -120,7 +120,7 @@ export interface MapTerritory {
   mapId: string
   territoryId: string // Unique within the map
   name: string
-  continentId?: string
+  sectorId?: string
   boundaryCoords: Coordinate[] // Polygon coordinates
   armyPosition: Coordinate
   abilityTypeId?: string
@@ -177,7 +177,9 @@ export interface MapRating {
 export interface EnhancedTerritory {
   id: string
   name: string
-  continent: string
+  sector: string
+  /** @deprecated use `sector` */
+  continent?: string
   ownerId: string | null
   armies: number
   adjacentTerritories: string[]
@@ -256,11 +258,11 @@ export interface MapEditorState {
   imageWidth: number
   imageHeight: number
 
-  continents: MapContinent[]
+  sectors: MapSector[]
   territories: MapTerritory[]
   adjacencies: TerritoryAdjacency[]
 
-  selectedTool: 'select' | 'territory' | 'continent' | 'adjacency'
+  selectedTool: 'select' | 'territory' | 'sector' | 'adjacency'
   selectedTerritory?: string
   isDrawing: boolean
   currentPolygon: Coordinate[]
@@ -271,7 +273,7 @@ export interface MetadataTerritoryInput {
   id?: string
   name?: string
   boundaryCoords?: Coordinate[]
-  continentId?: string
+  sectorId?: string
   x?: number
   y?: number
   /**
@@ -293,6 +295,13 @@ export interface MetadataContinentInput {
   color?: string
 }
 
+export interface MetadataSectorInput {
+  id?: string
+  name?: string
+  bonus?: number
+  color?: string
+}
+
 export interface MetadataAdjacencyInput {
   from?: string
   to?: string
@@ -306,7 +315,7 @@ export interface MetadataAdjacencyInput {
 
 export interface MapMetadataPayload {
   territories?: MetadataTerritoryInput[]
-  continents?: MetadataContinentInput[]
+  sectors?: MetadataSectorInput[]
   adjacencies?: MetadataAdjacencyInput[]
   capitalAssignments?: Record<string, string[]>
   width?: number
@@ -343,7 +352,7 @@ export interface CreateTerritoryRequest {
   mapId: string
   territoryId: string
   name: string
-  continentId?: string
+  sectorId?: string
   boundaryCoords: Coordinate[]
   armyPosition: Coordinate
   abilityTypeId?: string
@@ -389,7 +398,7 @@ export interface MapDraft {
   description?: string
   data: Record<string, unknown> // JSON map data
   territories?: unknown
-  continents?: unknown
+  sectors?: unknown
   adjacencies?: unknown
   capitalAssignments?: Record<string, string[]>
   territoryModifiers?: Record<string, TerritoryModifierMetadata>
@@ -418,7 +427,7 @@ export interface MapVersion {
   versionNumber: number
   data: Record<string, unknown>
   territories?: unknown
-  continents?: unknown
+  sectors?: unknown
   adjacencies?: unknown
   changeSummary?: string
   changedBy: string

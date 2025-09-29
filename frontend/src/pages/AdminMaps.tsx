@@ -342,6 +342,11 @@ export const AdminMaps: React.FC = () => {
   const mapPublicId = useId()
   const mapVipOnlyId = useId()
 
+  // Cache of per-map connection stats for list view
+  const [connectionStats, setConnectionStats] = useState<
+    Record<string, { total: number; average: number }>
+  >({})
+
   const statusLabels: Record<Map['status'], string> = {
     draft: 'Draft',
     pending_review: 'Pending Review',
@@ -361,6 +366,38 @@ export const AdminMaps: React.FC = () => {
         },
       })
       setMaps(response.data.maps || [])
+      // After base list loads, fetch connection stats lazily
+      const list: Map[] = response.data.maps || []
+      void (async () => {
+        const updates: Record<string, { total: number; average: number }> = {}
+        await Promise.all(
+          list.map(async (m: Map) => {
+            try {
+              const details = await api.get(`/admin/maps/${m.id}`)
+              const adj = Array.isArray(details.data.adjacencies)
+                ? (details.data.adjacencies as Array<{ from?: string; to?: string }>)
+                : []
+              const uniq = new Set<string>()
+              adj.forEach((a) => {
+                const from = a.from
+                const to = a.to
+                if (!from || !to) return
+                const key = from < to ? `${from}__${to}` : `${to}__${from}`
+                uniq.add(key)
+              })
+              const total = uniq.size
+              const n = typeof m.territoryCount === 'number' && m.territoryCount > 0
+                ? m.territoryCount
+                : details.data.territories?.length || 0
+              const average = n > 0 ? (total * 2) / n : 0
+              updates[m.id] = { total, average }
+            } catch {
+              // ignore per-map errors; leave blank
+            }
+          }),
+        )
+        setConnectionStats((prev) => ({ ...prev, ...updates }))
+      })()
     } catch (error: unknown) {
       setError(getErrorMessage(error, 'Failed to load maps'))
     } finally {
@@ -898,6 +935,9 @@ export const AdminMaps: React.FC = () => {
                       Continents
                     </th>
                     <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
+                      Connections
+                    </th>
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Games Played
                     </th>
                     <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
@@ -1001,6 +1041,15 @@ export const AdminMaps: React.FC = () => {
                         <td>
                           <div className="text-sm text-muted">
                             {typeof map.continentCount === 'number' ? map.continentCount : 'N/A'}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="text-sm text-muted">
+                            {connectionStats[map.id]
+                              ? `${connectionStats[map.id].total} / ${connectionStats[
+                                  map.id
+                                ].average.toFixed(1)}`
+                              : '—'}
                           </div>
                         </td>
                         <td>
