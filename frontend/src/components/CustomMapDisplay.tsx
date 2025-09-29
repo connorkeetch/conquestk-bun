@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useAppSelector } from '@/hooks/redux'
 import { logger } from '@/utils/logger'
+import { computeRollOdds } from '@/utils/odds'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
 
 interface Territory {
@@ -16,22 +18,28 @@ interface CustomMapDisplayProps {
   mapId: string
   territories: Territory[]
   onTerritoryClick?: (territoryId: string) => void
+  onTerritoryHover?: (territoryId: string | null) => void
   selectedTerritoryId?: string | null
   playerColors?: Record<string, string>
   imageUrl?: string
   mapWidth?: number
   mapHeight?: number
+  validTargets?: string[]
+  pendingAction?: string | null
 }
 
 export default function CustomMapDisplay({
   mapId,
   territories,
   onTerritoryClick,
+  onTerritoryHover,
   selectedTerritoryId,
   playerColors = {},
   imageUrl,
   mapWidth,
   mapHeight,
+  validTargets = [],
+  pendingAction,
 }: CustomMapDisplayProps) {
   const [mapData, setMapData] = useState<{
     imageUrl: string
@@ -40,6 +48,7 @@ export default function CustomMapDisplay({
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   useEffect(() => {
     const hydrateFromProps = () => {
@@ -95,6 +104,36 @@ export default function CustomMapDisplay({
     }
   }, [mapId, imageUrl, mapWidth, mapHeight])
 
+  // Hooks must be top-level
+  const attackDice = useAppSelector((s) => s.uiRoom.dice)
+  const oddsTooltip = useMemo(() => {
+    if (!mapData) return null
+    if (pendingAction !== 'attack') return null
+    if (!selectedTerritoryId || !hoveredId) return null
+    if (!validTargets.includes(hoveredId)) return null
+    const src = territories.find((t) => t.id === selectedTerritoryId)
+    const dst = territories.find((t) => t.id === hoveredId)
+    if (!src || !dst) return null
+    const srcArmies = src.armies ?? 0
+    const dstArmies = dst.armies ?? 0
+    if (srcArmies <= 1) return null
+    const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
+    const def = Math.max(1, Math.min(2, dstArmies > 1 ? 2 : 1)) as 1 | 2
+    const odds = computeRollOdds(att, def)
+    const winChance = (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
+    const left = (dst.x / mapData.width) * 100
+    const top = (dst.y / mapData.height) * 100
+    return { att, def, odds, winChance, left, top }
+  }, [
+    attackDice,
+    hoveredId,
+    mapData,
+    pendingAction,
+    selectedTerritoryId,
+    territories,
+    validTargets,
+  ])
+
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-surface-1">
@@ -145,6 +184,8 @@ export default function CustomMapDisplay({
         const isSelected = territory.id === selectedTerritoryId
         const ownerColor = territory.owner ? playerColors[territory.owner] : undefined
         const color = ownerColor || '#6b7280' // gray-500 as fallback
+        const isValidTarget =
+          pendingAction === 'attack' && validTargets.includes(territory.id) && selectedTerritoryId
 
         return (
           <div
@@ -159,9 +200,18 @@ export default function CustomMapDisplay({
             <button
               type="button"
               onClick={() => handleTerritoryActivate(territory.id)}
-              className="relative block"
+              onMouseEnter={() => {
+                setHoveredId(territory.id)
+                onTerritoryHover?.(territory.id)
+              }}
+              onMouseLeave={() => {
+                setHoveredId((current) => (current === territory.id ? null : current))
+                onTerritoryHover?.(null)
+              }}
+              className={`relative block ${isValidTarget ? 'animate-pulse' : ''}`}
               title={territory.name}
               aria-label={`Territory: ${territory.name}`}
+              style={{ cursor: isValidTarget ? ('crosshair' as const) : 'pointer' }}
             >
               <span
                 className="block"
@@ -173,8 +223,10 @@ export default function CustomMapDisplay({
                   clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
                   boxShadow: isSelected
                     ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
-                    : '0 2px 4px rgba(0,0,0,0.3)',
-                  border: '1px solid rgba(255,255,255,0.25)',
+                    : isValidTarget
+                      ? '0 0 8px rgba(56,189,248,0.7), 0 2px 4px rgba(0,0,0,0.3)'
+                      : '0 2px 4px rgba(0,0,0,0.3)',
+                  border: isValidTarget ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.25)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -197,6 +249,22 @@ export default function CustomMapDisplay({
           </div>
         )
       })}
+
+      {oddsTooltip && (
+        <div
+          role="tooltip"
+          className="absolute z-30 pointer-events-none animate-pulse"
+          style={{
+            left: `${oddsTooltip.left}%`,
+            top: `${oddsTooltip.top}%`,
+            transform: 'translate(-50%, -140%)',
+          }}
+        >
+          <div className="rounded bg-surface-2/95 border border-border shadow px-2 py-1 text-xs text-white whitespace-nowrap">
+            {`Odds (${oddsTooltip.att}v${oddsTooltip.def}) · Win ${oddsTooltip.winChance.toFixed(0)}% · E[Δ] ${oddsTooltip.odds.expected.advantage >= 0 ? '+' : ''}${oddsTooltip.odds.expected.advantage.toFixed(2)}`}
+          </div>
+        </div>
+      )}
     </ResponsiveMapContainer>
   )
 }
