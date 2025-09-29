@@ -4,6 +4,7 @@ import { query as dbQuery } from '../config/database'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { adminService } from '../services/adminService'
+import { mapService } from '../services/mapService'
 import { logger } from '../utils/logger'
 import { handleRouteError } from '../utils/routeErrorHandler'
 import { resolveAssetUrl } from '../utils/url'
@@ -1218,6 +1219,107 @@ router.get(
         mapId: req.params.mapId,
       })
       res.status(500).json({ error: 'Failed to get map details' })
+    }
+  },
+)
+
+// Update structural map content (territories, continents, adjacencies, modifiers) from editor metadata
+router.put(
+  '/maps/:mapId/content',
+  requirePermission('content.edit'),
+  logAdminActivity('map_content_update'),
+  param('mapId').isUUID(),
+  body('metadata').optional().isObject(),
+  body('name').optional().isString().isLength({ min: 1, max: 100 }),
+  body('description').optional().isString().isLength({ max: 1000 }),
+  body('imageUrl').optional().isString(),
+  body('imageWidth').optional().isInt({ min: 1, max: 10000 }),
+  body('imageHeight').optional().isInt({ min: 1, max: 10000 }),
+  body('isPublic').optional().isBoolean(),
+  body('tags').optional().isArray(),
+  body('minPlayers').optional().isInt({ min: 2, max: 20 }),
+  body('maxPlayers').optional().isInt({ min: 2, max: 20 }),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { mapId } = req.params
+      const {
+        metadata,
+        name,
+        description,
+        imageUrl,
+        imageWidth,
+        imageHeight,
+        isPublic,
+        tags,
+        minPlayers,
+        maxPlayers,
+      } = req.body || {}
+
+      // Ensure map exists
+      const existing = await mapService.getMap(mapId)
+      if (!existing) {
+        res.status(404).json({ error: 'Map not found' })
+        return
+      }
+
+      // Apply structural updates first
+      if (metadata && typeof metadata === 'object') {
+        await mapService.updateMapContentFromMetadata(mapId, metadata)
+      }
+
+      // Apply ancillary map field updates
+      if (
+        name !== undefined ||
+        description !== undefined ||
+        imageUrl !== undefined ||
+        imageWidth !== undefined ||
+        imageHeight !== undefined ||
+        isPublic !== undefined ||
+        tags !== undefined
+      ) {
+        await mapService.updateMap(
+          mapId,
+          req.userId,
+          {
+            name,
+            description,
+            imageUrl,
+            imageWidth,
+            imageHeight,
+            isPublic,
+            tags,
+          },
+          { isAdmin: true, allowCollaborator: true },
+        )
+      }
+
+      // Apply min/max players if supplied
+      if (minPlayers !== undefined || maxPlayers !== undefined) {
+        const sets: string[] = []
+        const params: unknown[] = []
+        let idx = 1
+        if (minPlayers !== undefined) {
+          sets.push(`min_players = $${idx++}`)
+          params.push(minPlayers)
+        }
+        if (maxPlayers !== undefined) {
+          sets.push(`max_players = $${idx++}`)
+          params.push(maxPlayers)
+        }
+        params.push(mapId)
+        await dbQuery(
+          `UPDATE maps SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx}`,
+          params,
+        )
+      }
+
+      res.json({ success: true })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to update map content', 500, {
+        mapId: req.params.mapId,
+      })
+      res.status(500).json({ error: 'Failed to update map content' })
     }
   },
 )

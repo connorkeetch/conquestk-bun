@@ -623,6 +623,8 @@ export default function MapEditorTokens() {
   const [searchParams] = useSearchParams()
   const [draftId, setDraftId] = useState<string | null>(null)
   const [publishedMapId, setPublishedMapId] = useState<string | null>(null)
+  const [isAdminContext, setIsAdminContext] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [showDraftsList, setShowDraftsList] = useState(false)
   const [availableDrafts, setAvailableDrafts] = useState<MapDraftResponse[]>([])
   const [draftStatus, setDraftStatus] = useState<string>('editing')
@@ -1001,6 +1003,10 @@ export default function MapEditorTokens() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [adminSaveStatus, setAdminSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
+    'idle',
+  )
+  const [adminSaveError, setAdminSaveError] = useState<string | null>(null)
   const [uploadInfo, setUploadInfo] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [showLoadDraftDialog, setShowLoadDraftDialog] = useState(false)
@@ -1137,9 +1143,11 @@ export default function MapEditorTokens() {
       let response: { data: unknown }
       try {
         response = await api.get(`/admin/maps/${mapId}`)
+        setIsAdminContext(true)
       } catch (_adminError) {
         // Fallback to regular maps endpoint
         response = await api.get(`/maps/${mapId}`)
+        setIsAdminContext(false)
       }
 
       const map = response.data as MapApiResponse
@@ -1292,6 +1300,90 @@ export default function MapEditorTokens() {
       alert('Failed to load map. Starting with a new map instead.')
     }
   }, [])
+
+  // Determine admin status once on mount
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const resp = await api.get('/admin/status')
+        setIsAdmin(resp?.data?.isAdmin === true)
+      } catch {
+        setIsAdmin(false)
+      }
+    }
+    void checkAdmin()
+  }, [])
+
+  // Admin: Save changes directly to an existing map (when editing via ?edit=)
+  const handleAdminSaveToMap = useCallback(async () => {
+    if (!publishedMapId) return
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token || token === 'null' || token === 'undefined') {
+        alert('Please log in as an admin to save changes')
+        return
+      }
+
+      if (state.territories.length < 2) {
+        alert('Please add at least 2 territories before saving')
+        return
+      }
+
+      setAdminSaveStatus('saving')
+      setAdminSaveError(null)
+
+      // Normalize current territories to ensure pixel + normalized are in sync
+      const territoriesForSave = state.territories.map((t) =>
+        withNormalizedPosition(t, state.mapWidth, state.mapHeight),
+      )
+
+      const adjacencyList = territoriesForSave.flatMap((territory) =>
+        (territory.connections || []).map((targetId) => ({ from: territory.id, to: targetId })),
+      )
+
+      const payload = {
+        name: state.name,
+        description: state.description,
+        imageUrl: state.imageUrl,
+        imageWidth: state.imageWidth,
+        imageHeight: state.imageHeight,
+        minPlayers: state.minPlayers,
+        maxPlayers: state.maxPlayers,
+        metadata: {
+          width: state.mapWidth,
+          height: state.mapHeight,
+          territories: territoriesForSave,
+          continents: state.continents,
+          adjacencies: adjacencyList,
+          capitalAssignments,
+          territoryModifiers: state.territoryModifiers,
+        },
+      }
+
+      await api.put(`/admin/maps/${publishedMapId}/content`, payload)
+
+      setLastSaved(new Date())
+      setAdminSaveStatus('saved')
+      reportInfo('Admin map update saved', { mapId: publishedMapId })
+      setTimeout(() => setAdminSaveStatus('idle'), 1500)
+    } catch (error: unknown) {
+      reportError('Admin save failed:', error)
+      setAdminSaveStatus('error')
+      if (axios.isAxiosError(error)) {
+        const responseData = error.response?.data as ApiErrorResponse | undefined
+        const message = responseData?.error || responseData?.message || error.message
+        setAdminSaveError(message || 'Failed to save map changes.')
+        alert(`Failed to save map changes. ${message ? `\n\n${message}` : ''}`)
+      } else if (error instanceof Error) {
+        setAdminSaveError(error.message)
+        alert(`Failed to save map changes.\n\nError: ${error.message}`)
+      } else {
+        setAdminSaveError('An unexpected error occurred.')
+        alert('Failed to save map changes due to an unexpected error.')
+      }
+    }
+  }, [publishedMapId, state, capitalAssignments])
 
   const loadDraftForEditing = useCallback(async (draftIdToLoad: string) => {
     try {
@@ -3554,8 +3646,8 @@ export default function MapEditorTokens() {
               )}
             </div>
 
-            {/* Save/Load Actions */}
-            <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
+              {/* Save/Load Actions */}
+              <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
               {lastSaved && (
                 <div className="text-xs text-muted">
                   Auto-saved {lastSaved.toLocaleTimeString()}
@@ -3571,6 +3663,18 @@ export default function MapEditorTokens() {
                 💾 {draftId ? 'Update Draft' : 'Save Draft'}
               </button>
 
+              {/* Admin save to existing map when editing via ?edit= and admin privilege */}
+              {publishedMapId && isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleAdminSaveToMap}
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 rounded text-sm font-medium"
+                  title="Admin: Save changes to this map"
+                >
+                  🛠️ Save (Admin)
+                </button>
+              )}
+
               {draftId && (
                 <span className="text-xs text-muted uppercase tracking-wide">
                   Status: {draftStatus}
@@ -3585,6 +3689,16 @@ export default function MapEditorTokens() {
                 <span className="text-xs text-red-400">{saveError}</span>
               )}
 
+              {publishedMapId && isAdmin && adminSaveStatus === 'saving' && (
+                <span className="text-xs text-muted">Admin saving…</span>
+              )}
+              {publishedMapId && isAdmin && adminSaveStatus === 'saved' && (
+                <span className="text-xs text-green-400">Admin changes saved</span>
+              )}
+              {publishedMapId && isAdmin && adminSaveStatus === 'error' && adminSaveError && (
+                <span className="text-xs text-red-400">{adminSaveError}</span>
+              )}
+              
               {draftId && draftStatus !== 'submitted' && (
                 <button
                   type="button"
@@ -3639,6 +3753,28 @@ export default function MapEditorTokens() {
               >
                 🗑️ Clear All
               </button>
+            </div>
+
+            {/* Save guidance banner */}
+            <div className="px-3 pb-3 text-xs text-muted">
+              <div className="rounded border border-border bg-surface-1 p-2">
+                <span className="font-semibold text-white">Saving tips:</span>
+                <span> 💾 "Save Draft" stores a private draft under your account.</span>
+                {publishedMapId ? (
+                  isAdmin ? (
+                    <span>
+                      {' '}
+                      🛠️ "Save (Admin)" updates the current map in review so moderators see your
+                      changes.
+                    </span>
+                  ) : (
+                    <span>
+                      {' '}
+                      You’re editing an existing map; only admins can update it directly.
+                    </span>
+                  )
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
