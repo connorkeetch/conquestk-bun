@@ -80,11 +80,11 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       name: territory.name,
       x: territory.armyPosition?.x ?? 0,
       y: territory.armyPosition?.y ?? 0,
-      continent: territory.continentId,
+      sector: territory.continentId,
     }))
   }, [mapData])
 
-  const continents = useMemo(() => {
+  const sectors = useMemo(() => {
     if (!mapData) {
       return []
     }
@@ -202,7 +202,7 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
                       <dd>{mapData.territories.length}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt>Continents</dt>
+                      <dt>Sectors</dt>
                       <dd>{mapData.continents.length}</dd>
                     </div>
                     <div className="flex justify-between">
@@ -234,15 +234,15 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
               )}
 
               <div className="rounded-lg border border-border bg-surface-2 p-4">
-                <h3 className="text-lg font-semibold text-white">Continents & Bonuses</h3>
-                {continents.length === 0 && (
+                <h3 className="text-lg font-semibold text-white">Sectors & Bonuses</h3>
+                {sectors.length === 0 && (
                   <p className="mt-3 text-sm text-muted">
-                    No continent bonuses have been defined for this map yet.
+                    No sector bonuses have been defined for this map yet.
                   </p>
                 )}
-                {continents.length > 0 && (
+                {sectors.length > 0 && (
                   <ul className="mt-3 space-y-3 text-sm">
-                    {continents.map((continent) => (
+                    {sectors.map((continent) => (
                       <li
                         key={continent.id}
                         className="flex items-center justify-between rounded bg-surface-3 px-3 py-2"

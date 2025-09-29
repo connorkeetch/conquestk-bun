@@ -45,7 +45,7 @@ Each row represents a single territory on a published map.
 | `map_id` | Foreign key → `maps.id`. |
 | `name` | Display label shown in the UI. |
 | `polygon_data` (`jsonb`) | Serialized geometry & display metadata. See [Section 4](#4-territory-serialization) for the exact shape. |
-| `continent` | Name of the continent this territory belongs to. |
+| `sector` | Name of the sector this territory belongs to (formerly `continent`). |
 | `is_capital` | Boolean flag for capital territories. |
 | `capital_for_players` (`jsonb`) | Array of player counts where this territory is a valid capital. |
 | `created_at` | Timestamp. |
