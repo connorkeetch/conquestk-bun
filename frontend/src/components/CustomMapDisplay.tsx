@@ -26,6 +26,7 @@ interface CustomMapDisplayProps {
   mapHeight?: number
   validTargets?: string[]
   pendingAction?: string | null
+  focus?: { x: number; y: number } | null
 }
 
 export default function CustomMapDisplay({
@@ -40,6 +41,7 @@ export default function CustomMapDisplay({
   mapHeight,
   validTargets = [],
   pendingAction,
+  focus = null,
 }: CustomMapDisplayProps) {
   const [mapData, setMapData] = useState<{
     imageUrl: string
@@ -166,6 +168,7 @@ export default function CustomMapDisplay({
       className="custom-map-display"
       showMinimap={true}
       backgroundImageUrl={mapData.imageUrl}
+      focus={focus ?? undefined}
     >
       {/* Map background */}
       <div
