@@ -698,6 +698,48 @@ export const AdminMaps: React.FC = () => {
       .filter((token): token is NonNullable<typeof token> => token !== null)
   }, [previewDetails, effectiveCanvasWidth, effectiveCanvasHeight])
 
+  // Compute adjacency lines and stats for preview
+  const previewConnections = useMemo(() => {
+    if (!previewDetails || previewDetails.adjacencies.length === 0) {
+      return { lines: [] as Array<{ id: string; x1: number; y1: number; x2: number; y2: number }>, total: 0, average: 0 }
+    }
+
+    const posById = new Map<string, { x: number; y: number }>()
+    previewTokens.forEach((t) => posById.set(t.id, { x: t.left, y: t.top }))
+
+    const seen = new Set<string>()
+    const degree = new Map<string, number>()
+    const lines: Array<{ id: string; x1: number; y1: number; x2: number; y2: number }> = []
+
+    for (const adj of previewDetails.adjacencies) {
+      const from = adj.from || adj.territory_from
+      const to = adj.to || adj.territory_to
+      if (!from || !to) continue
+
+      // Treat as undirected for stats and visuals
+      const a = String(from)
+      const b = String(to)
+      const key = a < b ? `${a}__${b}` : `${b}__${a}`
+      if (seen.has(key)) continue
+      seen.add(key)
+
+      const p1 = posById.get(a)
+      const p2 = posById.get(b)
+      if (!p1 || !p2) continue
+
+      lines.push({ id: key, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y })
+
+      degree.set(a, (degree.get(a) ?? 0) + 1)
+      degree.set(b, (degree.get(b) ?? 0) + 1)
+    }
+
+    const n = previewTokens.length
+    const total = lines.length
+    const avg = n > 0 ? [...degree.values()].reduce((s, v) => s + v, 0) / n : 0
+
+    return { lines, total, average: avg }
+  }, [previewDetails, previewTokens])
+
   const getStatusBadge = (status: string) => {
     const base = 'badge'
     switch (status) {
@@ -1411,6 +1453,24 @@ export const AdminMaps: React.FC = () => {
                         }}
                       />
 
+                      {/* Visualize connections behind tokens */}
+                      {previewConnections.lines.length > 0 && (
+                        <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%" preserveAspectRatio="none">
+                          {previewConnections.lines.map((line) => (
+                            <line
+                              key={line.id}
+                              x1={`${line.x1}%`}
+                              y1={`${line.y1}%`}
+                              x2={`${line.x2}%`}
+                              y2={`${line.y2}%`}
+                              stroke="rgba(255,255,255,0.5)"
+                              strokeWidth="2"
+                              strokeDasharray="4 3"
+                            />
+                          ))}
+                        </svg>
+                      )}
+
                       {previewTokens.length > 0 && (
                         <div className="pointer-events-none absolute inset-0">
                           {previewTokens.map((token) => {
@@ -1472,6 +1532,16 @@ export const AdminMaps: React.FC = () => {
                       Canvas size: {Math.round(effectiveCanvasWidth)} x{' '}
                       {Math.round(effectiveCanvasHeight)} px
                     </p>
+                  )}
+
+                  {/* Connection stats */}
+                  {previewConnections && (
+                    <div className="mt-2 text-xs text-muted">
+                      <div>Total connections: {previewConnections.total}</div>
+                      <div>
+                        Average per territory: {previewConnections.average.toFixed(1)}
+                      </div>
+                    </div>
                   )}
 
                   {!previewError && !previewLoading && previewTokens.length === 0 && (
