@@ -26,8 +26,8 @@
  * 2. /frontend/src/pages/CreateGamePage.tsx - Color picker in game creation
  * 3. /frontend/src/pages/Settings.tsx - Preferred color selection
  * 4. /frontend/src/components/ProfilePage.tsx - Avatar backgrounds
- * 5. /frontend/src/pages/GamePage.tsx - Active game player colors
- * 6. /frontend/src/components/SimpleRiskGameBoard.tsx - Game board rendering
+ * 5. /frontend/src/pages/GameRoom.tsx - Active game player colors
+ * 6. /frontend/src/components/RiskGameBoard.tsx - Game board rendering
  * 7. /frontend/src/app.css - CSS variables for Tailwind (lines 110-122)
  * 8. /frontend/src/store/settingsSlice.ts - Default preferred color
  *
