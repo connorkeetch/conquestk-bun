@@ -137,7 +137,8 @@ Your game should feel like a guided story, not a spreadsheet. Only show what mat
 ## 6. Log, Chat, Pings, Diplomacy
 
 - Event log is authoritative history, filterable by me/others/system. Click a log entry to focus the map on the involved territories.
-- Chat is separate from the log. Don’t mix them. Add quick‑pings: double‑tap a territory to drop a ping others can click to zoom to.
+- Chat is separate from the log. Don’t mix them.
+- Quick‑pings: IMPLEMENTED. Double‑tap (double‑click) a territory to drop a transient ping others can click to focus the map.
 - Manners: profanity toggle, mute player, and a “Report” action in the player list.
 
 ## 7. Cards and Set Trades (If Enabled)

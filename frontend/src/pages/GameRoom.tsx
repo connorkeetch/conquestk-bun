@@ -4,6 +4,7 @@ import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { GameOverModal } from '@/components/GameOverModal'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
@@ -87,6 +88,7 @@ export default function GameRoom() {
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
   const [liveMessage, setLiveMessage] = useState('')
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
+  const [showGameOver, setShowGameOver] = useState(false)
   // AFK grace prompt state
   const graceActorUserId = useMemo(
     () => (currentRoom as unknown as { graceActorUserId?: string | null })?.graceActorUserId ?? null,
@@ -116,6 +118,13 @@ export default function GameRoom() {
     }
     return currentRoom.players.find((player) => player.userId === user.id)
   }, [currentRoom?.players, user?.id])
+
+  // Open Game Over modal when game finishes
+  useEffect(() => {
+    if (currentGame?.phase === 'finished') {
+      setShowGameOver(true)
+    }
+  }, [currentGame?.phase])
 
   const isMember = Boolean(currentPlayer)
 
@@ -1583,6 +1592,20 @@ export default function GameRoom() {
       )}
 
       {currentGame && <GameActionBar />}
+
+      {/* Post-game results modal */}
+      {showGameOver && currentGame && (
+        <GameOverModal
+          isOpen={showGameOver}
+          winner={(() => {
+            const alive = currentGame.players.find((p) => !p.isEliminated)
+            return alive ?? null
+          })()}
+          eliminatedPlayers={currentGame.players.filter((p) => p.isEliminated).map((p) => p.id)}
+          onClose={() => setShowGameOver(false)}
+          onBackToMenu={() => navigate('/lobby')}
+        />
+      )}
 
       <PlayerProfileModal
         open={profileUsername !== null}
