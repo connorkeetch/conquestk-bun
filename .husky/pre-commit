@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+
+echo "Running Biome lint..."
+npm run lint || exit 1
+
+echo "Running TypeScript typechecks..."
+npm run typecheck || exit 1
+
+echo "Pre-commit checks passed."
+
