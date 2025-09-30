@@ -763,7 +763,18 @@ export default function GameRoom() {
       const currentGame = state.game.currentGame
 
       if (!currentRoom || !currentGame) return
-      if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return
+
+      // Ignore if user is typing in an input field
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
 
       // Ignore if modifier keys are pressed (except allowed combos)
       if (e.ctrlKey || e.metaKey || e.altKey) return

@@ -54,8 +54,16 @@ class SocketService {
   private lastReadEmitAt: Record<string, number> = {}
 
   connect() {
+    // Early return if already connected to the same socket
     if (this.socket?.connected) {
       return
+    }
+
+    // Clean up existing socket before creating a new one
+    if (this.socket) {
+      this.removeEventListeners()
+      this.socket.disconnect()
+      this.socket = null
     }
 
     const token = localStorage.getItem('token')
@@ -80,6 +88,7 @@ class SocketService {
 
   disconnect() {
     if (this.socket) {
+      this.removeEventListeners()
       this.socket.disconnect()
       this.socket = null
     }
@@ -200,12 +209,13 @@ class SocketService {
     if (!this.socket) return
 
     this.socket.on('connect', () => {
+      store.dispatch(setConnectionStatus('connected'))
       store.dispatch(loadUnreadSummary())
       store.dispatch(loadInbox())
     })
 
     this.socket.on('disconnect', () => {
-      // connection closed
+      store.dispatch(setConnectionStatus('disconnected'))
     })
 
     this.socket.on('player-joined', (data) => {
@@ -268,11 +278,6 @@ class SocketService {
     // Delta update handler - efficient real-time updates
     this.socket.on('game-delta', (delta) => {
       const payload = delta as unknown as GameDelta
-      const state = store.getState()
-      const board = state.game.currentGame?.board ?? []
-      const hasTerritory = (id: string) => board.some((t) => t.id === id)
-      const hasPlayer = (id: string) =>
-        (state.game.currentGame?.players ?? []).some((p) => p.id === id)
       const currentUserId = store.getState().auth.user?.id
 
       // Handle turn notifications for phase changes
@@ -300,23 +305,29 @@ class SocketService {
         }
       }
 
-      // Basic desync checks before applying
+      // Basic desync checks before applying - read fresh state right before validation
       try {
         if (payload.type === 'TERRITORY_UPDATE') {
           const td = payload as TerritoryDelta
-          if (!hasTerritory(td.territoryId)) {
+          const currentBoard = store.getState().game.currentGame?.board ?? []
+          if (!currentBoard.some((t) => t.id === td.territoryId)) {
             store.dispatch(setDesyncDetected(true))
             return
           }
         } else if (payload.type === 'PLAYER_UPDATE') {
           const pd = payload as PlayerDelta
-          if (!hasPlayer(pd.playerId)) {
+          const currentPlayers = store.getState().game.currentGame?.players ?? []
+          if (!currentPlayers.some((p) => p.id === pd.playerId)) {
             store.dispatch(setDesyncDetected(true))
             return
           }
         } else if (payload.type === 'BATTLE_RESULT') {
           const br = (payload as BattleResultDelta).battleResult
-          if (!hasTerritory(br.fromTerritory.id) || !hasTerritory(br.toTerritory.id)) {
+          const currentBoard = store.getState().game.currentGame?.board ?? []
+          if (
+            !currentBoard.some((t) => t.id === br.fromTerritory.id) ||
+            !currentBoard.some((t) => t.id === br.toTerritory.id)
+          ) {
             store.dispatch(setDesyncDetected(true))
             return
           }
@@ -775,6 +786,42 @@ class SocketService {
       audioService.playEffect('error')
       store.dispatch(setError('Connection error'))
     })
+  }
+
+  /**
+   * Removes all event listeners from the socket
+   * Called before disconnecting or reconnecting to prevent memory leaks
+   */
+  private removeEventListeners() {
+    if (!this.socket) return
+
+    // Remove all event listeners to prevent memory leaks
+    this.socket.off('connect')
+    this.socket.off('disconnect')
+    this.socket.off('player-joined')
+    this.socket.off('player-left')
+    this.socket.off('game-delta')
+    this.socket.off('game-update')
+    this.socket.off('lifecycle:update')
+    this.socket.off('room-update')
+    this.socket.off('armiesDeployed')
+    this.socket.off('attackResult')
+    this.socket.off('phaseChanged')
+    this.socket.off('territoriesFortified')
+    this.socket.off('capitalAttackCheck')
+    this.socket.off('capitalElimination')
+    this.socket.off('gameError')
+    this.socket.off('notification:new')
+    this.socket.off('message.new')
+    this.socket.off('conversation.created')
+    this.socket.off('conversation.members.added')
+    this.socket.off('conversation.members.removed')
+    this.socket.off('conversation.members.changed')
+    this.socket.off('conversation.updated')
+    this.socket.off('receipt.read')
+    this.socket.off('typing.start')
+    this.socket.off('typing.stop')
+    this.socket.off('error')
   }
 }
 
