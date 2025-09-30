@@ -15,7 +15,7 @@ git checkout dev
 git push origin dev  # Auto-deploys via Railway
 ```
 
-> **Configuration note (October 2025):** The repo no longer ships a `railway.json`. Manage services and environment variables directly in the Railway dashboard to avoid the deployment regression that file triggered. Document any changes in the GUI so the team can keep this guide current.
+> **Configuration note (September 2025):** The repo no longer ships a `railway.json`. Manage services and environment variables directly in the Railway dashboard to avoid the deployment regression that file triggered. Document any changes in the GUI so the team can keep this guide current.
 
 ## 🔐 Environment Variables
 
@@ -32,29 +32,33 @@ SESSION_SECRET=[32+ char secret - rotate every 90 days]
 CORS_ORIGIN=https://conquestk.com
 FRONTEND_URL=https://conquestk.com
 
-# Email Service (Resend - REQUIRED)
-RESEND_API_KEY=[from Resend dashboard]
-EMAIL_FROM=noreply@updates.conquestk.com  # Updates subdomain verified
-EMAIL_FROM_NAME=ConquestK
+# Email Service (Resend or SMTP)
 EMAIL_ENABLED=true
+EMAIL_FROM=noreply@updates.conquestk.com
+EMAIL_FROM_NAME=ConquestK
 EMAIL_VERIFICATION_EXPIRE_HOURS=24
 REQUIRE_EMAIL_VERIFICATION=true
+RESEND_API_KEY=[Resend API key]  # or provide SMTP_* credentials instead
 
-# Error Tracking
-SENTRY_DSN=[your-sentry-dsn]
+# Redis & caching (strongly recommended in prod)
+REDIS_URL=[Railway Redis addon URL]
+
+# Logging & telemetry
 LOG_LEVEL=info
+SENTRY_DSN=[Sentry DSN]
 
-# Performance & Scaling (Enterprise Features)
-REDIS_URL=[Railway Redis addon if using caching]
-DB_POOL_MAX=20
-DB_POOL_IDLE_TIMEOUT=30000
-DB_POOL_CONNECTION_TIMEOUT=2000
-ENABLE_PERFORMANCE_MONITORING=true
+# Worker scaling (optional but supported)
 ENABLE_AUTO_SCALING=true
+MIN_WORKERS=2
+MAX_WORKERS=4
 
-# Node.js 24 Features
-NODE_ENV=production  # Enables Node.js 24 optimizations
-ENGINE_VERSION=24    # Explicit version specification
+# Optional external notifications
+ENABLE_EXTERNAL_NOTIFICATIONS=false
+NOTIFICATION_CHANNELS=webpush,slack
+SLACK_NOTIFICATIONS_ENABLED=false
+SLACK_WEBHOOK_URL=[Slack webhook]
+DISCORD_NOTIFICATIONS_ENABLED=false
+DISCORD_WEBHOOK_URL=[Discord webhook]
 ```
 
 ### Staging Environment Differences
@@ -63,8 +67,7 @@ NODE_ENV=staging  # Important: staging mode, not production
 CORS_ORIGIN=https://risk-game-production-9935.up.railway.app
 FRONTEND_URL=https://risk-game-production-9935.up.railway.app
 
-> Note: If `FRONTEND_URL` is not set, the backend now derives the base URL from the incoming request's protocol and host (trusting proxies). This makes links in verification and password reset emails work by default in most environments, but you should still set `FRONTEND_URL` explicitly in production and staging to avoid surprises.
-ENABLE_DEBUG_LOGS=true
+> Note: If `FRONTEND_URL` is not set, the backend derives the base URL from the incoming request's protocol and host (trusting proxies). This makes links in verification and password reset emails work by default in most environments, but you should still set `FRONTEND_URL` explicitly in production and staging to avoid surprises.
 SENTRY_ENVIRONMENT=staging
 ```
 
@@ -86,8 +89,13 @@ Response includes:
   "status": "OK",
   "server": "running",
   "database": "connected",
+  "redis": "connected",
+  "queues": "healthy",
+  "environment": "production",
+  "databaseUrl": "configured",
+  "redisUrl": "configured",
   "sentry": "configured",
-  "environment": "production"
+  "timestamp": "2025-09-30T23:00:00.000Z"
 }
 ```
 
@@ -161,7 +169,8 @@ railway run --environment production psql $DATABASE_URL
 SELECT * FROM schema_migrations ORDER BY executed_at DESC;
 
 # Manual rollback if needed
-railway run --environment production npm run migrate:rollback
+# The migration runner only supports forward migrations.
+# Create and deploy a new rollback migration or restore a Railway snapshot.
 ```
 
 ### Database Backups (January 2026 update)

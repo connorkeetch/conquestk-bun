@@ -27,10 +27,16 @@ npm start                  # Start production backend
 npm test                   # Run all tests
 npm run test:frontend      # Run frontend tests
 npm run test:backend       # Run backend tests
-npm run lint               # Run all linting
-npm run lint:frontend      # Run frontend linting
-npm run lint:backend       # Run backend linting
+npm run lint               # Run Biome linting across every workspace
+cd frontend && npm run lint  # Run frontend-only linting
+cd backend && npm run lint   # Run backend-only linting
 ```
+
+### 🎭 Playwright smoke tests
+- Source files live in [`tests/`](../../tests) with the current smoke check at [`tests/smoke.spec.ts`](../../tests/smoke.spec.ts).
+- Configuration lives at [`playwright.config.ts`](../../playwright.config.ts) and automatically starts the frontend dev server via `npm run dev:frontend`.
+- Run the suite locally with `npx playwright test` (or `npx playwright test --ui` to inspect runs). The backend is not auto-started—launch it separately when a test needs API data.
+- CI retries failed specs twice and records traces/screenshots on the first retry to aid debugging.
 
 ## 🚀 Backend Performance Practices
 

@@ -1,6 +1,6 @@
 # ConquestK Database Schema
 
-Generated on 2025-09-26T17:33:47.346Z
+Generated on 2025-09-30T22:47:07Z
 
 > This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.
 
@@ -44,8 +44,8 @@ Generated on 2025-09-26T17:33:47.346Z
 | `friendships` | 6 | 0 |
 | `game_moves` | 9 | 0 |
 | `game_results` | 9 | 0 |
-| `game_rooms` | 30 | 0 |
-| `game_states` | 13 | 0 |
+| `game_rooms` | 35 | 0 |
+| `game_states` | 14 | 0 |
 | `game_territory_modifiers` | 8 | 0 |
 | `game_variants` | 11 | 0 |
 | `map_asset_purge_runs` | 10 | 503 |
@@ -69,7 +69,7 @@ Generated on 2025-09-26T17:33:47.346Z
 | `player_game_results` | 13 | 0 |
 | `player_stats` | 12 | 0 |
 | `rating_history` | 8 | 0 |
-| `room_players` | 16 | 0 |
+| `room_players` | 19 | 0 |
 | `schema_migrations` | 8 | 38 |
 | `seasons` | 9 | 0 |
 | `skill_leaderboard_cache` | 6 | 0 |
@@ -1048,6 +1048,10 @@ Generated on 2025-09-26T17:33:47.346Z
 | `status` | `varchar(20)` | No | `'waiting'` |
 | `game_mode` | `varchar(20)` | No | `'classic'` |
 | `turn_timer` | `integer` | No | `60` |
+| `time_bank_seconds` | `integer` | No | `0` |
+| `grace_window_seconds` | `integer` | No | `20` |
+| `grace_actor_user_id` | `uuid` | Yes | — |
+| `grace_expires_at` | `timestamp` | Yes | — |
 | `team_mode` | `boolean` | No | `false` |
 | `number_of_teams` | `integer` | Yes | — |
 | `variant_id` | `uuid` | Yes | — |
@@ -1068,6 +1072,7 @@ Generated on 2025-09-26T17:33:47.346Z
 | `treasure_config` | `jsonb` | Yes | — |
 | `movement_type` | `text` | Yes | — |
 | `fog_of_war` | `text` | Yes | — |
+| `replacement_pending_user_id` | `uuid` | Yes | — |
 
 **Primary key:** `id`
 
@@ -1110,6 +1115,7 @@ Generated on 2025-09-26T17:33:47.346Z
 | `territories` | `jsonb` | No | `'{}'` |
 | `player_stats` | `jsonb` | No | `'{}'` |
 | `game_log` | `jsonb` | No | `'[]'` |
+| `turn_stats` | `jsonb` | No | `'[]'` |
 | `replay_data` | `jsonb` | No | `'{}'` |
 | `ai_players` | `jsonb` | No | `'[]'` |
 | `last_activity` | `timestamp` | No | `CURRENT_TIMESTAMP` |
@@ -1943,6 +1949,9 @@ Generated on 2025-09-26T17:33:47.346Z
 | `ai_difficulty` | `varchar(20)` | Yes | — |
 | `ai_personality_seed` | `integer` | Yes | — |
 | `ai_player_id` | `uuid` | Yes | — |
+| `time_bank_seconds_remaining` | `integer` | Yes | — |
+| `is_kicked` | `boolean` | No | `false` |
+| `missed_turns` | `integer` | No | `0` |
 
 **Primary key:** `id`
 
@@ -1962,6 +1971,7 @@ Generated on 2025-09-26T17:33:47.346Z
 
 **Indexes:**
 - `idx_room_players_room_id`: CREATE INDEX idx_room_players_room_id ON public.room_players USING btree (room_id)
+- `idx_room_players_bank`: CREATE INDEX idx_room_players_bank ON public.room_players USING btree (room_id, user_id)
 - `idx_room_players_team_id`: CREATE INDEX idx_room_players_team_id ON public.room_players USING btree (team_id)
 - `idx_room_players_user_id`: CREATE INDEX idx_room_players_user_id ON public.room_players USING btree (user_id)
 - `room_players_pkey`: CREATE UNIQUE INDEX room_players_pkey ON public.room_players USING btree (id)
