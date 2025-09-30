@@ -33,8 +33,15 @@ export const authenticateToken: RequestHandler = async (
     return
   }
 
+  const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    logger.error('FATAL: JWT_SECRET environment variable is not set')
+    res.status(500).json({ message: 'Server configuration error' })
+    return
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret')
+    const decoded = jwt.verify(token, jwtSecret)
     if (
       !decoded ||
       typeof decoded !== 'object' ||

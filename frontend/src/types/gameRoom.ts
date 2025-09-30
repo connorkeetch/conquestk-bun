@@ -39,6 +39,10 @@ export interface GameRoom {
   turnExpiresAt?: string | null
   readyCheckStartedAt?: string | null
   timeBankSecondsRemaining?: number | null
+  // AFK grace window
+  graceActorUserId?: string | null
+  graceExpiresAt?: string | null
+  replacementPendingUserId?: string | null
   allowTeamPlay?: boolean
   teamMode?: 'none' | 'teams' | 'auto_balance' | null
   numberOfTeams?: number | null

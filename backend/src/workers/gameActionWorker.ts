@@ -92,13 +92,45 @@ export class GameActionWorker {
         actionType: action.type,
       })
 
-      // Get current game state
+      // Special handling for AFK stages (grace scheduling/skip) before any validation
+      if ((job.data as { afkStage?: 'start' | 'skip' }).afkStage === 'start') {
+        try {
+          const { GameLifecycleService } = await import('../services/gameLifecycleService')
+          const lifecycle = new GameLifecycleService()
+          await lifecycle.beginAfkGrace(gameId)
+        } catch (e) {
+          logger.warn('AFK grace start failed', {
+            roomId: gameId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
+        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        return result
+      }
+      if ((job.data as { afkStage?: 'start' | 'skip' }).afkStage === 'skip') {
+        try {
+          const { GameLifecycleService } = await import('../services/gameLifecycleService')
+          const lifecycle = new GameLifecycleService()
+          await lifecycle.skipAfkTurn(gameId, job.data.playerId, 'auto')
+        } catch (e) {
+          logger.warn('AFK auto-skip failed', {
+            roomId: gameId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
+        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        return result
+      }
+
+      // Get current game state for normal actions
       const currentState = await this.gameService.getGameState(gameId)
       if (!currentState) {
         throw new Error(`Game ${gameId} not found`)
       }
 
-      // Validate player can perform action
+      // Validate player can perform action (non-AFK)
       if (!this.canPlayerPerformAction(currentState, playerId, action)) {
         throw new Error(`Player ${playerId} cannot perform action ${action.type}`)
       }
@@ -142,22 +174,7 @@ export class GameActionWorker {
           break
 
         case 'end_turn': {
-          // If invoked by auto-timer and player has time bank, try to extend instead of ending
-          try {
-            const { GameLifecycleService } = await import('../services/gameLifecycleService')
-            const lifecycle = new GameLifecycleService()
-            const extended = await lifecycle.tryConsumeTimeBank(gameId)
-            if (extended) {
-              delta = null
-              shouldBroadcast = false
-              break
-            }
-          } catch (e) {
-            logger.warn('Time bank extension attempt failed', {
-              roomId: gameId,
-              error: e instanceof Error ? e.message : e,
-            })
-          }
+          // Manual end-turn: just end immediately
           delta = await this.processEndTurn(gameId, playerId)
           break
         }
@@ -294,20 +311,21 @@ export class GameActionWorker {
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
     const nextPlayer = await this.gameService.processEndTurn(gameId, playerId)
 
-    // Schedule next auto end-turn if timer configured
+    // Schedule next AFK grace start at the end of next player's timer
     try {
       const { GameRoomService } = await import('../services/gameRoomService')
       const roomService = new GameRoomService()
       const room = await roomService.getRoomById(gameId)
       const seconds = room?.turnTimerSeconds ?? 0
       if (seconds && seconds > 0) {
-        const idKey = `auto-end:${gameId}:turn:next:${Date.now()}`
+        const idKey = `afk:${gameId}:turn:next:${Date.now()}`
         await queueService.addDelayedGameAction(
           {
             gameId,
             playerId: nextPlayer.id,
             action: { type: 'end_turn', playerId: nextPlayer.id, roomId: gameId },
             idempotencyKey: idKey,
+            afkStage: 'start',
           },
           seconds * 1000,
           { idempotencyKey: idKey, priority: 10 },

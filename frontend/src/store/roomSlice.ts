@@ -25,6 +25,9 @@ export interface LifecycleUpdatePayload {
   turnExpiresAt?: string | null
   readyCheckStartedAt?: string | null
   timeBankSecondsRemaining?: number | null
+  graceActorUserId?: string | null
+  graceExpiresAt?: string | null
+  replacementPendingUserId?: string | null
   readyStates?: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
   players?: RoomPlayer[]
 }
@@ -146,6 +149,19 @@ const roomSlice = createSlice({
 
         if (action.payload.timeBankSecondsRemaining !== undefined) {
           room.timeBankSecondsRemaining = action.payload.timeBankSecondsRemaining ?? null
+        }
+
+        if (action.payload.graceActorUserId !== undefined) {
+          // @ts-expect-error extended field on GameRoom
+          room.graceActorUserId = action.payload.graceActorUserId
+        }
+        if (action.payload.graceExpiresAt !== undefined) {
+          // @ts-expect-error extended field on GameRoom
+          room.graceExpiresAt = action.payload.graceExpiresAt
+        }
+        if (action.payload.replacementPendingUserId !== undefined) {
+          // @ts-expect-error extended field on GameRoom
+          room.replacementPendingUserId = action.payload.replacementPendingUserId
         }
 
         if (readyCheckStartedAt !== undefined) {
