@@ -5,13 +5,30 @@
   --color-primary-soft: #ff8c5a; /* Lighter pumpkin */
   --color-secondary: #ffd23f; /* Candy corn yellow */
   --color-accent: #8b1538; /* Blood red */
+  --color-success: #48e091; /* Witchlight green */
+  --color-warning: #ffd23f; /* Candy corn yellow */
+  --color-danger: #ff5572; /* Haunted magenta */
+  --color-info: #7f8cff; /* Moonlit indigo */
   --color-bg-deep: #0a0108; /* Midnight black */
   --color-bg-alt: #110a0f; /* Purple-tinted black */
-  --color-surface-1: #1a0f17; /* Dark purple surface */
-  --color-surface-2: #2b1624; /* Lighter purple surface */
-  --color-text: #f5e6e8; /* Ghostly white */
-  --color-text-muted: #b68fa5; /* Muted purple-gray */
-  --color-border: #4a2040; /* Purple border */
+  --color-surface-1: #1f121d; /* Dark purple surface */
+  --color-surface-2: #301828; /* Lighter purple surface */
+  --color-text: #f7ecf1; /* Ghostly white */
+  --color-text-muted: #ceb4c8; /* Muted purple-gray with more contrast */
+  --color-border: #60234e; /* Purple border */
+
+  --nav-bg: rgba(14, 3, 16, 0.86);
+  --nav-border: rgba(255, 140, 90, 0.35);
+  --footer-bg: rgba(6, 1, 8, 0.9);
+  --modal-bg: rgba(16, 3, 18, 0.94);
+  --modal-border: rgba(139, 21, 56, 0.45);
+
+  --hover-bg: rgba(255, 107, 53, 0.16);
+  --hover-border: rgba(255, 210, 63, 0.35);
+
+  --shadow-1: 0 6px 18px rgba(6, 1, 8, 0.45);
+  --shadow-2: 0 16px 44px rgba(6, 1, 8, 0.6);
+  --shadow-modal: 0 28px 68px rgba(6, 1, 8, 0.65);
 
   --ck-bg-gradient: linear-gradient(
     135deg,
@@ -24,16 +41,16 @@
   --ck-glow: #ff6b35;
 
   /* Align box/glass tokens with Halloween palette for consistent components */
-  --glass-bg: rgba(26, 15, 23, 0.6);
-  --glass-bg-light: rgba(26, 15, 23, 0.45);
-  --glass-border: rgba(139, 21, 56, 0.5);
-  --glass-shadow: 0 10px 40px rgba(139, 21, 56, 0.3);
+  --glass-bg: rgba(26, 15, 23, 0.72);
+  --glass-bg-light: rgba(26, 15, 23, 0.55);
+  --glass-border: rgba(255, 140, 90, 0.22);
+  --glass-shadow: 0 18px 50px rgba(6, 1, 8, 0.55);
   --glass-radius-sm: 10px;
   --glass-radius-lg: 14px;
 
-  --panel-bg: color-mix(in srgb, var(--color-surface-1) 92%, transparent);
-  --panel-bg-alt: color-mix(in srgb, var(--color-surface-2) 85%, transparent);
-  --panel-border: color-mix(in srgb, var(--color-border) 65%, transparent);
+  --panel-bg: color-mix(in srgb, var(--color-surface-1) 82%, transparent);
+  --panel-bg-alt: color-mix(in srgb, var(--color-surface-2) 78%, transparent);
+  --panel-border: color-mix(in srgb, var(--color-border) 55%, transparent);
 
   --box-bg: var(--glass-bg);
   --box-bg-solid: var(--color-surface-1);
@@ -45,6 +62,12 @@
   --box-padding-sm: 0.75rem;
   --box-padding-lg: 1.5rem;
   --box-padding-xl: 2rem;
+
+  /* Overlay tuning knobs so density and speed can be tweaked without editing animations */
+  --halloween-mist-opacity: 0.16;
+  --halloween-overlay-opacity: 0.72;
+  --halloween-float-duration: 26s;
+  --halloween-fall-duration: 34s;
 }
 
 /* Animate the particles */
@@ -52,25 +75,43 @@
   0%,
   100% {
     background-position:
-      0 0,
-      100px 50px,
-      50px 150px,
-      200px 20px,
-      150px 180px,
-      center center,
-      center center,
-      center center;
+      0 -240px,
+      120px -360px,
+      -60px -280px,
+      10% 20%,
+      80% 60%,
+      30% 75%,
+      60% 12%,
+      92% 88%,
+      20% 82%,
+      78% 24%,
+      48% 52%;
   }
   50% {
     background-position:
-      50px 30px,
-      150px 100px,
-      100px 200px,
-      250px 70px,
-      200px 230px,
-      center center,
-      center center,
-      center center;
+      0 240px,
+      120px 120px,
+      -60px 200px,
+      16% 28%,
+      74% 54%,
+      24% 70%,
+      56% 16%,
+      88% 92%,
+      26% 86%,
+      74% 28%,
+      52% 56%;
+  }
+}
+
+@keyframes halloween-fall-loop {
+  0% {
+    transform: rotate(-1.5deg) translateY(0);
+  }
+  50% {
+    transform: rotate(1.5deg) translateY(1.5%);
+  }
+  100% {
+    transform: rotate(-1.5deg) translateY(0);
   }
 }
 
@@ -99,7 +140,7 @@
     radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.08), transparent 55%);
   filter: blur(60px);
   transform-origin: center;
-  opacity: 0.18;
+  opacity: var(--halloween-mist-opacity);
   pointer-events: none;
   z-index: 0;
   animation: halloween-mist 24s ease-in-out infinite;
@@ -108,6 +149,9 @@
 /* Halloween overlay combines particles with spider web pattern */
 [data-theme="halloween"] body::after {
   background-image:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20fill%3D%22%23FF7A1A%22%20d%3D%22M20%2024c-6%200-10%207-10%2014s4%2014%2010%2014c4%200%206-2%2012-2s8%202%2012%202c6%200%2010-7%2010-14s-4-14-10-14c-4%200-6%202-12%202s-8-2-12-2z%22%2F%3E%3Cpath%20fill%3D%22%238A4B0A%22%20d%3D%22M30%2014h4v8h-4z%22%2F%3E%3Cpath%20fill%3D%22%23FF9248%22%20d%3D%22M24%2024c-3%202-5%206-5%2013s2%2013%205%2015c4%200%207-2%2011-2s7%202%2011%202c3-2%205-8%205-15s-2-11-5-13c-4%200-7%202-11%202s-7-2-11-2z%22%20opacity%3D%22.55%22%2F%3E%3C%2Fsvg%3E"),
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2072%2036%22%3E%3Cpath%20fill%3D%22%232C1B47%22%20d%3D%22M2%2020c6-2%2010-6%2012-10l4%206c4-2%208-4%2012-4s8%202%2012%204l4-6c2%204%206%208%2012%2010l-2-6c4%202%208%206%2014%206-4-6-4-12-2-18-8%200-14%204-18%208l-4-10-4%208c-2-2-4-4-8-4s-6%202-8%204l-4-8-4%2010c-4-4-10-8-18-8%202%206%202%2012-2%2018%206%200%2010-4%2014-6l-2%206z%22%2F%3E%3Ccircle%20cx%3D%2236%22%20cy%3D%2218%22%20r%3D%224%22%20fill%3D%22%23FF6B35%22%2F%3E%3C%2Fsvg%3E"),
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2048%2064%22%3E%3Cpath%20fill%3D%22%23FFB347%22%20d%3D%22M24%204c-6%208-14%2010-20%2018%204%204%2010%206%2012%2012-4%200-8-2-10-4%202%208%208%2012%2014%2014-4%204-8%206-12%206%2010%206%2018%204%2024-2%206%204%2014%206%2020%202-4%200-8-2-12-6%206-2%2012-6%2014-14-2%202-6%204-10%204%202-6%208-8%2012-12-6-8-14-10-20-18-2%204-2%206-2%2010%200-4%200-6-2-10z%22%2F%3E%3C%2Fsvg%3E"),
     radial-gradient(3px 3px at 10% 20%, rgba(255, 107, 53, 0.4), transparent),
     radial-gradient(2px 2px at 80% 60%, rgba(139, 21, 56, 0.3), transparent),
     radial-gradient(1px 1px at 30% 70%, rgba(255, 215, 0, 0.3), transparent),
@@ -132,6 +176,9 @@
       transparent 31%
     );
   background-size:
+    180px 360px,
+    220px 340px,
+    160px 300px,
     300px 300px,
     400px 400px,
     250px 250px,
@@ -140,7 +187,44 @@
     200px 200px,
     200px 200px,
     300px 300px;
-  animation: halloween-float 20s ease-in-out infinite;
+  background-repeat:
+    repeat, repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat,
+    no-repeat, no-repeat;
+  background-position:
+    0 -240px,
+    120px -360px,
+    -60px -280px,
+    10% 20%,
+    80% 60%,
+    30% 75%,
+    60% 12%,
+    92% 88%,
+    20% 82%,
+    78% 24%,
+    48% 52%;
+  animation:
+    halloween-float var(--halloween-float-duration) linear infinite,
+    halloween-fall-loop var(--halloween-fall-duration) ease-in-out infinite;
+  opacity: var(--halloween-overlay-opacity);
+  will-change: background-position, transform;
+}
+
+@media (max-width: 768px) {
+  :root[data-theme="halloween"] {
+    --halloween-overlay-opacity: 0.68;
+    --halloween-float-duration: 32s;
+    --halloween-fall-duration: 40s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="halloween"] body::before,
+  [data-theme="halloween"] body::after {
+    animation: none !important;
+    transform: none !important;
+    background-image: none !important;
+    opacity: 0 !important;
+  }
 }
 
 /* Halloween links get orange hover */
@@ -182,6 +266,8 @@
     0 14px 32px rgba(255, 107, 53, 0.35),
     0 0 0 1px rgba(255, 140, 90, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #fff4e8;
+  text-shadow: 0 1px 2px rgba(30, 4, 22, 0.65);
 }
 
 [data-theme="halloween"] .btn-primary::after {
@@ -189,17 +275,43 @@
   position: absolute;
   left: 1rem;
   top: 50%;
+  width: 1.85rem;
+  height: 1.85rem;
+  display: grid;
+  place-items: center;
   transform: translateY(-50%) rotate(-6deg);
-  font-size: 1.2rem;
-  filter: drop-shadow(0 0 6px rgba(255, 140, 90, 0.45));
+  font-size: 1.1rem;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(16, 2, 14, 0.85) 0%,
+      rgba(16, 2, 14, 0.72) 55%,
+      rgba(16, 2, 14, 0) 85%
+    ), linear-gradient(135deg, rgba(255, 184, 120, 0.35), rgba(139, 21, 56, 0.35));
+  border: 1px solid rgba(255, 210, 63, 0.45);
+  box-shadow:
+    0 0 12px rgba(255, 210, 63, 0.45),
+    0 4px 12px rgba(18, 3, 14, 0.5);
+  color: #ffe7c7;
+  filter: drop-shadow(0 2px 6px rgba(24, 4, 18, 0.45));
   pointer-events: none;
+}
+
+[data-theme="halloween"] .btn-primary:hover,
+[data-theme="halloween"] .btn-primary:focus-visible {
+  box-shadow:
+    0 18px 36px rgba(255, 107, 53, 0.45),
+    0 0 0 1px rgba(255, 210, 63, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 [data-theme="halloween"] .btn-secondary {
   padding-right: 2.2rem;
   background: linear-gradient(135deg, rgba(139, 21, 56, 0.4), rgba(255, 107, 53, 0.22));
   border-color: rgba(255, 107, 53, 0.35);
-  color: color-mix(in srgb, var(--color-text) 80%, #ffd23f 20%);
+  color: #f9eaf4;
+  text-shadow: 0 1px 2px rgba(18, 3, 14, 0.75);
 }
 
 [data-theme="halloween"] .btn-secondary::after {
@@ -207,16 +319,39 @@
   position: absolute;
   right: 0.85rem;
   top: 50%;
+  width: 1.65rem;
+  height: 1.65rem;
+  display: grid;
+  place-items: center;
   transform: translateY(-50%) rotate(12deg);
-  font-size: 1rem;
-  opacity: 0.9;
-  filter: drop-shadow(0 0 6px rgba(139, 21, 86, 0.6));
+  font-size: 0.95rem;
+  opacity: 0.92;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(17, 0, 22, 0.85) 0%,
+      rgba(17, 0, 22, 0.7) 60%,
+      rgba(17, 0, 22, 0) 85%
+    ), linear-gradient(135deg, rgba(139, 21, 86, 0.35), rgba(255, 140, 90, 0.35));
+  border: 1px solid rgba(139, 21, 86, 0.45);
+  box-shadow:
+    0 0 10px rgba(139, 21, 86, 0.45),
+    0 4px 10px rgba(12, 0, 18, 0.45);
+  filter: drop-shadow(0 2px 5px rgba(12, 0, 18, 0.4));
   pointer-events: none;
+}
+
+[data-theme="halloween"] .btn-secondary:hover,
+[data-theme="halloween"] .btn-secondary:focus-visible {
+  box-shadow:
+    0 16px 32px rgba(139, 21, 86, 0.35),
+    0 0 0 1px rgba(139, 21, 86, 0.45);
 }
 
 [data-theme="halloween"] .btn-tertiary {
   background: linear-gradient(135deg, rgba(255, 200, 87, 0.9), rgba(255, 140, 90, 0.85));
-  color: #2e0101;
+  color: #3f050a;
   border-color: rgba(255, 200, 87, 0.6);
   box-shadow:
     0 12px 26px rgba(255, 140, 90, 0.3),
@@ -227,8 +362,20 @@
   background: linear-gradient(120deg, rgba(255, 241, 184, 0.5), transparent 60%);
 }
 
+[data-theme="halloween"] .segmented-control button {
+  color: var(--color-text-muted);
+  border-color: transparent;
+}
+
+[data-theme="halloween"] .segmented-control button:hover:not(.segmented-active),
+[data-theme="halloween"] .segmented-control button:focus-visible:not(.segmented-active) {
+  color: var(--color-info);
+  background: rgba(127, 140, 255, 0.18);
+}
+
 [data-theme="halloween"] .segmented-control button.segmented-active {
   background: var(--color-accent);
+  color: #fde4f0;
   box-shadow:
     0 2px 12px rgba(139, 21, 56, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -239,6 +386,26 @@
   background: linear-gradient(140deg, rgba(255, 107, 53, 0.08), rgba(139, 21, 56, 0.1));
   border-color: color-mix(in srgb, #ff6b35 30%, transparent);
   box-shadow: 0 12px 30px rgba(139, 21, 56, 0.3);
+}
+
+[data-theme="halloween"] .badge {
+  background: rgba(127, 140, 255, 0.16);
+  border-color: rgba(127, 140, 255, 0.45);
+  color: #dfe3ff;
+  text-shadow: 0 1px 1px rgba(14, 3, 18, 0.7);
+}
+
+[data-theme="halloween"] .chip {
+  background: color-mix(in srgb, var(--color-surface-1) 78%, transparent);
+  border-color: rgba(255, 140, 90, 0.32);
+  color: var(--color-text);
+  box-shadow: inset 0 1px 0 rgba(255, 210, 63, 0.16);
+}
+
+[data-theme="halloween"] .theme-tile[data-theme="halloween"] {
+  background: linear-gradient(135deg, rgba(32, 8, 28, 0.94), rgba(255, 107, 53, 0.25));
+  border: 1px solid rgba(255, 140, 90, 0.45);
+  box-shadow: 0 12px 32px rgba(6, 1, 8, 0.55);
 }
 
 [data-theme="halloween"] .sidebar-menu {

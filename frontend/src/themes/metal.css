@@ -1,127 +1,310 @@
-/* Metal Theme - Premium heavy metal neon energy */
+/* Metal Mayhem Theme - amp-stacked, demon bat arena */
 :root[data-theme="metal"] {
-  --color-primary: #ff2d95; /* Electric magenta */
-  --color-primary-soft: #ff5cbf; /* Hover magenta */
-  --color-secondary: #9efc38; /* Toxic neon green */
-  --color-accent: #4df3ff; /* Cyan lightning */
+  --color-primary: #ff355e; /* Blood-red spotlight */
+  --color-primary-soft: #ff5478; /* Stage-light hover */
+  --color-secondary: #7b87ff; /* Amp-stack indigo */
+  --color-accent: #9ffcff; /* Arc-flash cyan */
 
-  --color-bg-deep: #020106; /* Amplifier black */
-  --color-bg-alt: #070014; /* Stage shadow violet */
-  --color-bg-void: #010005; /* Sub-bass black */
-  --color-surface-1: #0d0a17; /* Dark stage floor */
-  --color-surface-2: #171327; /* Amp stack surface */
+  --color-success: #65f0c0; /* Radioactive green */
+  --color-warning: #ffb75c; /* Molten amber */
+  --color-danger: #ff355e; /* Same crimson for alerts */
+  --color-info: #7b87ff; /* Indigo info */
 
-  --color-text: #f4f6ff; /* Frosted silver */
-  --color-text-muted: #8a90b2; /* Steel muted */
-  --color-border: #2f2b3e; /* Guitar string graphite */
+  --color-bg-deep: #030208; /* Arena void */
+  --color-bg-alt: #090513; /* Backstage violet */
+  --color-bg-void: #010005; /* Deepest shadow */
+  --color-surface-1: #11091b; /* Stage deck */
+  --color-surface-2: #1b1027; /* Speaker cab */
+
+  --color-text: #f6f5ff; /* Frosted chrome */
+  --color-text-muted: #9b95b8; /* Dimmed steel */
+  --color-border: #3d2d4f; /* Worn guitar string */
+
+  --nav-bg: rgba(9, 5, 18, 0.92); /* Catwalk rail */
+  --nav-border: rgba(255, 53, 94, 0.45); /* Neon trim */
+  --footer-bg: rgba(6, 3, 12, 0.92); /* Pit shadows */
+  --modal-bg: rgba(13, 7, 22, 0.95); /* Dressing room */
+  --modal-border: rgba(123, 135, 255, 0.38); /* Amp light halo */
+
+  --hover-bg: rgba(255, 53, 94, 0.16); /* Stage flare */
+  --hover-border: rgba(255, 53, 94, 0.32);
+
+  --shadow-1: 0 10px 32px rgba(3, 2, 8, 0.48);
+  --shadow-2: 0 22px 58px rgba(3, 2, 8, 0.62);
+  --shadow-modal: 0 32px 82px rgba(3, 2, 8, 0.7);
 
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #05010a 0% /* Deep violet edges */,
-    rgba(255, 45, 149, 0.35) 32% /* Magenta solo */,
-    rgba(77, 243, 255, 0.22) 62% /* Cyan feedback */,
-    #020106 100% /* Fade to black */
+    #020109 0% /* Pit black */,
+    rgba(159, 20, 61, 0.5) 32% /* Crimson spotlight */,
+    rgba(91, 135, 255, 0.42) 62% /* Indigo amp haze */,
+    #03020a 100% /* Fade to void */
   );
 
-  --ck-glow: #ff5cbf;
+  --ck-glow: #ff355e;
 
-  /* Box/Card overrides - glossy plexiglass */
-  --box-bg: rgba(13, 10, 23, 0.68);
-  --box-bg-solid: #0d0a17;
-  --box-border: rgba(77, 243, 255, 0.28);
-  --box-shadow: 0 10px 45px rgba(4, 11, 37, 0.55);
-  --box-blur: 14px;
-  --box-radius: 0.85rem;
+  --glass-bg: rgba(17, 9, 27, 0.86);
+  --glass-bg-light: rgba(27, 16, 39, 0.72);
+  --glass-border: rgba(123, 135, 255, 0.32);
+  --glass-shadow: 0 26px 76px rgba(3, 2, 8, 0.66);
+  --glass-blur: 10px;
+
+  --surface-glass: var(--glass-bg);
+  --surface-glass-light: var(--glass-bg-light);
+
+  --panel-bg: color-mix(in srgb, var(--color-surface-1) 92%, transparent);
+  --panel-bg-alt: color-mix(in srgb, var(--color-surface-2) 86%, transparent);
+  --panel-border: color-mix(in srgb, var(--color-border) 58%, transparent);
+
+  --box-bg: var(--glass-bg);
+  --box-bg-solid: #170c26;
+  --box-border: rgba(123, 135, 255, 0.36);
+  --box-shadow: var(--glass-shadow);
+  --box-blur: 8px;
+  --box-radius: 0.82rem;
   --box-padding: 1.6rem;
+  --box-padding-sm: 0.85rem;
+  --box-padding-lg: 1.8rem;
+  --box-padding-xl: 2.2rem;
+
+  --metal-fog-opacity: 0.26;
+  --metal-overlay-opacity: 0.78;
+  --metal-sparks-opacity: 0.38;
+  --metal-fog-speed: 44s;
+  --metal-bat-speed: 30s;
+  --metal-pulse-speed: 12s;
 }
 
-/* Metal theme neon grid overlay */
-@keyframes metal-grid-pan {
+@keyframes metal-fog-drift {
+  0% {
+    transform: translate3d(-6%, -4%, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(4%, 5%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-5%, -4%, 0) scale(1.08);
+  }
+}
+
+@keyframes metal-glyph-fall {
   0% {
     background-position:
-      0 0,
-      0 0,
+      0 -260px,
+      140px -340px,
+      60px -220px,
+      50% 0,
       0 0;
   }
+  50% {
+    background-position:
+      0 60px,
+      140px -40px,
+      60px 120px,
+      50% 0,
+      0 3px;
+  }
   100% {
     background-position:
-      240px 240px,
-      -240px 240px,
-      0 12px;
+      0 280px,
+      140px 240px,
+      60px 320px,
+      50% 0,
+      0 6px;
   }
 }
 
-@keyframes metal-scan {
+@keyframes metal-overlay-pulse {
   0%,
   100% {
-    opacity: 0.2;
+    opacity: var(--metal-overlay-opacity);
   }
   50% {
-    opacity: 0.45;
-  }
-}
-
-@keyframes metal-glow-pulse {
-  0% {
-    transform: scale(0.98);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scale(1.02);
-    opacity: 0.65;
-  }
-  100% {
-    transform: scale(0.98);
-    opacity: 0.4;
+    opacity: calc(var(--metal-overlay-opacity) + 0.08);
   }
 }
 
 [data-theme="metal"] body::before {
   content: "";
   position: fixed;
-  inset: -15%;
+  inset: -12%;
   background:
-    radial-gradient(circle at 20% 25%, rgba(255, 45, 149, 0.32), transparent 55%),
-    radial-gradient(circle at 78% 30%, rgba(77, 243, 255, 0.25), transparent 60%),
-    radial-gradient(circle at 55% 75%, rgba(158, 252, 56, 0.22), transparent 65%);
-  filter: blur(70px);
+    radial-gradient(circle at 22% 30%, rgba(255, 53, 94, 0.28), transparent 60%),
+    radial-gradient(circle at 78% 28%, rgba(91, 135, 255, 0.25), transparent 62%),
+    radial-gradient(circle at 55% 70%, rgba(159, 252, 255, 0.18), transparent 68%),
+    linear-gradient(180deg, rgba(6, 1, 12, 0.75) 0%, rgba(6, 1, 12, 0) 65%);
+  filter: blur(90px);
+  mix-blend-mode: screen;
+  opacity: var(--metal-fog-opacity);
   pointer-events: none;
   z-index: 0;
-  animation: metal-glow-pulse 18s ease-in-out infinite;
+  animation: metal-fog-drift var(--metal-fog-speed) ease-in-out infinite;
 }
 
 [data-theme="metal"] body::after {
   background-image:
-    linear-gradient(rgba(255, 45, 149, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(77, 243, 255, 0.07) 1px, transparent 1px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23ff355e' fill-opacity='0.58' d='M32 12c-4.5 0-7 3.4-7 3.4S20.5 13 17 13c-6 0-9.5 4.6-9.5 4.6S12 20.8 12 26c0 2.7 0.2 4.8 1.5 6.7L32 51l18.5-18.3C52.8 30.8 53 28.7 53 26c0-5.2 4.5-8.4 4.5-8.4S54 13 48 13c-3.5 0-7 2.4-7 2.4S36.5 12 32 12z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Cpath fill='%237b87ff' fill-opacity='0.45' d='M36 6C20 6 8 22 8 36c0 16 12 30 28 30s28-14 28-30C64 22 52 6 36 6zm0 12c8.8 0 16 8.4 16 18s-7.2 18-16 18S20 45.6 20 36s7.2-18 16-18z'/%3E%3Cpath fill='%239ffcff' fill-opacity='0.55' d='M36 20a4 4 0 0 0-4 4v12l-6-6-6 6 16 16 16-16-6-6-6 6V24a4 4 0 0 0-4-4z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 64'%3E%3Cpath fill='%23ff7c3b' fill-opacity='0.55' d='M28 2 8 34h12L20 62l20-32H28l8-28z'/%3E%3C/svg%3E"),
+    linear-gradient(
+      180deg,
+      rgba(255, 53, 94, 0.12) 0%,
+      rgba(0, 0, 0, 0) 55%,
+      rgba(91, 135, 255, 0.14) 100%
+    ),
     repeating-linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0) 0px,
-      rgba(0, 0, 0, 0) 2px,
-      rgba(255, 255, 255, 0.06) 3px,
-      rgba(0, 0, 0, 0) 4px
+      rgba(255, 255, 255, var(--metal-sparks-opacity)) 0,
+      rgba(255, 255, 255, var(--metal-sparks-opacity)) 1px,
+      transparent 1px,
+      transparent 6px
     );
   background-size:
-    120px 120px,
-    120px 120px,
+    240px 360px,
+    260px 380px,
+    180px 300px,
+    100% 100%,
     100% 6px;
+  background-repeat: repeat, repeat, repeat, no-repeat, repeat;
+  background-position:
+    0 -260px,
+    140px -340px,
+    60px -220px,
+    50% 0,
+    0 0;
   mix-blend-mode: screen;
+  opacity: var(--metal-overlay-opacity);
+  will-change: background-position, opacity;
   animation:
-    metal-grid-pan 36s linear infinite,
-    metal-scan 6s ease-in-out infinite;
-  opacity: 0.6;
+    metal-glyph-fall var(--metal-bat-speed) linear infinite,
+    metal-overlay-pulse var(--metal-pulse-speed) ease-in-out infinite;
+}
+
+@media (max-width: 768px) {
+  :root[data-theme="metal"] {
+    --metal-overlay-opacity: 0.68;
+    --metal-fog-opacity: 0.2;
+    --metal-sparks-opacity: 0.32;
+    --metal-bat-speed: 36s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="metal"] body::before,
+  [data-theme="metal"] body::after {
+    animation: none !important;
+    transform: none !important;
+    background-position: center center !important;
+    opacity: 0 !important;
+  }
 }
 
 [data-theme="metal"] a:hover {
   color: var(--color-secondary);
-  text-shadow: 0 0 12px rgba(158, 252, 56, 0.45);
+  text-shadow: 0 0 12px rgba(123, 135, 255, 0.6);
 }
 
 [data-theme="metal"] input:focus,
 [data-theme="metal"] textarea:focus,
 [data-theme="metal"] select:focus {
-  border-color: var(--color-accent);
+  border-color: var(--color-primary);
   box-shadow:
-    0 0 0 3px rgba(77, 243, 255, 0.18),
-    0 0 18px rgba(255, 45, 149, 0.25);
+    0 0 0 3px rgba(255, 53, 94, 0.2),
+    0 0 18px rgba(123, 135, 255, 0.32);
+}
+
+[data-theme="metal"] .btn-primary {
+  background: linear-gradient(130deg, rgba(255, 53, 94, 0.92), rgba(123, 35, 255, 0.88));
+  box-shadow:
+    0 18px 36px rgba(255, 53, 94, 0.35),
+    0 0 0 1px rgba(123, 135, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+[data-theme="metal"] .btn-primary::after {
+  content: "⚡";
+  margin-left: 0.65rem;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+}
+
+[data-theme="metal"] .btn-primary:hover,
+[data-theme="metal"] .btn-primary:focus-visible {
+  box-shadow:
+    0 22px 44px rgba(255, 53, 94, 0.45),
+    0 0 0 1px rgba(159, 252, 255, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+[data-theme="metal"] .btn-secondary {
+  background: linear-gradient(130deg, rgba(16, 9, 27, 0.85), rgba(123, 135, 255, 0.32));
+  border-color: rgba(123, 135, 255, 0.42);
+  color: color-mix(in srgb, var(--color-text) 80%, var(--color-secondary) 20%);
+}
+
+[data-theme="metal"] .btn-secondary:hover,
+[data-theme="metal"] .btn-secondary:focus-visible {
+  border-color: rgba(159, 252, 255, 0.55);
+  box-shadow: 0 12px 28px rgba(123, 135, 255, 0.28);
+}
+
+[data-theme="metal"] .btn-tertiary,
+[data-theme="metal"] .btn-ghost {
+  color: var(--color-text);
+  border-color: rgba(255, 53, 94, 0.32);
+  background-color: rgba(17, 9, 27, 0.4);
+}
+
+[data-theme="metal"] .btn-tertiary:hover,
+[data-theme="metal"] .btn-tertiary:focus-visible,
+[data-theme="metal"] .btn-ghost:hover,
+[data-theme="metal"] .btn-ghost:focus-visible {
+  color: var(--color-primary);
+  border-color: rgba(255, 53, 94, 0.48);
+  box-shadow: 0 12px 28px rgba(255, 53, 94, 0.25);
+}
+
+[data-theme="metal"] .badge,
+[data-theme="metal"] .chip {
+  background: linear-gradient(120deg, rgba(255, 53, 94, 0.45), rgba(123, 135, 255, 0.35));
+  border: 1px solid rgba(159, 252, 255, 0.28);
+  box-shadow: 0 4px 10px rgba(3, 2, 8, 0.4);
+  color: #f9f7ff;
+  text-shadow: 0 0 10px rgba(15, 0, 36, 0.6);
+}
+
+[data-theme="metal"] .theme-tile[data-theme="metal"] {
+  background: linear-gradient(135deg, rgba(17, 9, 27, 0.9), rgba(255, 53, 94, 0.25));
+  border: 1px solid rgba(123, 135, 255, 0.45);
+  box-shadow: 0 10px 26px rgba(3, 2, 8, 0.5);
+}
+
+[data-theme="metal"] .segmented-control {
+  background: rgba(9, 5, 18, 0.72);
+  border: 1px solid rgba(159, 252, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(123, 135, 255, 0.16);
+}
+
+[data-theme="metal"] .segmented-control button {
+  color: color-mix(in srgb, var(--color-text) 85%, rgba(159, 252, 255, 0.95) 15%);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="metal"] .segmented-control button:hover:not(.segmented-active),
+[data-theme="metal"] .segmented-control button:focus-visible:not(.segmented-active) {
+  background: rgba(255, 53, 94, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 53, 94, 0.4);
+  color: var(--color-primary);
+}
+
+[data-theme="metal"] .segmented-control button.segmented-active {
+  background: linear-gradient(135deg, rgba(255, 53, 94, 0.9), rgba(123, 35, 255, 0.78));
+  box-shadow:
+    0 12px 28px rgba(255, 53, 94, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
