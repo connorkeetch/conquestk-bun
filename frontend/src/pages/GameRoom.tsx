@@ -1611,6 +1611,42 @@ export default function GameRoom() {
           eliminatedPlayers={currentGame.players.filter((p) => p.isEliminated).map((p) => p.id)}
           onClose={() => setShowGameOver(false)}
           onBackToMenu={() => navigate('/lobby')}
+          onNewGame={async () => {
+            try {
+              if (!currentRoom) return
+              const aiOpponents = (currentRoom.players ?? [])
+                .filter((p) => p.isAi)
+                .map((p) => ({
+                  difficulty: (p.aiDifficulty ?? 'recruit') as AIDifficulty,
+                  personalitySeed:
+                    typeof p.aiPersonalitySeed === 'number' ? p.aiPersonalitySeed : undefined,
+                }))
+
+              const payload = {
+                name: `${currentRoom.name} (Rematch)`,
+                maxPlayers: currentRoom.maxPlayers,
+                isPrivate: currentRoom.isPrivate,
+                isRanked: currentRoom.isRanked ?? false,
+                mapId: currentRoom.mapId ?? undefined,
+                movementType: currentRoom.movementType ?? undefined,
+                fogOfWar: currentRoom.fogOfWar ?? undefined,
+                turnTimerSeconds: currentRoom.turnTimerSeconds ?? undefined,
+                aiOpponents,
+                teamMode: (currentRoom.teamMode ?? 'none') as 'none' | 'teams' | 'auto_balance',
+                numberOfTeams: currentRoom.numberOfTeams ?? undefined,
+                treasureConfig: (currentRoom as unknown as { treasureConfig?: unknown }).treasureConfig as any,
+              }
+              const res = await gameService.createRoom(payload)
+              const newRoomId = (res?.room?.id as string | undefined) ?? (res?.id as string | undefined)
+              if (newRoomId) {
+                setShowGameOver(false)
+                navigate(`/room/${newRoomId}`)
+              }
+            } catch (e) {
+              logger.error('Failed to create rematch room', e)
+            }
+          }}
+          newGameLabel="Rematch Same Seats"
         />
       )}
 
