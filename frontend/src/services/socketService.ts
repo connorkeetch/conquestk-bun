@@ -405,6 +405,12 @@ class SocketService {
           (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
             .timeBankSecondsRemaining,
         readyCheckStartedAt: payload.readyCheckStartedAt,
+        // @ts-expect-error grace fields are sent optionally by backend
+        graceActorUserId: (payload as any).graceActorUserId ?? null,
+        // @ts-expect-error grace fields are sent optionally by backend
+        graceExpiresAt: (payload as any).graceExpiresAt ?? null,
+        // @ts-expect-error replacement pending is sent optionally by backend
+        replacementPendingUserId: (payload as any).replacementPendingUserId ?? null,
         readyStates: payload.readyStates,
       }
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
@@ -473,6 +479,12 @@ class SocketService {
           .timeBankSecondsRemaining,
         readyCheckStartedAt:
           typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
+        // @ts-expect-error extended grace fields
+        graceActorUserId: (payload as any).graceActorUserId ?? null,
+        // @ts-expect-error extended grace fields
+        graceExpiresAt: (payload as any).graceExpiresAt ?? null,
+        // @ts-expect-error extended replacement field
+        replacementPendingUserId: (payload as any).replacementPendingUserId ?? null,
         // 'players' omitted: room-update payload may not match RoomPlayer shape
       }
 
@@ -485,6 +497,12 @@ class SocketService {
         currentTurnUserId: lifecyclePayload.currentTurnUserId ?? undefined,
         turnExpiresAt: lifecyclePayload.turnExpiresAt ?? undefined,
         readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt ?? undefined,
+        // @ts-expect-error GameRoom carries these optional fields locally
+        graceActorUserId: lifecyclePayload.graceActorUserId ?? undefined,
+        // @ts-expect-error GameRoom carries these optional fields locally
+        graceExpiresAt: lifecyclePayload.graceExpiresAt ?? undefined,
+        // @ts-expect-error GameRoom carries this optional field locally
+        replacementPendingUserId: lifecyclePayload.replacementPendingUserId ?? undefined,
         players: lifecyclePayload.players,
       }
 

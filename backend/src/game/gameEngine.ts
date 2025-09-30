@@ -810,6 +810,11 @@ export class GameEngine {
       return false
     }
 
+    // Prevent deploying more armies than player has available
+    if (player.armies < armies) {
+      return false
+    }
+
     return this.isFriendlyTerritory(gameState, action.playerId, territory.ownerId)
   }
 

@@ -87,6 +87,28 @@ export default function GameRoom() {
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
   const [liveMessage, setLiveMessage] = useState('')
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
+  // AFK grace prompt state
+  const graceActorUserId = useMemo(
+    () => (currentRoom as unknown as { graceActorUserId?: string | null })?.graceActorUserId ?? null,
+    [currentRoom],
+  )
+  const graceExpiresAt = useMemo(
+    () => (currentRoom as unknown as { graceExpiresAt?: string | null })?.graceExpiresAt ?? null,
+    [currentRoom],
+  )
+  const isGraceActor = Boolean(user?.id && graceActorUserId && user.id === graceActorUserId)
+  const [graceNow, setGraceNow] = useState<number>(() => Date.now())
+  useEffect(() => {
+    if (!isGraceActor || !graceExpiresAt) return
+    const id = window.setInterval(() => setGraceNow(Date.now()), 250)
+    return () => window.clearInterval(id)
+  }, [isGraceActor, graceExpiresAt])
+
+  const replacementPendingUserId = useMemo(
+    () => (currentRoom as unknown as { replacementPendingUserId?: string | null })?.replacementPendingUserId ?? null,
+    [currentRoom],
+  )
+  const replacementPending = Boolean(replacementPendingUserId)
 
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
@@ -1465,6 +1487,101 @@ export default function GameRoom() {
           {liveMessage}
         </div>
       </div>
+      {/* AFK grace action bar for the next player */}
+      {isGraceActor && graceExpiresAt && (
+        <div className="fixed inset-x-0 bottom-14 z-40 mx-auto max-w-[1200px] px-2">
+          <div className="flex items-center justify-between gap-3 rounded-md bg-[color:var(--surface-2)]/90 px-3 py-2 text-sm shadow">
+            <div>
+              {(() => {
+                const targetId = currentRoom?.currentTurnUserId
+                const player = currentRoom?.players?.find((p) => (p.userId ?? p.id) === targetId)
+                const targetName = player?.username ?? 'A player'
+                const expireMs = Date.parse(graceExpiresAt)
+                const remaining = Math.max(0, expireMs - graceNow)
+                const seconds = Math.ceil(remaining / 1000)
+                return (
+                  <>
+                    {targetName} is AFK. Decide before timer runs out.
+                    <span className="ml-2 text-[color:var(--color-warning)]">{seconds}s</span>
+                  </>
+                )
+              })()}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => currentRoom && socketService.emit('afk:remind', { roomId: currentRoom.id })}
+                className="btn btn-secondary btn-sm"
+                type="button"
+              >
+                Remind
+              </button>
+              <button
+                onClick={() => currentRoom && socketService.emit('afk:skip', { roomId: currentRoom.id })}
+                className="btn btn-danger btn-sm"
+                type="button"
+              >
+                Skip Turn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Host replacement decision prompt */}
+      {isHost && replacementPending && (
+        <div className="fixed inset-x-0 bottom-24 z-40 mx-auto max-w-[1200px] px-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-[color:var(--surface-2)]/90 px-3 py-2 text-sm shadow">
+            <div className="flex items-center gap-2">
+              <strong>Replacement needed:</strong>
+              <span>
+                {(() => {
+                  const targetId = replacementPendingUserId
+                  const player = currentRoom?.players?.find((p) => (p.userId ?? p.id) === targetId)
+                  return player?.username ?? 'Kicked player'
+                })()}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() =>
+                  currentRoom &&
+                  replacementPendingUserId &&
+                  socketService.emit('host:replacement', {
+                    roomId: currentRoom.id,
+                    targetUserId: replacementPendingUserId,
+                    choice: 'neutral',
+                  })
+                }
+                className="btn btn-danger btn-sm"
+                type="button"
+              >
+                Set Neutral
+              </button>
+              {(['recruit', 'commander', 'grandmaster'] as AIDifficulty[]).map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() =>
+                    currentRoom &&
+                    replacementPendingUserId &&
+                    socketService.emit('host:replacement', {
+                      roomId: currentRoom.id,
+                      targetUserId: replacementPendingUserId,
+                      choice: 'ai',
+                      aiDifficulty: diff,
+                    })
+                  }
+                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  title={`Replace with ${AI_DIFFICULTY_LABELS[diff]}`}
+                >
+                  AI: {AI_DIFFICULTY_LABELS[diff]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {currentGame && <GameActionBar />}
 
       <PlayerProfileModal

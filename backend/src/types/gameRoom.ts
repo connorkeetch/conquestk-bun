@@ -43,6 +43,12 @@ export interface GameRoom {
   readyCheckStartedAt?: Date | null
   // Canonical time bank remaining (seconds) for current turn user
   timeBankSecondsRemaining?: number | null
+  // AFK grace window
+  graceWindowSeconds?: number | null
+  graceActorUserId?: string | null
+  graceExpiresAt?: Date | null
+  // Replacement decision by host after kick
+  replacementPendingUserId?: string | null
   winner?: string | null
   playerCount?: number
   turnTimerSeconds?: number

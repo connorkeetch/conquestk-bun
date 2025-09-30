@@ -146,6 +146,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   registerSocketServer(io)
   const gameService = new GameService()
   const gameRoomService = new GameRoomService()
+  const { GameLifecycleService } = require('./gameLifecycleService') as typeof import('./gameLifecycleService')
+  const lifecycleService = new GameLifecycleService()
 
   io.use((socket: AuthenticatedSocket, next) => {
     const token = socket.handshake.auth.token
@@ -495,6 +497,125 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
+    // AFK grace: actor can skip or remind
+    socket.on(
+      'afk:skip',
+      withErrorHandler(socket, 'afk:skip', async (data: { roomId: string }) => {
+        if (!data || !data.roomId) throw new Error('Invalid AFK skip data')
+        const userId = requireUserId(socket)
+        // Validate membership
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) throw new Error('Not a member of this game')
+        await lifecycleService.skipAfkTurn(data.roomId, userId, 'actor')
+      }),
+    )
+
+    // Host replacement decision after a kick (3 strikes)
+    socket.on(
+      'host:replacement',
+      withErrorHandler(
+        socket,
+        'host:replacement',
+        async (data: {
+          roomId: string
+          targetUserId: string
+          choice: 'neutral' | 'ai'
+          aiDifficulty?: 'recruit' | 'commander' | 'grandmaster'
+        }) => {
+          const userId = requireUserId(socket)
+          const { roomId, targetUserId, choice, aiDifficulty } = data || {}
+          if (!roomId || !targetUserId || !choice) throw new Error('Invalid replacement data')
+          const room = await gameRoomService.getRoomById(roomId)
+          if (!room) throw new Error('Room not found')
+          if (room.hostId !== userId) throw new Error('Only the host can decide replacement')
+
+          const pending = (room as unknown as { replacementPendingUserId?: string | null })
+            .replacementPendingUserId
+          if (!pending || pending !== targetUserId) throw new Error('No pending replacement for user')
+
+          // Clear pending flag first to avoid duplicate decisions
+          await query(`UPDATE game_rooms SET replacement_pending_user_id = NULL WHERE id = $1`, [
+            roomId,
+          ])
+
+          if (choice === 'neutral') {
+            await lifecycleService.kickAndNeutralize(roomId, targetUserId)
+          } else {
+            // Replace with AI at chosen difficulty
+            const stateRaw = await (await import('./cacheService')).gameStateCache.getGameState<
+              import('../types/game').SerializedGameState
+            >(roomId)
+            if (!stateRaw) throw new Error('Game state not found')
+            const state = { ...stateRaw }
+            const idx = state.players.findIndex((p) => p.id === targetUserId)
+            if (idx < 0) throw new Error('Player not found in game state')
+            state.players[idx] = {
+              ...state.players[idx],
+              isAi: true,
+              aiDifficulty: aiDifficulty ?? 'recruit',
+            }
+            await (await import('./cacheService')).gameStateCache.setGameState(roomId, state)
+            // Persist on room_players for visibility in room state
+            await query(
+              `UPDATE room_players SET is_ai = TRUE, ai_difficulty = COALESCE($3, 'recruit') WHERE room_id = $1 AND user_id = $2`,
+              [roomId, targetUserId, aiDifficulty ?? null],
+            )
+          }
+
+          // Broadcast lifecycle + game state snapshot for clarity
+          await lifecycleService.refreshLifecycle(roomId)
+          const freshState = await gameService.getGameState(roomId)
+          if (freshState) {
+            const filtered = filterGameStateForPlayer(freshState, userId)
+            const finalState = serializeGameStateForClient(filtered)
+            if (finalState) {
+              io.to(getGameChannel(roomId)).emit('game-update', finalState)
+            }
+          }
+        },
+      ),
+    )
+    socket.on(
+      'afk:remind',
+      withErrorHandler(socket, 'afk:remind', async (data: { roomId: string }) => {
+        if (!data || !data.roomId) throw new Error('Invalid AFK remind data')
+        const userId = requireUserId(socket)
+        // Validate membership
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) throw new Error('Not a member of this game')
+
+        // Determine current turn user
+        const room = await gameRoomService.getRoomById(data.roomId)
+        const targetUserId = room?.currentTurnUserId
+        if (!targetUserId) return
+
+        try {
+          const { default: notificationService } = await import('./notificationService')
+          notificationService
+            .notifyTurnStart(data.roomId, targetUserId, 'Your turn — please respond')
+            .catch(() => {})
+        } catch {}
+
+        // Also emit an in-app real-time notification
+        const ioRef = require('./socketRegistry').tryGetSocketServer() as import('socket.io').Server<
+          import('../types/shared').ClientToServerEvents,
+          import('../types/shared').ServerToClientEvents
+        > | null
+        if (ioRef) {
+          ioRef.to(`user:${targetUserId}`).emit('notification:new', {
+            id: `afk-reminder:${Date.now()}`,
+            type: 'turn_reminder',
+            title: "It's your turn",
+            message: 'Another player requested you to act or your turn may be skipped.',
+            createdAt: new Date().toISOString(),
+            actionUrl: `/room/${data.roomId}`,
+            actionLabel: 'Return to game',
+            metadata: { roomId: data.roomId },
+          })
+        }
+      }),
+    )
+
     // End turn
     socket.on(
       'endTurn',
@@ -535,6 +656,42 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           turn: result.gameState.turn,
           reinforcementArmies: result.reinforcementArmies,
         })
+
+        // Schedule AFK grace start for the next player's timer
+        try {
+          const { GameRoomService } = await import('./gameRoomService')
+          const roomService = new GameRoomService()
+          const room = await roomService.getRoomById(data.roomId)
+          const seconds = room?.turnTimerSeconds ?? 0
+          if (seconds && seconds > 0) {
+            // Persist new expiry for UI
+            await query(
+              `UPDATE game_rooms SET turn_expires_at = NOW() + ($2 * INTERVAL '1 second') WHERE id = $1`,
+              [data.roomId, seconds],
+            )
+            const idKey = `afk:${data.roomId}:turn:${result.gameState.turn}:start:${Date.now()}`
+            await queueService.addDelayedGameAction(
+              {
+                gameId: data.roomId,
+                playerId: result.gameState.currentPlayer,
+                action: {
+                  type: 'end_turn',
+                  playerId: result.gameState.currentPlayer,
+                  roomId: data.roomId,
+                },
+                idempotencyKey: idKey,
+                afkStage: 'start',
+              },
+              seconds * 1000,
+              { idempotencyKey: idKey, priority: 10 },
+            )
+          }
+        } catch (e) {
+          logger.warn('Failed to schedule AFK grace after manual endTurn', {
+            roomId: data.roomId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
       }),
     )
 

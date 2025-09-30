@@ -625,6 +625,11 @@ export interface ServerToClientEvents {
     turnExpiresAt: string | null
     readyCheckStartedAt: string | null
     timeBankSecondsRemaining?: number | null
+    // AFK grace window (if active)
+    graceActorUserId?: string | null
+    graceExpiresAt?: string | null
+    // Host replacement (if pending)
+    replacementPendingUserId?: string | null
     readyStates: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
     players?: Array<{
       userId: string
@@ -643,6 +648,11 @@ export interface ServerToClientEvents {
     turnExpiresAt?: string | null
     timeBankSecondsRemaining?: number | null
     readyCheckStartedAt?: string | null
+    // AFK grace window (if active)
+    graceActorUserId?: string | null
+    graceExpiresAt?: string | null
+    // Host replacement (if pending)
+    replacementPendingUserId?: string | null
     players?: Array<{
       userId: string
       username: string
@@ -674,6 +684,14 @@ export interface ClientToServerEvents {
     armies: number
   }) => void
   endTurn: (data: { roomId: string }) => void
+  'afk:skip': (data: { roomId: string }) => void
+  'afk:remind': (data: { roomId: string }) => void
+  'host:replacement': (data: {
+    roomId: string
+    targetUserId: string
+    choice: 'neutral' | 'ai'
+    aiDifficulty?: 'recruit' | 'commander' | 'grandmaster'
+  }) => void
   'chat-message': (data: { roomId: string; message: string }) => void
   'message.send': (
     payload: MessageSendPayload,

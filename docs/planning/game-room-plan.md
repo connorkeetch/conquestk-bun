@@ -8,6 +8,7 @@
 - Turn timer
   - Added `frontend/src/components/game/TurnTimer.tsx`, driven by `room.turnExpiresAt` via lifecycle updates. Plays a subtle audio tick under 10s. No client auto-end; server remains source of truth. Time-bank UI not yet surfaced.
   - Timer now shows an optional time bank chip when lifecycle payloads include fields like `timeBankMs` or `timeBankSecondsRemaining`.
+  - AFK grace and strikes: When a turn expires, the next player gets a grace prompt to Remind or Skip. Skip counts as a strike for the timed-out player. Three strikes triggers a host decision: replace with AI (difficulty selectable) or set territories to neutral and clear cards.
 - Connection/resync UX
   - Added `frontend/src/components/game/ConnectionBanner.tsx` and socket connection status in `uiRoomSlice`. Header shows a (green/yellow/red) dot; a top banner appears while disconnected/connecting. “Resync” button not required yet since a fresh `game-update` arrives on reconnect; add if desync incidents appear.
 - Clickable log → map focus
@@ -24,7 +25,7 @@
   - Create Game flow includes a “Time Bank (optional)” minutes input; persisted to DB.
 
 Notes / TODO
-- Grace/AFK logic and host-side adjusters for time bank to follow. The backend chunk size is 15s for now; may expose it as a room setting later.
+- AFK grace implemented. Time bank auto-extension is disabled per latest direction (no time bank). Host replacement decision now live; default action is pending until host picks.
 - Keyboard shortcuts
   - Added minimal bindings: `E`/`T` end turn. Numeric dice are set via UI in the action bar. More shortcuts remain TODO.
 - Reduced motion
