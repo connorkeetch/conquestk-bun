@@ -95,6 +95,12 @@ export interface GameEndDelta extends DeltaBase {
   eliminatedPlayers: string[]
 }
 
+export interface SystemMessageDelta extends DeltaBase {
+  type: 'SYSTEM_MESSAGE'
+  text: string
+  playerId?: string
+}
+
 export type GameDelta =
   | TerritoryDelta
   | PlayerDelta
@@ -103,3 +109,4 @@ export type GameDelta =
   | GameEndDelta
   | FortifyResultDelta
   | TreasureAwardedDelta
+  | SystemMessageDelta

@@ -5,7 +5,14 @@ import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '@/utils/logger'
 
-// Debounce hook for input fields
+/**
+ * Debounce hook for input fields
+ * Delays updating the returned value until the input value has stopped changing for the specified delay.
+ * Useful for preventing excessive re-renders when typing in controlled inputs.
+ * @param value - The value to debounce
+ * @param delay - Delay in milliseconds before updating the value
+ * @returns The debounced value
+ */
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
@@ -22,7 +29,13 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue
 }
 
-// Generate a visually distinct color using HSL color space
+/**
+ * Generate a visually distinct color using HSL color space
+ * Uses the golden ratio for optimal hue distribution and analyzes existing colors
+ * to maximize visual distinction between sectors.
+ * @param existingColors - Array of existing hex colors to avoid similarity with
+ * @returns A hex color string (e.g., "#A3C4F3")
+ */
 function generateDistinctColor(existingColors: string[]): string {
   // Use golden ratio for better hue distribution
   const goldenRatio = 0.618033988749895
@@ -215,6 +228,33 @@ interface ApiErrorResponse {
   errors?: Array<{ msg?: string; message?: string }>
 }
 
+// Type for dynamic position data from various API sources
+interface DynamicPositionData {
+  x?: unknown
+  y?: unknown
+  normalizedX?: unknown
+  normalizedY?: unknown
+  armyPositionNormalized?: unknown
+  armyPosition?: unknown
+}
+
+// Type for territory modifier raw data from API
+interface RawTerritoryModifier {
+  [key: string]: unknown
+}
+
+// Type for map metadata from API
+interface MapMetadata {
+  width?: unknown
+  height?: unknown
+  territories?: unknown
+  continents?: unknown
+  territoryModifiers?: unknown
+  territory_modifiers?: unknown
+  armyPositionNormalized?: unknown
+  armyPosition?: unknown
+}
+
 interface ImportedTerritoryData {
   id: string
   name?: string
@@ -329,6 +369,14 @@ interface TerritorySpatialIndex {
   cells: Map<string, Territory[]>
 }
 
+/**
+ * Get the spatial grid cell key for a given position
+ * Used by the spatial index to bucket territories for efficient collision detection
+ * @param x - X coordinate in pixels
+ * @param y - Y coordinate in pixels
+ * @param cellSize - Size of each grid cell
+ * @returns A string key in format "cellX:cellY"
+ */
 const getTerritoryCellKey = (x: number, y: number, cellSize: number): string => {
   if (cellSize <= 0) return '0:0'
   const cellX = Math.floor(x / cellSize)
@@ -336,6 +384,14 @@ const getTerritoryCellKey = (x: number, y: number, cellSize: number): string => 
   return `${cellX}:${cellY}`
 }
 
+/**
+ * Build a spatial index for efficient territory collision detection
+ * Uses a grid-based spatial partitioning algorithm to avoid O(n²) comparisons
+ * when placing new territories
+ * @param territories - Array of territories to index
+ * @param tokenSize - Current token size in pixels
+ * @returns Spatial index containing cells mapped to territories
+ */
 const buildTerritorySpatialIndex = (
   territories: Territory[],
   tokenSize: number,
@@ -1220,7 +1276,7 @@ export default function MapEditorTokens() {
         return prev
       }
 
-      const { [territoryId]: _removedModifier, ...remainingModifiers } = prev.territoryModifiers
+      const { [territoryId]: _removedModifier, ...remainingModifiers} = prev.territoryModifiers
 
       return {
         ...prev,
@@ -1236,11 +1292,33 @@ export default function MapEditorTokens() {
       }
     })
 
+    // Clean up capital assignments and validate remaining assignments
     setCapitalAssignments((prev) => {
       const updated: CapitalAssignments = {}
+      let hasRemovedCapital = false
+
       Object.entries(prev).forEach(([playerCount, assignments]) => {
-        updated[playerCount] = assignments.filter((id) => id !== territoryId)
+        const filteredAssignments = assignments.filter((id) => id !== territoryId)
+        if (filteredAssignments.length !== assignments.length) {
+          hasRemovedCapital = true
+        }
+        // Only keep assignments that still have the required number of capitals
+        if (filteredAssignments.length === Number(playerCount)) {
+          updated[playerCount] = filteredAssignments
+        }
       })
+
+      // Warn user if capital assignments were affected
+      if (hasRemovedCapital) {
+        setTimeout(() => {
+          alert(
+            'Warning: Deleted territory was assigned as a capital.\n\n' +
+            'Some capital assignments have been removed because they no longer have the correct number of territories.\n\n' +
+            'Please regenerate capitals or manually assign new ones.'
+          )
+        }, 100)
+      }
+
       return updated
     })
   }, [])
@@ -2435,13 +2513,71 @@ export default function MapEditorTokens() {
         const content = e.target?.result as string
         const mapData = JSON.parse(content) as ImportedMapFile
 
-        // Validate the imported data structure
+        // Comprehensive validation of imported data
         if (!Array.isArray(mapData.territories)) {
-          throw new Error('Invalid map data: missing territories')
+          throw new Error('Invalid map data: missing territories array')
+        }
+
+        if (mapData.territories.length === 0) {
+          throw new Error('Invalid map data: territories array is empty')
+        }
+
+        // Validate territory IDs are unique
+        const territoryIds = new Set<string>()
+        const duplicateIds: string[] = []
+        mapData.territories.forEach((territory) => {
+          if (!territory.id) {
+            throw new Error(`Territory missing required 'id' field`)
+          }
+          if (territoryIds.has(territory.id)) {
+            duplicateIds.push(territory.id)
+          }
+          territoryIds.add(territory.id)
+        })
+
+        if (duplicateIds.length > 0) {
+          throw new Error(`Duplicate territory IDs found: ${duplicateIds.join(', ')}`)
+        }
+
+        // Validate connections reference valid territories
+        const invalidConnections: string[] = []
+        mapData.territories.forEach((territory) => {
+          if (Array.isArray(territory.connections)) {
+            territory.connections.forEach((targetId) => {
+              if (!territoryIds.has(targetId)) {
+                invalidConnections.push(`${territory.id} → ${targetId}`)
+              }
+            })
+          }
+        })
+
+        if (invalidConnections.length > 0) {
+          throw new Error(
+            `Invalid connections found (territory IDs don't exist):\n${invalidConnections.slice(0, 5).join('\n')}${invalidConnections.length > 5 ? `\n...and ${invalidConnections.length - 5} more` : ''}`
+          )
+        }
+
+        // Validate continentIds exist if continents are provided
+        if (Array.isArray(mapData.continents)) {
+          const continentIds = new Set(mapData.continents.map((c) => c.id))
+          const territoriesWithInvalidContinent = mapData.territories.filter(
+            (t) => t.continentId && !continentIds.has(t.continentId)
+          )
+
+          if (territoriesWithInvalidContinent.length > 0) {
+            throw new Error(
+              `Territories reference non-existent sector IDs: ${territoriesWithInvalidContinent.map((t) => t.id).slice(0, 5).join(', ')}${territoriesWithInvalidContinent.length > 5 ? ` ...and ${territoriesWithInvalidContinent.length - 5} more` : ''}`
+            )
+          }
         }
 
         const importWidth = isNumber(mapData.width) ? mapData.width : state.mapWidth
         const importHeight = isNumber(mapData.height) ? mapData.height : state.mapHeight
+
+        if (importWidth <= 0 || importHeight <= 0) {
+          throw new Error('Invalid map dimensions: width and height must be greater than 0')
+        }
+
         const normalizedTerritories: Territory[] = mapData.territories.map((territory) => {
           const pixelX = territory.x ?? 0
           const pixelY = territory.y ?? 0
@@ -3446,7 +3582,39 @@ export default function MapEditorTokens() {
                   min="10"
                   max="40"
                   value={tokenSize}
-                  onChange={(e) => setTokenSize(Number(e.target.value))}
+                  onChange={(e) => {
+                    const newSize = Number(e.target.value)
+
+                    // Check if increasing size would cause overlaps
+                    if (newSize > tokenSize && state.territories.length > 1) {
+                      const minDistance = newSize * 1.1
+                      const minDistanceSq = minDistance * minDistance
+
+                      // Check all territory pairs for potential overlaps
+                      let wouldOverlap = false
+                      for (let i = 0; i < state.territories.length && !wouldOverlap; i++) {
+                        for (let j = i + 1; j < state.territories.length; j++) {
+                          const dx = state.territories[i].x - state.territories[j].x
+                          const dy = state.territories[i].y - state.territories[j].y
+                          if (dx * dx + dy * dy < minDistanceSq) {
+                            wouldOverlap = true
+                            break
+                          }
+                        }
+                      }
+
+                      if (wouldOverlap) {
+                        alert(
+                          `Cannot increase token size to ${newSize}px.\n\n` +
+                          'This would cause territories to overlap.\n\n' +
+                          'Please adjust territory positions first or use a smaller size.'
+                        )
+                        return
+                      }
+                    }
+
+                    setTokenSize(newSize)
+                  }}
                   className="w-full"
                 />
               </div>

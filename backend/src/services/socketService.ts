@@ -558,6 +558,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         if (serialized) {
           io.to(channel).emit('game-update', serialized)
         }
+        // System log message for Game Log panel
+        try {
+          io.to(channel).emit('game-delta', {
+            type: 'SYSTEM_MESSAGE',
+            roomId: data.roomId,
+            timestamp: Date.now(),
+            text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
+            playerId: socket.userId,
+          })
+        } catch {}
         // Refresh lifecycle snapshot so timers/UI reflect changes
         await lifecycleService.refreshLifecycle(data.roomId)
         logger.info(`User ${userId} resigned from room ${data.roomId}`)
