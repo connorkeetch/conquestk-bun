@@ -16,7 +16,13 @@ import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
 import { endTurn } from '../store/gameActions'
-import { clearGame, fetchGameState, selectTerritory, setPendingAction } from '../store/gameSlice'
+import {
+  clearGame,
+  fetchGameState,
+  selectTargetTerritory,
+  selectTerritory,
+  setPendingAction,
+} from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import { hydrateFromStorage, setDice, setOverlay } from '../store/uiRoomSlice'
 import type { AIDifficulty } from '../types/game'
@@ -785,6 +791,7 @@ export default function GameRoom() {
       if (key === 'z') {
         e.preventDefault()
         dispatch(selectTerritory(null))
+        dispatch(selectTargetTerritory(null))
         dispatch(setPendingAction(null))
         return
       }

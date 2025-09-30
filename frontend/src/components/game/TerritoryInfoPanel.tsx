@@ -33,7 +33,7 @@ export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({
   const modifier = territoryModifiers?.get(territoryId)
 
   return (
-    <div className="p-4 border-b border-gray-200">
+    <div className="panel-outline p-3">
       <h3 className="text-lg font-semibold mb-2">Territory Info</h3>
       <div className="space-y-1 text-sm">
         <div>

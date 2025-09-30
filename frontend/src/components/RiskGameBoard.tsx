@@ -209,7 +209,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           onTerritoryHover={handleTerritoryHover}
         />
 
-        <div className="w-80 bg-white border-l border-gray-300 flex flex-col">
+        <div className="w-80 border-l border-border bg-surface-1 flex flex-col gap-3 p-3 overflow-y-auto">
           {/* Phase controls moved to bottom action bar */}
 
           <PlayersLegend players={playerSummaries} />
