@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { resolveAssetPath } from '@/utils/assets'
 import InfoTooltip from '@/components/InfoTooltip'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { tradeTreasureSet } from '@/store/gameActions'
+import { resolveAssetPath } from '@/utils/assets'
 
 type Props = {
   isOpen: boolean
@@ -17,54 +17,76 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
   const me = useMemo(() => game?.players.find((p) => p.id === userId), [game?.players, userId])
   const hand = (me?.treasures ?? []) as string[]
   const treasureConfig = useAppSelector((s) => s.room.currentRoom?.treasureConfig) as
-    | ({ payoutMode?: string; fixedValue?: number; diamondSetBonus?: number } & Record<string, unknown>)
+    | ({ payoutMode?: string; fixedValue?: number; diamondSetBonus?: number } & Record<
+        string,
+        unknown
+      >)
     | undefined
   const [selected, setSelected] = useState<number[]>([])
-  const metalType = (m: string) => String(m).toLowerCase()
-  const isDiamond = (m: string) => metalType(m) === 'diamond'
-  const isCore = (m: string) => {
-    const t = metalType(m)
-    return t === 'bronze' || t === 'silver' || t === 'gold'
-  }
 
-  const isValidTriple = (triple: number[]): boolean => {
-    if (triple.length !== 3) return false
-    const cards = triple.map((i) => hand[i] ?? '')
-    const d = cards.filter(isDiamond).length
-    const core = cards.filter((m) => !isDiamond(m))
-    // Filter to core names only
-    const coreNames = core.map(metalType).filter(isCore)
-    const distinctCore = Array.from(new Set(coreNames))
-    // Three of a kind: all same or can become same with diamonds (<=1 distinct core)
-    if (distinctCore.length <= 1) return true
-    // One of each: with diamonds as wild to complete {bronze, silver, gold}
-    // Need to be able to represent all three core types
-    if (distinctCore.length + d >= 3) return true
-    return false
-  }
+  // Helper functions defined with useCallback to stabilize dependencies
+  const metalType = useCallback((m: string) => String(m).toLowerCase(), [])
+  const isDiamond = useCallback((m: string) => metalType(m) === 'diamond', [metalType])
+  const isCore = useCallback(
+    (m: string) => {
+      const t = metalType(m)
+      return t === 'bronze' || t === 'silver' || t === 'gold'
+    },
+    [metalType],
+  )
+
+  const isValidTriple = useCallback(
+    (triple: number[]): boolean => {
+      if (triple.length !== 3) return false
+      // Bounds checking
+      if (triple.some((i) => i < 0 || i >= hand.length)) return false
+      const cards = triple.map((i) => hand[i] ?? '')
+      const d = cards.filter(isDiamond).length
+      const core = cards.filter((m) => !isDiamond(m))
+      // Filter to core names only
+      const coreNames = core.map(metalType).filter(isCore)
+      const distinctCore = Array.from(new Set(coreNames))
+      // Three of a kind: all same or can become same with diamonds (<=1 distinct core)
+      if (distinctCore.length <= 1) return true
+      // One of each: with diamonds as wild to complete {bronze, silver, gold}
+      // Need to be able to represent all three core types
+      if (distinctCore.length + d >= 3) return true
+      return false
+    },
+    [hand, isDiamond, isCore, metalType],
+  )
+
   const canTrade = selected.length === 3 && isValidTriple(selected)
 
   // Compute valid sets: three-of-a-kind or all-different
-  const classifyPattern = (triple: number[]): 'three_of_a_kind' | 'one_of_each' | 'diamond_combo' => {
-    const metals = triple.map((i) => metalType(hand[i]))
-    const diamonds = metals.filter((m) => m === 'diamond').length
-    const cores = metals.filter((m) => m !== 'diamond')
-    const coreSet = new Set(cores)
-    if (diamonds > 0) return 'diamond_combo'
-    if (coreSet.size === 1 && cores.length === 3) return 'three_of_a_kind'
-    const needed = ['bronze', 'silver', 'gold']
-    const distinct = Array.from(coreSet)
-    if (distinct.length === 3 && needed.every((m) => distinct.includes(m))) return 'one_of_each'
-    // With diamonds wild we handled earlier; non‑diamond case falls through
-    return 'diamond_combo'
-  }
+  const classifyPattern = useCallback(
+    (triple: number[]): 'three_of_a_kind' | 'one_of_each' | 'diamond_combo' => {
+      const metals = triple.map((i) => metalType(hand[i] ?? ''))
+      const diamonds = metals.filter((m) => m === 'diamond').length
+      const cores = metals.filter((m) => m !== 'diamond')
+      const coreSet = new Set(cores)
+      // First check pure patterns (no diamonds)
+      if (diamonds === 0) {
+        if (coreSet.size === 1 && cores.length === 3) return 'three_of_a_kind'
+        const needed = ['bronze', 'silver', 'gold']
+        const distinct = Array.from(coreSet)
+        if (distinct.length === 3 && needed.every((m) => distinct.includes(m))) return 'one_of_each'
+      }
+      // Any set with diamonds is a diamond combo
+      return 'diamond_combo'
+    },
+    [hand, metalType],
+  )
 
-  const labelForSet = (triple: number[]) => {
-    const pattern = classifyPattern(triple)
-    if (pattern === 'three_of_a_kind') return 'Three of a kind'
-    if (pattern === 'one_of_each') return 'One of each'
-    return 'Diamond combo (wild)'
-  }
+  const labelForSet = useCallback(
+    (triple: number[]) => {
+      const pattern = classifyPattern(triple)
+      if (pattern === 'three_of_a_kind') return 'Three of a kind'
+      if (pattern === 'one_of_each') return 'One of each'
+      return 'Diamond combo (wild)'
+    },
+    [classifyPattern],
+  )
 
   const validSets = useMemo(() => {
     const sets: Array<{ idx: number[]; label: string }> = []
@@ -77,12 +99,17 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
       }
     }
     return sets.map((s) => ({ idx: s, label: labelForSet(s) }))
-  }, [hand])
+  }, [hand, isValidTriple, labelForSet])
 
   const projection = useMemo(() => {
     const containsDiamond = selected.some((idx) => String(hand[idx]).toLowerCase() === 'diamond')
     const mode = (treasureConfig?.payoutMode || '').toLowerCase()
-    const nextIndex: number = (game?.treasureState && (game.treasureState as any).nextPayoutIndex) ?? 0
+    // Safely extract nextPayoutIndex with type checking
+    const treasureState = game?.treasureState
+    const nextIndex: number =
+      treasureState && typeof treasureState === 'object' && 'nextPayoutIndex' in treasureState
+        ? (treasureState.nextPayoutIndex as number)
+        : 0
 
     const diamondBonus = containsDiamond ? Math.max(0, treasureConfig?.diamondSetBonus ?? 0) : 0
     let base = 0
@@ -104,10 +131,12 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
 
     // triangular (default)
     const computeTriangular = (idx: number) => {
-      if (idx <= 0) return 4
+      // Guard against negative or invalid indices
+      const safeIdx = Math.max(0, Math.floor(idx))
+      if (safeIdx === 0) return 4
       let payout = 4
       let delta = 2
-      for (let i = 1; i <= idx; i++) {
+      for (let i = 1; i <= safeIdx; i++) {
         payout += delta
         delta += 1
       }
@@ -117,31 +146,38 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     return { base, bonus: diamondBonus, total: base + diamondBonus, mode: 'triangular' }
   }, [game?.treasureState, hand, selected, treasureConfig])
 
-  const iconFor = (metal: string) => {
-    const m = metal.toLowerCase()
-    const file =
-      m === 'diamond'
-        ? 'diamond'
-        : m === 'gold'
-          ? 'gold'
-          : m === 'silver'
-            ? 'silver'
-            : 'bronze'
-    const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
-    return (
-      <img
-        src={url}
-        alt={`${file} card`}
-        className="inline-block align-middle"
-        width={14}
-        height={14}
-        onError={(e) => {
-          // fallback to emoji if CDN asset missing
-          ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-        }}
-      />
-    )
-  }
+  // Track which metal icons have failed to load
+  const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set())
+
+  const iconFor = useCallback(
+    (metal: string) => {
+      const m = metal.toLowerCase()
+      const file =
+        m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
+      const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
+      const emoji = m === 'diamond' ? '💎' : m === 'gold' ? '🥇' : m === 'silver' ? '🥈' : '🥉'
+
+      const handleError = () => {
+        setFailedIcons((prev) => new Set(prev).add(file))
+      }
+
+      return failedIcons.has(file) ? (
+        <span className="inline-block align-middle text-sm" title={`${file} card`}>
+          {emoji}
+        </span>
+      ) : (
+        <img
+          src={url}
+          alt={`${file} card`}
+          className="inline-block align-middle"
+          width={14}
+          height={14}
+          onError={handleError}
+        />
+      )
+    },
+    [failedIcons],
+  )
 
   if (!isOpen) return null
 
@@ -155,7 +191,12 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
               title={`Valid sets: one of each (bronze, silver, gold) or three of a kind. Diamonds are wild and add +${Math.max(0, treasureConfig?.diamondSetBonus ?? 0)} troops.`}
             />
           </h3>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
@@ -173,16 +214,24 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                     type="button"
                     onClick={() =>
                       setSelected((prev) =>
-                        prev.includes(idx) ? prev.filter((i) => i !== idx) : prev.length < 3 ? [...prev, idx] : prev,
+                        prev.includes(idx)
+                          ? prev.filter((i) => i !== idx)
+                          : prev.length < 3
+                            ? [...prev, idx]
+                            : prev,
                       )
                     }
                     className={`rounded border px-2 py-3 text-sm text-left ${
-                      active ? 'border-[color:var(--color-accent)] ring-1 ring-[color:var(--color-accent)]' : 'border-border'
+                      active
+                        ? 'border-[color:var(--color-accent)] ring-1 ring-[color:var(--color-accent)]'
+                        : 'border-border'
                     }`}
                     title={active ? 'Selected' : 'Click to select'}
                   >
                     <div className="font-medium text-white flex items-center gap-2">
-                      <span className="w-4 h-4 flex items-center justify-center">{iconFor(metal)}</span>
+                      <span className="w-4 h-4 flex items-center justify-center">
+                        {iconFor(metal)}
+                      </span>
                       <span className="capitalize">{metal}</span>
                     </div>
                     <div className="text-xs text-muted">Card #{idx + 1}</div>
@@ -200,14 +249,19 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                     key={`set-${i}`}
                     type="button"
                     className={`btn btn-ghost btn-xs ${
-                      selected.length === 3 && entry.idx.every((v) => selected.includes(v)) ? 'ring-1 ring-[color:var(--color-accent)]' : ''
+                      selected.length === 3 && entry.idx.every((v) => selected.includes(v))
+                        ? 'ring-1 ring-[color:var(--color-accent)]'
+                        : ''
                     }`}
                     onClick={() => setSelected(entry.idx)}
                     title={entry.label}
                   >
                     <span className="flex items-center gap-1">
                       {entry.idx.map((idx) => (
-                        <span key={`icon-${i}-${idx}`} className="w-4 h-4 flex items-center justify-center">
+                        <span
+                          key={`icon-${i}-${idx}`}
+                          className="w-4 h-4 flex items-center justify-center"
+                        >
                           {iconFor(hand[idx])}
                         </span>
                       ))}
@@ -227,7 +281,11 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
             {projection ? (
               <>
                 <span className="text-white">+{projection.total}</span>
-                <span className="text-muted">(base {projection.base}{projection.bonus ? ` + diamond ${projection.bonus}` : ''}{projection.mode ? ` • ${projection.mode}` : ''})</span>
+                <span className="text-muted">
+                  (base {projection.base}
+                  {projection.bonus ? ` + diamond ${projection.bonus}` : ''}
+                  {projection.mode ? ` • ${projection.mode}` : ''})
+                </span>
               </>
             ) : (
               <span className="text-white">—</span>
@@ -247,7 +305,13 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
             disabled={!canTrade}
             onClick={() => {
               if (selected.length === 3) {
-                void dispatch(tradeTreasureSet([selected[0], selected[1], selected[2]] as [number, number, number]))
+                void dispatch(
+                  tradeTreasureSet([selected[0], selected[1], selected[2]] as [
+                    number,
+                    number,
+                    number,
+                  ]),
+                )
                 setSelected([])
                 onClose()
               }
