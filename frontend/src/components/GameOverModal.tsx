@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import type { GamePlayer } from '../types/game'
+import { gameService } from '@/services/gameService'
 
 interface GameOverModalProps {
   isOpen: boolean
@@ -12,6 +13,7 @@ interface GameOverModalProps {
   onNewGame?: () => void
   onBackToMenu?: () => void
   newGameLabel?: string
+  roomId?: string
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -22,6 +24,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onNewGame,
   onBackToMenu,
   newGameLabel = 'New Game',
+  roomId,
 }) => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
@@ -137,8 +140,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </div>
           )}
 
-          {/* Final standings summary (armies and territories) */}
+          {/* Final standings summary (armies and territories) */
           <FinalStandings />
+
+          {/* Key moments timeline */}
+          {roomId && <KeyMomentsTimeline roomId={roomId} />}
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -230,6 +236,107 @@ const FinalStandings: React.FC = () => {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+type LogEntry =
+  | { type: 'TURN'; timestamp: string; playerId: string; event: 'START' | 'END'; reinforcementArmies?: number; territoryCount?: number }
+  | { type: 'BATTLE'; timestamp: string; attackingTerritoryId: string; defendingTerritoryId: string; attackerId: string; defenderId: string | null; conquered: boolean }
+  | { type: 'TREASURE'; timestamp: string; userId: string; metal: string }
+  | { type: 'LIFECYCLE'; timestamp: string; event: string }
+
+const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
+  const [log, setLog] = React.useState<LogEntry[] | null>(null)
+  const [error, setError] = React.useState<string | null>(null)
+  const game = useAppSelector((s) => s.game.currentGame)
+  const playerName = React.useCallback(
+    (id?: string | null) => game?.players.find((p) => p.id === id)?.username ?? id ?? 'Unknown',
+    [game?.players],
+  )
+  const territoryName = React.useCallback(
+    (id?: string) => game?.board.find((t) => t.id === id)?.name ?? id ?? 'Unknown',
+    [game?.board],
+  )
+
+  React.useEffect(() => {
+    let active = true
+    const run = async () => {
+      try {
+        const entries = (await gameService.getGameLog(roomId)) as LogEntry[]
+        if (!active) return
+        setLog(Array.isArray(entries) ? entries : [])
+      } catch (e) {
+        if (!active) return
+        setError('Unable to load game log')
+        setLog([])
+      }
+    }
+    void run()
+    return () => {
+      active = false
+    }
+  }, [roomId])
+
+  if (log === null) {
+    return (
+      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">Loading key moments…</div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-[color:var(--color-warning)]">
+        {error}
+      </div>
+    )
+  }
+
+  // Build a simple per-turn timeline of START events and notable battles (conquests)
+  const turnStarts = log.filter((e) => e.type === 'TURN' && e.event === 'START') as Extract<
+    LogEntry,
+    { type: 'TURN' }
+  >[]
+  const conquests = log.filter((e) => e.type === 'BATTLE' && e.conquered) as Extract<
+    LogEntry,
+    { type: 'BATTLE' }
+  >[]
+
+  const items: Array<{ when: string; label: string; detail?: string }> = []
+  for (const t of turnStarts) {
+    const who = playerName(t.playerId)
+    const r = typeof t.reinforcementArmies === 'number' ? `${t.reinforcementArmies} troops` : '—'
+    const terr = typeof t.territoryCount === 'number' ? `${t.territoryCount} terr.` : '—'
+    items.push({ when: t.timestamp, label: `Turn start — ${who}`, detail: `${r}, ${terr}` })
+  }
+  for (const b of conquests) {
+    const from = territoryName(b.attackingTerritoryId)
+    const to = territoryName(b.defendingTerritoryId)
+    const who = playerName(b.attackerId)
+    items.push({ when: b.timestamp, label: `Conquest — ${who}`, detail: `${from} → ${to}` })
+  }
+
+  // Show up to the last 15 items, newest last
+  const sorted = items
+    .map((e) => ({ ...e, time: new Date(e.when).getTime() || 0 }))
+    .sort((a, b) => a.time - b.time)
+    .slice(-15)
+
+  if (sorted.length === 0) return null
+
+  return (
+    <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
+      <h4 className="font-semibold text-muted mb-3 text-center">Key Moments</h4>
+      <ol className="space-y-2 text-sm">
+        {sorted.map((e, idx) => (
+          <li key={`${e.when}-${idx}`} className="flex items-start gap-2">
+            <span className="mt-1 inline-block w-2 h-2 rounded-full bg-primary" />
+            <div>
+              <div className="text-white">{e.label}</div>
+              {e.detail && <div className="text-muted text-xs">{e.detail}</div>}
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }

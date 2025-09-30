@@ -1611,6 +1611,7 @@ export default function GameRoom() {
           eliminatedPlayers={currentGame.players.filter((p) => p.isEliminated).map((p) => p.id)}
           onClose={() => setShowGameOver(false)}
           onBackToMenu={() => navigate('/lobby')}
+          roomId={currentRoom?.id}
           onNewGame={async () => {
             try {
               if (!currentRoom) return
