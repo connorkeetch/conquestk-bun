@@ -18,7 +18,29 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     | ({ payoutMode?: string; fixedValue?: number; diamondSetBonus?: number } & Record<string, unknown>)
     | undefined
   const [selected, setSelected] = useState<number[]>([])
-  const canTrade = selected.length === 3
+  const metalType = (m: string) => String(m).toLowerCase()
+  const isDiamond = (m: string) => metalType(m) === 'diamond'
+  const isCore = (m: string) => {
+    const t = metalType(m)
+    return t === 'bronze' || t === 'silver' || t === 'gold'
+  }
+
+  const isValidTriple = (triple: number[]): boolean => {
+    if (triple.length !== 3) return false
+    const cards = triple.map((i) => hand[i] ?? '')
+    const d = cards.filter(isDiamond).length
+    const core = cards.filter((m) => !isDiamond(m))
+    // Filter to core names only
+    const coreNames = core.map(metalType).filter(isCore)
+    const distinctCore = Array.from(new Set(coreNames))
+    // Three of a kind: all same or can become same with diamonds (<=1 distinct core)
+    if (distinctCore.length <= 1) return true
+    // One of each: with diamonds as wild to complete {bronze, silver, gold}
+    // Need to be able to represent all three core types
+    if (distinctCore.length + d >= 3) return true
+    return false
+  }
+  const canTrade = selected.length === 3 && isValidTriple(selected)
 
   // Compute valid sets: three-of-a-kind or all-different
   const validSets = useMemo(() => {
@@ -26,12 +48,8 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     for (let i = 0; i < hand.length; i++) {
       for (let j = i + 1; j < hand.length; j++) {
         for (let k = j + 1; k < hand.length; k++) {
-          const a = hand[i]
-          const b = hand[j]
-          const c = hand[k]
-          const allSame = a === b && b === c
-          const allDiff = a !== b && a !== c && b !== c
-          if (allSame || allDiff) sets.push([i, j, k])
+          const triple = [i, j, k]
+          if (isValidTriple(triple)) sets.push(triple)
         }
       }
     }
@@ -122,12 +140,15 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
               </div>
             </div>
           )}
-          <div className="text-xs text-muted mt-2">
-            Projected reinforcements:{' '}
+          <div className="text-xs text-muted mt-2 flex items-center gap-2">
+            <span>Projected reinforcements:</span>
             {projectedReinforcements === undefined ? (
               <span className="text-white">varies by payout mode</span>
             ) : (
               <span className="text-white">+{projectedReinforcements}</span>
+            )}
+            {selected.length === 3 && !canTrade && (
+              <span className="text-[color:var(--color-warning)] ml-2">Invalid set</span>
             )}
           </div>
         </div>
