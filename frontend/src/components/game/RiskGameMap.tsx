@@ -150,7 +150,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   )
 
   return (
-    <div className="game-board flex-1 relative bg-blue-100 p-4">
+    <div className="game-board flex-1 relative bg-surface-2 p-2 sm:p-4">
       <div className="relative w-full h-full">
         {/* Overlay toggles */}
         <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded border border-border">
@@ -581,7 +581,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                 }}
               >
                 <div className="flex flex-col items-center gap-1">
-                  <div className="bg-white border-2 border-gray-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg">
+                  <div className="bg-[color:var(--surface-1)] border-2 border-[color:var(--panel-border)] rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-[var(--shadow-1)]">
                     {territory.armies}
                   </div>
                   {modifier && (

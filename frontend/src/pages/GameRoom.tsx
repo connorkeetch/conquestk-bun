@@ -12,7 +12,6 @@ import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
-import TeamAssignment from '../components/TeamAssignment'
 import { Skeleton } from '../components/ui/Skeleton'
 import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -42,12 +41,6 @@ const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
   grandmaster: 'Grandmaster',
 }
 
-const AI_DIFFICULTY_DESCRIPTIONS: Record<AIDifficulty, string> = {
-  recruit: 'Fast, forgiving baseline opponent',
-  commander: 'Balanced with threat awareness',
-  grandmaster: 'Advanced tactics and deeper lookahead',
-}
-
 const AI_DIFFICULTY_ORDER: AIDifficulty[] = ['recruit', 'commander', 'grandmaster']
 
 export default function GameRoom() {
@@ -66,8 +59,8 @@ export default function GameRoom() {
   const [isRoomLoading, setIsRoomLoading] = useState(false)
   const [roomError, setRoomError] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(audioService.isMutedState())
-  const [teamUpdating, setTeamUpdating] = useState(false)
-  const [teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
+  const [_teamUpdating, setTeamUpdating] = useState(false)
+  const [_teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
   const [joinSubmitting, setJoinSubmitting] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
@@ -80,8 +73,8 @@ export default function GameRoom() {
     grandmaster: 0,
   })
   const [aiDraftDirty, setAiDraftDirty] = useState(false)
-  const [aiSaving, setAiSaving] = useState(false)
-  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
+  const [_aiSaving, setAiSaving] = useState(false)
+  const [_aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
   const [mapPreview, setMapPreview] = useState<{
     imageUrl: string | null
     width?: number
@@ -168,7 +161,7 @@ export default function GameRoom() {
     currentRoom && (currentRoom.players?.length ?? 0) >= currentRoom.maxPlayers,
   )
 
-  const showTeamAssignment = useMemo(() => {
+  const _showTeamAssignment = useMemo(() => {
     if (!currentRoom) {
       return false
     }
@@ -204,7 +197,7 @@ export default function GameRoom() {
     return `Expires in ${minutes}m`
   }, [])
 
-  const lobbyTeamPlayers = useMemo(
+  const _lobbyTeamPlayers = useMemo(
     () =>
       (currentRoom?.players || []).map((player) => ({
         id: player.id,
@@ -568,9 +561,9 @@ export default function GameRoom() {
     (sum, difficulty) => sum + (aiDraftCounts[difficulty] ?? 0),
     0,
   )
-  const aiSlotsRemaining = Math.max(0, maxAiCapacity - draftTotalAi)
+  const _aiSlotsRemaining = Math.max(0, maxAiCapacity - draftTotalAi)
 
-  const hasAiChanges = useMemo(() => {
+  const _hasAiChanges = useMemo(() => {
     if (!showAiControls) {
       return false
     }
@@ -593,7 +586,7 @@ export default function GameRoom() {
     [allowedAiDifficulties],
   )
 
-  const updateAiCount = useCallback(
+  const _updateAiCount = useCallback(
     (difficulty: AIDifficulty, value: number) => {
       setAiDraftDirty(true)
       setAiErrorMessage(null)
@@ -602,7 +595,7 @@ export default function GameRoom() {
     [normalizeAiDraftCounts],
   )
 
-  const stepAiCount = useCallback(
+  const _stepAiCount = useCallback(
     (difficulty: AIDifficulty, delta: number) => {
       setAiDraftDirty(true)
       setAiErrorMessage(null)
@@ -613,13 +606,13 @@ export default function GameRoom() {
     [normalizeAiDraftCounts],
   )
 
-  const resetAiDraft = useCallback(() => {
+  const _resetAiDraft = useCallback(() => {
     setAiDraftCounts(normalizeAiDraftCounts(existingAiCounts))
     setAiDraftDirty(false)
     setAiErrorMessage(null)
   }, [existingAiCounts, normalizeAiDraftCounts])
 
-  const handleAiSave = useCallback(async () => {
+  const _handleAiSave = useCallback(async () => {
     if (!currentRoom) {
       return
     }
@@ -958,7 +951,7 @@ export default function GameRoom() {
     }
   }, [roomId, isMember, currentRoom, lobbyFull, dispatch, selectedJoinColor])
 
-  const handleTeamChange = useCallback(
+  const _handleTeamChange = useCallback(
     async (playerId: string, teamId: number) => {
       if (!roomId || !isHost) {
         return
@@ -1299,11 +1292,173 @@ export default function GameRoom() {
 
       {/* No ready errors expected */}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
-        {/* Left rail placeholder (will be inserted below) */}
-        {/* Game Board */}
-        <div className="lg:col-span-6 lg:col-start-4">
-          <div className="panel h-auto min-h-[clamp(520px,65vh,920px)] p-0">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Left rail: Players (desktop) - moved from bottom */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-6 lg:w-80 lg:shrink-0">
+          <div className="panel space-y-5">
+            <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+              Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
+            </h3>
+            <ul className="list border border-border rounded-md overflow-hidden">
+              {currentRoom.players?.map((player) => {
+                const isCurrentUser = player.userId === user?.id
+                const rawColor =
+                  ((player as { selected_color?: string | null }).selected_color as
+                    | string
+                    | null) ||
+                  (player.preferred_color as string | null) ||
+                  null
+                const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
+                const colorHex = extractFirstHexColor(colorValue) || '#9CA3AF'
+                const usernameColor = ensureReadableOnDark(colorHex)
+                const tier = ratingToTier(
+                  typeof player.skill_rating === 'number' ? player.skill_rating : null,
+                )
+                const tierIndex = tier ? TIER_BOUNDS.findIndex((t) => t.name === tier.name) + 1 : 0
+                const typingMap = (store.getState().messages.typing || {}) as Record<
+                  string,
+                  Record<string, string>
+                >
+                const typingForRoom = typingMap[currentRoom.id] || {}
+                const typingKey = player.userId ?? ''
+                const isTyping = Boolean(typingForRoom[typingKey])
+                const gp = currentGame?.players?.find(
+                  (p) => (p.userId ?? p.id) === (player.userId ?? player.id),
+                )
+                const armies = typeof gp?.armies === 'number' ? gp.armies : undefined
+                const terrs = Array.isArray(gp?.territories) ? gp.territories.length : undefined
+                const cardsCount = Array.isArray(gp?.treasures)
+                  ? gp.treasures.length
+                  : gp?.cards?.length || 0
+                const conn = isCurrentUser ? store.getState().uiRoom.connectionStatus : undefined
+                return (
+                  <li key={player.id} className="list-item last:border-b-0 group">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="relative inline-flex h-3.5 w-3.5 shrink-0 rounded-full border border-border"
+                        style={{ background: colorValue }}
+                        title={rawColor ? `Color: ${rawColor}` : undefined}
+                        aria-hidden="true"
+                      >
+                        {isTyping && (
+                          <span
+                            className="absolute -top-1 -right-1 inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-black/40"
+                            title="Typing"
+                          />
+                        )}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {player.isAi || !player.userId ? (
+                            <span
+                              className={`truncate text-sm ${isCurrentUser ? 'font-semibold' : ''}`}
+                              style={{ color: usernameColor }}
+                            >
+                              {player.username}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`truncate text-sm underline-offset-2 hover:underline ${
+                                isCurrentUser ? 'font-semibold' : ''
+                              }`}
+                              style={{ color: usernameColor }}
+                              title={`View ${player.username}'s profile`}
+                              onClick={() => setProfileUsername(player.username)}
+                            >
+                              {player.username}
+                            </button>
+                          )}
+                          {player.userId === currentRoom.hostId && (
+                            <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
+                              👑 Host
+                            </span>
+                          )}
+                          {typeof player.skill_rating === 'number' && (
+                            <RankInsignia
+                              rating={player.skill_rating}
+                              size="sm"
+                              showLabel={false}
+                              showRating={false}
+                            />
+                          )}
+                          {isCurrentUser && (
+                            <span
+                              className={`inline-block w-2 h-2 rounded-full ${conn === 'connected' ? 'bg-green-500' : conn === 'connecting' ? 'bg-yellow-400' : 'bg-red-500'}`}
+                              title={
+                                conn === 'connected'
+                                  ? 'Online'
+                                  : conn === 'connecting'
+                                    ? 'Reconnecting'
+                                    : 'Disconnected'
+                              }
+                            />
+                          )}
+                          {player.isAi && player.aiDifficulty && (
+                            <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
+                              🤖 {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
+                          {typeof armies === 'number' && <span>{armies} armies</span>}
+                          {typeof terrs === 'number' && (
+                            <span className="opacity-80">· {terrs} territories</span>
+                          )}
+                          <span className="opacity-80" title="Cards">
+                            · 🎴 {cardsCount}
+                          </span>
+                          {tier ? (
+                            <span>
+                              · {tier.name} — Rank {romanNumeral(tierIndex)}
+                              {typeof player.skill_rating === 'number' && (
+                                <span className="opacity-80"> ({player.skill_rating} CP)</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span>· Unranked</span>
+                          )}
+                          {currentRoom.allowTeamPlay &&
+                            currentRoom.teamMode !== 'none' &&
+                            typeof player.teamId === 'number' &&
+                            player.teamId > 0 && (
+                              <span className="chip text-xs">Team {player.teamId}</span>
+                            )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {!isCurrentUser && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs"
+                            title="Mute/unmute player"
+                            onClick={() => dispatch(toggleMuteUser(player.id))}
+                          >
+                            Mute
+                          </button>
+                        )}
+                        {isCurrentUser && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs text-[color:var(--color-danger)]"
+                            title="Resign"
+                            onClick={() => setResignDialogOpen(true)}
+                          >
+                            Resign
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </div>
+
+        {/* Game Board - center, flexible width */}
+        <div className="flex-1 min-w-0">
+          <div className="panel h-auto p-0" style={{ aspectRatio: '16/10', maxHeight: '75vh' }}>
             {currentGame ? (
               <RiskGameBoard
                 mapId={currentRoom?.mapId || 'classic'}
@@ -1381,355 +1536,65 @@ export default function GameRoom() {
               </div>
             )}
           </div>
-          {/* Desktop chat moved to right rail */}
-        </div>
 
-        {/* Right column previously used for players; switch to right rail chat */}
-        <div className="hidden lg:block lg:col-span-3 lg:col-start-10">
-          <div className="panel p-0 overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-              <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs"
-                onClick={() => {
-                  try {
-                    localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen))
-                  } catch {
-                    // ignore storage errors
-                  }
-                  setRightRailOpen((v) => !v)
-                }}
-                title={rightRailOpen ? 'Collapse' : 'Expand'}
-              >
-                {rightRailOpen ? 'Hide' : 'Show'}
-              </button>
-            </div>
-            {rightRailOpen && (
-              <div ref={chatContainerRef} style={{ height: 'min(60vh, 640px)' }}>
-                {roomId && user ? (
-                  shouldHydrateChat ? (
-                    <Suspense
-                      fallback={
-                        <div className="h-40 flex items-center justify-center p-4">
-                          <Skeleton variant="rectangular" width="100%" height="100%" />
-                        </div>
-                      }
-                    >
-                      <LazyTabbedGameChat
-                        gameId={currentRoom.id}
-                        currentUserId={user.id}
-                        userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
-                        className="h-full"
-                        onLogFocus={(territories) => {
-                          const focus = territories[territories.length - 1]
-                          if (focus) dispatch(selectTerritory(focus))
-                        }}
-                      />
-                    </Suspense>
-                  ) : (
-                    <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
-                      Preparing chat…
-                    </div>
-                  )
-                ) : null}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Left rail: Players (desktop) */}
-        <div className="hidden lg:flex lg:flex-col lg:gap-6 lg:col-span-3 lg:col-start-1">
-          <div className="panel space-y-5">
-            <h3 className="text-lg font-semibold text-[color:var(--heading)]">
-              Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
-            </h3>
-            <ul className="list border border-border rounded-md overflow-hidden">
-              {currentRoom.players?.map((player) => {
-                const isCurrentUser = player.userId === user?.id
-                const rawColor =
-                  ((player as { selected_color?: string | null }).selected_color as
-                    | string
-                    | null) ||
-                  (player.preferred_color as string | null) ||
-                  null
-                const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
-                const colorHex = extractFirstHexColor(colorValue) || '#9CA3AF'
-                const usernameColor = ensureReadableOnDark(colorHex)
-                const tier = ratingToTier(
-                  typeof player.skill_rating === 'number' ? player.skill_rating : null,
-                )
-                const tierIndex = tier ? TIER_BOUNDS.findIndex((t) => t.name === tier.name) + 1 : 0
-                // Typing indicator (game chat)
-                const typingMap = (store.getState().messages.typing || {}) as Record<
-                  string,
-                  Record<string, string>
+          {/* Chat & Log panel - below the map on desktop */}
+          {currentGame && (
+            <div className="hidden lg:block panel p-0 overflow-hidden mt-6">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen))
+                    } catch {
+                      // ignore storage errors
+                    }
+                    setRightRailOpen((v) => !v)
+                  }}
+                  title={rightRailOpen ? 'Collapse' : 'Expand'}
                 >
-                const typingForRoom = typingMap[currentRoom.id] || {}
-                const typingKey = player.userId ?? ''
-                const isTyping = Boolean(typingForRoom[typingKey])
-                const gp = currentGame?.players?.find(
-                  (p) => (p.userId ?? p.id) === (player.userId ?? player.id),
-                )
-                const armies = typeof gp?.armies === 'number' ? gp.armies : undefined
-                const terrs = Array.isArray(gp?.territories) ? gp.territories.length : undefined
-                const cardsCount = Array.isArray(gp?.treasures)
-                  ? gp.treasures.length
-                  : gp?.cards?.length || 0
-                const conn = isCurrentUser ? store.getState().uiRoom.connectionStatus : undefined
-                return (
-                  <li key={player.id} className="list-item last:border-b-0 group">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="relative inline-flex h-3.5 w-3.5 shrink-0 rounded-full border border-border"
-                        style={{ background: colorValue }}
-                        title={rawColor ? `Color: ${rawColor}` : undefined}
-                        aria-hidden="true"
-                      >
-                        {isTyping && (
-                          <span
-                            className="absolute -top-1 -right-1 inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-black/40"
-                            title="Typing"
-                          />
-                        )}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        {/* Row 1: Name + badges */}
-                        <div className="flex items-center gap-2">
-                          {player.isAi || !player.userId ? (
-                            <span
-                              className={`truncate text-sm ${isCurrentUser ? 'font-semibold' : ''}`}
-                              style={{ color: usernameColor }}
-                            >
-                              {player.username}
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              className={`truncate text-sm underline-offset-2 hover:underline ${
-                                isCurrentUser ? 'font-semibold' : ''
-                              }`}
-                              style={{ color: usernameColor }}
-                              title={`View ${player.username}'s profile`}
-                              onClick={() => setProfileUsername(player.username)}
-                            >
-                              {player.username}
-                            </button>
-                          )}
-                          {player.userId === currentRoom.hostId && (
-                            <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
-                              👑 Host
-                            </span>
-                          )}
-                          {typeof player.skill_rating === 'number' && (
-                            <RankInsignia
-                              rating={player.skill_rating}
-                              size="sm"
-                              showLabel={false}
-                              showRating={false}
-                            />
-                          )}
-                          {isCurrentUser && (
-                            <span
-                              className={`inline-block w-2 h-2 rounded-full ${conn === 'connected' ? 'bg-green-500' : conn === 'connecting' ? 'bg-yellow-400' : 'bg-red-500'}`}
-                              title={
-                                conn === 'connected'
-                                  ? 'Online'
-                                  : conn === 'connecting'
-                                    ? 'Reconnecting'
-                                    : 'Disconnected'
-                              }
-                            />
-                          )}
-                          {player.isAi && player.aiDifficulty && (
-                            <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
-                              🤖 {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
-                            </span>
-                          )}
-                        </div>
-                        {/* Row 2: Stats + team */}
-                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                          {typeof armies === 'number' && <span>{armies} armies</span>}
-                          {typeof terrs === 'number' && (
-                            <span className="opacity-80">· {terrs} territories</span>
-                          )}
-                          <span className="opacity-80" title="Cards">
-                            · 🎴 {cardsCount}
-                          </span>
-                          {tier ? (
-                            <span>
-                              · {tier.name} — Rank {romanNumeral(tierIndex)}
-                              {typeof player.skill_rating === 'number' && (
-                                <span className="opacity-80"> ({player.skill_rating} CP)</span>
-                              )}
-                            </span>
-                          ) : (
-                            <span>· Unranked</span>
-                          )}
-                          {currentRoom.allowTeamPlay &&
-                            currentRoom.teamMode !== 'none' &&
-                            typeof player.teamId === 'number' &&
-                            player.teamId > 0 && (
-                              <span className="chip text-xs">Team {player.teamId}</span>
-                            )}
-                        </div>
-                      </div>
-                      {/* Hover actions */}
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {!isCurrentUser && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs"
-                            title="Mute/unmute player"
-                            onClick={() => dispatch(toggleMuteUser(player.id))}
-                          >
-                            Mute
-                          </button>
-                        )}
-                        {isCurrentUser && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs text-[color:var(--color-danger)]"
-                            title="Resign"
-                            onClick={() => setResignDialogOpen(true)}
-                          >
-                            Resign
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-
-          {showAiControls && (
-            <div className="panel space-y-4 lg:hidden">
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="text-lg font-semibold text-[color:var(--heading)]">AI Opponents</h3>
-                <span className="badge border-[color:var(--panel-border)] text-muted">
-                  {aiPlayersInRoom.length}/{Math.max(0, maxAiCapacity)} slots filled
-                </span>
+                  {rightRailOpen ? 'Hide' : 'Show'}
+                </button>
               </div>
-              {allowedAiDifficulties.length === 0 ? (
-                <p className="text-xs text-muted">
-                  No AI tiers are currently available. Enable an AI difficulty flag to add computer
-                  opponents to this lobby.
-                </p>
-              ) : (
-                <>
-                  <p className="text-xs text-muted">
-                    Reserve seats for AI.{' '}
-                    {aiSlotsRemaining > 0
-                      ? `${aiSlotsRemaining} open slot${aiSlotsRemaining === 1 ? '' : 's'} remaining.`
-                      : 'All available AI slots are reserved. Remove one or free a player seat to add more.'}
-                  </p>
-                  <div className="space-y-3">
-                    {allowedAiDifficulties.map((difficulty) => {
-                      const label = AI_DIFFICULTY_LABELS[difficulty]
-                      const description = AI_DIFFICULTY_DESCRIPTIONS[difficulty]
-                      const count = aiDraftCounts[difficulty] ?? 0
-                      const canDecrease = count > 0 && !aiSaving
-                      const canIncrease = aiSlotsRemaining > 0 && !aiSaving
-                      return (
-                        <div
-                          key={difficulty}
-                          className="panel-outline flex items-center justify-between gap-4"
-                        >
-                          <div className="space-y-1">
-                            <div className="text-sm font-semibold text-[color:var(--heading)]">
-                              {label}
-                            </div>
-                            <p className="text-xs text-muted">{description}</p>
+              {rightRailOpen && (
+                <div ref={chatContainerRef} style={{ height: 'min(40vh, 400px)' }}>
+                  {roomId && user ? (
+                    shouldHydrateChat ? (
+                      <Suspense
+                        fallback={
+                          <div className="h-40 flex items-center justify-center p-4">
+                            <Skeleton variant="rectangular" width="100%" height="100%" />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => stepAiCount(difficulty, -1)}
-                              disabled={!canDecrease}
-                              className="btn btn-secondary btn-icon"
-                              aria-label={`Remove ${label} AI opponent`}
-                            >
-                              −
-                            </button>
-                            <input
-                              type="number"
-                              min={0}
-                              max={maxAiCapacity}
-                              value={count}
-                              onChange={(event) => {
-                                const nextValue = Number.parseInt(event.target.value, 10)
-                                updateAiCount(
-                                  difficulty,
-                                  Number.isNaN(nextValue) ? 0 : Math.max(0, nextValue),
-                                )
-                              }}
-                              className="form-input w-16 text-center"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => stepAiCount(difficulty, 1)}
-                              disabled={!canIncrease}
-                              className="btn btn-secondary btn-icon"
-                              aria-label={`Add ${label} AI opponent`}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {aiErrorMessage && (
-                    <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-xs text-[color:var(--color-danger)]">
-                      {aiErrorMessage}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={resetAiDraft}
-                      disabled={aiSaving || (!aiDraftDirty && !hasAiChanges)}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAiSave}
-                      disabled={aiSaving || !hasAiChanges}
-                      className="btn btn-primary btn-sm"
-                    >
-                      {aiSaving ? 'Saving...' : 'Save AI Slots'}
-                    </button>
-                  </div>
-                </>
+                        }
+                      >
+                        <LazyTabbedGameChat
+                          gameId={currentRoom.id}
+                          currentUserId={user.id}
+                          userTeamId={
+                            currentGame?.players?.find((p) => p.userId === user.id)?.teamId
+                          }
+                          className="h-full"
+                          onLogFocus={(territories) => {
+                            const focus = territories[territories.length - 1]
+                            if (focus) dispatch(selectTerritory(focus))
+                          }}
+                        />
+                      </Suspense>
+                    ) : (
+                      <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
+                        Preparing chat…
+                      </div>
+                    )
+                  ) : null}
+                </div>
               )}
             </div>
           )}
-
-          {showTeamAssignment && currentRoom.numberOfTeams && currentRoom.numberOfTeams > 0 && (
-            <div className="panel space-y-3 lg:hidden">
-              <TeamAssignment
-                players={lobbyTeamPlayers}
-                numberOfTeams={currentRoom.numberOfTeams}
-                isHost={Boolean(isHost) && !teamUpdating}
-                onTeamChange={handleTeamChange}
-              />
-              {teamUpdating && (
-                <p className="text-xs text-[color:var(--color-primary-soft)]">
-                  Updating team assignments...
-                </p>
-              )}
-              {teamUpdateError && (
-                <p className="text-xs text-[color:var(--color-danger)]">{teamUpdateError}</p>
-              )}
-            </div>
-          )}
-
-          {/* Contextual controls live inside RiskGameBoard -> GamePhaseControls; duplicate panel removed */}
         </div>
+
+        {/* Removed duplicate player list section and AI controls - now only showing once in left rail */}
         {/* SR-only live region for announcements */}
         <div className="sr-only" aria-live="polite">
           {liveMessage}

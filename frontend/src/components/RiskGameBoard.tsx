@@ -183,9 +183,9 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
   if (!gameState) {
     return (
-      <div className="flex items-center justify-center h-full bg-blue-50 rounded-lg">
+      <div className="flex items-center justify-center h-full panel">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-gray-600 mb-2">No Game in Progress</h2>
+          <h2 className="text-xl font-bold text-[color:var(--heading)] mb-2">No Game in Progress</h2>
           <p className="text-muted">Join a game room to start playing!</p>
         </div>
       </div>
@@ -203,14 +203,14 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     : undefined
 
   return (
-    <div className="flex flex-col h-full bg-blue-50 rounded-lg overflow-hidden">
+    <div className="flex flex-col w-full h-full panel p-0 overflow-hidden">
       <GameHeader
         currentPhase={currentPhase}
         turn={gameState.turn}
         currentPlayerInfo={headerPlayerInfo}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         <RiskGameMap
           mapId={mapId}
           territories={territories}
@@ -225,7 +225,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           onTerritoryHover={handleTerritoryHover}
         />
 
-        <div className="w-80 border-l border-border bg-surface-1 flex flex-col gap-3 p-3 overflow-y-auto">
+        <div className="hidden lg:flex w-80 border-l border-border bg-surface-1 flex-col gap-3 p-3 overflow-y-auto">
           {/* Phase controls moved to bottom action bar */}
 
           <PlayersLegend players={playerSummaries} />
