@@ -199,25 +199,28 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
 
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1]
+      const jwtSecret = process.env.JWT_SECRET
 
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JwtPayload
-        const userId =
-          typeof decoded === 'object' ? (decoded.userId as string | undefined) : undefined
+      if (jwtSecret) {
+        try {
+          const decoded = jwt.verify(token, jwtSecret) as JwtPayload
+          const userId =
+            typeof decoded === 'object' ? (decoded.userId as string | undefined) : undefined
 
-        if (userId) {
-          const userResult = await pool.query(
-            'SELECT is_admin, is_vip FROM users WHERE id = $1 LIMIT 1',
-            [userId],
-          )
+          if (userId) {
+            const userResult = await pool.query(
+              'SELECT is_admin, is_vip FROM users WHERE id = $1 LIMIT 1',
+              [userId],
+            )
 
-          if (userResult.rows[0]) {
-            includeVipMaps =
-              Boolean(userResult.rows[0].is_admin) || Boolean(userResult.rows[0].is_vip)
+            if (userResult.rows[0]) {
+              includeVipMaps =
+                Boolean(userResult.rows[0].is_admin) || Boolean(userResult.rows[0].is_vip)
+            }
           }
+        } catch (_error) {
+          // Ignore token errors – the route should still work for unauthenticated users
         }
-      } catch (_error) {
-        // Ignore token errors – the route should still work for unauthenticated users
       }
     }
 

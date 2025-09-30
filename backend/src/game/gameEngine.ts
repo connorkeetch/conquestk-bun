@@ -27,7 +27,15 @@ import {
 } from './hiddenTreasures'
 
 export class GameEngine {
-  private gameModifiers: Map<string, GameTerritoryModifier> = new Map()
+  // Cache modifiers per room to prevent memory leaks
+  private gameModifiersCache: Map<string, Map<string, GameTerritoryModifier>> = new Map()
+
+  /**
+   * Clear cached modifiers for a specific room (call when game ends)
+   */
+  clearModifiersCache(roomId: string): void {
+    this.gameModifiersCache.delete(roomId)
+  }
 
   initializeGame(
     roomId: string,
@@ -472,14 +480,16 @@ export class GameEngine {
     let _attackBonus = 0
     let _defenseBonus = 0
 
-    if (gameState.gameConfig?.useTerritoryModifiers) {
-      // Load modifiers if not cached
-      if (this.gameModifiers.size === 0 && gameState.roomId) {
-        this.gameModifiers = await territoryModifierService.getGameModifiers(gameState.roomId)
+    if (gameState.gameConfig?.useTerritoryModifiers && gameState.roomId) {
+      // Load modifiers if not cached for this room
+      let gameModifiers = this.gameModifiersCache.get(gameState.roomId)
+      if (!gameModifiers) {
+        gameModifiers = await territoryModifierService.getGameModifiers(gameState.roomId)
+        this.gameModifiersCache.set(gameState.roomId, gameModifiers)
       }
 
-      const attackerModifier = this.gameModifiers.get(fromTerritoryId)
-      const defenderModifier = this.gameModifiers.get(toTerritoryId)
+      const attackerModifier = gameModifiers.get(fromTerritoryId)
+      const defenderModifier = gameModifiers.get(toTerritoryId)
 
       if (attackerModifier) {
         _attackBonus = attackerModifier.attack_bonus
@@ -871,6 +881,8 @@ export class GameEngine {
     if (!this.canMoveTo(toTerritory, action.playerId, gameState)) return false
     if (fromTerritory.armies <= armies) return false // Must leave at least 1 army
     if (armies <= 0) return false
+    // Prevent integer overflow: max 1 million armies per fortify
+    if (armies > 1_000_000) return false
     if (gameState.phase !== 'fortify') return false
 
     // Check movement type restrictions

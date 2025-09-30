@@ -157,8 +157,14 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       return next(new Error('Authentication error'))
     }
 
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      logger.error('FATAL: JWT_SECRET environment variable is not set')
+      return next(new Error('Server configuration error'))
+    }
+
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as {
+      const decoded = jwt.verify(token, jwtSecret) as {
         userId: string
         username: string
       }
@@ -377,6 +383,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const userId = requireUserId(socket)
+
+        // Authorization check: verify player is in the room
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) {
+          throw new Error('Unauthorized: You are not a member of this game')
+        }
+
         // Queue the place armies action
         const job = await queueService.addGameAction({
           gameId: data.roomId,
@@ -417,6 +430,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const userId = requireUserId(socket)
+
+        // Authorization check: verify player is in the room
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) {
+          throw new Error('Unauthorized: You are not a member of this game')
+        }
+
         const armies = typeof data.armies === 'number' ? data.armies : 1
         // Queue the attack action - battle simulation will be handled in background
         const job = await queueService.addGameAction({
@@ -485,6 +505,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const userId = requireUserId(socket)
+
+        // Authorization check: verify player is in the room
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) {
+          throw new Error('Unauthorized: You are not a member of this game')
+        }
+
         const result = await gameService.fortify(
           data.roomId,
           userId,
@@ -747,7 +774,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       ),
     )
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
       try {
         const userId = socket.userId
         if (!userId) {
@@ -757,14 +784,15 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         logger.info(`User ${userId} disconnected`)
         const gameRooms = socket.joinedGameRooms ?? new Set<string>()
 
-        gameRooms.forEach((roomId) => {
+        // Use for...of instead of forEach to properly handle async operations
+        for (const roomId of gameRooms) {
           const channel = getGameChannel(roomId)
           socket.to(channel).emit('player-disconnected', {
             roomId,
             playerId: userId,
             socketId: socket.id,
           })
-        })
+        }
 
         socket.joinedGameRooms?.clear()
       } catch (error) {

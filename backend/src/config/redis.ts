@@ -311,3 +311,41 @@ export async function checkRedisHealth(): Promise<{ healthy: boolean; message: s
     }
   }
 }
+
+/**
+ * Acquire a distributed lock using Redis
+ * @param key Lock key (e.g., 'lock:game:room123')
+ * @param ttlMs Lock TTL in milliseconds (default 5000ms)
+ * @returns Lock token if acquired, null otherwise
+ */
+export async function acquireLock(key: string, ttlMs = 5000): Promise<string | null> {
+  if (!redisClient) {
+    logger.warn('Redis not available, skipping lock acquisition')
+    return null
+  }
+
+  const token = `${Date.now()}-${Math.random()}`
+  const result = await redisClient.set(key, token, 'PX', ttlMs, 'NX')
+  return result === 'OK' ? token : null
+}
+
+/**
+ * Release a distributed lock using Redis
+ * @param key Lock key
+ * @param token Lock token returned from acquireLock
+ */
+export async function releaseLock(key: string, token: string): Promise<void> {
+  if (!redisClient) {
+    return
+  }
+
+  // Use Lua script to ensure atomic check-and-delete
+  const script = `
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+      return redis.call("del", KEYS[1])
+    else
+      return 0
+    end
+  `
+  await redisClient.eval(script, 1, key, token)
+}
