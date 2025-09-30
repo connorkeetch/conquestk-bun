@@ -7,6 +7,7 @@ import { vi } from 'vitest'
 import authReducer from '../store/authSlice'
 import gameReducer, { setGameState, setReinforcementArmies } from '../store/gameSlice'
 import roomReducer from '../store/roomSlice'
+import uiRoomReducer from '../store/uiRoomSlice'
 import type { GameState, PlayerColor } from '../types/game'
 import { GamePhaseControls } from './GamePhaseControls'
 
@@ -99,6 +100,7 @@ describe('GamePhaseControls', () => {
         game: gameReducer,
         auth: authReducer,
         room: roomReducer,
+        uiRoom: uiRoomReducer,
       },
     })
 
@@ -213,6 +215,7 @@ describe('GamePhaseControls', () => {
           game: gameReducer,
           auth: authReducer,
           room: roomReducer,
+          uiRoom: uiRoomReducer,
         },
         preloadedState: {
           game: {
@@ -241,6 +244,7 @@ describe('GamePhaseControls', () => {
             isLoading: false,
             error: null,
           },
+          uiRoom: undefined as unknown as ReturnType<typeof uiRoomReducer>,
         },
       })
     })
