@@ -43,13 +43,14 @@ export class MigrationTracker {
       // Check if tracking table already exists
       const tableCheck = await query(`
         SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
           AND table_name = 'schema_migrations'
         )
       `)
 
       if (tableCheck.rows[0].exists) {
+        await this.upgradeTrackingTable()
         this.trackingTableExists = true
         logger.info('✅ Migration tracking table already exists')
         return
@@ -77,6 +78,64 @@ export class MigrationTracker {
       logger.info('✅ Created schema_migrations tracking table')
     } catch (error) {
       logger.error('❌ Failed to create migration tracking table:', error)
+      throw error
+    }
+  }
+
+  private async upgradeTrackingTable(): Promise<void> {
+    try {
+      logger.info('🔧 Ensuring schema_migrations table matches current layout')
+
+      const columnQuery = await query<{
+        column_name: string
+      }>(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = 'schema_migrations'
+      `)
+
+      const columns = new Set(columnQuery.rows.map((row) => row.column_name))
+      const statements: string[] = []
+
+      if (!columns.has('checksum')) {
+        statements.push("ALTER TABLE schema_migrations ADD COLUMN checksum VARCHAR(64)")
+      }
+      if (!columns.has('execution_time_ms')) {
+        statements.push('ALTER TABLE schema_migrations ADD COLUMN execution_time_ms INTEGER')
+      }
+      if (!columns.has('rollback_sql')) {
+        statements.push('ALTER TABLE schema_migrations ADD COLUMN rollback_sql TEXT')
+      }
+      if (!columns.has('created_at')) {
+        statements.push(
+          'ALTER TABLE schema_migrations ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP',
+        )
+      }
+
+      for (const statement of statements) {
+        await query(statement)
+      }
+
+      await query("UPDATE schema_migrations SET checksum = COALESCE(checksum, 'legacy-manual-import')")
+      await query('UPDATE schema_migrations SET execution_time_ms = COALESCE(execution_time_ms, 0)')
+      await query('UPDATE schema_migrations SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP)')
+
+      await query('ALTER TABLE schema_migrations ALTER COLUMN checksum SET NOT NULL')
+      await query('ALTER TABLE schema_migrations ALTER COLUMN execution_time_ms SET NOT NULL')
+      await query('ALTER TABLE schema_migrations ALTER COLUMN created_at SET NOT NULL')
+
+      await query('ALTER TABLE schema_migrations DROP CONSTRAINT IF EXISTS migration_status_check')
+      await query(
+        "ALTER TABLE schema_migrations ADD CONSTRAINT migration_status_check CHECK (status IN ('pending', 'running', 'completed', 'failed', 'rolled_back'))",
+      )
+
+      await query('CREATE INDEX IF NOT EXISTS idx_schema_migrations_filename ON schema_migrations(filename)')
+      await query('CREATE INDEX IF NOT EXISTS idx_schema_migrations_status ON schema_migrations(status)')
+
+      logger.info('✅ schema_migrations table is compatible with the modern migration runner')
+    } catch (error) {
+      logger.error('❌ Failed to upgrade schema_migrations table:', error)
       throw error
     }
   }

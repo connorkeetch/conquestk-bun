@@ -76,6 +76,13 @@ npm run setup
 The frontend is served at [http://localhost:5173](http://localhost:5173) and the backend at
 [http://localhost:5001](http://localhost:5001).
 
+#### Running inside the OpenAI sandbox
+
+The OpenAI agent sandbox blocks outbound TCP traffic to the shared Railway database, so the backend
+must target a local PostgreSQL instance instead. Follow the dedicated
+[OpenAI sandbox deployment guide](docs/operations/openai-sandbox.md) to install PostgreSQL, copy the
+workspace environment files, and run migrations before starting the servers.
+
 ### Useful workspace scripts
 
 ```bash
