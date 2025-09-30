@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 interface ResponsiveMapContainerProps {
   children: React.ReactNode
@@ -30,21 +30,21 @@ export default function ResponsiveMapContainer({
     scrollTop: number
   } | null>(null)
 
+  const calculateScale = useCallback(() => {
+    if (!containerRef.current) return
+
+    const container = containerRef.current
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
+
+    // Calculate scale to fit map within container
+    const scaleX = containerWidth / mapWidth
+    const scaleY = containerHeight / mapHeight
+    const newScale = Math.min(scaleX, scaleY, 1) // fit-to-container, never upscale baseline
+    setBaseScale(newScale)
+  }, [mapWidth, mapHeight])
+
   useEffect(() => {
-    const calculateScale = () => {
-      if (!containerRef.current) return
-
-      const container = containerRef.current
-      const containerWidth = container.clientWidth
-      const containerHeight = container.clientHeight
-
-      // Calculate scale to fit map within container
-      const scaleX = containerWidth / mapWidth
-      const scaleY = containerHeight / mapHeight
-      const newScale = Math.min(scaleX, scaleY, 1) // fit-to-container, never upscale baseline
-      setBaseScale(newScale)
-    }
-
     calculateScale()
 
     // Recalculate on resize
@@ -56,7 +56,7 @@ export default function ResponsiveMapContainer({
     return () => {
       resizeObserver.disconnect()
     }
-  }, [mapWidth, mapHeight])
+  }, [calculateScale])
 
   // Compute displayed dimensions from baseScale and zoom
   const display = useMemo(() => {
@@ -164,11 +164,25 @@ export default function ResponsiveMapContainer({
     el.scrollTop = Math.max(0, Math.min(display.height - el.clientHeight, targetY))
   }
 
-  // Focus pan when focus coordinates change
+  // Focus pan when focus coordinates change (but not on display dimension changes)
+  const prevFocusRef = useRef<{ x: number; y: number } | null>(null)
+
   useEffect(() => {
-    if (!focus) return
+    if (!focus) {
+      prevFocusRef.current = null
+      return
+    }
+
+    // Only pan if focus actually changed, not on dimension changes
+    if (prevFocusRef.current?.x === focus.x && prevFocusRef.current?.y === focus.y) {
+      return
+    }
+
+    prevFocusRef.current = focus
+
     const el = containerRef.current
     if (!el) return
+
     // Convert map coordinates to displayed pixels
     const fx = (focus.x / mapWidth) * display.width
     const fy = (focus.y / mapHeight) * display.height
@@ -177,12 +191,19 @@ export default function ResponsiveMapContainer({
       0,
       Math.min(display.height - el.clientHeight, fy - el.clientHeight / 2),
     )
-    // Smooth scroll when supported
+
+    // Smooth scroll when supported, with fallback
     const anyEl = el as unknown as {
       scrollTo?: (opts: { left: number; top: number; behavior?: 'auto' | 'smooth' }) => void
     }
     if (typeof anyEl.scrollTo === 'function') {
-      anyEl.scrollTo({ left: targetX, top: targetY, behavior: 'smooth' })
+      try {
+        anyEl.scrollTo({ left: targetX, top: targetY, behavior: 'smooth' })
+      } catch {
+        // Fallback if behavior option not supported
+        el.scrollLeft = targetX
+        el.scrollTop = targetY
+      }
     } else {
       el.scrollLeft = targetX
       el.scrollTop = targetY
