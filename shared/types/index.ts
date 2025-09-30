@@ -616,6 +616,14 @@ export interface ServerToClientEvents {
     message: string
     timestamp: string
   }) => void
+  // Map ping: broadcast a transient territory ping marker
+  'ping:territory': (data: {
+    roomId: string
+    territoryId: string
+    userId: string
+    username?: string | null
+    createdAt: string
+  }) => void
   'lifecycle:update': (data: {
     roomId: string
     status: GameLifecycleStatus
@@ -703,6 +711,8 @@ export interface ClientToServerEvents {
   ) => void
   'typing.start': (payload: TypingEventPayload) => void
   'typing.stop': (payload: TypingEventPayload) => void
+  // Map ping: client emits territory ping
+  'ping:territory': (data: { roomId: string; territoryId: string }) => void
   'conversation.create': (
     payload: ConversationCreatePayload,
     callback?: (response: ConversationCreateAck) => void,

@@ -14,6 +14,15 @@ export interface UIRoomState {
   conquestOverlay?: { fromId: string; toId: string } | null
   desyncDetected: boolean
   resyncing: boolean
+  // Transient map pings for display (expires client-side)
+  pings?: Array<{
+    id: string
+    territoryId: string
+    userId?: string
+    username?: string | null
+    createdAt: number
+    expiresAt: number
+  }>
 }
 
 const initialState: UIRoomState = {
@@ -28,6 +37,7 @@ const initialState: UIRoomState = {
   conquestOverlay: null,
   desyncDetected: false,
   resyncing: false,
+  pings: [],
 }
 
 const uiRoomSlice = createSlice({
@@ -88,6 +98,25 @@ const uiRoomSlice = createSlice({
     setResyncing(state, action: PayloadAction<boolean>) {
       state.resyncing = action.payload
     },
+    addPing(state, action: PayloadAction<{ id: string; territoryId: string; userId?: string; username?: string | null; ttlMs?: number }>) {
+      const now = Date.now()
+      const ttl = Math.max(500, Math.min(10_000, action.payload.ttlMs ?? 3000))
+      const ping = {
+        id: action.payload.id,
+        territoryId: action.payload.territoryId,
+        userId: action.payload.userId,
+        username: action.payload.username ?? null,
+        createdAt: now,
+        expiresAt: now + ttl,
+      }
+      const list = state.pings ?? []
+      // Keep a short buffer of recent pings to handle overlap
+      state.pings = [...list.filter((p) => p.expiresAt > now), ping].slice(-20)
+    },
+    prunePings(state) {
+      const now = Date.now()
+      state.pings = (state.pings ?? []).filter((p) => p.expiresAt > now)
+    },
     hydrateFromStorage(state) {
       try {
         const speed = localStorage.getItem('ui.animationSpeed') as AnimationSpeed | null
@@ -139,6 +168,8 @@ export const {
   setDesyncDetected,
   setResyncing,
   hydrateFromStorage,
+  addPing,
+  prunePings,
 } = uiRoomSlice.actions
 
 export default uiRoomSlice.reducer

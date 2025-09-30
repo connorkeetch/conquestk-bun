@@ -1,5 +1,7 @@
 import type React from 'react'
 import { useCallback, useMemo } from 'react'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { selectTerritory } from '@/store/gameSlice'
 import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
 import type { GamePlayer } from '@/types/game'
 import CustomMapDisplay from '../CustomMapDisplay'
@@ -41,6 +43,8 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   onTerritoryClick,
   onTerritoryHover,
 }) => {
+  const dispatchApp = useAppDispatch()
+  const pings = useAppSelector((s) => s.uiRoom.pings ?? [])
   const playerColors = useMemo(
     () => Object.fromEntries(players.map((player) => [player.id, player.color])),
     [players],
@@ -143,6 +147,30 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                 </div>
               </div>
             )}
+            {/* Ping markers */}
+            {pings
+              .filter((p) => p.expiresAt > Date.now())
+              .map((ping) => {
+                const t = territories[ping.territoryId]
+                if (!t) return null
+                const left = (t.armyPosition.x / CLASSIC_MAP_WIDTH) * 100
+                const top = (t.armyPosition.y / CLASSIC_MAP_HEIGHT) * 100
+                return (
+                  <button
+                    key={`ping-${ping.id}`}
+                    type="button"
+                    className="absolute z-30"
+                    style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
+                    onClick={() => dispatchApp(selectTerritory(ping.territoryId))}
+                    title={ping.username ? `${ping.username} pinged` : 'Ping'}
+                  >
+                    <span className="relative block w-10 h-10">
+                      <span className="absolute inset-0 rounded-full border-2 border-cyan-300/80 animate-ping" />
+                      <span className="absolute inset-2 rounded-full bg-cyan-400/70" />
+                    </span>
+                  </button>
+                )
+              })}
           </ResponsiveMapContainer>
         ) : (
           <CustomMapDisplay

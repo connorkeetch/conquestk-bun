@@ -269,6 +269,13 @@ export interface ServerToClientEvents {
     message: string
     timestamp: string
   }) => void
+  'ping:territory': (data: {
+    roomId: string
+    territoryId: string
+    userId: string
+    username?: string | null
+    createdAt: string
+  }) => void
   'notification:new': (payload: RealtimeNotification) => void
   // Friends events
   'friend.request.received': (payload: { requesterId: string; requestedAt: string }) => void
@@ -360,6 +367,7 @@ export interface ClientToServerEvents {
   ) => void
   'typing.start': (payload: TypingEventPayload) => void
   'typing.stop': (payload: TypingEventPayload) => void
+  'ping:territory': (data: { roomId: string; territoryId: string }) => void
   'conversation.create': (
     payload: ConversationCreatePayload,
     callback?: (response: ConversationCreateAck) => void,
