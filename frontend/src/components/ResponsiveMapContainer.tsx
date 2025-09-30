@@ -8,6 +8,9 @@ interface ResponsiveMapContainerProps {
   showMinimap?: boolean
   backgroundImageUrl?: string
   focus?: { x: number; y: number } | null
+  storageKey?: string
+  onSwipeLeft?: () => void
+  onSwipeRight?: () => void
 }
 
 export default function ResponsiveMapContainer({
@@ -18,6 +21,9 @@ export default function ResponsiveMapContainer({
   showMinimap = true,
   backgroundImageUrl,
   focus = null,
+  storageKey,
+  onSwipeLeft,
+  onSwipeRight,
 }: ResponsiveMapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [baseScale, setBaseScale] = useState(1)
@@ -29,6 +35,7 @@ export default function ResponsiveMapContainer({
     scrollLeft: number
     scrollTop: number
   } | null>(null)
+  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
   const calculateScale = useCallback(() => {
     if (!containerRef.current) return
@@ -57,6 +64,29 @@ export default function ResponsiveMapContainer({
       resizeObserver.disconnect()
     }
   }, [calculateScale])
+
+  // Hydrate zoom from storage
+  useEffect(() => {
+    if (!storageKey) return
+    try {
+      const raw = localStorage.getItem(`ui.zoom.${storageKey}`)
+      if (!raw) return
+      const z = Number.parseFloat(raw)
+      if (Number.isFinite(z) && z >= 0.5 && z <= 3) setZoom(z)
+    } catch {
+      // ignore storage errors
+    }
+  }, [storageKey])
+
+  // Persist zoom to storage
+  useEffect(() => {
+    if (!storageKey) return
+    try {
+      localStorage.setItem(`ui.zoom.${storageKey}`, String(zoom))
+    } catch {
+      // ignore storage errors
+    }
+  }, [storageKey, zoom])
 
   // Compute displayed dimensions from baseScale and zoom
   const display = useMemo(() => {
@@ -133,6 +163,40 @@ export default function ResponsiveMapContainer({
       el.removeEventListener('contextmenu', preventContext)
     }
   }, [])
+
+  // Touch swipe detection for mobile overlays switching
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return
+      const t = e.touches[0]
+      touchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() }
+    }
+    const onTouchEnd = (e: TouchEvent) => {
+      const start = touchStartRef.current
+      touchStartRef.current = null
+      if (!start) return
+      const end = e.changedTouches && e.changedTouches[0]
+      if (!end) return
+      const dx = end.clientX - start.x
+      const dy = end.clientY - start.y
+      const dt = Date.now() - start.t
+      const absX = Math.abs(dx)
+      const absY = Math.abs(dy)
+      // Quick horizontal swipe: threshold 50px, faster than 600ms, more horizontal than vertical
+      if (dt < 600 && absX > 50 && absX > absY) {
+        if (dx < 0) onSwipeLeft?.()
+        else onSwipeRight?.()
+      }
+    }
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchend', onTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [onSwipeLeft, onSwipeRight])
 
   // Minimap computations
   const minimap = useMemo(() => {

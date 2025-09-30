@@ -104,10 +104,13 @@ export const gameService = {
     const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`, { params })
     return response.data.game
   },
-  async getGameLog(roomId: string): Promise<{ log: Array<Record<string, unknown>>; stats?: Array<Record<string, unknown>> }> {
-    const response = await api.get<{ log: Array<Record<string, unknown>>; stats?: Array<Record<string, unknown>> }>(
-      `/game/rooms/${roomId}/log`,
-    )
+  async getGameLog(
+    roomId: string,
+  ): Promise<{ log: Array<Record<string, unknown>>; stats?: Array<Record<string, unknown>> }> {
+    const response = await api.get<{
+      log: Array<Record<string, unknown>>
+      stats?: Array<Record<string, unknown>>
+    }>(`/game/rooms/${roomId}/log`)
     return {
       log: Array.isArray(response.data?.log) ? response.data.log : [],
       stats: Array.isArray(response.data?.stats) ? response.data.stats : undefined,

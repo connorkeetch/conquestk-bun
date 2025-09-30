@@ -137,6 +137,7 @@ export default function ChatContainer({
     socketService.markConversationReadViaSocket(resolvedConversationId)
   }, [dispatch, resolvedConversationId, rawMessages.length])
 
+  const mutedIds = useAppSelector((s) => new Set(s.uiRoom.mutedUserIds ?? []))
   const displayMessages: DisplayMessage[] = useMemo(() => {
     const memberNameMap = new Map(
       (conversation?.memberRoles ?? []).map((member) => [
@@ -145,22 +146,24 @@ export default function ChatContainer({
       ]),
     )
 
-    return rawMessages.map((message) => ({
-      id: message.id,
-      senderId: message.senderId,
-      senderName:
-        message.senderId === currentUserId
-          ? 'You'
-          : typeof message.metadata?.senderName === 'string'
-            ? message.metadata.senderName
-            : message.senderId
-              ? (memberNameMap.get(message.senderId) ?? 'Player')
-              : 'System',
-      body: message.body,
-      createdAt: message.createdAt,
-      metadata: message.metadata,
-    }))
-  }, [conversation?.memberRoles, rawMessages, currentUserId])
+    return rawMessages
+      .filter((message) => (message.senderId ? !mutedIds.has(message.senderId) : true))
+      .map((message) => ({
+        id: message.id,
+        senderId: message.senderId,
+        senderName:
+          message.senderId === currentUserId
+            ? 'You'
+            : typeof message.metadata?.senderName === 'string'
+              ? message.metadata.senderName
+              : message.senderId
+                ? (memberNameMap.get(message.senderId) ?? 'Player')
+                : 'System',
+        body: message.body,
+        createdAt: message.createdAt,
+        metadata: message.metadata,
+      }))
+  }, [conversation?.memberRoles, rawMessages, currentUserId, mutedIds])
 
   const handleLoadOlder = useCallback(() => {
     if (!resolvedConversationId) {

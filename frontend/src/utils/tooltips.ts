@@ -30,12 +30,14 @@ export const getTreasureDescription = (cfg?: TreasureConfig | null) => {
   if (!cfg || cfg.enabled === false) return 'Treasure cards are disabled.'
   const mode = cfg.payoutMode || 'classic'
   const handCap = typeof cfg.handCap === 'number' ? Math.max(1, Math.trunc(cfg.handCap)) : 5
-  const diamondBonus = typeof cfg.diamondSetBonus === 'number' ? Math.max(0, Math.trunc(cfg.diamondSetBonus)) : 0
+  const diamondBonus =
+    typeof cfg.diamondSetBonus === 'number' ? Math.max(0, Math.trunc(cfg.diamondSetBonus)) : 0
 
   const baseText = `Valid sets: one of each (bronze, silver, gold) or three of a kind. Diamonds are wild. Sets with a diamond grant an extra +${diamondBonus} troops. Hand cap: ${handCap}.`
 
   if (mode === 'fixed') {
-    const fixed = typeof cfg.fixedValue === 'number' ? Math.max(1, Math.min(50, Math.trunc(cfg.fixedValue))) : 8
+    const fixed =
+      typeof cfg.fixedValue === 'number' ? Math.max(1, Math.min(50, Math.trunc(cfg.fixedValue))) : 8
     return `${baseText} Payout mode: Fixed (+${fixed} per set).`
   }
   if (mode === 'classic') {

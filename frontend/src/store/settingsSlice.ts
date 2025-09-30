@@ -59,6 +59,10 @@ interface SettingsState {
   game: {
     preferredColor: PlayerColor
   }
+  // Chat Settings
+  chat?: {
+    profanityFilter: boolean
+  }
 
   // Privacy Settings
   privacy: {
@@ -83,6 +87,9 @@ const defaultSettings: SettingsState = {
   },
   game: {
     preferredColor: '#DC2626' as PlayerColor, // Red - first standard color
+  },
+  chat: {
+    profanityFilter: true,
   },
   privacy: {
     showOnlineStatus: true,

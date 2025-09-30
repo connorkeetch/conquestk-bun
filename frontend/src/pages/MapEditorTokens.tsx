@@ -4,6 +4,101 @@ import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } fr
 import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '@/utils/logger'
+
+// Debounce hook for input fields
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+
+// Generate a visually distinct color using HSL color space
+function generateDistinctColor(existingColors: string[]): string {
+  // Use golden ratio for better hue distribution
+  const goldenRatio = 0.618033988749895
+  const existingHues = existingColors
+    .map((color) => {
+      // Parse hex to HSL
+      const hex = color.replace('#', '')
+      const r = parseInt(hex.substring(0, 2), 16) / 255
+      const g = parseInt(hex.substring(2, 4), 16) / 255
+      const b = parseInt(hex.substring(4, 6), 16) / 255
+
+      const max = Math.max(r, g, b)
+      const min = Math.min(r, g, b)
+      const diff = max - min
+
+      let h = 0
+      if (diff !== 0) {
+        if (max === r) {
+          h = ((g - b) / diff) % 6
+        } else if (max === g) {
+          h = (b - r) / diff + 2
+        } else {
+          h = (r - g) / diff + 4
+        }
+      }
+      return (h * 60 + 360) % 360
+    })
+    .filter((h) => !isNaN(h))
+
+  // Find a hue that's maximally distant from existing hues
+  let bestHue = Math.random() * 360
+  if (existingHues.length > 0) {
+    // Use golden ratio to spread hues evenly
+    const baseHue = existingHues.length > 0 ? existingHues[0] : 0
+    bestHue = (baseHue + existingHues.length * goldenRatio * 360) % 360
+  }
+
+  // Use high saturation and medium lightness for vivid, distinguishable colors
+  const saturation = 65 + Math.random() * 20 // 65-85%
+  const lightness = 45 + Math.random() * 15 // 45-60%
+
+  // Convert HSL to RGB
+  const c = ((1 - Math.abs(2 * (lightness / 100) - 1)) * saturation) / 100
+  const x = c * (1 - Math.abs(((bestHue / 60) % 2) - 1))
+  const m = lightness / 100 - c / 2
+
+  let r = 0,
+    g = 0,
+    b = 0
+  if (bestHue < 60) {
+    r = c
+    g = x
+  } else if (bestHue < 120) {
+    r = x
+    g = c
+  } else if (bestHue < 180) {
+    g = c
+    b = x
+  } else if (bestHue < 240) {
+    g = x
+    b = c
+  } else if (bestHue < 300) {
+    r = x
+    b = c
+  } else {
+    r = c
+    b = x
+  }
+
+  const toHex = (n: number) => {
+    const hex = Math.round((n + m) * 255).toString(16)
+    return hex.length === 1 ? '0' + hex : hex
+  }
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
 import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
 import ImageProcessor from '../components/ImageProcessor'
 import TerritoryToken from '../components/TerritoryToken'
@@ -245,8 +340,9 @@ const buildTerritorySpatialIndex = (
   territories: Territory[],
   tokenSize: number,
 ): TerritorySpatialIndex => {
-  // Spacing should correspond to the actual token footprint only
-  const minDistance = tokenSize
+  // Spacing should be at least one full diameter to prevent overlaps
+  // Add 10% buffer for better visual separation
+  const minDistance = tokenSize * 1.1
   const cellSize = Math.max(minDistance, 1)
 
   const cells = new Map<string, Territory[]>()
@@ -678,6 +774,12 @@ export default function MapEditorTokens() {
   const [showProcessor, setShowProcessor] = useState(false)
   const [showCropper, setShowCropper] = useState(false)
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
+  const [tempImageDimensions, setTempImageDimensions] = useState<{
+    width: number
+    height: number
+    mapWidth: number
+    mapHeight: number
+  } | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [showLabelSettings, setShowLabelSettings] = useState(false)
   const [canvasSelection, setCanvasSelection] = useState<string>(
@@ -1063,6 +1165,54 @@ export default function MapEditorTokens() {
   const [isAssigningCapital, setIsAssigningCapital] = useState(false)
   // Position editor mode: 'px' for pixels, 'norm' for normalized 0..1
   const [positionMode, setPositionMode] = useState<'px' | 'norm'>('px')
+  // Local position input state for debouncing
+  const [localPositionInputs, setLocalPositionInputs] = useState<Record<string, { x: string; y: string }>>({})
+  const debouncedPositionInputs = useDebounce(localPositionInputs, 300)
+
+  // Apply debounced position inputs to state
+  useEffect(() => {
+    Object.entries(debouncedPositionInputs).forEach(([territoryId, { x: xStr, y: yStr }]) => {
+      const x = Number(xStr)
+      const y = Number(yStr)
+
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return
+
+      setState((prev) => {
+        const width = prev.mapWidth > 0 ? prev.mapWidth : 1
+        const height = prev.mapHeight > 0 ? prev.mapHeight : 1
+
+        return {
+          ...prev,
+          territories: prev.territories.map((t) => {
+            if (t.id !== territoryId) return t
+
+            if (positionMode === 'px') {
+              const clampedX = Math.min(Math.max(x, 0), Math.max(1, width))
+              const clampedY = Math.min(Math.max(y, 0), Math.max(1, height))
+              return {
+                ...t,
+                x: clampedX,
+                y: clampedY,
+                normalizedX: clamp01(clampedX / width),
+                normalizedY: clamp01(clampedY / height),
+              }
+            } else {
+              // normalized mode
+              const normX = clamp01(x)
+              const normY = clamp01(y)
+              return {
+                ...t,
+                x: normX * width,
+                y: normY * height,
+                normalizedX: normX,
+                normalizedY: normY,
+              }
+            }
+          }),
+        }
+      })
+    })
+  }, [debouncedPositionInputs, positionMode])
 
   const handleDeleteTerritory = useCallback((territoryId: string) => {
     setState((prev) => {
@@ -1074,7 +1224,12 @@ export default function MapEditorTokens() {
 
       return {
         ...prev,
-        territories: prev.territories.filter((territory) => territory.id !== territoryId),
+        territories: prev.territories
+          .filter((territory) => territory.id !== territoryId)
+          .map((territory) => ({
+            ...territory,
+            connections: territory.connections.filter((id) => id !== territoryId),
+          })),
         territoryModifiers: remainingModifiers,
         selectedTerritoryId:
           prev.selectedTerritoryId === territoryId ? null : prev.selectedTerritoryId,
@@ -1264,6 +1419,15 @@ export default function MapEditorTokens() {
             connections: connections.length > 0 ? connections : territory.connections,
           }
         })
+      }
+
+      // Validate loaded map data
+      if (territories.length === 0) {
+        alert('Warning: Map contains no territories. Loading anyway, but you may need to recreate the map.')
+      }
+
+      if (!map.name || (typeof map.name === 'string' && map.name.trim().length < 3)) {
+        alert('Warning: Map has an invalid name. Please update the map name before saving.')
       }
 
       // Load map data into editor state
@@ -1483,6 +1647,15 @@ export default function MapEditorTokens() {
         imageUrl = `data:${imagePayload.mimeType || 'image/png'};base64,${imagePayload.data}`
       }
 
+      // Validate loaded data before applying to state
+      if (territories.length === 0) {
+        alert('Warning: Draft contains no territories. Loading anyway, but you may need to recreate the map.')
+      }
+
+      if (!draft.name || draft.name.trim().length < 3) {
+        alert('Warning: Draft has an invalid name. Please update the map name before saving.')
+      }
+
       setState((prev) => {
         const mapWidth =
           typeof draftData.width === 'number' ? draftData.width : draft.imageWidth || prev.mapWidth
@@ -1687,21 +1860,14 @@ export default function MapEditorTokens() {
           setUploadInfo(null)
         }
 
-        // Update map dimensions
-        setState((prev) => {
-          const mapWidth = Math.min(finalWidth, MAX_WIDTH)
-          const mapHeight = Math.min(finalHeight, MAX_HEIGHT)
-          return {
-            ...prev,
-            imageUrl: dataUrl,
-            imageWidth: img.width,
-            imageHeight: img.height,
-            mapWidth,
-            mapHeight,
-            territories: prev.territories.map((territory) =>
-              withNormalizedPosition(territory, mapWidth, mapHeight),
-            ),
-          }
+        // Store image dimensions temporarily - will be applied when user confirms choice
+        const mapWidth = Math.min(finalWidth, MAX_WIDTH)
+        const mapHeight = Math.min(finalHeight, MAX_HEIGHT)
+        setTempImageDimensions({
+          width: img.width,
+          height: img.height,
+          mapWidth,
+          mapHeight,
         })
 
         // Show options dialog
@@ -1844,6 +2010,13 @@ export default function MapEditorTokens() {
   }
 
   const applyDragUpdate = useCallback(() => {
+    if (!containerRef.current) {
+      // Component may have unmounted, clear pending state and exit
+      dragUpdateFrameRef.current = null
+      pendingDragPositionRef.current = null
+      return
+    }
+
     dragUpdateFrameRef.current = null
     const pending = pendingDragPositionRef.current
 
@@ -1937,8 +2110,8 @@ export default function MapEditorTokens() {
     return () => {
       if (dragUpdateFrameRef.current !== null) {
         cancelAnimationFrame(dragUpdateFrameRef.current)
-        dragUpdateFrameRef.current = null
       }
+      dragUpdateFrameRef.current = null
       pendingDragPositionRef.current = null
     }
   }, [])
@@ -1960,7 +2133,9 @@ export default function MapEditorTokens() {
     }))
 
     setNewContinentName('')
-    setNewContinentColor(`#${Math.floor(Math.random() * 16777215).toString(16)}`)
+    // Generate a distinct color based on existing sector colors
+    const existingColors = state.continents.map((c) => c.color)
+    setNewContinentColor(generateDistinctColor(existingColors))
     setNewContinentBonus(3)
     setSelectedContinentId(newContinent.id)
   }
@@ -1982,7 +2157,29 @@ export default function MapEditorTokens() {
   }
 
   // Handle continent deletion
-  const handleDeleteContinent = (continentId: string) => {
+  const handleDeleteContinent = (continentId: string, continentName: string) => {
+    // Count affected territories
+    const affectedTerritories = state.territories.filter((t) => t.continentId === continentId)
+
+    // Check if any capitals will be affected
+    const affectedCapitals = affectedTerritories.filter((t) =>
+      Object.values(capitalAssignments).some((assignments) => assignments.includes(t.id))
+    )
+
+    // Build warning message
+    let warningMessage = `Delete sector "${continentName}"?\n\n`
+    if (affectedTerritories.length > 0) {
+      warningMessage += `• ${affectedTerritories.length} ${affectedTerritories.length === 1 ? 'territory' : 'territories'} will be unassigned\n`
+    }
+    if (affectedCapitals.length > 0) {
+      warningMessage += `• ${affectedCapitals.length} capital ${affectedCapitals.length === 1 ? 'assignment' : 'assignments'} will be affected\n`
+    }
+    warningMessage += '\nTerritories will NOT be deleted, only unassigned.'
+
+    if (!confirm(warningMessage)) {
+      return
+    }
+
     setState((prev) => ({
       ...prev,
       continents: prev.continents.filter((c) => c.id !== continentId),
@@ -2060,8 +2257,19 @@ export default function MapEditorTokens() {
         return
       }
 
+      // Validate critical data before attempting save
       if (state.territories.length < 2) {
         alert('Please add at least 2 territories before saving')
+        return
+      }
+
+      if (!state.name || state.name.trim().length < 3) {
+        alert('Please provide a map name (at least 3 characters) before saving')
+        return
+      }
+
+      if (state.mapWidth <= 0 || state.mapHeight <= 0) {
+        alert('Invalid map dimensions. Please set a valid canvas size.')
         return
       }
 
@@ -2070,6 +2278,7 @@ export default function MapEditorTokens() {
 
       let imageBase64: string | null = null
       let imageMimeType: string | null = null
+      let imageProcessingWarning: string | null = null
 
       if (state.imageUrl) {
         try {
@@ -2094,21 +2303,35 @@ export default function MapEditorTokens() {
             imageMimeType = blob.type || 'image/png'
           }
         } catch (error: unknown) {
-          reportError('Failed to process image:', error)
-          throw new Error('Failed to process map background image')
+          reportError('Failed to process image (continuing without image):', error)
+          imageProcessingWarning = 'Warning: Background image could not be processed. Map data saved without image.'
+          // Continue saving without the image rather than failing completely
+          imageBase64 = null
+          imageMimeType = null
         }
       }
 
-      const territoriesForSave = state.territories.map((territory) =>
-        withNormalizedPosition(territory, state.mapWidth, state.mapHeight),
-      )
+      // Normalize territories and build adjacency list with error handling
+      let territoriesForSave: Territory[]
+      let adjacencyList: { from: string; to: string }[]
 
-      const adjacencyList = territoriesForSave.flatMap((territory) =>
-        (territory.connections || []).map((targetId) => ({
-          from: territory.id,
-          to: targetId,
-        })),
-      )
+      try {
+        territoriesForSave = state.territories.map((territory) =>
+          withNormalizedPosition(territory, state.mapWidth, state.mapHeight),
+        )
+
+        adjacencyList = territoriesForSave.flatMap((territory) =>
+          (territory.connections || []).map((targetId) => ({
+            from: territory.id,
+            to: targetId,
+          })),
+        )
+      } catch (error: unknown) {
+        reportError('Failed to process territory data:', error)
+        alert('Failed to process territory data. Please check that all territories have valid positions and connections.')
+        setSaveStatus('error')
+        return
+      }
 
       const draftPayload: MapDraftPayload = {
         id: draftId ?? undefined,
@@ -2149,6 +2372,11 @@ export default function MapEditorTokens() {
       setLastSaved(new Date())
       setSaveStatus('saved')
       reportInfo('Draft saved successfully', response.draft)
+
+      // Show warning if image processing failed but save succeeded
+      if (imageProcessingWarning) {
+        alert(imageProcessingWarning)
+      }
 
       setTimeout(() => setSaveStatus('idle'), 2000)
     } catch (error: unknown) {
@@ -2270,16 +2498,24 @@ export default function MapEditorTokens() {
 
   // Handle image options dialog
   const handleUseFullImage = () => {
-    if (!tempImageUrl) return
+    if (!tempImageUrl || !tempImageDimensions) return
 
     setState((prev) => ({
       ...prev,
       imageUrl: tempImageUrl,
+      imageWidth: tempImageDimensions.width,
+      imageHeight: tempImageDimensions.height,
+      mapWidth: tempImageDimensions.mapWidth,
+      mapHeight: tempImageDimensions.mapHeight,
       imageScale: 1,
+      territories: prev.territories.map((territory) =>
+        withNormalizedPosition(territory, tempImageDimensions.mapWidth, tempImageDimensions.mapHeight),
+      ),
     }))
     setShowImageOptions(false)
     setShowProcessor(false)
     setTempImageUrl(null)
+    setTempImageDimensions(null)
   }
 
   const handleCropImage = () => {
@@ -2642,11 +2878,26 @@ export default function MapEditorTokens() {
                       max="200"
                       step="10"
                       value={state.imageScale * 100}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        if (state.territories.length > 0) {
+                          const confirmed = confirm(
+                            'Warning: Changing image scale after placing territories will cause misalignment.\n\n' +
+                            'Territory positions are fixed to canvas coordinates, but the background image will scale.\n\n' +
+                            'Recommended: Remove all territories first, or cancel this change.\n\n' +
+                            'Continue anyway?'
+                          )
+                          if (!confirmed) return
+                        }
                         setState((prev) => ({ ...prev, imageScale: Number(e.target.value) / 100 }))
-                      }
+                      }}
                       className="w-full"
+                      title={state.territories.length > 0 ? 'Warning: Changing scale with territories placed will cause misalignment' : undefined}
                     />
+                    {state.territories.length > 0 && (
+                      <p className="mt-2 text-xs text-yellow-400">
+                        ⚠️ Scale locked - {state.territories.length} {state.territories.length === 1 ? 'territory' : 'territories'} placed
+                      </p>
+                    )}
                   </div>
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <button
@@ -2746,7 +2997,7 @@ export default function MapEditorTokens() {
                     : '➕ Enable territory placement'}
                 </button>
                 <p className="mt-2 text-xs text-muted">
-                  Choose a continent and enable placement, then click the canvas to drop tokens
+                  Choose a sector and enable placement, then click the canvas to drop tokens
                   where you need them.
                 </p>
               </div>
@@ -2755,11 +3006,11 @@ export default function MapEditorTokens() {
             {/* Continent Management (consolidated here) */}
             <div className="mb-6 rounded border border-border bg-surface-1 p-3">
               <h3 className="text-sm font-bold mb-3">
-                {editingContinentId ? 'Update Continent' : 'Create Continent'}
+                {editingContinentId ? 'Update Sector' : 'Create Sector'}
               </h3>
               <input
                 type="text"
-                placeholder="Continent name"
+                placeholder="Sector name"
                 value={newContinentName}
                 onChange={(e) => setNewContinentName(e.target.value)}
                 className="w-full rounded border border-border bg-surface-1 px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
@@ -2810,7 +3061,7 @@ export default function MapEditorTokens() {
                       : 'bg-surface-2 text-muted'
                   }`}
                 >
-                  {editingContinentId ? '💾 Save Changes' : '➕ Create Continent'}
+                  {editingContinentId ? '💾 Save Changes' : '➕ Create Sector'}
                 </button>
                 {editingContinentId && (
                   <button
@@ -2829,7 +3080,7 @@ export default function MapEditorTokens() {
               </div>
               {editingContinentId && (
                 <p className="mt-2 text-xs text-muted">
-                  Saving will update the selected continent in place. Cancel to keep the existing
+                  Saving will update the selected sector in place. Cancel to keep the existing
                   values.
                 </p>
               )}
@@ -2837,7 +3088,7 @@ export default function MapEditorTokens() {
 
             <div className="mb-6">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-bold">Territories by Continent</h3>
+                <h3 className="text-sm font-bold">Territories by Sector</h3>
                 <span className="text-xs text-muted">{state.territories.length} total</span>
               </div>
               <div className="space-y-3">
@@ -2859,7 +3110,7 @@ export default function MapEditorTokens() {
                             type="button"
                             onClick={() => toggleContinentExpanded(group.key)}
                             className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                            aria-label={isExpanded ? 'Collapse continent' : 'Expand continent'}
+                            aria-label={isExpanded ? 'Collapse sector' : 'Expand sector'}
                           >
                             {isExpanded ? '▾' : '▸'}
                           </button>
@@ -2908,13 +3159,7 @@ export default function MapEditorTokens() {
                             <button
                               type="button"
                               onClick={() => {
-                                if (
-                                  confirm(
-                                    `Delete continent "${continent.name}"? Territories will become unassigned.`,
-                                  )
-                                ) {
-                                  handleDeleteContinent(continent.id)
-                                }
+                                handleDeleteContinent(continent.id, continent.name)
                               }}
                               className="rounded border border-red-600/60 px-2 py-1 text-xs text-red-300 hover:border-red-500 hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                             >
@@ -2932,8 +3177,8 @@ export default function MapEditorTokens() {
                           {territoryCount === 0 ? (
                             <p className="rounded bg-surface-2/70 px-3 py-2 text-xs text-muted">
                               {continent
-                                ? 'No territories assigned to this continent yet. Use the selects below to add some.'
-                                : 'Any territories without a continent assignment will show here.'}
+                                ? 'No territories assigned to this sector yet. Use the selects below to add some.'
+                                : 'Any territories without a sector assignment will show here.'}
                             </p>
                           ) : (
                             group.territories.map((territory) => {
@@ -3059,53 +3304,37 @@ export default function MapEditorTokens() {
                                                     : 1
                                                 }
                                                 value={
-                                                  positionMode === 'px'
+                                                  localPositionInputs[territory.id]?.x ??
+                                                  (positionMode === 'px'
                                                     ? Math.round(territory.x)
                                                     : Number(
                                                         (
                                                           territory.normalizedX ??
                                                           territory.x / (state.mapWidth || 1)
                                                         ).toFixed(3),
-                                                      )
+                                                      ))
                                                 }
                                                 onChange={(e) => {
-                                                  const raw = Number(e.target.value)
-                                                  if (!Number.isFinite(raw)) return
-                                                  setState((prev) => {
-                                                    const width =
-                                                      prev.mapWidth > 0 ? prev.mapWidth : 1
-                                                    if (positionMode === 'px') {
-                                                      const clamped = Math.min(
-                                                        Math.max(raw, 0),
-                                                        Math.max(1, width),
-                                                      )
-                                                      return {
-                                                        ...prev,
-                                                        territories: prev.territories.map((t) =>
-                                                          t.id === territory.id
-                                                            ? {
-                                                                ...t,
-                                                                x: clamped,
-                                                                normalizedX: clamp01(
-                                                                  clamped / width,
-                                                                ),
-                                                              }
-                                                            : t,
-                                                        ),
-                                                      }
-                                                    }
-                                                    // normalized edit
-                                                    const norm = clamp01(raw)
-                                                    const px = norm * width
-                                                    return {
-                                                      ...prev,
-                                                      territories: prev.territories.map((t) =>
-                                                        t.id === territory.id
-                                                          ? { ...t, x: px, normalizedX: norm }
-                                                          : t,
-                                                      ),
-                                                    }
-                                                  })
+                                                  const currentY =
+                                                    localPositionInputs[territory.id]?.y ??
+                                                    (positionMode === 'px'
+                                                      ? String(Math.round(territory.y))
+                                                      : String(
+                                                          Number(
+                                                            (
+                                                              territory.normalizedY ??
+                                                              territory.y / (state.mapHeight || 1)
+                                                            ).toFixed(3),
+                                                          ),
+                                                        ))
+
+                                                  setLocalPositionInputs((prev) => ({
+                                                    ...prev,
+                                                    [territory.id]: {
+                                                      x: e.target.value,
+                                                      y: currentY,
+                                                    },
+                                                  }))
                                                 }}
                                                 className="no-spinners w-full rounded border border-border bg-surface-1 px-3 py-2 text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                                               />
@@ -3132,52 +3361,37 @@ export default function MapEditorTokens() {
                                                     : 1
                                                 }
                                                 value={
-                                                  positionMode === 'px'
+                                                  localPositionInputs[territory.id]?.y ??
+                                                  (positionMode === 'px'
                                                     ? Math.round(territory.y)
                                                     : Number(
                                                         (
                                                           territory.normalizedY ??
                                                           territory.y / (state.mapHeight || 1)
                                                         ).toFixed(3),
-                                                      )
+                                                      ))
                                                 }
                                                 onChange={(e) => {
-                                                  const raw = Number(e.target.value)
-                                                  if (!Number.isFinite(raw)) return
-                                                  setState((prev) => {
-                                                    const height =
-                                                      prev.mapHeight > 0 ? prev.mapHeight : 1
-                                                    if (positionMode === 'px') {
-                                                      const clamped = Math.min(
-                                                        Math.max(raw, 0),
-                                                        Math.max(1, height),
-                                                      )
-                                                      return {
-                                                        ...prev,
-                                                        territories: prev.territories.map((t) =>
-                                                          t.id === territory.id
-                                                            ? {
-                                                                ...t,
-                                                                y: clamped,
-                                                                normalizedY: clamp01(
-                                                                  clamped / height,
-                                                                ),
-                                                              }
-                                                            : t,
-                                                        ),
-                                                      }
-                                                    }
-                                                    const norm = clamp01(raw)
-                                                    const px = norm * height
-                                                    return {
-                                                      ...prev,
-                                                      territories: prev.territories.map((t) =>
-                                                        t.id === territory.id
-                                                          ? { ...t, y: px, normalizedY: norm }
-                                                          : t,
-                                                      ),
-                                                    }
-                                                  })
+                                                  const currentX =
+                                                    localPositionInputs[territory.id]?.x ??
+                                                    (positionMode === 'px'
+                                                      ? String(Math.round(territory.x))
+                                                      : String(
+                                                          Number(
+                                                            (
+                                                              territory.normalizedX ??
+                                                              territory.x / (state.mapWidth || 1)
+                                                            ).toFixed(3),
+                                                          ),
+                                                        ))
+
+                                                  setLocalPositionInputs((prev) => ({
+                                                    ...prev,
+                                                    [territory.id]: {
+                                                      x: currentX,
+                                                      y: e.target.value,
+                                                    },
+                                                  }))
                                                 }}
                                                 className="no-spinners w-full rounded border border-border bg-surface-1 px-3 py-2 text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                                               />
@@ -3447,7 +3661,7 @@ export default function MapEditorTokens() {
         return (
           <span>
             <strong>Regions:</strong> Enable placement to add tokens, drag to reposition, and use
-            the grouping panel to assign or edit continents and bonuses. Right-click or Delete
+            the grouping panel to assign or edit sectors and bonuses. Right-click or Delete
             removes tokens.
           </span>
         )
@@ -3779,6 +3993,7 @@ export default function MapEditorTokens() {
                 onClick={() => {
                   setShowImageOptions(false)
                   setTempImageUrl(null)
+                  setTempImageDimensions(null)
                 }}
                 className="w-full px-4 py-3 bg-surface-2 hover:bg-gray-600 rounded-lg text-white font-medium"
               >
@@ -3801,7 +4016,7 @@ export default function MapEditorTokens() {
             <h1 className="text-3xl font-bold">Map Editor (Token-Based)</h1>
             <p className="text-sm text-muted mt-1">
               Create custom Risk-style maps in 5 easy steps: Upload image → Place territories →
-              Create continents → Connect territories → Set capitals
+              Create sectors → Connect territories → Set capitals
             </p>
           </div>
           {polygonEditorEnabled && (

@@ -333,6 +333,7 @@ export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
   'game-action': (data: { roomId: string; action: GameAction }) => void
+  'player:resign': (data: { roomId: string }) => void
   deployArmies: (data: { roomId: string; territoryId: string; armies: number }) => void
   attack: (data: {
     roomId: string

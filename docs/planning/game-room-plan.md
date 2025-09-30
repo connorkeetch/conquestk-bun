@@ -1,6 +1,6 @@
 # Game Room Plan
 
-## Progress Tracker (Sept 29)
+## Progress Tracker (Sept 30)
 
 - Phase-driven HUD and bottom action bar
   - Added `frontend/src/components/game/GameActionBar.tsx` (sticky bottom). It surfaces phase-aware CTAs for Reinforcement (Place), Attack (Roll with 1/2/3 dice selector), and Fortify (Move slider). Wired to Redux actions; keeps side panel intact for now to avoid breaking flows. Next: unify with `GamePhaseControls` or remove the duplicate.
@@ -8,7 +8,14 @@
 - Turn timer
   - Added `frontend/src/components/game/TurnTimer.tsx`, driven by `room.turnExpiresAt` via lifecycle updates. Plays a subtle audio tick under 10s. No client auto-end; server remains source of truth. Time-bank UI not yet surfaced.
   - Timer now shows an optional time bank chip when lifecycle payloads include fields like `timeBankMs` or `timeBankSecondsRemaining`.
+  - Local bank countdown: when it's your turn and the main timer has expired, the bank chip now ticks down client-side using elapsed overtime (based on `now - turnExpiresAt`). Server deltas remain authoritative and override when received.
   - AFK grace and strikes: When a turn expires, the next player gets a grace prompt to Remind or Skip. Skip counts as a strike for the timed-out player. Three strikes triggers a host decision: replace with AI (difficulty selectable) or set territories to neutral and clear cards.
+- Map overlays & visible toggles
+  - Added in-map toggle group (top-left) for Sectors, Attackable, and Threat overlays. Mobile shows compact icon-only buttons; desktop shows labels.
+  - Classic map: Sector dots, Attackable rings (source + valid targets), Threat heat rings (friendly territories scaled by adjacent enemy armies). Small legend for sector colors (bottom-right).
+  - Custom maps: Sector dots, Attackable rings, and Threat heat rings implemented (adjacency passed from board). Legend included.
+  - Mobile swipes: Swipe left/right over the map cycles filters (None → Sectors → Attackable → Threat) on both classic and custom maps.
+  - Haptics: subtle vibration on filter change via swipe or overlay button taps (when supported).
 - Connection/resync UX
   - Added `frontend/src/components/game/ConnectionBanner.tsx` and socket connection status in `uiRoomSlice`. Header shows a (green/yellow/red) dot; a top banner appears while disconnected/connecting. “Resync” button not required yet since a fresh `game-update` arrives on reconnect; add if desync incidents appear.
 - Clickable log → map focus
@@ -51,11 +58,11 @@ Notes
 
 Next Steps (suggested)
 
-- Add odds tooltip on attack hover + quick “auto-attack” option.
-- Add inline transfer slider post-conquest (visual inline slider near border); current MVP uses a numeric "commit on conquer" input in the action bar.
-- Surface time bank UI alongside the timer when configured; reflect server deltas.
-- Implement pan/zoom focus to selected territories from log clicks (ResponsiveMapContainer hook).
-- Consolidate `CurrentActionPanel` details into the bottom bar (now that phase controls are moved) and reduce right-rail redundancy.
+- Add odds tooltip on attack hover + quick “auto-attack” option — implemented.
+- Add inline transfer slider post-conquest (visual inline slider near border); current MVP uses a numeric "commit on conquer" input in the action bar — implemented.
+- Surface time bank UI alongside the timer when configured; reflect server deltas — implemented, now with local client countdown while in overtime.
+- Implement pan/zoom focus to selected territories from log clicks (ResponsiveMapContainer hook) — implemented.
+- Consolidate `CurrentActionPanel` details into the bottom bar (now that phase controls are moved) and reduce right-rail redundancy — implemented.
 
 
 ## 0. The One‑Screen Mental Model
@@ -74,13 +81,13 @@ If a player can’t tell “where am I, whose turn is it, what can I do next?”
 
 - Map is full‑bleed.
 - A phase action FAB floats bottom‑right. A bottom drawer swaps between action controls and the log/chat.
-- Swipe left/right switches between map filters (ownership, attackable, continent bonus overlay).
+- Swipe left/right switches between map filters (ownership, attackable, sector bonus overlay).
 - Top mini‑HUD shows current player, timer, and phase. Tap to expand to the full sidebar.
 
 ## 1. Lobby Inside the Room
 
 - The “room” isn’t just the map; it’s also the pre‑match staging.
-- Seat selection with clear colors and lock‑in. Show continent bonuses on hover even before start.
+- Seat selection with clear colors and lock‑in. Show sector bonuses on hover even before start.
 - Private/public, invite code, and “Ready” state with host controls (kick, swap seats, set timer, toggle fog, card rules).
 - Countdown starts when all Ready (or host forces start). If someone drops in countdown, auto‑pause.
 
@@ -118,7 +125,7 @@ Your game should feel like a guided story, not a spreadsheet. Only show what mat
 - Zoom/pan: mouse wheel zoom centered on pointer. Touch pinch zoom. Double‑tap to zoom in.
 - Labels: always legible. Use dynamic text scaling and halo strokes so army counts are visible over any color.
 - Color system: owner colors meet WCAG AA over the terrain. Provide a color‑blind palette toggle in Settings. Theme switching already relies on CSS variables; extend those tokens for player colors.
-- Overlays: toggleable layers for continents, attackable adjacency, and “threat heatmap” (enemy pressure).
+- Overlays: toggleable layers for sectors, attackable adjacency, and “threat heatmap” (enemy pressure).
 
 ## 4. Combat Resolution That Feels Fair
 
@@ -166,6 +173,18 @@ Your game should feel like a guided story, not a spreadsheet. Only show what mat
 - Render only what’s visible. If you’re using SVG, keep armies and labels in one layer and territories in another; avoid re‑painting the entire map when a single number changes.
 - Persist small UI state in localStorage (zoom, animation speed, muted players) and game state in Redux with slices for room, players, map, chat, and UI. Extend your existing Redux Toolkit patterns.
 
+Implementation status (Sept 30)
+
+- Optimistic reinforcement + rollback: Implemented. We optimistically bump local armies on deploy, then reconcile on `armiesDeployed`. On mismatch, we show a toast and add a client log line. See `frontend/src/store/gameActions.ts` (optimistic bump), `frontend/src/services/socketService.ts` (reconcile + toast/log), and `frontend/src/store/uiRoomSlice.ts` (optimisticPlacements + clientLogs).
+- Conflict toast/log for contested actions: Implemented. Socket `gameError` triggers a toast and adds a client log line. See `frontend/src/services/socketService.ts`.
+- Render only what’s visible: Implemented earlier. SVG map + separate army/modifier overlays reduce repaint.
+- Socket hygiene + status dot: Implemented earlier. ConnectionBanner and header dot reflect connection status with reconnect backoff from Socket.io.
+- Persist small UI state: Extended. Added zoom persistence (per‑map key) in `ResponsiveMapContainer` via `storageKey`, wired by `RiskGameMap` (`storageKey="map:${mapId}"`). Existing persisted toggles remain.
+- Overlays & filters: Implemented Sectors/Attackable/Threat for classic and custom maps. Added a small sector legend.
+- Mobile FAB + Drawer: Implemented a bottom-right FAB (mobile only) that opens a bottom drawer with tabs for Actions and Chat/Log. The Actions tab embeds the action controls; desktop keeps the fixed bottom action bar.
+- Mini-HUD: Added a compact top-center HUD on mobile with phase chip, timer, and current player color/name. Tapping it opens the drawer to Chat.
+ - Drawer polish: spring-like easing, backdrop scrim tap-to-close, body scroll lock, and safe-area insets for portrait and landscape (bottom/left/right padding).
+
 ## 11. Sounds That Add Feedback, Not Headaches
 
 - Three categories with independent volume: actions, rolls, alerts.
@@ -177,8 +196,24 @@ Your game should feel like a guided story, not a spreadsheet. Only show what mat
 
 ## 13. Post‑Game That Teaches
 
-- MVP (in progress): post‑game modal with Final Standings (territories + armies), Key Moments timeline, and “Rematch same seats.”
-- Next: add Territories/Armies over time charts using `game_states.turn_stats` (see post‑game‑analytics‑plan.md) and annotate eliminations/conquests.
+- MVP (complete): post‑game modal with Final Standings (territories + armies), Game Progress charts (Territories | Armies) with turn labels and hover tooltips, Key Moments timeline, and “Rematch same seats.”
+- Persist per‑turn stats (`game_states.turn_stats`) power the charts; see post‑game‑analytics‑plan.md.
+- Next: annotate conquests/eliminations on charts; optional quick replay.
+
+## Open Items / TBD
+
+- Timer auto‑end: best‑effort even placement + cancel pending actions for timeouts.
+- Chat manners: profanity toggle, mute per‑room, and player “Report”.
+- Spectators: clearer labeling in list/header; confirm fog behavior expectations for spectators.
+- Ping polish: optional ping button + per‑user cooldown.
+- Keyboard / undo: broaden hotkeys and add “Undo” for reinforcement placements.
+- Mobile polish: improved drawer animations, safe-area insets, backdrop, and added haptic feedback on filter swipes; hiding the desktop chat panel on small screens is done, but refine thresholds.
+- Mobile: swipe left/right to cycle overlays; compact icon-only filter toggles and mini-HUD on small screens.
+- Right rail: restructure once action bar fully covers phase needs; consolidate info.
+- Rematch for non‑host: allow request + host approval.
+- ELO policy for strikes: confirm rating treatment for kicked/neutralized players.
+- Hidden Treasures polish: optional “trade and auto‑place evenly”; card art across app.
+- Charts: add annotations and series visibility presets; respect reduced motion.
 - Stretch: quick replay with key moments navigation.
 
 ## 14. What the UI Should Literally Look Like
@@ -193,7 +228,7 @@ Your game should feel like a guided story, not a spreadsheet. Only show what mat
 
 - A Attack, F Fortify, D Draft (or cycle phases when allowed).
 - 1/2/3 set dice. E end phase, T end turn. Z undo placement.
-- G toggle continent overlay, H toggle threat heatmap, L focus last log event.
+- G toggle sector overlay, H toggle threat heatmap, L focus last log event.
 
 ## 16. Minimal Data Shapes That Will Save You Pain
 

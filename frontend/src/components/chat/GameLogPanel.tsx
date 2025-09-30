@@ -37,6 +37,7 @@ function formatTimestamp(d: Date): string {
 export default function GameLogPanel({ gameId, className = '', onFocus }: Props) {
   const room = useAppSelector((s) => s.room.currentRoom)
   const game = useAppSelector((s) => s.game.currentGame)
+  const clientLogs = useAppSelector((s) => s.uiRoom.clientLogs ?? [])
   const [entries, setEntries] = useState<LogEntry[]>([])
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
@@ -406,32 +407,34 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {entries.length === 0 ? (
+        {entries.length === 0 && clientLogs.length === 0 ? (
           <div className="text-center text-muted py-6 text-sm">No log entries yet.</div>
         ) : (
           <div className="space-y-3">
-            {entries.map((e) => {
-              const key = `${e.ts.getTime()}-${e.text}`
-              const clickable = Boolean(
-                onFocus && e.focusTerritories && e.focusTerritories.length > 0,
-              )
-              return (
-                <div key={key} className="text-sm">
-                  <div className="text-xs text-muted">{formatTimestamp(e.ts)}</div>
-                  {clickable ? (
-                    <button
-                      type="button"
-                      className="text-left text-white underline underline-offset-2 hover:text-[color:var(--color-accent)]"
-                      onClick={() => e.focusTerritories && onFocus?.(e.focusTerritories)}
-                    >
-                      {e.text}
-                    </button>
-                  ) : (
-                    <div className="text-white">{e.text}</div>
-                  )}
-                </div>
-              )
-            })}
+            {[...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text })), ...entries]
+              .sort((a, b) => b.ts.getTime() - a.ts.getTime())
+              .map((e) => {
+                const key = `${e.ts.getTime()}-${e.text}`
+                const clickable = Boolean(
+                  onFocus && e.focusTerritories && e.focusTerritories.length > 0,
+                )
+                return (
+                  <div key={key} className="text-sm">
+                    <div className="text-xs text-muted">{formatTimestamp(e.ts)}</div>
+                    {clickable ? (
+                      <button
+                        type="button"
+                        className="text-left text-white underline underline-offset-2 hover:text-[color:var(--color-accent)]"
+                        onClick={() => e.focusTerritories && onFocus?.(e.focusTerritories)}
+                      >
+                        {e.text}
+                      </button>
+                    ) : (
+                      <div className="text-white">{e.text}</div>
+                    )}
+                  </div>
+                )
+              })}
           </div>
         )}
       </div>

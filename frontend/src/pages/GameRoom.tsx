@@ -5,6 +5,7 @@ import { GameOverModal } from '@/components/GameOverModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
+import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
@@ -17,6 +18,9 @@ import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
+import RankInsignia from '@/components/RankInsignia'
+import { toggleMuteUser } from '@/store/uiRoomSlice'
+import { toast } from 'react-hot-toast'
 import { endTurn } from '../store/gameActions'
 import {
   clearGame,
@@ -90,6 +94,18 @@ export default function GameRoom() {
   const [liveMessage, setLiveMessage] = useState('')
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
   const [showGameOver, setShowGameOver] = useState(false)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [mobileDrawerTab, setMobileDrawerTab] = useState<'actions' | 'chat'>('actions')
+
+  // Prevent background scroll when the bottom drawer is open
+  useEffect(() => {
+    if (!mobileDrawerOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileDrawerOpen])
   // AFK grace prompt state
   const graceActorUserId = useMemo(
     () =>
@@ -1008,6 +1024,39 @@ export default function GameRoom() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-20 pt-8 lg:px-10">
+      {/* Mini HUD for mobile */}
+      {currentGame && (
+        <div className="md:hidden fixed top-2 left-1/2 z-40 -translate-x-1/2">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileDrawerOpen(true)
+              setMobileDrawerTab('chat')
+            }}
+            className="flex items-center gap-2 rounded-full border border-border bg-surface-2/80 backdrop-blur px-4 py-2 text-sm shadow min-h-[44px]"
+            title="Open sidebar"
+            aria-controls="mobileGameDrawer"
+            aria-expanded={mobileDrawerOpen ? true : false}
+          >
+            <span className="chip text-[10px]">
+              {currentGame.phase.charAt(0).toUpperCase() + currentGame.phase.slice(1)}
+            </span>
+            <TurnTimer />
+            {(() => {
+              const p = currentGame.players.find((pl) => pl.id === currentGame.currentPlayer)
+              return (
+                <span className="inline-flex items-center gap-1">
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full border border-white/50"
+                    style={{ background: p?.color || '#9CA3AF' }}
+                  />
+                  <span className="max-w-[120px] truncate">{p?.username || 'Player'}</span>
+                </span>
+              )
+            })()}
+          </button>
+        </div>
+      )}
       <ConnectionBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1085,6 +1134,47 @@ export default function GameRoom() {
       {joinError && (
         <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-sm text-[color:var(--color-danger)]">
           {joinError}
+        </div>
+      )}
+
+      {/* Resign dialog */}
+      {resignDialogOpen && currentRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div
+            ref={resignDialogRef}
+            className="panel w-full max-w-sm space-y-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={resignDialogTitleId}
+            tabIndex={-1}
+          >
+            <h2 id={resignDialogTitleId} className="text-lg font-semibold text-[color:var(--heading)]">
+              Resign from game?
+            </h2>
+            <p className="text-sm text-muted">
+              This will request to resign and set your territories to neutral. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button type="button" className="btn btn-secondary" onClick={() => setResignDialogOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  try {
+                    socketService.emit('player:resign', { roomId: currentRoom.id })
+                    const { addClientLog } = require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+                    dispatch(addClientLog({ text: 'You requested to resign.', roomId: currentRoom.id }))
+                    toast.success('Resign requested')
+                  } catch {}
+                  setResignDialogOpen(false)
+                }}
+              >
+                Resign
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1167,9 +1257,10 @@ export default function GameRoom() {
 
       {/* No ready errors expected */}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        {/* Left rail placeholder (will be inserted below) */}
         {/* Game Board */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-6 lg:col-start-4">
           <div className="panel h-auto min-h-[clamp(520px,65vh,920px)] p-0">
             {currentGame ? (
               <RiskGameBoard
@@ -1248,41 +1339,61 @@ export default function GameRoom() {
               </div>
             )}
           </div>
-          <div
-            ref={chatContainerRef}
-            className="panel p-0 overflow-hidden"
-            style={{ height: 'min(40vh, 460px)' }}
-          >
-            {roomId && user ? (
-              shouldHydrateChat ? (
-                <Suspense
-                  fallback={
-                    <div className="h-full flex items-center justify-center p-4">
-                      <Skeleton variant="rectangular" width="100%" height="100%" />
+          {/* Desktop chat moved to right rail */}
+        </div>
+
+        {/* Right column previously used for players; switch to right rail chat */}
+        <div className="hidden lg:block lg:col-span-3 lg:col-start-10">
+          <div className="panel p-0 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+              <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
+                onClick={() => {
+                  try { localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen)) } catch {}
+                  setRightRailOpen((v) => !v)
+                }}
+                title={rightRailOpen ? 'Collapse' : 'Expand'}
+              >
+                {rightRailOpen ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            {rightRailOpen && (
+              <div ref={chatContainerRef} style={{ height: 'min(60vh, 640px)' }}>
+                {roomId && user ? (
+                  shouldHydrateChat ? (
+                    <Suspense
+                      fallback={
+                        <div className="h-40 flex items-center justify-center p-4">
+                          <Skeleton variant="rectangular" width="100%" height="100%" />
+                        </div>
+                      }
+                    >
+                      <LazyTabbedGameChat
+                        gameId={currentRoom.id}
+                        currentUserId={user.id}
+                        userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
+                        className="h-full"
+                        onLogFocus={(territories) => {
+                          const focus = territories[territories.length - 1]
+                          if (focus) dispatch(selectTerritory(focus))
+                        }}
+                      />
+                    </Suspense>
+                  ) : (
+                    <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
+                      Preparing chat…
                     </div>
-                  }
-                >
-                  <LazyTabbedGameChat
-                    gameId={currentRoom.id}
-                    currentUserId={user.id}
-                    userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
-                    className="h-full"
-                    onLogFocus={(territories) => {
-                      const focus = territories[territories.length - 1]
-                      if (focus) dispatch(selectTerritory(focus))
-                    }}
-                  />
-                </Suspense>
-              ) : (
-                <div className="h-full flex items-center justify-center p-4 text-sm text-muted">
-                  Preparing chat…
-                </div>
-              )
-            ) : null}
+                  )
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="space-y-6 lg:col-span-1">
+        {/* Left rail: Players (desktop) */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-6 lg:col-span-3 lg:col-start-1">
           <div className="panel space-y-5">
             <h3 className="text-lg font-semibold text-[color:var(--heading)]">
               Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
@@ -1303,15 +1414,28 @@ export default function GameRoom() {
                   typeof player.skill_rating === 'number' ? player.skill_rating : null,
                 )
                 const tierIndex = tier ? TIER_BOUNDS.findIndex((t) => t.name === tier.name) + 1 : 0
+                // Typing indicator (game chat)
+                const typingMap = (store.getState().messages.typing || {}) as Record<string, Record<string, string>>
+                const typingForRoom = typingMap[currentRoom.id] || {}
+                const isTyping = Boolean(typingForRoom[player.userId])
+                const gp = currentGame?.players?.find((p) => (p.userId ?? p.id) === (player.userId ?? player.id))
+                const armies = typeof gp?.armies === 'number' ? gp.armies : undefined
+                const terrs = Array.isArray(gp?.territories) ? gp.territories.length : undefined
+                const cardsCount = Array.isArray(gp?.treasures) ? gp.treasures.length : gp?.cards?.length || 0
+                const conn = isCurrentUser ? store.getState().uiRoom.connectionStatus : undefined
                 return (
-                  <li key={player.id} className="list-item last:border-b-0">
+                  <li key={player.id} className="list-item last:border-b-0 group">
                     <div className="flex items-center gap-3">
                       <span
-                        className="inline-flex h-3.5 w-3.5 shrink-0 rounded-full border border-border"
+                        className="relative inline-flex h-3.5 w-3.5 shrink-0 rounded-full border border-border"
                         style={{ background: colorValue }}
                         title={rawColor ? `Color: ${rawColor}` : undefined}
                         aria-hidden="true"
-                      />
+                      >
+                        {isTyping && (
+                          <span className="absolute -top-1 -right-1 inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-black/40" title="Typing" />
+                        )}
+                      </span>
                       <div className="flex-1 min-w-0">
                         {/* Row 1: Name + badges */}
                         <div className="flex items-center gap-2">
@@ -1340,27 +1464,63 @@ export default function GameRoom() {
                               👑 Host
                             </span>
                           )}
+                          {typeof player.skill_rating === 'number' && (
+                            <RankInsignia rating={player.skill_rating} size="sm" showLabel={false} showRating={false} />
+                          )}
+                          {isCurrentUser && (
+                            <span
+                              className={`inline-block w-2 h-2 rounded-full ${conn === 'connected' ? 'bg-green-500' : conn === 'connecting' ? 'bg-yellow-400' : 'bg-red-500'}`}
+                              title={conn === 'connected' ? 'Online' : conn === 'connecting' ? 'Reconnecting' : 'Disconnected'}
+                            />
+                          )}
                           {player.isAi && player.aiDifficulty && (
                             <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
                               🤖 {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
                             </span>
                           )}
                         </div>
-                        {/* Row 2: Tier + rating + team */}
+                        {/* Row 2: Stats + team */}
                         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                          <span>
-                            {tier ? `${tier.name} — Rank ${romanNumeral(tierIndex)}` : 'Unranked'}
-                          </span>
-                          {typeof player.skill_rating === 'number' && (
-                            <span className="opacity-80">· {player.skill_rating} CP</span>
+                          {typeof armies === 'number' && <span>{armies} armies</span>}
+                          {typeof terrs === 'number' && <span className="opacity-80">· {terrs} territories</span>}
+                          <span className="opacity-80" title="Cards">· 🎴 {cardsCount}</span>
+                          {tier ? (
+                            <span>
+                              · {tier.name} — Rank {romanNumeral(tierIndex)}
+                              {typeof player.skill_rating === 'number' && (
+                                <span className="opacity-80"> ({player.skill_rating} CP)</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span>· Unranked</span>
                           )}
-                          {currentRoom.allowTeamPlay &&
-                            currentRoom.teamMode !== 'none' &&
-                            typeof player.teamId === 'number' &&
-                            player.teamId > 0 && (
-                              <span className="chip text-xs">Team {player.teamId}</span>
-                            )}
+                          {currentRoom.allowTeamPlay && currentRoom.teamMode !== 'none' && typeof player.teamId === 'number' && player.teamId > 0 && (
+                            <span className="chip text-xs">Team {player.teamId}</span>
+                          )}
                         </div>
+                      </div>
+                      {/* Hover actions */}
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {!isCurrentUser && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs"
+                            title="Mute/unmute player"
+                            onClick={() => dispatch(toggleMuteUser(player.id))}
+                          >
+                            Mute
+                          </button>
+                        )}
+                        {isCurrentUser && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs text-[color:var(--color-danger)]"
+                            title="Resign"
+                            onClick={() => setResignDialogOpen(true)}
+                          >
+                            Resign
+                          </button>
+                        )}
                       </div>
                     </div>
                   </li>
@@ -1370,7 +1530,7 @@ export default function GameRoom() {
           </div>
 
           {showAiControls && (
-            <div className="panel space-y-4">
+            <div className="panel space-y-4 lg:hidden">
               <div className="flex items-start justify-between gap-4">
                 <h3 className="text-lg font-semibold text-[color:var(--heading)]">AI Opponents</h3>
                 <span className="badge border-[color:var(--panel-border)] text-muted">
@@ -1475,7 +1635,7 @@ export default function GameRoom() {
           )}
 
           {showTeamAssignment && currentRoom.numberOfTeams && currentRoom.numberOfTeams > 0 && (
-            <div className="panel space-y-3">
+            <div className="panel space-y-3 lg:hidden">
               <TeamAssignment
                 players={lobbyTeamPlayers}
                 numberOfTeams={currentRoom.numberOfTeams}
@@ -1599,7 +1759,112 @@ export default function GameRoom() {
         </div>
       )}
 
-      {currentGame && <GameActionBar />}
+      {/* Desktop action bar */}
+      {currentGame && (
+        <div className="hidden md:block">
+          <GameActionBar />
+        </div>
+      )}
+
+      {/* Mobile FAB */}
+      {currentGame && (
+        <button
+          type="button"
+          className="md:hidden fixed z-50 rounded-full bg-[color:var(--color-primary)] text-white shadow-lg px-4 py-3"
+          onClick={() => setMobileDrawerOpen((v) => !v)}
+          title={mobileDrawerOpen ? 'Close drawer' : 'Open actions/chat'}
+          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
+        >
+          {mobileDrawerOpen ? '✕' : mobileDrawerTab === 'actions' ? '⚔️ Actions' : '💬 Chat'}
+        </button>
+      )}
+
+      {/* Mobile backdrop */}
+      {currentGame && (
+        <div
+          className={`md:hidden fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setMobileDrawerOpen(false)}
+        />
+      )}
+
+      {/* Mobile bottom drawer */}
+      {currentGame && (
+        <div
+          id="mobileGameDrawer"
+          className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="rounded-t-xl border border-border bg-surface-1 shadow-2xl"
+            style={{
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
+              paddingLeft: 'calc(env(safe-area-inset-left) + 12px)',
+              paddingRight: 'calc(env(safe-area-inset-right) + 12px)',
+            }}
+          >
+            <div className="flex items-center justify-between px-3 pt-2">
+              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30" />
+            </div>
+            <div className="flex items-center gap-2 px-3 pb-2">
+              <button
+                type="button"
+                className={`btn btn-ghost btn-sm ${mobileDrawerTab === 'actions' ? 'ring-1 ring-white' : ''}`}
+                onClick={() => setMobileDrawerTab('actions')}
+              >
+                ⚔️ Actions
+              </button>
+              <button
+                type="button"
+                className={`btn btn-ghost btn-sm ${mobileDrawerTab === 'chat' ? 'ring-1 ring-white' : ''}`}
+                onClick={() => setMobileDrawerTab('chat')}
+              >
+                💬 Chat
+              </button>
+              <div className="ml-auto pr-1">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setMobileDrawerOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
+              {mobileDrawerTab === 'actions' ? (
+                <GameActionBar mode="inline" />
+              ) : roomId && user ? (
+                shouldHydrateChat ? (
+                  <Suspense
+                    fallback={
+                      <div className="h-40 flex items-center justify-center p-4">
+                        <Skeleton variant="rectangular" width="100%" height="100%" />
+                      </div>
+                    }
+                  >
+                    <LazyTabbedGameChat
+                      gameId={currentRoom.id}
+                      currentUserId={user.id}
+                      userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
+                      className="h-full"
+                      onLogFocus={(territories) => {
+                        const focus = territories[territories.length - 1]
+                        if (focus) dispatch(selectTerritory(focus))
+                      }}
+                    />
+                  </Suspense>
+                ) : (
+                  <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
+                    Preparing chat…
+                  </div>
+                )
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Post-game results modal */}
       {showGameOver && currentGame && (
