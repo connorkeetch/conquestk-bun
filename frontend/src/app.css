@@ -791,6 +791,9 @@ body {
 body[data-background-motion="off"]::before,
 body[data-background-motion="off"]::after {
   animation: none;
+  transform: none;
+  background-image: none;
+  opacity: 0;
 }
 
 /* Ensure content is above overlay */
