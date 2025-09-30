@@ -29,8 +29,18 @@ export const getCardTradeDescription = (mode?: string | null) => {
 export const getTreasureDescription = (cfg?: TreasureConfig | null) => {
   if (!cfg || cfg.enabled === false) return 'Treasure cards are disabled.'
   const mode = cfg.payoutMode || 'classic'
-  if (mode === 'fixed') return 'Treasure rewards a fixed number of troops per set.'
-  if (mode === 'classic') return 'Treasure follows classic Risk-style payouts that grow steadily.'
+  const handCap = typeof cfg.handCap === 'number' ? Math.max(1, Math.trunc(cfg.handCap)) : 5
+  const diamondBonus = typeof cfg.diamondSetBonus === 'number' ? Math.max(0, Math.trunc(cfg.diamondSetBonus)) : 0
+
+  const baseText = `Valid sets: one of each (bronze, silver, gold) or three of a kind. Diamonds are wild. Sets with a diamond grant an extra +${diamondBonus} troops. Hand cap: ${handCap}.`
+
+  if (mode === 'fixed') {
+    const fixed = typeof cfg.fixedValue === 'number' ? Math.max(1, Math.min(50, Math.trunc(cfg.fixedValue))) : 8
+    return `${baseText} Payout mode: Fixed (+${fixed} per set).`
+  }
+  if (mode === 'classic') {
+    return `${baseText} Payout mode: Classic progression (4, 6, 8, 10, 12, 15, 20, 25, 30, 35, then +5 each set).`
+  }
   // triangular or other (shown in UI as Progressive)
-  return 'Treasure payouts grow progressively (triangular growth), increasing by +1 more each set.'
+  return `${baseText} Payout mode: Progressive (triangular growth: 4, 6, 9, 13, 18, …).`
 }

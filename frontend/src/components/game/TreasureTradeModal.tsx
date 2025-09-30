@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { resolveAssetPath } from '@/utils/assets'
+import InfoTooltip from '@/components/InfoTooltip'
 import { tradeTreasureSet } from '@/store/gameActions'
 
 type Props = {
@@ -127,7 +128,12 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="panel w-full max-w-lg p-0 overflow-hidden" role="dialog" aria-modal="true">
         <div className="p-4 border-b border-border flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Trade Treasures</h3>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            Trade Treasures
+            <InfoTooltip
+              title={`Valid sets: one of each (bronze, silver, gold) or three of a kind. Diamonds are wild and add +${Math.max(0, treasureConfig?.diamondSetBonus ?? 0)} troops.`}
+            />
+          </h3>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
             ✕
           </button>
@@ -176,7 +182,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                       selected.length === 3 && set.every((v) => selected.includes(v)) ? 'ring-1 ring-[color:var(--color-accent)]' : ''
                     }`}
                     onClick={() => setSelected(set)}
-                    title="Click to select this set"
+                    title={`Select this valid set`}
                   >
                     <span className="flex items-center gap-1">
                       {set.map((idx) => (
@@ -190,6 +196,10 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
               </div>
             </div>
           )}
+          <div className="text-xs text-muted mt-2">
+            Rules: one of each or three of a kind. Diamonds are wild and increase payout by +
+            {Math.max(0, treasureConfig?.diamondSetBonus ?? 0)}.
+          </div>
           <div className="text-xs text-muted mt-2 flex items-center gap-3 flex-wrap">
             <span>Projected reinforcements:</span>
             {projection ? (
