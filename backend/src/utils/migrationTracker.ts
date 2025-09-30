@@ -99,7 +99,7 @@ export class MigrationTracker {
       const statements: string[] = []
 
       if (!columns.has('checksum')) {
-        statements.push("ALTER TABLE schema_migrations ADD COLUMN checksum VARCHAR(64)")
+        statements.push('ALTER TABLE schema_migrations ADD COLUMN checksum VARCHAR(64)')
       }
       if (!columns.has('execution_time_ms')) {
         statements.push('ALTER TABLE schema_migrations ADD COLUMN execution_time_ms INTEGER')
@@ -117,9 +117,13 @@ export class MigrationTracker {
         await query(statement)
       }
 
-      await query("UPDATE schema_migrations SET checksum = COALESCE(checksum, 'legacy-manual-import')")
+      await query(
+        "UPDATE schema_migrations SET checksum = COALESCE(checksum, 'legacy-manual-import')",
+      )
       await query('UPDATE schema_migrations SET execution_time_ms = COALESCE(execution_time_ms, 0)')
-      await query('UPDATE schema_migrations SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP)')
+      await query(
+        'UPDATE schema_migrations SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP)',
+      )
 
       await query('ALTER TABLE schema_migrations ALTER COLUMN checksum SET NOT NULL')
       await query('ALTER TABLE schema_migrations ALTER COLUMN execution_time_ms SET NOT NULL')
@@ -130,8 +134,12 @@ export class MigrationTracker {
         "ALTER TABLE schema_migrations ADD CONSTRAINT migration_status_check CHECK (status IN ('pending', 'running', 'completed', 'failed', 'rolled_back'))",
       )
 
-      await query('CREATE INDEX IF NOT EXISTS idx_schema_migrations_filename ON schema_migrations(filename)')
-      await query('CREATE INDEX IF NOT EXISTS idx_schema_migrations_status ON schema_migrations(status)')
+      await query(
+        'CREATE INDEX IF NOT EXISTS idx_schema_migrations_filename ON schema_migrations(filename)',
+      )
+      await query(
+        'CREATE INDEX IF NOT EXISTS idx_schema_migrations_status ON schema_migrations(status)',
+      )
 
       logger.info('✅ schema_migrations table is compatible with the modern migration runner')
     } catch (error) {
