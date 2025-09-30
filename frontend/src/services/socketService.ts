@@ -297,6 +297,19 @@ class SocketService {
         audioService.playEffect('turn')
       }
 
+      // Reset local placement tracking at the start of reinforcement
+      if (payload.type === 'PHASE_CHANGE') {
+        try {
+          const { clearPlacementHistory, setPlacementServerSpent } =
+            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+          if (payload.phase === 'reinforcement') {
+            store.dispatch(clearPlacementHistory())
+            // Server may include reinforcementArmies; server-spent resets to 0 at phase start
+            store.dispatch(setPlacementServerSpent(0))
+          }
+        } catch {}
+      }
+
       // Handle battle result audio
       if (payload.type === 'BATTLE_RESULT') {
         if (payload.battleResult.conquered) {
@@ -340,6 +353,20 @@ class SocketService {
 
       // Apply delta to Redux store
       store.dispatch(applyDelta(payload))
+
+      // Clear optimistic placement tracking when server confirms territory armies
+      if (payload.type === 'TERRITORY_UPDATE') {
+        try {
+          const territoryId = (payload as TerritoryDelta).territoryId
+          const opt = store.getState().uiRoom.optimisticPlacements?.[territoryId]
+          if (opt) {
+            const { clearOptimisticPlacement } = require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+            store.dispatch(clearOptimisticPlacement({ territoryId }))
+          }
+        } catch {
+          /* ignore */
+        }
+      }
     })
 
     // Legacy game-update handler - kept for backward compatibility during transition
@@ -373,6 +400,34 @@ class SocketService {
       }
 
       store.dispatch(setGameState(typedGameState))
+
+      // Reconcile placement counter from server baseline if available
+      try {
+        // biome-ignore lint/suspicious/noExplicitAny: tolerate extended state shape
+        const baseline = (typedGameState as any).reinforcementBaseline as
+          | Record<string, number>
+          | undefined
+        if (baseline && typedGameState.phase === 'reinforcement' && currentUserId) {
+          // Sum deltas above baseline for owned territories
+          let spent = 0
+          for (const t of typedGameState.board) {
+            if (t.ownerId === currentUserId) {
+              const b = baseline[t.id]
+              if (typeof b === 'number') {
+                const delta = Math.max(0, (t.armies ?? 0) - b)
+                spent += delta
+              }
+            }
+          }
+          const { setPlacementServerSpent } =
+            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+          store.dispatch(setPlacementServerSpent(spent))
+        } else {
+          const { setPlacementServerSpent } =
+            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+          store.dispatch(setPlacementServerSpent(0))
+        }
+      } catch {}
     })
 
     this.socket.on('lifecycle:update', (incoming) => {

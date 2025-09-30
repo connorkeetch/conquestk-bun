@@ -28,6 +28,12 @@ export interface UIRoomState {
   mutedUserIds?: string[]
   optimisticPlacements?: Record<string, { expectedArmies: number; ts: number }>
   clientLogs?: Array<{ id: string; ts: number; text: string; roomId?: string }>
+  // Reinforcement placement history (client-side) to enable Undo within turn
+  placementHistory?: Array<{ territoryId: string; armies: number; ts: number }>
+  // Net armies already placed this reinforcement phase according to server (baseline-diff)
+  placementServerSpent?: number
+  // Simple per-user cooldown tracking for ping button
+  lastPingAt?: number
 }
 
 const initialState: UIRoomState = {
@@ -47,6 +53,9 @@ const initialState: UIRoomState = {
   mutedUserIds: [],
   optimisticPlacements: {},
   clientLogs: [],
+  placementHistory: [],
+  placementServerSpent: 0,
+  lastPingAt: 0,
 }
 
 const uiRoomSlice = createSlice({
@@ -169,6 +178,27 @@ const uiRoomSlice = createSlice({
     clearClientLogs(state) {
       state.clientLogs = []
     },
+    pushPlacement(state, action: PayloadAction<{ territoryId: string; armies: number }>) {
+      const list = state.placementHistory ?? []
+      state.placementHistory = [
+        ...list,
+        { territoryId: action.payload.territoryId, armies: action.payload.armies, ts: Date.now() },
+      ].slice(-50)
+    },
+    popPlacement(state) {
+      const list = state.placementHistory ?? []
+      state.placementHistory = list.slice(0, Math.max(0, list.length - 1))
+    },
+    clearPlacementHistory(state) {
+      state.placementHistory = []
+    },
+    setPlacementServerSpent(state, action: PayloadAction<number>) {
+      const n = Math.max(0, Math.trunc(action.payload) || 0)
+      state.placementServerSpent = n
+    },
+    setLastPingAt(state, action: PayloadAction<number>) {
+      state.lastPingAt = Math.max(0, Math.trunc(action.payload) || 0)
+    },
     toggleMuteUser(state, action: PayloadAction<string>) {
       const id = action.payload
       const list = new Set(state.mutedUserIds ?? [])
@@ -248,6 +278,11 @@ export const {
   addClientLog,
   clearClientLogs,
   toggleMuteUser,
+  pushPlacement,
+  popPlacement,
+  clearPlacementHistory,
+  setPlacementServerSpent,
+  setLastPingAt,
 } = uiRoomSlice.actions
 
 export default uiRoomSlice.reducer

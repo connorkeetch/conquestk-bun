@@ -4,6 +4,7 @@ import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { type AnimationSpeed, setAnimationSpeed } from '@/store/uiRoomSlice'
 import { TurnTimer } from './TurnTimer'
+import InfoTooltip from '@/components/InfoTooltip'
 
 interface GameHeaderProps {
   currentPhase: string
@@ -24,6 +25,17 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   const dispatch = useAppDispatch()
   const connection = useAppSelector((s) => s.uiRoom.connectionStatus)
   const anim = useAppSelector((s) => s.uiRoom.animationSpeed)
+  const fog = useAppSelector((s) => (s.room.currentRoom?.fogOfWar || 'off') as
+    | 'off'
+    | 'adjacent'
+    | 'persistent')
+  const fogLabel = fog === 'off' ? 'Off' : fog === 'adjacent' ? 'Adjacent' : 'Persistent'
+  const fogTip =
+    fog === 'off'
+      ? 'Fog of War: Off — all territories are visible to everyone.'
+      : fog === 'adjacent'
+        ? 'Fog of War: Adjacent — you see your territories and those directly adjacent; others are hidden.'
+        : 'Fog of War: Persistent — fog remains; you see owned and adjacent territories; others stay hidden.'
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
   return (
     <div className="bg-blue-900 text-white p-4">
@@ -38,6 +50,13 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             </span>
             <span>Turn {turn}</span>
             <TurnTimer />
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-surface-2 text-ink-2"
+              title={`Fog of War: ${fogLabel}`}
+            >
+              Fog: {fogLabel}
+              <InfoTooltip title={fogTip} />
+            </span>
             <span
               className="inline-flex items-center gap-1 text-xs"
               title={

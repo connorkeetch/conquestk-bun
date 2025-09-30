@@ -5,6 +5,7 @@ import { setOverlay } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import { arePlayersTeammates } from '@/utils/teamHelpers'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
+import { getColorValue, type PlayerColor } from '@/constants/colors'
 
 interface Territory {
   id: string
@@ -336,7 +337,9 @@ export default function CustomMapDisplay({
       {territories.map((territory) => {
         const isSelected = territory.id === selectedTerritoryId
         const ownerColor = territory.owner ? playerColors[territory.owner] : undefined
-        const color = ownerColor || '#6b7280' // gray-500 as fallback
+        const color = ownerColor
+          ? getColorValue(ownerColor as PlayerColor)
+          : '#6b7280' // gray-500 as fallback
         const isValidTarget =
           pendingAction === 'attack' && validTargets.includes(territory.id) && selectedTerritoryId
 
