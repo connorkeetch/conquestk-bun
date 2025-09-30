@@ -53,6 +53,7 @@ export default function GameRoom() {
     isLoading: isGameLoading,
     error: gameError,
   } = useAppSelector((state) => state.game)
+  const activeGameRoomId = currentGame?.roomId ?? null
   const { user } = useAppSelector((state) => state.auth)
   const [searchParams] = useSearchParams()
   const isSpectator = searchParams.get('spectate') === 'true'
@@ -103,6 +104,8 @@ export default function GameRoom() {
     return true
   })
   const mobileDrawerId = useId()
+  const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
+  const lifecycleAutoFetchInFlightRef = useRef(false)
 
   // Prevent background scroll when the bottom drawer is open
   useEffect(() => {
@@ -796,12 +799,119 @@ export default function GameRoom() {
       return
     }
 
-    if (currentGame && currentGame.roomId === roomId) {
+    if (activeGameRoomId === roomId) {
       return
     }
 
     void dispatch(fetchGameState({ roomId, allowSpectate: isSpectator }))
-  }, [currentGame, dispatch, isSpectator, roomId])
+  }, [activeGameRoomId, dispatch, isSpectator, roomId])
+
+  useEffect(() => {
+    return () => {
+      if (lifecycleAutoFetchTimeoutRef.current !== null) {
+        window.clearTimeout(lifecycleAutoFetchTimeoutRef.current)
+        lifecycleAutoFetchTimeoutRef.current = null
+      }
+      lifecycleAutoFetchInFlightRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!roomId) {
+      if (lifecycleAutoFetchTimeoutRef.current !== null) {
+        window.clearTimeout(lifecycleAutoFetchTimeoutRef.current)
+        lifecycleAutoFetchTimeoutRef.current = null
+      }
+      lifecycleAutoFetchInFlightRef.current = false
+      return
+    }
+
+    const status = currentRoom?.status ?? null
+    const gameLoaded = activeGameRoomId === roomId
+
+    if (status === null || status === 'lobby' || status === 'completed' || status === 'abandoned') {
+      if (lifecycleAutoFetchTimeoutRef.current !== null) {
+        window.clearTimeout(lifecycleAutoFetchTimeoutRef.current)
+        lifecycleAutoFetchTimeoutRef.current = null
+      }
+      lifecycleAutoFetchInFlightRef.current = false
+      return
+    }
+
+    if (gameLoaded) {
+      if (lifecycleAutoFetchTimeoutRef.current !== null) {
+        window.clearTimeout(lifecycleAutoFetchTimeoutRef.current)
+        lifecycleAutoFetchTimeoutRef.current = null
+      }
+      return
+    }
+
+    const shouldAttemptFetch =
+      status === 'initializing' || status === 'active' || status === 'paused'
+
+    if (!shouldAttemptFetch) {
+      return
+    }
+
+    if (lifecycleAutoFetchInFlightRef.current || lifecycleAutoFetchTimeoutRef.current !== null) {
+      return
+    }
+
+    const attemptFetch = () => {
+      lifecycleAutoFetchTimeoutRef.current = null
+
+      if (lifecycleAutoFetchInFlightRef.current) {
+        return
+      }
+
+      lifecycleAutoFetchInFlightRef.current = true
+
+      void dispatch(fetchGameState({ roomId, allowSpectate: isSpectator }))
+        .unwrap()
+        .catch((error: unknown) => {
+          if (error === 'NOT_READY') {
+            const latestState = store.getState()
+            const latestRoom = latestState.room.currentRoom
+            if (
+              latestRoom &&
+              latestRoom.id === roomId &&
+              (latestRoom.status === 'initializing' ||
+                latestRoom.status === 'active' ||
+                latestRoom.status === 'paused')
+            ) {
+              lifecycleAutoFetchTimeoutRef.current = window.setTimeout(attemptFetch, 750)
+            }
+            return
+          }
+
+          if (typeof error === 'string') {
+            logger.error('Failed to fetch game state after lifecycle update', {
+              roomId,
+              error,
+            })
+            return
+          }
+
+          if (error instanceof Error) {
+            logger.error('Failed to fetch game state after lifecycle update', {
+              roomId,
+              error: error.message,
+            })
+            return
+          }
+
+          logger.error('Failed to fetch game state after lifecycle update', {
+            roomId,
+            error,
+          })
+        })
+        .finally(() => {
+          lifecycleAutoFetchInFlightRef.current = false
+        })
+    }
+
+    attemptFetch()
+  }, [activeGameRoomId, currentRoom?.status, dispatch, isSpectator, roomId])
 
   const handleLeaveRoom = () => {
     navigate('/lobby')
@@ -1097,23 +1207,6 @@ export default function GameRoom() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {isHost && currentRoom.status === 'lobby' && (currentRoom.players?.length || 0) >= 2 && (
-            <button
-              type="button"
-              className="btn btn-success"
-              onClick={async () => {
-                if (!roomId) return
-                try {
-                  await gameService.setReadyState(roomId, true)
-                } catch (err) {
-                  logger.warn('Failed to trigger start via ready-state', err)
-                }
-              }}
-              title="Start game now (minimum 2 players required)"
-            >
-              Start Game
-            </button>
-          )}
           {!isMember && (
             <button
               onClick={() => openJoinDialog()}
@@ -1474,7 +1567,7 @@ export default function GameRoom() {
                   currentRoom.players?.map((p) => ({
                     id: p.id,
                     username: p.username,
-                    color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
+                    color: p.selected_color ?? p.preferred_color ?? '#9CA3AF',
                   })) || []
                 }
                 onTerritoryClick={(_territoryId) => {

@@ -1,9 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
-import InfoTooltip from '@/components/InfoTooltip'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
-import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { type AnimationSpeed, setAnimationSpeed } from '@/store/uiRoomSlice'
+import { useAppSelector } from '@/hooks/redux'
 import { TurnTimer } from './TurnTimer'
 
 interface GameHeaderProps {
@@ -22,27 +20,13 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   turn,
   currentPlayerInfo,
 }) => {
-  const dispatch = useAppDispatch()
   const connection = useAppSelector((s) => s.uiRoom.connectionStatus)
-  const anim = useAppSelector((s) => s.uiRoom.animationSpeed)
-  const fog = useAppSelector(
-    (s) => (s.room.currentRoom?.fogOfWar || 'off') as 'off' | 'adjacent' | 'persistent',
-  )
-  const fogLabel = fog === 'off' ? 'Off' : fog === 'adjacent' ? 'Adjacent' : 'Persistent'
-  const fogTip =
-    fog === 'off'
-      ? 'Fog of War: Off — all territories are visible to everyone.'
-      : fog === 'adjacent'
-        ? 'Fog of War: Adjacent — you see your territories and those directly adjacent; others are hidden.'
-        : 'Fog of War: Persistent — fog remains; you see owned and adjacent territories; others stay hidden.'
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
   return (
     <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
       <div className="flex justify-between items-center gap-4">
         <div className="flex items-center gap-4 text-sm">
-          <span
-            className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]"
-          >
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]">
             {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
           </span>
           <span className="text-[color:var(--text)]">Turn {turn}</span>

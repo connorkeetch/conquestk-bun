@@ -199,7 +199,7 @@ export interface EnhancedGameState {
   gameModeId?: string // Reference to game mode
   players: EnhancedGamePlayer[]
   currentPlayer: string
-  phase: 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
+  phase: 'reinforcement' | 'attack' | 'fortify' | 'finished'
   turn: number
   board: EnhancedTerritory[]
   cards: Card[]

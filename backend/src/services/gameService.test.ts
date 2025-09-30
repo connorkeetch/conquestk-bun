@@ -215,7 +215,7 @@ describe('GameService', () => {
       const returnedIds = gameState.players.map((p) => p.id).sort()
       expect(returnedIds).toEqual([...players].sort())
       expect(players).toContain(gameState.currentPlayer)
-      expect(gameState.phase).toBe('setup')
+      expect(gameState.phase).toBe('reinforcement')
 
       const retrievedGame = await gameService.getGameState(roomId)
       expect(retrievedGame).toEqual(gameState)
@@ -275,12 +275,17 @@ describe('GameService', () => {
       const currentPlayer = initialState.currentPlayer
 
       const firstAdvance = await gameService.endTurn(roomId, currentPlayer)
-      expect(firstAdvance.gameState.phase).toBe('reinforcement')
+      expect(firstAdvance.gameState.phase).toBe('attack')
       expect(firstAdvance.gameState.currentPlayer).toBe(currentPlayer)
 
       const secondAdvance = await gameService.endTurn(roomId, currentPlayer)
-      expect(secondAdvance.gameState.phase).toBe('attack')
+      expect(secondAdvance.gameState.phase).toBe('fortify')
       expect(secondAdvance.gameState.currentPlayer).toBe(currentPlayer)
+
+      const thirdAdvance = await gameService.endTurn(roomId, currentPlayer)
+      expect(thirdAdvance.gameState.phase).toBe('reinforcement')
+      expect(thirdAdvance.gameState.currentPlayer).not.toBe(currentPlayer)
+      expect(players).toContain(thirdAdvance.gameState.currentPlayer)
     })
 
     it('should reject turn end from wrong player', async () => {
@@ -314,8 +319,6 @@ describe('GameService', () => {
         buildConfig(),
       )
       const currentPlayer = initialState.currentPlayer
-      await gameService.endTurn(roomId, currentPlayer)
-
       const updatedState = await gameService.getGameState(roomId)
       if (!updatedState) {
         throw new Error('Game state not found')
@@ -346,6 +349,8 @@ describe('GameService', () => {
       if (!territory) {
         throw new Error(`No territory found for ${currentPlayer}`)
       }
+
+      await gameService.endTurn(roomId, currentPlayer)
 
       await expect(
         gameService.deployArmies(roomId, currentPlayer, territory.id, 1),
@@ -654,12 +659,29 @@ describe('GameService', () => {
 
       await gameStateCache.setGameState(roomId, stateBefore)
 
+      const chooseSpy = jest.spyOn(aiDecisionService, 'chooseAction')
+      chooseSpy.mockResolvedValueOnce({
+        actions: [],
+        usedFallback: true,
+        reason: 'stubbed',
+        diagnostics: {
+          generatedAt: new Date().toISOString(),
+          durationMs: 0,
+          requestedDifficulty: 'recruit',
+          plannedActionCount: 0,
+          budget: {
+            maxThinkTimeMs: 1000,
+            maxPlannedActions: 4,
+          },
+        },
+      })
+
       const result = await gameService.executeAiTurn(roomId)
 
       expect(result.fallbackUsed).toBe(true)
       expect(result.fallbackReason).toBe('stubbed')
-      expect(result.appliedActions[0]?.type).toBe('begin_turn')
-      expect(result.appliedActions).toHaveLength(4)
+      expect(result.appliedActions).toHaveLength(3)
+      expect(result.appliedActions.every((action) => action.type === 'end_turn')).toBe(true)
       expect(result.gameState.currentPlayer).not.toBe('ai')
 
       const persisted = await gameService.getGameState(roomId)
@@ -684,12 +706,12 @@ describe('GameService', () => {
         expect.arrayContaining([
           expect.objectContaining({
             metric: 'ai_turn_actions_planned',
-            value: 4,
+            value: 0,
             labels: { difficulty: 'recruit' },
           }),
           expect.objectContaining({
             metric: 'ai_turn_actions_applied',
-            value: 4,
+            value: 3,
             labels: { difficulty: 'recruit' },
           }),
         ]),

@@ -1,6 +1,6 @@
 import { getClient, query } from '../config/database'
 import { acquireLock, releaseLock } from '../config/redis'
-import type { GameConfiguration, GamePhase, GameState } from '../types/game'
+import type { GameConfiguration, GameState } from '../types/game'
 import type { GameLifecycleStatus, GameRoom } from '../types/gameRoom'
 import { logger } from '../utils/logger'
 import capitalGameService from './capitalGameService'
@@ -194,6 +194,122 @@ export class GameLifecycleService {
     await this.broadcastLifecycle(snapshot)
 
     return snapshot
+  }
+
+  async maybeAutoStart(roomId: string): Promise<boolean> {
+    const lockKey = `lock:game:ready:${roomId}`
+    const lockToken = await acquireLock(lockKey, 5000)
+
+    if (!lockToken) {
+      logger.warn('Failed to acquire lifecycle lock for auto-start', { roomId })
+      return false
+    }
+
+    const client = await getClient()
+
+    let shouldStart = false
+    let players: ReadyPlayerRow[] = []
+    let turnTimer = 60
+
+    try {
+      await client.query('BEGIN')
+
+      const roomResult = await client.query<{
+        status: string
+        turn_timer: number | null
+        max_players: number | null
+      }>('SELECT status, turn_timer, max_players FROM game_rooms WHERE id = $1 FOR UPDATE', [
+        roomId,
+      ])
+
+      if (roomResult.rowCount === 0) {
+        throw new Error('Room not found')
+      }
+
+      const lifecycleStatus = this.normalizeStatus(roomResult.rows[0].status)
+      turnTimer = roomResult.rows[0].turn_timer ?? 60
+      const maxPlayers = roomResult.rows[0].max_players ?? 0
+
+      if (lifecycleStatus === 'lobby') {
+        const playersResult = await client.query<ReadyPlayerRow>(
+          `
+          SELECT id, user_id, ai_player_id, is_ready, ready_at, joined_at, team_id, is_ai, ai_difficulty, ai_personality_seed
+          FROM room_players
+          WHERE room_id = $1
+          ORDER BY joined_at ASC
+        `,
+          [roomId],
+        )
+
+        players = playersResult.rows
+        const playerCount = players.length
+        const targetCount = maxPlayers > 0 ? maxPlayers : playerCount
+        const minPlayers = Math.max(2, Math.min(targetCount, playerCount))
+
+        if (playerCount >= targetCount && playerCount >= minPlayers) {
+          shouldStart = true
+          await client.query(
+            `
+            UPDATE game_rooms
+            SET status = 'initializing',
+                lifecycle_phase = 'initializing',
+                ready_check_started_at = NOW(),
+                turn_number = 0,
+                turn_expires_at = NULL
+            WHERE id = $1
+          `,
+            [roomId],
+          )
+        }
+      }
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      logger.error('Auto-start lifecycle transaction failed', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
+      shouldStart = false
+    } finally {
+      client.release()
+      await releaseLock(lockKey, lockToken)
+    }
+
+    if (!shouldStart) {
+      return false
+    }
+
+    try {
+      await this.startGame(roomId, players, turnTimer)
+    } catch (error) {
+      logger.error('Failed to auto-start game', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
+
+      await query(
+        `
+        UPDATE game_rooms
+        SET status = 'lobby',
+            lifecycle_phase = 'lobby',
+            ready_check_started_at = NULL,
+            turn_number = 0,
+            current_turn_user_id = NULL,
+            turn_expires_at = NULL
+        WHERE id = $1
+      `,
+        [roomId],
+      )
+
+      return false
+    }
+
+    const snapshot = await this.getLifecycleSnapshot(roomId)
+    snapshot.triggeredStart = true
+    await this.broadcastLifecycle(snapshot)
+
+    return true
   }
 
   async getLifecycleSnapshot(roomId: string): Promise<LifecycleSnapshot> {
@@ -623,14 +739,8 @@ export class GameLifecycleService {
   }
 
   private toSerializableGameState(gameState: GameState) {
-    let lifecyclePhase: GamePhase = gameState.phase
-    if (lifecyclePhase === 'setup') {
-      lifecyclePhase = 'reinforcement'
-    }
-
     return {
       ...gameState,
-      phase: lifecyclePhase,
       territoryModifiers:
         gameState.territoryModifiers instanceof Map
           ? Object.fromEntries(gameState.territoryModifiers.entries())

@@ -91,11 +91,11 @@ export class GameEngine {
     const treasureConfig = this.ensureTreasureConfig(hydratedConfig)
     treasureMetrics.recordMode(treasureConfig)
 
-    return {
+    const gameState: GameState = {
       roomId,
       players,
       currentPlayer: players[0].id,
-      phase: 'setup', // Start in setup phase for initial deployment
+      phase: 'reinforcement',
       turn: 1,
       board: territories,
       cards: [],
@@ -105,14 +105,16 @@ export class GameEngine {
       mustCashInTreasures: false,
       conqueredDuringTurn: false,
     }
+
+    this.prepareReinforcementPhase(gameState, treasureConfig)
+
+    return gameState
   }
 
   async processAction(gameState: GameState, action: GameAction): Promise<ProcessActionResult> {
     const newState = { ...gameState }
 
     switch (action.type) {
-      case 'begin_turn':
-        return { gameState: this.beginTurn(newState) }
       case 'deploy':
         return { gameState: this.handleDeploy(newState, action) }
       case 'attack': {
@@ -140,8 +142,6 @@ export class GameEngine {
     }
 
     switch (action.type) {
-      case 'begin_turn':
-        return gameState.phase === 'setup'
       case 'deploy':
         return this.validateDeploy(gameState, action)
       case 'attack':
@@ -311,11 +311,73 @@ export class GameEngine {
   }
 
   private randomizePlayerOrder(players: GamePlayer[]): void {
-    // Fisher-Yates shuffle
-    for (let i = players.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[players[i], players[j]] = [players[j], players[i]]
+    const shuffleInPlace = <T>(items: T[]): void => {
+      for (let index = items.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1))
+        ;[items[index], items[swapIndex]] = [items[swapIndex], items[index]]
+      }
     }
+
+    const teamBuckets = new Map<number, GamePlayer[]>()
+    const soloPlayers: GamePlayer[] = []
+
+    for (const player of players) {
+      const teamId =
+        typeof player.teamId === 'number' && Number.isFinite(player.teamId) && player.teamId > 0
+          ? Math.trunc(player.teamId)
+          : null
+      if (teamId) {
+        const bucket = teamBuckets.get(teamId)
+        if (bucket) {
+          bucket.push(player)
+        } else {
+          teamBuckets.set(teamId, [player])
+        }
+      } else {
+        soloPlayers.push(player)
+      }
+    }
+
+    if (teamBuckets.size <= 1) {
+      shuffleInPlace(players)
+      return
+    }
+
+    const rotation: Array<{ members: GamePlayer[] }> = []
+
+    for (const [, members] of teamBuckets) {
+      const copy = [...members]
+      shuffleInPlace(copy)
+      rotation.push({ members: copy })
+    }
+
+    for (const solo of soloPlayers) {
+      rotation.push({ members: [solo] })
+    }
+
+    shuffleInPlace(rotation)
+
+    const ordered: GamePlayer[] = []
+    let madeProgress = true
+
+    while (madeProgress) {
+      madeProgress = false
+      for (const bucket of rotation) {
+        const next = bucket.members.shift()
+        if (next) {
+          ordered.push(next)
+          madeProgress = true
+        }
+      }
+    }
+
+    if (ordered.length !== players.length) {
+      const remaining = players.filter((player) => !ordered.includes(player))
+      shuffleInPlace(remaining)
+      ordered.push(...remaining)
+    }
+
+    players.splice(0, players.length, ...ordered)
   }
 
   private distributeTerritoriesWithNeutrals(territories: Territory[], players: GamePlayer[]): void {
@@ -662,10 +724,6 @@ export class GameEngine {
   private handleEndTurn(gameState: GameState): GameState {
     // Advance phase or move to next player
     switch (gameState.phase) {
-      case 'setup':
-        // After setup, first player begins their turn
-        gameState.phase = 'reinforcement'
-        break
       case 'reinforcement':
         // After reinforcement, move to attack phase
         gameState.phase = 'attack'
@@ -722,30 +780,7 @@ export class GameEngine {
     gameState.phase = 'reinforcement'
     gameState.hasAttackedThisTurn = false // Reset attack flag for new player
     gameState.lastBattleResult = undefined // Clear last battle result
-    // Capture reinforcement baseline for next player and reset history
-    try {
-      const baseline: Record<string, number> = {}
-      for (const t of gameState.board) {
-        if (t.ownerId === gameState.currentPlayer) {
-          baseline[t.id] = Math.max(0, Math.trunc(t.armies))
-        }
-      }
-      gameState.reinforcementBaseline = baseline
-      gameState.reinforcementHistory = []
-    } catch {
-      gameState.reinforcementBaseline = {}
-      gameState.reinforcementHistory = []
-    }
-
-    // Calculate reinforcement armies for new player
-    const nextPlayer = gameState.players[nextPlayerIndex]
-    nextPlayer.armies = this.calculateReinforcementArmies(
-      nextPlayer.territories,
-      gameState.board,
-      gameState.gameConfig,
-    )
-
-    this.updateCurrentPlayerCashRequirement(gameState, treasureConfig)
+    this.prepareReinforcementPhase(gameState, treasureConfig)
 
     // Increment turn counter when we complete a full round (back to first active player)
     const firstActivePlayerIndex = gameState.players.findIndex((p) => !p.isEliminated)
@@ -754,43 +789,37 @@ export class GameEngine {
     }
   }
 
-  beginTurn(gameState: GameState): GameState {
-    const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+  private prepareReinforcementPhase(
+    gameState: GameState,
+    providedTreasureConfig?: TreasureConfig,
+  ): void {
+    const treasureConfig = providedTreasureConfig ?? this.ensureTreasureConfig(gameState.gameConfig)
+    const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayer)
 
-    // Player hits "Begin Turn" button
-    if (gameState.phase === 'setup') {
-      // Transition from setup to reinforcement phase
-      gameState.phase = 'reinforcement'
-
-      // Calculate starting reinforcement armies for current player
-      const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayer)
-      if (currentPlayer) {
-        currentPlayer.armies = this.calculateReinforcementArmies(
-          currentPlayer.territories,
-          gameState.board,
-          gameState.gameConfig,
-        )
-      }
-
-      // Initialize reinforcement baseline/history for current player
-      try {
-        const baseline: Record<string, number> = {}
-        for (const t of gameState.board) {
-          if (t.ownerId === gameState.currentPlayer) {
-            baseline[t.id] = Math.max(0, Math.trunc(t.armies))
-          }
-        }
-        gameState.reinforcementBaseline = baseline
-        gameState.reinforcementHistory = []
-      } catch {
-        gameState.reinforcementBaseline = {}
-        gameState.reinforcementHistory = []
-      }
+    if (currentPlayer) {
+      currentPlayer.armies = this.calculateReinforcementArmies(
+        currentPlayer.territories,
+        gameState.board,
+        gameState.gameConfig,
+      )
     }
+
+    try {
+      const baseline: Record<string, number> = {}
+      for (const territory of gameState.board) {
+        if (territory.ownerId === gameState.currentPlayer) {
+          baseline[territory.id] = Math.max(0, Math.trunc(territory.armies))
+        }
+      }
+      gameState.reinforcementBaseline = baseline
+    } catch {
+      gameState.reinforcementBaseline = {}
+    }
+
+    gameState.reinforcementHistory = []
 
     if (treasureConfig.enabled) {
       gameState.treasureState = ensureTreasureState(gameState.treasureState)
-      const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayer)
       if (currentPlayer) {
         this.getPlayerTreasureHand(currentPlayer)
       }
@@ -800,8 +829,6 @@ export class GameEngine {
 
     this.updateCurrentPlayerCashRequirement(gameState, treasureConfig)
     gameState.conqueredDuringTurn = false
-
-    return gameState
   }
 
   // Get valid fortify targets for a given source territory

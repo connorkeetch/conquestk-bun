@@ -406,7 +406,7 @@ describe('socketService event handlers', () => {
   it('joins canonical channel and backfills state when authorized', async () => {
     const serializedState = {
       roomId: 'room-123',
-      phase: 'setup',
+      phase: 'reinforcement',
       board: [],
       players: [],
     }
