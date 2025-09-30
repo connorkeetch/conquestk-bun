@@ -55,6 +55,11 @@ export function GameActionBar() {
 
   // Auto-attack loop
   const battle = useAppSelector((s) => s.game.battleResult)
+  const autoRef = useRef(auto)
+  useEffect(() => {
+    autoRef.current = auto
+  }, [auto])
+
   useEffect(() => {
     if (!auto) return
     if (!game || !selected || !target) return
@@ -74,8 +79,8 @@ export function GameActionBar() {
       return
     }
     lastTargetRef.current = target
-    setTimeout(() => {
-      if (!auto) return
+    const timeoutId = setTimeout(() => {
+      if (!autoRef.current) return
       void dispatch(
         executeAttack({
           fromTerritoryId: selected,
@@ -84,6 +89,8 @@ export function GameActionBar() {
         }),
       )
     }, 150)
+
+    return () => clearTimeout(timeoutId)
   }, [auto, battle, commit, dispatch, game, selected, target])
 
   if (!game) return null
@@ -108,16 +115,26 @@ export function GameActionBar() {
             <span className="chip text-xs">{phase.charAt(0).toUpperCase() + phase.slice(1)}</span>
             {phase === 'attack' && (
               <div className="flex items-center gap-1">
-                {[1, 2, 3].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => dispatch(setDice(n as 1 | 2 | 3))}
-                    className={`btn btn-ghost btn-sm ${dice === n ? 'ring-1 ring-white' : ''}`}
-                  >
-                    {n} die{n === 1 ? '' : 's'}
-                  </button>
-                ))}
+                {[1, 2, 3].map((n) => {
+                  const srcTerritory = game.board.find((t) => t.id === selected)
+                  const maxDice = srcTerritory
+                    ? Math.min(3, Math.max(1, (srcTerritory.armies ?? 1) - 1))
+                    : 0
+                  const disabled = n > maxDice
+
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => dispatch(setDice(n as 1 | 2 | 3))}
+                      disabled={disabled}
+                      className={`btn btn-ghost btn-sm ${dice === n ? 'ring-1 ring-white' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={disabled ? `Need ${n + 1} armies to roll ${n} dice` : undefined}
+                    >
+                      {n} die{n === 1 ? '' : 's'}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>

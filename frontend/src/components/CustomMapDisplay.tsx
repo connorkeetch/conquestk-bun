@@ -208,7 +208,7 @@ export default function CustomMapDisplay({
                 onTerritoryHover?.(territory.id)
               }}
               onMouseLeave={() => {
-                setHoveredId((current) => (current === territory.id ? null : current))
+                setHoveredId(null)
                 onTerritoryHover?.(null)
               }}
               className={`relative block ${isValidTarget ? 'animate-pulse' : ''}`}

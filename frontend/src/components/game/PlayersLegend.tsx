@@ -19,7 +19,7 @@ export const PlayersLegend: React.FC<PlayersLegendProps> = ({ players }) => {
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
   return (
-    <div className="p-4 border-b border-gray-200">
+    <div className="panel-outline p-3">
       <h3 className="text-lg font-semibold mb-3">Players</h3>
       <div className="space-y-2">
         {players.map((player) => (
