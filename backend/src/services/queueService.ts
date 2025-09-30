@@ -53,6 +53,8 @@ export interface GameActionJob {
   action: GameAction
   socketId?: string
   idempotencyKey?: string
+  afkSkip?: boolean
+  afkStage?: 'start' | 'skip'
 }
 
 export interface BattleSimulationJob {

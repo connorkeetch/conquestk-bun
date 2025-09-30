@@ -757,8 +757,17 @@ export default function GameRoom() {
   // Keyboard shortcuts for quick gameplay
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Read current state from store to avoid stale closures
+      const state = store.getState()
+      const currentRoom = state.room.currentRoom
+      const currentGame = state.game.currentGame
+
       if (!currentRoom || !currentGame) return
       if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return
+
+      // Ignore if modifier keys are pressed (except allowed combos)
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
       const key = e.key.toLowerCase()
       if (key === 'e' || key === 't') {
         e.preventDefault()
@@ -798,7 +807,6 @@ export default function GameRoom() {
       // Toggle overlays
       if (key === 'g' || key === 'h') {
         e.preventDefault()
-        const state = store.getState()
         const overlays = state.uiRoom?.overlays
         if (key === 'g') {
           dispatch(setOverlay({ key: 'continents', value: !overlays?.continents }))
@@ -810,7 +818,7 @@ export default function GameRoom() {
       // Focus last log/last action territory
       if (key === 'l') {
         e.preventDefault()
-        const hist = store.getState().game.territoryActionHistory
+        const hist = state.game.territoryActionHistory
         const last = hist.length > 0 ? hist[hist.length - 1]?.territoryId : null
         if (last) dispatch(selectTerritory(last))
         return
@@ -818,7 +826,7 @@ export default function GameRoom() {
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [currentGame, currentRoom, dispatch])
+  }, [dispatch])
 
   // No ready toggle; start triggers when lobby is full
 

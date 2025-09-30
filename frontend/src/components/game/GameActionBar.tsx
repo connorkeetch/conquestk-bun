@@ -5,6 +5,12 @@ import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/stor
 import { setAttackCommit, setDice } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
 
+/**
+ * Delay between consecutive auto-attacks (in milliseconds)
+ * Provides time for battle animation and user feedback
+ */
+const AUTO_ATTACK_DELAY_MS = 150
+
 export function GameActionBar() {
   const dispatch = useAppDispatch()
   const game = useAppSelector((s) => s.game.currentGame)
@@ -88,7 +94,7 @@ export function GameActionBar() {
           commitArmies: commit,
         }),
       )
-    }, 150)
+    }, AUTO_ATTACK_DELAY_MS)
 
     return () => clearTimeout(timeoutId)
   }, [auto, battle, commit, dispatch, game, selected, target])

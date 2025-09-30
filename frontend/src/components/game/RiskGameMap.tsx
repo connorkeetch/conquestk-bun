@@ -1,8 +1,7 @@
 import type React from 'react'
 import { useCallback, useMemo } from 'react'
-import { useAppSelector } from '@/hooks/redux'
+import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
 import type { GamePlayer } from '@/types/game'
-import { computeRollOdds } from '@/utils/odds'
 import CustomMapDisplay from '../CustomMapDisplay'
 import ResponsiveMapContainer from '../ResponsiveMapContainer'
 import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
@@ -69,42 +68,29 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
     return { x: t.armyPosition.x, y: t.armyPosition.y }
   }, [selectedTargetTerritory, selectedTerritory, territories])
 
-  // Odds tooltip on attack hover
-  const attackDice = useAppSelector((s) => s.uiRoom.dice)
-  const oddsTooltip = useMemo(() => {
-    if (mapId !== 'classic') return null
-    if (pendingAction !== 'attack') return null
-    if (!selectedTerritory || !hoveredTerritory) return null
-    if (!validTargets.includes(hoveredTerritory)) return null
-    const src = territories[selectedTerritory]
-    const dst = territories[hoveredTerritory]
-    if (!src || !dst) return null
-    const srcArmies = src.armies ?? 0
-    const dstArmies = dst.armies ?? 0
-    if (srcArmies <= 1) return null
-    const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
-    const def = Math.max(1, Math.min(2, dstArmies > 1 ? 2 : 1)) as 1 | 2
-    const odds = computeRollOdds(att, def)
-    const winChance = (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
-    const left = (dst.armyPosition.x / CLASSIC_MAP_WIDTH) * 100
-    const top = (dst.armyPosition.y / CLASSIC_MAP_HEIGHT) * 100
-    return {
-      att,
-      def,
-      left,
-      top,
-      odds,
-      winChance,
-    }
-  }, [
-    attackDice,
-    hoveredTerritory,
-    mapId,
-    pendingAction,
-    selectedTerritory,
-    territories,
+  // Odds tooltip on attack hover - use shared hook for classic map
+  const classicTerritoriesArray = useMemo(
+    () =>
+      Object.entries(territories).map(([id, t]) => ({
+        id,
+        x: t.armyPosition.x,
+        y: t.armyPosition.y,
+        armies: t.armies,
+      })),
+    [territories],
+  )
+
+  const rawOddsTooltip = useAttackOddsTooltip({
+    pendingAction: pendingAction ?? null,
+    selectedId: selectedTerritory ?? null,
+    hoveredId: hoveredTerritory ?? null,
     validTargets,
-  ])
+    territories: classicTerritoriesArray,
+    mapWidth: CLASSIC_MAP_WIDTH,
+    mapHeight: CLASSIC_MAP_HEIGHT,
+  })
+
+  const oddsTooltip = mapId === 'classic' ? rawOddsTooltip : null
 
   return (
     <div className="game-board flex-1 relative bg-blue-100 p-4">
@@ -128,16 +114,18 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
               pendingAction={pendingAction}
             />
             {focusCoords && (
-              <div
+              <output
                 className="absolute pointer-events-none z-10"
                 style={{
                   left: `${(focusCoords.x / CLASSIC_MAP_WIDTH) * 100}%`,
                   top: `${(focusCoords.y / CLASSIC_MAP_HEIGHT) * 100}%`,
                   transform: 'translate(-50%, -50%)',
                 }}
+                aria-live="polite"
+                aria-label={`Focused on ${territories[selectedTargetTerritory || selectedTerritory]?.name || 'territory'}`}
               >
                 <div className="w-10 h-10 rounded-full border-2 border-cyan-300/80 animate-ping" />
-              </div>
+              </output>
             )}
             {oddsTooltip && (
               <div
@@ -146,7 +134,8 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                 style={{
                   left: `${oddsTooltip.left}%`,
                   top: `${oddsTooltip.top}%`,
-                  transform: 'translate(-50%, -140%)',
+                  transform:
+                    oddsTooltip.top > 20 ? 'translate(-50%, -140%)' : 'translate(-50%, 40%)',
                 }}
               >
                 <div className="rounded bg-surface-2/95 border border-border shadow px-2 py-1 text-xs text-white whitespace-nowrap">

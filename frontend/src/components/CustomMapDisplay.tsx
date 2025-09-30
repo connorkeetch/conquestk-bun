@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useAppSelector } from '@/hooks/redux'
+import { useEffect, useState } from 'react'
+import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
 import { logger } from '@/utils/logger'
-import { computeRollOdds } from '@/utils/odds'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
 
 interface Territory {
@@ -106,35 +105,16 @@ export default function CustomMapDisplay({
     }
   }, [mapId, imageUrl, mapWidth, mapHeight])
 
-  // Hooks must be top-level
-  const attackDice = useAppSelector((s) => s.uiRoom.dice)
-  const oddsTooltip = useMemo(() => {
-    if (!mapData) return null
-    if (pendingAction !== 'attack') return null
-    if (!selectedTerritoryId || !hoveredId) return null
-    if (!validTargets.includes(hoveredId)) return null
-    const src = territories.find((t) => t.id === selectedTerritoryId)
-    const dst = territories.find((t) => t.id === hoveredId)
-    if (!src || !dst) return null
-    const srcArmies = src.armies ?? 0
-    const dstArmies = dst.armies ?? 0
-    if (srcArmies <= 1) return null
-    const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
-    const def = Math.max(1, Math.min(2, dstArmies > 1 ? 2 : 1)) as 1 | 2
-    const odds = computeRollOdds(att, def)
-    const winChance = (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
-    const left = (dst.x / mapData.width) * 100
-    const top = (dst.y / mapData.height) * 100
-    return { att, def, odds, winChance, left, top }
-  }, [
-    attackDice,
+  // Compute attack odds tooltip using shared hook
+  const oddsTooltip = useAttackOddsTooltip({
+    pendingAction: pendingAction ?? null,
+    selectedId: selectedTerritoryId ?? null,
     hoveredId,
-    mapData,
-    pendingAction,
-    selectedTerritoryId,
-    territories,
     validTargets,
-  ])
+    territories,
+    mapWidth: mapData?.width ?? 0,
+    mapHeight: mapData?.height ?? 0,
+  })
 
   if (loading) {
     return (
@@ -260,7 +240,7 @@ export default function CustomMapDisplay({
           style={{
             left: `${oddsTooltip.left}%`,
             top: `${oddsTooltip.top}%`,
-            transform: 'translate(-50%, -140%)',
+            transform: oddsTooltip.top > 20 ? 'translate(-50%, -140%)' : 'translate(-50%, 40%)',
           }}
         >
           <div className="rounded bg-surface-2/95 border border-border shadow px-2 py-1 text-xs text-white whitespace-nowrap">
