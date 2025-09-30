@@ -228,32 +228,7 @@ interface ApiErrorResponse {
   errors?: Array<{ msg?: string; message?: string }>
 }
 
-// Type for dynamic position data from various API sources
-interface DynamicPositionData {
-  x?: unknown
-  y?: unknown
-  normalizedX?: unknown
-  normalizedY?: unknown
-  armyPositionNormalized?: unknown
-  armyPosition?: unknown
-}
-
-// Type for territory modifier raw data from API
-interface RawTerritoryModifier {
-  [key: string]: unknown
-}
-
-// Type for map metadata from API
-interface MapMetadata {
-  width?: unknown
-  height?: unknown
-  territories?: unknown
-  continents?: unknown
-  territoryModifiers?: unknown
-  territory_modifiers?: unknown
-  armyPositionNormalized?: unknown
-  armyPosition?: unknown
-}
+// (types removed: unused helper interfaces)
 
 interface ImportedTerritoryData {
   id: string

@@ -141,7 +141,9 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
           // subtle haptic on filter change
           ;(navigator as unknown as { vibrate?: (pattern: number | number[]) => void }).vibrate?.(10)
         }
-      } catch {}
+      } catch {
+        // ignore haptics errors
+      }
     },
     [dispatchApp, overlays.attackable, overlays.continents, overlays.threat],
   )
@@ -155,7 +157,9 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
             const haptic = () => {
               try {
                 (navigator as unknown as { vibrate?: (pattern: number | number[]) => void }).vibrate?.(10)
-              } catch {}
+              } catch {
+                // ignore haptics errors
+              }
             }
             return (
               <>
@@ -218,11 +222,15 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                   if (!game?.roomId || !targetId || coolingDown) return
                   try {
                     socketService.emit('ping:territory', { roomId: game.roomId, territoryId: targetId })
-                  } catch {}
+                  } catch {
+                    // ignore ping emit errors
+                  }
                   dispatchApp(setLastPingAt(now))
                   try {
                     (navigator as unknown as { vibrate?: (pattern: number | number[]) => void }).vibrate?.(15)
-                  } catch {}
+                  } catch {
+                    // ignore haptics errors
+                  }
                 }}
                 disabled={disabled}
                 title={(() => {
@@ -261,8 +269,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
             />
             {/* Sectors overlay: colored dots per territory */}
             {overlays.continents && (
-              <>
-                {(() => {
+              (() => {
                   // Build deterministic color per continent
                   const uniqueContinents = Array.from(
                     new Set(Object.values(territories).map((t) => t.continent || 'unknown')),
@@ -277,8 +284,9 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                     '#14b8a6',
                     '#f97316',
                   ]
-                  const cMap = new Map<string, string>()
-                  uniqueContinents.forEach((c, i) => cMap.set(c, palette[i % palette.length]))
+                  const cMap = new Map<string, string>(
+                    uniqueContinents.map((c, i) => [c, palette[i % palette.length]]),
+                  )
                   return Object.entries(territories).map(([id, t]) => {
                     const color = cMap.get(t.continent) || '#94a3b8'
                     const left = (t.armyPosition.x / CLASSIC_MAP_WIDTH) * 100
@@ -293,7 +301,6 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                           transform: 'translate(-50%, -50%)',
                         }}
                         title={`Sector: ${t.continent}`}
-                        aria-label={`Sector ${t.continent}`}
                       >
                         <span
                           className="inline-block w-3 h-3 rounded-full border border-white/60 shadow"
@@ -302,13 +309,11 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                       </div>
                     )
                   })
-                })()}
-              </>
+                })()
             )}
             {/* Attackable overlay: rings for selected + valid targets */}
             {overlays.attackable && selectedTerritory && (
-              <>
-                {(() => {
+              (() => {
                   const src = territories[selectedTerritory]
                   const entries: Array<{ x: number; y: number; kind: 'src' | 'tgt'; id: string }> =
                     []
@@ -350,13 +355,11 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                       />
                     </div>
                   ))
-                })()}
-              </>
+                })()
             )}
             {/* Threat overlay: heat rings on friendly territories proportional to adjacent enemy armies */}
             {overlays.threat && game && myId && (
-              <>
-                {(() => {
+              (() => {
                   const isFriendly = (owner?: string | null) =>
                     owner ? owner === myId || arePlayersTeammates(game, owner, myId) : false
                   const items: Array<{ id: string; x: number; y: number; score: number }> = []
@@ -392,7 +395,6 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                           transform: 'translate(-50%, -50%)',
                         }}
                         title={`Threat score: ${i.score}`}
-                        aria-label={`Threat ${i.score}`}
                       >
                         <span
                           className="block rounded-full"
@@ -405,8 +407,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                       </div>
                     )
                   })
-                })()}
-              </>
+                })()
             )}
             {/* Sectors legend */}
             {overlays.continents && (

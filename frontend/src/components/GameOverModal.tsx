@@ -283,7 +283,10 @@ const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
     let active = true
     const run = async () => {
       try {
-        const entries = (await gameService.getGameLog(roomId)) as LogEntry[]
+        const resp = await gameService.getGameLog(roomId)
+        const r1 = resp as unknown
+        const maybeObj = r1 as { log?: unknown[] }
+        const entries = (Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])) as LogEntry[]
         if (!active) return
         setLog(Array.isArray(entries) ? entries : [])
       } catch (_e) {
