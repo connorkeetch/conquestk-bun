@@ -100,8 +100,17 @@ const uiRoomSlice = createSlice({
       try {
         const raw = localStorage.getItem('ui.overlays')
         if (raw) {
-          const parsed = JSON.parse(raw) as UIRoomState['overlays']
-          state.overlays = { ...state.overlays, ...parsed }
+          const parsed = JSON.parse(raw)
+          // Validate the parsed structure to prevent corruption
+          if (
+            typeof parsed === 'object' &&
+            parsed !== null &&
+            typeof parsed.continents === 'boolean' &&
+            typeof parsed.attackable === 'boolean' &&
+            typeof parsed.threat === 'boolean'
+          ) {
+            state.overlays = parsed as UIRoomState['overlays']
+          }
         }
       } catch {
         // ignore storage errors (quota, privacy, SSR)
