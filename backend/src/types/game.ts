@@ -8,7 +8,7 @@ import type {
 
 export type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'
 
-export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
+export type GamePhase = 'reinforcement' | 'attack' | 'fortify' | 'finished'
 
 export interface GameTerritoryModifier {
   territory_id: string
@@ -102,7 +102,6 @@ export type GameAction =
   | AttackAction
   | FortifyAction
   | EndTurnAction
-  | BeginTurnAction
   | TradeCardsAction
   | GoBackToReinforcementAction
 
@@ -111,7 +110,6 @@ type GameActionType =
   | 'attack'
   | 'fortify'
   | 'end_turn'
-  | 'begin_turn'
   | 'trade_cards'
   | 'go_back_to_reinforcement'
 
@@ -145,10 +143,6 @@ export type FortifyAction = ActionBase<'fortify'> & {
 }
 
 export type EndTurnAction = ActionBase<'end_turn'> & {
-  payload?: undefined
-}
-
-export type BeginTurnAction = ActionBase<'begin_turn'> & {
   payload?: undefined
 }
 

@@ -1,8 +1,9 @@
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { mapService } from '@/services/mapService'
+import { type FullMapData, mapService } from '@/services/mapService'
 import { socketService } from '@/services/socketService'
+import type { Territory } from '@/types/game'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
 import {
@@ -11,18 +12,10 @@ import {
   setError,
   setPendingAction,
 } from '../store/gameSlice'
-import {
-  calculateAllPlayersContinentStatus,
-  resolveContinentDefinitions,
-} from '../utils/continentBonuses'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 // import { GamePhaseControls } from './GamePhaseControls'
-import { ContinentControlPanel } from './game/ContinentControlPanel'
 import { GameHeader } from './game/GameHeader'
-import type { PlayerSummary } from './game/PlayersLegend'
-import { PlayersLegend } from './game/PlayersLegend'
 import { RiskGameMap } from './game/RiskGameMap'
-import { TerritoryInfoPanel } from './game/TerritoryInfoPanel'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
 
@@ -51,7 +44,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
 
   const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
-  const [lobbyMapData, setLobbyMapData] = useState<any>(null)
+  const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
@@ -67,53 +60,59 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     }
   }, [lobbyMode, mapId])
 
+  const lobbyTerritories = useMemo<Territory[] | null>(() => {
+    if (!lobbyMode || !lobbyMapData) {
+      return null
+    }
+
+    const adjacency = new Map<string, Set<string>>()
+    for (const edge of lobbyMapData.adjacencies ?? []) {
+      const from = edge.fromTerritoryId
+      const to = edge.toTerritoryId
+      if (!from || !to) {
+        continue
+      }
+
+      const addEdge = (source: string, target: string) => {
+        if (!adjacency.has(source)) {
+          adjacency.set(source, new Set())
+        }
+        adjacency.get(source)?.add(target)
+      }
+
+      addEdge(from, to)
+      if (edge.isBidirectional !== false) {
+        addEdge(to, from)
+      }
+    }
+
+    return lobbyMapData.territories.map((territory) => {
+      const id = territory.territoryId || territory.id
+      const connections = adjacency.get(id) ?? new Set<string>()
+
+      return {
+        id,
+        name: territory.name,
+        ownerId: null,
+        armies: territory.startingArmies ?? 0,
+        continent: territory.continentId,
+        sector: territory.continentId,
+        sectorId: territory.continentId,
+        adjacentTerritories: Array.from(connections),
+        coordinates: territory.armyPosition
+          ? { x: territory.armyPosition.x, y: territory.armyPosition.y }
+          : undefined,
+      }
+    })
+  }, [lobbyMapData, lobbyMode])
+
   // Use lobby map data or game state data
-  const board = lobbyMode && lobbyMapData ? lobbyMapData.territories : (gameState?.board ?? [])
+  const board = lobbyTerritories ?? gameState?.board ?? []
   const players = lobbyMode ? lobbyPlayers : (gameState?.players ?? [])
   const currentPlayer = lobbyMode ? '' : (gameState?.currentPlayer ?? '')
   const currentPhase = lobbyMode ? 'lobby' : (gameState?.phase ?? 'reinforcement')
 
   const territories = useMemo(() => createTerritoryDisplayMap(board), [board])
-  const territoryValues = useMemo(() => Object.values(territories), [territories])
-
-  const continentDefinitions = useMemo(
-    () =>
-      resolveContinentDefinitions(
-        gameState?.gameConfig?.sectorBonuses || gameState?.gameConfig?.continentBonuses,
-      ),
-    [gameState?.gameConfig],
-  )
-
-  const playerContinentStatuses = useMemo(
-    () => calculateAllPlayersContinentStatus(players, board, continentDefinitions),
-    [players, board, continentDefinitions],
-  )
-
-  const playerSummaries = useMemo<PlayerSummary[]>(() => {
-    const statsByPlayer = new Map<string, { territoriesOwned: number; totalArmies: number }>()
-
-    territoryValues.forEach((territory) => {
-      const ownerId = territory.owner
-      if (!ownerId) return
-
-      const existing = statsByPlayer.get(ownerId) ?? { territoriesOwned: 0, totalArmies: 0 }
-      existing.territoriesOwned += 1
-      existing.totalArmies += territory.armies ?? 0
-      statsByPlayer.set(ownerId, existing)
-    })
-
-    return players.map((player) => {
-      const stats = statsByPlayer.get(player.id) ?? { territoriesOwned: 0, totalArmies: 0 }
-      return {
-        id: player.id,
-        username: player.username,
-        color: player.color,
-        territoriesOwned: stats.territoriesOwned,
-        totalArmies: stats.totalArmies,
-        isCurrentPlayer: player.id === currentPlayer,
-      }
-    })
-  }, [players, territoryValues, currentPlayer])
 
   const handleTerritoryClick = useCallback(
     (territoryId: string) => {

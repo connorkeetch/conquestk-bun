@@ -72,7 +72,7 @@ async function createPostgreSQLTables(): Promise<void> {
         game_data JSONB NOT NULL,
         turn_number INTEGER DEFAULT 1,
         current_player_id UUID REFERENCES users(id),
-        phase VARCHAR(20) DEFAULT 'setup' CHECK (phase IN ('setup', 'reinforcement', 'attack', 'fortify', 'finished')),
+        phase VARCHAR(20) DEFAULT 'reinforcement' CHECK (phase IN ('reinforcement', 'attack', 'fortify', 'finished')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,

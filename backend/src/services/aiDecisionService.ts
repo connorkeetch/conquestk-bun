@@ -110,7 +110,7 @@ class AIDecisionService {
       return false
     }
 
-    if (gameState.phase === 'setup' || gameState.phase === 'finished') {
+    if (gameState.phase === 'finished') {
       return []
     }
 
@@ -353,12 +353,7 @@ class AIDecisionService {
   buildFallbackPlan(gameState: GameState, playerId: string): GameAction[] {
     const actions: GameAction[] = []
     const roomId = gameState.roomId
-    let phase = gameState.phase
-
-    if (phase === 'setup') {
-      actions.push({ type: 'begin_turn', roomId, playerId })
-      phase = 'reinforcement'
-    }
+    const phase = gameState.phase
 
     const addEndTurn = () => {
       actions.push({ type: 'end_turn', roomId, playerId })

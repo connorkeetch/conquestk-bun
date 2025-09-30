@@ -125,7 +125,7 @@ describe('GameEngine', () => {
       expect(gameState.roomId).toBe('room123')
       expect(gameState.players).toHaveLength(3)
       expect(players.map((p) => p.userId)).toContain(gameState.currentPlayer)
-      expect(gameState.phase).toBe('setup')
+      expect(gameState.phase).toBe('reinforcement')
       expect(gameState.turn).toBe(1)
       expect(gameState.board).toBeDefined()
       expect(gameState.board.length).toBeGreaterThan(0)

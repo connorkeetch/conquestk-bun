@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { getClient, query, transaction } from '../config/database'
 import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom'
+import { logger } from '../utils/logger'
 
 type AIDifficultyOption = NonNullable<Player['aiDifficulty']>
 
@@ -804,6 +805,20 @@ export class GameRoomService {
     return this.getRoomById(idOrCode)
   }
 
+  private async triggerAutoStartIfReady(roomId: string): Promise<void> {
+    const { GameLifecycleService } = await import('./gameLifecycleService')
+
+    try {
+      const lifecycleService = new GameLifecycleService()
+      await lifecycleService.maybeAutoStart(roomId)
+    } catch (error) {
+      logger.warn('Failed to evaluate auto-start after lobby change', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
   async ensureAiReadyStates(roomId: string): Promise<void> {
     const updateQuery = `
       UPDATE room_players
@@ -978,6 +993,7 @@ export class GameRoomService {
     }
 
     await this.ensureAiReadyStates(roomId)
+    await this.triggerAutoStartIfReady(roomId)
     const updatedRoom = await this.getRoomById(roomId)
     if (!updatedRoom) {
       throw new Error('Failed to load room after updating AI opponents')
@@ -1059,6 +1075,7 @@ export class GameRoomService {
     options?: { selectedColor?: string | null },
   ): Promise<{ success: boolean; message: string }> {
     const client = await getClient()
+    let joinSucceeded = false
 
     try {
       await client.query('BEGIN')
@@ -1210,6 +1227,7 @@ export class GameRoomService {
       await client.query(joinQuery, [roomId, userId, finalColor])
 
       await client.query('COMMIT')
+      joinSucceeded = true
       return { success: true, message: 'Joined room successfully' }
     } catch (error) {
       await client.query('ROLLBACK')
@@ -1217,6 +1235,10 @@ export class GameRoomService {
     } finally {
       if (client.release) {
         client.release()
+      }
+
+      if (joinSucceeded) {
+        await this.triggerAutoStartIfReady(roomId)
       }
     }
   }

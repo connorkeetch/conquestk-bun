@@ -170,7 +170,7 @@ export interface SharedUser {
 // Game Types
 // ============================================
 
-export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
+export type GamePhase = 'reinforcement' | 'attack' | 'fortify' | 'finished'
 export type GameStatus = 'lobby' | 'initializing' | 'active' | 'completed' | 'paused' | 'abandoned'
 export type PlayerColor =
   | 'red'

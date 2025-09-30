@@ -41,6 +41,6 @@ chooseAction({
 - `gameState` is a read-only snapshot (hydrated from cache and cloned before use).
 - `player` carries `isAi`, `aiDifficulty`, and `aiPersonalitySeed` for personality-specific heuristics.
 - `budget` enforces wall-clock limits and supports cancellation via `AbortSignal`.
-- `AIDecisionPlan` must always return at least one safe action; the default stub produces a deterministic fallback sequence (`begin_turn`/`end_turn`) that hands off to the next player without mutating game state directly.
+- `AIDecisionPlan` must always return at least one safe action; the default stub produces a deterministic fallback sequence of phase-clearing `end_turn` actions that hands off to the next player without mutating game state directly.
 
 `GameService.executeAiTurn` consumes this plan, re-validates every action with `GameEngine.validateAction`, and persists the resulting state. If the plan is empty, invalid, or the signal aborts, it swaps in the same safe fallback and records the failure reason for telemetry.

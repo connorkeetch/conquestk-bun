@@ -488,7 +488,6 @@ export class QueueService {
   private getActionPriority(action: GameAction): number {
     switch (action.type) {
       case 'end_turn':
-      case 'begin_turn':
         return 10 // Highest priority
       case 'attack':
       case 'fortify':

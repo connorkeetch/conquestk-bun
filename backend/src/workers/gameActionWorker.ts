@@ -179,7 +179,6 @@ export class GameActionWorker {
           break
         }
 
-        case 'begin_turn':
         case 'trade_cards':
         case 'go_back_to_reinforcement':
           delta = await this.processPhaseChange(gameId, playerId, action)
@@ -344,10 +343,7 @@ export class GameActionWorker {
   private async processPhaseChange(
     gameId: string,
     playerId: string,
-    action: Extract<
-      GameAction,
-      { type: 'begin_turn' | 'trade_cards' | 'go_back_to_reinforcement' }
-    >,
+    action: Extract<GameAction, { type: 'trade_cards' | 'go_back_to_reinforcement' }>,
   ): Promise<GameDelta> {
     const phase = ((action as { payload?: { phase?: GamePhase } }).payload?.phase ??
       'reinforcement') as GamePhase
