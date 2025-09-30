@@ -16,7 +16,14 @@ export class AuthController {
     (process.env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] | undefined) ??
     ('7d' as jwt.SignOptions['expiresIn'])
 
-  private readonly jwtSecret: jwt.Secret = process.env.JWT_SECRET ?? 'fallback-secret'
+  private readonly jwtSecret: jwt.Secret = (() => {
+    const secret = process.env.JWT_SECRET
+    if (!secret) {
+      logger.error('FATAL: JWT_SECRET environment variable is not set')
+      throw new Error('JWT_SECRET must be configured')
+    }
+    return secret
+  })()
 
   register = async (req: Request, res: Response) => {
     try {

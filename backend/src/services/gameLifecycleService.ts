@@ -1,4 +1,5 @@
 import { getClient, query } from '../config/database'
+import { acquireLock, releaseLock } from '../config/redis'
 import type { GameConfiguration, GamePhase, GameState } from '../types/game'
 import type { GameLifecycleStatus, GameRoom } from '../types/gameRoom'
 import { logger } from '../utils/logger'
@@ -36,6 +37,14 @@ export class GameLifecycleService {
   private gameService = new GameService()
 
   async setReadyState(roomId: string, userId: string, ready: boolean): Promise<LifecycleSnapshot> {
+    // Acquire distributed lock to prevent race conditions
+    const lockKey = `lock:game:ready:${roomId}`
+    const lockToken = await acquireLock(lockKey, 5000)
+
+    if (!lockToken) {
+      throw new Error('Failed to acquire lock, another operation in progress')
+    }
+
     const client = await getClient()
 
     let shouldStart = false
@@ -149,6 +158,8 @@ export class GameLifecycleService {
       throw error
     } finally {
       client.release()
+      // Always release lock in finally block
+      await releaseLock(lockKey, lockToken)
     }
 
     if (shouldStart) {

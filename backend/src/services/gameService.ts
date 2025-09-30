@@ -560,15 +560,20 @@ export class GameService {
 
     await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
 
-    if (notificationService.isEnabled() && battleResult.gameEnded) {
-      const participantIds = updatedState.players.map((player) => player.id)
-      const winnerId = battleResult.winner?.id ?? updatedState.currentPlayer
-      notificationService.notifyGameEnd(roomId, winnerId, participantIds).catch((error) => {
-        logger.warn('Failed to send game end push notifications after battle', {
-          roomId,
-          error: error instanceof Error ? error.message : error,
+    if (battleResult.gameEnded) {
+      // Clean up GameEngine cache when game ends
+      this.gameEngine.clearModifiersCache(roomId)
+
+      if (notificationService.isEnabled()) {
+        const participantIds = updatedState.players.map((player) => player.id)
+        const winnerId = battleResult.winner?.id ?? updatedState.currentPlayer
+        notificationService.notifyGameEnd(roomId, winnerId, participantIds).catch((error) => {
+          logger.warn('Failed to send game end push notifications after battle', {
+            roomId,
+            error: error instanceof Error ? error.message : error,
+          })
         })
-      })
+      }
     }
 
     return {
@@ -1197,9 +1202,9 @@ export class GameService {
         'SELECT turn_stats FROM game_states WHERE room_id = $1 FOR UPDATE',
         [roomId],
       )
-      const current = (Array.isArray(res.rows[0]?.turn_stats)
-        ? (res.rows[0]?.turn_stats as unknown[])
-        : []) as typeof snapshot[]
+      const current = (
+        Array.isArray(res.rows[0]?.turn_stats) ? (res.rows[0]?.turn_stats as unknown[]) : []
+      ) as (typeof snapshot)[]
       const updated = [...current, snapshot].slice(-500)
       await client.query(
         `INSERT INTO game_states (room_id, turn_stats, last_activity)
