@@ -21,6 +21,10 @@ taskkill /PID <process-id> /F
 # Contact admin for connection string if needed
 ```
 
+**Sandbox note**: The OpenAI agent sandbox blocks outbound TCP ports above 443. Use the local
+connection string from [docs/operations/openai-sandbox.md](openai-sandbox.md) instead of the shared
+Railway URL to avoid `connect ENETUNREACH` errors.
+
 ### ❌ Frontend won't connect to backend
 **Problem**: CORS or network issues
 1. Check backend is running on port 5001
@@ -36,6 +40,9 @@ taskkill /PID <process-id> /F
 # Production: Railway production database
 # Both URLs provided by Railway platform
 ```
+
+**Sandbox note**: Swap the `DATABASE_URL` to the localhost value described in the sandbox deployment
+guide; the hosted Railway port is unreachable from within the sandbox network.
 
 ### ❌ Admin Panel 500 Errors
 **Problem**: Admin endpoints returning 500 errors

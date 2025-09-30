@@ -66,6 +66,9 @@ export class MigrationRunner {
       // Ensure migration tracking table exists
       await this.migrationTracker.createTrackingTable()
 
+      // Patch legacy restores so migrations that expect the historic `games` table can run
+      await this.ensureLegacyCompatibility()
+
       // Get all migration files
       const availableMigrations = this.getAvailableMigrations()
       const appliedMigrations = await this.migrationTracker.getAppliedMigrations()
@@ -122,6 +125,240 @@ export class MigrationRunner {
     } catch (error) {
       logger.error('❌ Migration system failed:', error)
       throw error
+    }
+  }
+
+  private async ensureLegacyCompatibility(): Promise<void> {
+    try {
+      logger.info('🧩 Checking legacy compatibility shims before running migrations')
+
+      await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+      await query('CREATE EXTENSION IF NOT EXISTS citext')
+      await query('CREATE EXTENSION IF NOT EXISTS pg_trgm')
+
+      const gamesExistsResult = await query<{ exists: boolean }>(
+        `
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = 'games'
+        ) AS exists
+      `,
+      )
+
+      const gamesExists = Boolean(gamesExistsResult.rows[0]?.exists)
+
+      if (gamesExists) {
+        logger.info('  ✅ games table already present — no compatibility shim required')
+      } else {
+        const gameRoomsExistsResult = await query<{ exists: boolean }>(
+          `
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'game_rooms'
+          ) AS exists
+        `,
+        )
+
+        const gameRoomsExists = Boolean(gameRoomsExistsResult.rows[0]?.exists)
+
+        if (!gameRoomsExists) {
+          logger.warn(
+            '  ⚠️ game_rooms table is missing; skipping games compatibility shim (migration 031 may still fail)',
+          )
+          return
+        }
+
+        logger.warn(
+          '  ⚠️ games table missing — creating compatibility table so conversation migrations can complete',
+        )
+
+        await query(`
+          CREATE TABLE games (
+            id UUID PRIMARY KEY,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await query(
+          `
+          ALTER TABLE games
+          ADD CONSTRAINT games_room_fk
+          FOREIGN KEY (id) REFERENCES game_rooms(id) ON DELETE CASCADE
+        `,
+        )
+
+        await query(
+          `
+          INSERT INTO games (id, created_at, updated_at)
+          SELECT
+            id,
+            COALESCE(started_at, created_at, CURRENT_TIMESTAMP),
+            COALESCE(updated_at, CURRENT_TIMESTAMP)
+          FROM game_rooms
+          ON CONFLICT (id) DO NOTHING
+        `,
+        )
+
+        await query(
+          `
+          CREATE OR REPLACE FUNCTION sync_games_from_game_rooms()
+          RETURNS TRIGGER AS $$
+          BEGIN
+            INSERT INTO games (id, created_at, updated_at)
+            VALUES (
+              NEW.id,
+              COALESCE(NEW.started_at, NEW.created_at, CURRENT_TIMESTAMP),
+              COALESCE(NEW.updated_at, CURRENT_TIMESTAMP)
+            )
+            ON CONFLICT (id)
+            DO UPDATE SET
+              updated_at = EXCLUDED.updated_at;
+            RETURN NEW;
+          END;
+          $$ LANGUAGE plpgsql;
+        `,
+        )
+
+        await query('DROP TRIGGER IF EXISTS trg_game_rooms_sync_games ON game_rooms')
+
+        await query(
+          `
+          CREATE TRIGGER trg_game_rooms_sync_games
+          AFTER INSERT OR UPDATE ON game_rooms
+          FOR EACH ROW
+          EXECUTE FUNCTION sync_games_from_game_rooms()
+        `,
+        )
+
+        logger.info('  ✅ Created compatibility games table and sync trigger')
+      }
+    } catch (error) {
+      logger.error('  ❌ Failed to prepare legacy compatibility tables', error)
+      throw error
+    }
+
+    const clanRolesTable = await query<{ exists: boolean }>(
+      `
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'clan_roles'
+      ) AS exists
+    `,
+    )
+
+    const clanRolesExists = Boolean(clanRolesTable.rows[0]?.exists)
+
+    if (clanRolesExists) {
+      const clanRolesIndex = await query<{ exists: boolean }>(
+        `
+        SELECT EXISTS (
+          SELECT 1
+          FROM pg_indexes
+          WHERE schemaname = 'public'
+            AND tablename = 'clan_roles'
+            AND indexname = 'idx_clan_roles_clan_id_lower_name'
+        ) AS exists
+      `,
+      )
+
+      const clanRolesIndexExists = Boolean(clanRolesIndex.rows[0]?.exists)
+
+      if (!clanRolesIndexExists) {
+        logger.info(
+          '  🔐 Backfilling case-insensitive uniqueness for clan role names (idx_clan_roles_clan_id_lower_name)',
+        )
+
+        await query(
+          `
+          CREATE UNIQUE INDEX idx_clan_roles_clan_id_lower_name
+          ON clan_roles (clan_id, LOWER(name))
+        `,
+        )
+      } else {
+        logger.info('  ✅ Case-insensitive clan role name index already present')
+      }
+    }
+
+    const approvalTable = await query<{ exists: boolean }>(
+      `
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'map_approval_requests'
+      ) AS exists
+    `,
+    )
+
+    const approvalExists = Boolean(approvalTable.rows[0]?.exists)
+
+    if (!approvalExists) {
+      logger.warn('  ⚠️ map_approval_requests table missing — creating compatibility table')
+
+      await query(`
+        CREATE TABLE map_approval_requests (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          version_id UUID NOT NULL REFERENCES map_versions(id) ON DELETE CASCADE,
+          requester_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          assigned_moderator_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          submission_notes TEXT,
+          priority_level VARCHAR(20) NOT NULL DEFAULT 'normal',
+          estimated_review_time INTEGER,
+          review_started_at TIMESTAMP WITH TIME ZONE,
+          review_completed_at TIMESTAMP WITH TIME ZONE,
+          decision VARCHAR(32),
+          moderator_feedback TEXT,
+          created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+
+      await query(
+        `
+        CREATE INDEX idx_map_approval_requests_version
+        ON map_approval_requests(version_id)
+      `,
+      )
+
+      await query(
+        `
+        CREATE INDEX idx_map_approval_requests_requester
+        ON map_approval_requests(requester_id)
+      `,
+      )
+
+      await query(
+        `
+        CREATE INDEX idx_map_approval_requests_decision
+        ON map_approval_requests(decision)
+      `,
+      )
+
+      await query(
+        `
+        CREATE OR REPLACE FUNCTION update_map_approval_requests_updated_at()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          NEW.updated_at = CURRENT_TIMESTAMP;
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `,
+      )
+
+      await query(
+        'DROP TRIGGER IF EXISTS trg_map_approval_requests_updated_at ON map_approval_requests',
+      )
+
+      await query(
+        `
+        CREATE TRIGGER trg_map_approval_requests_updated_at
+        BEFORE UPDATE ON map_approval_requests
+        FOR EACH ROW
+        EXECUTE FUNCTION update_map_approval_requests_updated_at()
+      `,
+      )
+
+      logger.info('  ✅ Created compatibility map_approval_requests table')
     }
   }
 
@@ -302,6 +539,12 @@ export class MigrationRunner {
         '$1 ON CONFLICT DO NOTHING;',
       )
     }
+
+    // Normalize unsupported UNIQUE constraints that use expressions (PostgreSQL requires a functional index instead)
+    convertedSQL = convertedSQL.replace(
+      'CONSTRAINT clan_roles_name_unique UNIQUE (clan_id, LOWER(name))',
+      'CONSTRAINT clan_roles_name_unique UNIQUE (clan_id, name)',
+    )
 
     return convertedSQL
   }
