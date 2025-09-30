@@ -1,5 +1,6 @@
 import type {
   BattleResultDelta,
+  SystemMessageDelta,
   FortifyResultDelta,
   GameDelta,
   PhaseChangeDelta,
@@ -340,6 +341,11 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       const d = delta as unknown as GameDelta
       if (!d || (d as { roomId?: string }).roomId !== gameId) return
 
+      if (d.type === 'SYSTEM_MESSAGE') {
+        const sm = d as SystemMessageDelta
+        add(sm.text, new Date(sm.timestamp))
+        return
+      }
       if (d.type === 'PHASE_CHANGE') {
         handlePhaseChange(d as PhaseChangeDelta)
         return
