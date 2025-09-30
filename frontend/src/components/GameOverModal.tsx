@@ -418,10 +418,19 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
   }>
 
   const n = snapshots.length
+
+  // Hover tooltip state - must be before early returns
+  const [hoverIdx, setHoverIdx] = React.useState<number | null>(null)
+
   if (n < 1) return null
 
   type Series = { id: string; name: string; color: string; values: number[] }
-  const series: Series[] = players.map((p) => ({ id: p.id, name: p.username, color: p.color, values: [] }))
+  const series: Series[] = players.map((p) => ({
+    id: p.id,
+    name: p.username,
+    color: p.color,
+    values: [],
+  }))
   for (const snap of snapshots) {
     for (const s of series) {
       const entry = (snap.players || []).find((pp) => pp.id === s.id)
@@ -441,8 +450,6 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
   const innerW = W - pad * 2
   const innerH = H - pad * 2
 
-  // Hover tooltip state
-  const [hoverIdx, setHoverIdx] = React.useState<number | null>(null)
   const xStep = innerW / Math.max(1, n - 1)
 
   const pathFor = (vals: number[]) => {
@@ -506,20 +513,37 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
         onMouseMove={(e) => {
           const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
           const x = e.clientX - rect.left
-          const idx = Math.round((x - pad) / xStep)
-          setHoverIdx(Number.isFinite(idx) ? Math.max(0, Math.min(n - 1, idx)) : null)
+          const rawIdx = Math.round((x - pad) / xStep)
+          // Bounds check: ensure index is within array bounds
+          const idx =
+            Number.isFinite(rawIdx) && rawIdx >= 0 && rawIdx < n ? rawIdx : null
+          setHoverIdx(idx)
         }}
         onMouseLeave={() => setHoverIdx(null)}
       >
         {/* Axes */}
         <line x1={pad} y1={pad + innerH} x2={pad + innerW} y2={pad + innerH} stroke="var(--border)" strokeWidth="1" />
         {/* Y grid + labels */}
-        {yLabels.map((label, i) => {
+        {yLabels.map((label) => {
           const y = pad + innerH - (maxY === 0 ? 0 : (label / maxY) * innerH)
           return (
-            <g key={i}>
-              <line x1={pad} y1={y} x2={pad + innerW} y2={y} stroke="var(--border)" strokeOpacity="0.25" strokeWidth="1" />
-              <text x={pad - 6} y={y + 3} textAnchor="end" className="text-[10px] fill-current" fill="currentColor">
+            <g key={`y-${label}`}>
+              <line
+                x1={pad}
+                y1={y}
+                x2={pad + innerW}
+                y2={y}
+                stroke="var(--border)"
+                strokeOpacity="0.25"
+                strokeWidth="1"
+              />
+              <text
+                x={pad - 6}
+                y={y + 3}
+                textAnchor="end"
+                className="text-[10px] fill-current"
+                fill="currentColor"
+              >
                 {label}
               </text>
             </g>
@@ -532,14 +556,27 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
           const count = Math.max(2, Math.min(maxTicks, n))
           const stepIndex = (n - 1) / (count - 1)
           const ticks = Array.from({ length: count }, (_, i) => Math.round(i * stepIndex))
-          const xStep = innerW / Math.max(1, n - 1)
-          return ticks.map((idx, i) => {
-            const x = pad + idx * xStep
+          const xStepLocal = innerW / Math.max(1, n - 1)
+          return ticks.map((idx) => {
+            const x = pad + idx * xStepLocal
             const label = `T${idx + 1}`
             return (
-              <g key={`x-${i}`}>
-                <line x1={x} y1={pad + innerH} x2={x} y2={pad + innerH + 4} stroke="var(--border)" strokeWidth="1" />
-                <text x={x} y={pad + innerH + 14} textAnchor="middle" className="text-[10px] fill-current" fill="currentColor">
+              <g key={`x-turn-${idx}`}>
+                <line
+                  x1={x}
+                  y1={pad + innerH}
+                  x2={x}
+                  y2={pad + innerH + 4}
+                  stroke="var(--border)"
+                  strokeWidth="1"
+                />
+                <text
+                  x={x}
+                  y={pad + innerH + 14}
+                  textAnchor="middle"
+                  className="text-[10px] fill-current"
+                  fill="currentColor"
+                >
                   {label}
                 </text>
               </g>
@@ -569,6 +606,8 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
             {series
               .filter((s) => visible[s.id] !== false)
               .map((s) => {
+                // Bounds check: ensure hoverIdx is within values array
+                if (hoverIdx >= s.values.length) return null
                 const v = s.values[hoverIdx]
                 const y = pad + innerH - (maxY === 0 ? 0 : (v / maxY) * innerH)
                 const x = pad + hoverIdx * xStep
@@ -585,13 +624,22 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
           <div className="grid grid-cols-2 gap-x-2 gap-y-1">
             {series
               .filter((s) => visible[s.id] !== false)
-              .map((s) => (
-                <div key={`tt-${s.id}`} className="flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                  <span className="text-white truncate">{playerMap.get(s.id)?.username ?? s.id}</span>
-                  <span className="ml-auto tabular-nums">{s.values[hoverIdx]}</span>
-                </div>
-              ))}
+              .map((s) => {
+                // Bounds check for tooltip values
+                const value = hoverIdx < s.values.length ? s.values[hoverIdx] : 0
+                return (
+                  <div key={`tt-${s.id}`} className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-2 h-2 rounded-full"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    <span className="text-white truncate">
+                      {playerMap.get(s.id)?.username ?? s.id}
+                    </span>
+                    <span className="ml-auto tabular-nums">{value}</span>
+                  </div>
+                )
+              })}
           </div>
         </div>
       )}
