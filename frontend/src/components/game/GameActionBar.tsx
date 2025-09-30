@@ -234,10 +234,17 @@ export function GameActionBar({
                   type="button"
                   onClick={() => void dispatch(undoLastPlacement())}
                   disabled={!isMyTurn || !hasUndo}
-                  className="btn btn-secondary"
-                  title="Undo last placement"
+                  className={`btn ${hasUndo ? 'btn-warning' : 'btn-secondary'}`}
+                  title={`Undo last placement${hasUndo ? ' (Z)' : ''}`}
                 >
-                  Undo
+                  <span className="inline-flex items-center gap-1.5">
+                    ↶ Undo
+                    {hasUndo && (
+                      <kbd className="text-xs opacity-75 font-mono px-1 py-0.5 rounded bg-black/20">
+                        Z
+                      </kbd>
+                    )}
+                  </span>
                 </button>
                 {endTurnBtn}
               </>

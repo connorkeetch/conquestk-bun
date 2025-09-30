@@ -21,7 +21,7 @@ import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
-import { endTurn } from '../store/gameActions'
+import { endTurn, undoLastPlacement } from '../store/gameActions'
 import {
   clearGame,
   fetchGameState,
@@ -872,8 +872,23 @@ export default function GameRoom() {
         dispatch(setPendingAction('deploy'))
         return
       }
-      // Clear selection
+      // Undo placement (Z key) - only in reinforcement phase
       if (key === 'z') {
+        e.preventDefault()
+        const phase = currentGame?.phase
+        const hasUndo = state.uiRoom?.placementHistory && state.uiRoom.placementHistory.length > 0
+        if (phase === 'reinforcement' && hasUndo) {
+          dispatch(undoLastPlacement())
+        } else {
+          // Fallback to clear selection if not in reinforcement or no history
+          dispatch(selectTerritory(null))
+          dispatch(selectTargetTerritory(null))
+          dispatch(setPendingAction(null))
+        }
+        return
+      }
+      // Escape to clear selection
+      if (key === 'escape') {
         e.preventDefault()
         dispatch(selectTerritory(null))
         dispatch(selectTargetTerritory(null))
