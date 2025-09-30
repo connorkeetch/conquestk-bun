@@ -2,6 +2,8 @@ import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import MapDetailModal from '@/components/MapDetailModal'
+import InfoTooltip from '@/components/InfoTooltip'
+import { getTreasureDescription } from '@/utils/tooltips'
 import { extractFirstHexColor, pickTextOnColor } from '@/utils/color'
 import { logger } from '@/utils/logger'
 import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
@@ -1240,6 +1242,19 @@ const CreateGamePage: React.FC = () => {
               Hidden Treasures replace classic spoils. Capture territories to earn treasure cards
               and turn in sets for troop reinforcements based on the payout mode.
             </p>
+            <div className="text-xs text-muted flex items-center gap-2">
+              <span>Rules & bonuses</span>
+              <InfoTooltip
+                title={getTreasureDescription({
+                  enabled: true,
+                  payoutMode: treasurePayoutMode,
+                  diamondsPercent: DIAMOND_PERCENT,
+                  fixedValue: fixedTreasureValue,
+                  handCap: TREASURE_HAND_CAP,
+                  diamondSetBonus: DIAMOND_SET_BONUS,
+                })}
+              />
+            </div>
             <div>
               <p className="text-xs text-muted mb-2">Payout Mode</p>
               <div className="space-y-2">
