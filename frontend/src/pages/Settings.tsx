@@ -1615,16 +1615,18 @@ export default function Settings() {
           },
         ]
 
-        if (comingSoonUiEnabled) {
-          items.push({
-            id: 'colorblind-mode',
-            label: 'Colorblind Mode',
-            description: 'Use colorblind-friendly territory colors',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: false,
-          })
-        }
+        items.push({
+          id: 'colorblind-mode',
+          label: 'Colorblind Mode',
+          description: 'Use colorblind-friendly territory colors and higher-contrast tokens',
+          type: 'toggle',
+          isWorking: true,
+          defaultValue: Boolean(settings.display?.colorblindMode),
+          onChange: (value) => {
+            if (typeof value !== 'boolean') return
+            dispatch(require('../store/settingsSlice').setColorblindMode(value))
+          },
+        })
 
         return items
       }

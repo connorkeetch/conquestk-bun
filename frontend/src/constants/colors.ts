@@ -82,6 +82,23 @@ export const PLAYER_COLORS = [
   '#5C4033', // Brown - Deep coffee brown
 ] as const
 
+// Color-blind friendly palette (Okabe-Ito extended)
+// Source core: Okabe & Ito (2008), extended to 12 by repeating distinct hues
+const COLORBLIND_PLAYER_COLORS: readonly string[] = [
+  '#D55E00', // Vermilion
+  '#0072B2', // Blue
+  '#CC79A7', // Reddish purple
+  '#E69F00', // Orange
+  '#56B4E9', // Sky blue
+  '#009E73', // Bluish green
+  '#F0E442', // Yellow
+  '#000000', // Black
+  '#D55E00', // Vermilion (repeat distinct)
+  '#0072B2', // Blue (repeat distinct)
+  '#009E73', // Bluish green (repeat distinct)
+  '#CC79A7', // Reddish purple (repeat distinct)
+]
+
 // ===== PREMIUM PLAYER COLORS =====
 // Premium player colors with special effects
 export const PREMIUM_PLAYER_COLORS = {
@@ -213,6 +230,18 @@ export const getRankColor = (elo: number) => {
 export const getColorValue = (color: PlayerColor): string => {
   // Check if it's a regular player color (hex value)
   if ((PLAYER_COLORS as readonly string[]).includes(color)) {
+    // If colorblind mode is enabled, map to color-blind-friendly palette by index
+    try {
+      const isColorblind =
+        typeof document !== 'undefined' &&
+        document.documentElement.getAttribute('data-colorblind')
+      if (isColorblind) {
+        const idx = (PLAYER_COLORS as readonly string[]).indexOf(color)
+        if (idx >= 0) return COLORBLIND_PLAYER_COLORS[idx % COLORBLIND_PLAYER_COLORS.length]
+      }
+    } catch {
+      // ignore environment issues
+    }
     return color
   }
 

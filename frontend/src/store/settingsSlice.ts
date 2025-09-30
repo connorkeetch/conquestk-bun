@@ -45,6 +45,7 @@ interface SettingsState {
   // Display Settings
   display: {
     theme: Theme
+    colorblindMode?: boolean
   }
 
   // Audio Settings
@@ -73,6 +74,7 @@ interface SettingsState {
 const defaultSettings: SettingsState = {
   display: {
     theme: DEFAULT_THEME_ID,
+    colorblindMode: false,
   },
   audio: {
     masterVolume: 75,
@@ -137,9 +139,18 @@ const loadSettings = (): SettingsState => {
       }
 
       mergedSettings.display.theme = themeToUse
+      // Adopt colorblind mode flag if present
+      const colorblind = Boolean(parsed.display?.colorblindMode)
+      mergedSettings.display.colorblindMode = colorblind
 
       if (typeof document !== 'undefined') {
         document.documentElement.setAttribute('data-theme', themeToUse)
+        // Apply colorblind attribute
+        if (colorblind) {
+          document.documentElement.setAttribute('data-colorblind', '1')
+        } else {
+          document.documentElement.removeAttribute('data-colorblind')
+        }
       }
 
       try {
@@ -378,6 +389,19 @@ const settingsSlice = createSlice({
         // Ignore storage errors (quota, privacy mode, etc.)
       }
     },
+
+    // Accessibility: Colorblind palette toggle
+    setColorblindMode: (state, action: PayloadAction<boolean>) => {
+      state.display.colorblindMode = Boolean(action.payload)
+      saveSettings(state)
+      if (typeof document !== 'undefined') {
+        if (state.display.colorblindMode) {
+          document.documentElement.setAttribute('data-colorblind', '1')
+        } else {
+          document.documentElement.removeAttribute('data-colorblind')
+        }
+      }
+    },
   },
 })
 
@@ -391,6 +415,7 @@ export const {
   setDirectMessages,
   setNotificationPref,
   setColorTheme,
+  setColorblindMode,
   clearCache,
   resetSettings,
   loadServerSettings,
