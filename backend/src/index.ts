@@ -58,6 +58,7 @@ let setupSocketHandlers: typeof import('./services/socketService').setupSocketHa
 let ensureTablesExist: typeof import('./utils/initTables').ensureTablesExist
 let logger: Logger
 let MigrationRunner: typeof import('./utils/migrationRunner').MigrationRunner
+let memoryDiagnosticsService: typeof import('./services/memoryDiagnosticsService').memoryDiagnosticsService
 
 try {
   createServer = require('node:http').createServer
@@ -93,6 +94,7 @@ try {
   setupSocketHandlers = require('./services/socketService').setupSocketHandlers
   ensureTablesExist = require('./utils/initTables').ensureTablesExist
   logger = require('./utils/logger').logger
+  memoryDiagnosticsService = require('./services/memoryDiagnosticsService').memoryDiagnosticsService
 
   // Now that logger is available, use it for all subsequent logging
   try {
@@ -681,6 +683,8 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 })
 
 setupSocketHandlers(io)
+
+memoryDiagnosticsService.start()
 
 // WorkerManager will be created AND initialized after Redis is ready (see Redis initialization block above)
 import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager'
