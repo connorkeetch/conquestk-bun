@@ -1,9 +1,8 @@
-import type React from 'react'
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
+import { gameService } from '@/services/gameService'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import type { GamePlayer } from '../types/game'
-import { gameService } from '@/services/gameService'
 
 interface GameOverModalProps {
   isOpen: boolean
@@ -140,7 +139,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </div>
           )}
 
-          {/* Final standings summary (armies and territories) */
+          {/* Final standings summary (armies and territories) */}
           <FinalStandings />
 
           {/* Key moments timeline */}
@@ -210,7 +209,10 @@ const FinalStandings: React.FC = () => {
         {sorted.map((e, idx) => (
           <div key={e.id} className="grid grid-cols-12 items-center gap-2 text-sm">
             <div className="col-span-3 flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full border border-white" style={{ backgroundColor: e.color }} />
+              <div
+                className="w-3 h-3 rounded-full border border-white"
+                style={{ backgroundColor: e.color }}
+              />
               <div className={`font-medium ${e.eliminated ? 'line-through opacity-75' : ''}`}>
                 {idx + 1}. {e.name}
               </div>
@@ -241,8 +243,23 @@ const FinalStandings: React.FC = () => {
 }
 
 type LogEntry =
-  | { type: 'TURN'; timestamp: string; playerId: string; event: 'START' | 'END'; reinforcementArmies?: number; territoryCount?: number }
-  | { type: 'BATTLE'; timestamp: string; attackingTerritoryId: string; defendingTerritoryId: string; attackerId: string; defenderId: string | null; conquered: boolean }
+  | {
+      type: 'TURN'
+      timestamp: string
+      playerId: string
+      event: 'START' | 'END'
+      reinforcementArmies?: number
+      territoryCount?: number
+    }
+  | {
+      type: 'BATTLE'
+      timestamp: string
+      attackingTerritoryId: string
+      defendingTerritoryId: string
+      attackerId: string
+      defenderId: string | null
+      conquered: boolean
+    }
   | { type: 'TREASURE'; timestamp: string; userId: string; metal: string }
   | { type: 'LIFECYCLE'; timestamp: string; event: string }
 
@@ -266,7 +283,7 @@ const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
         const entries = (await gameService.getGameLog(roomId)) as LogEntry[]
         if (!active) return
         setLog(Array.isArray(entries) ? entries : [])
-      } catch (e) {
+      } catch (_e) {
         if (!active) return
         setError('Unable to load game log')
         setLog([])
@@ -280,7 +297,9 @@ const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
 
   if (log === null) {
     return (
-      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">Loading key moments…</div>
+      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">
+        Loading key moments…
+      </div>
     )
   }
   if (error) {
