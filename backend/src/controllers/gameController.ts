@@ -588,8 +588,22 @@ export class GameController {
         return res.status(403).json({ message: 'Game log available after game ends' })
       }
 
-      const log = await this.gameService.getBattleLog(roomId)
-      return res.json({ log })
+      const [log, stats] = await Promise.all([
+        this.gameService.getBattleLog(roomId),
+        (async () => {
+          try {
+            const result = await query<{ turn_stats: unknown[] | null }>(
+              'SELECT turn_stats FROM game_states WHERE room_id = $1',
+              [roomId],
+            )
+            const list = result.rows[0]?.turn_stats
+            return Array.isArray(list) ? list : []
+          } catch {
+            return []
+          }
+        })(),
+      ])
+      return res.json({ log, stats })
     } catch (error) {
       logger.error('Get room log error:', error)
       return res.status(500).json({ message: 'Internal server error' })

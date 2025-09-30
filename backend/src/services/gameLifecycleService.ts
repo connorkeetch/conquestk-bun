@@ -395,6 +395,17 @@ export class GameLifecycleService {
     const snapshot = await this.getLifecycleSnapshot(roomId)
     await this.broadcastLifecycle(snapshot)
 
+    // Append initial per-turn stats snapshot for turn 1
+    try {
+      const stats = this.gameService.buildTurnStatsSnapshot(gameState)
+      await this.gameService.appendTurnStats(roomId, stats)
+    } catch (e) {
+      logger.warn('Failed to append initial turn stats snapshot', {
+        roomId,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
+
     const io = tryGetSocketServer()
     if (io) {
       const serialized = this.toSerializableGameState(gameState)

@@ -734,6 +734,17 @@ export class GameService {
       })
     }
 
+    // Append per-turn stats snapshot for analytics
+    try {
+      const stats = this.buildTurnStatsSnapshot(updatedState)
+      await this.appendTurnStats(roomId, stats)
+    } catch (e) {
+      logger.warn('Failed to append turn stats snapshot', {
+        roomId,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
+
     return {
       gameState: this.serializeGameState(updatedState),
       reinforcementArmies,
@@ -1166,6 +1177,57 @@ export class GameService {
     }
 
     return divergences
+  }
+
+  /**
+   * Append a per-turn stats snapshot for analytics/visualization.
+   */
+  async appendTurnStats(
+    roomId: string,
+    snapshot: {
+      turn: number
+      phase: string
+      currentPlayerId: string
+      timestamp: string
+      players: Array<{ id: string; territories: number; armies: number; eliminated: boolean }>
+    },
+  ): Promise<void> {
+    await transaction(async (client) => {
+      const res = await client.query<{ turn_stats: unknown[] | null }>(
+        'SELECT turn_stats FROM game_states WHERE room_id = $1 FOR UPDATE',
+        [roomId],
+      )
+      const current = (Array.isArray(res.rows[0]?.turn_stats)
+        ? (res.rows[0]?.turn_stats as unknown[])
+        : []) as typeof snapshot[]
+      const updated = [...current, snapshot].slice(-500)
+      await client.query(
+        `INSERT INTO game_states (room_id, turn_stats, last_activity)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (room_id) DO UPDATE SET turn_stats = EXCLUDED.turn_stats, last_activity = NOW()`,
+        [roomId, JSON.stringify(updated)],
+      )
+    })
+  }
+
+  /**
+   * Convenience to compute snapshot from a GameState.
+   */
+  buildTurnStatsSnapshot(state: GameState, at?: Date) {
+    const when = (at ?? new Date()).toISOString()
+    const players = state.players.map((p) => ({
+      id: p.id,
+      territories: state.board.filter((t) => t.ownerId === p.id).length,
+      armies: state.board.reduce((sum, t) => (t.ownerId === p.id ? sum + t.armies : sum), 0),
+      eliminated: p.isEliminated,
+    }))
+    return {
+      turn: state.turn,
+      phase: state.phase,
+      currentPlayerId: state.currentPlayer,
+      timestamp: when,
+      players,
+    }
   }
 
   private calculateRoundNumber(gameState: GameState): number {
