@@ -272,28 +272,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           onTerritoryClick={handleTerritoryClick}
           onTerritoryHover={handleTerritoryHover}
         />
-
-        <div className="hidden lg:flex w-80 border-l border-border bg-surface-1 flex-col gap-3 p-3 overflow-y-auto">
-          {/* Phase controls moved to bottom action bar */}
-
-          <PlayersLegend players={playerSummaries} />
-
-          {/* CurrentActionPanel consolidated into bottom action bar */}
-
-          <TerritoryInfoPanel
-            hoveredTerritory={hoveredTerritory}
-            selectedTerritory={selectedTerritory}
-            territories={territories}
-            players={players}
-            territoryModifiers={territoryModifierMap ?? undefined}
-          />
-
-          <ContinentControlPanel
-            continents={continentDefinitions}
-            playerStatuses={playerContinentStatuses}
-            players={players}
-          />
-        </div>
       </div>
     </div>
   )

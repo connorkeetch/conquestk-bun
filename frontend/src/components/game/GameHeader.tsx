@@ -37,79 +37,52 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
         : 'Fog of War: Persistent — fog remains; you see owned and adjacent territories; others stay hidden.'
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
   return (
-    <div className="bg-blue-900 text-white p-4">
+    <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
       <div className="flex justify-between items-center gap-4">
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold truncate">Risk Game Board</h2>
-          <div className="flex items-center gap-3 text-sm opacity-75 mt-1">
+        <div className="flex items-center gap-4 text-sm">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]"
+          >
+            {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
+          </span>
+          <span className="text-[color:var(--text)]">Turn {turn}</span>
+          <TurnTimer />
+          <span
+            className="inline-flex items-center gap-1 text-xs"
+            title={
+              connection === 'connected'
+                ? 'Connected'
+                : connection === 'connecting'
+                  ? 'Reconnecting'
+                  : 'Disconnected'
+            }
+          >
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-surface-2 text-ink-2`}
-            >
-              {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
-            </span>
-            <span>Turn {turn}</span>
-            <TurnTimer />
-            <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-surface-2 text-ink-2"
-              title={`Fog of War: ${fogLabel}`}
-            >
-              Fog: {fogLabel}
-              <InfoTooltip title={fogTip} />
-            </span>
-            <span
-              className="inline-flex items-center gap-1 text-xs"
-              title={
+              className={`inline-block w-2 h-2 rounded-full ${
                 connection === 'connected'
-                  ? 'Connected'
+                  ? 'bg-green-500'
                   : connection === 'connecting'
-                    ? 'Reconnecting'
-                    : 'Disconnected'
-              }
-            >
-              <span
-                className={`inline-block w-2 h-2 rounded-full ${
-                  connection === 'connected'
-                    ? 'bg-green-500'
-                    : connection === 'connecting'
-                      ? 'bg-yellow-400'
-                      : 'bg-red-500'
-                }`}
-              />
-              {connection}
-            </span>
-            <label className="inline-flex items-center gap-2 text-xs">
-              <span>Anim:</span>
-              <select
-                value={anim}
-                onChange={(e) => dispatch(setAnimationSpeed(e.target.value as AnimationSpeed))}
-                className="bg-surface-2 text-white border border-border rounded px-1 py-0.5 text-xs"
-                title="Animation speed"
-              >
-                <option value="normal">Normal</option>
-                <option value="fast">Fast</option>
-                <option value="instant">Instant</option>
-              </select>
-            </label>
-          </div>
+                    ? 'bg-yellow-400'
+                    : 'bg-red-500'
+              }`}
+            />
+          </span>
         </div>
         {currentPlayerInfo && (
-          <div className="flex items-center space-x-2">
-            <span>Current Turn:</span>
+          <div className="flex items-center space-x-2 text-sm">
+            <span className="text-muted">Current Turn:</span>
             <div
-              className="w-3 h-3 rounded-full border border-white"
+              className="w-3 h-3 rounded-full border border-[color:var(--panel-border)]"
               style={{ backgroundColor: currentPlayerInfo.color }}
-            ></div>
+            />
             <button
               type="button"
-              className="font-semibold underline-offset-2 hover:underline"
+              className="font-semibold underline-offset-2 hover:underline text-[color:var(--text)]"
               onClick={() => setProfileUsername(currentPlayerInfo.username)}
               title={`View ${currentPlayerInfo.username}'s profile`}
             >
               {currentPlayerInfo.username}
             </button>
-            <span className="text-sm opacity-75">
-              ({currentPlayerInfo.troops ?? 0} troops to deploy)
-            </span>
           </div>
         )}
       </div>
