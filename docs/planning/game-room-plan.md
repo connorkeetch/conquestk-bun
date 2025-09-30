@@ -177,8 +177,9 @@ Your game should feel like a guided story, not a spreadsheet. Only show what mat
 
 ## 13. Post‑Game That Teaches
 
-- MVP: results modal with graph of armies over time, eliminations, and “Play again” plus “Rematch same seats.”
-- Stretch: key moments timeline players can click to jump through a quick replay.
+- MVP (in progress): post‑game modal with Final Standings (territories + armies), Key Moments timeline, and “Rematch same seats.”
+- Next: add Territories/Armies over time charts using `game_states.turn_stats` (see post‑game‑analytics‑plan.md) and annotate eliminations/conquests.
+- Stretch: quick replay with key moments navigation.
 
 ## 14. What the UI Should Literally Look Like
 

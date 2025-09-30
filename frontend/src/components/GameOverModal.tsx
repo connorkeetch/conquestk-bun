@@ -139,8 +139,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </div>
           )}
 
-          {/* Final standings summary (armies and territories) */}
+          {/* Final standings summary (armies and territories) */
           <FinalStandings />
+
+          {/* Game progress charts */}
+          {roomId && <PostGameCharts roomId={roomId} />}
 
           {/* Key moments timeline */}
           {roomId && <KeyMomentsTimeline roomId={roomId} />}
@@ -356,6 +359,163 @@ const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
           </li>
         ))}
       </ol>
+    </div>
+  )
+}
+
+// Lightweight SVG charts for Territories/Armies over time
+const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
+  const game = useAppSelector((s) => s.game.currentGame)
+  const [stats, setStats] = React.useState<Array<Record<string, unknown>> | null>(null)
+  const [tab, setTab] = React.useState<'territories' | 'armies'>('territories')
+  const [error, setError] = React.useState<string | null>(null)
+  const [visible, setVisible] = React.useState<Record<string, boolean>>({})
+
+  const players = game?.players ?? []
+  const playerMap = React.useMemo(() => new Map(players.map((p) => [p.id, p])), [players])
+
+  React.useEffect(() => {
+    let active = true
+    const run = async () => {
+      try {
+        const res = await gameService.getGameLog(roomId)
+        if (!active) return
+        const raw = Array.isArray(res.stats) ? res.stats : []
+        setStats(raw)
+        // Default all series visible
+        const next: Record<string, boolean> = {}
+        for (const p of players) next[p.id] = true
+        setVisible(next)
+      } catch (_e) {
+        if (!active) return
+        setError('Unable to load turn stats')
+        setStats([])
+      }
+    }
+    void run()
+    return () => {
+      active = false
+    }
+  }, [roomId, players])
+
+  if (!players.length) return null
+  if (stats === null) {
+    return (
+      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">Preparing charts…</div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-[color:var(--color-warning)]">
+        {error}
+      </div>
+    )
+  }
+
+  const snapshots = stats as Array<{
+    turn?: number
+    players?: Array<{ id: string; territories?: number; armies?: number; eliminated?: boolean }>
+  }>
+
+  const n = snapshots.length
+  if (n < 1) return null
+
+  type Series = { id: string; name: string; color: string; values: number[] }
+  const series: Series[] = players.map((p) => ({ id: p.id, name: p.username, color: p.color, values: [] }))
+  for (const snap of snapshots) {
+    for (const s of series) {
+      const entry = (snap.players || []).find((pp) => pp.id === s.id)
+      s.values.push(
+        tab === 'territories'
+          ? Math.max(0, Math.trunc(entry?.territories ?? 0))
+          : Math.max(0, Math.trunc(entry?.armies ?? 0)),
+      )
+    }
+  }
+
+  const maxY = Math.max(1, ...series.flatMap((s) => s.values))
+
+  const W = 640
+  const H = 200
+  const pad = 24
+  const innerW = W - pad * 2
+  const innerH = H - pad * 2
+
+  const pathFor = (vals: number[]) => {
+    if (vals.length === 0) return ''
+    const step = innerW / Math.max(1, vals.length - 1)
+    return vals
+      .map((v, i) => {
+        const x = pad + i * step
+        const y = pad + innerH - (maxY === 0 ? 0 : (v / maxY) * innerH)
+        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+      })
+      .join(' ')
+  }
+
+  const ticksY = 4
+  const yLabels = Array.from({ length: ticksY + 1 }, (_, i) => Math.round((maxY * i) / ticksY))
+
+  return (
+    <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="font-semibold text-muted">Game Progress</h4>
+        <div className="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            className={`btn btn-secondary btn-xs ${tab === 'territories' ? 'opacity-100' : 'opacity-70'}`}
+            onClick={() => setTab('territories')}
+          >
+            Territories
+          </button>
+          <button
+            type="button"
+            className={`btn btn-secondary btn-xs ${tab === 'armies' ? 'opacity-100' : 'opacity-70'}`}
+            onClick={() => setTab('armies')}
+          >
+            Armies
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        {series.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`text-xs px-2 py-1 rounded border ${visible[s.id] !== false ? 'opacity-100' : 'opacity-50'}`}
+            style={{ borderColor: s.color, color: s.color }}
+            onClick={() => setVisible((prev) => ({ ...prev, [s.id]: !(prev[s.id] ?? true) }))}
+            aria-pressed={visible[s.id] !== false}
+          >
+            <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: s.color }} />
+            {playerMap.get(s.id)?.username ?? s.id}
+          </button>
+        ))}
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Post game chart" className="w-full h-auto">
+        {/* Axes */}
+        <line x1={pad} y1={pad + innerH} x2={pad + innerW} y2={pad + innerH} stroke="var(--border)" strokeWidth="1" />
+        {yLabels.map((label, i) => {
+          const y = pad + innerH - (maxY === 0 ? 0 : (label / maxY) * innerH)
+          return (
+            <g key={i}>
+              <line x1={pad} y1={y} x2={pad + innerW} y2={y} stroke="var(--border)" strokeOpacity="0.25" strokeWidth="1" />
+              <text x={pad - 6} y={y + 3} textAnchor="end" className="text-[10px] fill-current" fill="currentColor">
+                {label}
+              </text>
+            </g>
+          )
+        })}
+
+        {/* Series */}
+        {series
+          .filter((s) => visible[s.id] !== false)
+          .map((s) => (
+            <path key={s.id} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          ))}
+      </svg>
     </div>
   )
 }
