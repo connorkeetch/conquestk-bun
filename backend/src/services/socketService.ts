@@ -146,7 +146,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   registerSocketServer(io)
   const gameService = new GameService()
   const gameRoomService = new GameRoomService()
-  const { GameLifecycleService } = require('./gameLifecycleService') as typeof import('./gameLifecycleService')
+  const { GameLifecycleService } =
+    require('./gameLifecycleService') as typeof import('./gameLifecycleService')
   const lifecycleService = new GameLifecycleService()
 
   io.use((socket: AuthenticatedSocket, next) => {
@@ -531,7 +532,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
           const pending = (room as unknown as { replacementPendingUserId?: string | null })
             .replacementPendingUserId
-          if (!pending || pending !== targetUserId) throw new Error('No pending replacement for user')
+          if (!pending || pending !== targetUserId)
+            throw new Error('No pending replacement for user')
 
           // Clear pending flag first to avoid duplicate decisions
           await query(`UPDATE game_rooms SET replacement_pending_user_id = NULL WHERE id = $1`, [
@@ -593,14 +595,20 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           const { default: notificationService } = await import('./notificationService')
           notificationService
             .notifyTurnStart(data.roomId, targetUserId, 'Your turn — please respond')
-            .catch(() => {})
-        } catch {}
+            .catch(() => {
+              /* noop: notification is best-effort */
+            })
+        } catch {
+          /* ignore optional notification service errors */
+        }
 
         // Also emit an in-app real-time notification
-        const ioRef = require('./socketRegistry').tryGetSocketServer() as import('socket.io').Server<
-          import('../types/shared').ClientToServerEvents,
-          import('../types/shared').ServerToClientEvents
-        > | null
+        const ioRef = require('./socketRegistry').tryGetSocketServer() as
+          | import('socket.io').Server<
+              import('../types/shared').ClientToServerEvents,
+              import('../types/shared').ServerToClientEvents
+            >
+          | null
         if (ioRef) {
           ioRef.to(`user:${targetUserId}`).emit('notification:new', {
             id: `afk-reminder:${Date.now()}`,
@@ -719,20 +727,24 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     // Map ping: broadcast a transient ping marker
     socket.on(
       'ping:territory',
-      withErrorHandler(socket, 'ping:territory', async (data: { roomId: string; territoryId: string }) => {
-        if (!data || !data.roomId || !data.territoryId) throw new Error('Invalid ping data')
-        const userId = requireUserId(socket)
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) throw new Error('Not a member of this game')
-        const channel = getGameChannel(data.roomId)
-        io.to(channel).emit('ping:territory', {
-          roomId: data.roomId,
-          territoryId: data.territoryId,
-          userId,
-          username: socket.username ?? null,
-          createdAt: new Date().toISOString(),
-        })
-      }),
+      withErrorHandler(
+        socket,
+        'ping:territory',
+        async (data: { roomId: string; territoryId: string }) => {
+          if (!data || !data.roomId || !data.territoryId) throw new Error('Invalid ping data')
+          const userId = requireUserId(socket)
+          const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+          if (!hasAccess) throw new Error('Not a member of this game')
+          const channel = getGameChannel(data.roomId)
+          io.to(channel).emit('ping:territory', {
+            roomId: data.roomId,
+            territoryId: data.territoryId,
+            userId,
+            username: socket.username ?? null,
+            createdAt: new Date().toISOString(),
+          })
+        },
+      ),
     )
 
     socket.on('disconnect', () => {
