@@ -441,6 +441,10 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
   const innerW = W - pad * 2
   const innerH = H - pad * 2
 
+  // Hover tooltip state
+  const [hoverIdx, setHoverIdx] = React.useState<number | null>(null)
+  const xStep = innerW / Math.max(1, n - 1)
+
   const pathFor = (vals: number[]) => {
     if (vals.length === 0) return ''
     const step = innerW / Math.max(1, vals.length - 1)
@@ -494,7 +498,19 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Post game chart" className="w-full h-auto">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label="Post game chart"
+        className="w-full h-auto"
+        onMouseMove={(e) => {
+          const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
+          const x = e.clientX - rect.left
+          const idx = Math.round((x - pad) / xStep)
+          setHoverIdx(Number.isFinite(idx) ? Math.max(0, Math.min(n - 1, idx)) : null)
+        }}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
         {/* Axes */}
         <line x1={pad} y1={pad + innerH} x2={pad + innerW} y2={pad + innerH} stroke="var(--border)" strokeWidth="1" />
         {/* Y grid + labels */}
@@ -537,7 +553,48 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
           .map((s) => (
             <path key={s.id} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
           ))}
+
+        {/* Hover guideline and points */}
+        {hoverIdx !== null && (
+          <g>
+            <line
+              x1={pad + hoverIdx * xStep}
+              y1={pad}
+              x2={pad + hoverIdx * xStep}
+              y2={pad + innerH}
+              stroke="var(--border)"
+              strokeOpacity="0.6"
+              strokeDasharray="3 3"
+            />
+            {series
+              .filter((s) => visible[s.id] !== false)
+              .map((s) => {
+                const v = s.values[hoverIdx]
+                const y = pad + innerH - (maxY === 0 ? 0 : (v / maxY) * innerH)
+                const x = pad + hoverIdx * xStep
+                return <circle key={`pt-${s.id}`} cx={x} cy={y} r={3} fill={s.color} />
+              })}
+          </g>
+        )}
       </svg>
+
+      {/* Hover tooltip */}
+      {hoverIdx !== null && (
+        <div className="mt-1 text-xs bg-surface-2/90 border border-border rounded px-2 py-1 inline-block">
+          <div className="font-medium text-muted">Turn {hoverIdx + 1}</div>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+            {series
+              .filter((s) => visible[s.id] !== false)
+              .map((s) => (
+                <div key={`tt-${s.id}`} className="flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                  <span className="text-white truncate">{playerMap.get(s.id)?.username ?? s.id}</span>
+                  <span className="ml-auto tabular-nums">{s.values[hoverIdx]}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
