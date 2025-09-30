@@ -1,6 +1,6 @@
 # Create Game & Options Guide
 
-Last updated: January 2026
+Last updated: 30 September 2025
 
 This guide explains every option on the Create Game page, what it does in the game today, and any items that are planned but not yet wired to the backend. The goal is plain-language clarity so hosts know exactly how their choices affect a match.
 
@@ -35,8 +35,8 @@ Gameplay options
   - Enforced server-side; invalid setups are rejected with an error.
 
 - Fortification (Adjacent / Adjacent Multi / Chained / Unlimited / Random)
-  - Current status: UI-only. The server defaults to classic adjacent movement for now.
-  - Roadmap: Persist selection and pass through to the engine’s movementType.
+  - Status: Persisted end-to-end. The selected option is translated into the room’s `movementType`, saved with the room record, and injected into the engine so fortify rules follow the host’s choice every turn.【F:frontend/src/pages/CreateGamePage.tsx†L629-L647】【F:backend/src/controllers/gameController.ts†L110-L145】【F:backend/src/services/gameLifecycleService.ts†L298-L338】
+  - Random selects one of the supported fortification styles before the request is sent.
 
 - Hidden Treasures (Payout Mode)
   - Status: Fully wired.
@@ -48,20 +48,21 @@ Gameplay options
   - Engine behavior: Draws occur on conquest; redeem sets of 3 for troops; forced cash-in when at or above hand limit. See guides/hidden-treasures.md for full details.
 
 - Fog of War (Off / Adjacent / Persistent)
-  - Current status: UI-only from the Create Game page; not applied to engine yet.
-  - Roadmap: Persist selection in game_rooms and filter visible territories server-side per mode.
+  - Status: Persisted. Non-off selections are stored with the room and currently normalize to the server’s supported `adjacent` fog mode while persistent filtering is finalized.【F:backend/src/controllers/gameController.ts†L110-L145】【F:backend/src/services/gameLifecycleService.ts†L298-L338】
 
 - Turn Timer
-  - Current status: UI-only from the Create Game page; server uses its default timer setting for now.
-  - Roadmap: Persist and apply at game start to set per-turn deadlines.
+  - Status: Fully enforced. Hosts can choose between 10 seconds and 24 hours; the backend clamps the value, persists it, and seeds game start deadlines plus AFK enforcement jobs from the stored timer. Unset timers fall back to a 24-hour lobby default.【F:backend/src/controllers/gameController.ts†L110-L145】【F:backend/src/services/gameRoomService.ts†L586-L629】【F:backend/src/services/gameLifecycleService.ts†L40-L148】【F:backend/src/services/gameLifecycleService.ts†L388-L448】
+  - UI exposes presets in minutes and converts them to seconds before submission.【F:frontend/src/pages/CreateGamePage.tsx†L629-L647】
+
+- Time Bank
+  - Status: Live. When enabled, the UI mirrors the turn timer to set a shared reserve; the backend persists the per-room capacity and seeds each player’s remaining bank from that figure when the game starts.【F:frontend/src/pages/CreateGamePage.tsx†L392-L404】【F:frontend/src/pages/CreateGamePage.tsx†L629-L647】【F:backend/src/services/gameRoomService.ts†L586-L629】【F:backend/src/services/gameLifecycleService.ts†L338-L356】
 
 - AI Opponents (feature-flagged)
   - Status: Wired in lobby management (host can add AI seats if allowed by feature flags and if not Ranked). Stored in room seats as AI players.
   - Difficulties: Recruit, Commander, Grandmaster.
 
 - Territory Modifiers (feature-flagged)
-  - Status: Toggle is wired.
-  - Behavior: When enabled, games use map-defined territory modifiers only. No random distribution.
+  - Status: Toggle pending backend support. The Create Game payload includes `useTerritoryModifiers`, but the controller’s create-room contract does not accept or persist it yet, so games only load modifiers when configuration is supplied out-of-band (e.g. admin overrides or default map settings).【F:frontend/src/pages/CreateGamePage.tsx†L629-L647】【F:backend/src/controllers/gameController.ts†L600-L632】【F:backend/src/services/gameService.ts†L400-L520】
 
 Map selection
 - Choose a specific map or “Random Map” (picks at game start).
@@ -78,12 +79,9 @@ What’s applied vs pending
   - [x] AI Opponents (feature-flagged)
   - [x] Hidden Treasures (full ruleset; see linked guide)
 
-- Pending wiring checklist (UI-only before these commits):
-  - [x] Fortification type → movementType in engine (classic_adjacent, adjacent_multi, path_single, path_multi)
-  - [x] Fog of War → stored on room (UI still pending engine filters)
-  - [x] Turn Timer → stored on room (UI still pending enforcement per turn)
-  - [x] Territory Modifiers → persist toggle (map-defined only; no distribution)
+- Pending wiring checklist (still to finish):
   - [ ] Private Invite Code → persist code and allow code-based join
+  - [ ] Territory Modifiers toggle → persist `useTerritoryModifiers` and honor the host’s selection without manual intervention
 
 As items ship, check them off here so the guide stays accurate.
 

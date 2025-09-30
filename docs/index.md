@@ -1,6 +1,6 @@
 # 📚 ConquestK Documentation
 
- _Last updated: September 29, 2025_
+ _Last updated: February 19, 2026_
 
 Welcome! Every guide, decision record, and troubleshooting note lives in the `docs/` directory.
 Use this index to jump directly to the information you need.
@@ -37,7 +37,6 @@ Use this index to jump directly to the information you need.
 - [operations/migration-guide.md](operations/migration-guide.md) – writing, testing, and shipping migrations
 - [operations/logging-standards.md](operations/logging-standards.md) – structured logging patterns
 - [operations/security-audit.md](operations/security-audit.md) – recurring security review checklist
-- [guides/playwright-mcp.md](guides/playwright-mcp.md) – end-to-end testing harness overview
 - [operations/player-stats-smoke-test.md](operations/player-stats-smoke-test.md) – smoke tests for player stats accuracy
 
 ### Feature & product deep dives
@@ -54,8 +53,6 @@ Use this index to jump directly to the information you need.
 - [planning/mobile-app-strategy.md](planning/mobile-app-strategy.md) – recommended mobile distribution approach
 
 ### Package-specific guides
-- **Backend**
-  - [backend/worker-architecture.md](backend/worker-architecture.md)
 - **Frontend**
   - [frontend/map-schema.md](frontend/map-schema.md)
 
@@ -87,5 +84,6 @@ Use this index to jump directly to the information you need.
 
 ## 🔍 Need something else?
 
-If a topic is missing, add a stub document in the appropriate folder and link it above. Leaving a
-TODO section is better than letting knowledge live only in Slack or memory.
+If a topic is missing, add a stub document in the appropriate folder and link it above. Leaving a TODO section is better than letting knowledge live only in Slack or memory.
+
+Looking for end-to-end or worker architecture details? See [reference/development.md](reference/development.md#playwright-smoke-tests) for the Playwright harness and [reference/architecture.md](reference/architecture.md#workers--queues) for Bull worker coverage.
