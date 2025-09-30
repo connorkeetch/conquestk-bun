@@ -41,8 +41,6 @@ export function TurnTimer({ className = '' }: Props) {
     }
   }, [isCurrentTurn, remainingMs])
 
-  if (!expiresAt) return null
-
   const total = Math.max(1, (game?.settings?.turnTimer ?? game?.gameConfig?.turnTimer ?? 60) * 1000)
   const ratio = Math.max(0, Math.min(1, (remainingMs ?? 0) / total))
   const seconds = Math.ceil((remainingMs ?? 0) / 1000)
@@ -56,15 +54,30 @@ export function TurnTimer({ className = '' }: Props) {
       ? Math.max(0, Math.trunc(room.timeBankSecondsRemaining))
       : null
 
+  // Local approximation: when it's my turn and the main timer is exhausted, show
+  // a locally ticking time bank based on how long we've been in overtime.
+  const effectiveBankSeconds = useMemo(() => {
+    if (typeof bankSeconds !== 'number') return null
+    if (!isCurrentTurn) return bankSeconds
+    if (!expiresAt) return bankSeconds
+    const overMs = now - expiresAt
+    if (overMs <= 0) return bankSeconds
+    const consumed = Math.floor(overMs / 1000)
+    return Math.max(0, bankSeconds - consumed)
+  }, [bankSeconds, isCurrentTurn, expiresAt, now])
+
+  // After hooks are defined, early-return if no timer expiry provided
+  if (!expiresAt) return null
+
   return (
     <div className={`flex items-center gap-2 min-w-[140px] ${className}`} title="Turn timer">
       <div className="w-24 h-2 rounded bg-surface-2 overflow-hidden">
         <div className={`h-full ${bar}`} style={{ width: `${ratio * 100}%` }} />
       </div>
       <div className={`text-xs tabular-nums ${color}`}>{seconds}s</div>
-      {typeof bankSeconds === 'number' && bankSeconds > 0 && (
+      {typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
         <span className="chip text-[10px]" title="Time bank remaining">
-          +{bankSeconds}s
+          +{effectiveBankSeconds}s
         </span>
       )}
     </div>

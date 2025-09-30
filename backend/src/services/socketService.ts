@@ -538,6 +538,32 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
+    // Player resigns: neutralize their territories and mark eliminated
+    socket.on(
+      'player:resign',
+      withErrorHandler(socket, 'player:resign', async (data: { roomId: string }) => {
+        if (!data || !data.roomId) throw new Error('Invalid resign data')
+        const userId = requireUserId(socket)
+        // Validate membership
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) throw new Error('Not a member of this game')
+
+        // Neutralize territories and eliminate player
+        await lifecycleService.kickAndNeutralize(data.roomId, userId)
+
+        // Broadcast updated game state
+        const channel = getGameChannel(data.roomId)
+        const cached = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
+        const serialized = serializeGameStateForClient(cached)
+        if (serialized) {
+          io.to(channel).emit('game-update', serialized)
+        }
+        // Refresh lifecycle snapshot so timers/UI reflect changes
+        await lifecycleService.refreshLifecycle(data.roomId)
+        logger.info(`User ${userId} resigned from room ${data.roomId}`)
+      }),
+    )
+
     // Host replacement decision after a kick (3 strikes)
     socket.on(
       'host:replacement',

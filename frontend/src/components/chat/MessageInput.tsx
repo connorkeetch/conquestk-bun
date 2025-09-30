@@ -1,5 +1,6 @@
 import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react'
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { useAppSelector } from '@/hooks/redux'
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void
@@ -20,6 +21,7 @@ export default function MessageInput({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
+  const profanityFilter = useAppSelector((s) => Boolean((s.settings as any)?.chat?.profanityFilter))
 
   // Handle typing indicator
   useEffect(() => {
@@ -51,11 +53,22 @@ export default function MessageInput({
     }
   }, [message, isTyping, onTyping])
 
+  const maskProfanity = (text: string) => {
+    if (!profanityFilter) return text
+    const bad = ['fuck', 'shit', 'bitch', 'asshole', 'cunt']
+    let out = text
+    for (const word of bad) {
+      const re = new RegExp(`\\b${word}\\b`, 'gi')
+      out = out.replace(re, '*'.repeat(word.length))
+    }
+    return out
+  }
+
   const handleSend = () => {
     const trimmedMessage = message.trim()
     if (trimmedMessage.length === 0) return
 
-    onSendMessage(trimmedMessage)
+    onSendMessage(maskProfanity(trimmedMessage))
     setMessage('')
 
     // Stop typing indicator

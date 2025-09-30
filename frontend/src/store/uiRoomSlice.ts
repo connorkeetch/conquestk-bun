@@ -12,6 +12,8 @@ export interface UIRoomState {
   overlays: { continents: boolean; attackable: boolean; threat: boolean }
   connectionStatus: 'connected' | 'connecting' | 'disconnected'
   conquestOverlay?: { fromId: string; toId: string } | null
+  // Global UI toggle for auto-attack so non-ActionBar UI (e.g., map tooltip) can start/stop it
+  autoAttacking?: boolean
   desyncDetected: boolean
   resyncing: boolean
   // Transient map pings for display (expires client-side)
@@ -23,6 +25,9 @@ export interface UIRoomState {
     createdAt: number
     expiresAt: number
   }>
+  mutedUserIds?: string[]
+  optimisticPlacements?: Record<string, { expectedArmies: number; ts: number }>
+  clientLogs?: Array<{ id: string; ts: number; text: string; roomId?: string }>
 }
 
 const initialState: UIRoomState = {
@@ -35,9 +40,13 @@ const initialState: UIRoomState = {
   overlays: { continents: false, attackable: false, threat: false },
   connectionStatus: 'connected',
   conquestOverlay: null,
+  autoAttacking: false,
   desyncDetected: false,
   resyncing: false,
   pings: [],
+  mutedUserIds: [],
+  optimisticPlacements: {},
+  clientLogs: [],
 }
 
 const uiRoomSlice = createSlice({
@@ -92,6 +101,9 @@ const uiRoomSlice = createSlice({
     hideConquestOverlay(state) {
       state.conquestOverlay = null
     },
+    setAutoAttacking(state, action: PayloadAction<boolean>) {
+      state.autoAttacking = Boolean(action.payload)
+    },
     setDesyncDetected(state, action: PayloadAction<boolean>) {
       state.desyncDetected = action.payload
     },
@@ -125,6 +137,57 @@ const uiRoomSlice = createSlice({
     prunePings(state) {
       const now = Date.now()
       state.pings = (state.pings ?? []).filter((p) => p.expiresAt > now)
+    },
+    trackOptimisticPlacement(
+      state,
+      action: PayloadAction<{ territoryId: string; expectedArmies: number }>,
+    ) {
+      const map = state.optimisticPlacements ?? {}
+      map[action.payload.territoryId] = {
+        expectedArmies: Math.max(0, Math.trunc(action.payload.expectedArmies) || 0),
+        ts: Date.now(),
+      }
+      state.optimisticPlacements = map
+    },
+    clearOptimisticPlacement(state, action: PayloadAction<{ territoryId: string }>) {
+      const map = { ...(state.optimisticPlacements ?? {}) }
+      delete map[action.payload.territoryId]
+      state.optimisticPlacements = map
+    },
+    addClientLog(
+      state,
+      action: PayloadAction<{ text: string; roomId?: string; ts?: number; id?: string }>,
+    ) {
+      const id = action.payload.id ?? `${Date.now()}:${Math.random().toString(36).slice(2, 8)}`
+      const ts = action.payload.ts ?? Date.now()
+      const list = state.clientLogs ?? []
+      state.clientLogs = [
+        { id, ts, text: action.payload.text, roomId: action.payload.roomId },
+        ...list,
+      ].slice(0, 300)
+    },
+    clearClientLogs(state) {
+      state.clientLogs = []
+    },
+    toggleMuteUser(state, action: PayloadAction<string>) {
+      const id = action.payload
+      const list = new Set(state.mutedUserIds ?? [])
+      if (list.has(id)) list.delete(id)
+      else list.add(id)
+      state.mutedUserIds = Array.from(list)
+      try {
+        localStorage.setItem('ui.mutedUserIds', JSON.stringify(state.mutedUserIds))
+      } catch {}
+    },
+    hydrateMutedFromStorage(state) {
+      try {
+        const raw = localStorage.getItem('ui.mutedUserIds')
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed))
+            state.mutedUserIds = parsed.filter((x) => typeof x === 'string')
+        }
+      } catch {}
     },
     hydrateFromStorage(state) {
       try {
@@ -174,11 +237,17 @@ export const {
   setConnectionStatus,
   showConquestOverlay,
   hideConquestOverlay,
+  setAutoAttacking,
   setDesyncDetected,
   setResyncing,
   hydrateFromStorage,
   addPing,
   prunePings,
+  trackOptimisticPlacement,
+  clearOptimisticPlacement,
+  addClientLog,
+  clearClientLogs,
+  toggleMuteUser,
 } = uiRoomSlice.actions
 
 export default uiRoomSlice.reducer

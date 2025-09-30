@@ -1,6 +1,8 @@
 import type React from 'react'
 import { useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { toggleMuteUser } from '@/store/uiRoomSlice'
 
 interface PlayerSummary {
   id: string
@@ -17,6 +19,8 @@ interface PlayersLegendProps {
 
 export const PlayersLegend: React.FC<PlayersLegendProps> = ({ players }) => {
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
+  const dispatch = useAppDispatch()
+  const muted = useAppSelector((s) => new Set(s.uiRoom.mutedUserIds ?? []))
 
   return (
     <div className="panel-outline p-3">
@@ -43,10 +47,33 @@ export const PlayersLegend: React.FC<PlayersLegendProps> = ({ players }) => {
                 {player.username}
               </button>
             </div>
-            <div className="text-sm text-gray-600">
-              <span>{player.territoriesOwned} territories</span>
-              <br />
-              <span>{player.totalArmies} armies</span>
+            <div className="text-sm text-gray-600 flex items-center gap-3">
+              <div className="text-right">
+                <span>{player.territoriesOwned} territories</span>
+                <br />
+                <span>{player.totalArmies} armies</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className={`btn btn-ghost btn-xs ${muted.has(player.id) ? 'text-yellow-300' : 'text-muted'}`}
+                  onClick={() => dispatch(toggleMuteUser(player.id))}
+                  title={muted.has(player.id) ? 'Unmute player' : 'Mute player'}
+                >
+                  {muted.has(player.id) ? 'Unmute' : 'Mute'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs text-muted"
+                  onClick={() => {
+                    // Placeholder: surface a future report UI
+                    alert(`Report submitted for ${player.username}`)
+                  }}
+                  title="Report player"
+                >
+                  Report
+                </button>
+              </div>
             </div>
           </div>
         ))}

@@ -1,4 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
+import { toast } from 'react-hot-toast'
 import { socketService } from '../services/socketService'
 import type { GameState, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
@@ -10,6 +11,7 @@ import {
   setPendingAction,
 } from './gameSlice'
 import type { AppDispatch, RootState } from './index'
+import { addClientLog, clearOptimisticPlacement, trackOptimisticPlacement } from './uiRoomSlice'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -221,6 +223,17 @@ export const deployArmies = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
+      // Optimistic update: bump local armies immediately
+      const prev = currentGame.board.find((t) => t.id === territoryId)?.armies ?? 0
+      const expected = Math.max(0, prev + Math.max(1, Math.trunc(armies)))
+      dispatch(
+        updateTerritory({
+          territoryId,
+          armies: expected,
+        }),
+      )
+      dispatch(trackOptimisticPlacement({ territoryId, expectedArmies: expected }))
+
       socketService.deployArmies(currentGame.roomId, territoryId, armies)
 
       dispatch(
@@ -235,6 +248,9 @@ export const deployArmies = createAsyncThunk(
       dispatch(setPendingAction(null))
     } catch (_error) {
       dispatch(setError('Failed to deploy armies'))
+      dispatch(clearOptimisticPlacement({ territoryId }))
+      toast.error('Deploy failed')
+      dispatch(addClientLog({ text: `Deployment to ${territoryId} failed` }))
     }
   },
 )

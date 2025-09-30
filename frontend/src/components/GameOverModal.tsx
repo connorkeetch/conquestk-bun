@@ -139,7 +139,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </div>
           )}
 
-          {/* Final standings summary (armies and territories) */
+          {/* Final standings summary (armies and territories) */}
           <FinalStandings />
 
           {/* Game progress charts */}
@@ -398,6 +398,9 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
     }
   }, [roomId, players])
 
+  // Hover tooltip state must be defined before any early returns
+  const [hoverIdx, setHoverIdx] = React.useState<number | null>(null)
+
   if (!players.length) return null
   if (stats === null) {
     return (
@@ -418,9 +421,6 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
   }>
 
   const n = snapshots.length
-
-  // Hover tooltip state - must be before early returns
-  const [hoverIdx, setHoverIdx] = React.useState<number | null>(null)
 
   if (n < 1) return null
 

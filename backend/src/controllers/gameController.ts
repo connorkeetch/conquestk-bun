@@ -5,6 +5,7 @@ import { GameService } from '../services/gameService'
 import type { AuthenticatedRequest } from '../types/express'
 import type { TreasureConfig } from '../types/game'
 import { logger } from '../utils/logger'
+import { query } from '../config/database'
 
 export class GameController {
   private gameRoomService = new GameRoomService()

@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { deployArmies, endTurn, executeAttack, executeFortify } from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
-import { setAttackCommit, setDice } from '@/store/uiRoomSlice'
+import { setAttackCommit, setAutoAttacking, setDice } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
@@ -12,7 +12,11 @@ import { TreasureTradeModal } from './TreasureTradeModal'
  */
 const AUTO_ATTACK_DELAY_MS = 150
 
-export function GameActionBar() {
+export function GameActionBar({
+  mode = 'fixed' as 'fixed' | 'inline',
+}: {
+  mode?: 'fixed' | 'inline'
+}) {
   const dispatch = useAppDispatch()
   const game = useAppSelector((s) => s.game.currentGame)
   const selected = useAppSelector((s) => s.game.selectedTerritory)
@@ -21,12 +25,15 @@ export function GameActionBar() {
   const dice = useAppSelector((s) => s.uiRoom.dice)
   const commit = useAppSelector((s) => s.uiRoom.attackCommit)
   const userId = useAppSelector((s) => s.auth.user?.id)
-  const me = useAppSelector((s) => s.game.currentGame?.players.find((p) => p.id === s.auth.user?.id))
+  const me = useAppSelector((s) =>
+    s.game.currentGame?.players.find((p) => p.id === s.auth.user?.id),
+  )
   const mustCashIn = useAppSelector((s) => s.game.currentGame?.mustCashInTreasures)
   const myHandCount = (me?.treasures?.length ?? 0) as number
   const [reinforce, setReinforce] = useState(1)
   const [fortify, setFortify] = useState(1)
-  const [auto, setAuto] = useState(false)
+  // Auto-attack is global so it can be toggled from map tooltip
+  const auto = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
   const [showTreasures, setShowTreasures] = useState(false)
   const lastTargetRef = useRef<string | null>(null)
   const reinforceId = useId()
@@ -76,7 +83,7 @@ export function GameActionBar() {
     if (!game || !selected || !target) return
     if (!battle) return
     if (battle.gameEnded) {
-      setAuto(false)
+      void dispatch(setAutoAttacking(false))
       return
     }
     const fromId =
@@ -86,7 +93,7 @@ export function GameActionBar() {
     const src = game.board.find((t) => t.id === selected)
     if (!src) return
     if (battle.conquered || (src.armies ?? 0) <= 1) {
-      setAuto(false)
+      void dispatch(setAutoAttacking(false))
       return
     }
     lastTargetRef.current = target
@@ -104,6 +111,11 @@ export function GameActionBar() {
     return () => clearTimeout(timeoutId)
   }, [auto, battle, commit, dispatch, game, selected, target])
 
+  // Auto-open treasure modal if must cash in (only when it's my turn)
+  useEffect(() => {
+    if (isMyTurn && mustCashIn) setShowTreasures(true)
+  }, [isMyTurn, mustCashIn])
+
   if (!game) return null
 
   const endTurnBtn = (
@@ -118,9 +130,14 @@ export function GameActionBar() {
     </button>
   )
 
+  const containerClasses =
+    mode === 'fixed' ? 'fixed inset-x-0 bottom-0 z-30 mx-auto max-w-7xl p-2' : 'p-2'
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-7xl p-2">
-      <div className="rounded-xl border border-border backdrop-blur supports-[backdrop-filter]:bg-surface-1/80 bg-surface-1/95 p-2 shadow-lg">
+    <div className={containerClasses}>
+      <div
+        className={`rounded-xl border border-border ${mode === 'fixed' ? 'backdrop-blur supports-[backdrop-filter]:bg-surface-1/80 bg-surface-1/95' : 'bg-surface-1'} p-2 shadow-lg`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="chip text-xs">{phase.charAt(0).toUpperCase() + phase.slice(1)}</span>
@@ -225,8 +242,9 @@ export function GameActionBar() {
                   onClick={() => {
                     if (!isMyTurn || !selected || !target || !validTargets.includes(target)) return
                     lastTargetRef.current = target
-                    setAuto((v) => !v)
-                    if (!auto) {
+                    const next = !auto
+                    void dispatch(setAutoAttacking(next))
+                    if (next) {
                       void dispatch(
                         executeAttack({
                           fromTerritoryId: selected,
@@ -348,7 +366,3 @@ export function GameActionBar() {
     </div>
   )
 }
-  // Auto-open treasure modal if must cash in (only when it's my turn)
-  useEffect(() => {
-    if (isMyTurn && mustCashIn) setShowTreasures(true)
-  }, [isMyTurn, mustCashIn])

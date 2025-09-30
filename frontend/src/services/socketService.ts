@@ -13,6 +13,7 @@ import type {
   ServerToClientEvents,
   TerritoryDelta,
 } from '@shared/types'
+import { toast } from 'react-hot-toast'
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
 import {
@@ -557,6 +558,36 @@ class SocketService {
             armies: payload.armies,
           }),
         )
+
+        try {
+          const { optimisticPlacements } = store.getState().uiRoom
+          const opt = optimisticPlacements?.[payload.territoryId]
+          if (opt) {
+            if (typeof payload.armies === 'number' && payload.armies !== opt.expectedArmies) {
+              toast.error('Placement reconciled by server')
+              const name =
+                store.getState().game.currentGame?.board.find((t) => t.id === payload.territoryId)
+                  ?.name || payload.territoryId
+              store.dispatch(
+                (
+                  require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+                ).addClientLog({
+                  text: `${name} adjusted to ${payload.armies} troops (server)`,
+                  roomId: store.getState().game.currentGame?.roomId,
+                }),
+              )
+            }
+            store.dispatch(
+              (
+                require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+              ).clearOptimisticPlacement({
+                territoryId: payload.territoryId,
+              }),
+            )
+          }
+        } catch {
+          // ignore UI logging issues
+        }
       }
     })
 
@@ -717,6 +748,14 @@ class SocketService {
       // Play error sound
       audioService.playEffect('error')
       store.dispatch(setError(payload.message))
+      try {
+        toast.error(payload.message || 'Game error')
+        const { addClientLog } =
+          require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+        store.dispatch(addClientLog({ text: `Error: ${payload.message}`, roomId: payload.roomId }))
+      } catch {
+        // ignore toast/log issues
+      }
     })
 
     this.socket.on('notification:new', (payload: unknown) => {
