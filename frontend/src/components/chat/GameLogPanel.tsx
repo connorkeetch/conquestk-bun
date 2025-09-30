@@ -121,7 +121,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     let cancelled = false
     ;(async () => {
       try {
-        const raw = await gameService.getGameLog(gameId)
+        const resp = await gameService.getGameLog(gameId)
+        const raw = Array.isArray((resp as any).log) ? (resp as any).log : (resp as any)
         if (cancelled) return
         // Format to display entries; build newest-first
         const formatted: LogEntry[] = []
