@@ -196,3 +196,6 @@ map-uploads/
 
 # Windows ADS metadata files that can appear from downloads
 *.Zone.Identifier
+
+# Heap snapshots (from memory leak diagnostics)
+*.heapsnapshot
