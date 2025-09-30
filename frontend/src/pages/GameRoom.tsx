@@ -1457,13 +1457,28 @@ export default function GameRoom() {
         </div>
 
         {/* Game Board - center, flexible width */}
-        <div className="flex-1 min-w-0">
-          <div className="panel h-auto p-0" style={{ aspectRatio: '16/10', maxHeight: '75vh' }}>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="panel flex-1 p-0 overflow-hidden">
             {currentGame ? (
               <RiskGameBoard
                 mapId={currentRoom?.mapId || 'classic'}
                 onTerritoryClick={(_territoryId) => {
                   // TODO: Handle territory interactions based on game phase
+                }}
+              />
+            ) : currentRoom ? (
+              <RiskGameBoard
+                mapId={currentRoom.mapId || 'classic'}
+                lobbyMode={true}
+                lobbyPlayers={
+                  currentRoom.players?.map((p) => ({
+                    id: p.id,
+                    username: p.username,
+                    color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
+                  })) || []
+                }
+                onTerritoryClick={(_territoryId) => {
+                  // No interaction in lobby mode
                 }}
               />
             ) : (
@@ -1539,7 +1554,7 @@ export default function GameRoom() {
 
           {/* Chat & Log panel - below the map on desktop */}
           {currentGame && (
-            <div className="hidden lg:block panel p-0 overflow-hidden mt-6">
+            <div className="hidden lg:block panel p-0 overflow-hidden mt-6 shrink-0">
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
                 <button

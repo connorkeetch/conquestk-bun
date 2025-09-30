@@ -963,7 +963,9 @@ const CreateGamePage: React.FC = () => {
                 </label>
                 <InfoTooltip text="Gives each player extra time equal to one full turn to use after their timer hits zero." />
               </div>
-              <div className={`text-xs ${timeBankEnabled ? 'text-muted' : 'opacity-60 text-muted'}`}>
+              <div
+                className={`text-xs ${timeBankEnabled ? 'text-muted' : 'opacity-60 text-muted'}`}
+              >
                 Bank: {timeBankEnabled ? `${timeBankMinutes} min` : 'Off'}
               </div>
             </div>
