@@ -497,6 +497,7 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Post game chart" className="w-full h-auto">
         {/* Axes */}
         <line x1={pad} y1={pad + innerH} x2={pad + innerW} y2={pad + innerH} stroke="var(--border)" strokeWidth="1" />
+        {/* Y grid + labels */}
         {yLabels.map((label, i) => {
           const y = pad + innerH - (maxY === 0 ? 0 : (label / maxY) * innerH)
           return (
@@ -508,6 +509,27 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
             </g>
           )
         })}
+
+        {/* X ticks (turn labels) */}
+        {(() => {
+          const maxTicks = 8
+          const count = Math.max(2, Math.min(maxTicks, n))
+          const stepIndex = (n - 1) / (count - 1)
+          const ticks = Array.from({ length: count }, (_, i) => Math.round(i * stepIndex))
+          const xStep = innerW / Math.max(1, n - 1)
+          return ticks.map((idx, i) => {
+            const x = pad + idx * xStep
+            const label = `T${idx + 1}`
+            return (
+              <g key={`x-${i}`}>
+                <line x1={x} y1={pad + innerH} x2={x} y2={pad + innerH + 4} stroke="var(--border)" strokeWidth="1" />
+                <text x={x} y={pad + innerH + 14} textAnchor="middle" className="text-[10px] fill-current" fill="currentColor">
+                  {label}
+                </text>
+              </g>
+            )
+          })
+        })()}
 
         {/* Series */}
         {series
