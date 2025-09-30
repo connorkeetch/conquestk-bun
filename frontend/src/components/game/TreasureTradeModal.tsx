@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { resolveAssetPath } from '@/utils/assets'
 import { tradeTreasureSet } from '@/store/gameActions'
 
 type Props = {
@@ -56,25 +57,68 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     return sets
   }, [hand])
 
-  const projectedReinforcements = useMemo(() => {
-    const containsDiamond = selected.some((idx) => String(hand[idx]).toLowerCase().includes('diamond'))
+  const projection = useMemo(() => {
+    const containsDiamond = selected.some((idx) => String(hand[idx]).toLowerCase() === 'diamond')
     const mode = (treasureConfig?.payoutMode || '').toLowerCase()
+    const nextIndex: number = (game?.treasureState && (game.treasureState as any).nextPayoutIndex) ?? 0
+
+    const diamondBonus = containsDiamond ? Math.max(0, treasureConfig?.diamondSetBonus ?? 0) : 0
+    let base = 0
+
     if (mode === 'fixed') {
-      const base = Math.max(1, Math.min(50, treasureConfig?.fixedValue ?? 8))
-      const bonus = containsDiamond ? Math.max(0, treasureConfig?.diamondSetBonus ?? 0) : 0
-      return base + bonus
+      base = Math.max(1, Math.min(50, treasureConfig?.fixedValue ?? 8))
+      return { base, bonus: diamondBonus, total: base + diamondBonus, mode }
     }
-    if (mode === 'none') return 0
-    return undefined // varies
-  }, [hand, selected, treasureConfig])
+    if (mode === 'none') return { base: 0, bonus: 0, total: 0, mode }
+
+    if (mode === 'classic') {
+      const classicSeq = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35]
+      base =
+        nextIndex < classicSeq.length
+          ? classicSeq[nextIndex]
+          : classicSeq[classicSeq.length - 1] + (nextIndex - classicSeq.length + 1) * 5
+      return { base, bonus: diamondBonus, total: base + diamondBonus, mode }
+    }
+
+    // triangular (default)
+    const computeTriangular = (idx: number) => {
+      if (idx <= 0) return 4
+      let payout = 4
+      let delta = 2
+      for (let i = 1; i <= idx; i++) {
+        payout += delta
+        delta += 1
+      }
+      return payout
+    }
+    base = computeTriangular(nextIndex)
+    return { base, bonus: diamondBonus, total: base + diamondBonus, mode: 'triangular' }
+  }, [game?.treasureState, hand, selected, treasureConfig])
 
   const iconFor = (metal: string) => {
     const m = metal.toLowerCase()
-    if (m.includes('diamond')) return '💎'
-    if (m.includes('gold')) return '🟡'
-    if (m.includes('silver')) return '⚪'
-    if (m.includes('bronze') || m.includes('copper')) return '🟤'
-    return '⬜'
+    const file =
+      m === 'diamond'
+        ? 'diamond'
+        : m === 'gold'
+          ? 'gold'
+          : m === 'silver'
+            ? 'silver'
+            : 'bronze'
+    const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
+    return (
+      <img
+        src={url}
+        alt={`${file} card`}
+        className="inline-block align-middle"
+        width={14}
+        height={14}
+        onError={(e) => {
+          // fallback to emoji if CDN asset missing
+          ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+        }}
+      />
+    )
   }
 
   if (!isOpen) return null
@@ -111,8 +155,8 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                     title={active ? 'Selected' : 'Click to select'}
                   >
                     <div className="font-medium text-white flex items-center gap-2">
-                      <span>{iconFor(metal)}</span>
-                      <span>{metal}</span>
+                      <span className="w-4 h-4 flex items-center justify-center">{iconFor(metal)}</span>
+                      <span className="capitalize">{metal}</span>
                     </div>
                     <div className="text-xs text-muted">Card #{idx + 1}</div>
                   </button>
@@ -134,18 +178,27 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                     onClick={() => setSelected(set)}
                     title="Click to select this set"
                   >
-                    {set.map((idx) => iconFor(hand[idx])).join(' ')}
+                    <span className="flex items-center gap-1">
+                      {set.map((idx) => (
+                        <span key={`icon-${i}-${idx}`} className="w-4 h-4 flex items-center justify-center">
+                          {iconFor(hand[idx])}
+                        </span>
+                      ))}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
           )}
-          <div className="text-xs text-muted mt-2 flex items-center gap-2">
+          <div className="text-xs text-muted mt-2 flex items-center gap-3 flex-wrap">
             <span>Projected reinforcements:</span>
-            {projectedReinforcements === undefined ? (
-              <span className="text-white">varies by payout mode</span>
+            {projection ? (
+              <>
+                <span className="text-white">+{projection.total}</span>
+                <span className="text-muted">(base {projection.base}{projection.bonus ? ` + diamond ${projection.bonus}` : ''}{projection.mode ? ` • ${projection.mode}` : ''})</span>
+              </>
             ) : (
-              <span className="text-white">+{projectedReinforcements}</span>
+              <span className="text-white">—</span>
             )}
             {selected.length === 3 && !canTrade && (
               <span className="text-[color:var(--color-warning)] ml-2">Invalid set</span>
