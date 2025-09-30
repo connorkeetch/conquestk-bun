@@ -567,7 +567,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
             playerId: socket.userId,
           })
-        } catch {}
+        } catch {
+          // best-effort: logging may fail or socket registry unavailable
+        }
         // Refresh lifecycle snapshot so timers/UI reflect changes
         await lifecycleService.refreshLifecycle(data.roomId)
         logger.info(`User ${userId} resigned from room ${data.roomId}`)

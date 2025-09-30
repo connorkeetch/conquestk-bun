@@ -152,15 +152,12 @@ const roomSlice = createSlice({
         }
 
         if (action.payload.graceActorUserId !== undefined) {
-          // @ts-expect-error extended field on GameRoom
           room.graceActorUserId = action.payload.graceActorUserId
         }
         if (action.payload.graceExpiresAt !== undefined) {
-          // @ts-expect-error extended field on GameRoom
           room.graceExpiresAt = action.payload.graceExpiresAt
         }
         if (action.payload.replacementPendingUserId !== undefined) {
-          // @ts-expect-error extended field on GameRoom
           room.replacementPendingUserId = action.payload.replacementPendingUserId
         }
 
