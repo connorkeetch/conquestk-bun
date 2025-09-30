@@ -286,7 +286,9 @@ const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
         const resp = await gameService.getGameLog(roomId)
         const r1 = resp as unknown
         const maybeObj = r1 as { log?: unknown[] }
-        const entries = (Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])) as LogEntry[]
+        const entries = (
+          Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
+        ) as LogEntry[]
         if (!active) return
         setLog(Array.isArray(entries) ? entries : [])
       } catch (_e) {
@@ -407,7 +409,9 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
   if (!players.length) return null
   if (stats === null) {
     return (
-      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">Preparing charts…</div>
+      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">
+        Preparing charts…
+      </div>
     )
   }
   if (error) {
@@ -502,7 +506,10 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
             onClick={() => setVisible((prev) => ({ ...prev, [s.id]: !(prev[s.id] ?? true) }))}
             aria-pressed={visible[s.id] !== false}
           >
-            <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: s.color }} />
+            <span
+              className="inline-block w-2 h-2 rounded-full mr-1"
+              style={{ backgroundColor: s.color }}
+            />
             {playerMap.get(s.id)?.username ?? s.id}
           </button>
         ))}
@@ -518,14 +525,20 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
           const x = e.clientX - rect.left
           const rawIdx = Math.round((x - pad) / xStep)
           // Bounds check: ensure index is within array bounds
-          const idx =
-            Number.isFinite(rawIdx) && rawIdx >= 0 && rawIdx < n ? rawIdx : null
+          const idx = Number.isFinite(rawIdx) && rawIdx >= 0 && rawIdx < n ? rawIdx : null
           setHoverIdx(idx)
         }}
         onMouseLeave={() => setHoverIdx(null)}
       >
         {/* Axes */}
-        <line x1={pad} y1={pad + innerH} x2={pad + innerW} y2={pad + innerH} stroke="var(--border)" strokeWidth="1" />
+        <line
+          x1={pad}
+          y1={pad + innerH}
+          x2={pad + innerW}
+          y2={pad + innerH}
+          stroke="var(--border)"
+          strokeWidth="1"
+        />
         {/* Y grid + labels */}
         {yLabels.map((label) => {
           const y = pad + innerH - (maxY === 0 ? 0 : (label / maxY) * innerH)
@@ -591,7 +604,15 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
         {series
           .filter((s) => visible[s.id] !== false)
           .map((s) => (
-            <path key={s.id} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            <path
+              key={s.id}
+              d={pathFor(s.values)}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
           ))}
 
         {/* Hover guideline and points */}

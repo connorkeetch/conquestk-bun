@@ -1,11 +1,11 @@
 import type { Request, Response } from 'express'
+import { query } from '../config/database'
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
 import type { AuthenticatedRequest } from '../types/express'
 import type { TreasureConfig } from '../types/game'
 import { logger } from '../utils/logger'
-import { query } from '../config/database'
 
 export class GameController {
   private gameRoomService = new GameRoomService()

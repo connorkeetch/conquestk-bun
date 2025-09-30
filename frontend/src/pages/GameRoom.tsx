@@ -1,5 +1,6 @@
 import type { TreasureConfig } from '@shared/types'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
@@ -7,6 +8,8 @@ import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import RankInsignia from '@/components/RankInsignia'
+import { toggleMuteUser } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
@@ -18,9 +21,6 @@ import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
-import RankInsignia from '@/components/RankInsignia'
-import { toggleMuteUser } from '@/store/uiRoomSlice'
-import { toast } from 'react-hot-toast'
 import { endTurn } from '../store/gameActions'
 import {
   clearGame,
@@ -104,9 +104,12 @@ export default function GameRoom() {
       const raw = localStorage.getItem('ui.rightRailOpen')
       if (raw === 'true') return true
       if (raw === 'false') return false
-    } catch {}
+    } catch {
+      // ignore storage errors (quota, privacy)
+    }
     return true
   })
+  const mobileDrawerId = useId()
 
   // Prevent background scroll when the bottom drawer is open
   useEffect(() => {
@@ -1046,8 +1049,8 @@ export default function GameRoom() {
             }}
             className="flex items-center gap-2 rounded-full border border-border bg-surface-2/80 backdrop-blur px-4 py-2 text-sm shadow min-h-[44px]"
             title="Open sidebar"
-            aria-controls="mobileGameDrawer"
-            aria-expanded={mobileDrawerOpen ? true : false}
+            aria-controls={mobileDrawerId}
+            aria-expanded={!!mobileDrawerOpen}
           >
             <span className="chip text-[10px]">
               {currentGame.phase.charAt(0).toUpperCase() + currentGame.phase.slice(1)}
@@ -1159,14 +1162,22 @@ export default function GameRoom() {
             aria-labelledby={resignDialogTitleId}
             tabIndex={-1}
           >
-            <h2 id={resignDialogTitleId} className="text-lg font-semibold text-[color:var(--heading)]">
+            <h2
+              id={resignDialogTitleId}
+              className="text-lg font-semibold text-[color:var(--heading)]"
+            >
               Resign from game?
             </h2>
             <p className="text-sm text-muted">
-              This will request to resign and set your territories to neutral. This action cannot be undone.
+              This will request to resign and set your territories to neutral. This action cannot be
+              undone.
             </p>
             <div className="flex items-center justify-end gap-2 pt-1">
-              <button type="button" className="btn btn-secondary" onClick={() => setResignDialogOpen(false)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setResignDialogOpen(false)}
+              >
                 Cancel
               </button>
               <button
@@ -1175,10 +1186,15 @@ export default function GameRoom() {
                 onClick={() => {
                   try {
                     socketService.emit('player:resign', { roomId: currentRoom.id })
-                    const { addClientLog } = require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-                    dispatch(addClientLog({ text: 'You requested to resign.', roomId: currentRoom.id }))
+                    const { addClientLog } =
+                      require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+                    dispatch(
+                      addClientLog({ text: 'You requested to resign.', roomId: currentRoom.id }),
+                    )
                     toast.success('Resign requested')
-                  } catch {}
+                  } catch {
+                    // ignore resign emit/logging failures
+                  }
                   setResignDialogOpen(false)
                 }}
               >
@@ -1362,7 +1378,11 @@ export default function GameRoom() {
                 type="button"
                 className="btn btn-ghost btn-xs"
                 onClick={() => {
-                  try { localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen)) } catch {}
+                  try {
+                    localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen))
+                  } catch {
+                    // ignore storage errors
+                  }
                   setRightRailOpen((v) => !v)
                 }}
                 title={rightRailOpen ? 'Collapse' : 'Expand'}
@@ -1426,14 +1446,21 @@ export default function GameRoom() {
                 )
                 const tierIndex = tier ? TIER_BOUNDS.findIndex((t) => t.name === tier.name) + 1 : 0
                 // Typing indicator (game chat)
-                const typingMap = (store.getState().messages.typing || {}) as Record<string, Record<string, string>>
+                const typingMap = (store.getState().messages.typing || {}) as Record<
+                  string,
+                  Record<string, string>
+                >
                 const typingForRoom = typingMap[currentRoom.id] || {}
                 const typingKey = player.userId ?? ''
                 const isTyping = Boolean(typingForRoom[typingKey])
-                const gp = currentGame?.players?.find((p) => (p.userId ?? p.id) === (player.userId ?? player.id))
+                const gp = currentGame?.players?.find(
+                  (p) => (p.userId ?? p.id) === (player.userId ?? player.id),
+                )
                 const armies = typeof gp?.armies === 'number' ? gp.armies : undefined
                 const terrs = Array.isArray(gp?.territories) ? gp.territories.length : undefined
-                const cardsCount = Array.isArray(gp?.treasures) ? gp.treasures.length : gp?.cards?.length || 0
+                const cardsCount = Array.isArray(gp?.treasures)
+                  ? gp.treasures.length
+                  : gp?.cards?.length || 0
                 const conn = isCurrentUser ? store.getState().uiRoom.connectionStatus : undefined
                 return (
                   <li key={player.id} className="list-item last:border-b-0 group">
@@ -1445,7 +1472,10 @@ export default function GameRoom() {
                         aria-hidden="true"
                       >
                         {isTyping && (
-                          <span className="absolute -top-1 -right-1 inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-black/40" title="Typing" />
+                          <span
+                            className="absolute -top-1 -right-1 inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-black/40"
+                            title="Typing"
+                          />
                         )}
                       </span>
                       <div className="flex-1 min-w-0">
@@ -1477,12 +1507,23 @@ export default function GameRoom() {
                             </span>
                           )}
                           {typeof player.skill_rating === 'number' && (
-                            <RankInsignia rating={player.skill_rating} size="sm" showLabel={false} showRating={false} />
+                            <RankInsignia
+                              rating={player.skill_rating}
+                              size="sm"
+                              showLabel={false}
+                              showRating={false}
+                            />
                           )}
                           {isCurrentUser && (
                             <span
                               className={`inline-block w-2 h-2 rounded-full ${conn === 'connected' ? 'bg-green-500' : conn === 'connecting' ? 'bg-yellow-400' : 'bg-red-500'}`}
-                              title={conn === 'connected' ? 'Online' : conn === 'connecting' ? 'Reconnecting' : 'Disconnected'}
+                              title={
+                                conn === 'connected'
+                                  ? 'Online'
+                                  : conn === 'connecting'
+                                    ? 'Reconnecting'
+                                    : 'Disconnected'
+                              }
                             />
                           )}
                           {player.isAi && player.aiDifficulty && (
@@ -1494,8 +1535,12 @@ export default function GameRoom() {
                         {/* Row 2: Stats + team */}
                         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                           {typeof armies === 'number' && <span>{armies} armies</span>}
-                          {typeof terrs === 'number' && <span className="opacity-80">· {terrs} territories</span>}
-                          <span className="opacity-80" title="Cards">· 🎴 {cardsCount}</span>
+                          {typeof terrs === 'number' && (
+                            <span className="opacity-80">· {terrs} territories</span>
+                          )}
+                          <span className="opacity-80" title="Cards">
+                            · 🎴 {cardsCount}
+                          </span>
                           {tier ? (
                             <span>
                               · {tier.name} — Rank {romanNumeral(tierIndex)}
@@ -1506,9 +1551,12 @@ export default function GameRoom() {
                           ) : (
                             <span>· Unranked</span>
                           )}
-                          {currentRoom.allowTeamPlay && currentRoom.teamMode !== 'none' && typeof player.teamId === 'number' && player.teamId > 0 && (
-                            <span className="chip text-xs">Team {player.teamId}</span>
-                          )}
+                          {currentRoom.allowTeamPlay &&
+                            currentRoom.teamMode !== 'none' &&
+                            typeof player.teamId === 'number' &&
+                            player.teamId > 0 && (
+                              <span className="chip text-xs">Team {player.teamId}</span>
+                            )}
                         </div>
                       </div>
                       {/* Hover actions */}
@@ -1785,7 +1833,10 @@ export default function GameRoom() {
           className="md:hidden fixed z-50 rounded-full bg-[color:var(--color-primary)] text-white shadow-lg px-4 py-3"
           onClick={() => setMobileDrawerOpen((v) => !v)}
           title={mobileDrawerOpen ? 'Close drawer' : 'Open actions/chat'}
-          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
+          style={{
+            bottom: 'calc(1rem + env(safe-area-inset-bottom))',
+            right: 'calc(1rem + env(safe-area-inset-right))',
+          }}
         >
           {mobileDrawerOpen ? '✕' : mobileDrawerTab === 'actions' ? '⚔️ Actions' : '💬 Chat'}
         </button>
@@ -1793,17 +1844,22 @@ export default function GameRoom() {
 
       {/* Mobile backdrop */}
       {currentGame && (
-        <div
+        <button
           className={`md:hidden fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
           onClick={() => setMobileDrawerOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') setMobileDrawerOpen(false)
+          }}
+          type="button"
+          aria-label="Close actions/chat drawer"
         />
       )}
 
       {/* Mobile bottom drawer */}
       {currentGame && (
         <div
-          id="mobileGameDrawer"
+          id={mobileDrawerId}
           className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"

@@ -9,9 +9,9 @@ import {
   selectTerritory,
   setError,
   setPendingAction,
+  updateTerritory,
 } from './gameSlice'
 import type { AppDispatch, RootState } from './index'
-import { updateTerritory } from './gameSlice'
 import {
   addClientLog,
   clearOptimisticPlacement,
@@ -292,7 +292,9 @@ export const undoLastPlacement = createAsyncThunk(
         armies: newExpected,
       }),
     )
-    dispatch(trackOptimisticPlacement({ territoryId: last.territoryId, expectedArmies: newExpected }))
+    dispatch(
+      trackOptimisticPlacement({ territoryId: last.territoryId, expectedArmies: newExpected }),
+    )
     dispatch(popPlacement())
     // Send negative placement to server (engine clamps to baseline)
     socketService.deployArmies(game.roomId, last.territoryId, -last.armies)

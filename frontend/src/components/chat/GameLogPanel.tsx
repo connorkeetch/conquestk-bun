@@ -139,9 +139,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         const sorted = [...raw].sort((a, b) => {
           const ar = a as Record<string, unknown>
           const br = b as Record<string, unknown>
-          return (
-            new Date(String(ar.timestamp)).getTime() - new Date(String(br.timestamp)).getTime()
-          )
+          return new Date(String(ar.timestamp)).getTime() - new Date(String(br.timestamp)).getTime()
         })
         for (const e of sorted) {
           const er = e as Record<string, unknown>
@@ -423,10 +421,12 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           <div className="text-center text-muted py-6 text-sm">No log entries yet.</div>
         ) : (
           <div className="space-y-3">
-            {([
-              ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text } as LogEntry)),
-              ...entries,
-            ] as LogEntry[])
+            {(
+              [
+                ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text }) as LogEntry),
+                ...entries,
+              ] as LogEntry[]
+            )
               .sort((a, b) => b.ts.getTime() - a.ts.getTime())
               .map((e) => {
                 const key = `${e.ts.getTime()}-${e.text}`

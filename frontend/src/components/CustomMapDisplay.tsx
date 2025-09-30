@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
+import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
 import { setOverlay } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import { arePlayersTeammates } from '@/utils/teamHelpers'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
-import { getColorValue, type PlayerColor } from '@/constants/colors'
 
 interface Territory {
   id: string
@@ -197,130 +197,136 @@ export default function CustomMapDisplay({
       {/* Sectors overlay: colored dots per territory */}
       {overlays.continents &&
         (() => {
-            const uniqueContinents = Array.from(
-              new Set(territories.map((t) => t.continent || 'unknown')),
-            )
-            const palette = [
-              '#22c55e',
-              '#06b6d4',
-              '#f59e0b',
-              '#ef4444',
-              '#8b5cf6',
-              '#eab308',
-              '#14b8a6',
-              '#f97316',
-            ]
-            const cMap = new Map<string, string>()
-            uniqueContinents.forEach((c, i) => cMap.set(c, palette[i % palette.length]))
-            return territories.map((t) => {
-              const color = cMap.get(t.continent || 'unknown') || '#94a3b8'
-              return (
-                <div
-                  key={`cont-${t.id}`}
-                  className="absolute z-10 pointer-events-none"
-                  style={{
-                    left: `${(t.x / mapData.width) * 100}%`,
-                    top: `${(t.y / mapData.height) * 100}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                  title={`Sector: ${t.continent ?? 'unknown'}`}
-                  aria-label={`Sector ${t.continent ?? 'unknown'}`}
-                >
-                  <span
-                    className="inline-block w-3 h-3 rounded-full border border-white/60 shadow"
-                    style={{ backgroundColor: color }}
-                  />
-                </div>
-              )
-            })
-          })()}
-
-      {/* Attackable overlay: ring highlights for selected + valid targets */}
-      {overlays.attackable && selectedTerritoryId &&
-        (() => {
-            const entries: Array<{ id: string; x: number; y: number; kind: 'src' | 'tgt' }> = []
-            const src = territories.find((t) => t.id === selectedTerritoryId)
-            if (src) entries.push({ id: src.id, x: src.x, y: src.y, kind: 'src' })
-            for (const tgt of validTargets) {
-              const t = territories.find((tt) => tt.id === tgt)
-              if (t) entries.push({ id: t.id, x: t.x, y: t.y, kind: 'tgt' })
-            }
-            return entries.map((e) => (
+          const uniqueContinents = Array.from(
+            new Set(territories.map((t) => t.continent || 'unknown')),
+          )
+          const palette = [
+            '#22c55e',
+            '#06b6d4',
+            '#f59e0b',
+            '#ef4444',
+            '#8b5cf6',
+            '#eab308',
+            '#14b8a6',
+            '#f97316',
+          ]
+          const cMap = new Map<string, string>()
+          uniqueContinents.forEach((c, i) => {
+            cMap.set(c, palette[i % palette.length])
+          })
+          return territories.map((t) => {
+            const color = cMap.get(t.continent || 'unknown') || '#94a3b8'
+            return (
               <div
-                key={`atk-${e.id}`}
+                key={`cont-${t.id}`}
                 className="absolute z-10 pointer-events-none"
                 style={{
-                  left: `${(e.x / mapData.width) * 100}%`,
-                  top: `${(e.y / mapData.height) * 100}%`,
+                  left: `${(t.x / mapData.width) * 100}%`,
+                  top: `${(t.y / mapData.height) * 100}%`,
                   transform: 'translate(-50%, -50%)',
                 }}
+                title={`Sector: ${t.continent ?? 'unknown'}`}
               >
                 <span
-                  className={`block rounded-full ${e.kind === 'src' ? 'w-12 h-12' : 'w-10 h-10'}`}
+                  className="inline-block w-3 h-3 rounded-full border border-white/60 shadow"
+                  style={{ backgroundColor: color }}
+                />
+              </div>
+            )
+          })
+        })()}
+
+      {/* Attackable overlay: ring highlights for selected + valid targets */}
+      {overlays.attackable &&
+        selectedTerritoryId &&
+        (() => {
+          const entries: Array<{ id: string; x: number; y: number; kind: 'src' | 'tgt' }> = []
+          const src = territories.find((t) => t.id === selectedTerritoryId)
+          if (src) entries.push({ id: src.id, x: src.x, y: src.y, kind: 'src' })
+          for (const tgt of validTargets) {
+            const t = territories.find((tt) => tt.id === tgt)
+            if (t) entries.push({ id: t.id, x: t.x, y: t.y, kind: 'tgt' })
+          }
+          return entries.map((e) => (
+            <div
+              key={`atk-${e.id}`}
+              className="absolute z-10 pointer-events-none"
+              style={{
+                left: `${(e.x / mapData.width) * 100}%`,
+                top: `${(e.y / mapData.height) * 100}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              <span
+                className={`block rounded-full ${e.kind === 'src' ? 'w-12 h-12' : 'w-10 h-10'}`}
+                style={{
+                  boxShadow:
+                    e.kind === 'src'
+                      ? '0 0 0 3px rgba(56,189,248,0.9), 0 0 24px rgba(56,189,248,0.45)'
+                      : '0 0 0 3px rgba(239,68,68,0.9), 0 0 24px rgba(239,68,68,0.45)',
+                }}
+              />
+            </div>
+          ))
+        })()}
+
+      {/* Threat overlay: heat rings on friendly territories proportional to adjacent enemy armies */}
+      {overlays.threat &&
+        game &&
+        myId &&
+        adjacency &&
+        (() => {
+          const byId = new Map<string, Territory>()
+          for (const t of territories) {
+            byId.set(t.id, t)
+          }
+          const isFriendly = (owner?: string | null) =>
+            owner ? owner === myId || arePlayersTeammates(game, owner, myId) : false
+          const items: Array<{ id: string; x: number; y: number; score: number }> = []
+          for (const t of territories) {
+            if (!isFriendly(t.owner)) continue
+            let s = 0
+            for (const adjId of adjacency[t.id] || []) {
+              const adj = byId.get(adjId)
+              if (!adj) continue
+              if (!isFriendly(adj.owner)) s += Math.max(0, adj.armies ?? 0)
+            }
+            if (s > 0) items.push({ id: t.id, x: t.x, y: t.y, score: s })
+          }
+          const max = Math.max(1, ...items.map((i) => i.score))
+          const colorFor = (r: number) => {
+            if (r > 0.66) return 'rgba(239,68,68,0.85)'
+            if (r > 0.33) return 'rgba(245,158,11,0.85)'
+            if (r > 0.1) return 'rgba(34,197,94,0.85)'
+            return 'rgba(148,163,184,0.6)'
+          }
+          return items.map((i) => {
+            const ratio = Math.min(1, i.score / max)
+            const size = 14 + Math.round(10 * ratio)
+            const color = colorFor(ratio)
+            return (
+              <div
+                key={`thr-${i.id}`}
+                className="absolute z-10 pointer-events-none"
+                style={{
+                  left: `${(i.x / (mapData.width || 1)) * 100}%`,
+                  top: `${(i.y / (mapData.height || 1)) * 100}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+                title={`Threat score: ${i.score}`}
+              >
+                <span
+                  className="block rounded-full"
                   style={{
-                    boxShadow:
-                      e.kind === 'src'
-                        ? '0 0 0 3px rgba(56,189,248,0.9), 0 0 24px rgba(56,189,248,0.45)'
-                        : '0 0 0 3px rgba(239,68,68,0.9), 0 0 24px rgba(239,68,68,0.45)',
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    boxShadow: `0 0 0 3px ${color}, 0 0 24px ${color}`,
                   }}
                 />
               </div>
-            ))
-          })()}
-
-      {/* Threat overlay: heat rings on friendly territories proportional to adjacent enemy armies */}
-      {overlays.threat && game && myId && adjacency &&
-        (() => {
-            const byId = new Map<string, Territory>()
-            for (const t of territories) byId.set(t.id, t)
-            const isFriendly = (owner?: string | null) =>
-              owner ? owner === myId || arePlayersTeammates(game, owner, myId) : false
-            const items: Array<{ id: string; x: number; y: number; score: number }> = []
-            for (const t of territories) {
-              if (!isFriendly(t.owner)) continue
-              let s = 0
-              for (const adjId of adjacency[t.id] || []) {
-                const adj = byId.get(adjId)
-                if (!adj) continue
-                if (!isFriendly(adj.owner)) s += Math.max(0, adj.armies ?? 0)
-              }
-              if (s > 0) items.push({ id: t.id, x: t.x, y: t.y, score: s })
-            }
-            const max = Math.max(1, ...items.map((i) => i.score))
-            const colorFor = (r: number) => {
-              if (r > 0.66) return 'rgba(239,68,68,0.85)'
-              if (r > 0.33) return 'rgba(245,158,11,0.85)'
-              if (r > 0.1) return 'rgba(34,197,94,0.85)'
-              return 'rgba(148,163,184,0.6)'
-            }
-            return items.map((i) => {
-              const ratio = Math.min(1, i.score / max)
-              const size = 14 + Math.round(10 * ratio)
-              const color = colorFor(ratio)
-              return (
-                <div
-                  key={`thr-${i.id}`}
-                  className="absolute z-10 pointer-events-none"
-                  style={{
-                    left: `${(i.x / (mapData.width || 1)) * 100}%`,
-                    top: `${(i.y / (mapData.height || 1)) * 100}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                  title={`Threat score: ${i.score}`}
-                  aria-label={`Threat ${i.score}`}
-                >
-                  <span
-                    className="block rounded-full"
-                    style={{
-                      width: `${size}px`,
-                      height: `${size}px`,
-                      boxShadow: `0 0 0 3px ${color}, 0 0 24px ${color}`,
-                    }}
-                  />
-                </div>
-              )
-            })
-          })()}
+            )
+          })
+        })()}
       {/* Map background */}
       <div
         className="absolute inset-0"
@@ -337,9 +343,7 @@ export default function CustomMapDisplay({
       {territories.map((territory) => {
         const isSelected = territory.id === selectedTerritoryId
         const ownerColor = territory.owner ? playerColors[territory.owner] : undefined
-        const color = ownerColor
-          ? getColorValue(ownerColor as PlayerColor)
-          : '#6b7280' // gray-500 as fallback
+        const color = ownerColor ? getColorValue(ownerColor as PlayerColor) : '#6b7280' // gray-500 as fallback
         const isValidTarget =
           pendingAction === 'attack' && validTargets.includes(territory.id) && selectedTerritoryId
 
@@ -423,7 +427,9 @@ export default function CustomMapDisplay({
               '#f97316',
             ]
             const cMap = new Map<string, string>()
-            uniqueContinents.forEach((c, i) => cMap.set(c, palette[i % palette.length]))
+            uniqueContinents.forEach((c, i) => {
+              cMap.set(c, palette[i % palette.length])
+            })
             return (
               <div className="flex items-center gap-3 flex-wrap max-w-[320px]">
                 {uniqueContinents.map((c) => (
