@@ -1,3 +1,4 @@
+import type { TreasureConfig } from '@shared/types'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
@@ -1635,10 +1636,12 @@ export default function GameRoom() {
                 aiOpponents,
                 teamMode: (currentRoom.teamMode ?? 'none') as 'none' | 'teams' | 'auto_balance',
                 numberOfTeams: currentRoom.numberOfTeams ?? undefined,
-                treasureConfig: (currentRoom as unknown as { treasureConfig?: unknown }).treasureConfig as any,
+                treasureConfig: (currentRoom as unknown as { treasureConfig?: unknown })
+                  .treasureConfig as Partial<TreasureConfig> | undefined,
               }
               const res = await gameService.createRoom(payload)
-              const newRoomId = (res?.room?.id as string | undefined) ?? (res?.id as string | undefined)
+              const newRoomId =
+                (res?.room?.id as string | undefined) ?? (res?.id as string | undefined)
               if (newRoomId) {
                 setShowGameOver(false)
                 navigate(`/room/${newRoomId}`)
