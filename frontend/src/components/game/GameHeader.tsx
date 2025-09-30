@@ -1,10 +1,10 @@
 import type React from 'react'
 import { useState } from 'react'
+import InfoTooltip from '@/components/InfoTooltip'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { type AnimationSpeed, setAnimationSpeed } from '@/store/uiRoomSlice'
 import { TurnTimer } from './TurnTimer'
-import InfoTooltip from '@/components/InfoTooltip'
 
 interface GameHeaderProps {
   currentPhase: string
@@ -25,10 +25,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   const dispatch = useAppDispatch()
   const connection = useAppSelector((s) => s.uiRoom.connectionStatus)
   const anim = useAppSelector((s) => s.uiRoom.animationSpeed)
-  const fog = useAppSelector((s) => (s.room.currentRoom?.fogOfWar || 'off') as
-    | 'off'
-    | 'adjacent'
-    | 'persistent')
+  const fog = useAppSelector(
+    (s) => (s.room.currentRoom?.fogOfWar || 'off') as 'off' | 'adjacent' | 'persistent',
+  )
   const fogLabel = fog === 'off' ? 'Off' : fog === 'adjacent' ? 'Adjacent' : 'Persistent'
   const fogTip =
     fog === 'off'

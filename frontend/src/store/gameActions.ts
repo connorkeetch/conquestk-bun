@@ -18,6 +18,7 @@ import {
   popPlacement,
   trackOptimisticPlacement,
 } from './uiRoomSlice'
+import { updateTerritory } from './gameSlice'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(

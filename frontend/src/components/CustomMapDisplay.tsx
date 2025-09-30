@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
 import { setOverlay } from '@/store/uiRoomSlice'

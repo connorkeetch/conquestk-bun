@@ -206,7 +206,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
           {(() => {
             const now = Date.now()
             const cooldownMs = 2000
-            const coolingDown = lastPingAt && now - lastPingAt < cooldownMs
+            const coolingDown = (lastPingAt ?? 0) > 0 && now - lastPingAt < cooldownMs
             const targetId = selectedTargetTerritory || selectedTerritory || hoveredTerritory
             const disabled = !isMyTurn || !game?.roomId || !targetId || coolingDown
             const label = coolingDown ? 'Ping (cooldown)' : 'Ping'
@@ -225,7 +225,12 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                   } catch {}
                 }}
                 disabled={disabled}
-                title={targetId ? `Ping ${territories[targetId]?.name ?? targetId}` : 'Select or hover a territory to ping'}
+                title={(() => {
+                  if (!targetId) return 'Select or hover a territory to ping'
+                  const key = targetId as string
+                  const name = territories[key]?.name ?? key
+                  return `Ping ${name}`
+                })()}
               >
                 <span aria-hidden>📍</span>
                 <span className="hidden sm:inline">{label}</span>
@@ -447,7 +452,12 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
                   transform: 'translate(-50%, -50%)',
                 }}
                 aria-live="polite"
-                aria-label={`Focused on ${territories[selectedTargetTerritory || selectedTerritory]?.name || 'territory'}`}
+                aria-label={(() => {
+                  const focusId = selectedTargetTerritory || selectedTerritory
+                  if (!focusId) return 'Focused territory'
+                  const name = territories[focusId]?.name ?? focusId
+                  return `Focused on ${name}`
+                })()}
               >
                 <div className="w-10 h-10 rounded-full border-2 border-cyan-300/80 animate-ping" />
               </output>

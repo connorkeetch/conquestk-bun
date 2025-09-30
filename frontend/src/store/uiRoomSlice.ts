@@ -207,7 +207,9 @@ const uiRoomSlice = createSlice({
       state.mutedUserIds = Array.from(list)
       try {
         localStorage.setItem('ui.mutedUserIds', JSON.stringify(state.mutedUserIds))
-      } catch {}
+      } catch {
+        // ignore storage errors (quota, privacy, SSR)
+      }
     },
     hydrateMutedFromStorage(state) {
       try {
@@ -217,7 +219,9 @@ const uiRoomSlice = createSlice({
           if (Array.isArray(parsed))
             state.mutedUserIds = parsed.filter((x) => typeof x === 'string')
         }
-      } catch {}
+      } catch {
+        // ignore storage errors (quota, privacy, SSR)
+      }
     },
     hydrateFromStorage(state) {
       try {

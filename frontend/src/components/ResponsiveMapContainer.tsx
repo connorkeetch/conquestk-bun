@@ -177,7 +177,7 @@ export default function ResponsiveMapContainer({
       const start = touchStartRef.current
       touchStartRef.current = null
       if (!start) return
-      const end = e.changedTouches && e.changedTouches[0]
+      const end = e.changedTouches?.[0]
       if (!end) return
       const dx = end.clientX - start.x
       const dy = end.clientY - start.y

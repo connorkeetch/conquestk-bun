@@ -567,12 +567,19 @@ class SocketService {
         currentTurnUserId: lifecyclePayload.currentTurnUserId ?? undefined,
         turnExpiresAt: lifecyclePayload.turnExpiresAt ?? undefined,
         readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt ?? undefined,
-        // @ts-expect-error GameRoom carries these optional fields locally
-        graceActorUserId: lifecyclePayload.graceActorUserId ?? undefined,
-        // @ts-expect-error GameRoom carries these optional fields locally
-        graceExpiresAt: lifecyclePayload.graceExpiresAt ?? undefined,
-        // @ts-expect-error GameRoom carries this optional field locally
-        replacementPendingUserId: lifecyclePayload.replacementPendingUserId ?? undefined,
+        // Extended fields carried locally in GameRoom state
+        // biome-ignore lint/suspicious/noExplicitAny: Partial<GameRoom> accepts extra keys in our local state
+        ...(lifecyclePayload.graceActorUserId !== undefined
+          ? ({ graceActorUserId: lifecyclePayload.graceActorUserId } as any)
+          : {}),
+        // biome-ignore lint/suspicious/noExplicitAny: Partial<GameRoom> accepts extra keys in our local state
+        ...(lifecyclePayload.graceExpiresAt !== undefined
+          ? ({ graceExpiresAt: lifecyclePayload.graceExpiresAt } as any)
+          : {}),
+        // biome-ignore lint/suspicious/noExplicitAny: Partial<GameRoom> accepts extra keys in our local state
+        ...(lifecyclePayload.replacementPendingUserId !== undefined
+          ? ({ replacementPendingUserId: lifecyclePayload.replacementPendingUserId } as any)
+          : {}),
         players: lifecyclePayload.players,
       }
 
@@ -807,7 +814,8 @@ class SocketService {
         toast.error(payload.message || 'Game error')
         const { addClientLog } =
           require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-        store.dispatch(addClientLog({ text: `Error: ${payload.message}`, roomId: payload.roomId }))
+        const rid = store.getState().game.currentGame?.roomId
+        store.dispatch(addClientLog({ text: `Error: ${payload.message}`, roomId: rid }))
       } catch {
         // ignore toast/log issues
       }
