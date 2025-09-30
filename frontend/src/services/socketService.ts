@@ -307,7 +307,9 @@ class SocketService {
             // Server may include reinforcementArmies; server-spent resets to 0 at phase start
             store.dispatch(setPlacementServerSpent(0))
           }
-        } catch {}
+        } catch {
+          // ignore placement spent reconciliation errors
+        }
       }
 
       // Handle battle result audio
@@ -360,7 +362,8 @@ class SocketService {
           const territoryId = (payload as TerritoryDelta).territoryId
           const opt = store.getState().uiRoom.optimisticPlacements?.[territoryId]
           if (opt) {
-            const { clearOptimisticPlacement } = require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+            const { clearOptimisticPlacement } =
+              require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
             store.dispatch(clearOptimisticPlacement({ territoryId }))
           }
         } catch {
@@ -427,7 +430,9 @@ class SocketService {
             require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
           store.dispatch(setPlacementServerSpent(0))
         }
-      } catch {}
+      } catch {
+        // ignore placement spent reconciliation errors
+      }
     })
 
     this.socket.on('lifecycle:update', (incoming) => {
@@ -567,18 +572,14 @@ class SocketService {
         currentTurnUserId: lifecyclePayload.currentTurnUserId ?? undefined,
         turnExpiresAt: lifecyclePayload.turnExpiresAt ?? undefined,
         readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt ?? undefined,
-        // Extended fields carried locally in GameRoom state
-        // biome-ignore lint/suspicious/noExplicitAny: Partial<GameRoom> accepts extra keys in our local state
         ...(lifecyclePayload.graceActorUserId !== undefined
-          ? ({ graceActorUserId: lifecyclePayload.graceActorUserId } as any)
+          ? { graceActorUserId: lifecyclePayload.graceActorUserId }
           : {}),
-        // biome-ignore lint/suspicious/noExplicitAny: Partial<GameRoom> accepts extra keys in our local state
         ...(lifecyclePayload.graceExpiresAt !== undefined
-          ? ({ graceExpiresAt: lifecyclePayload.graceExpiresAt } as any)
+          ? { graceExpiresAt: lifecyclePayload.graceExpiresAt }
           : {}),
-        // biome-ignore lint/suspicious/noExplicitAny: Partial<GameRoom> accepts extra keys in our local state
         ...(lifecyclePayload.replacementPendingUserId !== undefined
-          ? ({ replacementPendingUserId: lifecyclePayload.replacementPendingUserId } as any)
+          ? { replacementPendingUserId: lifecyclePayload.replacementPendingUserId }
           : {}),
         players: lifecyclePayload.players,
       }

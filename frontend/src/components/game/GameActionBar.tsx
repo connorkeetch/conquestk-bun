@@ -1,6 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { deployArmies, endTurn, executeAttack, executeFortify, undoLastPlacement } from '@/store/gameActions'
+import {
+  deployArmies,
+  endTurn,
+  executeAttack,
+  executeFortify,
+  undoLastPlacement,
+} from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
 import { setAttackCommit, setAutoAttacking, setDice } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
@@ -33,7 +39,10 @@ export function GameActionBar({
   const [reinforce, setReinforce] = useState(1)
   const baseReinforcements = useAppSelector((s) => s.game.reinforcementArmies)
   const localSpent = useAppSelector((s) =>
-    (s.uiRoom.placementHistory ?? []).reduce((sum, it) => sum + Math.max(0, Math.trunc(it.armies) || 0), 0),
+    (s.uiRoom.placementHistory ?? []).reduce(
+      (sum, it) => sum + Math.max(0, Math.trunc(it.armies) || 0),
+      0,
+    ),
   )
   const serverSpent = useAppSelector((s) => s.uiRoom.placementServerSpent ?? 0)
   const remaining = Math.max(0, (baseReinforcements || 0) - (serverSpent + localSpent))

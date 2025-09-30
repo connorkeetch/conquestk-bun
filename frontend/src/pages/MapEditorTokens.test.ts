@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 // Mock territory type for tests
 interface Territory {
@@ -32,7 +32,7 @@ describe('MapEditorTokens utility functions', () => {
         const b = Math.floor(Math.random() * 256)
         const toHex = (n: number) => {
           const hex = n.toString(16)
-          return hex.length === 1 ? '0' + hex : hex
+          return hex.length === 1 ? `0${hex}` : hex
         }
         return `#${toHex(r)}${toHex(g)}${toHex(b)}`
       }
@@ -110,7 +110,15 @@ describe('MapEditorTokens utility functions', () => {
       const territories: Territory[] = [
         { id: '1', name: 'A', x: 0, y: 0, connections: ['2', '3'], armies: 1, continentId: null },
         { id: '2', name: 'B', x: 50, y: 50, connections: ['1', '3'], armies: 1, continentId: null },
-        { id: '3', name: 'C', x: 100, y: 100, connections: ['1', '2'], armies: 1, continentId: null },
+        {
+          id: '3',
+          name: 'C',
+          x: 100,
+          y: 100,
+          connections: ['1', '2'],
+          armies: 1,
+          continentId: null,
+        },
       ]
 
       const territoryIdToDelete = '2'
@@ -174,7 +182,9 @@ describe('MapEditorTokens utility functions', () => {
         height: 800,
       }
 
-      const hasTerritoriesArray = Array.isArray((mapData as any).territories)
+      const hasTerritoriesArray = Array.isArray(
+        (mapData as unknown as { territories?: unknown[] }).territories,
+      )
       expect(hasTerritoriesArray).toBe(false)
     })
 

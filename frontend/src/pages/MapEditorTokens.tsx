@@ -63,7 +63,7 @@ function generateDistinctColor(existingColors: string[]): string {
       }
       return (h * 60 + 360) % 360
     })
-    .filter((h) => !isNaN(h))
+    .filter((h) => !Number.isNaN(h))
 
   // Find a hue that's maximally distant from existing hues
   let bestHue = Math.random() * 360
@@ -82,9 +82,9 @@ function generateDistinctColor(existingColors: string[]): string {
   const x = c * (1 - Math.abs(((bestHue / 60) % 2) - 1))
   const m = lightness / 100 - c / 2
 
-  let r = 0,
-    g = 0,
-    b = 0
+  let r = 0
+  let g = 0
+  let b = 0
   if (bestHue < 60) {
     r = c
     g = x
@@ -107,11 +107,12 @@ function generateDistinctColor(existingColors: string[]): string {
 
   const toHex = (n: number) => {
     const hex = Math.round((n + m) * 255).toString(16)
-    return hex.length === 1 ? '0' + hex : hex
+    return hex.length === 1 ? `0${hex}` : hex
   }
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }
+
 import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
 import ImageProcessor from '../components/ImageProcessor'
 import TerritoryToken from '../components/TerritoryToken'
@@ -1197,7 +1198,9 @@ export default function MapEditorTokens() {
   // Position editor mode: 'px' for pixels, 'norm' for normalized 0..1
   const [positionMode, setPositionMode] = useState<'px' | 'norm'>('px')
   // Local position input state for debouncing
-  const [localPositionInputs, setLocalPositionInputs] = useState<Record<string, { x: string; y: string }>>({})
+  const [localPositionInputs, setLocalPositionInputs] = useState<
+    Record<string, { x: string; y: string }>
+  >({})
   const debouncedPositionInputs = useDebounce(localPositionInputs, 300)
 
   // Apply debounced position inputs to state
@@ -1227,17 +1230,16 @@ export default function MapEditorTokens() {
                 normalizedX: clamp01(clampedX / width),
                 normalizedY: clamp01(clampedY / height),
               }
-            } else {
-              // normalized mode
-              const normX = clamp01(x)
-              const normY = clamp01(y)
-              return {
-                ...t,
-                x: normX * width,
-                y: normY * height,
-                normalizedX: normX,
-                normalizedY: normY,
-              }
+            }
+            // normalized mode
+            const normX = clamp01(x)
+            const normY = clamp01(y)
+            return {
+              ...t,
+              x: normX * width,
+              y: normY * height,
+              normalizedX: normX,
+              normalizedY: normY,
             }
           }),
         }
@@ -1251,7 +1253,7 @@ export default function MapEditorTokens() {
         return prev
       }
 
-      const { [territoryId]: _removedModifier, ...remainingModifiers} = prev.territoryModifiers
+      const { [territoryId]: _removedModifier, ...remainingModifiers } = prev.territoryModifiers
 
       return {
         ...prev,
@@ -1288,8 +1290,8 @@ export default function MapEditorTokens() {
         setTimeout(() => {
           alert(
             'Warning: Deleted territory was assigned as a capital.\n\n' +
-            'Some capital assignments have been removed because they no longer have the correct number of territories.\n\n' +
-            'Please regenerate capitals or manually assign new ones.'
+              'Some capital assignments have been removed because they no longer have the correct number of territories.\n\n' +
+              'Please regenerate capitals or manually assign new ones.',
           )
         }, 100)
       }
@@ -1476,7 +1478,9 @@ export default function MapEditorTokens() {
 
       // Validate loaded map data
       if (territories.length === 0) {
-        alert('Warning: Map contains no territories. Loading anyway, but you may need to recreate the map.')
+        alert(
+          'Warning: Map contains no territories. Loading anyway, but you may need to recreate the map.',
+        )
       }
 
       if (!map.name || (typeof map.name === 'string' && map.name.trim().length < 3)) {
@@ -1702,7 +1706,9 @@ export default function MapEditorTokens() {
 
       // Validate loaded data before applying to state
       if (territories.length === 0) {
-        alert('Warning: Draft contains no territories. Loading anyway, but you may need to recreate the map.')
+        alert(
+          'Warning: Draft contains no territories. Loading anyway, but you may need to recreate the map.',
+        )
       }
 
       if (!draft.name || draft.name.trim().length < 3) {
@@ -2216,7 +2222,7 @@ export default function MapEditorTokens() {
 
     // Check if any capitals will be affected
     const affectedCapitals = affectedTerritories.filter((t) =>
-      Object.values(capitalAssignments).some((assignments) => assignments.includes(t.id))
+      Object.values(capitalAssignments).some((assignments) => assignments.includes(t.id)),
     )
 
     // Build warning message
@@ -2357,7 +2363,8 @@ export default function MapEditorTokens() {
           }
         } catch (error: unknown) {
           reportError('Failed to process image (continuing without image):', error)
-          imageProcessingWarning = 'Warning: Background image could not be processed. Map data saved without image.'
+          imageProcessingWarning =
+            'Warning: Background image could not be processed. Map data saved without image.'
           // Continue saving without the image rather than failing completely
           imageBase64 = null
           imageMimeType = null
@@ -2381,7 +2388,9 @@ export default function MapEditorTokens() {
         )
       } catch (error: unknown) {
         reportError('Failed to process territory data:', error)
-        alert('Failed to process territory data. Please check that all territories have valid positions and connections.')
+        alert(
+          'Failed to process territory data. Please check that all territories have valid positions and connections.',
+        )
         setSaveStatus('error')
         return
       }
@@ -2528,7 +2537,7 @@ export default function MapEditorTokens() {
 
         if (invalidConnections.length > 0) {
           throw new Error(
-            `Invalid connections found (territory IDs don't exist):\n${invalidConnections.slice(0, 5).join('\n')}${invalidConnections.length > 5 ? `\n...and ${invalidConnections.length - 5} more` : ''}`
+            `Invalid connections found (territory IDs don't exist):\n${invalidConnections.slice(0, 5).join('\n')}${invalidConnections.length > 5 ? `\n...and ${invalidConnections.length - 5} more` : ''}`,
           )
         }
 
@@ -2536,12 +2545,17 @@ export default function MapEditorTokens() {
         if (Array.isArray(mapData.continents)) {
           const continentIds = new Set(mapData.continents.map((c) => c.id))
           const territoriesWithInvalidContinent = mapData.territories.filter(
-            (t) => t.continentId && !continentIds.has(t.continentId)
+            (t) => t.continentId && !continentIds.has(t.continentId),
           )
 
           if (territoriesWithInvalidContinent.length > 0) {
             throw new Error(
-              `Territories reference non-existent sector IDs: ${territoriesWithInvalidContinent.map((t) => t.id).slice(0, 5).join(', ')}${territoriesWithInvalidContinent.length > 5 ? ` ...and ${territoriesWithInvalidContinent.length - 5} more` : ''}`
+              `Territories reference non-existent sector IDs: ${territoriesWithInvalidContinent
+                .map((t) => t.id)
+                .slice(0, 5)
+                .join(
+                  ', ',
+                )}${territoriesWithInvalidContinent.length > 5 ? ` ...and ${territoriesWithInvalidContinent.length - 5} more` : ''}`,
             )
           }
         }
@@ -2620,7 +2634,11 @@ export default function MapEditorTokens() {
       mapHeight: tempImageDimensions.mapHeight,
       imageScale: 1,
       territories: prev.territories.map((territory) =>
-        withNormalizedPosition(territory, tempImageDimensions.mapWidth, tempImageDimensions.mapHeight),
+        withNormalizedPosition(
+          territory,
+          tempImageDimensions.mapWidth,
+          tempImageDimensions.mapHeight,
+        ),
       ),
     }))
     setShowImageOptions(false)
@@ -2993,20 +3011,25 @@ export default function MapEditorTokens() {
                         if (state.territories.length > 0) {
                           const confirmed = confirm(
                             'Warning: Changing image scale after placing territories will cause misalignment.\n\n' +
-                            'Territory positions are fixed to canvas coordinates, but the background image will scale.\n\n' +
-                            'Recommended: Remove all territories first, or cancel this change.\n\n' +
-                            'Continue anyway?'
+                              'Territory positions are fixed to canvas coordinates, but the background image will scale.\n\n' +
+                              'Recommended: Remove all territories first, or cancel this change.\n\n' +
+                              'Continue anyway?',
                           )
                           if (!confirmed) return
                         }
                         setState((prev) => ({ ...prev, imageScale: Number(e.target.value) / 100 }))
                       }}
                       className="w-full"
-                      title={state.territories.length > 0 ? 'Warning: Changing scale with territories placed will cause misalignment' : undefined}
+                      title={
+                        state.territories.length > 0
+                          ? 'Warning: Changing scale with territories placed will cause misalignment'
+                          : undefined
+                      }
                     />
                     {state.territories.length > 0 && (
                       <p className="mt-2 text-xs text-yellow-400">
-                        ⚠️ Scale locked - {state.territories.length} {state.territories.length === 1 ? 'territory' : 'territories'} placed
+                        ⚠️ Scale locked - {state.territories.length}{' '}
+                        {state.territories.length === 1 ? 'territory' : 'territories'} placed
                       </p>
                     )}
                   </div>
@@ -3108,8 +3131,8 @@ export default function MapEditorTokens() {
                     : '➕ Enable territory placement'}
                 </button>
                 <p className="mt-2 text-xs text-muted">
-                  Choose a sector and enable placement, then click the canvas to drop tokens
-                  where you need them.
+                  Choose a sector and enable placement, then click the canvas to drop tokens where
+                  you need them.
                 </p>
               </div>
             </div>
@@ -3581,8 +3604,8 @@ export default function MapEditorTokens() {
                       if (wouldOverlap) {
                         alert(
                           `Cannot increase token size to ${newSize}px.\n\n` +
-                          'This would cause territories to overlap.\n\n' +
-                          'Please adjust territory positions first or use a smaller size.'
+                            'This would cause territories to overlap.\n\n' +
+                            'Please adjust territory positions first or use a smaller size.',
                         )
                         return
                       }
@@ -3804,8 +3827,8 @@ export default function MapEditorTokens() {
         return (
           <span>
             <strong>Regions:</strong> Enable placement to add tokens, drag to reposition, and use
-            the grouping panel to assign or edit sectors and bonuses. Right-click or Delete
-            removes tokens.
+            the grouping panel to assign or edit sectors and bonuses. Right-click or Delete removes
+            tokens.
           </span>
         )
       case 'connections':
