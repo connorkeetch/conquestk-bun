@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import InfoTooltip from '@/components/InfoTooltip'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { tradeTreasureSet } from '@/store/gameActions'
@@ -89,7 +89,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
   )
 
   const validSets = useMemo(() => {
-    const sets: Array<{ idx: number[]; label: string }> = []
+    const sets: number[][] = []
     for (let i = 0; i < hand.length; i++) {
       for (let j = i + 1; j < hand.length; j++) {
         for (let k = j + 1; k < hand.length; k++) {
@@ -210,6 +210,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                 const active = selected.includes(idx)
                 return (
                   <button
+                    // biome-ignore lint/suspicious/noArrayIndexKey: cards don't have stable ids yet; index is stable within session
                     key={`${metal}-${idx}`}
                     type="button"
                     onClick={() =>
@@ -246,6 +247,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
               <div className="flex flex-wrap gap-2">
                 {validSets.map((entry, i) => (
                   <button
+                    // biome-ignore lint/suspicious/noArrayIndexKey: enumerated combos are ephemeral and index is sufficient
                     key={`set-${i}`}
                     type="button"
                     className={`btn btn-ghost btn-xs ${

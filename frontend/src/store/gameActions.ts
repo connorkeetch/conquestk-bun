@@ -11,14 +11,14 @@ import {
   setPendingAction,
 } from './gameSlice'
 import type { AppDispatch, RootState } from './index'
+import { updateTerritory } from './gameSlice'
 import {
   addClientLog,
   clearOptimisticPlacement,
-  pushPlacement,
   popPlacement,
+  pushPlacement,
   trackOptimisticPlacement,
 } from './uiRoomSlice'
-import { updateTerritory } from './gameSlice'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -246,7 +246,9 @@ export const deployArmies = createAsyncThunk(
         if (phase === 'reinforcement') {
           dispatch(pushPlacement({ territoryId, armies: Math.max(1, Math.trunc(armies)) }))
         }
-      } catch {}
+      } catch {
+        // ignore placement history tracking errors
+      }
 
       socketService.deployArmies(currentGame.roomId, territoryId, armies)
 
@@ -272,7 +274,7 @@ export const deployArmies = createAsyncThunk(
 // Undo last placement in reinforcement phase (client convenience)
 export const undoLastPlacement = createAsyncThunk(
   'game/undoLastPlacement',
-  async (_: void, { getState, dispatch }) => {
+  async (_: undefined, { getState, dispatch }) => {
     const state = getState() as RootState
     const game = state.game.currentGame
     if (!game) return

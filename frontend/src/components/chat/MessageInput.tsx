@@ -21,7 +21,7 @@ export default function MessageInput({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
-  const profanityFilter = useAppSelector((s) => Boolean((s.settings as any)?.chat?.profanityFilter))
+  const profanityFilter = useAppSelector((s) => Boolean(s.settings?.chat?.profanityFilter))
 
   // Handle typing indicator
   useEffect(() => {

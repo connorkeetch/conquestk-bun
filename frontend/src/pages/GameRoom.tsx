@@ -96,6 +96,17 @@ export default function GameRoom() {
   const [showGameOver, setShowGameOver] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const [mobileDrawerTab, setMobileDrawerTab] = useState<'actions' | 'chat'>('actions')
+  const [resignDialogOpen, setResignDialogOpen] = useState(false)
+  const resignDialogRef = useRef<HTMLDivElement | null>(null)
+  const resignDialogTitleId = useId()
+  const [rightRailOpen, setRightRailOpen] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem('ui.rightRailOpen')
+      if (raw === 'true') return true
+      if (raw === 'false') return false
+    } catch {}
+    return true
+  })
 
   // Prevent background scroll when the bottom drawer is open
   useEffect(() => {
@@ -1417,7 +1428,8 @@ export default function GameRoom() {
                 // Typing indicator (game chat)
                 const typingMap = (store.getState().messages.typing || {}) as Record<string, Record<string, string>>
                 const typingForRoom = typingMap[currentRoom.id] || {}
-                const isTyping = Boolean(typingForRoom[player.userId])
+                const typingKey = player.userId ?? ''
+                const isTyping = Boolean(typingForRoom[typingKey])
                 const gp = currentGame?.players?.find((p) => (p.userId ?? p.id) === (player.userId ?? player.id))
                 const armies = typeof gp?.armies === 'number' ? gp.armies : undefined
                 const terrs = Array.isArray(gp?.territories) ? gp.territories.length : undefined

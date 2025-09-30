@@ -1,9 +1,9 @@
 import type {
   BattleResultDelta,
-  SystemMessageDelta,
   FortifyResultDelta,
   GameDelta,
   PhaseChangeDelta,
+  SystemMessageDelta,
   TreasureAwardedDelta,
 } from '@shared/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -124,7 +124,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     ;(async () => {
       try {
         const resp = await gameService.getGameLog(gameId)
-        const raw = Array.isArray((resp as any).log) ? (resp as any).log : (resp as any)
+        // Narrow unknown response shape: either an array or an object with a `log` array
+        const r1 = resp as unknown
+        const maybeObj = r1 as { log?: unknown[] }
+        const raw = Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
         if (cancelled) return
         // Format to display entries; build newest-first
         const formatted: LogEntry[] = []
@@ -133,10 +136,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         const nameOf = (id: string | null | undefined) =>
           id ? playerName.get(id) || id : undefined
         // Sort ascending by timestamp then push and reverse
-        const sorted = [...raw].sort(
-          (a, b) =>
-            new Date(String(a.timestamp)).getTime() - new Date(String(b.timestamp)).getTime(),
-        )
+        const sorted = [...raw].sort((a, b) => {
+          const ar = a as Record<string, unknown>
+          const br = b as Record<string, unknown>
+          return (
+            new Date(String(ar.timestamp)).getTime() - new Date(String(br.timestamp)).getTime()
+          )
+        })
         for (const e of sorted) {
           const er = e as Record<string, unknown>
           const ts = new Date(String(er.timestamp))
@@ -417,7 +423,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           <div className="text-center text-muted py-6 text-sm">No log entries yet.</div>
         ) : (
           <div className="space-y-3">
-            {[...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text })), ...entries]
+            {([
+              ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text } as LogEntry)),
+              ...entries,
+            ] as LogEntry[])
               .sort((a, b) => b.ts.getTime() - a.ts.getTime())
               .map((e) => {
                 const key = `${e.ts.getTime()}-${e.text}`
