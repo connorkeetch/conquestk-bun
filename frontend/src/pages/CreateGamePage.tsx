@@ -230,7 +230,9 @@ const CreateGamePage: React.FC = () => {
   >('adjacent')
   const [selectedColor, setSelectedColor] = useState<PlayerColor>(preferredColor)
   const [turnTimeLimit, setTurnTimeLimit] = useState(24 * 60) // in minutes
-  const [timeBankMinutes, setTimeBankMinutes] = useState<number>(0)
+  // Time bank: enable/disable with default equal to one turn
+  const [timeBankEnabled, setTimeBankEnabled] = useState<boolean>(true)
+  const [timeBankMinutes, setTimeBankMinutes] = useState<number>(24 * 60)
   const timeBankId = useId()
   const [useTerritoryModifiers, setUseTerritoryModifiers] = useState<boolean>(false)
   // Hidden Treasures (new ruleset) UI state
@@ -384,6 +386,13 @@ const CreateGamePage: React.FC = () => {
     },
     [showAiOpponentCard],
   )
+
+  // Keep time bank equal to one turn when enabled
+  useEffect(() => {
+    if (timeBankEnabled) {
+      setTimeBankMinutes(turnTimeLimit)
+    }
+  }, [turnTimeLimit, timeBankEnabled])
 
   const lastAppliedModeRef = useRef<'casual' | 'ranked' | null>(initialMode)
   const modeParam = searchParams.get('mode')
@@ -837,32 +846,7 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 3b. Time Bank (optional) */}
-        <OptionCard number="3b" title="Time Bank (optional)">
-          <div className="space-y-3">
-            <p className="text-xs text-muted">
-              Extra time players can dip into when their turn timer runs out. Set to 0 to disable.
-            </p>
-            <div className="flex items-center gap-3">
-              <label className="text-sm" htmlFor={timeBankId}>
-                Minutes:
-              </label>
-              <input
-                id={timeBankId}
-                type="number"
-                min={0}
-                step={5}
-                className="form-input w-24 text-center"
-                value={timeBankMinutes}
-                onChange={(e) =>
-                  setTimeBankMinutes(Math.max(0, Number.parseInt(e.target.value, 10) || 0))
-                }
-                title="Total time bank per player (minutes)"
-              />
-              <span className="text-xs text-muted">e.g. 0, 5, 15, 30</span>
-            </div>
-          </div>
-        </OptionCard>
+        {/* Removed separate 3b card; time bank now lives inside Turn Time Limits */}
 
         {/* 2. Game Mode Card */}
         <OptionCard number="2" title="Game Mode">
@@ -957,6 +941,30 @@ const CreateGamePage: React.FC = () => {
                   <span className="font-semibold text-[color:var(--heading)]">24h</span>
                   <p className="text-xs text-muted">Default</p>
                 </button>
+              </div>
+            </div>
+
+            {/* Time bank toggle inside card */}
+            <div className="flex items-center justify-between p-3 rounded-lg border border-[color:var(--hover-border)] bg-[color:var(--hover-bg)]">
+              <div className="flex items-center gap-2">
+                <input
+                  id={timeBankId}
+                  type="checkbox"
+                  className="accent-violet"
+                  checked={timeBankEnabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked
+                    setTimeBankEnabled(enabled)
+                    setTimeBankMinutes(enabled ? turnTimeLimit : 0)
+                  }}
+                />
+                <label htmlFor={timeBankId} className="text-sm text-[color:var(--heading)]">
+                  Enable time bank
+                </label>
+                <InfoTooltip text="Gives each player extra time equal to one full turn to use after their timer hits zero." />
+              </div>
+              <div className={`text-xs ${timeBankEnabled ? 'text-muted' : 'opacity-60 text-muted'}`}>
+                Bank: {timeBankEnabled ? `${timeBankMinutes} min` : 'Off'}
               </div>
             </div>
           </div>
