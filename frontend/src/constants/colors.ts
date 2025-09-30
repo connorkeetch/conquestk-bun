@@ -232,9 +232,7 @@ export const getColorValue = (color: PlayerColor): string => {
   if ((PLAYER_COLORS as readonly string[]).includes(color)) {
     // If colorblind mode is enabled, map to color-blind-friendly palette by index
     try {
-      const isColorblind =
-        typeof document !== 'undefined' &&
-        document.documentElement.getAttribute('data-colorblind')
+      const isColorblind = document?.documentElement.getAttribute('data-colorblind')
       if (isColorblind) {
         const idx = (PLAYER_COLORS as readonly string[]).indexOf(color)
         if (idx >= 0) return COLORBLIND_PLAYER_COLORS[idx % COLORBLIND_PLAYER_COLORS.length]

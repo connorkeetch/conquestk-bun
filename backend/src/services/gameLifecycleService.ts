@@ -687,7 +687,8 @@ export class GameLifecycleService {
 
       // Load current game state to compute next actor
       const { gameStateCache } = await import('./cacheService')
-      const raw = await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
+      const raw =
+        await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
       if (!raw) {
         await client.query('ROLLBACK')
         return
@@ -850,10 +851,10 @@ export class GameLifecycleService {
             `UPDATE room_players SET is_kicked = TRUE WHERE room_id = $1 AND user_id = $2`,
             [roomId, targetUserId],
           )
-          await query(
-            `UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`,
-            [roomId, targetUserId],
-          )
+          await query(`UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`, [
+            roomId,
+            targetUserId,
+          ])
         } catch (e) {
           logger.warn('Failed to mark player kicked / replacement pending', {
             roomId,
@@ -921,7 +922,8 @@ export class GameLifecycleService {
   async kickAndNeutralize(roomId: string, userId: string) {
     // Mark player kicked and convert territories to neutral; clear their treasures
     const { gameStateCache } = await import('./cacheService')
-    const raw = await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
+    const raw =
+      await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
     if (!raw) return
     const state = { ...raw }
     // Neutralize territories
@@ -932,9 +934,9 @@ export class GameLifecycleService {
     )
     await gameStateCache.setGameState(roomId, state)
     // Persist DB flags
-    await query(
-      `UPDATE room_players SET is_kicked = TRUE WHERE room_id = $1 AND user_id = $2`,
-      [roomId, userId],
-    )
+    await query(`UPDATE room_players SET is_kicked = TRUE WHERE room_id = $1 AND user_id = $2`, [
+      roomId,
+      userId,
+    ])
   }
 }

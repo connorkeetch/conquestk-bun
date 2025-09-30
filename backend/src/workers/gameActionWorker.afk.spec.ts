@@ -1,11 +1,11 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals'
+import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import type { Server } from 'socket.io'
 
 // Minimal IO mock
 const ioMock = {
   to: jest.fn().mockReturnThis(),
   emit: jest.fn(),
-} as unknown as Server<any, any>
+} as unknown as Server
 
 // Mock queue service to satisfy constructor requirements
 jest.mock('../services/queueService', () => {
@@ -79,6 +79,7 @@ describe('GameActionWorker AFK stages', () => {
 
   it('invokes beginAfkGrace on afk start', async () => {
     const worker = new GameActionWorker(ioMock)
+    // biome-ignore lint/suspicious/noExplicitAny: accessing private for targeted unit test
     const result = await (worker as any).processGameAction({
       id: 'job1',
       data: {
@@ -94,6 +95,7 @@ describe('GameActionWorker AFK stages', () => {
 
   it('invokes skipAfkTurn on afk skip', async () => {
     const worker = new GameActionWorker(ioMock)
+    // biome-ignore lint/suspicious/noExplicitAny: accessing private for targeted unit test
     const result = await (worker as any).processGameAction({
       id: 'job2',
       data: {
@@ -107,4 +109,3 @@ describe('GameActionWorker AFK stages', () => {
     expect(result.processed).toBe(true)
   })
 })
-

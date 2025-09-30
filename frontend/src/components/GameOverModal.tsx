@@ -11,6 +11,7 @@ interface GameOverModalProps {
   onClose: () => void
   onNewGame?: () => void
   onBackToMenu?: () => void
+  newGameLabel?: string
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -20,6 +21,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onClose,
   onNewGame,
   onBackToMenu,
+  newGameLabel = 'New Game',
 }) => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
@@ -135,20 +137,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </div>
           )}
 
-          {/* Game Statistics */}
-          <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-muted mb-3 text-center">Game Summary</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm text-center">
-              <div>
-                <div className="font-medium text-muted">Duration</div>
-                <div className="text-gray-200">Epic Battle</div>
-              </div>
-              <div>
-                <div className="font-medium text-muted">Final Turn</div>
-                <div className="text-gray-200">Turn Complete</div>
-              </div>
-            </div>
-          </div>
+          {/* Final standings summary (armies and territories) */}
+          <FinalStandings />
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -158,7 +148,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 onClick={onNewGame}
                 className="flex-1 bg-primary hover:brightness-110 text-white py-3 px-4 rounded-lg font-semibold transition-all"
               >
-                🎮 New Game
+                🎮 {newGameLabel}
               </button>
             )}
             {onBackToMenu && (
@@ -179,6 +169,66 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+const FinalStandings: React.FC = () => {
+  const game = useAppSelector((s) => s.game.currentGame)
+  if (!game) return null
+  const players = game.players
+  const territoriesByPlayer = new Map<string, number>()
+  const armiesByPlayer = new Map<string, number>()
+  for (const t of game.board) {
+    if (!t.ownerId) continue
+    territoriesByPlayer.set(t.ownerId, (territoriesByPlayer.get(t.ownerId) ?? 0) + 1)
+    armiesByPlayer.set(t.ownerId, (armiesByPlayer.get(t.ownerId) ?? 0) + t.armies)
+  }
+  const entries = players.map((p) => ({
+    id: p.id,
+    name: p.username,
+    color: p.color,
+    territories: territoriesByPlayer.get(p.id) ?? 0,
+    armies: armiesByPlayer.get(p.id) ?? 0,
+    eliminated: p.isEliminated,
+  }))
+  const maxTerr = Math.max(1, ...entries.map((e) => e.territories))
+  const maxArmy = Math.max(1, ...entries.map((e) => e.armies))
+  const sorted = [...entries].sort((a, b) => b.territories - a.territories || b.armies - a.armies)
+
+  return (
+    <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
+      <h4 className="font-semibold text-muted mb-3 text-center">Final Standings</h4>
+      <div className="space-y-3">
+        {sorted.map((e, idx) => (
+          <div key={e.id} className="grid grid-cols-12 items-center gap-2 text-sm">
+            <div className="col-span-3 flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full border border-white" style={{ backgroundColor: e.color }} />
+              <div className={`font-medium ${e.eliminated ? 'line-through opacity-75' : ''}`}>
+                {idx + 1}. {e.name}
+              </div>
+            </div>
+            <div className="col-span-5">
+              <div className="text-xs text-muted">Territories ({e.territories})</div>
+              <div className="h-2 bg-surface-1 rounded">
+                <div
+                  className="h-2 rounded"
+                  style={{ width: `${(e.territories / maxTerr) * 100}%`, backgroundColor: e.color }}
+                />
+              </div>
+            </div>
+            <div className="col-span-4">
+              <div className="text-xs text-muted">Armies ({e.armies})</div>
+              <div className="h-2 bg-surface-1 rounded">
+                <div
+                  className="h-2 rounded"
+                  style={{ width: `${(e.armies / maxArmy) * 100}%`, backgroundColor: e.color }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

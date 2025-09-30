@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { socketService } from '@/services/socketService'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
 import {
@@ -23,7 +24,6 @@ import { RiskGameMap } from './game/RiskGameMap'
 import { TerritoryInfoPanel } from './game/TerritoryInfoPanel'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
-import { socketService } from '@/services/socketService'
 
 export type { TerritoryDisplay, TerritoryDisplayMap }
 

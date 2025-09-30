@@ -505,17 +505,25 @@ export class GameRoomService {
       graceWindowSeconds: this.parseNullableNumber(
         (row as Record<string, unknown>).grace_window_seconds,
       ),
-      graceActorUserId: (row as Record<string, unknown>).grace_actor_user_id as string | null | undefined,
-      graceExpiresAt: this.toDate((row as Record<string, unknown>).grace_expires_at as Date | string | null | undefined) ?? null,
+      graceActorUserId: (row as Record<string, unknown>).grace_actor_user_id as
+        | string
+        | null
+        | undefined,
+      graceExpiresAt:
+        this.toDate(
+          (row as Record<string, unknown>).grace_expires_at as Date | string | null | undefined,
+        ) ?? null,
       readyCheckStartedAt: this.toDate(row.ready_check_started_at) ?? null,
       // Time bank is not currently tracked; expose canonical field as null for now.
       winner: row.winner ?? undefined,
       playerCount: normalizedPlayerCount,
       players,
       // Replacement pending user id for host decision
-      // biome-ignore lint/suspicious/noExplicitAny: row projection from SQL
-      ...(typeof (row as any).replacement_pending_user_id === 'string'
-        ? { replacementPendingUserId: (row as any).replacement_pending_user_id as string }
+      ...(typeof (row as Record<string, unknown>).replacement_pending_user_id === 'string'
+        ? {
+            replacementPendingUserId: (row as Record<string, unknown>)
+              .replacement_pending_user_id as string,
+          }
         : {}),
     }
   }

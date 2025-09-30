@@ -1,10 +1,10 @@
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { GameOverModal } from '@/components/GameOverModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
-import { GameOverModal } from '@/components/GameOverModal'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
@@ -91,7 +91,8 @@ export default function GameRoom() {
   const [showGameOver, setShowGameOver] = useState(false)
   // AFK grace prompt state
   const graceActorUserId = useMemo(
-    () => (currentRoom as unknown as { graceActorUserId?: string | null })?.graceActorUserId ?? null,
+    () =>
+      (currentRoom as unknown as { graceActorUserId?: string | null })?.graceActorUserId ?? null,
     [currentRoom],
   )
   const graceExpiresAt = useMemo(
@@ -107,7 +108,9 @@ export default function GameRoom() {
   }, [isGraceActor, graceExpiresAt])
 
   const replacementPendingUserId = useMemo(
-    () => (currentRoom as unknown as { replacementPendingUserId?: string | null })?.replacementPendingUserId ?? null,
+    () =>
+      (currentRoom as unknown as { replacementPendingUserId?: string | null })
+        ?.replacementPendingUserId ?? null,
     [currentRoom],
   )
   const replacementPending = Boolean(replacementPendingUserId)
@@ -1518,14 +1521,18 @@ export default function GameRoom() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => currentRoom && socketService.emit('afk:remind', { roomId: currentRoom.id })}
+                onClick={() =>
+                  currentRoom && socketService.emit('afk:remind', { roomId: currentRoom.id })
+                }
                 className="btn btn-secondary btn-sm"
                 type="button"
               >
                 Remind
               </button>
               <button
-                onClick={() => currentRoom && socketService.emit('afk:skip', { roomId: currentRoom.id })}
+                onClick={() =>
+                  currentRoom && socketService.emit('afk:skip', { roomId: currentRoom.id })
+                }
                 className="btn btn-danger btn-sm"
                 type="button"
               >

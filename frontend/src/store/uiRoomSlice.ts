@@ -98,7 +98,16 @@ const uiRoomSlice = createSlice({
     setResyncing(state, action: PayloadAction<boolean>) {
       state.resyncing = action.payload
     },
-    addPing(state, action: PayloadAction<{ id: string; territoryId: string; userId?: string; username?: string | null; ttlMs?: number }>) {
+    addPing(
+      state,
+      action: PayloadAction<{
+        id: string
+        territoryId: string
+        userId?: string
+        username?: string | null
+        ttlMs?: number
+      }>,
+    ) {
       const now = Date.now()
       const ttl = Math.max(500, Math.min(10_000, action.payload.ttlMs ?? 3000))
       const ping = {
