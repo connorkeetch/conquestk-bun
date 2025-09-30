@@ -1,6 +1,7 @@
 import type React from 'react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { mapService } from '@/services/mapService'
 import { socketService } from '@/services/socketService'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
@@ -30,11 +31,15 @@ export type { TerritoryDisplay, TerritoryDisplayMap }
 interface RiskGameBoardProps {
   onTerritoryClick?: (territoryId: string) => void
   mapId?: string
+  lobbyMode?: boolean
+  lobbyPlayers?: Array<{ id: string; username: string; color: string }>
 }
 
 export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   onTerritoryClick,
   mapId = 'classic',
+  lobbyMode = false,
+  lobbyPlayers = [],
 }) => {
   const dispatch = useDispatch<AppDispatch>()
   const gameState = useSelector((state: RootState) => state.game.currentGame)
@@ -46,13 +51,27 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
 
   const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
+  const [lobbyMapData, setLobbyMapData] = useState<any>(null)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
-  const board = gameState?.board ?? []
-  const players = gameState?.players ?? []
-  const currentPlayer = gameState?.currentPlayer ?? ''
-  const currentPhase = gameState?.phase ?? 'reinforcement'
+  // Load map data for lobby mode
+  useEffect(() => {
+    if (lobbyMode && mapId) {
+      mapService
+        .getMap(mapId)
+        .then((data) => setLobbyMapData(data))
+        .catch(() => {
+          // Map loading failed, will show loading spinner
+        })
+    }
+  }, [lobbyMode, mapId])
+
+  // Use lobby map data or game state data
+  const board = lobbyMode && lobbyMapData ? lobbyMapData.territories : (gameState?.board ?? [])
+  const players = lobbyMode ? lobbyPlayers : (gameState?.players ?? [])
+  const currentPlayer = lobbyMode ? '' : (gameState?.currentPlayer ?? '')
+  const currentPhase = lobbyMode ? 'lobby' : (gameState?.phase ?? 'reinforcement')
 
   const territories = useMemo(() => createTerritoryDisplayMap(board), [board])
   const territoryValues = useMemo(() => Object.values(territories), [territories])
@@ -181,12 +200,27 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     return normaliseModifierMap(gameState.territoryModifiers)
   }, [gameState?.territoryModifiers])
 
-  if (!gameState) {
+  // Show loading or empty state only when NOT in lobby mode
+  if (!gameState && !lobbyMode) {
     return (
       <div className="flex items-center justify-center h-full panel">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-[color:var(--heading)] mb-2">No Game in Progress</h2>
+          <h2 className="text-xl font-bold text-[color:var(--heading)] mb-2">
+            No Game in Progress
+          </h2>
           <p className="text-muted">Join a game room to start playing!</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Lobby mode: wait for map data to load
+  if (lobbyMode && !lobbyMapData) {
+    return (
+      <div className="flex items-center justify-center h-full panel">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent mb-3"></div>
+          <p className="text-muted">Loading map...</p>
         </div>
       </div>
     )
@@ -204,11 +238,25 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
   return (
     <div className="flex flex-col w-full h-full panel p-0 overflow-hidden">
-      <GameHeader
-        currentPhase={currentPhase}
-        turn={gameState.turn}
-        currentPlayerInfo={headerPlayerInfo}
-      />
+      {lobbyMode ? (
+        <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[color:var(--heading)]">
+              Waiting for Game to Start
+            </h2>
+            <span className="badge">Lobby</span>
+          </div>
+          <p className="text-sm text-muted mt-1">
+            {lobbyPlayers.length} {lobbyPlayers.length === 1 ? 'player' : 'players'} ready
+          </p>
+        </div>
+      ) : (
+        <GameHeader
+          currentPhase={currentPhase}
+          turn={gameState?.turn ?? 0}
+          currentPlayerInfo={headerPlayerInfo}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <RiskGameMap
