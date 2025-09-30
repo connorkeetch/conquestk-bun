@@ -36,6 +36,14 @@ export default function ResponsiveMapContainer({
     scrollTop: number
   } | null>(null)
   const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
+  const pinchStartRef = useRef<{ distance: number; zoom: number } | null>(null)
+  const touchPanStartRef = useRef<{
+    x: number
+    y: number
+    scrollLeft: number
+    scrollTop: number
+    t: number
+  } | null>(null)
 
   const calculateScale = useCallback(() => {
     if (!containerRef.current) return
@@ -164,39 +172,101 @@ export default function ResponsiveMapContainer({
     }
   }, [])
 
-  // Touch swipe detection for mobile overlays switching
+  // Enhanced touch handling: pinch-to-zoom, single-finger pan, and swipe gestures
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return
-      const t = e.touches[0]
-      touchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() }
+
+    const getDistance = (t1: Touch, t2: Touch) => {
+      const dx = t1.clientX - t2.clientX
+      const dy = t1.clientY - t2.clientY
+      return Math.sqrt(dx * dx + dy * dy)
     }
-    const onTouchEnd = (e: TouchEvent) => {
-      const start = touchStartRef.current
-      touchStartRef.current = null
-      if (!start) return
-      const end = e.changedTouches?.[0]
-      if (!end) return
-      const dx = end.clientX - start.x
-      const dy = end.clientY - start.y
-      const dt = Date.now() - start.t
-      const absX = Math.abs(dx)
-      const absY = Math.abs(dy)
-      // Quick horizontal swipe: threshold 50px, faster than 600ms, more horizontal than vertical
-      if (dt < 600 && absX > 50 && absX > absY) {
-        if (dx < 0) onSwipeLeft?.()
-        else onSwipeRight?.()
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        // Single finger - could be pan or swipe
+        const t = e.touches[0]
+        touchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() }
+        touchPanStartRef.current = {
+          x: t.clientX,
+          y: t.clientY,
+          scrollLeft: el.scrollLeft,
+          scrollTop: el.scrollTop,
+          t: Date.now(),
+        }
+      } else if (e.touches.length === 2) {
+        // Two fingers - pinch to zoom
+        e.preventDefault() // Prevent default pinch behavior
+        const distance = getDistance(e.touches[0], e.touches[1])
+        pinchStartRef.current = { distance, zoom }
+        touchStartRef.current = null
+        touchPanStartRef.current = null
       }
     }
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchend', onTouchEnd)
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchStartRef.current) {
+        // Pinch zoom
+        e.preventDefault()
+        const newDistance = getDistance(e.touches[0], e.touches[1])
+        const scale = newDistance / pinchStartRef.current.distance
+        const newZoom = Math.min(3, Math.max(0.5, pinchStartRef.current.zoom * scale))
+        setZoom(Math.round(newZoom * 10) / 10)
+      } else if (e.touches.length === 1 && touchPanStartRef.current) {
+        // Single finger pan
+        const t = e.touches[0]
+        const dx = t.clientX - touchPanStartRef.current.x
+        const dy = t.clientY - touchPanStartRef.current.y
+        const absX = Math.abs(dx)
+        const absY = Math.abs(dy)
+
+        // If moved more than 10px, it's a pan not a tap
+        if (absX > 10 || absY > 10) {
+          el.scrollLeft = touchPanStartRef.current.scrollLeft - dx
+          el.scrollTop = touchPanStartRef.current.scrollTop - dy
+        }
+      }
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      // Handle swipe gestures (quick horizontal movement)
+      const start = touchStartRef.current
+      if (start && e.changedTouches.length === 1) {
+        const end = e.changedTouches[0]
+        const dx = end.clientX - start.x
+        const dy = end.clientY - start.y
+        const dt = Date.now() - start.t
+        const absX = Math.abs(dx)
+        const absY = Math.abs(dy)
+
+        // Quick horizontal swipe: threshold 50px, faster than 600ms, more horizontal than vertical
+        if (dt < 600 && absX > 50 && absX > absY * 2) {
+          // Trigger haptic feedback if available
+          if ('vibrate' in navigator) {
+            navigator.vibrate(10)
+          }
+          if (dx < 0) onSwipeLeft?.()
+          else onSwipeRight?.()
+        }
+      }
+
+      // Reset refs
+      touchStartRef.current = null
+      pinchStartRef.current = null
+      touchPanStartRef.current = null
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+
     return () => {
       el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [onSwipeLeft, onSwipeRight])
+  }, [onSwipeLeft, onSwipeRight, zoom])
 
   // Minimap computations
   const minimap = useMemo(() => {
@@ -295,33 +365,33 @@ export default function ResponsiveMapContainer({
       )}
 
       {/* Zoom controls */}
-      <div className="absolute bottom-2 right-2 flex gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded">
+      <div className="absolute bottom-2 right-2 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
         <button
           type="button"
-          className="btn btn-secondary btn-sm"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
           onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
-          title="Zoom out (Ctrl/Cmd + scroll)"
+          title="Zoom out (Ctrl/Cmd + scroll or pinch)"
         >
           −
         </button>
-        <div className="text-xs self-center w-16 text-center text-muted">
+        <div className="text-xs self-center min-w-[44px] text-center text-muted font-mono">
           {Math.round(zoom * 100)}%
         </div>
         <button
           type="button"
-          className="btn btn-secondary btn-sm"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
           onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.1) * 10) / 10))}
-          title="Zoom in (Ctrl/Cmd + scroll)"
+          title="Zoom in (Ctrl/Cmd + scroll or pinch)"
         >
           +
         </button>
         <button
           type="button"
-          className="btn btn-ghost btn-sm"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-ghost hover:bg-surface-2 active:bg-surface-2 transition-colors text-xs"
           onClick={() => setZoom(1)}
-          title="Reset zoom"
+          title="Reset zoom to 100%"
         >
-          Reset
+          1:1
         </button>
       </div>
 
