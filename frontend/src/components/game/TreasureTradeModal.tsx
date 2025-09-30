@@ -14,8 +14,50 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
 
   const me = useMemo(() => game?.players.find((p) => p.id === userId), [game?.players, userId])
   const hand = (me?.treasures ?? []) as string[]
+  const treasureConfig = useAppSelector((s) => s.room.currentRoom?.treasureConfig) as
+    | ({ payoutMode?: string; fixedValue?: number; diamondSetBonus?: number } & Record<string, unknown>)
+    | undefined
   const [selected, setSelected] = useState<number[]>([])
   const canTrade = selected.length === 3
+
+  // Compute valid sets: three-of-a-kind or all-different
+  const validSets = useMemo(() => {
+    const sets: number[][] = []
+    for (let i = 0; i < hand.length; i++) {
+      for (let j = i + 1; j < hand.length; j++) {
+        for (let k = j + 1; k < hand.length; k++) {
+          const a = hand[i]
+          const b = hand[j]
+          const c = hand[k]
+          const allSame = a === b && b === c
+          const allDiff = a !== b && a !== c && b !== c
+          if (allSame || allDiff) sets.push([i, j, k])
+        }
+      }
+    }
+    return sets
+  }, [hand])
+
+  const projectedReinforcements = useMemo(() => {
+    const containsDiamond = selected.some((idx) => String(hand[idx]).toLowerCase().includes('diamond'))
+    const mode = (treasureConfig?.payoutMode || '').toLowerCase()
+    if (mode === 'fixed') {
+      const base = Math.max(1, Math.min(50, treasureConfig?.fixedValue ?? 8))
+      const bonus = containsDiamond ? Math.max(0, treasureConfig?.diamondSetBonus ?? 0) : 0
+      return base + bonus
+    }
+    if (mode === 'none') return 0
+    return undefined // varies
+  }, [hand, selected, treasureConfig])
+
+  const iconFor = (metal: string) => {
+    const m = metal.toLowerCase()
+    if (m.includes('diamond')) return '💎'
+    if (m.includes('gold')) return '🟡'
+    if (m.includes('silver')) return '⚪'
+    if (m.includes('bronze') || m.includes('copper')) return '🟤'
+    return '⬜'
+  }
 
   if (!isOpen) return null
 
@@ -50,13 +92,44 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                     }`}
                     title={active ? 'Selected' : 'Click to select'}
                   >
-                    <div className="font-medium text-white">{metal}</div>
+                    <div className="font-medium text-white flex items-center gap-2">
+                      <span>{iconFor(metal)}</span>
+                      <span>{metal}</span>
+                    </div>
                     <div className="text-xs text-muted">Card #{idx + 1}</div>
                   </button>
                 )
               })}
             </div>
           )}
+          {validSets.length > 0 && (
+            <div className="mt-3">
+              <div className="text-xs text-muted mb-1">Valid sets:</div>
+              <div className="flex flex-wrap gap-2">
+                {validSets.map((set, i) => (
+                  <button
+                    key={`set-${i}`}
+                    type="button"
+                    className={`btn btn-ghost btn-xs ${
+                      selected.length === 3 && set.every((v) => selected.includes(v)) ? 'ring-1 ring-[color:var(--color-accent)]' : ''
+                    }`}
+                    onClick={() => setSelected(set)}
+                    title="Click to select this set"
+                  >
+                    {set.map((idx) => iconFor(hand[idx])).join(' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="text-xs text-muted mt-2">
+            Projected reinforcements:{' '}
+            {projectedReinforcements === undefined ? (
+              <span className="text-white">varies by payout mode</span>
+            ) : (
+              <span className="text-white">+{projectedReinforcements}</span>
+            )}
+          </div>
         </div>
         <div className="p-4 border-t border-border flex items-center justify-end gap-2">
           <button type="button" className="btn btn-secondary" onClick={onClose}>
@@ -81,4 +154,3 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     </div>
   )
 }
-
