@@ -4,6 +4,7 @@ import { deployArmies, endTurn, executeAttack, executeFortify } from '@/store/ga
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
 import { setAttackCommit, setDice } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
+import { TreasureTradeModal } from './TreasureTradeModal'
 
 /**
  * Delay between consecutive auto-attacks (in milliseconds)
@@ -20,9 +21,13 @@ export function GameActionBar() {
   const dice = useAppSelector((s) => s.uiRoom.dice)
   const commit = useAppSelector((s) => s.uiRoom.attackCommit)
   const userId = useAppSelector((s) => s.auth.user?.id)
+  const me = useAppSelector((s) => s.game.currentGame?.players.find((p) => p.id === s.auth.user?.id))
+  const mustCashIn = useAppSelector((s) => s.game.currentGame?.mustCashInTreasures)
+  const myHandCount = (me?.treasures?.length ?? 0) as number
   const [reinforce, setReinforce] = useState(1)
   const [fortify, setFortify] = useState(1)
   const [auto, setAuto] = useState(false)
+  const [showTreasures, setShowTreasures] = useState(false)
   const lastTargetRef = useRef<string | null>(null)
   const reinforceId = useId()
   const fortifyId = useId()
@@ -146,6 +151,17 @@ export function GameActionBar() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Treasures chip */}
+            {isMyTurn && (
+              <button
+                type="button"
+                className={`chip text-xs ${mustCashIn ? 'ring-1 ring-yellow-400' : ''}`}
+                title={mustCashIn ? 'You must trade a set' : 'View/trade treasures'}
+                onClick={() => setShowTreasures(true)}
+              >
+                Treasures: {myHandCount}
+              </button>
+            )}
             {/* Primary actions by phase */}
             {phase === 'reinforcement' && (
               <>
@@ -328,6 +344,11 @@ export function GameActionBar() {
           )}
         </div>
       </div>
+      <TreasureTradeModal isOpen={showTreasures} onClose={() => setShowTreasures(false)} />
     </div>
   )
 }
+  // Auto-open treasure modal if must cash in (only when it's my turn)
+  useEffect(() => {
+    if (isMyTurn && mustCashIn) setShowTreasures(true)
+  }, [isMyTurn, mustCashIn])
