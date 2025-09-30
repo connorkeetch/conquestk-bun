@@ -451,10 +451,34 @@ export class GameEngine {
     const territory = gameState.board.find((t) => t.id === territoryId)
 
     if (territory && this.isFriendlyTerritory(gameState, action.playerId, territory.ownerId)) {
-      territory.armies += armies
-      const player = gameState.players.find((p) => p.id === action.playerId)
-      if (player) {
-        player.armies -= armies
+      const baseline = gameState.reinforcementBaseline?.[territoryId]
+      if (typeof baseline === 'number' && armies < 0) {
+        const allowedUndo = Math.max(0, territory.armies - baseline)
+        const requested = Math.abs(armies)
+        const actual = Math.min(allowedUndo, requested)
+        territory.armies = Math.max(baseline, territory.armies - actual)
+        const player = gameState.players.find((p) => p.id === action.playerId)
+        if (player) player.armies += actual
+        const entry = {
+          playerId: action.playerId,
+          territoryId,
+          armies: -actual,
+          ts: Date.now(),
+        }
+        gameState.reinforcementHistory = [...(gameState.reinforcementHistory ?? []), entry]
+      } else {
+        territory.armies += armies
+        const player = gameState.players.find((p) => p.id === action.playerId)
+        if (player) {
+          player.armies -= armies
+        }
+        const entry = {
+          playerId: action.playerId,
+          territoryId,
+          armies,
+          ts: Date.now(),
+        }
+        gameState.reinforcementHistory = [...(gameState.reinforcementHistory ?? []), entry]
       }
     }
 
@@ -646,6 +670,9 @@ export class GameEngine {
         // After reinforcement, move to attack phase
         gameState.phase = 'attack'
         gameState.hasAttackedThisTurn = false // Reset attack flag
+        // Clear reinforcement tracking when leaving reinforcement
+        gameState.reinforcementHistory = []
+        gameState.reinforcementBaseline = undefined
         break
       case 'attack':
         // After attack, move to fortify phase
@@ -695,6 +722,20 @@ export class GameEngine {
     gameState.phase = 'reinforcement'
     gameState.hasAttackedThisTurn = false // Reset attack flag for new player
     gameState.lastBattleResult = undefined // Clear last battle result
+    // Capture reinforcement baseline for next player and reset history
+    try {
+      const baseline: Record<string, number> = {}
+      for (const t of gameState.board) {
+        if (t.ownerId === gameState.currentPlayer) {
+          baseline[t.id] = Math.max(0, Math.trunc(t.armies))
+        }
+      }
+      gameState.reinforcementBaseline = baseline
+      gameState.reinforcementHistory = []
+    } catch {
+      gameState.reinforcementBaseline = {}
+      gameState.reinforcementHistory = []
+    }
 
     // Calculate reinforcement armies for new player
     const nextPlayer = gameState.players[nextPlayerIndex]
@@ -729,6 +770,21 @@ export class GameEngine {
           gameState.board,
           gameState.gameConfig,
         )
+      }
+
+      // Initialize reinforcement baseline/history for current player
+      try {
+        const baseline: Record<string, number> = {}
+        for (const t of gameState.board) {
+          if (t.ownerId === gameState.currentPlayer) {
+            baseline[t.id] = Math.max(0, Math.trunc(t.armies))
+          }
+        }
+        gameState.reinforcementBaseline = baseline
+        gameState.reinforcementHistory = []
+      } catch {
+        gameState.reinforcementBaseline = {}
+        gameState.reinforcementHistory = []
       }
     }
 
@@ -816,16 +872,25 @@ export class GameEngine {
     const player = gameState.players.find((p) => p.id === action.playerId)
     const territory = gameState.board.find((t) => t.id === territoryId)
 
-    if (!player || !territory || armies <= 0 || gameState.phase !== 'reinforcement') {
-      return false
+    if (!player || !territory || gameState.phase !== 'reinforcement') return false
+
+    if (armies > 0) {
+      // Prevent deploying more armies than player has available
+      if (player.armies < armies) return false
+      return this.isFriendlyTerritory(gameState, action.playerId, territory.ownerId)
     }
 
-    // Prevent deploying more armies than player has available
-    if (player.armies < armies) {
-      return false
+    if (armies < 0) {
+      const baseline = gameState.reinforcementBaseline?.[territoryId]
+      if (typeof baseline !== 'number') return false
+      const available = Math.max(0, territory.armies - baseline)
+      const requested = Math.abs(armies)
+      if (requested <= 0) return false
+      if (available <= 0) return false
+      return this.isFriendlyTerritory(gameState, action.playerId, territory.ownerId)
     }
 
-    return this.isFriendlyTerritory(gameState, action.playerId, territory.ownerId)
+    return false
   }
 
   private isFriendlyTerritory(

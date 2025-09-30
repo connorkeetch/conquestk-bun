@@ -11,7 +11,13 @@ import {
   setPendingAction,
 } from './gameSlice'
 import type { AppDispatch, RootState } from './index'
-import { addClientLog, clearOptimisticPlacement, trackOptimisticPlacement } from './uiRoomSlice'
+import {
+  addClientLog,
+  clearOptimisticPlacement,
+  pushPlacement,
+  popPlacement,
+  trackOptimisticPlacement,
+} from './uiRoomSlice'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -233,6 +239,13 @@ export const deployArmies = createAsyncThunk(
         }),
       )
       dispatch(trackOptimisticPlacement({ territoryId, expectedArmies: expected }))
+      // Track client-side placement history for Undo (reinforcement phase only)
+      try {
+        const phase = (getState() as RootState).game.currentGame?.phase
+        if (phase === 'reinforcement') {
+          dispatch(pushPlacement({ territoryId, armies: Math.max(1, Math.trunc(armies)) }))
+        }
+      } catch {}
 
       socketService.deployArmies(currentGame.roomId, territoryId, armies)
 
@@ -252,6 +265,37 @@ export const deployArmies = createAsyncThunk(
       toast.error('Deploy failed')
       dispatch(addClientLog({ text: `Deployment to ${territoryId} failed` }))
     }
+  },
+)
+
+// Undo last placement in reinforcement phase (client convenience)
+export const undoLastPlacement = createAsyncThunk(
+  'game/undoLastPlacement',
+  async (_: void, { getState, dispatch }) => {
+    const state = getState() as RootState
+    const game = state.game.currentGame
+    if (!game) return
+    if (game.phase !== 'reinforcement') return
+    const history = state.uiRoom.placementHistory ?? []
+    if (history.length === 0) return
+    const last = history[history.length - 1]
+    const territory = game.board.find((t) => t.id === last.territoryId)
+    const currentArmies = territory?.armies ?? 0
+    const newExpected = Math.max(0, currentArmies - last.armies)
+    // Optimistic revert
+    dispatch(
+      updateTerritory({
+        territoryId: last.territoryId,
+        armies: newExpected,
+      }),
+    )
+    dispatch(trackOptimisticPlacement({ territoryId: last.territoryId, expectedArmies: newExpected }))
+    dispatch(popPlacement())
+    // Send negative placement to server (engine clamps to baseline)
+    socketService.deployArmies(game.roomId, last.territoryId, -last.armies)
+    dispatch(
+      addTerritoryAction({ territoryId: last.territoryId, action: `Undo ${last.armies} armies` }),
+    )
   },
 )
 

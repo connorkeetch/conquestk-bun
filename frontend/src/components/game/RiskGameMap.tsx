@@ -8,12 +8,15 @@ import { setAutoAttacking, setOverlay } from '@/store/uiRoomSlice'
 import type { GamePlayer } from '@/types/game'
 import { arePlayersTeammates } from '@/utils/teamHelpers'
 import CustomMapDisplay from '../CustomMapDisplay'
+import { getColorValue, type PlayerColor } from '@/constants/colors'
 import ResponsiveMapContainer from '../ResponsiveMapContainer'
 import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
 import { TerritoryModifierIcon } from '../TerritoryModifierIcon'
 import { TerritoryModifierLegend } from '../TerritoryModifierLegend'
 import { WorldMapSVG } from '../WorldMapSVG'
 import { ConquestTransferOverlay } from './ConquestTransferOverlay'
+import { socketService } from '@/services/socketService'
+import { setLastPingAt } from '@/store/uiRoomSlice'
 import type { TerritoryDisplayMap } from './territoryDisplay'
 
 const CLASSIC_MAP_WIDTH = 800
@@ -52,6 +55,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   const userId = useAppSelector((s) => s.auth.user?.id)
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
   const pings = useAppSelector((s) => s.uiRoom.pings ?? [])
+  const lastPingAt = useAppSelector((s) => s.uiRoom.lastPingAt ?? 0)
   const overlays = useAppSelector((s) => s.uiRoom.overlays)
   const myId = useAppSelector((s) => s.auth.user?.id)
   const playerColors = useMemo(
@@ -66,7 +70,9 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
         return '#D1D5DB'
       }
 
-      return playerColors[territory.owner] ?? '#D1D5DB'
+      const raw = playerColors[territory.owner] ?? '#D1D5DB'
+      // Respect colorblind mode setting via getColorValue
+      return getColorValue(raw as PlayerColor)
     },
     [territories, playerColors],
   )
@@ -194,6 +200,36 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
             <span className="hidden sm:inline">Threat</span>
           </button>
               </>
+            )
+          })()}
+          {/* Explicit Ping button with simple cooldown */}
+          {(() => {
+            const now = Date.now()
+            const cooldownMs = 2000
+            const coolingDown = lastPingAt && now - lastPingAt < cooldownMs
+            const targetId = selectedTargetTerritory || selectedTerritory || hoveredTerritory
+            const disabled = !isMyTurn || !game?.roomId || !targetId || coolingDown
+            const label = coolingDown ? 'Ping (cooldown)' : 'Ping'
+            return (
+              <button
+                type="button"
+                className={`btn btn-ghost btn-xs ${coolingDown ? 'opacity-60 cursor-not-allowed' : ''}`}
+                onClick={() => {
+                  if (!game?.roomId || !targetId || coolingDown) return
+                  try {
+                    socketService.emit('ping:territory', { roomId: game.roomId, territoryId: targetId })
+                  } catch {}
+                  dispatchApp(setLastPingAt(now))
+                  try {
+                    (navigator as unknown as { vibrate?: (pattern: number | number[]) => void }).vibrate?.(15)
+                  } catch {}
+                }}
+                disabled={disabled}
+                title={targetId ? `Ping ${territories[targetId]?.name ?? targetId}` : 'Select or hover a territory to ping'}
+              >
+                <span aria-hidden>📍</span>
+                <span className="hidden sm:inline">{label}</span>
+              </button>
             )
           })()}
         </div>

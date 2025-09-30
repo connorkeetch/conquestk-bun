@@ -39,6 +39,21 @@ export interface GameState {
   treasureState?: TreasureState
   mustCashInTreasures?: boolean
   conqueredDuringTurn?: boolean
+  /**
+   * Snapshot of armies at the start of the reinforcement phase for the current player.
+   * Used to safely allow client "undo last placement" by preventing reductions below baseline.
+   */
+  reinforcementBaseline?: Record<string, number>
+  /**
+   * History of reinforcement placements (positive) and undos (negative) in the current reinforcement phase.
+   * Entries are appended in order and cleared when leaving reinforcement or the turn advances.
+   */
+  reinforcementHistory?: Array<{
+    playerId: string
+    territoryId: string
+    armies: number
+    ts: number
+  }>
 }
 
 export interface GamePlayer {

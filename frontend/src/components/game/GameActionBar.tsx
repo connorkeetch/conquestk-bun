@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { deployArmies, endTurn, executeAttack, executeFortify } from '@/store/gameActions'
+import { deployArmies, endTurn, executeAttack, executeFortify, undoLastPlacement } from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
 import { setAttackCommit, setAutoAttacking, setDice } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
@@ -31,9 +31,16 @@ export function GameActionBar({
   const mustCashIn = useAppSelector((s) => s.game.currentGame?.mustCashInTreasures)
   const myHandCount = (me?.treasures?.length ?? 0) as number
   const [reinforce, setReinforce] = useState(1)
+  const baseReinforcements = useAppSelector((s) => s.game.reinforcementArmies)
+  const localSpent = useAppSelector((s) =>
+    (s.uiRoom.placementHistory ?? []).reduce((sum, it) => sum + Math.max(0, Math.trunc(it.armies) || 0), 0),
+  )
+  const serverSpent = useAppSelector((s) => s.uiRoom.placementServerSpent ?? 0)
+  const remaining = Math.max(0, (baseReinforcements || 0) - (serverSpent + localSpent))
   const [fortify, setFortify] = useState(1)
   // Auto-attack is global so it can be toggled from map tooltip
   const auto = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
+  const hasUndo = useAppSelector((s) => (s.uiRoom.placementHistory?.length ?? 0) > 0)
   const [showTreasures, setShowTreasures] = useState(false)
   const lastTargetRef = useRef<string | null>(null)
   const reinforceId = useId()
@@ -190,7 +197,7 @@ export function GameActionBar({
                     className="form-input w-16 text-center"
                     type="number"
                     min={1}
-                    max={game.reinforcementArmies ?? 99}
+                    max={remaining > 0 ? remaining : 1}
                     id={reinforceId}
                     value={reinforce}
                     onChange={(e) =>
@@ -202,14 +209,26 @@ export function GameActionBar({
                   type="button"
                   onClick={() => {
                     if (selected) {
-                      void dispatch(deployArmies({ territoryId: selected, armies: reinforce }))
+                      const amt = Math.max(1, Math.trunc(reinforce) || 1)
+                      const toPlace = Math.min(amt, remaining || 0)
+                      if (toPlace > 0)
+                        void dispatch(deployArmies({ territoryId: selected, armies: toPlace }))
                     }
                   }}
-                  disabled={!isMyTurn || !selected}
+                  disabled={!isMyTurn || !selected || remaining <= 0}
                   className="btn btn-success"
                   title={selected ? `Deploy to ${selectedName}` : 'Select a territory to deploy'}
                 >
                   Place
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void dispatch(undoLastPlacement())}
+                  disabled={!isMyTurn || !hasUndo}
+                  className="btn btn-secondary"
+                  title="Undo last placement"
+                >
+                  Undo
                 </button>
                 {endTurnBtn}
               </>
@@ -309,6 +328,11 @@ export function GameActionBar({
           </div>
 
           <div className="flex items-center gap-2 text-xs text-muted">
+            {phase === 'reinforcement' && (
+              <span className="chip text-xs" title="Troops remaining to place">
+                Remaining: {remaining}
+              </span>
+            )}
             {!selected && <span>Select a territory to begin</span>}
             {selected && !target && phase !== 'reinforcement' && (
               <span>Select a target territory</span>

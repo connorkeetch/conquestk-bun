@@ -778,7 +778,49 @@ export class GameService {
     const territory = gameState.board.find((t) => t.id === data.territoryId)
     if (!territory) throw new Error('Territory not found')
 
-    territory.armies += data.armies
+    // Only allow placement/undo for the current player during reinforcement
+    if (gameState.currentPlayer !== data.playerId || gameState.phase !== 'reinforcement') {
+      throw new Error('Invalid placement phase or player')
+    }
+
+    const change = Math.trunc(data.armies)
+    if (change === 0) {
+      return territory.armies
+    }
+
+    if (change < 0) {
+      // Enforce baseline: don't allow reductions below start-of-phase baseline
+      const baseline = gameState.reinforcementBaseline?.[data.territoryId]
+      const current = territory.armies
+      if (typeof baseline === 'number') {
+        const allowedUndo = Math.max(0, current - baseline)
+        const requested = Math.abs(change)
+        const actual = Math.min(allowedUndo, requested)
+        territory.armies = Math.max(baseline, current - actual)
+        // Track history (negative)
+        const entry = {
+          playerId: data.playerId,
+          territoryId: data.territoryId,
+          armies: -actual,
+          ts: Date.now(),
+        }
+        gameState.reinforcementHistory = [...(gameState.reinforcementHistory ?? []), entry]
+      } else {
+        // If no baseline, do not apply negative change
+        // Keep territory armies unchanged
+      }
+    } else {
+      // Positive placement
+      territory.armies = Math.max(0, territory.armies + change)
+      const entry = {
+        playerId: data.playerId,
+        territoryId: data.territoryId,
+        armies: change,
+        ts: Date.now(),
+      }
+      gameState.reinforcementHistory = [...(gameState.reinforcementHistory ?? []), entry]
+    }
+
     await gameStateCache.setGameState(gameId, this.serializeGameState(gameState))
 
     return territory.armies
