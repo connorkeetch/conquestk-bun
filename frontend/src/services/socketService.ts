@@ -1,4 +1,5 @@
 import type {
+  BattleResultDelta,
   ClientToServerEvents,
   ConversationCreateAck,
   ConversationCreatePayload,
@@ -7,8 +8,10 @@ import type {
   GameDelta,
   MessageSendAck,
   MessageSendPayload,
+  PlayerDelta,
   ReceiptReadAck,
   ServerToClientEvents,
+  TerritoryDelta,
 } from '@shared/types'
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
@@ -37,7 +40,7 @@ import {
   removePlayerFromRoom,
   updateRoom,
 } from '../store/roomSlice'
-import { setConnectionStatus } from '../store/uiRoomSlice'
+import { setConnectionStatus, setDesyncDetected } from '../store/uiRoomSlice'
 import type { BattleResult, GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
@@ -265,6 +268,11 @@ class SocketService {
     // Delta update handler - efficient real-time updates
     this.socket.on('game-delta', (delta) => {
       const payload = delta as unknown as GameDelta
+      const state = store.getState()
+      const board = state.game.currentGame?.board ?? []
+      const hasTerritory = (id: string) => board.some((t) => t.id === id)
+      const hasPlayer = (id: string) =>
+        (state.game.currentGame?.players ?? []).some((p) => p.id === id)
       const currentUserId = store.getState().auth.user?.id
 
       // Handle turn notifications for phase changes
@@ -290,6 +298,32 @@ class SocketService {
         } else {
           audioService.playEffect('defeat')
         }
+      }
+
+      // Basic desync checks before applying
+      try {
+        if (payload.type === 'TERRITORY_UPDATE') {
+          const td = payload as TerritoryDelta
+          if (!hasTerritory(td.territoryId)) {
+            store.dispatch(setDesyncDetected(true))
+            return
+          }
+        } else if (payload.type === 'PLAYER_UPDATE') {
+          const pd = payload as PlayerDelta
+          if (!hasPlayer(pd.playerId)) {
+            store.dispatch(setDesyncDetected(true))
+            return
+          }
+        } else if (payload.type === 'BATTLE_RESULT') {
+          const br = (payload as BattleResultDelta).battleResult
+          if (!hasTerritory(br.fromTerritory.id) || !hasTerritory(br.toTerritory.id)) {
+            store.dispatch(setDesyncDetected(true))
+            return
+          }
+        }
+      } catch {
+        store.dispatch(setDesyncDetected(true))
+        return
       }
 
       // Apply delta to Redux store
