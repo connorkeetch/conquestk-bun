@@ -45,8 +45,29 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
   const canTrade = selected.length === 3 && isValidTriple(selected)
 
   // Compute valid sets: three-of-a-kind or all-different
+  const classifyPattern = (triple: number[]): 'three_of_a_kind' | 'one_of_each' | 'diamond_combo' => {
+    const metals = triple.map((i) => metalType(hand[i]))
+    const diamonds = metals.filter((m) => m === 'diamond').length
+    const cores = metals.filter((m) => m !== 'diamond')
+    const coreSet = new Set(cores)
+    if (diamonds > 0) return 'diamond_combo'
+    if (coreSet.size === 1 && cores.length === 3) return 'three_of_a_kind'
+    const needed = ['bronze', 'silver', 'gold']
+    const distinct = Array.from(coreSet)
+    if (distinct.length === 3 && needed.every((m) => distinct.includes(m))) return 'one_of_each'
+    // With diamonds wild we handled earlier; non‑diamond case falls through
+    return 'diamond_combo'
+  }
+
+  const labelForSet = (triple: number[]) => {
+    const pattern = classifyPattern(triple)
+    if (pattern === 'three_of_a_kind') return 'Three of a kind'
+    if (pattern === 'one_of_each') return 'One of each'
+    return 'Diamond combo (wild)'
+  }
+
   const validSets = useMemo(() => {
-    const sets: number[][] = []
+    const sets: Array<{ idx: number[]; label: string }> = []
     for (let i = 0; i < hand.length; i++) {
       for (let j = i + 1; j < hand.length; j++) {
         for (let k = j + 1; k < hand.length; k++) {
@@ -55,7 +76,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
         }
       }
     }
-    return sets
+    return sets.map((s) => ({ idx: s, label: labelForSet(s) }))
   }, [hand])
 
   const projection = useMemo(() => {
@@ -174,23 +195,24 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
             <div className="mt-3">
               <div className="text-xs text-muted mb-1">Valid sets:</div>
               <div className="flex flex-wrap gap-2">
-                {validSets.map((set, i) => (
+                {validSets.map((entry, i) => (
                   <button
                     key={`set-${i}`}
                     type="button"
                     className={`btn btn-ghost btn-xs ${
-                      selected.length === 3 && set.every((v) => selected.includes(v)) ? 'ring-1 ring-[color:var(--color-accent)]' : ''
+                      selected.length === 3 && entry.idx.every((v) => selected.includes(v)) ? 'ring-1 ring-[color:var(--color-accent)]' : ''
                     }`}
-                    onClick={() => setSelected(set)}
-                    title={`Select this valid set`}
+                    onClick={() => setSelected(entry.idx)}
+                    title={entry.label}
                   >
                     <span className="flex items-center gap-1">
-                      {set.map((idx) => (
+                      {entry.idx.map((idx) => (
                         <span key={`icon-${i}-${idx}`} className="w-4 h-4 flex items-center justify-center">
                           {iconFor(hand[idx])}
                         </span>
                       ))}
                     </span>
+                    <span className="ml-1 text-[10px] opacity-80">{entry.label}</span>
                   </button>
                 ))}
               </div>
