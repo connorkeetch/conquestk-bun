@@ -12,6 +12,8 @@ export interface UIRoomState {
   overlays: { continents: boolean; attackable: boolean; threat: boolean }
   connectionStatus: 'connected' | 'connecting' | 'disconnected'
   conquestOverlay?: { fromId: string; toId: string } | null
+  desyncDetected: boolean
+  resyncing: boolean
 }
 
 const initialState: UIRoomState = {
@@ -24,6 +26,8 @@ const initialState: UIRoomState = {
   overlays: { continents: false, attackable: false, threat: false },
   connectionStatus: 'connected',
   conquestOverlay: null,
+  desyncDetected: false,
+  resyncing: false,
 }
 
 const uiRoomSlice = createSlice({
@@ -78,6 +82,12 @@ const uiRoomSlice = createSlice({
     hideConquestOverlay(state) {
       state.conquestOverlay = null
     },
+    setDesyncDetected(state, action: PayloadAction<boolean>) {
+      state.desyncDetected = action.payload
+    },
+    setResyncing(state, action: PayloadAction<boolean>) {
+      state.resyncing = action.payload
+    },
     hydrateFromStorage(state) {
       try {
         const speed = localStorage.getItem('ui.animationSpeed') as AnimationSpeed | null
@@ -117,6 +127,8 @@ export const {
   setConnectionStatus,
   showConquestOverlay,
   hideConquestOverlay,
+  setDesyncDetected,
+  setResyncing,
   hydrateFromStorage,
 } = uiRoomSlice.actions
 
