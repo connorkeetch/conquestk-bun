@@ -716,6 +716,25 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
+    // Map ping: broadcast a transient ping marker
+    socket.on(
+      'ping:territory',
+      withErrorHandler(socket, 'ping:territory', async (data: { roomId: string; territoryId: string }) => {
+        if (!data || !data.roomId || !data.territoryId) throw new Error('Invalid ping data')
+        const userId = requireUserId(socket)
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) throw new Error('Not a member of this game')
+        const channel = getGameChannel(data.roomId)
+        io.to(channel).emit('ping:territory', {
+          roomId: data.roomId,
+          territoryId: data.territoryId,
+          userId,
+          username: socket.username ?? null,
+          createdAt: new Date().toISOString(),
+        })
+      }),
+    )
+
     socket.on('disconnect', () => {
       try {
         const userId = socket.userId

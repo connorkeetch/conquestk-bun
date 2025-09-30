@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
@@ -23,6 +23,7 @@ import { RiskGameMap } from './game/RiskGameMap'
 import { TerritoryInfoPanel } from './game/TerritoryInfoPanel'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
+import { socketService } from '@/services/socketService'
 
 export type { TerritoryDisplay, TerritoryDisplayMap }
 
@@ -45,6 +46,8 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
 
   const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
+  const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
+  const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
   const board = gameState?.board ?? []
   const players = gameState?.players ?? []
@@ -141,6 +144,18 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       }
 
       onTerritoryClick?.(territoryId)
+
+      // Double-tap/double-click detection for pings
+      const now = Date.now()
+      const last = lastClickRef.current
+      if (last && last.id === territoryId && now - last.ts < 350) {
+        if (roomId) {
+          socketService.emit('ping:territory', { roomId, territoryId })
+        }
+        lastClickRef.current = null
+      } else {
+        lastClickRef.current = { id: territoryId, ts: now }
+      }
     },
     [
       currentPhase,
@@ -148,6 +163,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       dispatch,
       gameState,
       onTerritoryClick,
+      roomId,
       selectedTerritory,
       territories,
       validTargets,

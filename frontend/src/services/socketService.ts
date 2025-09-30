@@ -509,6 +509,26 @@ class SocketService {
       store.dispatch(updateRoom(roomUpdate))
     })
 
+    // Map ping: show transient ping marker
+    this.socket.on('ping:territory', (data) => {
+      const payload = data as Parameters<ServerToClientEvents['ping:territory']>[0]
+      const id = `${payload.userId}:${payload.territoryId}:${payload.createdAt}`
+      try {
+        const { addPing } = require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+        store.dispatch(
+          addPing({
+            id,
+            territoryId: payload.territoryId,
+            userId: payload.userId,
+            username: payload.username ?? null,
+            ttlMs: 3000,
+          }),
+        )
+      } catch {
+        // best-effort; ignore if slice not available
+      }
+    })
+
     // Game-specific legacy events removed in favor of game-delta and phaseChanged
 
     this.socket.on('armiesDeployed', (data: unknown) => {
