@@ -8,7 +8,6 @@ interface ResponsiveMapContainerProps {
   showMinimap?: boolean
   backgroundImageUrl?: string
   focus?: { x: number; y: number } | null
-  storageKey?: string
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
 }
@@ -35,7 +34,6 @@ export default function ResponsiveMapContainer({
   showMinimap = true,
   backgroundImageUrl,
   focus = null,
-  storageKey,
   onSwipeLeft,
   onSwipeRight,
 }: ResponsiveMapContainerProps) {
@@ -88,28 +86,8 @@ export default function ResponsiveMapContainer({
     }
   }, [calculateScale])
 
-  // Hydrate zoom from storage
-  useEffect(() => {
-    if (!storageKey) return
-    try {
-      const raw = localStorage.getItem(`ui.zoom.${storageKey}`)
-      if (!raw) return
-      const z = Number.parseFloat(raw)
-      if (Number.isFinite(z) && z >= 0.5 && z <= 3) setZoom(z)
-    } catch {
-      // ignore storage errors
-    }
-  }, [storageKey])
-
-  // Persist zoom to storage
-  useEffect(() => {
-    if (!storageKey) return
-    try {
-      localStorage.setItem(`ui.zoom.${storageKey}`, String(zoom))
-    } catch {
-      // ignore storage errors
-    }
-  }, [storageKey, zoom])
+  // Don't persist zoom - always start at default 1.0 on page load
+  // (Removed zoom persistence to localStorage)
 
   // Compute displayed dimensions from baseScale and zoom
   const display = useMemo(() => {
@@ -148,9 +126,9 @@ export default function ResponsiveMapContainer({
       const relY = display.height > 0 ? contentY / display.height : 0
 
       const delta = e.deltaY
-      const step = delta > 0 ? -0.1 : 0.1
-      let nextZoom = Math.round((zoom + step) * 10) / 10
-      nextZoom = Math.max(0.5, Math.min(3, nextZoom))
+      const step = delta > 0 ? -0.05 : 0.05
+      let nextZoom = Math.round((zoom + step) * 100) / 100
+      nextZoom = Math.max(0.5, Math.min(2, nextZoom))
       if (nextZoom === zoom) return
 
       setZoom(nextZoom)
@@ -267,8 +245,8 @@ export default function ResponsiveMapContainer({
         e.preventDefault()
         const newDistance = getDistance(e.touches[0], e.touches[1])
         const scale = newDistance / pinchStartRef.current.distance
-        const newZoom = Math.min(3, Math.max(0.5, pinchStartRef.current.zoom * scale))
-        setZoom(Math.round(newZoom * 10) / 10)
+        const newZoom = Math.min(2, Math.max(0.5, pinchStartRef.current.zoom * scale))
+        setZoom(Math.round(newZoom * 100) / 100)
       } else if (e.touches.length === 1 && touchPanStartRef.current) {
         // Single finger pan
         const t = e.touches[0]
@@ -422,12 +400,12 @@ export default function ResponsiveMapContainer({
           </div>
         )}
 
-        {/* Zoom controls */}
-        <div className="absolute bottom-2 right-2 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
+        {/* Zoom controls - positioned outside map on desktop, bottom center on mobile */}
+        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 md:bottom-auto md:top-2 md:right-2 md:left-auto md:translate-x-0 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg z-10">
           <button
             type="button"
             className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
-            onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
+            onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.05) * 100) / 100))}
             title="Zoom out (Ctrl/Cmd + scroll or pinch)"
           >
             −
@@ -438,7 +416,7 @@ export default function ResponsiveMapContainer({
           <button
             type="button"
             className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
-            onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.1) * 10) / 10))}
+            onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.05) * 100) / 100))}
             title="Zoom in (Ctrl/Cmd + scroll or pinch)"
           >
             +
