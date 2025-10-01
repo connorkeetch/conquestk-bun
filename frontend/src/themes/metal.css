@@ -188,9 +188,13 @@
   [data-theme="metal"] body::before,
   [data-theme="metal"] body::after {
     /* Disable motion while keeping overlays visible */
+    /* biome-ignore lint/complexity/noImportantStyles: Force override of animation */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Ensure transforms are reset */
     transform: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Maintain centered background */
     background-position: center center !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Force compositor reset for perf */
     will-change: auto !important;
   }
 }

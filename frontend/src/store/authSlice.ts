@@ -59,7 +59,9 @@ export const login = createAsyncThunk(
               theme: response.user.preferences.theme,
             })
           }
-        } catch {}
+        } catch {
+          // ignore theme debug logging issues (e.g., localStorage unavailable)
+        }
       }
 
       return response
@@ -117,7 +119,9 @@ export const checkAuth = createAsyncThunk(
               theme: response.user.preferences.theme,
             })
           }
-        } catch {}
+        } catch {
+          // ignore theme debug logging issues (e.g., localStorage unavailable)
+        }
       }
 
       return { user: response.user, token }

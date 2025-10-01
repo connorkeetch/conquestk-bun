@@ -214,7 +214,9 @@ export function applyTheme(themeId: string): void {
   // Update dynamic overlays for select themes
   try {
     updateDynamicOverlay(normalizedTheme)
-  } catch {}
+  } catch {
+    // ignore overlay update errors (non-browser or observer issues)
+  }
 }
 
 export function getStoredTheme(): ThemeId {
@@ -264,6 +266,7 @@ function setThemeCookie(themeId: string) {
   const sameSite = '; SameSite=Lax'
   // Short TTL (3 days)
   const expires = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toUTCString()
+  /* biome-ignore lint/suspicious/noDocumentCookie: Use cookie for first-paint theme fallback */
   document.cookie = `ck_theme=${encodeURIComponent(themeId)}; Expires=${expires}; Path=/${domain}${sameSite}${secure}`
 }
 
@@ -271,7 +274,9 @@ function isThemeDebugEnabled(): boolean {
   try {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('themeDebug') === '1')
       return true
-  } catch {}
+  } catch {
+    // ignore localStorage access in non-browser environments
+  }
   try {
     const value = `; ${document.cookie}`
     const parts = value.split('; ck_theme_debug=')
@@ -279,7 +284,9 @@ function isThemeDebugEnabled(): boolean {
       const v = parts.pop()?.split(';').shift()
       if (v === '1') return true
     }
-  } catch {}
+  } catch {
+    // ignore cookie parsing errors (non-browser)
+  }
   // Feature flag can also enable logs globally
   try {
     return featureFlagService.isEnabled(FEATURE_FLAGS.UI_THEME_DEBUG_LOGS)
@@ -291,8 +298,11 @@ function isThemeDebugEnabled(): boolean {
 function themeDebugLog(message: string, data?: unknown) {
   if (!isThemeDebugEnabled()) return
   try {
+    /* biome-ignore lint/suspicious/noConsole: Debug logging gated by isThemeDebugEnabled */
     console.info('[theme]', message, data ?? '')
-  } catch {}
+  } catch {
+    // ignore console issues (e.g., non-interactive env)
+  }
 }
 
 // ================== Dynamic Overlay Generator ==================
@@ -308,10 +318,7 @@ function ensureOverlayEl(): HTMLStyleElement {
 }
 
 function motionEnabled(): boolean {
-  const reduced =
-    typeof window !== 'undefined' &&
-    window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced = window?.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   if (reduced) return false
   const attr = document.body.getAttribute('data-background-motion')
   return attr !== 'off'
@@ -359,7 +366,9 @@ function updateDynamicOverlay(themeId: ThemeId) {
         const currentTheme = document.documentElement.getAttribute('data-theme') as ThemeId | null
         if (currentTheme) updateDynamicOverlay(normalizeThemeId(currentTheme))
       })
-    } catch {}
+    } catch {
+      // ignore media query listener setup failures
+    }
   }
 }
 
@@ -378,7 +387,8 @@ function generateHalloweenOverlayCSS(withMotion: boolean): string {
     const sum = weights.reduce((a, b) => a + b, 0)
     let r = Math.random() * sum
     for (let i = 0; i < shapes.length; i++) {
-      if ((r -= weights[i]) < 0) return shapes[i]
+      r -= weights[i]
+      if (r < 0) return shapes[i]
     }
     return shapes[0]
   }
@@ -454,7 +464,8 @@ function generateCheeseOverlayCSS(withMotion: boolean): string {
     const sum = weights.reduce((a, b) => a + b, 0)
     let r = Math.random() * sum
     for (let i = 0; i < shapes.length; i++) {
-      if ((r -= weights[i]) < 0) return shapes[i]
+      r -= weights[i]
+      if (r < 0) return shapes[i]
     }
     return shapes[0]
   }
