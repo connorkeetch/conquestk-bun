@@ -1430,52 +1430,8 @@ export default function GameRoom() {
 
       {/* No ready errors expected */}
 
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-        {/* Left rail: Player Stats (desktop) */}
-        <div className="hidden lg:flex lg:flex-col lg:gap-6 lg:w-80 lg:shrink-0">
-          {currentGame ? (
-            <PlayerStatsTable
-              players={currentGame.players || []}
-              currentPlayerId={currentGame.currentPlayer}
-              territories={Object.fromEntries(
-                (currentGame.board || []).map((t) => [t.id, { owner: t.owner }]),
-              )}
-            />
-          ) : (
-            <div className="panel space-y-3">
-              <h3 className="text-sm font-semibold text-[color:var(--heading)]">
-                Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
-              </h3>
-              <ul className="space-y-1">
-                {currentRoom.players?.map((player) => {
-                  const rawColor =
-                    ((player as { selected_color?: string | null }).selected_color as
-                      | string
-                      | null) ||
-                    (player.preferred_color as string | null) ||
-                    null
-                  const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
-                  return (
-                    <li
-                      key={player.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[color:var(--surface-2)]"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full border border-[color:var(--panel-border)] shrink-0"
-                        style={{ backgroundColor: colorValue }}
-                      />
-                      <span className="text-sm text-[color:var(--text)] truncate">
-                        {player.username}
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        {/* Game Board - center, flexible width */}
+      <div className="flex flex-col gap-6">
+        {/* Game Board - full width */}
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="panel flex-1 p-0 overflow-hidden">
             {currentGame ? (
@@ -1571,10 +1527,55 @@ export default function GameRoom() {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Chat & Log panel - below the map on desktop */}
+        {/* Player Stats & Chat Row - below map */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Player Stats */}
+          {currentGame ? (
+            <PlayerStatsTable
+              players={currentGame.players || []}
+              currentPlayerId={currentGame.currentPlayer}
+              territories={Object.fromEntries(
+                (currentGame.board || []).map((t) => [t.id, { owner: t.owner }]),
+              )}
+            />
+          ) : (
+            <div className="panel space-y-3">
+              <h3 className="text-sm font-semibold text-[color:var(--heading)]">
+                Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
+              </h3>
+              <ul className="space-y-1">
+                {currentRoom.players?.map((player) => {
+                  const rawColor =
+                    ((player as { selected_color?: string | null }).selected_color as
+                      | string
+                      | null) ||
+                    (player.preferred_color as string | null) ||
+                    null
+                  const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
+                  return (
+                    <li
+                      key={player.id}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[color:var(--surface-2)]"
+                    >
+                      <div
+                        className="w-3 h-3 rounded-full border border-[color:var(--panel-border)] shrink-0"
+                        style={{ backgroundColor: colorValue }}
+                      />
+                      <span className="text-sm text-[color:var(--text)] truncate">
+                        {player.username}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
+          {/* Chat & Log panel */}
           {currentGame && (
-            <div className="hidden lg:block panel p-0 overflow-hidden mt-6 shrink-0">
+            <div className="panel p-0 overflow-hidden shrink-0">
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
                 <button
