@@ -21,6 +21,8 @@ interface User {
   premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise'
   vipReason?: string
   vipGrantedAt?: string
+  vipGrantedBy?: string
+  vipGrantedByName?: string
   premiumExpiresAt?: string
   isBetaUser?: boolean
   emailVerified?: boolean
@@ -380,7 +382,8 @@ const AdminUsers: React.FC = () => {
       vipNotes.push(`Reason: ${selectedUser.vipReason}.`)
     }
     if (selectedUser.vipGrantedAt) {
-      vipNotes.push(`Granted ${new Date(selectedUser.vipGrantedAt).toLocaleString()}`)
+      const by = selectedUser.vipGrantedByName ? ` by ${selectedUser.vipGrantedByName}` : ''
+      vipNotes.push(`Granted${by} ${new Date(selectedUser.vipGrantedAt).toLocaleString()}`)
     }
 
     return (

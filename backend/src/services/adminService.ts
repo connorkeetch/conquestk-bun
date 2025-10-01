@@ -2,7 +2,6 @@ import { validate as uuidValidate } from 'uuid'
 import { getClient, query } from '../config/database'
 import { logger } from '../utils/logger'
 import { featureFlagService } from './featureFlagService'
-import { mapService } from './mapService'
 
 const domainPermissionMap: Record<string, string[]> = {
   users: ['users.*', 'user_management', 'system_admin'],
@@ -103,6 +102,8 @@ export interface AdminUserSummary {
   isVip: boolean
   vipReason?: string | null
   vipGrantedAt?: Date | string | null
+  vipGrantedBy?: string | null
+  vipGrantedByName?: string | null
   premiumTier: string
   premiumExpiresAt?: Date | string | null
   gamesPlayed: number
@@ -139,6 +140,8 @@ type AdminUserQueryRow = {
   isVip: boolean | null
   vipReason: string | null
   vipGrantedAt: Date | string | null
+  vipGrantedBy: string | null
+  vipGrantedByName: string | null
   premiumTier: string | null
   premiumExpiresAt: Date | string | null
   gamesPlayed: string | number | null
@@ -149,16 +152,7 @@ type AdminUserQueryRow = {
   timezone: string | null
 }
 
-type ContentApprovalRow = {
-  id: string
-  content_type: string
-  content_id: string
-  content_name: string | null
-  submitter_id: string
-  submitter_username: string
-  status: string
-  submitted_at: Date | string
-}
+// ContentApprovalRow type removed (unused)
 
 export class AdminService {
   // ============= PERMISSION CHECKING =============
@@ -326,6 +320,8 @@ export class AdminService {
         u.is_vip as "isVip", 
         u.vip_reason as "vipReason",
         u.vip_granted_at as "vipGrantedAt",
+        u.vip_granted_by as "vipGrantedBy",
+        ug.username as "vipGrantedByName",
         u.premium_tier as "premiumTier",
         u.premium_expires_at as "premiumExpiresAt",
         u.is_beta_user as "isBetaUser",
@@ -342,9 +338,10 @@ export class AdminService {
       LEFT JOIN user_account_status uas ON u.id = uas.user_id
       LEFT JOIN user_admin_roles uar ON u.id = uar.user_id AND uar.is_active = TRUE
       LEFT JOIN admin_roles ar ON uar.role_id = ar.id
+      LEFT JOIN users ug ON u.vip_granted_by = ug.id
       ${whereClause}
       GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, 
-               u.is_admin, u.is_vip, u.vip_reason, u.vip_granted_at, 
+               u.is_admin, u.is_vip, u.vip_reason, u.vip_granted_at, u.vip_granted_by, ug.username,
                u.premium_tier, u.premium_expires_at,
                u.is_beta_user, u.email_verified, u.preferred_language, u.timezone,
                ps.games_played,
@@ -370,6 +367,8 @@ export class AdminService {
       isVip: row.isVip || false,
       vipReason: row.vipReason,
       vipGrantedAt: row.vipGrantedAt,
+      vipGrantedBy: row.vipGrantedBy,
+      vipGrantedByName: row.vipGrantedByName,
       premiumTier: row.premiumTier || 'free',
       premiumExpiresAt: row.premiumExpiresAt,
       gamesPlayed: Number.parseInt(String(row.gamesPlayed ?? '0'), 10),
@@ -459,16 +458,16 @@ export class AdminService {
     isVip: boolean,
     reason?: string,
   ): Promise<void> {
-    const updateData = {
-      is_vip: isVip,
-      vip_reason: isVip ? reason : null,
-      vip_granted_at: isVip ? new Date().toISOString() : null,
+    // Use database-side functions to ensure vip_granted_by is set correctly
+    if (isVip) {
+      await query('SELECT grant_vip_status($1, $2, $3) as ok', [
+        targetUserId,
+        adminUserId,
+        reason ?? null,
+      ])
+    } else {
+      await query('SELECT revoke_vip_status($1) as ok', [targetUserId])
     }
-
-    await query(
-      'UPDATE users SET is_vip = $1, vip_reason = $2, vip_granted_at = $3 WHERE id = $4',
-      [updateData.is_vip, updateData.vip_reason, updateData.vip_granted_at, targetUserId],
-    )
 
     await this.logAdminAction(
       adminUserId,
@@ -488,7 +487,35 @@ export class AdminService {
     adminUserId: string,
     isAdmin: boolean,
   ): Promise<void> {
-    await query('UPDATE users SET is_admin = $1 WHERE id = $2', [isAdmin, targetUserId])
+    if (isAdmin) {
+      // Ensure super_admin role exists
+      let roleId: string | undefined
+      const roleRes = await query<{ id: string }>(
+        `SELECT id FROM admin_roles WHERE name = 'super_admin' LIMIT 1`,
+      )
+      if (roleRes.rows[0]?.id) {
+        roleId = roleRes.rows[0].id
+      } else {
+        const createRes = await query<{ id: string }>(
+          `INSERT INTO admin_roles (name, description, permissions, is_super_admin)
+           VALUES ('super_admin', 'Full system access', ARRAY['*'], true)
+           RETURNING id`,
+        )
+        roleId = createRes.rows[0].id
+      }
+
+      if (!roleId) throw new Error('Failed to resolve super_admin role')
+      await this.assignAdminRole(targetUserId, roleId, adminUserId)
+    } else {
+      // Remove super_admin role if present
+      const roleRes = await query<{ id: string }>(
+        `SELECT id FROM admin_roles WHERE name = 'super_admin' LIMIT 1`,
+      )
+      if (roleRes.rows[0]?.id) {
+        await this.removeAdminRole(targetUserId, roleRes.rows[0].id, adminUserId)
+      }
+      // No direct toggle of users.is_admin; trigger will recompute from roles
+    }
 
     await this.logAdminAction(
       adminUserId,
