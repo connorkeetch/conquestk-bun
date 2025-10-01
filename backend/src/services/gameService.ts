@@ -609,8 +609,31 @@ export class GameService {
   }
 
   async getGameState(roomId: string): Promise<GameState | null> {
-    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
-    if (!cachedState) return null
+    // Try Redis cache first
+    let cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
+
+    // If not in cache, try to load from database
+    if (!cachedState) {
+      try {
+        const dbResult = await query<{ game_data: string }>(
+          'SELECT game_data FROM game_states WHERE room_id = $1',
+          [roomId]
+        )
+
+        if (dbResult.rows.length > 0 && dbResult.rows[0].game_data) {
+          cachedState = JSON.parse(dbResult.rows[0].game_data) as SerializedGameState
+
+          // Repopulate cache for next time
+          await gameStateCache.setGameState(roomId, cachedState)
+          logger.info('Loaded game state from database and repopulated cache', { roomId })
+        } else {
+          return null
+        }
+      } catch (error) {
+        logger.error('Failed to load game state from database', { roomId, error })
+        return null
+      }
+    }
 
     const hydratedState = this.hydrateGameState(cachedState)
 
