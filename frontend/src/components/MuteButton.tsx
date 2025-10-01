@@ -21,7 +21,7 @@ export default function MuteButton() {
       onClick={handleToggleMute}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed top-4 right-4 z-50 p-3 bg-[color:var(--panel-bg)] hover:bg-[color:var(--hover-bg)] backdrop-blur-sm border border-[color:var(--panel-border)] rounded-full transition-all hover:scale-110 group"
+      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 p-3 bg-[color:var(--panel-bg)] hover:bg-[color:var(--hover-bg)]/90 backdrop-blur-sm border border-[color:var(--panel-border)] rounded-full transition-all hover:scale-110 group shadow"
       title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
       aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
     >
