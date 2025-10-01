@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- PostgreSQL database dump
 --
 
-\restrict bO8vj6y8B3Isr9gsXXGgeg5wV5vr3ZQ0TRHpElb7bgsAMoTPAABjxLe18Cl68fX
+\restrict J256yQQdQ0dFIDGIP1bNae9LdFrJQlyc6PMIW6NsgmHcyl93deHeHe0hiM1Arz5
 
 -- Dumped from database version 17.6 (Debian 17.6-2.pgdg13+1)
 -- Dumped by pg_dump version 17.6 (Ubuntu 17.6-1.pgdg24.04+1)
@@ -25,7 +25,6 @@ SET row_security = off;
 
 ALTER TABLE IF EXISTS ONLY "public"."web_push_subscriptions" DROP CONSTRAINT IF EXISTS "web_push_subscriptions_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."users" DROP CONSTRAINT IF EXISTS "users_vip_granted_by_fkey";
-ALTER TABLE IF EXISTS ONLY "public"."user_terms_acceptance" DROP CONSTRAINT IF EXISTS "user_terms_acceptance_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_sessions" DROP CONSTRAINT IF EXISTS "user_sessions_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_reports" DROP CONSTRAINT IF EXISTS "user_reports_reporter_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_reports" DROP CONSTRAINT IF EXISTS "user_reports_reported_user_id_fkey";
@@ -35,7 +34,6 @@ ALTER TABLE IF EXISTS ONLY "public"."user_feature_flags" DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY "public"."user_clan_preferences" DROP CONSTRAINT IF EXISTS "user_clan_preferences_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_blocks" DROP CONSTRAINT IF EXISTS "user_blocks_blocker_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_blocks" DROP CONSTRAINT IF EXISTS "user_blocks_blocked_id_fkey";
-ALTER TABLE IF EXISTS ONLY "public"."user_behavior_patterns" DROP CONSTRAINT IF EXISTS "user_behavior_patterns_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_bans" DROP CONSTRAINT IF EXISTS "user_bans_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_bans" DROP CONSTRAINT IF EXISTS "user_bans_admin_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_admin_roles" DROP CONSTRAINT IF EXISTS "user_admin_roles_user_id_fkey";
@@ -56,7 +54,6 @@ ALTER TABLE IF EXISTS ONLY "public"."player_game_results" DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY "public"."player_game_results" DROP CONSTRAINT IF EXISTS "player_game_results_room_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."password_reset_tokens" DROP CONSTRAINT IF EXISTS "password_reset_tokens_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."notifications" DROP CONSTRAINT IF EXISTS "notifications_user_id_fkey";
-ALTER TABLE IF EXISTS ONLY "public"."matchmaking_queue" DROP CONSTRAINT IF EXISTS "matchmaking_queue_user_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."maps" DROP CONSTRAINT IF EXISTS "maps_reviewed_by_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."maps" DROP CONSTRAINT IF EXISTS "maps_parent_map_id_fkey";
 ALTER TABLE IF EXISTS ONLY "public"."maps" DROP CONSTRAINT IF EXISTS "maps_created_by_fkey";
@@ -150,7 +147,6 @@ DROP TRIGGER IF EXISTS "web_push_subscriptions_updated_at" ON "public"."web_push
 DROP TRIGGER IF EXISTS "user_preferences_updated_at" ON "public"."user_preferences";
 DROP TRIGGER IF EXISTS "update_users_updated_at" ON "public"."users";
 DROP TRIGGER IF EXISTS "update_user_preferences_updated_at" ON "public"."user_preferences";
-DROP TRIGGER IF EXISTS "update_user_behavior_patterns_updated_at" ON "public"."user_behavior_patterns";
 DROP TRIGGER IF EXISTS "update_player_stats_updated_at" ON "public"."player_stats";
 DROP TRIGGER IF EXISTS "update_maps_updated_at" ON "public"."maps";
 DROP TRIGGER IF EXISTS "update_map_ratings_updated_at" ON "public"."map_ratings";
@@ -189,7 +185,6 @@ DROP INDEX IF EXISTS "public"."idx_users_is_vip";
 DROP INDEX IF EXISTS "public"."idx_users_is_admin";
 DROP INDEX IF EXISTS "public"."idx_users_email";
 DROP INDEX IF EXISTS "public"."idx_users_created_at";
-DROP INDEX IF EXISTS "public"."idx_user_terms_acceptance_unique";
 DROP INDEX IF EXISTS "public"."idx_user_sessions_user_id";
 DROP INDEX IF EXISTS "public"."idx_user_sessions_started_at";
 DROP INDEX IF EXISTS "public"."idx_user_sessions_session_data_gin";
@@ -206,10 +201,6 @@ DROP INDEX IF EXISTS "public"."idx_user_feature_flags_flag_name";
 DROP INDEX IF EXISTS "public"."idx_user_clan_preferences_notifications";
 DROP INDEX IF EXISTS "public"."idx_user_blocks_blocker";
 DROP INDEX IF EXISTS "public"."idx_user_blocks_blocked";
-DROP INDEX IF EXISTS "public"."idx_user_behavior_patterns_user_id";
-DROP INDEX IF EXISTS "public"."idx_user_behavior_patterns_pattern_type";
-DROP INDEX IF EXISTS "public"."idx_user_behavior_patterns_pattern_data_gin";
-DROP INDEX IF EXISTS "public"."idx_user_behavior_patterns_confidence_score";
 DROP INDEX IF EXISTS "public"."idx_user_bans_user_id";
 DROP INDEX IF EXISTS "public"."idx_user_bans_admin_id";
 DROP INDEX IF EXISTS "public"."idx_user_admin_roles_user_id";
@@ -247,11 +238,6 @@ DROP INDEX IF EXISTS "public"."idx_notifications_user_id";
 DROP INDEX IF EXISTS "public"."idx_notifications_user_created_at";
 DROP INDEX IF EXISTS "public"."idx_notifications_data_gin";
 DROP INDEX IF EXISTS "public"."idx_notifications_created_at";
-DROP INDEX IF EXISTS "public"."idx_matchmaking_queue_skill_rating";
-DROP INDEX IF EXISTS "public"."idx_matchmaking_queue_queue_type";
-DROP INDEX IF EXISTS "public"."idx_matchmaking_queue_priority_score";
-DROP INDEX IF EXISTS "public"."idx_matchmaking_queue_preferences_gin";
-DROP INDEX IF EXISTS "public"."idx_matchmaking_queue_joined_at";
 DROP INDEX IF EXISTS "public"."idx_maps_submitted_at";
 DROP INDEX IF EXISTS "public"."idx_maps_status";
 DROP INDEX IF EXISTS "public"."idx_maps_reviewed_at";
@@ -387,8 +373,6 @@ ALTER TABLE IF EXISTS ONLY "public"."web_push_subscriptions" DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS ONLY "public"."users" DROP CONSTRAINT IF EXISTS "users_username_key";
 ALTER TABLE IF EXISTS ONLY "public"."users" DROP CONSTRAINT IF EXISTS "users_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."users" DROP CONSTRAINT IF EXISTS "users_email_key";
-ALTER TABLE IF EXISTS ONLY "public"."user_terms_acceptance" DROP CONSTRAINT IF EXISTS "user_terms_acceptance_user_id_feature_type_terms_version_key";
-ALTER TABLE IF EXISTS ONLY "public"."user_terms_acceptance" DROP CONSTRAINT IF EXISTS "user_terms_acceptance_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_sessions" DROP CONSTRAINT IF EXISTS "user_sessions_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_reports" DROP CONSTRAINT IF EXISTS "user_reports_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_preferences" DROP CONSTRAINT IF EXISTS "user_preferences_user_id_key";
@@ -397,7 +381,6 @@ ALTER TABLE IF EXISTS ONLY "public"."user_feature_flags" DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY "public"."user_clan_preferences" DROP CONSTRAINT IF EXISTS "user_clan_preferences_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_blocks" DROP CONSTRAINT IF EXISTS "user_blocks_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_blocks" DROP CONSTRAINT IF EXISTS "user_blocks_blocker_id_blocked_id_key";
-ALTER TABLE IF EXISTS ONLY "public"."user_behavior_patterns" DROP CONSTRAINT IF EXISTS "user_behavior_patterns_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_bans" DROP CONSTRAINT IF EXISTS "user_bans_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."user_admin_roles" DROP CONSTRAINT IF EXISTS "user_admin_roles_user_id_role_id_key";
 ALTER TABLE IF EXISTS ONLY "public"."user_admin_roles" DROP CONSTRAINT IF EXISTS "user_admin_roles_pkey";
@@ -424,7 +407,6 @@ ALTER TABLE IF EXISTS ONLY "public"."player_game_results" DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY "public"."password_reset_tokens" DROP CONSTRAINT IF EXISTS "password_reset_tokens_token_key";
 ALTER TABLE IF EXISTS ONLY "public"."password_reset_tokens" DROP CONSTRAINT IF EXISTS "password_reset_tokens_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."notifications" DROP CONSTRAINT IF EXISTS "notifications_pkey";
-ALTER TABLE IF EXISTS ONLY "public"."matchmaking_queue" DROP CONSTRAINT IF EXISTS "matchmaking_queue_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."maps" DROP CONSTRAINT IF EXISTS "maps_pkey";
 ALTER TABLE IF EXISTS ONLY "public"."maps" DROP CONSTRAINT IF EXISTS "maps_name_key";
 ALTER TABLE IF EXISTS ONLY "public"."map_versions" DROP CONSTRAINT IF EXISTS "map_versions_pkey";
@@ -490,7 +472,6 @@ ALTER TABLE IF EXISTS ONLY "public"."achievements" DROP CONSTRAINT IF EXISTS "ac
 ALTER TABLE IF EXISTS "public"."web_push_subscriptions" ALTER COLUMN "id" DROP DEFAULT;
 DROP SEQUENCE IF EXISTS "public"."web_push_subscriptions_id_seq";
 DROP TABLE IF EXISTS "public"."web_push_subscriptions";
-DROP TABLE IF EXISTS "public"."user_terms_acceptance";
 DROP TABLE IF EXISTS "public"."user_sessions";
 DROP TABLE IF EXISTS "public"."user_reports";
 DROP VIEW IF EXISTS "public"."user_messaging_settings";
@@ -498,7 +479,6 @@ DROP TABLE IF EXISTS "public"."user_preferences";
 DROP TABLE IF EXISTS "public"."user_feature_flags";
 DROP TABLE IF EXISTS "public"."user_clan_preferences";
 DROP TABLE IF EXISTS "public"."user_blocks";
-DROP TABLE IF EXISTS "public"."user_behavior_patterns";
 DROP TABLE IF EXISTS "public"."user_bans";
 DROP TABLE IF EXISTS "public"."user_admin_roles";
 DROP TABLE IF EXISTS "public"."user_achievements";
@@ -510,7 +490,6 @@ DROP TABLE IF EXISTS "public"."rating_history";
 DROP TABLE IF EXISTS "public"."player_game_results";
 DROP TABLE IF EXISTS "public"."password_reset_tokens";
 DROP TABLE IF EXISTS "public"."notifications";
-DROP TABLE IF EXISTS "public"."matchmaking_queue";
 DROP TABLE IF EXISTS "public"."map_versions";
 DROP TABLE IF EXISTS "public"."map_territory_modifiers";
 DROP TABLE IF EXISTS "public"."map_territories";
@@ -1992,25 +1971,6 @@ CREATE TABLE "public"."map_versions" (
 
 
 --
--- Name: matchmaking_queue; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE "public"."matchmaking_queue" (
-    "id" "uuid" DEFAULT "public"."uuid_generate_v4"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "queue_type" character varying(50) NOT NULL,
-    "preferences" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
-    "skill_rating" integer NOT NULL,
-    "joined_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "estimated_wait_time" integer,
-    "priority_score" integer DEFAULT 100 NOT NULL,
-    "region" character varying(10),
-    CONSTRAINT "matchmaking_queue_priority_range" CHECK ((("priority_score" >= 1) AND ("priority_score" <= 1000))),
-    CONSTRAINT "matchmaking_queue_type_check" CHECK ((("queue_type")::"text" = ANY ((ARRAY['ranked'::character varying, 'casual'::character varying, 'tournament'::character varying, 'custom'::character varying])::"text"[])))
-);
-
-
---
 -- Name: notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2188,25 +2148,6 @@ CREATE TABLE "public"."user_bans" (
 
 
 --
--- Name: user_behavior_patterns; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE "public"."user_behavior_patterns" (
-    "id" "uuid" DEFAULT "public"."uuid_generate_v4"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "pattern_type" character varying(50) NOT NULL,
-    "pattern_data" "jsonb" NOT NULL,
-    "confidence_score" numeric(3,2) DEFAULT 0.0,
-    "generated_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "expires_at" timestamp without time zone,
-    "created_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updated_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT "behavior_patterns_confidence_range" CHECK ((("confidence_score" >= 0.0) AND ("confidence_score" <= 1.0))),
-    CONSTRAINT "behavior_patterns_type_check" CHECK ((("pattern_type")::"text" = ANY ((ARRAY['playstyle'::character varying, 'skill_trend'::character varying, 'churn_risk'::character varying, 'engagement_level'::character varying, 'spending_pattern'::character varying])::"text"[])))
-);
-
-
---
 -- Name: user_blocks; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2332,21 +2273,6 @@ CREATE TABLE "public"."user_sessions" (
     "device_info" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "session_data" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     CONSTRAINT "user_sessions_duration_positive" CHECK ((("duration_seconds" IS NULL) OR ("duration_seconds" >= 0)))
-);
-
-
---
--- Name: user_terms_acceptance; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE "public"."user_terms_acceptance" (
-    "id" "uuid" DEFAULT "public"."uuid_generate_v4"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "feature_type" character varying(50) NOT NULL,
-    "terms_version" character varying(20) NOT NULL,
-    "accepted_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "ip_address" "inet",
-    CONSTRAINT "terms_feature_type_check" CHECK ((("feature_type")::"text" = ANY ((ARRAY['map_creation'::character varying, 'data_processing'::character varying, 'community_guidelines'::character varying])::"text"[])))
 );
 
 
@@ -2894,14 +2820,6 @@ ALTER TABLE ONLY "public"."maps"
 
 
 --
--- Name: matchmaking_queue matchmaking_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."matchmaking_queue"
-    ADD CONSTRAINT "matchmaking_queue_pkey" PRIMARY KEY ("id");
-
-
---
 -- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3110,14 +3028,6 @@ ALTER TABLE ONLY "public"."user_bans"
 
 
 --
--- Name: user_behavior_patterns user_behavior_patterns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_behavior_patterns"
-    ADD CONSTRAINT "user_behavior_patterns_pkey" PRIMARY KEY ("id");
-
-
---
 -- Name: user_blocks user_blocks_blocker_id_blocked_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3179,22 +3089,6 @@ ALTER TABLE ONLY "public"."user_reports"
 
 ALTER TABLE ONLY "public"."user_sessions"
     ADD CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("id");
-
-
---
--- Name: user_terms_acceptance user_terms_acceptance_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_terms_acceptance"
-    ADD CONSTRAINT "user_terms_acceptance_pkey" PRIMARY KEY ("id");
-
-
---
--- Name: user_terms_acceptance user_terms_acceptance_user_id_feature_type_terms_version_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_terms_acceptance"
-    ADD CONSTRAINT "user_terms_acceptance_user_id_feature_type_terms_version_key" UNIQUE ("user_id", "feature_type", "terms_version");
 
 
 --
@@ -4147,41 +4041,6 @@ CREATE INDEX "idx_maps_submitted_at" ON "public"."maps" USING "btree" ("submitte
 
 
 --
--- Name: idx_matchmaking_queue_joined_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_matchmaking_queue_joined_at" ON "public"."matchmaking_queue" USING "btree" ("joined_at");
-
-
---
--- Name: idx_matchmaking_queue_preferences_gin; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_matchmaking_queue_preferences_gin" ON "public"."matchmaking_queue" USING "gin" ("preferences");
-
-
---
--- Name: idx_matchmaking_queue_priority_score; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_matchmaking_queue_priority_score" ON "public"."matchmaking_queue" USING "btree" ("priority_score" DESC);
-
-
---
--- Name: idx_matchmaking_queue_queue_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_matchmaking_queue_queue_type" ON "public"."matchmaking_queue" USING "btree" ("queue_type");
-
-
---
--- Name: idx_matchmaking_queue_skill_rating; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_matchmaking_queue_skill_rating" ON "public"."matchmaking_queue" USING "btree" ("skill_rating");
-
-
---
 -- Name: idx_notifications_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4441,34 +4300,6 @@ CREATE INDEX "idx_user_bans_user_id" ON "public"."user_bans" USING "btree" ("use
 
 
 --
--- Name: idx_user_behavior_patterns_confidence_score; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_user_behavior_patterns_confidence_score" ON "public"."user_behavior_patterns" USING "btree" ("confidence_score" DESC);
-
-
---
--- Name: idx_user_behavior_patterns_pattern_data_gin; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_user_behavior_patterns_pattern_data_gin" ON "public"."user_behavior_patterns" USING "gin" ("pattern_data");
-
-
---
--- Name: idx_user_behavior_patterns_pattern_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_user_behavior_patterns_pattern_type" ON "public"."user_behavior_patterns" USING "btree" ("pattern_type");
-
-
---
--- Name: idx_user_behavior_patterns_user_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_user_behavior_patterns_user_id" ON "public"."user_behavior_patterns" USING "btree" ("user_id");
-
-
---
 -- Name: idx_user_blocks_blocked; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4578,13 +4409,6 @@ CREATE INDEX "idx_user_sessions_started_at" ON "public"."user_sessions" USING "b
 --
 
 CREATE INDEX "idx_user_sessions_user_id" ON "public"."user_sessions" USING "btree" ("user_id");
-
-
---
--- Name: idx_user_terms_acceptance_unique; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX "idx_user_terms_acceptance_unique" ON "public"."user_terms_acceptance" USING "btree" ("user_id", "feature_type", "terms_version");
 
 
 --
@@ -4851,13 +4675,6 @@ CREATE TRIGGER "update_maps_updated_at" BEFORE UPDATE ON "public"."maps" FOR EAC
 --
 
 CREATE TRIGGER "update_player_stats_updated_at" BEFORE UPDATE ON "public"."player_stats" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
-
-
---
--- Name: user_behavior_patterns update_user_behavior_patterns_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER "update_user_behavior_patterns_updated_at" BEFORE UPDATE ON "public"."user_behavior_patterns" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
 --
@@ -5601,14 +5418,6 @@ ALTER TABLE ONLY "public"."maps"
 
 
 --
--- Name: matchmaking_queue matchmaking_queue_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."matchmaking_queue"
-    ADD CONSTRAINT "matchmaking_queue_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
-
-
---
 -- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5769,14 +5578,6 @@ ALTER TABLE ONLY "public"."user_bans"
 
 
 --
--- Name: user_behavior_patterns user_behavior_patterns_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_behavior_patterns"
-    ADD CONSTRAINT "user_behavior_patterns_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
-
-
---
 -- Name: user_blocks user_blocks_blocked_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5849,14 +5650,6 @@ ALTER TABLE ONLY "public"."user_sessions"
 
 
 --
--- Name: user_terms_acceptance user_terms_acceptance_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_terms_acceptance"
-    ADD CONSTRAINT "user_terms_acceptance_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
-
-
---
 -- Name: users users_vip_granted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5876,5 +5669,5 @@ ALTER TABLE ONLY "public"."web_push_subscriptions"
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bO8vj6y8B3Isr9gsXXGgeg5wV5vr3ZQ0TRHpElb7bgsAMoTPAABjxLe18Cl68fX
+\unrestrict J256yQQdQ0dFIDGIP1bNae9LdFrJQlyc6PMIW6NsgmHcyl93deHeHe0hiM1Arz5
 
