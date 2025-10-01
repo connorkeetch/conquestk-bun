@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { getColorValue } from '@/constants/colors'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { type AdminGame, adminService } from '../services/adminService'
 
@@ -355,7 +356,7 @@ export default function AdminGames() {
                           >
                             <div
                               className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: player.color }}
+                              style={{ backgroundColor: getColorValue(player.color) }}
                             />
                             <span>{player.username}</span>
                             <span className="text-muted">

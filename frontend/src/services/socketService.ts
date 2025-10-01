@@ -27,6 +27,7 @@ import {
   setReinforcementArmies,
   updateGameState,
   updateTerritory,
+  fetchGameState,
 } from '../store/gameSlice'
 import {
   loadInbox,
@@ -76,10 +77,16 @@ class SocketService {
       (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
 
     // Cast to typed Socket to enable strong event typing without generics on io()
+    // Force websocket transport in production to avoid polling 502s behind proxies
     this.socket = io(socketUrl, {
-      auth: {
-        token,
-      },
+      auth: { token },
+      path: '/socket.io',
+      transports: ['websocket'],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5000,
     }) as unknown as Socket<ServerToClientEvents, ClientToServerEvents>
 
     this.setupEventListeners()
@@ -555,6 +562,21 @@ class SocketService {
       }
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
 
+      // Proactively fetch game state when lifecycle transitions to active/initializing
+      try {
+        const state = store.getState()
+        const loadedRoomId = state.game.currentGame?.roomId ?? null
+        if (
+          (payload.status === 'active' || payload.status === 'initializing') &&
+          payload.roomId &&
+          payload.roomId !== loadedRoomId
+        ) {
+          store.dispatch(fetchGameState({ roomId: payload.roomId }))
+        }
+      } catch {
+        // best-effort prefetch; ignore errors in proactive flow
+      }
+
       // When games end or are abandoned, prune any archived game/team conversations
       if (payload.status === 'completed' || payload.status === 'abandoned') {
         // Narrow kinds to keep DM/group threads intact
@@ -636,6 +658,21 @@ class SocketService {
       }
 
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
+
+      // Proactively fetch game state when we detect room status activation via room-update
+      try {
+        const state = store.getState()
+        const loadedRoomId = state.game.currentGame?.roomId ?? null
+        if (
+          (status === 'active' || status === 'initializing') &&
+          roomId &&
+          roomId !== loadedRoomId
+        ) {
+          store.dispatch(fetchGameState({ roomId }))
+        }
+      } catch {
+        /* ignore */
+      }
       const roomUpdate: Partial<GameRoom> = {
         id: roomId,
         status,
