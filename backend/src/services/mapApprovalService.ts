@@ -357,6 +357,45 @@ export class MapApprovalService {
     )
   }
 
+  static async unassignReviewer(
+    requestId: string,
+    actorId: string,
+    auditContext?: AuditContext,
+  ): Promise<void> {
+    const requestBefore = await MapApprovalService.getApprovalRequestById(requestId)
+
+    await query(
+      `
+      UPDATE map_approval_requests 
+      SET assigned_moderator_id = NULL, review_started_at = NULL
+      WHERE id = $1
+    `,
+      [requestId],
+    )
+
+    const requestAfter = await MapApprovalService.getApprovalRequestById(requestId)
+
+    await adminService.logAdminAction(
+      actorId,
+      'map_reviewer_unassigned',
+      {
+        requestId,
+        before: {
+          assignedModeratorId: requestBefore.assignedModeratorId,
+          reviewStartedAt: requestBefore.reviewStartedAt,
+        },
+        after: {
+          assignedModeratorId: requestAfter.assignedModeratorId,
+          reviewStartedAt: requestAfter.reviewStartedAt,
+        },
+      },
+      'map_approval_request',
+      requestId,
+      auditContext?.ipAddress,
+      auditContext?.userAgent,
+    )
+  }
+
   // Review Criteria Management
   static async getReviewCriteria(): Promise<MapReviewCriteria[]> {
     const result = await query(`

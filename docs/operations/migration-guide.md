@@ -34,20 +34,11 @@ npx ts-node src/scripts/checkProductionDb.ts
 ### Location
 `backend/migrations/`
 
-### Naming Convention
-`XXX_description.sql` where XXX is a 3-digit number
-- Example: `014_add_map_status_column.sql`
-- Numbers determine execution order
-- Never reuse numbers
-
-### Current Migrations (Sept 2025)
-- `004_user_preferences.sql` - User preferences table with theme
-- `011_final_consolidated_schema.sql` - Core schema with all tables
-- `012_remove_unused_is_verified_field.sql` - Cleanup migration
-- `013_add_creator_id_to_maps.sql` - Map creator tracking
-- `014_add_map_status_column.sql` - Map status system
-- `015_consolidate_user_tables.sql` - User table consolidation
-- `016_add_vip_and_premium_features.sql` - VIP flags, premium tiers, admin status
+### Baseline + Incremental Model
+- We maintain a single baseline schema file (e.g. `001_baseline_schema.sql`) that fully bootstraps the DB.
+- After committing a new baseline, remove older migration files from the repo.
+- Future changes ship as incremental migrations on top of the baseline.
+- For new environments, apply the baseline; for existing DBs, only new incrementals will run.
 
 ## 🔧 Common Issues & Solutions
 

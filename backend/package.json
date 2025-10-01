@@ -26,6 +26,7 @@
     "test:email": "ts-node src/scripts/testEmail.ts",
     "check:schema": "ts-node src/scripts/checkSchema.ts",
     "migrate:status": "ts-node src/scripts/checkSchema.ts",
+    "migrate:squash": "ts-node src/scripts/squashMigrations.ts",
     "notify": "ts-node src/scripts/notify.ts",
     "backfill:conversation-read": "ts-node src/scripts/backfillConversationReadState.ts",
     "flags:check": "ts-node src/scripts/checkFeatureFlags.ts",

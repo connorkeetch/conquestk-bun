@@ -97,6 +97,12 @@ cd backend && npm run migrate   # Apply database migrations
 cd backend && npm run seed:users # Populate demo accounts
 ```
 
+### Migrations (baseline + incremental)
+- The project maintains a single baseline SQL schema plus incremental migrations.
+- After generating the baseline (e.g. `backend/migrations/001_baseline_schema.sql`) and committing it, remove older migration files from the repo.
+- New environments bootstrap from the baseline; existing DBs only apply future incrementals.
+- For non‑prod resets you can `TRUNCATE schema_migrations;` and re‑apply the baseline to rebuild.
+
 ---
 
 ## 🧱 Project structure

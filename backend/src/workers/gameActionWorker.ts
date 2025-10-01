@@ -1,4 +1,5 @@
 import type { GameDelta } from '@risk-game/shared/types'
+import { query } from '../config/database'
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
@@ -179,7 +180,40 @@ export class GameActionWorker {
           break
         }
 
-        case 'trade_cards':
+        case 'trade_cards': {
+          // Log a lightweight move record so profile stats can aggregate trades
+          try {
+            const payload = (action as { payload?: { cards?: string[]; treasureSet?: unknown } })
+              .payload
+            const cards = Array.isArray(payload?.cards) ? payload?.cards : undefined
+            const count =
+              (cards?.length ?? 0) ||
+              (Array.isArray(payload?.treasureSet) ? (payload?.treasureSet as unknown[]).length : 0)
+            const moveData =
+              cards && cards.length > 0
+                ? { cards }
+                : count > 0
+                  ? { cardCount: count, treasureSet: payload?.treasureSet }
+                  : { cardCount: 0 }
+
+            await query(
+              `
+              INSERT INTO game_moves (room_id, player_id, turn_number, move_type, move_data)
+              VALUES ($1, $2, $3, 'trade_cards', $4::jsonb)
+            `,
+              [gameId, playerId, currentState.turn, JSON.stringify(moveData)],
+            )
+          } catch (e) {
+            // Non-fatal; trading still progresses even if analytics write fails
+            logger.debug('Skipped logging trade_cards move', {
+              roomId: gameId,
+              playerId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
+          delta = await this.processPhaseChange(gameId, playerId, action)
+          break
+        }
         case 'go_back_to_reinforcement':
           delta = await this.processPhaseChange(gameId, playerId, action)
           break

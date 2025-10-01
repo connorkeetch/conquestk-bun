@@ -6,11 +6,13 @@ import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
 import { createGameActionWorker } from './gameActionWorker'
 import { createMapAssetWorker, type MapAssetWorker } from './mapAssetWorker'
+import { createMaintenanceWorker, type MaintenanceWorker } from './maintenanceWorker'
 
 export class WorkerManager {
   private isInitialized = false
   private io: Server<ClientToServerEvents, ServerToClientEvents>
   private mapAssetWorker: MapAssetWorker | null = null
+  private maintenanceWorker: MaintenanceWorker | null = null
 
   constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
     this.io = io
@@ -30,15 +32,18 @@ export class WorkerManager {
       const battleWorker = createBattleWorker(this.io)
       const cleanupWorker = createCleanupWorker()
       const mapAssetWorker = createMapAssetWorker()
+      const maintenanceWorker = createMaintenanceWorker()
 
       await Promise.all([
         gameActionWorker.initialize(),
         battleWorker.initialize(),
         cleanupWorker.initialize(),
         mapAssetWorker.initialize(),
+        maintenanceWorker.initialize(),
       ])
 
       this.mapAssetWorker = mapAssetWorker
+      this.maintenanceWorker = maintenanceWorker
 
       this.isInitialized = true
       logger.info('✅ WorkerManager initialized successfully')
@@ -115,7 +120,9 @@ export class WorkerManager {
     try {
       await queueService.shutdown()
       this.mapAssetWorker?.shutdown()
+      this.maintenanceWorker?.shutdown()
       this.mapAssetWorker = null
+      this.maintenanceWorker = null
       this.isInitialized = false
       logger.info('✅ WorkerManager shutdown complete')
     } catch (error) {

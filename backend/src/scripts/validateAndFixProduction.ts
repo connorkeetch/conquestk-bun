@@ -10,57 +10,70 @@ async function validateAndFixProduction() {
     // Initialize database
     await initDatabase()
 
-    // 1. Check if user_settings table exists and has required columns
-    logger.info('\n=== CHECKING USER_SETTINGS TABLE ===')
+    // 1. Check if user_preferences table exists and has required columns
+    logger.info('\n=== CHECKING USER_PREFERENCES TABLE ===')
 
     try {
-      const userSettingsColumns = await query(`
+      const userPrefColumns = await query(`
         SELECT column_name, data_type, is_nullable 
         FROM information_schema.columns 
-        WHERE table_name = 'user_settings'
+        WHERE table_name = 'user_preferences'
         ORDER BY ordinal_position
       `)
 
-      if (userSettingsColumns.rows.length === 0) {
-        logger.info('❌ user_settings table does not exist, creating...')
+      if (userPrefColumns.rows.length === 0) {
+        logger.info('❌ user_preferences table does not exist, creating...')
         await query(`
-          CREATE TABLE IF NOT EXISTS user_settings (
+          CREATE TABLE IF NOT EXISTS user_preferences (
             user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-            preferred_color VARCHAR(50) DEFAULT 'bright-red',
-            email_notifications BOOLEAN DEFAULT TRUE,
-            game_notifications BOOLEAN DEFAULT TRUE,
+            theme VARCHAR(50) DEFAULT '${DEFAULT_THEME_ID}',
+            notification_enabled BOOLEAN DEFAULT TRUE,
+            show_online_status BOOLEAN DEFAULT TRUE,
+            direct_messages VARCHAR(20) DEFAULT 'friends',
+            preferred_color VARCHAR(50) DEFAULT '#DC2626',
+            dm_notifications_browser BOOLEAN DEFAULT TRUE,
+            dm_notifications_email BOOLEAN DEFAULT FALSE,
             sound_enabled BOOLEAN DEFAULT TRUE,
             music_enabled BOOLEAN DEFAULT TRUE,
-            chat_enabled BOOLEAN DEFAULT TRUE,
-            show_tutorial BOOLEAN DEFAULT TRUE,
-            theme VARCHAR(20) DEFAULT '${DEFAULT_THEME_ID}',
+            auto_ready BOOLEAN DEFAULT FALSE,
+            show_timer BOOLEAN DEFAULT TRUE,
+            show_army_numbers BOOLEAN DEFAULT TRUE,
+            animation_speed INTEGER DEFAULT 1,
             language VARCHAR(10) DEFAULT 'en',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           )
         `)
-        logger.info('✅ Created user_settings table')
+        logger.info('✅ Created user_preferences table')
       } else {
-        logger.info(
-          '✅ user_settings table exists with columns:',
-          userSettingsColumns.rows.map((r) => r.column_name).join(', '),
-        )
+        const existing = userPrefColumns.rows.map((r) => r.column_name)
+        logger.info('✅ user_preferences table exists with columns:', existing.join(', '))
 
-        // Check if preferred_color column exists
-        const hasPreferredColor = userSettingsColumns.rows.some(
-          (col) => col.column_name === 'preferred_color',
-        )
-        if (!hasPreferredColor) {
-          logger.info('❌ preferred_color column missing, adding...')
-          await query(`
-            ALTER TABLE user_settings 
-            ADD COLUMN IF NOT EXISTS preferred_color VARCHAR(50) DEFAULT 'bright-red'
-          `)
-          logger.info('✅ Added preferred_color column')
+        const ensureColumn = async (name: string, ddl: string) => {
+          if (!existing.includes(name)) {
+            logger.info(`❌ ${name} column missing, adding...`)
+            await query(`ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS ${ddl}`)
+            logger.info(`✅ Added ${name} column`)
+          }
         }
+
+        await ensureColumn('theme', `theme VARCHAR(50) DEFAULT '${DEFAULT_THEME_ID}'`)
+        await ensureColumn('notification_enabled', 'notification_enabled BOOLEAN DEFAULT TRUE')
+        await ensureColumn('show_online_status', 'show_online_status BOOLEAN DEFAULT TRUE')
+        await ensureColumn('direct_messages', "direct_messages VARCHAR(20) DEFAULT 'friends'")
+        await ensureColumn('preferred_color', "preferred_color VARCHAR(50) DEFAULT '#DC2626'")
+        await ensureColumn('dm_notifications_browser', 'dm_notifications_browser BOOLEAN DEFAULT TRUE')
+        await ensureColumn('dm_notifications_email', 'dm_notifications_email BOOLEAN DEFAULT FALSE')
+        await ensureColumn('sound_enabled', 'sound_enabled BOOLEAN DEFAULT TRUE')
+        await ensureColumn('music_enabled', 'music_enabled BOOLEAN DEFAULT TRUE')
+        await ensureColumn('auto_ready', 'auto_ready BOOLEAN DEFAULT FALSE')
+        await ensureColumn('show_timer', 'show_timer BOOLEAN DEFAULT TRUE')
+        await ensureColumn('show_army_numbers', 'show_army_numbers BOOLEAN DEFAULT TRUE')
+        await ensureColumn('animation_speed', 'animation_speed INTEGER DEFAULT 1')
+        await ensureColumn('language', "language VARCHAR(10) DEFAULT 'en'")
       }
     } catch (error) {
-      logger.error('Error with user_settings table:', getErrorMessage(error))
+      logger.error('Error with user_preferences table:', getErrorMessage(error))
     }
 
     // 2. Check admin_roles table
@@ -204,16 +217,16 @@ async function validateAndFixProduction() {
     // 6. Test the fixes
     logger.info('\n=== TESTING FIXES ===')
 
-    // Test user_settings query
+    // Test user_preferences query
     try {
       await query(`
-        SELECT preferred_color 
-        FROM user_settings 
+        SELECT theme, preferred_color 
+        FROM user_preferences 
         LIMIT 1
       `)
-      logger.info('✅ user_settings.preferred_color query works')
+      logger.info('✅ user_preferences query works')
     } catch (error) {
-      logger.error('❌ user_settings query still fails:', getErrorMessage(error))
+      logger.error('❌ user_preferences query still fails:', getErrorMessage(error))
     }
 
     // Test admin query
@@ -233,7 +246,7 @@ async function validateAndFixProduction() {
 🎉 PRODUCTION DATABASE VALIDATION COMPLETE!
 
 Summary:
-- ✅ user_settings table with preferred_color column
+- ✅ user_preferences table validated
 - ✅ admin_roles table with super_admin role
 - ✅ user_admin_roles table for role assignments
 - ✅ users table with all essential columns

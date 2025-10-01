@@ -3,14 +3,14 @@
 This guide summarizes how achievements are modeled, exposed, and rendered in ConquestK for the initial MVP.
 
 ## Overview
-- Definitions live in the `achievements` table; user unlocks use `user_achievements`; optional progress lives in `achievement_progress`.
+- Definitions live in the `achievements` table; user unlocks use `user_achievements`.
+- For future incremental tracking, use the `progress_data` JSONB column on `user_achievements`. There is no standalone `achievement_progress` table in v1.
 - Backend API surfaces the current user's unlocked and available achievements.
 - The Profile page renders an Achievements tab guarded by the `ui_profile_extras` feature flag.
 
 ## Data Model
 - `achievements` columns (key): `id`, `name`, `description`, `category`, `icon`, `points`, `rarity`, `unlock_criteria` (JSONB), `is_secret` (hidden), `created_at`.
 - `user_achievements`: `id`, `user_id`, `achievement_id`, `progress_data` (JSONB), `unlocked_at`.
-- `achievement_progress`: `id`, `user_id`, `achievement_id`, `current_progress`, `total_required`, `metadata`, `created_at`, `updated_at`.
 
 Notes
 - Use `is_secret = FALSE` for publicly discoverable achievements.

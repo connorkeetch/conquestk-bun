@@ -16,7 +16,7 @@ ConquestK ships multiple visual themes (default, dark, RetroSpace, seasonal drop
   - Theme metadata (name, description, preview color) used by selectors/settings
 - `frontend/src/constants/colors.ts`
   - Game art colors only (armies, ranks). Themes do **not** live here.
-- `backend/migrations/009_user_preferences.sql`
+- Database: `user_preferences` table (baseline schema)
   - Persists a user’s theme choice so it follows them across devices
 
 ## Token Baseline (light-first)
