@@ -240,8 +240,16 @@ This allows themes to work with any color scheme!
 
 /* Apply theme-aware heading font */
 @layer base {
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-family-heading, var(--font-family-base, "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif));
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(
+      --font-family-heading,
+      var(--font-family-base, "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif)
+    );
   }
 }
 
@@ -271,7 +279,10 @@ This allows themes to work with any color scheme!
 }
 
 /* Default grid for most themes (disabled for premium themes with custom overlays) */
-:root:not([data-theme="retrospace"]):not([data-theme="frontier"]):not([data-theme="metal"]):not([data-theme="halloween"]):not([data-theme="cutlers-cheese"]) body::after {
+:root:not([data-theme="retrospace"]):not([data-theme="frontier"]):not([data-theme="metal"]):not(
+    [data-theme="halloween"]
+  ):not([data-theme="cutlers-cheese"])
+  body::after {
   content: "";
   position: fixed;
   top: 0;

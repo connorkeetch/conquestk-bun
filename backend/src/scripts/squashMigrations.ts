@@ -13,9 +13,9 @@
 */
 
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
 import crypto from 'node:crypto'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import dotenv from 'dotenv'
 import { Client } from 'pg'
 
@@ -110,13 +110,19 @@ function makeConnString(base: PgConn, overrideDb?: string): string {
   return u.toString()
 }
 
-async function createTempDatabase(baseUrl: string): Promise<{ name: string; url: string }>
-{
+async function createTempDatabase(baseUrl: string): Promise<{ name: string; url: string }> {
   const base = parseDatabaseUrl(baseUrl)
-  const adminDb = base.database && base.database !== 'postgres' ? 'postgres' : base.database || 'postgres'
-  const tempName = `conquestk_squash_${new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 12)}_${randomSuffix(4)}`
+  const adminDb =
+    base.database && base.database !== 'postgres' ? 'postgres' : base.database || 'postgres'
+  const tempName = `conquestk_squash_${new Date()
+    .toISOString()
+    .replace(/[-:T.]/g, '')
+    .slice(0, 12)}_${randomSuffix(4)}`
   const adminUrl = makeConnString(base, adminDb)
-  const client = new Client({ connectionString: adminUrl, ssl: base.ssl ? { rejectUnauthorized: false } : undefined })
+  const client = new Client({
+    connectionString: adminUrl,
+    ssl: base.ssl ? { rejectUnauthorized: false } : undefined,
+  })
   await client.connect()
   try {
     // CREATE DATABASE cannot run inside a transaction
@@ -130,9 +136,13 @@ async function createTempDatabase(baseUrl: string): Promise<{ name: string; url:
 
 async function dropDatabase(baseUrl: string, dbName: string): Promise<void> {
   const base = parseDatabaseUrl(baseUrl)
-  const adminDb = base.database && base.database !== 'postgres' ? 'postgres' : base.database || 'postgres'
+  const adminDb =
+    base.database && base.database !== 'postgres' ? 'postgres' : base.database || 'postgres'
   const adminUrl = makeConnString(base, adminDb)
-  const client = new Client({ connectionString: adminUrl, ssl: base.ssl ? { rejectUnauthorized: false } : undefined })
+  const client = new Client({
+    connectionString: adminUrl,
+    ssl: base.ssl ? { rejectUnauthorized: false } : undefined,
+  })
   await client.connect()
   try {
     // Terminate existing connections and drop
@@ -140,7 +150,9 @@ async function dropDatabase(baseUrl: string, dbName: string): Promise<void> {
       `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`,
       [dbName],
     )
-    await client.query(`DROP DATABASE IF EXISTS ${JSON.stringify(dbName).slice(1, -1).replace(/"/g, '')}`)
+    await client.query(
+      `DROP DATABASE IF EXISTS ${JSON.stringify(dbName).slice(1, -1).replace(/"/g, '')}`,
+    )
   } finally {
     await client.end()
   }
@@ -194,7 +206,7 @@ async function pgDumpSchema(url: string, outPath: string): Promise<void> {
 
       // Ensure required extensions exist at top; pg_dump usually includes them, but enforce just in case
       const prelude = [
-        "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";",
+        'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";',
         'CREATE EXTENSION IF NOT EXISTS pgcrypto;',
         'CREATE EXTENSION IF NOT EXISTS citext;',
         'CREATE EXTENSION IF NOT EXISTS pg_trgm;',
@@ -215,7 +227,9 @@ async function main() {
 
   // Guardrails: require --yes in non-test environments
   if (!opts.yes) {
-    throw new Error('Refusing to run without --yes acknowledgement. This operation creates/drops DBs when --temp-db is used and generates a new baseline file.')
+    throw new Error(
+      'Refusing to run without --yes acknowledgement. This operation creates/drops DBs when --temp-db is used and generates a new baseline file.',
+    )
   }
   if (process.env.NODE_ENV === 'production') {
     throw new Error('Refusing to run in production NODE_ENV')

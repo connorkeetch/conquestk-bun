@@ -5,8 +5,8 @@ import {
   THEME_IDS,
   type ThemeId,
 } from '@shared/types/themes'
-import { featureFlagService } from '../services/featureFlagService'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { featureFlagService } from '../services/featureFlagService'
 
 // Theme Configuration - Metadata Only
 // CSS in app.css handles all actual styling
@@ -269,7 +269,8 @@ function setThemeCookie(themeId: string) {
 
 function isThemeDebugEnabled(): boolean {
   try {
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('themeDebug') === '1') return true
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('themeDebug') === '1')
+      return true
   } catch {}
   try {
     const value = `; ${document.cookie}`
@@ -307,8 +308,10 @@ function ensureOverlayEl(): HTMLStyleElement {
 }
 
 function motionEnabled(): boolean {
-  const reduced = typeof window !== 'undefined' &&
-    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
   if (reduced) return false
   const attr = document.body.getAttribute('data-background-motion')
   return attr !== 'off'
@@ -336,12 +339,18 @@ function updateDynamicOverlay(themeId: ThemeId) {
       const currentTheme = document.documentElement.getAttribute('data-theme') as ThemeId | null
       if (currentTheme) updateDynamicOverlay(normalizeThemeId(currentTheme))
     })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
     const motionObserver = new MutationObserver(() => {
       const currentTheme = document.documentElement.getAttribute('data-theme') as ThemeId | null
       if (currentTheme) updateDynamicOverlay(normalizeThemeId(currentTheme))
     })
-    motionObserver.observe(document.body, { attributes: true, attributeFilter: ['data-background-motion'] })
+    motionObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-background-motion'],
+    })
 
     // Respect OS reduced-motion changes
     try {
@@ -394,7 +403,7 @@ function generateHalloweenOverlayCSS(withMotion: boolean): string {
   const gradients = [
     'radial-gradient(3px 3px at 10% 20%, rgba(255, 107, 53, 0.4), transparent)',
     'radial-gradient(2px 2px at 80% 60%, rgba(139, 21, 56, 0.3), transparent)',
-    'radial-gradient(1px 1px at 30% 70%, rgba(255, 215, 0, 0.3), transparent)'
+    'radial-gradient(1px 1px at 30% 70%, rgba(255, 215, 0, 0.3), transparent)',
   ]
 
   images.push(...gradients)
