@@ -192,9 +192,13 @@
 @media (prefers-reduced-motion: reduce) {
   [data-theme="metal"] body::before,
   [data-theme="metal"] body::after {
+    /* biome-ignore lint/complexity/noImportantStyles: ensure motion is disabled when user requests reduced motion */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: disable transforms for reduced motion */
     transform: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: override any previous background animation positioning */
     background-position: center center !important;
+    /* biome-ignore lint/complexity/noImportantStyles: ensure overlay is fully hidden */
     opacity: 0 !important;
   }
 }

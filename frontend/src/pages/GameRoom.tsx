@@ -12,6 +12,7 @@ import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
+import { PlayerStatsTable } from '../components/game/PlayerStatsTable'
 import { Skeleton } from '../components/ui/Skeleton'
 import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -1428,167 +1429,50 @@ export default function GameRoom() {
       {/* No ready errors expected */}
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-        {/* Left rail: Players (desktop) - moved from bottom */}
+        {/* Left rail: Player Stats (desktop) */}
         <div className="hidden lg:flex lg:flex-col lg:gap-6 lg:w-80 lg:shrink-0">
-          <div className="panel space-y-5">
-            <h3 className="text-lg font-semibold text-[color:var(--heading)]">
-              Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
-            </h3>
-            <ul className="list border border-border rounded-md overflow-hidden">
-              {currentRoom.players?.map((player) => {
-                const isCurrentUser = player.userId === user?.id
-                const rawColor =
-                  ((player as { selected_color?: string | null }).selected_color as
-                    | string
-                    | null) ||
-                  (player.preferred_color as string | null) ||
-                  null
-                const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
-                const colorHex = extractFirstHexColor(colorValue) || '#9CA3AF'
-                const usernameColor = ensureReadableOnDark(colorHex)
-                const tier = ratingToTier(
-                  typeof player.skill_rating === 'number' ? player.skill_rating : null,
+          {currentGame ? (
+            <PlayerStatsTable
+              players={currentGame.players || []}
+              currentPlayerId={currentGame.currentPlayer}
+              territories={
+                Object.fromEntries(
+                  (currentGame.board || []).map((t) => [t.id, { owner: t.owner }]),
                 )
-                const tierIndex = tier ? TIER_BOUNDS.findIndex((t) => t.name === tier.name) + 1 : 0
-                const typingMap = (store.getState().messages.typing || {}) as Record<
-                  string,
-                  Record<string, string>
-                >
-                const typingForRoom = typingMap[currentRoom.id] || {}
-                const typingKey = player.userId ?? ''
-                const isTyping = Boolean(typingForRoom[typingKey])
-                const gp = currentGame?.players?.find(
-                  (p) => (p.userId ?? p.id) === (player.userId ?? player.id),
-                )
-                const armies = typeof gp?.armies === 'number' ? gp.armies : undefined
-                const terrs = Array.isArray(gp?.territories) ? gp.territories.length : undefined
-                const cardsCount = Array.isArray(gp?.treasures)
-                  ? gp.treasures.length
-                  : gp?.cards?.length || 0
-                const conn = isCurrentUser ? store.getState().uiRoom.connectionStatus : undefined
-                return (
-                  <li key={player.id} className="list-item last:border-b-0 group">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="relative inline-flex h-3.5 w-3.5 shrink-0 rounded-full border border-border"
-                        style={{ background: colorValue }}
-                        title={rawColor ? `Color: ${rawColor}` : undefined}
-                        aria-hidden="true"
-                      >
-                        {isTyping && (
-                          <span
-                            className="absolute -top-1 -right-1 inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-black/40"
-                            title="Typing"
-                          />
-                        )}
+              }
+            />
+          ) : (
+            <div className="panel space-y-3">
+              <h3 className="text-sm font-semibold text-[color:var(--heading)]">
+                Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
+              </h3>
+              <ul className="space-y-1">
+                {currentRoom.players?.map((player) => {
+                  const rawColor =
+                    ((player as { selected_color?: string | null }).selected_color as
+                      | string
+                      | null) ||
+                    (player.preferred_color as string | null) ||
+                    null
+                  const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
+                  return (
+                    <li
+                      key={player.id}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[color:var(--surface-2)]"
+                    >
+                      <div
+                        className="w-3 h-3 rounded-full border border-[color:var(--panel-border)] shrink-0"
+                        style={{ backgroundColor: colorValue }}
+                      />
+                      <span className="text-sm text-[color:var(--text)] truncate">
+                        {player.username}
                       </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {player.isAi || !player.userId ? (
-                            <span
-                              className={`truncate text-sm ${isCurrentUser ? 'font-semibold' : ''}`}
-                              style={{ color: usernameColor }}
-                            >
-                              {player.username}
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              className={`truncate text-sm underline-offset-2 hover:underline ${
-                                isCurrentUser ? 'font-semibold' : ''
-                              }`}
-                              style={{ color: usernameColor }}
-                              title={`View ${player.username}'s profile`}
-                              onClick={() => setProfileUsername(player.username)}
-                            >
-                              {player.username}
-                            </button>
-                          )}
-                          {player.userId === currentRoom.hostId && (
-                            <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
-                              👑 Host
-                            </span>
-                          )}
-                          {typeof player.skill_rating === 'number' && (
-                            <RankInsignia
-                              rating={player.skill_rating}
-                              size="sm"
-                              showLabel={false}
-                              showRating={false}
-                            />
-                          )}
-                          {isCurrentUser && (
-                            <span
-                              className={`inline-block w-2 h-2 rounded-full ${conn === 'connected' ? 'bg-green-500' : conn === 'connecting' ? 'bg-yellow-400' : 'bg-red-500'}`}
-                              title={
-                                conn === 'connected'
-                                  ? 'Online'
-                                  : conn === 'connecting'
-                                    ? 'Reconnecting'
-                                    : 'Disconnected'
-                              }
-                            />
-                          )}
-                          {player.isAi && player.aiDifficulty && (
-                            <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
-                              🤖 {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                          {typeof armies === 'number' && <span>{armies} armies</span>}
-                          {typeof terrs === 'number' && (
-                            <span className="opacity-80">· {terrs} territories</span>
-                          )}
-                          <span className="opacity-80" title="Cards">
-                            · 🎴 {cardsCount}
-                          </span>
-                          {tier ? (
-                            <span>
-                              · {tier.name} — Rank {romanNumeral(tierIndex)}
-                              {typeof player.skill_rating === 'number' && (
-                                <span className="opacity-80"> ({player.skill_rating} CP)</span>
-                              )}
-                            </span>
-                          ) : (
-                            <span>· Unranked</span>
-                          )}
-                          {currentRoom.allowTeamPlay &&
-                            currentRoom.teamMode !== 'none' &&
-                            typeof player.teamId === 'number' &&
-                            player.teamId > 0 && (
-                              <span className="chip text-xs">Team {player.teamId}</span>
-                            )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {!isCurrentUser && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs"
-                            title="Mute/unmute player"
-                            onClick={() => dispatch(toggleMuteUser(player.id))}
-                          >
-                            Mute
-                          </button>
-                        )}
-                        {isCurrentUser && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs text-[color:var(--color-danger)]"
-                            title="Resign"
-                            onClick={() => setResignDialogOpen(true)}
-                          >
-                            Resign
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Game Board - center, flexible width */}
