@@ -78,6 +78,37 @@ export class MigrationRunner {
         (migration) => !appliedMigrations.includes(migration),
       )
 
+      // Special handling for baseline migrations: never execute them via the runner.
+      // Baselines are pg_dump outputs and may contain psql meta-commands (e.g. \restrict) and DROP statements.
+      const baselineFiles = pendingMigrations.filter((m) =>
+        /^001_.*(baseline|complete|initial).*\.sql$/i.test(m),
+      )
+      if (baselineFiles.length > 0) {
+        // If the DB already has key tables, just mark baseline(s) as completed and skip execution.
+        // Even if the DB is empty, we still do not execute baseline via this runner to avoid accidental drops.
+        for (const baseline of baselineFiles) {
+          try {
+            const fsPath = join(this.migrationsPath, baseline)
+            const content = readFileSync(fsPath, 'utf8')
+            const checksum = this.migrationTracker.calculateChecksum(content)
+            await this.migrationTracker.markMigrationCompleted({
+              filename: baseline,
+              checksum,
+              executed_at: new Date(),
+              execution_time_ms: 0,
+              status: 'completed',
+              rollback_sql: '-- baseline marker only; no rollback',
+            })
+            logger.warn(`⏭️  Skipped baseline migration and marked completed: ${baseline}`)
+          } catch (e) {
+            logger.error(`❌ Failed to mark baseline as completed: ${baseline}`, e)
+            // Continue without throwing to avoid blocking other real migrations
+          }
+        }
+        // Remove baselines from pending list
+        pendingMigrations = pendingMigrations.filter((m) => !baselineFiles.includes(m))
+      }
+
       // IMPORTANT: Check if key tables actually exist, even if migration is marked as complete
       // This handles cases where migrations were marked complete but tables are missing
       const keyTablesExist = await this.checkKeyTablesExist()
