@@ -68,6 +68,9 @@
   --halloween-overlay-opacity: 0.72;
   --halloween-float-duration: 26s;
   --halloween-fall-duration: 34s;
+
+  /* Spooky headings */
+  --font-family-heading: "Creepster", "Georgia", serif;
 }
 
 /* Animate the particles */
