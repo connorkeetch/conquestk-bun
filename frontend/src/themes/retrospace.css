@@ -1,6 +1,7 @@
 /* RetroSpace Theme - Early social media tribute */
 :root[data-theme="retrospace"] {
   --font-family-base: "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
+  --font-family-heading: "Audiowide", "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
   --color-primary: #0b3aa7; /* Classic Myspace blue */
   --color-primary-soft: #1e4fc4; /* Hover blue */
   --color-secondary: #ffffff; /* Neutral secondary */

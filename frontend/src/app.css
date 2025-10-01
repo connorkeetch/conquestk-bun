@@ -55,6 +55,8 @@ This allows themes to work with any color scheme!
 @layer base {
   :root {
     --font-family-base: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    /* Heading/display font; themes can override */
+    --font-family-heading: var(--font-family-base);
 
     /* Text palette */
     --text: #0f172a;
@@ -233,6 +235,13 @@ This allows themes to work with any color scheme!
     --color-text: #f9fafb;
     --color-text-muted: #94a3b8;
     --color-border: #334155;
+  }
+}
+
+/* Apply theme-aware heading font */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-heading, var(--font-family-base, "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif));
   }
 }
 
