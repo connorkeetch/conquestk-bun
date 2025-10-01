@@ -1052,19 +1052,7 @@ export class GameLifecycleService {
   }
 
   async kickAndNeutralize(roomId: string, userId: string) {
-    // Mark player kicked and convert territories to neutral; clear their treasures
-    const { gameStateCache } = await import('./cacheService')
-    const raw =
-      await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
-    if (!raw) return
-    const state = { ...raw }
-    // Neutralize territories
-    state.board = state.board.map((t) => (t.ownerId === userId ? { ...t, ownerId: 'neutral' } : t))
-    // Mark player eliminated
-    state.players = state.players.map((p) =>
-      p.id === userId ? { ...p, isEliminated: true, territories: [], armies: 0, treasures: [] } : p,
-    )
-    await gameStateCache.setGameState(roomId, state)
+    await this.gameService.neutralizePlayerAndResolve(roomId, userId)
     // Persist DB flags
     await query(`UPDATE room_players SET is_kicked = TRUE WHERE room_id = $1 AND user_id = $2`, [
       roomId,

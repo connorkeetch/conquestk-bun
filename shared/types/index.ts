@@ -181,6 +181,29 @@ export interface Card {
   type: 'infantry' | 'cavalry' | 'artillery' | 'wild'
 }
 
+export interface KingOfTheHillConfig {
+  targetPoints?: number
+  neutralArmies?: number
+  rotationInterval?: number | null
+  previewTurns?: number
+  eligibleTerritoryIds?: string[]
+  rotationOrder?: string[]
+}
+
+export interface KingOfTheHillState {
+  currentHillTerritoryId: string
+  points: Record<string, number>
+  targetPoints: number
+  rotationInterval?: number | null
+  turnsUntilRotation?: number | null
+  upcomingHillTerritoryId?: string | null
+  previewTurns?: number
+  neutralArmies: number
+  rotationQueue?: string[]
+  eligibleTerritoryIds?: string[]
+  lastScoreTurn?: number
+}
+
 export interface GameState {
   roomId: string
   players: Player[]
@@ -203,6 +226,7 @@ export interface GameState {
     territoriesGained: number
     troopsGained: number
   }
+  assassinationTargets?: Record<string, string>
   status?: GameStatus
   winner?: string
   reinforcementArmies?: number
@@ -213,6 +237,7 @@ export interface GameState {
   treasureState?: TreasureState
   mustCashInTreasures?: boolean
   conqueredDuringTurn?: boolean
+  kingOfTheHillState?: KingOfTheHillState
 }
 
 export interface GameTerritoryModifier {
@@ -250,6 +275,7 @@ export interface GameConfiguration {
   isPrivate?: boolean
   movementSystem?: string
   treasureConfig?: TreasureConfig
+  kingOfTheHill?: KingOfTheHillConfig
 }
 
 export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'

@@ -23,7 +23,7 @@ import type { PlayerRating, RatingChange } from './eloService'
 import { eloService } from './eloService'
 import { featureFlagService } from './featureFlagService'
 import { mapService } from './mapService'
-import { aiTurnMetrics, battleMetrics } from './metricsService'
+import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService'
 import notificationService from './notificationService'
 import { tryGetSocketServer } from './socketRegistry'
 import territoryModifierService from './territoryModifierService'
@@ -215,6 +215,67 @@ export class GameService {
     return limited
       .map((action) => this.normalizeAction(action, roomId, playerId))
       .filter((a): a is GameAction => Boolean(a))
+  }
+
+  private recordAssassinationAssignments(roomId: string, gameState: GameState) {
+    if (gameState.gameConfig?.gameMode !== 'assassination') {
+      return
+    }
+
+    const assignments = gameState.assassinationTargets
+    if (!assignments || Object.keys(assignments).length === 0) {
+      return
+    }
+
+    assassinationMetrics.recordAssignments(roomId, assignments, 0)
+  }
+
+  private recordAssassinationElimination(
+    roomId: string,
+    gameState: GameState,
+    elimination: { gameEnded: boolean; winner: GamePlayer | null; eliminatedPlayers: string[] },
+    eliminatorId: string | null,
+    cause: 'battle' | 'neutralize',
+  ) {
+    if (
+      gameState.gameConfig?.gameMode !== 'assassination' ||
+      !elimination.gameEnded ||
+      !elimination.winner ||
+      !gameState.assassinationTargets
+    ) {
+      return
+    }
+
+    const hunterId = elimination.winner.id
+    const targetId = gameState.assassinationTargets[hunterId]
+
+    if (!targetId || !elimination.eliminatedPlayers.includes(targetId)) {
+      return
+    }
+
+    const resolvedEliminator = eliminatorId ?? 'system'
+    let resolution: 'direct' | 'collateral' | 'resignation' | 'self_eliminated' | 'system'
+
+    if (cause === 'neutralize') {
+      resolution = 'resignation'
+    } else if (resolvedEliminator === hunterId) {
+      resolution = 'direct'
+    } else if (resolvedEliminator === targetId) {
+      resolution = 'self_eliminated'
+    } else if (resolvedEliminator === 'system') {
+      resolution = 'system'
+    } else {
+      resolution = 'collateral'
+    }
+
+    assassinationMetrics.recordElimination({
+      gameId: roomId,
+      hunterId,
+      targetId,
+      eliminatorId: resolvedEliminator,
+      turnNumber: gameState.turn ?? 0,
+      resolution,
+    })
   }
 
   private hydrateGameState(state: GameState | SerializedGameState): GameState {
@@ -469,6 +530,8 @@ export class GameService {
     // Cache the game state with TTL for automatic cleanup (24 hours)
     await gameStateCache.setGameState(roomId, this.serializeGameState(gameState))
 
+    this.recordAssassinationAssignments(roomId, gameState)
+
     if (notificationService.isEnabled()) {
       notificationService
         .notifyGameStart(
@@ -485,6 +548,64 @@ export class GameService {
 
     logger.info(`Game initialized for room ${roomId} with ${players.length} players`)
     return gameState
+  }
+
+  async neutralizePlayerAndResolve(
+    roomId: string,
+    userId: string,
+  ): Promise<{
+    state: SerializedGameState
+    elimination: { gameEnded: boolean; winner: GamePlayer | null; eliminatedPlayers: string[] }
+  } | null> {
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
+    if (!cachedState) {
+      return null
+    }
+
+    let gameState = this.hydrateGameState(cachedState)
+    const targetPlayer = gameState.players.find((player) => player.id === userId)
+
+    if (targetPlayer) {
+      for (const territory of gameState.board) {
+        if (territory.ownerId === userId) {
+          territory.ownerId = 'neutral'
+        }
+      }
+
+      targetPlayer.territories = []
+      targetPlayer.armies = 0
+      targetPlayer.treasures = []
+      targetPlayer.mustCashInTreasures = false
+    }
+
+    let elimination = this.gameEngine.checkGameEnd(gameState)
+
+    if (!elimination.gameEnded && gameState.currentPlayer === userId) {
+      const action: GameAction = {
+        type: 'end_turn',
+        roomId,
+        playerId: userId,
+      }
+
+      const { gameState: advancedState } = await this.gameEngine.processAction(gameState, action)
+      gameState = advancedState
+      elimination = this.gameEngine.checkGameEnd(gameState)
+    }
+
+    if (gameState.gameConfig?.gameMode === 'assassination') {
+      this.recordAssassinationElimination(roomId, gameState, elimination, userId, 'neutralize')
+    }
+
+    const serializedState = this.serializeGameState(gameState)
+
+    if (gameState.phase === 'finished' || elimination.gameEnded) {
+      await gameStateCache.setInactiveGameState(roomId, serializedState)
+      this.gameEngine.clearModifiersCache(roomId)
+    } else {
+      await gameStateCache.setGameState(roomId, serializedState)
+    }
+
+    return { state: serializedState, elimination }
   }
 
   async getGameState(roomId: string): Promise<GameState | null> {
@@ -574,6 +695,20 @@ export class GameService {
           })
         })
       }
+    }
+
+    if (battleResult.gameEnded && updatedState.gameConfig?.gameMode === 'assassination') {
+      this.recordAssassinationElimination(
+        roomId,
+        updatedState,
+        {
+          gameEnded: true,
+          winner: battleResult.winner ?? null,
+          eliminatedPlayers: battleResult.eliminatedPlayers ?? [],
+        },
+        userId,
+        'battle',
+      )
     }
 
     return {

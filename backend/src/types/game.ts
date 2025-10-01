@@ -1,12 +1,21 @@
 import type {
   AIDifficulty,
+  KingOfTheHillConfig,
+  KingOfTheHillState,
   Metal,
   SectorBonus,
   TreasureConfig,
   TreasureState,
 } from '@risk-game/shared/types'
 
-export type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'
+export type {
+  AIDifficulty,
+  KingOfTheHillConfig,
+  KingOfTheHillState,
+  Metal,
+  TreasureConfig,
+  TreasureState,
+} from '@risk-game/shared/types'
 
 export type GamePhase = 'reinforcement' | 'attack' | 'fortify' | 'finished'
 
@@ -39,6 +48,8 @@ export interface GameState {
   treasureState?: TreasureState
   mustCashInTreasures?: boolean
   conqueredDuringTurn?: boolean
+  assassinationTargets?: Record<string, string>
+  kingOfTheHillState?: KingOfTheHillState
   /**
    * Snapshot of armies at the start of the reinforcement phase for the current player.
    * Used to safely allow client "undo last placement" by preventing reductions below baseline.
@@ -196,6 +207,7 @@ export interface GameConfiguration {
   modifierDistribution?: ModifierDistribution
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   treasureConfig?: TreasureConfig
+  kingOfTheHill?: KingOfTheHillConfig
 }
 
 export type ContinentBonus = SectorBonus

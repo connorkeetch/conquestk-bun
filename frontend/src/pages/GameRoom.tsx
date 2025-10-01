@@ -1252,6 +1252,48 @@ export default function GameRoom() {
         </div>
       )}
 
+      {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') &&
+        currentRoom.gameMode === 'assassination' && (
+          <div className="panel border-[color:var(--color-accent)]/30 bg-[color:var(--surface-2)] text-sm text-[color:var(--heading)]">
+            <div className="flex items-center gap-2 text-base font-semibold text-[color:var(--heading)]">
+              <span aria-hidden>🎯</span>
+              <span>Assassination rules</span>
+            </div>
+            <p className="mt-2 text-sm text-muted">
+              Eliminate the secret target assigned to you. The first hunter whose contract target
+              falls wins instantly—even if another player delivers the finishing blow.
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted">
+              <li>Teams are disabled; every player is hunting solo.</li>
+              <li>Your contract card appears as soon as the match begins.</li>
+            </ul>
+          </div>
+        )}
+
+      {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') &&
+        currentRoom.gameMode === 'king_of_the_hill' && (
+          <div className="panel border-[color:var(--color-warning)]/40 bg-[color:var(--surface-2)] text-sm text-[color:var(--heading)]">
+            <div className="flex items-center gap-2 text-base font-semibold text-[color:var(--heading)]">
+              <span aria-hidden>⛰️</span>
+              <span>King of the Hill rules</span>
+            </div>
+            <p className="mt-2 text-sm text-muted">
+              Secure the highlighted territory to earn victory points at the end of each global
+              turn. The first player—or team—to reach the target total wins the match.
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted">
+              <li>
+                The hill starts heavily defended by neutral forces. Break through to claim it.
+              </li>
+              <li>Hold the hill through every player&apos;s turn to bank a point.</li>
+              <li>
+                Some lobbies rotate the hill periodically—watch the scoreboard for the next
+                objective announcement.
+              </li>
+            </ul>
+          </div>
+        )}
+
       {/* Resign dialog */}
       {resignDialogOpen && currentRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -1567,7 +1609,8 @@ export default function GameRoom() {
                   currentRoom.players?.map((p) => ({
                     id: p.id,
                     username: p.username,
-                    color: p.selected_color ?? p.preferred_color ?? '#9CA3AF',
+                    // biome-ignore lint/suspicious/noExplicitAny: Lobby snapshot still exposes legacy snake_case color field
+                    color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
                   })) || []
                 }
                 onTerritoryClick={(_territoryId) => {

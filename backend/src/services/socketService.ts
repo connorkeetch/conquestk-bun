@@ -40,34 +40,52 @@ function filterGameStateForPlayer(
   // Gracefully handle missing state during lobby/initialization
   if (!state) return state as unknown as GameState
 
-  const fogMode =
-    (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })?.fogOfWar ?? 'off'
+  const typedState = state as GameState
+  const fogMode = typedState.gameConfig?.fogOfWar ?? 'off'
   const fogEnabled = fogMode !== 'off'
-  if (!fogEnabled) return state as GameState
 
-  const owned = new Set<string>()
-  for (const t of state.board) {
-    if (t.ownerId === viewerId) owned.add(t.id)
-  }
-  const visible = new Set<string>(owned)
-  // Adjacent (non-persistent) visibility
-  for (const t of state.board) {
-    if (!owned.has(t.id)) continue
-    for (const adj of t.adjacentTerritories) {
-      visible.add(adj)
+  let filteredState: GameState
+
+  if (!fogEnabled) {
+    filteredState = { ...typedState }
+  } else {
+    const owned = new Set<string>()
+    for (const territory of state.board) {
+      if (territory.ownerId === viewerId) {
+        owned.add(territory.id)
+      }
     }
+
+    const visible = new Set<string>(owned)
+    for (const territory of state.board) {
+      if (!owned.has(territory.id)) {
+        continue
+      }
+      for (const adjacentId of territory.adjacentTerritories) {
+        visible.add(adjacentId)
+      }
+    }
+
+    const filteredBoard = state.board.map((territory) => {
+      if (visible.has(territory.id)) {
+        return territory
+      }
+      return {
+        ...territory,
+        ownerId: null,
+        armies: 0,
+      }
+    })
+
+    filteredState = { ...typedState, board: filteredBoard }
   }
 
-  const filteredBoard = state.board.map((t) => {
-    if (visible.has(t.id)) return t
-    return {
-      ...t,
-      ownerId: null,
-      armies: 0,
-    }
-  })
+  if (typedState.gameConfig?.gameMode === 'assassination' && typedState.assassinationTargets) {
+    const viewerTarget = typedState.assassinationTargets[viewerId]
+    filteredState.assassinationTargets = viewerTarget ? { [viewerId]: viewerTarget } : {}
+  }
 
-  return { ...(state as GameState), board: filteredBoard }
+  return filteredState
 }
 
 function serializeGameStateForClient(

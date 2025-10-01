@@ -9,7 +9,14 @@ jest.mock('../config/database', () => ({
   })),
 }))
 
-import type { ContinentBonus, GameAction, GameConfiguration, Territory } from '../types/game'
+import type {
+  ContinentBonus,
+  GameAction,
+  GameConfiguration,
+  GamePlayer,
+  GameState,
+  Territory,
+} from '../types/game'
 import { GameEngine } from './gameEngine'
 
 describe('GameEngine', () => {
@@ -162,6 +169,106 @@ describe('GameEngine', () => {
       const weakTerritories = gameState.board.filter((t) => t.armies < 1)
       expect(weakTerritories).toHaveLength(0)
     })
+
+    it('assigns assassination targets and disables team play when mode is assassination', () => {
+      const players = createPlayers('player1', 'player2', 'player3')
+      const gameState = gameEngine.initializeGame(
+        'room123',
+        players,
+        createConfig(players.length, { gameMode: 'assassination', allowTeamPlay: true }),
+        mapOverrides,
+      )
+
+      expect(gameState.gameConfig.allowTeamPlay).toBe(false)
+      expect(gameState.assassinationTargets).toBeDefined()
+      const assignments = gameState.assassinationTargets ?? {}
+      expect(Object.keys(assignments)).toHaveLength(gameState.players.length)
+      const uniqueTargets = new Set<string>(Object.values(assignments))
+      expect(uniqueTargets.size).toBe(gameState.players.length)
+      for (const player of gameState.players) {
+        expect(assignments[player.id]).toBeDefined()
+        expect(assignments[player.id]).not.toBe(player.id)
+      }
+    })
+  })
+
+  describe('assassination mode victory resolution', () => {
+    const baseConfig: GameConfiguration = {
+      movementType: 'classic_adjacent',
+      allowTeamPlay: false,
+      teamMode: 'none',
+      numberOfTeams: null,
+      maxPlayers: 3,
+      mapId: 'classic',
+      gameMode: 'assassination',
+    }
+
+    const createPlayerState = (overrides: Partial<GamePlayer>): GamePlayer => ({
+      id: overrides.id ?? 'player',
+      username: overrides.username ?? 'Player',
+      color: overrides.color ?? 'red',
+      armies: overrides.armies ?? 0,
+      territories: overrides.territories ?? [],
+      cards: overrides.cards ?? [],
+      isEliminated: overrides.isEliminated ?? false,
+      teamId: overrides.teamId ?? null,
+      isAi: overrides.isAi ?? false,
+      aiDifficulty: overrides.aiDifficulty ?? null,
+      aiPersonalitySeed: overrides.aiPersonalitySeed ?? null,
+      treasures: overrides.treasures ?? [],
+      mustCashInTreasures: overrides.mustCashInTreasures ?? false,
+    })
+
+    it('declares the hunter as winner when their target is eliminated', () => {
+      const gameState: GameState = {
+        roomId: 'room123',
+        players: [
+          createPlayerState({ id: 'hunter', username: 'Hunter', territories: ['t1'] }),
+          createPlayerState({ id: 'target', username: 'Target' }),
+          createPlayerState({ id: 'bystander', username: 'Bystander', territories: ['t2'] }),
+        ],
+        currentPlayer: 'hunter',
+        phase: 'attack',
+        turn: 5,
+        board: [
+          {
+            id: 't1',
+            name: 'Territory 1',
+            sector: 'north',
+            ownerId: 'hunter',
+            armies: 3,
+            adjacentTerritories: [],
+          },
+          {
+            id: 't2',
+            name: 'Territory 2',
+            sector: 'south',
+            ownerId: 'bystander',
+            armies: 2,
+            adjacentTerritories: [],
+          },
+        ],
+        cards: [],
+        gameConfig: baseConfig,
+        movementTracking: {},
+        treasureState: undefined,
+        mustCashInTreasures: false,
+        conqueredDuringTurn: false,
+        assassinationTargets: {
+          hunter: 'target',
+          target: 'bystander',
+          bystander: 'hunter',
+        },
+      }
+
+      const result = gameEngine.checkGameEnd(gameState)
+
+      expect(result.gameEnded).toBe(true)
+      expect(result.winner?.id).toBe('hunter')
+      expect(result.eliminatedPlayers).toContain('target')
+      expect(gameState.phase).toBe('finished')
+      expect(gameState.currentPlayer).toBe('hunter')
+    })
   })
 
   describe('calculateReinforcementArmies', () => {
@@ -305,6 +412,133 @@ describe('GameEngine', () => {
       expect(newState.phase).toBe('reinforcement')
       expect(newState.currentPlayer).toBe(gameState.players[0].id)
       expect(newState.turn).toBe(2)
+    })
+  })
+
+  describe('king of the hill mode', () => {
+    const hillConfig: GameConfiguration = {
+      movementType: 'classic_adjacent',
+      allowTeamPlay: false,
+      teamMode: 'none',
+      numberOfTeams: null,
+      maxPlayers: 3,
+      mapId: 'classic',
+      gameMode: 'king_of_the_hill',
+      kingOfTheHill: {
+        targetPoints: 3,
+        neutralArmies: 7,
+        rotationOrder: ['territory-2', 'territory-3', 'territory-4'],
+        rotationInterval: 1,
+        previewTurns: 1,
+      },
+    }
+
+    it('initializes hill state with neutral defenders', () => {
+      const players = createPlayers('player1', 'player2', 'player3')
+      const config = {
+        ...hillConfig,
+        kingOfTheHill: {
+          ...(hillConfig.kingOfTheHill ?? {}),
+          neutralArmies: 9,
+          rotationOrder: ['territory-3', 'territory-4'],
+        },
+      }
+
+      const gameState = gameEngine.initializeGame('room-hill', players, config, mapOverrides)
+      expect(gameState.kingOfTheHillState).toBeDefined()
+      const hillState = gameState.kingOfTheHillState!
+      expect(hillState.currentHillTerritoryId).toBe('territory-3')
+
+      const hill = gameState.board.find((territory) => territory.id === hillState.currentHillTerritoryId)
+      expect(hill?.ownerId).toBe('neutral')
+      expect(hill?.armies).toBe(9)
+    })
+
+    it('awards a single point per completed round to the hill controller', async () => {
+      const players = createPlayers('holder', 'challenger')
+      const staticHillConfig: GameConfiguration = {
+        ...hillConfig,
+        kingOfTheHill: {
+          ...(hillConfig.kingOfTheHill ?? {}),
+          rotationInterval: null,
+        },
+      }
+      let gameState = gameEngine.initializeGame('room-hold', players, staticHillConfig, mapOverrides)
+
+      const hillId = gameState.kingOfTheHillState?.currentHillTerritoryId
+      expect(hillId).toBeDefined()
+      const owner = gameState.players.find((player) => player.id === 'holder')
+      expect(owner).toBeDefined()
+      const hillTerritory = gameState.board.find((territory) => territory.id === hillId)
+      expect(hillTerritory).toBeDefined()
+
+      if (!hillId || !owner || !hillTerritory) {
+        throw new Error('Hill state failed to initialize')
+      }
+
+      hillTerritory.ownerId = owner.id
+      if (!owner.territories.includes(hillId)) {
+        owner.territories.push(hillId)
+      }
+
+      const completeRound = async () => {
+        for (let i = 0; i < gameState.players.length; i++) {
+          if (gameState.players[i].isEliminated) {
+            continue
+          }
+
+          gameState.phase = 'fortify'
+          const action: GameAction = {
+            type: 'end_turn',
+            roomId: 'room-hold',
+            playerId: gameState.currentPlayer,
+          }
+          const result = await gameEngine.processAction(gameState, action)
+          gameState = result.gameState
+        }
+      }
+
+      await completeRound()
+      await completeRound()
+
+      expect(gameState.kingOfTheHillState?.points[owner.id]).toBe(2)
+      expect(gameState.phase).not.toBe('finished')
+    })
+
+    it('rotates the hill when the interval elapses', async () => {
+      const players = createPlayers('holder', 'opponent', 'ally')
+      let gameState = gameEngine.initializeGame('room-rotate', players, hillConfig, mapOverrides)
+
+      const hillId = gameState.kingOfTheHillState?.currentHillTerritoryId
+      expect(hillId).toBe('territory-2')
+      const owner = gameState.players.find((player) => player.id === 'holder')
+      const hillTerritory = gameState.board.find((territory) => territory.id === hillId)
+      if (!hillId || !owner || !hillTerritory) {
+        throw new Error('Hill state failed to initialize for rotation test')
+      }
+
+      hillTerritory.ownerId = owner.id
+      if (!owner.territories.includes(hillId)) {
+        owner.territories.push(hillId)
+      }
+
+      for (let i = 0; i < gameState.players.length; i++) {
+        if (gameState.players[i].isEliminated) {
+          continue
+        }
+        gameState.phase = 'fortify'
+        const action: GameAction = {
+          type: 'end_turn',
+          roomId: 'room-rotate',
+          playerId: gameState.currentPlayer,
+        }
+        const result = await gameEngine.processAction(gameState, action)
+        gameState = result.gameState
+      }
+
+      expect(gameState.kingOfTheHillState?.currentHillTerritoryId).toBe('territory-3')
+      expect(gameState.kingOfTheHillState?.upcomingHillTerritoryId).toBe('territory-4')
+      expect(gameState.kingOfTheHillState?.turnsUntilRotation).toBe(1)
     })
   })
 

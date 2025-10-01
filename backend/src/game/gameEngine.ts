@@ -12,6 +12,8 @@ import type {
   GameConfiguration,
   GamePlayer,
   GameState,
+  KingOfTheHillConfig,
+  KingOfTheHillState,
   Metal,
   ProcessActionResult,
   Territory,
@@ -75,6 +77,17 @@ export class GameEngine {
     // Distribute territories fairly with neutrals
     this.distributeTerritoriesWithNeutrals(territories, players)
 
+    let kingConfig: KingOfTheHillConfig | null = null
+    let hillRotation: { current: string; queue: string[] } | null = null
+
+    if (gameConfig.gameMode === 'king_of_the_hill') {
+      kingConfig = this.normalizeKingOfTheHillConfig(gameConfig.kingOfTheHill, territories)
+      hillRotation = this.createInitialHillRotation(territories, kingConfig)
+      if (hillRotation) {
+        this.prepareInitialHillTerritory(territories, players, kingConfig, hillRotation.current)
+      }
+    }
+
     // Each player starts with 3 armies per territory
     this.deployInitialArmies(territories, players, gameConfig)
 
@@ -88,8 +101,26 @@ export class GameEngine {
             : mapOverrides.continentBonuses,
     }
 
+    if (kingConfig) {
+      hydratedConfig.kingOfTheHill = kingConfig
+    }
+
     const treasureConfig = this.ensureTreasureConfig(hydratedConfig)
     treasureMetrics.recordMode(treasureConfig)
+
+    if (hydratedConfig.gameMode === 'assassination') {
+      hydratedConfig.allowTeamPlay = false
+    }
+
+    const assassinationTargets =
+      hydratedConfig.gameMode === 'assassination'
+        ? this.assignAssassinationTargets(players)
+        : undefined
+
+    const kingOfTheHillState =
+      kingConfig && hillRotation
+        ? this.createInitialKingOfTheHillState(kingConfig, hillRotation)
+        : undefined
 
     const gameState: GameState = {
       roomId,
@@ -104,6 +135,8 @@ export class GameEngine {
       treasureState: treasureConfig.enabled ? ensureTreasureState() : undefined,
       mustCashInTreasures: false,
       conqueredDuringTurn: false,
+      assassinationTargets,
+      kingOfTheHillState,
     }
 
     this.prepareReinforcementPhase(gameState, treasureConfig)
@@ -378,6 +411,338 @@ export class GameEngine {
     }
 
     players.splice(0, players.length, ...ordered)
+  }
+
+  private shuffleArray<T>(items: T[]): void {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[items[i], items[j]] = [items[j], items[i]]
+    }
+  }
+
+  private assignAssassinationTargets(players: GamePlayer[]): Record<string, string> | undefined {
+    const eligible = players.filter((player) => !player.isEliminated)
+    if (eligible.length < 2) {
+      return undefined
+    }
+
+    const shuffled = [...eligible]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+
+    const assignments: Record<string, string> = {}
+    for (let i = 0; i < shuffled.length; i++) {
+      const hunter = shuffled[i]
+      const target = shuffled[(i + 1) % shuffled.length]
+      assignments[hunter.id] = target.id
+    }
+
+    return assignments
+  }
+
+  private normalizeKingOfTheHillConfig(
+    config: KingOfTheHillConfig | undefined,
+    territories: Territory[],
+  ): KingOfTheHillConfig {
+    const territoryIds = territories.map((territory) => territory.id)
+
+    const eligibleSource = Array.isArray((config as Record<string, unknown>)?.eligibleTerritories)
+      ? ((config as Record<string, unknown>).eligibleTerritories as string[])
+      : config?.eligibleTerritoryIds
+
+    const eligibleSet = new Set<string>(
+      (eligibleSource && eligibleSource.length > 0 ? eligibleSource : territoryIds).filter((id) =>
+        territoryIds.includes(id),
+      ),
+    )
+
+    if (eligibleSet.size === 0) {
+      for (const id of territoryIds) {
+        eligibleSet.add(id)
+      }
+    }
+
+    const rawRotationOrder = Array.isArray(config?.rotationOrder) ? config?.rotationOrder : []
+    const rotationOrder = Array.from(
+      new Set(
+        rawRotationOrder?.filter(
+          (id): id is string => typeof id === 'string' && eligibleSet.has(id),
+        ),
+      ),
+    )
+
+    const targetPoints = Math.max(1, Math.floor(config?.targetPoints ?? 10))
+    const neutralArmies = Math.max(1, Math.floor(config?.neutralArmies ?? 8))
+    const previewTurns = Math.max(0, Math.floor(config?.previewTurns ?? 2))
+    const rawInterval =
+      typeof config?.rotationInterval === 'number' && Number.isFinite(config.rotationInterval)
+        ? Math.floor(config.rotationInterval)
+        : null
+    const rotationInterval = rawInterval && rawInterval > 0 ? rawInterval : null
+
+    return {
+      targetPoints,
+      neutralArmies,
+      previewTurns,
+      rotationInterval,
+      eligibleTerritoryIds: Array.from(eligibleSet),
+      rotationOrder,
+    }
+  }
+
+  private createInitialHillRotation(
+    territories: Territory[],
+    config: KingOfTheHillConfig,
+  ): { current: string; queue: string[] } | null {
+    const territoryIds = territories.map((territory) => territory.id)
+    const eligiblePool =
+      config.eligibleTerritoryIds && config.eligibleTerritoryIds.length > 0
+        ? config.eligibleTerritoryIds.filter((id) => territoryIds.includes(id))
+        : territoryIds
+
+    if (eligiblePool.length === 0) {
+      return null
+    }
+
+    let rotationPool: string[]
+
+    if (config.rotationOrder && config.rotationOrder.length > 0) {
+      const uniqueOrder = config.rotationOrder.filter(
+        (id, index, arr) => arr.indexOf(id) === index && eligiblePool.includes(id),
+      )
+      const remaining = eligiblePool.filter((id) => !uniqueOrder.includes(id))
+      rotationPool = [...uniqueOrder, ...remaining]
+    } else {
+      rotationPool = [...eligiblePool]
+      this.shuffleArray(rotationPool)
+    }
+
+    const current = rotationPool.shift() ?? eligiblePool[0]
+    const queue = rotationPool
+
+    return { current, queue }
+  }
+
+  private prepareInitialHillTerritory(
+    territories: Territory[],
+    players: GamePlayer[],
+    config: KingOfTheHillConfig,
+    hillId: string,
+  ): void {
+    const hillTerritory = territories.find((territory) => territory.id === hillId)
+    if (!hillTerritory) {
+      return
+    }
+
+    const previousOwner = hillTerritory.ownerId
+    hillTerritory.ownerId = 'neutral'
+    hillTerritory.armies = config.neutralArmies ? Math.max(1, Math.floor(config.neutralArmies)) : 8
+
+    if (previousOwner && previousOwner !== 'neutral') {
+      const owner = players.find((player) => player.id === previousOwner)
+      if (owner) {
+        owner.territories = owner.territories.filter((territoryId) => territoryId !== hillId)
+      }
+    }
+  }
+
+  private createInitialKingOfTheHillState(
+    config: KingOfTheHillConfig,
+    rotation: { current: string; queue: string[] },
+  ): KingOfTheHillState {
+    const rotationInterval =
+      typeof config.rotationInterval === 'number' && config.rotationInterval > 0
+        ? config.rotationInterval
+        : null
+
+    const previewTurns = Math.max(0, config.previewTurns ?? 0)
+
+    return {
+      currentHillTerritoryId: rotation.current,
+      points: {},
+      targetPoints: Math.max(1, config.targetPoints ?? 10),
+      rotationInterval,
+      turnsUntilRotation: rotationInterval ?? null,
+      upcomingHillTerritoryId: rotation.queue.length > 0 ? rotation.queue[0] : null,
+      previewTurns,
+      neutralArmies: Math.max(1, config.neutralArmies ?? 8),
+      rotationQueue: [...rotation.queue],
+      eligibleTerritoryIds: config.eligibleTerritoryIds
+        ? [...config.eligibleTerritoryIds]
+        : undefined,
+      lastScoreTurn: undefined,
+    }
+  }
+
+  private handleKingOfTheHillRoundComplete(gameState: GameState): void {
+    const state = gameState.kingOfTheHillState
+    if (!state) {
+      return
+    }
+
+    if (state.lastScoreTurn === gameState.turn) {
+      this.progressKingOfTheHillRotation(gameState)
+      return
+    }
+
+    state.lastScoreTurn = gameState.turn
+
+    const hillTerritory = gameState.board.find(
+      (territory) => territory.id === state.currentHillTerritoryId,
+    )
+    if (hillTerritory) {
+      const ownerId = hillTerritory.ownerId
+      if (ownerId && ownerId !== 'neutral') {
+        const owner = gameState.players.find((player) => player.id === ownerId)
+        if (owner && !owner.isEliminated) {
+          state.points[owner.id] = (state.points[owner.id] ?? 0) + 1
+          if (this.isKingOfTheHillVictory(gameState, owner)) {
+            this.endGame(gameState, owner)
+          }
+        }
+      }
+    }
+
+    if (gameState.phase !== 'finished') {
+      this.progressKingOfTheHillRotation(gameState)
+    }
+  }
+
+  private progressKingOfTheHillRotation(gameState: GameState): void {
+    const state = gameState.kingOfTheHillState
+    if (!state || !state.rotationInterval || state.rotationInterval <= 0) {
+      return
+    }
+
+    const remaining =
+      typeof state.turnsUntilRotation === 'number'
+        ? state.turnsUntilRotation - 1
+        : state.rotationInterval - 1
+
+    if (remaining <= 0) {
+      this.rotateKingOfTheHill(gameState)
+    } else {
+      state.turnsUntilRotation = remaining
+      if (state.rotationQueue && state.rotationQueue.length > 0) {
+        state.upcomingHillTerritoryId = state.rotationQueue[0] ?? null
+      }
+    }
+  }
+
+  private rotateKingOfTheHill(gameState: GameState): void {
+    const state = gameState.kingOfTheHillState
+    if (!state || !state.rotationInterval || state.rotationInterval <= 0) {
+      return
+    }
+
+    const queue = state.rotationQueue ? [...state.rotationQueue] : []
+    if (queue.length === 0) {
+      queue.push(...this.refillHillRotationQueue(gameState))
+    }
+
+    if (queue.length === 0) {
+      state.turnsUntilRotation = state.rotationInterval
+      state.upcomingHillTerritoryId = null
+      return
+    }
+
+    const nextHill = queue.shift()
+    if (!nextHill) {
+      state.turnsUntilRotation = state.rotationInterval
+      state.upcomingHillTerritoryId = null
+      return
+    }
+
+    state.currentHillTerritoryId = nextHill
+    state.rotationQueue = queue
+
+    this.ensureHillNeutralDefenders(gameState, nextHill)
+
+    if (!state.rotationQueue || state.rotationQueue.length === 0) {
+      state.rotationQueue = this.refillHillRotationQueue(gameState)
+    }
+
+    state.turnsUntilRotation = state.rotationInterval
+    state.upcomingHillTerritoryId =
+      state.rotationQueue && state.rotationQueue.length > 0 ? state.rotationQueue[0] : null
+  }
+
+  private refillHillRotationQueue(gameState: GameState): string[] {
+    const state = gameState.kingOfTheHillState
+    if (!state) {
+      return []
+    }
+
+    const eligibleIds =
+      state.eligibleTerritoryIds && state.eligibleTerritoryIds.length > 0
+        ? state.eligibleTerritoryIds
+        : gameState.board.map((territory) => territory.id)
+
+    const pool = eligibleIds
+      .filter((id) => id !== state.currentHillTerritoryId)
+      .filter((id, index, arr) => arr.indexOf(id) === index)
+
+    this.shuffleArray(pool)
+    return pool
+  }
+
+  private ensureHillNeutralDefenders(gameState: GameState, territoryId: string): void {
+    const state = gameState.kingOfTheHillState
+    if (!state) {
+      return
+    }
+
+    const territory = gameState.board.find((t) => t.id === territoryId)
+    if (!territory) {
+      return
+    }
+
+    if (!territory.ownerId || territory.ownerId === 'neutral') {
+      territory.ownerId = 'neutral'
+      if (typeof territory.armies !== 'number' || territory.armies < state.neutralArmies) {
+        territory.armies = state.neutralArmies
+      }
+    }
+  }
+
+  private isKingOfTheHillVictory(gameState: GameState, player: GamePlayer): boolean {
+    const state = gameState.kingOfTheHillState
+    if (!state) {
+      return false
+    }
+
+    const target = Math.max(1, state.targetPoints ?? 0)
+    const playerPoints = state.points[player.id] ?? 0
+    if (playerPoints >= target) {
+      return true
+    }
+
+    if (!gameState.gameConfig.allowTeamPlay) {
+      return false
+    }
+
+    const teamId = this.getPlayerTeam(gameState, player.id)
+    if (!teamId) {
+      return false
+    }
+
+    let total = 0
+    for (const teammate of gameState.players) {
+      if (teammate.isEliminated) {
+        continue
+      }
+
+      if (this.getPlayerTeam(gameState, teammate.id) === teamId) {
+        total += state.points[teammate.id] ?? 0
+        if (total >= target) {
+          return true
+        }
+      }
+    }
+
+    return false
   }
 
   private distributeTerritoriesWithNeutrals(territories: Territory[], players: GamePlayer[]): void {
@@ -777,16 +1142,22 @@ export class GameEngine {
 
     // Move to next player
     gameState.currentPlayer = gameState.players[nextPlayerIndex].id
-    gameState.phase = 'reinforcement'
     gameState.hasAttackedThisTurn = false // Reset attack flag for new player
     gameState.lastBattleResult = undefined // Clear last battle result
-    this.prepareReinforcementPhase(gameState, treasureConfig)
 
     // Increment turn counter when we complete a full round (back to first active player)
     const firstActivePlayerIndex = gameState.players.findIndex((p) => !p.isEliminated)
     if (nextPlayerIndex === firstActivePlayerIndex) {
+      this.handleKingOfTheHillRoundComplete(gameState)
+      if (gameState.phase === 'finished') {
+        return
+      }
       gameState.turn += 1
     }
+
+    // Begin next player's reinforcement phase
+    gameState.phase = 'reinforcement'
+    this.prepareReinforcementPhase(gameState, treasureConfig)
   }
 
   private prepareReinforcementPhase(
@@ -1334,6 +1705,30 @@ export class GameEngine {
     }
   }
 
+  private resolveAssassinationVictory(
+    gameState: GameState,
+    eliminatedPlayers: string[],
+  ): GamePlayer | null {
+    if (!gameState.assassinationTargets || eliminatedPlayers.length === 0) {
+      return null
+    }
+
+    for (const eliminatedId of eliminatedPlayers) {
+      for (const [hunterId, targetId] of Object.entries(gameState.assassinationTargets)) {
+        if (targetId !== eliminatedId) {
+          continue
+        }
+
+        const hunter = gameState.players.find((player) => player.id === hunterId)
+        if (hunter && !hunter.isEliminated) {
+          return hunter
+        }
+      }
+    }
+
+    return null
+  }
+
   // Check if game should end after territory conquest
   checkGameEnd(gameState: GameState): {
     gameEnded: boolean
@@ -1341,6 +1736,19 @@ export class GameEngine {
     eliminatedPlayers: string[]
   } {
     const eliminatedPlayers = this.updateEliminatedPlayers(gameState)
+
+    if (gameState.gameConfig.gameMode === 'assassination') {
+      const winner = this.resolveAssassinationVictory(gameState, eliminatedPlayers)
+      if (winner) {
+        this.endGame(gameState, winner)
+        return {
+          gameEnded: true,
+          winner,
+          eliminatedPlayers,
+        }
+      }
+    }
+
     const activePlayers = gameState.players.filter((p) => !p.isEliminated)
 
     if (activePlayers.length <= 1) {
