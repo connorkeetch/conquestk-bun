@@ -12,13 +12,9 @@ export function createPreferencesRouter(pool: Pool): Router {
   // Get user preferences
   router.get('/', authenticateToken, async (req: Request, res: Response) => {
     try {
-      const rawUserId = req.user?.id || req.userId
-      if (!rawUserId) {
+      const userId = (req.user?.id || req.userId) as string | undefined
+      if (!userId) {
         return res.status(401).json({ error: 'Authentication required' })
-      }
-      const userId = Number(rawUserId)
-      if (Number.isNaN(userId)) {
-        return res.status(400).json({ error: 'Invalid user identifier' })
       }
 
       const preferences = await preferencesService.getPreferences(userId)
@@ -37,13 +33,9 @@ export function createPreferencesRouter(pool: Pool): Router {
   // Update user preferences
   router.put('/', authenticateToken, async (req: Request, res: Response) => {
     try {
-      const rawUserId = req.user?.id || req.userId
-      if (!rawUserId) {
+      const userId = (req.user?.id || req.userId) as string | undefined
+      if (!userId) {
         return res.status(401).json({ error: 'Authentication required' })
-      }
-      const userId = Number(rawUserId)
-      if (Number.isNaN(userId)) {
-        return res.status(400).json({ error: 'Invalid user identifier' })
       }
 
       const preferences = await preferencesService.updatePreferences(userId, req.body)
@@ -62,13 +54,9 @@ export function createPreferencesRouter(pool: Pool): Router {
   // Update theme specifically
   router.put('/theme', authenticateToken, async (req: Request, res: Response) => {
     try {
-      const rawUserId = req.user?.id || req.userId
-      if (!rawUserId) {
+      const userId = (req.user?.id || req.userId) as string | undefined
+      if (!userId) {
         return res.status(401).json({ error: 'Authentication required' })
-      }
-      const userId = Number(rawUserId)
-      if (Number.isNaN(userId)) {
-        return res.status(400).json({ error: 'Invalid user identifier' })
       }
       const { theme } = req.body
 

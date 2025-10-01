@@ -269,6 +269,7 @@ const addUniqueSources = (sources: string[], values: (string | undefined)[]) => 
 const imgSources = ["'self'", 'data:', 'blob:']
 const mediaSources = ["'self'", 'blob:']
 const fontSources = ["'self'", 'data:']
+const styleSources = ["'self'", "'unsafe-inline'"]
 const scriptSources = ["'self'", "'unsafe-inline'"]
 const connectSources = ["'self'", 'wss:', 'ws:']
 
@@ -288,6 +289,10 @@ const cloudflareConnectOrigins = [
 addUniqueSources(scriptSources, cloudflareScriptOrigins)
 addUniqueSources(connectSources, cloudflareConnectOrigins)
 
+// Allow Google Fonts for theme heading fonts (Audiowide/Rye)
+addUniqueSources(styleSources, ['https://fonts.googleapis.com'])
+addUniqueSources(fontSources, ['https://fonts.gstatic.com'])
+
 // Security middleware
 app.use(
   helmet({
@@ -295,7 +300,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: scriptSources,
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: styleSources,
         imgSrc: imgSources,
         connectSrc: connectSources,
         fontSrc: fontSources,
@@ -358,6 +363,7 @@ app.use('/api/clans', clanRoutes)
 app.use('/api/friends', friendsRoutes)
 app.use('/api/leaderboard', leaderboardRoutes)
 app.use('/api/workflow', require('./routes/mapWorkflow').default)
+app.use('/api/map-approval', require('./routes/mapApproval').default)
 app.use('/api/terms', require('./routes/terms').default)
 app.use('/api/staging', require('./routes/mapStaging').default)
 app.use('/api/feature-flags', require('./routes/featureFlags').default)
