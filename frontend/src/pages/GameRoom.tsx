@@ -168,6 +168,12 @@ export default function GameRoom() {
     currentRoom && (currentRoom.players?.length ?? 0) >= currentRoom.maxPlayers,
   )
 
+  const hostIsAloneInLobby = useMemo(() => {
+    if (!currentRoom || !isHost) return false
+    const count = currentRoom.players?.length ?? 0
+    return (currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && count <= 1
+  }, [currentRoom, isHost])
+
   const _showTeamAssignment = useMemo(() => {
     if (!currentRoom) {
       return false
@@ -921,6 +927,20 @@ export default function GameRoom() {
     navigate('/lobby')
   }
 
+  const handleCancelRoom = async () => {
+    if (!currentRoom) return
+    const ok = window.confirm('Close this room? This will cancel the lobby for everyone.')
+    if (!ok) return
+    try {
+      await gameService.leaveRoom(currentRoom.id)
+      toast.success('Room closed')
+      navigate('/lobby')
+    } catch (error) {
+      logger.error('Failed to close room', error)
+      toast.error('Failed to close room')
+    }
+  }
+
   // Inline mute toggle moved to floating button component
 
   // Keyboard shortcuts for quick gameplay
@@ -1231,9 +1251,15 @@ export default function GameRoom() {
               >
                 {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
               </button>
-              <button onClick={handleLeaveRoom} type="button" className="btn btn-danger">
-                Leave Room
-              </button>
+              {hostIsAloneInLobby ? (
+                <button onClick={() => void handleCancelRoom()} type="button" className="btn btn-danger">
+                  Close Room
+                </button>
+              ) : (
+                <button onClick={handleLeaveRoom} type="button" className="btn btn-danger">
+                  Leave Room
+                </button>
+              )}
             </>
           )}
         </div>
