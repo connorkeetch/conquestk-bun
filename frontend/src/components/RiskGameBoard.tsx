@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { FullMapData } from '@/services/mapService'
 import { mapService } from '@/services/mapService'
 import { socketService } from '@/services/socketService'
+import type { ZoomControls } from '@/types/zoom'
 import type { Territory } from '@/types/game'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
@@ -19,6 +20,7 @@ import { AssassinationContract } from './game/AssassinationContract'
 // import { GamePhaseControls } from './GamePhaseControls'
 import { GameHeader } from './game/GameHeader'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
+import { MapControlsSidebar } from './game/MapControlsSidebar'
 import { RiskGameMap } from './game/RiskGameMap'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
@@ -52,6 +54,8 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
   const [_hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
+  const [showMinimap, setShowMinimap] = useState(true)
+  const [zoomControls, setZoomControls] = useState<ZoomControls | null>(null)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
@@ -319,6 +323,10 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             currentPhase={currentPhase}
             turn={gameState?.turn ?? 0}
             currentPlayerInfo={headerPlayerInfo}
+            zoom={zoomControls?.zoom}
+            onZoomIn={zoomControls?.zoomIn}
+            onZoomOut={zoomControls?.zoomOut}
+            onZoomReset={zoomControls?.resetZoom}
           />
           {assassinationMode && (
             <AssassinationContract
@@ -358,7 +366,15 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           territoryModifierMap={territoryModifierMap}
           onTerritoryClick={handleTerritoryClick}
           onTerritoryHover={handleTerritoryHover}
+          showMinimap={showMinimap}
+          onZoomControlsReady={setZoomControls}
         />
+        {!lobbyMode && (
+          <MapControlsSidebar
+            showMinimap={showMinimap}
+            onToggleMinimap={() => setShowMinimap((prev) => !prev)}
+          />
+        )}
       </div>
     </div>
   )
