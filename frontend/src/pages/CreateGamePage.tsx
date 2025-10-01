@@ -394,6 +394,16 @@ const CreateGamePage: React.FC = () => {
     }
   }, [turnTimeLimit, timeBankEnabled])
 
+  // Format minutes contextually as hours/minutes (avoid large minute-only values)
+  const formatMinutes = useCallback((minutes: number) => {
+    if (!Number.isFinite(minutes) || minutes <= 0) return '0m'
+    const hrs = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    if (hrs > 0 && mins === 0) return `${hrs}h`
+    if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`
+    return `${mins}m`
+  }, [])
+
   const lastAppliedModeRef = useRef<'casual' | 'ranked' | null>(initialMode)
   const modeParam = searchParams.get('mode')
 
@@ -779,18 +789,20 @@ const CreateGamePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setGameVisibility('public')}
-                  className={`btn btn-secondary flex-1 justify-start gap-2 text-left ${
-                    gameVisibility === 'public' ? 'theme-selected' : ''
-                  }`}
+                  className={choiceClass(
+                    gameVisibility === 'public',
+                    'flex-1 justify-start gap-2 text-left px-3 py-2',
+                  )}
                 >
                   🌍 Public
                 </button>
                 <button
                   type="button"
                   onClick={() => setGameVisibility('private')}
-                  className={`btn btn-secondary flex-1 justify-start gap-2 text-left ${
-                    gameVisibility === 'private' ? 'theme-selected' : ''
-                  }`}
+                  className={choiceClass(
+                    gameVisibility === 'private',
+                    'flex-1 justify-start gap-2 text-left px-3 py-2',
+                  )}
                 >
                   🔒 Private
                 </button>
@@ -807,9 +819,10 @@ const CreateGamePage: React.FC = () => {
                     setGameType('casual')
                     setIsRanked(false)
                   }}
-                  className={`btn btn-secondary flex-1 flex-col items-start text-left gap-1 ${
-                    gameType === 'casual' ? 'theme-selected' : ''
-                  }`}
+                  className={choiceClass(
+                    gameType === 'casual',
+                    'flex-1 flex-col items-start text-left gap-1 px-3 py-2',
+                  )}
                 >
                   😎 Casual
                   <p className="text-xs opacity-70 mt-0.5">For fun</p>
@@ -820,9 +833,10 @@ const CreateGamePage: React.FC = () => {
                     setGameType('ranked')
                     setIsRanked(true)
                   }}
-                  className={`btn btn-secondary flex-1 flex-col items-start text-left gap-1 ${
-                    gameType === 'ranked' ? 'theme-selected' : ''
-                  }`}
+                  className={choiceClass(
+                    gameType === 'ranked',
+                    'flex-1 flex-col items-start text-left gap-1 px-3 py-2',
+                  )}
                 >
                   ⚔️ Ranked
                   <p className="text-xs opacity-70 mt-0.5">Affects rating</p>
@@ -966,7 +980,7 @@ const CreateGamePage: React.FC = () => {
               <div
                 className={`text-xs ${timeBankEnabled ? 'text-muted' : 'opacity-60 text-muted'}`}
               >
-                Bank: {timeBankEnabled ? `${timeBankMinutes} min` : 'Off'}
+                Bank: {timeBankEnabled ? formatMinutes(timeBankMinutes) : 'Off'}
               </div>
             </div>
           </div>
@@ -1484,21 +1498,19 @@ const CreateGamePage: React.FC = () => {
             </div>
           </div>
         </OptionCard>
-      </div>
+        {/* 10. Select Map - Now spans 2 columns */}
+        <div className="lg:col-span-2">
+          <div className="panel transition-shadow duration-200 hover:shadow-[var(--shadow-2)] p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
+              <span className="text-2xl bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                {getStepNumber(10)}
+              </span>
+              <span className="text-white">Select Map</span>
+            </h2>
 
-      {/* 10. Select Map - Full Width */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
-            <span className="text-2xl bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-              {getStepNumber(10)}
-            </span>
-            <span className="text-white">Select Map</span>
-          </h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Map List */}
-            <div className="lg:col-span-1">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Map List */}
+              <div className="lg:col-span-1">
               <input
                 placeholder="Search maps..."
                 value={mapSearch}
@@ -1588,7 +1600,7 @@ const CreateGamePage: React.FC = () => {
 
             {/* Map Preview */}
             <div className="lg:col-span-2">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <div className="panel-outline rounded-lg p-4">
                 {(() => {
                   const selectedMapData = maps.find((m) => m.id === selectedMap)
 
@@ -1618,10 +1630,10 @@ const CreateGamePage: React.FC = () => {
                         type="button"
                         onClick={handleOpenMapDetails}
                         disabled={isRandomMap}
-                        className={`relative w-full h-60 md:h-72 rounded-lg mb-4 flex items-center justify-center border border-white/10 overflow-hidden transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                        className={`relative w-full h-48 md:h-56 rounded-lg mb-4 flex items-center justify-center border overflow-hidden transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                           isRandomMap
-                            ? 'bg-white/5'
-                            : 'bg-white/10 hover:border-primary/60 cursor-zoom-in group'
+                            ? 'panel-muted'
+                            : 'panel-outline hover:border-[color:var(--color-primary)] cursor-zoom-in group'
                         }`}
                         aria-label={
                           isRandomMap ? 'Map preview' : 'Open detailed map preview with tokens'
@@ -1733,6 +1745,7 @@ const CreateGamePage: React.FC = () => {
                   )
                 })()}
               </div>
+            </div>
             </div>
           </div>
         </div>
