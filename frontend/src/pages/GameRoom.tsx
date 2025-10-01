@@ -1436,14 +1436,14 @@ export default function GameRoom() {
           <div className="panel flex-1 p-0 overflow-hidden">
             {currentGame ? (
               <RiskGameBoard
-                mapId={currentRoom?.mapId || 'classic'}
+                mapId={currentRoom?.mapId || 'world'}
                 onTerritoryClick={(_territoryId) => {
                   // TODO: Handle territory interactions based on game phase
                 }}
               />
             ) : currentRoom ? (
               <RiskGameBoard
-                mapId={currentRoom.mapId || 'classic'}
+                mapId={currentRoom.mapId || 'world'}
                 lobbyMode={true}
                 lobbyPlayers={
                   currentRoom.players?.map((p) => ({
