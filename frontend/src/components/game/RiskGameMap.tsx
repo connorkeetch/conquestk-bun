@@ -73,6 +73,9 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
               Array.isArray(t.adjacentTerritories) ? t.adjacentTerritories : [],
             ]),
           )}
+          showZoomControls={false}
+          showOverlayToggles={false}
+          showMinimap={true}
         />
       </div>
 
