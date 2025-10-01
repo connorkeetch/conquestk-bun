@@ -62,6 +62,65 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
     [players],
   )
 
+  const kingOfTheHillState =
+    game?.gameConfig?.gameMode === 'king_of_the_hill' ? game.kingOfTheHillState : null
+  const hillTerritoryId = kingOfTheHillState?.currentHillTerritoryId ?? null
+  const hillTerritory = hillTerritoryId ? territories[hillTerritoryId] : undefined
+  const hillOverlay = useMemo(() => {
+    if (!kingOfTheHillState || !hillTerritory) return null
+
+    const left = (hillTerritory.armyPosition.x / CLASSIC_MAP_WIDTH) * 100
+    const top = (hillTerritory.armyPosition.y / CLASSIC_MAP_HEIGHT) * 100
+    const ownerId = hillTerritory.owner ?? null
+    const owner = ownerId ? players.find((player) => player.id === ownerId) : null
+    const ownerColor = owner ? getColorValue(owner.color as PlayerColor) : 'rgba(250,204,21,0.9)'
+    const turnsUntilRotation = kingOfTheHillState.turnsUntilRotation
+    const rotationInterval = kingOfTheHillState.rotationInterval
+    const previewTurns = kingOfTheHillState.previewTurns ?? 0
+    const rotationActive = Boolean(rotationInterval && rotationInterval > 0)
+    const showCountdown =
+      rotationActive && typeof turnsUntilRotation === 'number' && turnsUntilRotation >= 0
+
+    const labelParts = [
+      owner
+        ? `Controlled by ${owner.username}`
+        : ownerId === 'neutral'
+          ? 'Held by neutral forces'
+          : 'Currently unclaimed',
+    ]
+    if (showCountdown) {
+      const turns = Math.max(0, turnsUntilRotation ?? 0)
+      const unit = turns === 1 ? 'turn' : 'turns'
+      if (previewTurns > 0 && turns > previewTurns) {
+        labelParts.push(`Rotation reveals in ${turns - previewTurns} ${unit}`)
+      } else {
+        labelParts.push(`Rotates in ${turns} ${unit}`)
+      }
+    }
+
+    return (
+      <div
+        className="absolute z-30 pointer-events-none"
+        style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
+      >
+        <span className="pointer-events-none relative block">
+          <span className="absolute -left-12 -top-12 h-24 w-24 rounded-full border-4 border-yellow-300/80 opacity-70 blur-sm" />
+          <span className="absolute -left-10 -top-10 h-20 w-20 animate-ping rounded-full border-4 border-yellow-300/60" />
+          <span
+            className="absolute -left-8 -top-8 h-16 w-16 rounded-full border-4"
+            style={{ borderColor: ownerColor, boxShadow: '0 0 24px rgba(250,204,21,0.75)' }}
+          />
+        </span>
+        <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded bg-black/70 px-3 py-1 text-xs text-white shadow-lg">
+          <p className="font-semibold text-amber-200">
+            {hillTerritory.name ?? hillTerritoryId ?? 'Hill'}
+          </p>
+          <p>{labelParts.join(' · ')}</p>
+        </div>
+      </div>
+    )
+  }, [kingOfTheHillState, hillTerritory, hillTerritoryId, players])
+
   const getTerritoryColor = useCallback(
     (territoryId: string): string => {
       const territory = territories[territoryId]
@@ -271,6 +330,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
               validTargets={validTargets}
               pendingAction={pendingAction}
             />
+            {hillOverlay}
             {/* Sectors overlay: colored dots per territory */}
             {overlays.continents &&
               (() => {

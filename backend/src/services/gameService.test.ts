@@ -73,10 +73,10 @@ jest.mock('../game/mapLoader', () => ({
   loadMapForEngine: mockLoadMapForEngine,
 }))
 
-import type { ContinentBonus, GameAction, Territory } from '../types/game'
+import type { ContinentBonus, GameAction, GameState, Territory } from '../types/game'
 import { gameStateCache } from './cacheService'
 import { aiDecisionService } from './aiDecisionService'
-import { aiTurnMetrics } from './metricsService'
+import { aiTurnMetrics, assassinationMetrics } from './metricsService'
 import { GameService } from './gameService'
 
 describe('GameService', () => {
@@ -197,6 +197,7 @@ describe('GameService', () => {
     mockLoadMapForEngine.mockResolvedValue({ territories, continentBonuses })
     gameService = new GameService()
     aiTurnMetrics.reset()
+    assassinationMetrics.reset()
   })
 
   describe('initializeGame', () => {
@@ -800,6 +801,198 @@ describe('GameService', () => {
       )
 
       chooseSpy.mockRestore()
+    })
+  })
+
+  describe('assassination telemetry', () => {
+    it('records contract assignments when starting an assassination match', async () => {
+      const roomId = 'assassination-telemetry-init'
+      const players = ['hunter', 'target', 'bystander']
+
+      await gameService.initializeGame(
+        roomId,
+        createPlayers(players),
+        buildConfig({ gameMode: 'assassination' }),
+      )
+
+      const metrics = assassinationMetrics.snapshot()
+      const assignmentCounters = metrics.counters.filter(
+        (entry) => entry.metric === 'assassination_assignment_total',
+      )
+
+      expect(assignmentCounters).toHaveLength(players.length)
+      assignmentCounters.forEach((entry) => {
+        expect(entry.value).toBe(1)
+        expect(entry.labels.gameId).toBe(roomId)
+        expect(entry.labels.turn).toBe('0')
+        expect(entry.labels.hunterId).toBeTruthy()
+        expect(entry.labels.targetId).toBeTruthy()
+      })
+    })
+
+    it('records eliminations when a hunter defeats their contract target', async () => {
+      const roomId = 'assassination-telemetry-elim'
+
+      const manualState: GameState = {
+        roomId,
+        players: [
+          {
+            id: 'hunter',
+            username: 'Hunter',
+            color: 'red',
+            armies: 6,
+            territories: ['attacking'],
+            cards: [],
+            isEliminated: false,
+          },
+          {
+            id: 'target',
+            username: 'Target',
+            color: 'blue',
+            armies: 2,
+            territories: ['defending'],
+            cards: [],
+            isEliminated: false,
+          },
+          {
+            id: 'bystander',
+            username: 'Bystander',
+            color: 'green',
+            armies: 3,
+            territories: ['support'],
+            cards: [],
+            isEliminated: false,
+          },
+        ],
+        currentPlayer: 'hunter',
+        phase: 'attack',
+        turn: 4,
+        board: [
+          {
+            id: 'attacking',
+            name: 'Attacking Territory',
+            sector: 'c1',
+            continent: 'c1',
+            ownerId: 'hunter',
+            armies: 4,
+            adjacentTerritories: ['defending', 'support'],
+          },
+          {
+            id: 'defending',
+            name: 'Defending Territory',
+            sector: 'c1',
+            continent: 'c1',
+            ownerId: 'target',
+            armies: 1,
+            adjacentTerritories: ['attacking'],
+          },
+          {
+            id: 'support',
+            name: 'Support Territory',
+            sector: 'c2',
+            continent: 'c2',
+            ownerId: 'bystander',
+            armies: 3,
+            adjacentTerritories: ['attacking'],
+          },
+        ],
+        cards: [],
+        gameConfig: {
+          movementType: 'classic_adjacent',
+          allowTeamPlay: false,
+          teamMode: 'none',
+          numberOfTeams: null,
+          maxPlayers: 3,
+          mapId: 'test-map',
+          gameMode: 'assassination',
+          continentBonuses,
+          sectorBonuses: continentBonuses,
+        },
+        movementTracking: {},
+        assassinationTargets: {
+          hunter: 'target',
+          target: 'bystander',
+          bystander: 'hunter',
+        },
+      }
+
+      await gameStateCache.setGameState(roomId, manualState)
+
+      const simulateSpy = jest
+        .spyOn((gameService as unknown as { gameEngine: { simulateBattle: Function } }).gameEngine, 'simulateBattle')
+        .mockReturnValue({
+          attackerDice: [6],
+          defenderDice: [1],
+          attackerLosses: 0,
+          defenderLosses: 1,
+        })
+
+      const result = await gameService.attack(roomId, 'hunter', 'attacking', 'defending')
+      expect(result.gameEnded).toBe(true)
+      simulateSpy.mockRestore()
+
+      const metrics = assassinationMetrics.snapshot()
+      const eliminationCounters = metrics.counters.filter(
+        (entry) => entry.metric === 'assassination_elimination_total',
+      )
+
+      expect(eliminationCounters).toHaveLength(1)
+      expect(eliminationCounters[0].value).toBe(1)
+      expect(eliminationCounters[0].labels).toMatchObject({
+        gameId: roomId,
+        hunterId: 'hunter',
+        targetId: 'target',
+        eliminatorId: 'hunter',
+        resolution: 'direct',
+      })
+    })
+  })
+
+  describe('neutralizePlayerAndResolve', () => {
+    it('declares the hunter the winner if their target is neutralized in assassination mode', async () => {
+      const roomId = 'assassination-neutralize'
+      const players = ['hunter', 'target', 'bystander']
+
+      const initialState = await gameService.initializeGame(
+        roomId,
+        createPlayers(players),
+        buildConfig({ gameMode: 'assassination' }),
+      )
+
+      const assignments = initialState.assassinationTargets ?? {}
+      const [hunterId, targetId] = Object.entries(assignments)[0] ?? []
+
+      expect(hunterId).toBeDefined()
+      expect(targetId).toBeDefined()
+
+      if (!targetId) {
+        throw new Error('No assassination target assigned in test setup')
+      }
+
+      const result = await gameService.neutralizePlayerAndResolve(roomId, targetId)
+
+      expect(result).not.toBeNull()
+      expect(result?.elimination.gameEnded).toBe(true)
+      expect(result?.elimination.winner?.id).toBe(hunterId)
+      expect(result?.state.phase).toBe('finished')
+
+      const eliminationCounters = assassinationMetrics
+        .snapshot()
+        .counters.filter((entry) => entry.metric === 'assassination_elimination_total')
+
+      expect(eliminationCounters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            value: 1,
+            labels: expect.objectContaining({
+              gameId: roomId,
+              hunterId,
+              targetId,
+              resolution: 'resignation',
+            }),
+          }),
+        ]),
+      )
     })
   })
 })

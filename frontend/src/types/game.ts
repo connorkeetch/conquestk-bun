@@ -12,6 +12,8 @@ import type {
   GamePhase,
   GameStatus,
   GameTerritoryModifier,
+  KingOfTheHillConfig,
+  KingOfTheHillState,
   PlayerColor,
   BattleResult as SharedBattleResult,
   Card as SharedCard,
@@ -35,6 +37,8 @@ export type {
   EndTurnAction,
   TradeCardsAction,
   AIDifficulty,
+  KingOfTheHillConfig,
+  KingOfTheHillState,
 }
 
 export interface BattleTerritorySnapshot {

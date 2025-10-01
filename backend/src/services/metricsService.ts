@@ -239,3 +239,70 @@ class AITurnMetrics {
 }
 
 export const aiTurnMetrics = new AITurnMetrics()
+
+type AssassinationResolution =
+  | 'direct'
+  | 'collateral'
+  | 'resignation'
+  | 'self_eliminated'
+  | 'system'
+
+type AssassinationEliminationRecord = {
+  gameId: string
+  hunterId: string
+  targetId: string
+  eliminatorId: string
+  turnNumber: number
+  resolution: AssassinationResolution
+}
+
+class AssassinationMetrics {
+  private readonly assignmentCounter = new CounterMetric('assassination_assignment_total')
+  private readonly eliminationCounter = new CounterMetric('assassination_elimination_total')
+
+  recordAssignments(gameId: string, assignments: Record<string, string>, turnNumber = 0) {
+    for (const [hunterId, targetId] of Object.entries(assignments)) {
+      if (!hunterId || !targetId) continue
+      this.recordAssignment(gameId, hunterId, targetId, turnNumber)
+    }
+  }
+
+  recordAssignment(gameId: string, hunterId: string, targetId: string, turnNumber = 0) {
+    if (!gameId || !hunterId || !targetId) return
+
+    this.assignmentCounter.inc({
+      gameId,
+      hunterId,
+      targetId,
+      turn: String(turnNumber ?? 0),
+    })
+  }
+
+  recordElimination(record: AssassinationEliminationRecord) {
+    const { gameId, hunterId, targetId, eliminatorId, turnNumber, resolution } = record
+    if (!gameId || !hunterId || !targetId) return
+
+    this.eliminationCounter.inc({
+      gameId,
+      hunterId,
+      targetId,
+      eliminatorId,
+      resolution,
+      turn: String(turnNumber ?? 0),
+    })
+  }
+
+  reset() {
+    this.assignmentCounter.resetAll()
+    this.eliminationCounter.resetAll()
+  }
+
+  snapshot() {
+    return {
+      counters: [...this.assignmentCounter.snapshot(), ...this.eliminationCounter.snapshot()],
+      gauges: [] as GaugeSnapshot[],
+    }
+  }
+}
+
+export const assassinationMetrics = new AssassinationMetrics()

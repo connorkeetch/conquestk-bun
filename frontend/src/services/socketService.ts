@@ -402,6 +402,78 @@ class SocketService {
         audioService.playEffect('turn')
       }
 
+      if (currentUserId && typedGameState.gameConfig?.gameMode === 'assassination') {
+        const prevTarget = previousState?.assassinationTargets?.[currentUserId]
+        const nextTarget = typedGameState.assassinationTargets?.[currentUserId]
+
+        if (!prevTarget && nextTarget) {
+          const targetPlayer = typedGameState.players.find((p) => p.id === nextTarget)
+          toast.success(
+            targetPlayer
+              ? `Contract assigned: eliminate ${targetPlayer.username}.`
+              : 'Contract assigned: eliminate your target.',
+          )
+        } else if (prevTarget && nextTarget && prevTarget !== nextTarget) {
+          const reassignedPlayer = typedGameState.players.find((p) => p.id === nextTarget)
+          toast(
+            reassignedPlayer
+              ? `Contract updated: new target is ${reassignedPlayer.username}.`
+              : 'Contract updated: pursue your new target.',
+            { icon: '🎯' },
+          )
+        }
+
+        if (prevTarget) {
+          const prevPlayerBefore = previousState?.players.find((p) => p.id === prevTarget)
+          const prevPlayerAfter = typedGameState.players.find((p) => p.id === prevTarget)
+          const wasEliminated = prevPlayerBefore?.isEliminated ?? false
+          const isEliminated = prevPlayerAfter?.isEliminated ?? false
+          const targetRemoved = !nextTarget
+
+          if (!wasEliminated && (isEliminated || targetRemoved)) {
+            toast.success(
+              prevPlayerAfter
+                ? `${prevPlayerAfter.username} has been eliminated. Contract complete!`
+                : 'Your target has been eliminated. Contract complete!',
+            )
+          }
+        }
+      }
+
+      if (typedGameState.kingOfTheHillState) {
+        const prevHill = previousState?.kingOfTheHillState
+        const nextHill = typedGameState.kingOfTheHillState
+        const hillName = typedGameState.board.find(
+          (territory) => territory.id === nextHill.currentHillTerritoryId,
+        )?.name
+
+        if (!prevHill) {
+          toast(
+            hillName
+              ? `King of the Hill activated. Capture and hold ${hillName}.`
+              : 'King of the Hill activated. Capture and hold the marked territory.',
+            { icon: '⛰️' },
+          )
+        } else {
+          if (prevHill.currentHillTerritoryId !== nextHill.currentHillTerritoryId) {
+            toast(
+              hillName
+                ? `Hill has rotated to ${hillName}.`
+                : 'Hill has rotated to a new territory.',
+              { icon: '⛰️' },
+            )
+          }
+
+          if (currentUserId) {
+            const prevPoints = prevHill.points?.[currentUserId] ?? 0
+            const nextPoints = nextHill.points?.[currentUserId] ?? 0
+            if (nextPoints > prevPoints) {
+              toast.success('You gained a hill point! Keep holding the objective.')
+            }
+          }
+        }
+      }
+
       store.dispatch(setGameState(typedGameState))
 
       // Reconcile placement counter from server baseline if available

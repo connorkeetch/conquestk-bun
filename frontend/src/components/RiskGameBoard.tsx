@@ -1,7 +1,9 @@
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import { useDispatch, useSelector } from 'react-redux'
-import { type FullMapData, mapService } from '@/services/mapService'
+import type { FullMapData } from '@/services/mapService'
+import { mapService } from '@/services/mapService'
 import { socketService } from '@/services/socketService'
 import type { Territory } from '@/types/game'
 import type { AppDispatch, RootState } from '../store'
@@ -13,11 +15,15 @@ import {
   setPendingAction,
 } from '../store/gameSlice'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
+import { AssassinationContract } from './game/AssassinationContract'
 // import { GamePhaseControls } from './GamePhaseControls'
 import { GameHeader } from './game/GameHeader'
+import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
 import { RiskGameMap } from './game/RiskGameMap'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
+
+type OwnedTerritory = { id: string; ownerId?: string | null; armies?: number }
 
 export type { TerritoryDisplay, TerritoryDisplayMap }
 
@@ -42,6 +48,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   )
   const validTargets = useSelector((state: RootState) => state.game.validTargets)
   const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
+  const viewerId = useSelector((state: RootState) => state.auth.user?.id ?? null)
 
   const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
@@ -79,7 +86,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         }
         adjacency.get(source)?.add(target)
       }
-
       addEdge(from, to)
       if (edge.isBidirectional !== false) {
         addEdge(to, from)
@@ -111,6 +117,64 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const players = lobbyMode ? lobbyPlayers : (gameState?.players ?? [])
   const currentPlayer = lobbyMode ? '' : (gameState?.currentPlayer ?? '')
   const currentPhase = lobbyMode ? 'lobby' : (gameState?.phase ?? 'reinforcement')
+  
+  const isSpectator = useMemo(() => {
+    if (!viewerId) return true
+    return !players.some((player) => player.id === viewerId)
+  }, [players, viewerId])
+
+  const assassinationMode = Boolean(
+    !lobbyMode && gameState?.gameConfig?.gameMode === 'assassination',
+  )
+  const contractTargetId = viewerId ? gameState?.assassinationTargets?.[viewerId] : undefined
+  const targetPlayer = contractTargetId
+    ? players.find((player) => player.id === contractTargetId)
+    : undefined
+  const targetTerritories = useMemo<OwnedTerritory[]>(() => {
+    if (!contractTargetId || !Array.isArray(board)) return []
+    return (board as OwnedTerritory[]).filter((territory) => territory.ownerId === contractTargetId)
+  }, [board, contractTargetId])
+  const targetArmyCount = useMemo(
+    () => targetTerritories.reduce((sum, territory) => sum + (territory.armies ?? 0), 0),
+    [targetTerritories],
+  )
+  const awaitingContract = Boolean(
+    assassinationMode && !isSpectator && viewerId && !contractTargetId,
+  )
+  const targetEliminated = Boolean(
+    targetPlayer?.isEliminated ||
+      (contractTargetId && targetTerritories.length === 0 && !awaitingContract),
+  )
+  const targetName = targetPlayer?.username ?? null
+  const canPingContract = Boolean(!targetEliminated && roomId && targetTerritories.length > 0)
+  const handlePingContract = useCallback(() => {
+    if (!roomId || targetTerritories.length === 0) {
+      toast.error('Target currently controls no territories to ping.')
+      return
+    }
+
+    const first = targetTerritories[0]
+    socketService.emit('ping:territory', { roomId, territoryId: first.id })
+    toast.success(
+      targetName ? `Pinged ${targetName}'s last known position.` : 'Pinged your contract target.',
+    )
+  }, [roomId, targetName, targetTerritories])
+
+  const kingOfTheHillState = !lobbyMode ? gameState?.kingOfTheHillState : undefined
+  const kingOfTheHillMode = Boolean(
+    !lobbyMode && gameState?.gameConfig?.gameMode === 'king_of_the_hill' && kingOfTheHillState,
+  )
+  const hillTerritoryId = kingOfTheHillState?.currentHillTerritoryId ?? null
+  const canPingHill = Boolean(!isSpectator && roomId && hillTerritoryId)
+  const handlePingHill = useCallback(() => {
+    if (!roomId || !hillTerritoryId) {
+      toast.error('Hill territory unavailable to ping right now.')
+      return
+    }
+
+    socketService.emit('ping:territory', { roomId, territoryId: hillTerritoryId })
+    toast.success('Pinged the active hill for your team.')
+  }, [roomId, hillTerritoryId])
 
   const territories = useMemo(() => createTerritoryDisplayMap(board), [board])
 
@@ -250,11 +314,36 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           </p>
         </div>
       ) : (
-        <GameHeader
-          currentPhase={currentPhase}
-          turn={gameState?.turn ?? 0}
-          currentPlayerInfo={headerPlayerInfo}
-        />
+        <>
+          <GameHeader
+            currentPhase={currentPhase}
+            turn={gameState?.turn ?? 0}
+            currentPlayerInfo={headerPlayerInfo}
+          />
+          {assassinationMode && (
+            <AssassinationContract
+              target={targetPlayer}
+              territoryCount={targetTerritories.length}
+              armyCount={targetArmyCount}
+              awaiting={awaitingContract}
+              eliminated={targetEliminated}
+              isSpectator={isSpectator}
+              canPing={canPingContract}
+              onPing={handlePingContract}
+            />
+          )}
+          {kingOfTheHillMode && kingOfTheHillState && (
+            <KingOfTheHillPanel
+              state={kingOfTheHillState}
+              players={players}
+              territories={gameState?.board ?? []}
+              viewerId={viewerId}
+              isSpectator={isSpectator}
+              canPingHill={canPingHill}
+              onPingHill={handlePingHill}
+            />
+          )}
+        </>
       )}
 
       <div className="flex flex-1 overflow-hidden min-h-0">
