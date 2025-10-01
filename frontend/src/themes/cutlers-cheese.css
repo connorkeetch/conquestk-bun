@@ -44,6 +44,9 @@
   --panel-bg: var(--surface-glass);
   --panel-bg-alt: var(--surface-glass-light);
   --panel-border: var(--box-border);
+
+  /* Fun, chunky headline vibe */
+  --font-family-heading: "Chewy", "Georgia", serif;
 }
 
 @keyframes cutlers-cheese-bubble {
@@ -95,17 +98,25 @@
 
 [data-theme="cutlers-cheese"] body::after {
   background-image:
+    /* Cheese wedge tile */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23F5B700' stroke='%238C3B00' stroke-width='2' d='M6 10 L58 32 L6 54 Z'/%3E%3Ccircle cx='26' cy='24' r='4.5' fill='%23FFE18D'/%3E%3Ccircle cx='22' cy='40' r='3.5' fill='%23F5C33B'/%3E%3Ccircle cx='38' cy='36' r='3' fill='%23FFD97A'/%3E%3C/svg%3E"),
+    /* Small hole polka tile */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='6' cy='6' r='2.5' fill='%23FFD97A'/%3E%3Ccircle cx='18' cy='8' r='2' fill='%23FFE18D'/%3E%3Ccircle cx='10' cy='18' r='1.8' fill='%23F5C33B'/%3E%3C/svg%3E"),
     radial-gradient(42px 42px at 18% 28%, rgba(255, 221, 128, 0.2), transparent 60%),
     radial-gradient(34px 34px at 70% 35%, rgba(252, 196, 67, 0.18), transparent 62%),
-    radial-gradient(28px 28px at 40% 78%, rgba(240, 168, 40, 0.15), transparent 60%),
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    radial-gradient(28px 28px at 40% 78%, rgba(240, 168, 40, 0.15), transparent 60%);
   background-size:
+    280px 280px,
+    48px 48px,
     320px 320px,
     420px 420px,
-    260px 260px,
-    44px 44px,
-    44px 44px;
+    260px 260px;
+  background-repeat:
+    repeat,
+    repeat,
+    no-repeat,
+    no-repeat,
+    no-repeat;
   animation: cutlers-cheese-bubble 18s ease-in-out infinite;
   mix-blend-mode: screen;
 }
@@ -140,7 +151,6 @@
 
 /* Cutler's Cheese call-to-action embellishments */
 [data-theme="cutlers-cheese"] .btn-primary {
-  padding-left: 2.65rem;
   color: #2a1500;
   background: linear-gradient(135deg, rgba(245, 183, 0, 0.92), rgba(255, 209, 102, 0.98));
   box-shadow:
@@ -149,33 +159,10 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
-[data-theme="cutlers-cheese"] .btn-primary::after {
-  content: "🧀";
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%) rotate(-8deg);
-  font-size: 1.15rem;
-  filter: drop-shadow(0 0 6px rgba(245, 183, 0, 0.45));
-  pointer-events: none;
-}
-
 [data-theme="cutlers-cheese"] .btn-secondary {
-  padding-right: 2.4rem;
   background: linear-gradient(135deg, rgba(122, 65, 0, 0.45), rgba(255, 224, 102, 0.18));
   border-color: rgba(255, 209, 102, 0.35);
   color: color-mix(in srgb, var(--color-text) 85%, #ffedb5 15%);
-}
-
-[data-theme="cutlers-cheese"] .btn-secondary::after {
-  content: "🥖";
-  position: absolute;
-  right: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%) rotate(5deg);
-  font-size: 1.05rem;
-  opacity: 0.9;
-  pointer-events: none;
 }
 
 [data-theme="cutlers-cheese"] .btn-tertiary {
