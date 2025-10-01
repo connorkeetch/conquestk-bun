@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import audioService from '../services/audioService'
 
-export default function MuteButton() {
+interface MuteButtonProps {
+  offsetBottom?: number // pixels; extra bottom offset to avoid overlapping UI
+}
+
+export default function MuteButton({ offsetBottom = 56 }: MuteButtonProps) {
   const [isMuted, setIsMuted] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+
+  const bottomStyle = useMemo(() => `calc(${Math.max(0, offsetBottom)}px + env(safe-area-inset-bottom, 0px))`, [offsetBottom])
 
   useEffect(() => {
     // Check initial mute state
@@ -21,7 +27,8 @@ export default function MuteButton() {
       onClick={handleToggleMute}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed bottom-8 right-4 md:bottom-10 md:right-6 z-50 p-3 bg-[color:var(--panel-bg)] hover:bg-[color:var(--hover-bg)]/90 backdrop-blur-sm border border-[color:var(--panel-border)] rounded-full transition-all hover:scale-110 group shadow"
+      className="fixed right-4 md:right-6 z-50 p-3 bg-[color:var(--panel-bg)] hover:bg-[color:var(--hover-bg)]/90 backdrop-blur-sm border border-[color:var(--panel-border)] rounded-full transition-all hover:scale-110 group shadow"
+      style={{ bottom: bottomStyle }}
       title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
       aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
     >

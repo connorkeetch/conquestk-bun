@@ -153,6 +153,24 @@ export default function GameRoom() {
     return currentRoom.players.find((player) => player.userId === user.id)
   }, [currentRoom?.players, user?.id])
 
+  const muteOffsetBottom = useMemo(() => {
+    // Base offset so it clears typical bottom paddings/footers
+    let px = 56
+    // Raise above AFK grace bar if visible
+    if (isGraceActor && graceExpiresAt) {
+      px = Math.max(px, 120)
+    }
+    // Raise further if host replacement bar is visible
+    if (isHost && replacementPending) {
+      px = Math.max(px, 160)
+    }
+    // If bottom drawer is open on mobile, push higher
+    if (mobileDrawerOpen) {
+      px = Math.max(px, 240)
+    }
+    return px
+  }, [isGraceActor, graceExpiresAt, isHost, replacementPending, mobileDrawerOpen])
+
   // Open Game Over modal when game finishes
   useEffect(() => {
     if (currentGame?.phase === 'finished') {
@@ -1925,7 +1943,7 @@ export default function GameRoom() {
         onClose={() => setProfileUsername(null)}
       />
       {/* Floating, less-obtrusive mute control */}
-      <MuteButton />
+      <MuteButton offsetBottom={muteOffsetBottom} />
     </div>
   )
 }
