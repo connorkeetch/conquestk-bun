@@ -58,8 +58,9 @@ function initLoginAttemptsStore() {
 const useInMemoryLogin = initLoginAttemptsStore()
 
 // Clean up old entries periodically (only needed for in-memory store)
+let loginCleanupInterval: NodeJS.Timeout | null = null
 if (useInMemoryLogin && loginAttemptsStore) {
-  setInterval(() => {
+  const interval = setInterval(() => {
     if (!loginAttemptsStore) return
 
     const now = Date.now()
@@ -74,6 +75,18 @@ if (useInMemoryLogin && loginAttemptsStore) {
       }
     })
   }, 60 * 1000) // Clean every minute
+
+  // Ensure this timer does not keep the process alive (important for tests)
+  interval.unref()
+  loginCleanupInterval = interval
+}
+
+// Allow tests to explicitly stop the background cleanup if needed
+export function stopRateLimiterCleanup(): void {
+  if (loginCleanupInterval) {
+    clearInterval(loginCleanupInterval)
+    loginCleanupInterval = null
+  }
 }
 
 /**
@@ -263,10 +276,12 @@ export class SuspiciousActivityTracker {
     this.blockedIPs.add(ip)
 
     // Automatically unblock after duration
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       this.blockedIPs.delete(ip)
       this.suspiciousIPs.delete(ip)
     }, this.BLOCK_DURATION * 1000) // Convert to milliseconds for setTimeout
+    // Don't hold the process open for long timeouts
+    timeout.unref()
   }
 
   async isBlocked(ip: string): Promise<boolean> {
