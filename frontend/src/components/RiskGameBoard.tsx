@@ -50,7 +50,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
   const viewerId = useSelector((state: RootState) => state.auth.user?.id ?? null)
 
-  const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
+  const [_hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
@@ -351,7 +351,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           mapId={mapId}
           territories={territories}
           players={players}
-          hoveredTerritory={hoveredTerritory}
           selectedTerritory={selectedTerritory}
           selectedTargetTerritory={selectedTargetTerritory}
           validTargets={validTargets}
