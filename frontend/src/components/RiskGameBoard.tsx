@@ -36,7 +36,7 @@ interface RiskGameBoardProps {
 
 export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   onTerritoryClick,
-  mapId = 'classic',
+  mapId = 'world',
   lobbyMode = false,
   lobbyPlayers = [],
 }) => {

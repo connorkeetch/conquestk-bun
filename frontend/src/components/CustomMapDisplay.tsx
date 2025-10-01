@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
-import { setOverlay } from '@/store/uiRoomSlice'
+import { socketService } from '@/services/socketService'
+import { selectTerritory } from '@/store/gameSlice'
+import { setLastPingAt, setOverlay } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import { arePlayersTeammates } from '@/utils/teamHelpers'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
@@ -52,6 +54,10 @@ export default function CustomMapDisplay({
   const dispatch = useAppDispatch()
   const game = useAppSelector((s) => s.game.currentGame)
   const myId = useAppSelector((s) => s.auth.user?.id)
+  const userId = useAppSelector((s) => s.auth.user?.id)
+  const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
+  const pings = useAppSelector((s) => s.uiRoom.pings ?? [])
+  const lastPingAt = useAppSelector((s) => s.uiRoom.lastPingAt ?? 0)
   const players = game?.players ?? []
   const kingOfTheHillState =
     game?.gameConfig?.gameMode === 'king_of_the_hill' ? game.kingOfTheHillState : null
@@ -169,7 +175,7 @@ export default function CustomMapDisplay({
       }
     }
 
-    if (mapId && mapId !== 'classic') {
+    if (mapId) {
       if (!hydrateFromProps()) {
         void loadMapData()
       }
@@ -255,6 +261,105 @@ export default function CustomMapDisplay({
       onSwipeLeft={() => cycleOverlay('left')}
       onSwipeRight={() => cycleOverlay('right')}
     >
+      {/* Overlay toggle buttons */}
+      <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded border border-border">
+        {(() => {
+          const haptic = () => {
+            try {
+              ;(navigator as unknown as { vibrate?: (pattern: number | number[]) => void }).vibrate?.(
+                10,
+              )
+            } catch {
+              // ignore haptics errors
+            }
+          }
+          return (
+            <>
+              <button
+                type="button"
+                className={`btn btn-ghost btn-xs ${overlays.continents ? 'ring-1 ring-white' : ''}`}
+                onClick={() => {
+                  dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
+                  haptic()
+                }}
+                title="Toggle sectors overlay (g)"
+              >
+                <span aria-hidden>🗺️</span>
+                <span className="hidden sm:inline">Sectors</span>
+              </button>
+              <button
+                type="button"
+                className={`btn btn-ghost btn-xs ${overlays.attackable ? 'ring-1 ring-white' : ''}`}
+                onClick={() => {
+                  dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
+                  haptic()
+                }}
+                title="Toggle attackable overlay"
+              >
+                <span aria-hidden>🎯</span>
+                <span className="hidden sm:inline">Attackable</span>
+              </button>
+              <button
+                type="button"
+                className={`btn btn-ghost btn-xs ${overlays.threat ? 'ring-1 ring-white' : ''}`}
+                onClick={() => {
+                  dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
+                  haptic()
+                }}
+                title="Toggle threat overlay (h)"
+              >
+                <span aria-hidden>🔥</span>
+                <span className="hidden sm:inline">Threat</span>
+              </button>
+            </>
+          )
+        })()}
+        {/* Ping button */}
+        {(() => {
+          const now = Date.now()
+          const cooldownMs = 2000
+          const coolingDown = (lastPingAt ?? 0) > 0 && now - lastPingAt < cooldownMs
+          const targetId = selectedTerritoryId || hoveredId
+          const disabled = !isMyTurn || !game?.roomId || !targetId || coolingDown
+          const label = coolingDown ? 'Ping (cooldown)' : 'Ping'
+          return (
+            <button
+              type="button"
+              className={`btn btn-ghost btn-xs ${coolingDown ? 'opacity-60 cursor-not-allowed' : ''}`}
+              onClick={() => {
+                if (!game?.roomId || !targetId || coolingDown) return
+                try {
+                  socketService.emit('ping:territory', {
+                    roomId: game.roomId,
+                    territoryId: targetId,
+                  })
+                } catch {
+                  // ignore ping emit errors
+                }
+                dispatch(setLastPingAt(now))
+                try {
+                  ;(
+                    navigator as unknown as { vibrate?: (pattern: number | number[]) => void }
+                  ).vibrate?.(15)
+                } catch {
+                  // ignore haptics errors
+                }
+              }}
+              disabled={disabled}
+              title={(() => {
+                if (!targetId) return 'Select or hover a territory to ping'
+                const name =
+                  territories.find((t) => t.id === targetId)?.name ?? targetId
+                return `Ping ${name}`
+              })()}
+            >
+              <span aria-hidden>📍</span>
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          )
+        })()}
+      </div>
+
       {hillOverlay}
       {/* Sectors overlay: colored dots per territory */}
       {overlays.continents &&
@@ -441,7 +546,7 @@ export default function CustomMapDisplay({
                   width: '32px',
                   height: '32px',
                   backgroundColor: color,
-                  opacity: isSelected ? 0.9 : 0.8,
+                  opacity: isSelected ? 0.85 : 0.7,
                   clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
                   boxShadow: isSelected
                     ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
@@ -508,6 +613,52 @@ export default function CustomMapDisplay({
           })()}
         </div>
       )}
+
+      {/* Focus animation on selected territory */}
+      {focus && (
+        <output
+          className="absolute pointer-events-none z-10"
+          style={{
+            left: `${(focus.x / mapData.width) * 100}%`,
+            top: `${(focus.y / mapData.height) * 100}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+          aria-live="polite"
+          aria-label={(() => {
+            const focusId = selectedTerritoryId
+            if (!focusId) return 'Focused territory'
+            const name = territories.find((t) => t.id === focusId)?.name ?? focusId
+            return `Focused on ${name}`
+          })()}
+        >
+          <div className="w-10 h-10 rounded-full border-2 border-cyan-300/80 animate-ping" />
+        </output>
+      )}
+
+      {/* Ping markers */}
+      {pings
+        .filter((p) => p.expiresAt > Date.now())
+        .map((ping) => {
+          const t = territories.find((territory) => territory.id === ping.territoryId)
+          if (!t) return null
+          const left = (t.x / mapData.width) * 100
+          const top = (t.y / mapData.height) * 100
+          return (
+            <button
+              key={`ping-${ping.id}`}
+              type="button"
+              className="absolute z-30"
+              style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
+              onClick={() => dispatch(selectTerritory(ping.territoryId))}
+              title={ping.username ? `${ping.username} pinged` : 'Ping'}
+            >
+              <span className="relative block w-10 h-10">
+                <span className="absolute inset-0 rounded-full border-2 border-cyan-300/80 animate-ping" />
+                <span className="absolute inset-2 rounded-full bg-cyan-400/70" />
+              </span>
+            </button>
+          )
+        })}
 
       {oddsTooltip && (
         <div
