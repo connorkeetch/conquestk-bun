@@ -169,7 +169,7 @@ function ColorDropdown({
 
       {/* Dropdown Menu */}
       {isDropdownOpen && (
-        <div className="absolute mt-2 w-full panel z-50 max-h-96 overflow-y-auto p-0">
+        <div className="absolute mt-2 w-full panel panel-overlay z-50 max-h-96 overflow-y-auto p-0">
           {/* Standard Colors Section */}
           <div className="p-2">
             <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">
@@ -1146,7 +1146,7 @@ export default function Settings() {
 
               {/* Dropdown Menu */}
               {isThemeDropdownOpen && (
-                <div className="absolute mt-2 w-full panel z-50 max-h-96 overflow-y-auto p-0">
+                <div className="absolute mt-2 w-full panel panel-overlay z-50 max-h-96 overflow-y-auto p-0">
                   <div className="p-2">
                     <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">
                       Standard Themes
