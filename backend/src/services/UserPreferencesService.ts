@@ -4,7 +4,7 @@ import type { Pool } from 'pg'
 import { logger } from '../utils/logger'
 
 export interface UserPreferences {
-  userId: number
+  userId: string
   theme: ThemeId
   soundEnabled: boolean
   musicEnabled: boolean
@@ -21,7 +21,7 @@ export interface UserPreferences {
 export class UserPreferencesService {
   constructor(private pool: Pool) {}
 
-  async getPreferences(userId: number): Promise<UserPreferences | null> {
+  async getPreferences(userId: string): Promise<UserPreferences | null> {
     try {
       // First check what columns exist
       const columnsResult = await this.pool.query(
@@ -122,7 +122,7 @@ export class UserPreferencesService {
   }
 
   async updatePreferences(
-    userId: number,
+    userId: string,
     preferences: Partial<UserPreferences>,
   ): Promise<UserPreferences | null> {
     try {
@@ -221,7 +221,7 @@ export class UserPreferencesService {
     }
   }
 
-  async updateTheme(userId: number, theme: string): Promise<ThemeId | null> {
+  async updateTheme(userId: string, theme: string): Promise<ThemeId | null> {
     try {
       const normalizedTheme = normalizeThemeId(theme)
       const result = await this.updatePreferences(userId, { theme: normalizedTheme })
@@ -242,7 +242,7 @@ export class UserPreferencesService {
   }
 
   private async createDefaultPreferences(
-    userId: number,
+    userId: string,
     overrides: Partial<UserPreferences> = {},
   ): Promise<UserPreferences> {
     try {
