@@ -222,7 +222,6 @@ export default function CustomMapDisplay({
       className="custom-map-display"
       showMinimap={true}
       backgroundImageUrl={mapData.imageUrl}
-      storageKey={mapId}
       focus={focus ?? undefined}
       onSwipeLeft={() => cycleOverlay('left')}
       onSwipeRight={() => cycleOverlay('right')}
@@ -281,6 +280,9 @@ export default function CustomMapDisplay({
           )
         })()}
       </div>
+
+      {/* Zoom controls */}
+      <ZoomControls />
 
       {hillOverlayEnabled && (
         <HillOverlay
@@ -422,6 +424,49 @@ export default function CustomMapDisplay({
         </div>
       )}
     </ResponsiveMapContainer>
+  )
+}
+
+/**
+ * Zoom controls component - uses useMapViewport to control zoom
+ */
+function ZoomControls() {
+  const viewport = useMapViewport()
+
+  if (!viewport) return null
+
+  const { zoom, setZoom } = viewport
+
+  return (
+    <div className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
+      <button
+        type="button"
+        className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+        onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.05) * 100) / 100))}
+        title="Zoom out (Ctrl/Cmd + scroll or pinch)"
+      >
+        −
+      </button>
+      <div className="text-xs self-center min-w-[44px] text-center text-muted font-mono">
+        {Math.round(zoom * 100)}%
+      </div>
+      <button
+        type="button"
+        className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+        onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.05) * 100) / 100))}
+        title="Zoom in (Ctrl/Cmd + scroll or pinch)"
+      >
+        +
+      </button>
+      <button
+        type="button"
+        className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-ghost hover:bg-surface-2 active:bg-surface-2 transition-colors text-xs"
+        onClick={() => setZoom(1)}
+        title="Reset zoom to 100%"
+      >
+        1:1
+      </button>
+    </div>
   )
 }
 
