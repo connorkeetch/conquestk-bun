@@ -717,6 +717,7 @@ export class GameLifecycleService {
   private async persistGameState(roomId: string, gameState: GameState) {
     const serializable = this.toSerializableGameState(gameState)
 
+    // Save to database
     await query(
       `
       INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, phase)
@@ -736,6 +737,10 @@ export class GameLifecycleService {
         gameState.phase,
       ],
     )
+
+    // Also populate Redis cache for fast access
+    const { gameStateCache } = await import('./cacheService')
+    await gameStateCache.setGameState(roomId, serializable)
   }
 
   private toSerializableGameState(gameState: GameState) {
