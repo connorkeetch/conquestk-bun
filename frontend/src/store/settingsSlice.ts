@@ -160,7 +160,9 @@ const loadSettings = (): SettingsState => {
           if (localStorage.getItem('themeDebug') === '1') {
             console.info('[theme/settings] loadSettings apply', { themeToUse, themeSource })
           }
-        } catch {}
+        } catch {
+          // ignore theme debug logging issues (e.g., localStorage unavailable)
+        }
         // Apply colorblind attribute
         if (colorblind) {
           document.documentElement.setAttribute('data-colorblind', '1')
@@ -190,7 +192,9 @@ const loadSettings = (): SettingsState => {
             if (localStorage.getItem('themeDebug') === '1') {
               console.info('[theme/settings] recover theme after parse error', { themeToUse })
             }
-          } catch {}
+          } catch {
+            // ignore theme debug logging issues (e.g., localStorage unavailable)
+          }
         }
 
         try {
@@ -212,7 +216,9 @@ const loadSettings = (): SettingsState => {
       if (localStorage.getItem('themeDebug') === '1') {
         console.info('[theme/settings] no stored settings; using fallback', { fallbackTheme })
       }
-    } catch {}
+    } catch {
+      // ignore theme debug logging issues (e.g., localStorage unavailable)
+    }
   }
 
   try {

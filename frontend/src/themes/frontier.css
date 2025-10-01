@@ -307,8 +307,11 @@
   [data-theme="frontier"] body::before,
   [data-theme="frontier"] body::after {
     /* Keep static overlays visible */
+    /* biome-ignore lint/complexity/noImportantStyles: Force override of animation */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Ensure transforms are reset */
     transform: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Force compositor reset for perf */
     will-change: auto !important;
   }
 }

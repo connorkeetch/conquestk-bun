@@ -300,6 +300,7 @@ This allows themes to work with any color scheme!
 }
 
 /* Overlay scaffolding for all themes: ensure ::after exists even when grid is disabled */
+/* biome-ignore lint/style/noDescendingSpecificity: Base overlay must follow grid overrides */
 [data-theme] body::after {
   content: "";
   position: fixed;

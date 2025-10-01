@@ -70,7 +70,9 @@ async function which(cmd: string): Promise<string | null> {
       stdio: ['ignore', 'pipe', 'ignore'],
     })
     let out = ''
-    s.stdout.on('data', (d) => (out += d.toString()))
+    s.stdout.on('data', (d) => {
+      out += d.toString()
+    })
     s.on('close', (code) => {
       resolve(code === 0 ? out.trim().split(/\r?\n/)[0] : null)
     })
@@ -200,7 +202,9 @@ async function pgDumpSchema(url: string, outPath: string): Promise<void> {
     ]
     const p = spawn(pgDumpPath, args, { stdio: ['ignore', 'pipe', 'inherit'] })
     let dump = ''
-    p.stdout.on('data', (d) => (dump += d.toString()))
+    p.stdout.on('data', (d) => {
+      dump += d.toString()
+    })
     p.on('close', (code) => {
       if (code !== 0) return reject(new Error(`pg_dump exit code ${code}`))
 

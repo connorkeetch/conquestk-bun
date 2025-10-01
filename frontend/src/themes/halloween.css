@@ -231,8 +231,11 @@
   [data-theme="halloween"] body::before,
   [data-theme="halloween"] body::after {
     /* Disable motion but keep overlays visible for static ambience */
+    /* biome-ignore lint/complexity/noImportantStyles: Force override of motion for accessibility */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Ensure transforms are reset */
     transform: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Force compositor reset for perf */
     will-change: auto !important;
   }
 }
