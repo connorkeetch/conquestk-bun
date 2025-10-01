@@ -18,7 +18,8 @@ import { RiskGameBoard } from '../components/RiskGameBoard'
 import { Skeleton } from '../components/ui/Skeleton'
 import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import audioService from '../services/audioService'
+// audioService toggled via floating MuteButton component
+import MuteButton from '@/components/MuteButton'
 import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
@@ -62,7 +63,7 @@ export default function GameRoom() {
   const isSpectator = searchParams.get('spectate') === 'true'
   const [isRoomLoading, setIsRoomLoading] = useState(false)
   const [roomError, setRoomError] = useState<string | null>(null)
-  const [isMuted, setIsMuted] = useState(audioService.isMutedState())
+  // Mute button moved to bottom-right floating control; local state not needed here
   const [_teamUpdating, setTeamUpdating] = useState(false)
   const [_teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
   const [joinSubmitting, setJoinSubmitting] = useState(false)
@@ -920,10 +921,7 @@ export default function GameRoom() {
     navigate('/lobby')
   }
 
-  const handleToggleMute = () => {
-    audioService.toggleMute()
-    setIsMuted(audioService.isMutedState())
-  }
+  // Inline mute toggle moved to floating button component
 
   // Keyboard shortcuts for quick gameplay
   useEffect(() => {
@@ -1222,14 +1220,6 @@ export default function GameRoom() {
             </button>
           )}
           {/* Ready control removed; joining implies ready */}
-          <button
-            onClick={handleToggleMute}
-            className="btn btn-ghost"
-            type="button"
-            title={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
-          </button>
           {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
             <>
               <button
@@ -1908,6 +1898,8 @@ export default function GameRoom() {
         username={profileUsername}
         onClose={() => setProfileUsername(null)}
       />
+      {/* Floating, less-obtrusive mute control */}
+      <MuteButton />
     </div>
   )
 }
