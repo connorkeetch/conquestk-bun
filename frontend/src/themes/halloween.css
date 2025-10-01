@@ -230,14 +230,10 @@
 @media (prefers-reduced-motion: reduce) {
   [data-theme="halloween"] body::before,
   [data-theme="halloween"] body::after {
-    /* biome-ignore lint/complexity/noImportantStyles: ensure motion is disabled when user requests reduced motion */
+    /* Disable motion but keep overlays visible for static ambience */
     animation: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: ensure transform animations are disabled */
     transform: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: ensure heavy overlays are removed for accessibility */
-    background-image: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: ensure overlay is fully hidden */
-    opacity: 0 !important;
+    will-change: auto !important;
   }
 }
 

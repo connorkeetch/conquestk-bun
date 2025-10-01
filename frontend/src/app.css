@@ -820,8 +820,7 @@ body[data-background-motion="off"]::before,
 body[data-background-motion="off"]::after {
   animation: none;
   transform: none;
-  background-image: none;
-  opacity: 0;
+  /* Keep overlays visible when motion is off */
 }
 
 /* Ensure content is above overlay */
