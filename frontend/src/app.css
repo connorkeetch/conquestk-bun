@@ -340,6 +340,16 @@ This allows themes to work with any color scheme!
     padding: var(--panel-padding);
   }
 
+  /* Overlay-strength panel for dropdowns/menus/popovers to improve readability */
+  .panel-overlay {
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border);
+    border-radius: var(--panel-radius);
+    box-shadow: var(--shadow-2);
+    /* Keep blur subtle while ensuring sufficient contrast */
+    backdrop-filter: blur(calc(var(--glass-blur) * 0.75));
+  }
+
   .panel-muted {
     background: var(--panel-bg-alt);
     border: 1px solid var(--panel-border);
