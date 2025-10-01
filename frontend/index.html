@@ -10,6 +10,27 @@
     <script>
       // Load theme immediately to prevent flash
       ;(function () {
+        const getCookie = (name) => {
+          try {
+            const value = `; ${document.cookie}`
+            const parts = value.split(`; ${name}=`)
+            if (parts.length === 2) return parts.pop().split(';').shift()
+          } catch {}
+          return null
+        }
+        const isDebug = () => {
+          try {
+            if (localStorage.getItem('themeDebug') === '1') return true
+          } catch {}
+          return getCookie('ck_theme_debug') === '1'
+        }
+
+        const log = (msg, data) => {
+          if (isDebug()) {
+            try { console.info('[theme-loader]', msg, data || '') } catch {}
+          }
+        }
+
         try {
           const validThemes = [
             'default',
@@ -32,7 +53,15 @@
             'metal',
             'cutlers-cheese',
           ]
-          let storedTheme = localStorage.getItem('colorTheme') || 'default'
+
+          let storedTheme = null
+          try {
+            storedTheme = localStorage.getItem('colorTheme') || 'default'
+          } catch (err) {
+            // localStorage unavailable; we'll try cookie below
+            log('localStorage read failed; will try cookie', String(err))
+          }
+
           // Migrate legacy single-variant color themes to their dark variants
           const legacyMap = {
             violet: 'violet-dark',
@@ -40,16 +69,30 @@
             red: 'red-dark',
             green: 'green-dark',
           }
-          if (legacyMap[storedTheme]) {
+          if (storedTheme && legacyMap[storedTheme]) {
             storedTheme = legacyMap[storedTheme]
             try { localStorage.setItem('colorTheme', storedTheme) } catch {}
+            log('migrated legacy theme to variant', storedTheme)
           }
-          
-          // Validate and apply theme
-          const theme = validThemes.includes(storedTheme) ? storedTheme : 'default'
+
+          // Validate and apply theme; try cookie fallback before defaulting
+          let theme = null
+          if (storedTheme && validThemes.includes(storedTheme)) {
+            theme = storedTheme
+          } else {
+            const cookieTheme = getCookie('ck_theme')
+            if (cookieTheme && validThemes.includes(cookieTheme)) {
+              theme = cookieTheme
+              log('using cookie fallback theme', theme)
+            } else {
+              theme = 'default'
+              log('falling back to default theme', theme)
+            }
+          }
+
           document.documentElement.setAttribute('data-theme', theme)
         } catch (e) {
-          // Silently fail if localStorage is not available
+          // Silently fail if localStorage/cookie is not available
           document.documentElement.setAttribute('data-theme', 'default')
         }
       })()

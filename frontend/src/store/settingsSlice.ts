@@ -138,11 +138,14 @@ const loadSettings = (): SettingsState => {
         typeof parsed.display?.theme === 'string' ? parsed.display.theme : undefined
 
       let themeToUse: ThemeId = fallbackTheme
+      let themeSource: string = 'default'
 
       if (typeof storedColorThemeRaw === 'string') {
         themeToUse = normalizeThemeId(storedColorThemeRaw)
+        themeSource = 'localStorage.colorTheme'
       } else if (parsedTheme) {
         themeToUse = normalizeThemeId(parsedTheme)
+        themeSource = 'userSettings.display.theme'
       }
 
       mergedSettings.display.theme = themeToUse
@@ -152,6 +155,12 @@ const loadSettings = (): SettingsState => {
 
       if (typeof document !== 'undefined') {
         document.documentElement.setAttribute('data-theme', themeToUse)
+        // Debug (opt-in): log theme application source in production when enabled
+        try {
+          if (localStorage.getItem('themeDebug') === '1') {
+            console.info('[theme/settings] loadSettings apply', { themeToUse, themeSource })
+          }
+        } catch {}
         // Apply colorblind attribute
         if (colorblind) {
           document.documentElement.setAttribute('data-colorblind', '1')
@@ -177,6 +186,11 @@ const loadSettings = (): SettingsState => {
 
         if (typeof document !== 'undefined') {
           document.documentElement.setAttribute('data-theme', themeToUse)
+          try {
+            if (localStorage.getItem('themeDebug') === '1') {
+              console.info('[theme/settings] recover theme after parse error', { themeToUse })
+            }
+          } catch {}
         }
 
         try {
@@ -194,6 +208,11 @@ const loadSettings = (): SettingsState => {
 
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('data-theme', fallbackTheme)
+    try {
+      if (localStorage.getItem('themeDebug') === '1') {
+        console.info('[theme/settings] no stored settings; using fallback', { fallbackTheme })
+      }
+    } catch {}
   }
 
   try {
