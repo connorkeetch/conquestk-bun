@@ -441,7 +441,7 @@ export interface MapReviewItem {
   map?: CustomMap
   submittedBy: string
   submitterName?: string
-  status: 'pending' | 'in_review' | 'approved' | 'rejected'
+  status: 'pending' | 'in_review' | 'approved' | 'rejected' | 'needs_changes'
   priority: number
   assignedTo?: string
   submittedAt: Date

@@ -3,6 +3,7 @@ import { logger } from '../utils/logger'
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 const DEFAULT_DAILY_MS = ONE_DAY_MS
+const DEFAULT_WEEKLY_MS = 7 * ONE_DAY_MS
 
 function getIntervalMs(): number {
   const value = process.env.MAINTENANCE_PRUNE_INTERVAL_MS

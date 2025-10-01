@@ -148,7 +148,7 @@ const mapConversationRow = (row: ConversationRow): ConversationRecord => ({
   isArchived: row.is_archived,
   isReadOnly: row.is_read_only,
   gameId: row.game_id,
-  clanId: (row as any).clan_id ?? null,
+  clanId: row.clan_id ?? null,
   metadata: row.metadata ?? {},
 })
 
