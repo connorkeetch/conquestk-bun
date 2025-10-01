@@ -102,9 +102,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         <div
           className={`${
             isFullPage ? 'min-h-screen' : level === 'section' ? 'min-h-[400px]' : 'min-h-[200px]'
-          } flex items-center justify-center ${
-            isFullPage ? 'bg-gradient-to-br from-gray-900 via-purple-900/20 to-black' : ''
-          }`}
+          } flex items-center justify-center`}
         >
           <div className="text-center p-8 bg-danger-soft border border-red-500/30 rounded-lg max-w-lg">
             <div className="text-5xl mb-4">{isFullPage ? '💥' : '⚠️'}</div>

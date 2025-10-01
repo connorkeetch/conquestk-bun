@@ -14,6 +14,10 @@ export const FEATURE_FLAGS = {
   COMING_SOON_UI: 'ui_coming_soon_placeholders',
   PROFILE_EXTRAS: 'ui_profile_extras',
 
+  // Theme/UX hardening
+  UI_THEME_COOKIE_FALLBACK: 'ui_theme_cookie_fallback',
+  UI_THEME_DEBUG_LOGS: 'ui_theme_debug_logs',
+
   // Experimental Features
   // (AI features are now generally available; flags removed)
 } as const

@@ -5,6 +5,8 @@ import {
   THEME_IDS,
   type ThemeId,
 } from '@shared/types/themes'
+import { featureFlagService } from '../services/featureFlagService'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
 
 // Theme Configuration - Metadata Only
 // CSS in app.css handles all actual styling
@@ -198,13 +200,26 @@ export function applyTheme(themeId: string): void {
   const normalizedTheme = normalizeThemeId(themeId)
   document.documentElement.setAttribute('data-theme', normalizedTheme)
   setBackgroundMotionPreference(getBackgroundMotionPreference(), false)
+
+  // Optional: persist to cookie for first-paint fallback (behind feature flag)
+  try {
+    if (featureFlagService.isEnabled(FEATURE_FLAGS.UI_THEME_COOKIE_FALLBACK)) {
+      setThemeCookie(normalizedTheme)
+      themeDebugLog('applyTheme: wrote cookie', { normalizedTheme })
+    }
+  } catch {
+    // ignore cookie errors
+  }
 }
 
 export function getStoredTheme(): ThemeId {
   try {
     const storedTheme = localStorage.getItem('colorTheme')
-    return normalizeThemeId(storedTheme)
+    const normalized = normalizeThemeId(storedTheme)
+    themeDebugLog('getStoredTheme', { storedTheme, normalized })
+    return normalized
   } catch {
+    themeDebugLog('getStoredTheme: localStorage failed; defaulting', { fallback: DEFAULT_THEME_ID })
     return DEFAULT_THEME_ID
   }
 }
@@ -218,5 +233,58 @@ export function storeTheme(themeId: string): ThemeId {
     // Silently fail if localStorage is not available
   }
 
+  // Optional cookie persistence for first-paint fallback (behind feature flag)
+  try {
+    if (
+      typeof document !== 'undefined' &&
+      featureFlagService.isEnabled(FEATURE_FLAGS.UI_THEME_COOKIE_FALLBACK)
+    ) {
+      setThemeCookie(normalizedTheme)
+      themeDebugLog('storeTheme: wrote cookie', { normalizedTheme })
+    }
+  } catch {
+    // ignore cookie errors
+  }
+
   return normalizedTheme
+}
+
+// --- Internals: cookie + debug helpers ---
+function setThemeCookie(themeId: string) {
+  if (typeof document === 'undefined') return
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : ''
+  const domain = host.endsWith('conquestk.com') ? '; Domain=.conquestk.com' : ''
+  const secure = isHttps ? '; Secure' : ''
+  const sameSite = '; SameSite=Lax'
+  // Short TTL (3 days)
+  const expires = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toUTCString()
+  document.cookie = `ck_theme=${encodeURIComponent(themeId)}; Expires=${expires}; Path=/${domain}${sameSite}${secure}`
+}
+
+function isThemeDebugEnabled(): boolean {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('themeDebug') === '1') return true
+  } catch {}
+  try {
+    const value = `; ${document.cookie}`
+    const parts = value.split('; ck_theme_debug=')
+    if (parts.length === 2) {
+      const v = parts.pop()?.split(';').shift()
+      if (v === '1') return true
+    }
+  } catch {}
+  // Feature flag can also enable logs globally
+  try {
+    return featureFlagService.isEnabled(FEATURE_FLAGS.UI_THEME_DEBUG_LOGS)
+  } catch {
+    return false
+  }
+}
+
+function themeDebugLog(message: string, data?: unknown) {
+  if (!isThemeDebugEnabled()) return
+  try {
+    console.info('[theme]', message, data ?? '')
+  } catch {}
 }
