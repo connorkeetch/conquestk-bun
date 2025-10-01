@@ -1,5 +1,6 @@
 import type React from 'react'
 import type { GamePlayer } from '@/types/game'
+import { getColorValue } from '@/constants/colors'
 import type { ContinentDefinition, PlayerContinentStatus } from '@/utils/continentBonuses'
 
 interface ContinentControlPanelProps {
@@ -33,7 +34,7 @@ export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = ({
         <div key={playerStatus.playerId} className="flex items-center mb-1">
           <div
             className="w-2 h-2 rounded-full mr-1 border border-gray-400"
-            style={{ backgroundColor: player.color }}
+            style={{ backgroundColor: getColorValue(player.color) }}
           />
           <span>
             {player.username}: {partialControl.controlledTerritories}/
@@ -82,7 +83,7 @@ export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = ({
                 <div className="flex items-center text-sm">
                   <div
                     className="w-3 h-3 rounded-full mr-2 border border-gray-400"
-                    style={{ backgroundColor: controller.color }}
+                    style={{ backgroundColor: getColorValue(controller.color) }}
                   />
                   <span className="font-medium">Controlled by {controller.username}</span>
                 </div>
@@ -111,7 +112,7 @@ export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = ({
                   <div className="flex items-center">
                     <div
                       className="w-3 h-3 rounded-full mr-2 border border-gray-400"
-                      style={{ backgroundColor: player.color }}
+                      style={{ backgroundColor: getColorValue(player.color) }}
                     />
                     <span>{player.username}</span>
                   </div>

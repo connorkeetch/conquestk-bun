@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
 import { TurnTimer } from './TurnTimer'
 
@@ -57,7 +58,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             <span className="text-muted">Current Turn:</span>
             <div
               className="w-3 h-3 rounded-full border border-[color:var(--panel-border)]"
-              style={{ backgroundColor: currentPlayerInfo.color }}
+              style={{ backgroundColor: getColorValue(currentPlayerInfo.color) }}
             />
             <button
               type="button"

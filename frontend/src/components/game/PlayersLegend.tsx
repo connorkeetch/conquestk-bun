@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { getColorValue } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
 
@@ -36,7 +37,7 @@ export const PlayersLegend: React.FC<PlayersLegendProps> = ({ players }) => {
             <div className="flex items-center space-x-2">
               <div
                 className="w-4 h-4 rounded-full border border-gray-400"
-                style={{ backgroundColor: player.color }}
+                style={{ backgroundColor: getColorValue(player.color) }}
               />
               <button
                 type="button"

@@ -1,4 +1,5 @@
 import type React from 'react'
+import { getColorValue } from '@/constants/colors'
 
 interface Player {
   id: string
@@ -45,7 +46,7 @@ export const PlayersPanel: React.FC<PlayersPanelProps> = ({
               <div className="flex items-center space-x-2">
                 <div
                   className="w-4 h-4 rounded-full border border-gray-400"
-                  style={{ backgroundColor: player.color }}
+                  style={{ backgroundColor: getColorValue(player.color) }}
                 ></div>
                 <span className="font-medium">{player.username}</span>
               </div>

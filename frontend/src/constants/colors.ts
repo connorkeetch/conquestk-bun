@@ -228,6 +228,33 @@ export const getRankColor = (elo: number) => {
 
 // Legacy compatibility functions for components that haven't been fully migrated
 export const getColorValue = (color: PlayerColor): string => {
+  // Normalize simple named colors coming from the shared backend types to our hex palette
+  // This bridges backend PlayerColor name values (e.g. 'red', 'blue') to frontend hex tokens
+  const namedToHex: Record<string, string> = {
+    red: '#DC2626',
+    blue: '#2563EB',
+    green: '#059669',
+    yellow: '#F59E0B',
+    purple: '#7C3AED',
+    orange: '#EA580C',
+    cyan: '#06B6D4',
+    pink: '#EC4899',
+    brown: '#5C4033',
+    lime: '#014421',
+    indigo: '#7C3AED',
+    teal: '#06B6D4',
+  }
+
+  // If we receive a named color, map it to a known hex
+  const lower = typeof color === 'string' ? color.toLowerCase() : ''
+  if (lower in namedToHex) {
+    const hex = namedToHex[lower]
+    // Ensure the mapped hex is part of our standard palette to keep visuals consistent
+    if ((PLAYER_COLORS as readonly string[]).includes(hex)) {
+      return hex
+    }
+  }
+
   // Check if it's a regular player color (hex value)
   if ((PLAYER_COLORS as readonly string[]).includes(color)) {
     // If colorblind mode is enabled, map to color-blind-friendly palette by index

@@ -1183,7 +1183,7 @@ export default function GameRoom() {
                 <span className="inline-flex items-center gap-1">
                   <span
                     className="inline-block w-2.5 h-2.5 rounded-full border border-white/50"
-                    style={{ background: p?.color || '#9CA3AF' }}
+                    style={{ background: p?.color ? getColorValue(p.color) : '#9CA3AF' }}
                   />
                   <span className="max-w-[120px] truncate">{p?.username || 'Player'}</span>
                 </span>
