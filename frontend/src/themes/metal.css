@@ -143,8 +143,7 @@
 
 [data-theme="metal"] body::after {
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23ff355e' fill-opacity='0.58' d='M32 12c-4.5 0-7 3.4-7 3.4S20.5 13 17 13c-6 0-9.5 4.6-9.5 4.6S12 20.8 12 26c0 2.7 0.2 4.8 1.5 6.7L32 51l18.5-18.3C52.8 30.8 53 28.7 53 26c0-5.2 4.5-8.4 4.5-8.4S54 13 48 13c-3.5 0-7 2.4-7 2.4S36.5 12 32 12z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Cpath fill='%237b87ff' fill-opacity='0.45' d='M36 6C20 6 8 22 8 36c0 16 12 30 28 30s28-14 28-30C64 22 52 6 36 6zm0 12c8.8 0 16 8.4 16 18s-7.2 18-16 18S20 45.6 20 36s7.2-18 16-18z'/%3E%3Cpath fill='%239ffcff' fill-opacity='0.55' d='M36 20a4 4 0 0 0-4 4v12l-6-6-6 6 16 16 16-16-6-6-6 6V24a4 4 0 0 0-4-4z'/%3E%3C/svg%3E"),
+    /* Keep lightning bolt; reduce clutter by removing extra glyphs */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 64'%3E%3Cpath fill='%23ff7c3b' fill-opacity='0.55' d='M28 2 8 34h12L20 62l20-32H28l8-28z'/%3E%3C/svg%3E"),
     linear-gradient(
       180deg,
@@ -160,16 +159,12 @@
       transparent 6px
     );
   background-size:
-    240px 360px,
-    260px 380px,
-    180px 300px,
+    420px 660px,
     100% 100%,
     100% 6px;
-  background-repeat: repeat, repeat, repeat, no-repeat, repeat;
+  background-repeat: repeat, no-repeat, repeat;
   background-position:
-    0 -260px,
-    140px -340px,
-    60px -220px,
+    0 -220px,
     50% 0,
     0 0;
   mix-blend-mode: screen;
@@ -192,14 +187,11 @@
 @media (prefers-reduced-motion: reduce) {
   [data-theme="metal"] body::before,
   [data-theme="metal"] body::after {
-    /* biome-ignore lint/complexity/noImportantStyles: ensure motion is disabled when user requests reduced motion */
+    /* Disable motion while keeping overlays visible */
     animation: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: disable transforms for reduced motion */
     transform: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: override any previous background animation positioning */
     background-position: center center !important;
-    /* biome-ignore lint/complexity/noImportantStyles: ensure overlay is fully hidden */
-    opacity: 0 !important;
+    will-change: auto !important;
   }
 }
 
