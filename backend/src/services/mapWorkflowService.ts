@@ -441,17 +441,19 @@ export class MapWorkflowService {
         throw new MapNotFoundError()
       }
 
-      // Add to review queue
-      await query(
-        `
-        INSERT INTO map_review_queue (map_id, submitted_by, status, priority)
-        VALUES ($1, $2, 'pending', 0)
-        ON CONFLICT(map_id) DO UPDATE SET 
-          status = 'pending', 
-          submitted_at = CURRENT_TIMESTAMP
-      `,
-        [mapId, userId],
+      // Create approval request tied to the latest version
+      const v = await query<{ id: string }>(
+        `SELECT id FROM map_versions WHERE map_id = $1 ORDER BY version_number DESC, created_at DESC LIMIT 1`,
+        [mapId],
       )
+      const versionId = v.rows[0]?.id
+      if (versionId) {
+        await query(
+          `INSERT INTO map_approval_requests (version_id, requester_id, submission_notes, priority_level)
+           VALUES ($1, $2, $3, 'normal')`,
+          [versionId, userId, 'Submitted via mapWorkflowService'],
+        )
+      }
 
       // Create admin notification
       const mapNameResult = await query<{ name: string }>('SELECT name FROM maps WHERE id = $1', [
@@ -507,13 +509,15 @@ export class MapWorkflowService {
         [adminId, notes ?? null, mapId],
       )
 
+      // Mark any pending approval request for this map as approved
       await query(
         `
-        UPDATE map_review_queue 
-        SET status = 'approved', reviewed_at = CURRENT_TIMESTAMP
-        WHERE map_id = $1
-      `,
-        [mapId],
+          UPDATE map_approval_requests ar
+          SET decision = 'approved', moderator_feedback = COALESCE($2, moderator_feedback), review_completed_at = CURRENT_TIMESTAMP, assigned_moderator_id = COALESCE(assigned_moderator_id, $1)
+          FROM map_versions v
+          WHERE ar.version_id = v.id AND v.map_id = $3 AND ar.decision IS NULL
+        `,
+        [adminId, notes ?? null, mapId],
       )
 
       await this.logMapAction(mapId, 'approved', adminId, notes ? { notes } : undefined)
@@ -604,11 +608,12 @@ export class MapWorkflowService {
 
       await query(
         `
-        UPDATE map_review_queue 
-        SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP
-        WHERE map_id = $1
-      `,
-        [mapId],
+          UPDATE map_approval_requests ar
+          SET decision = 'rejected', moderator_feedback = $2, review_completed_at = CURRENT_TIMESTAMP, assigned_moderator_id = COALESCE(assigned_moderator_id, $1)
+          FROM map_versions v
+          WHERE ar.version_id = v.id AND v.map_id = $3 AND ar.decision IS NULL
+        `,
+        [adminId, reason, mapId],
       )
 
       await this.logMapAction(mapId, 'rejected', adminId, { reason })
@@ -733,21 +738,39 @@ export class MapWorkflowService {
    */
   async getPendingReviews(): Promise<MapReviewItem[]> {
     try {
-      const result = await query(`
+      const result = await query(
+        `
         SELECT 
-          mrq.*,
+          ar.id,
+          v.map_id,
           m.name as map_name,
           m.description as map_description,
           m.creator_id,
-          u.username as submitter_name
-        FROM map_review_queue mrq
-        JOIN maps m ON mrq.map_id = m.id
-        JOIN users u ON m.creator_id = u.id
-        WHERE mrq.status = 'pending'
-        ORDER BY mrq.priority DESC, mrq.submitted_at ASC
-      `)
+          u.username as submitter_name,
+          ar.assigned_moderator_id,
+          ar.created_at,
+          ar.review_completed_at,
+          ar.decision
+        FROM map_approval_requests ar
+        JOIN map_versions v ON ar.version_id = v.id
+        JOIN maps m ON v.map_id = m.id
+        JOIN users u ON ar.requester_id = u.id
+        WHERE ar.decision IS NULL
+        ORDER BY ar.created_at ASC
+        `,
+      )
 
-      return (result.rows as MapReviewItem[]) || []
+      return result.rows.map((row) => ({
+        id: row.id,
+        mapId: row.map_id,
+        submittedBy: row.creator_id,
+        submitterName: row.submitter_name,
+        status: row.decision ? (row.decision as 'approved' | 'rejected' | 'needs_changes') : 'pending',
+        priority: 0,
+        assignedTo: row.assigned_moderator_id ?? undefined,
+        submittedAt: row.created_at,
+        reviewedAt: row.review_completed_at ?? undefined,
+      }))
     } catch (error) {
       logger.error('Error fetching pending reviews:', error)
       throw error

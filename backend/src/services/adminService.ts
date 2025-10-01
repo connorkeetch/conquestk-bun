@@ -589,41 +589,42 @@ export class AdminService {
     items: ContentApprovalQueueItem[]
     total: number
   }> {
+    // Content approval queue is repurposed for user reports only (maps use map_approval_requests)
     const countResult = await query(`
-      SELECT COUNT(*) as total FROM content_approval_queue 
-      WHERE status = 'pending'
+      SELECT COUNT(*) as total FROM user_reports WHERE status = 'pending'
     `)
     const total = countResult.rows[0].total
 
     const result = await query(
       `
       SELECT 
-        caq.*,
-        u.username as submitter_username,
-        CASE 
-          WHEN caq.content_type = 'map' THEN m.name
-          ELSE NULL
-        END as content_name
-      FROM content_approval_queue caq
-      JOIN users u ON caq.submitter_id = u.id
-      LEFT JOIN maps m ON caq.content_type = 'map' AND caq.content_id = m.id
-      WHERE caq.status = 'pending'
-      ORDER BY caq.submitted_at DESC
+        ur.id,
+        ur.reporter_id,
+        u1.username as reporter_username,
+        ur.reported_user_id,
+        u2.username as reported_username,
+        ur.status,
+        ur.created_at
+      FROM user_reports ur
+      JOIN users u1 ON ur.reporter_id = u1.id
+      JOIN users u2 ON ur.reported_user_id = u2.id
+      WHERE ur.status = 'pending'
+      ORDER BY ur.created_at ASC
       LIMIT $1 OFFSET $2
     `,
       [limit, offset],
     )
 
     return {
-      items: (result.rows as ContentApprovalRow[]).map((row) => ({
+      items: result.rows.map((row) => ({
         id: row.id,
-        contentType: row.content_type,
-        contentId: row.content_id,
-        contentName: row.content_name,
-        submitterId: row.submitter_id,
-        submitterUsername: row.submitter_username,
+        contentType: 'user_report',
+        contentId: row.reported_user_id,
+        contentName: row.reported_username,
+        submitterId: row.reporter_id,
+        submitterUsername: row.reporter_username,
         status: row.status,
-        submittedAt: new Date(row.submitted_at),
+        submittedAt: new Date(row.created_at),
       })),
       total,
     }
@@ -634,83 +635,32 @@ export class AdminService {
     try {
       await client.query('BEGIN')
 
-      // Update approval queue
-      await client.query(
-        `
-        UPDATE content_approval_queue 
-        SET status = 'approved', admin_user_id = $1, admin_notes = $2, reviewed_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-      `,
-        [adminUserId, notes, queueId],
-      )
-
-      // Get the content details
-      const result = await client.query(
-        `
-        SELECT content_type, content_id FROM content_approval_queue WHERE id = $1
-      `,
+      // queueId refers to user_reports.id; approve => resolve
+      const reportRow = await client.query<{ reported_user_id: string; reporter_id: string }>(
+        `SELECT reported_user_id, reporter_id FROM user_reports WHERE id = $1 FOR UPDATE`,
         [queueId],
       )
+      if ((reportRow.rowCount ?? 0) === 0) throw new Error('User report not found')
 
-      if (result.rows.length > 0) {
-        const { content_type, content_id } = result.rows[0]
-        let previousState: Record<string, unknown> | undefined
+      await client.query(
+        `UPDATE user_reports 
+         SET status = 'resolved', admin_id = $1, admin_notes = $2, resolved_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [adminUserId, notes ?? null, queueId],
+      )
 
-        // Update content to be public/approved
-        if (content_type === 'map') {
-          // Validate playability before approving a map
-          const validation = await mapService.validateMapPlayable(content_id)
-          if (!validation.isValid) {
-            throw new Error(
-              `Map cannot be approved; playability validation failed: ${validation.errors.join('; ')}`,
-            )
-          }
-
-          const mapState = await client.query(
-            `SELECT status, is_public, reviewed_at, reviewed_by FROM maps WHERE id = $1`,
-            [content_id],
-          )
-          if (mapState.rows[0]) {
-            previousState = mapState.rows[0]
-          }
-
-          await client.query(
-            `UPDATE maps 
-             SET is_public = TRUE, 
-                 status = 'approved',
-                 reviewed_at = CURRENT_TIMESTAMP,
-                 reviewed_by = $1,
-                 review_notes = $2
-             WHERE id = $3`,
-            [adminUserId, notes, content_id],
-          )
-        }
-
-        const afterState =
-          content_type === 'map'
-            ? {
-                status: 'approved',
-                is_public: true,
-                reviewed_by: adminUserId,
-                review_notes: notes,
-              }
-            : undefined
-
-        await this.logAdminAction(
-          adminUserId,
-          'content_approved',
-          {
-            queueId,
-            contentType: content_type,
-            contentId: content_id,
-            notes,
-            before: previousState,
-            after: afterState,
-          },
-          content_type,
-          content_id,
-        )
-      }
+      await this.logAdminAction(
+        adminUserId,
+        'user_report_resolved',
+        {
+          reportId: queueId,
+          reportedUserId: reportRow.rows[0].reported_user_id,
+          reporterId: reportRow.rows[0].reporter_id,
+          notes,
+        },
+        'user_report',
+        queueId,
+      )
 
       await client.query('COMMIT')
     } catch (error) {
@@ -726,63 +676,26 @@ export class AdminService {
     try {
       await client.query('BEGIN')
 
-      // Update approval queue
+      // queueId refers to user_reports.id; reject => dismiss
+      const reportRow = await client.query<{ reported_user_id: string; reporter_id: string }>(
+        `SELECT reported_user_id, reporter_id FROM user_reports WHERE id = $1 FOR UPDATE`,
+        [queueId],
+      )
+      if ((reportRow.rowCount ?? 0) === 0) throw new Error('User report not found')
+
       await client.query(
-        `
-        UPDATE content_approval_queue 
-        SET status = 'rejected', admin_user_id = $1, admin_notes = $2, reviewed_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-      `,
+        `UPDATE user_reports 
+         SET status = 'dismissed', admin_id = $1, admin_notes = $2, resolved_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
         [adminUserId, reason, queueId],
       )
 
-      // Get the content details
-      const result = await client.query(
-        `SELECT content_type, content_id FROM content_approval_queue WHERE id = $1`,
-        [queueId],
-      )
-
-      if (result.rows.length > 0) {
-        const { content_type, content_id } = result.rows[0]
-        let previousState: Record<string, unknown> | undefined
-
-        // Update map status to rejected
-        if (content_type === 'map') {
-          const mapState = await client.query(
-            `SELECT status, is_public, rejection_reason FROM maps WHERE id = $1`,
-            [content_id],
-          )
-          if (mapState.rows[0]) {
-            previousState = mapState.rows[0]
-          }
-
-          await client.query(
-            `UPDATE maps 
-             SET status = 'rejected',
-                 reviewed_at = CURRENT_TIMESTAMP,
-                 reviewed_by = $1,
-                 rejection_reason = $2
-             WHERE id = $3`,
-            [adminUserId, reason, content_id],
-          )
-        }
-
-        await this.logAdminAction(adminUserId, 'content_rejected', {
-          queueId,
-          contentType: content_type,
-          contentId: content_id,
-          reason,
-          before: previousState,
-          after:
-            content_type === 'map'
-              ? {
-                  status: 'rejected',
-                  rejection_reason: reason,
-                  reviewed_by: adminUserId,
-                }
-              : undefined,
-        })
-      }
+      await this.logAdminAction(adminUserId, 'user_report_dismissed', {
+        reportId: queueId,
+        reportedUserId: reportRow.rows[0].reported_user_id,
+        reporterId: reportRow.rows[0].reporter_id,
+        reason,
+      })
 
       await client.query('COMMIT')
     } catch (error) {

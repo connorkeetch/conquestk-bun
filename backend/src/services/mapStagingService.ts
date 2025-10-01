@@ -434,6 +434,27 @@ export class MapStagingService {
       ],
     )
 
+    // Lightweight retention: keep 5 days and cap to 10k rows
+    try {
+      await query(
+        `DELETE FROM map_asset_purge_runs WHERE started_at < NOW() - INTERVAL '5 days'`,
+      )
+
+      await query(
+        `
+          WITH ranked AS (
+            SELECT id, ROW_NUMBER() OVER (ORDER BY started_at DESC) AS rn
+            FROM map_asset_purge_runs
+          )
+          DELETE FROM map_asset_purge_runs m
+          USING ranked r
+          WHERE m.id = r.id AND r.rn > 10000
+        `,
+      )
+    } catch (_e) {
+      // Non-fatal retention best-effort
+    }
+
     return {
       processed: rows.length,
       purged: purgedCount,

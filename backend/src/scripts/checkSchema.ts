@@ -22,7 +22,6 @@ import { logger } from '../utils/logger'
 
 // Required tables mirrored from the current production schema snapshot
 const REQUIRED_TABLES = [
-  'achievement_progress',
   'achievements',
   'admin_activity_logs',
   'admin_roles',
@@ -31,7 +30,6 @@ const REQUIRED_TABLES = [
   'conversations',
   'conversation_members',
   'conversation_messages',
-  'message_read_receipts',
   'email_verification_logs',
   'events',
   'feature_flags',
@@ -40,41 +38,34 @@ const REQUIRED_TABLES = [
   'game_rooms',
   'game_states',
   'game_territory_modifiers',
-  'game_variants',
   'map_continents',
   'map_ratings',
   'map_submissions',
   'map_territories',
   'map_territory_modifiers',
   'maps',
-  'matchmaking_queue',
   'notifications',
   'password_reset_tokens',
   'player_stats',
   'rating_history',
   'room_players',
   'schema_migrations',
-  'seasons',
   'skill_leaderboard_cache',
   'territory_adjacencies',
   'territory_modifier_templates',
-  'transactions',
   'user_account_status',
   'user_achievements',
   'user_admin_roles',
   'user_bans',
   'user_behavior_patterns',
   'user_feature_flags',
-  'user_inventory',
   'user_preferences',
-  'user_profiles',
   'user_reports',
-  'user_seasonal_stats',
   'user_sessions',
-  'user_settings',
   'user_terms_acceptance',
   'users',
   'user_blocks',
+  'web_push_subscriptions',
 ]
 
 // Tables that are being tracked for future features but are not present in production
@@ -225,13 +216,31 @@ async function checkRequiredColumns(): Promise<void> {
 
 async function checkMigrationStatus(): Promise<void> {
   try {
-    const result = await query(
-      `SELECT version, applied_at FROM schema_migrations ORDER BY version DESC LIMIT 5`,
+    // Detect legacy vs modern tracking columns
+    const cols = await query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'schema_migrations' AND table_schema = 'public'`,
     )
+    const names = new Set(cols.rows.map((r) => r.column_name))
 
-    logger.info('📋 Recent migrations:')
-    for (const row of result.rows) {
-      logger.info(`  - Version ${row.version}: ${new Date(row.applied_at).toLocaleString()}`)
+    if (names.has('version') && names.has('applied_at')) {
+      const result = await query<{ version: string; applied_at: string }>(
+        `SELECT version, applied_at FROM schema_migrations ORDER BY version DESC LIMIT 5`,
+      )
+      logger.info('📋 Recent migrations (legacy tracker):')
+      for (const row of result.rows) {
+        logger.info(`  - ${row.version} @ ${new Date(row.applied_at).toLocaleString()}`)
+      }
+      return
+    }
+
+    const modern = await query<{ filename: string; executed_at: string; status?: string }>(
+      `SELECT filename, executed_at, status FROM schema_migrations ORDER BY executed_at DESC NULLS LAST, filename DESC LIMIT 5`,
+    )
+    logger.info('📋 Recent migrations (modern tracker / baseline):')
+    for (const row of modern.rows) {
+      logger.info(
+        `  - ${row.filename} @ ${row.executed_at ? new Date(row.executed_at).toLocaleString() : 'N/A'}${row.status ? ` [${row.status}]` : ''}`,
+      )
     }
   } catch (_error) {
     logger.warn('⚠️  Could not check migration status')
@@ -286,6 +295,7 @@ export async function validateDatabaseSchema(): Promise<boolean> {
   logger.info(`📈 Schema validation summary:`)
   logger.info(`  ✅ Tables present: ${existingTables.length}/${REQUIRED_TABLES.length}`)
   logger.info(`  ❌ Tables missing: ${missingTables.length}`)
+  logger.info('\nℹ️ Baseline migrations: This project maintains a single baseline SQL file for fresh databases, plus incremental migrations as needed. If you recently switched to the baseline-only approach, ensure old migration files are removed in your repo after generating the baseline.')
 
   if (missingTables.length > 0) {
     logger.error('\n⚠️  Missing tables:')

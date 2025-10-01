@@ -60,6 +60,45 @@ export const authenticateToken: RequestHandler = async (
       req.sessionId = undefined
     }
 
+    // Enforce bans/suspensions via user_account_status
+    try {
+      const statusResult = await query<{
+        status: string
+        reason: string | null
+        expires_at: string | null
+      }>(
+        'SELECT status, reason, expires_at FROM user_account_status WHERE user_id = $1',
+        [payload.userId],
+      )
+
+      const row = statusResult.rows[0]
+      if (row) {
+        const status = (row.status || '').toLowerCase()
+        const isBlocking = status === 'banned' || status === 'suspended'
+        if (isBlocking) {
+          const now = Date.now()
+          const expiresAtMs = row.expires_at ? new Date(row.expires_at).getTime() : null
+          const isExpired = typeof expiresAtMs === 'number' ? expiresAtMs <= now : false
+          if (!isExpired) {
+            const message = status === 'banned' ? 'Account is banned' : 'Account is suspended'
+            res.status(403).json({
+              message,
+              status,
+              reason: row.reason ?? undefined,
+              expiresAt: row.expires_at ?? undefined,
+            })
+            return
+          }
+        }
+      }
+    } catch (statusError) {
+      // Do not block if status lookup fails; log and continue
+      logger.warn('Failed to check user account status', {
+        userId: payload.userId,
+        error: getErrorMessage(statusError),
+      })
+    }
+
     // Optionally fetch user details for req.user
     try {
       const result = await query(

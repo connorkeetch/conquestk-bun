@@ -257,6 +257,39 @@ export class AuthController {
         })
       }
 
+      // Block login for banned/suspended accounts (honor expires_at if set)
+      try {
+        const { query } = await import('../config/database')
+        const statusResult = await query<{
+          status: string
+          reason: string | null
+          expires_at: string | null
+        }>('SELECT status, reason, expires_at FROM user_account_status WHERE user_id = $1', [
+          user.id,
+        ])
+        const row = statusResult.rows[0]
+        if (row) {
+          const status = (row.status || '').toLowerCase()
+          const isBlocking = status === 'banned' || status === 'suspended'
+          if (isBlocking) {
+            const now = Date.now()
+            const expiresAtMs = row.expires_at ? new Date(row.expires_at).getTime() : null
+            const isExpired = typeof expiresAtMs === 'number' ? expiresAtMs <= now : false
+            if (!isExpired) {
+              return res.status(403).json({
+                error: 'Account restricted',
+                message: status === 'banned' ? 'Account is banned' : 'Account is suspended',
+                status,
+                reason: row.reason ?? undefined,
+                expiresAt: row.expires_at ?? undefined,
+              })
+            }
+          }
+        }
+      } catch (_statusError) {
+        // If we fail to check status, continue; middleware will re-check on protected routes
+      }
+
       // Update last_login timestamp
       await this.userService.updateLastLogin(user.id)
 

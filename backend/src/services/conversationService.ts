@@ -24,6 +24,7 @@ export interface ConversationRecord {
   isArchived: boolean
   isReadOnly: boolean
   gameId: string | null
+  clanId?: string | null
   metadata: Record<string, unknown>
 }
 
@@ -95,6 +96,7 @@ type ConversationRow = {
   is_archived: boolean
   is_read_only: boolean
   game_id: string | null
+  clan_id?: string | null
   metadata: Record<string, unknown> | null
 }
 
@@ -146,6 +148,7 @@ const mapConversationRow = (row: ConversationRow): ConversationRecord => ({
   isArchived: row.is_archived,
   isReadOnly: row.is_read_only,
   gameId: row.game_id,
+  clanId: (row as any).clan_id ?? null,
   metadata: row.metadata ?? {},
 })
 
@@ -631,6 +634,72 @@ export async function ensureGameConversation(gameId: string): Promise<Conversati
     emitConversationMembersRemovedEvent(conversationRecord.id, removed, descriptor.memberIds)
   }
 
+  emitConversationUpdatedEvent(descriptor)
+  return descriptor
+}
+
+export async function ensureClanConversation(clanId: string): Promise<ConversationWithMembers> {
+  // Lookup clan owner and name
+  const clanResult = await query<{ id: string; owner_user_id: string; name: string }>(
+    `SELECT id, owner_user_id, name FROM clans WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
+    [clanId],
+  )
+  const clan = clanResult.rows[0]
+  if (!clan) {
+    throw new ConversationError('NOT_FOUND', 'Clan not found')
+  }
+
+  // Check if conversation already exists for this clan
+  const existing = await query<ConversationRow>(
+    `SELECT ${CONVERSATION_COLUMNS}, clan_id FROM conversations WHERE clan_id = $1 LIMIT 1`,
+    [clanId],
+  )
+
+  let conversationRecord: ConversationRecord
+
+  if (existing.rows.length === 0) {
+    const title = `${clan.name} — Clan Chat`
+    const metadata = JSON.stringify({ clanId })
+
+    conversationRecord = await transaction(async (client) => {
+      const insert = await client.query(
+        `
+          INSERT INTO conversations (kind, title, created_by, metadata, clan_id)
+          VALUES ('group', $1, $2, $3::jsonb, $4)
+          RETURNING ${CONVERSATION_COLUMNS}, clan_id
+        `,
+        [title, clan.owner_user_id, metadata, clan.id],
+      )
+      const row = insert.rows[0] as ConversationRow
+      await insertConversationMember(client, row.id, clan.owner_user_id, 'owner')
+      return mapConversationRow(row)
+    })
+  } else {
+    conversationRecord = mapConversationRow(existing.rows[0] as ConversationRow)
+  }
+
+  // Sync members with active clan members
+  const members = await query<{ user_id: string }>(
+    `SELECT user_id FROM clan_members WHERE clan_id = $1 AND status = 'active'`,
+    [clanId],
+  )
+  const desired = new Set<string>(members.rows.map((r) => r.user_id))
+  desired.add(clan.owner_user_id)
+
+  const { added, removed } = await syncConversationMembers(
+    conversationRecord.id,
+    Array.from(desired),
+    clan.owner_user_id,
+  )
+
+  const descriptor = await buildConversationDescriptor(conversationRecord)
+  if (added.length > 0) {
+    const addedRoles = descriptor.memberRoles.filter((m) => added.includes(m.userId))
+    emitConversationMembersAddedEvent(conversationRecord.id, addedRoles, descriptor.memberIds)
+  }
+  if (removed.length > 0) {
+    emitConversationMembersRemovedEvent(conversationRecord.id, removed, descriptor.memberIds)
+  }
   emitConversationUpdatedEvent(descriptor)
   return descriptor
 }

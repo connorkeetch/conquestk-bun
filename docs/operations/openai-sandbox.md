@@ -56,18 +56,19 @@ Railway URL (still present but commented out in the same file).
 
 ## 4. Apply database migrations
 
-1. **Bootstrap the consolidated schema** (this creates all core tables and
-   constraints the app expects):
+1. **Bootstrap from the baseline** (creates all core tables and constraints):
 
    ```bash
    sudo -u postgres psql -d risk_game_local \
-     -f backend/migrations/011_final_consolidated_schema.sql
+     -f backend/migrations/001_baseline_schema.sql
    ```
 
-2. **Replay incremental migrations with the app's runner.** The backend now
-   upgrades the legacy `schema_migrations` table automatically, so you can lean
-   on the standard tooling from here:
+   If a baseline hasn’t been generated yet in your branch, you can instead run
+   the app’s migration runner directly and it will apply the current set of SQL
+   files in `backend/migrations/`.
 
+2. **Run the app’s migration runner** (safe to rerun):
+   
    ```bash
    cd backend
    npm run migrate

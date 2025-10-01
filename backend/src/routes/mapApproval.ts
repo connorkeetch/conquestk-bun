@@ -272,6 +272,36 @@ router.put(
   },
 )
 
+// Unassign reviewer from approval request
+router.delete(
+  '/approval-requests/:requestId/assign',
+  requireAdmin,
+  requirePermission('map_approval'),
+  logAdminActivity('map_review_unassign'),
+  async (req, res) => {
+    try {
+      const { requestId } = req.params
+      const currentUserId = req.userId
+
+      if (!currentUserId) {
+        res.status(401).json({ message: 'Moderator not authenticated' })
+        return
+      }
+
+      await MapApprovalService.unassignReviewer(requestId, currentUserId, {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent') ?? undefined,
+      })
+      res.json({ message: 'Reviewer unassigned successfully' })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to unassign reviewer', 500, {
+        requestId: req.params.requestId,
+      })
+      res.status(500).json({ message: 'Failed to unassign reviewer' })
+    }
+  },
+)
+
 // Get review criteria
 router.get(
   '/review-criteria',

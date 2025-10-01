@@ -94,9 +94,9 @@ export class ClanMembershipService {
 
       const existingApplication = await client.query<ClanApplicationRow>(
         `
-          SELECT *
-          FROM clan_applications
-          WHERE clan_id = $1 AND user_id = $2
+          SELECT id, clan_id, user_id, status, message, reviewed_by, reviewed_at, created_at, updated_at
+          FROM clan_join_requests
+          WHERE clan_id = $1 AND user_id = $2 AND type = 'application'
           ORDER BY created_at DESC
           LIMIT 1
         `,
@@ -113,9 +113,9 @@ export class ClanMembershipService {
 
       const newApplication = await client.query<ClanApplicationRow>(
         `
-          INSERT INTO clan_applications (clan_id, user_id, status, message)
-          VALUES ($1, $2, 'pending', $3)
-          RETURNING *
+          INSERT INTO clan_join_requests (clan_id, user_id, type, status, message, created_by)
+          VALUES ($1, $2, 'application', 'pending', $3, $2)
+          RETURNING id, clan_id, user_id, status, message, reviewed_by, reviewed_at, created_at, updated_at
         `,
         [clanId, userId, trimmedMessage],
       )
@@ -158,7 +158,12 @@ export class ClanMembershipService {
   ): Promise<ClanApplication> {
     const updatedApplication = await transaction<ClanApplicationRow>(async (client) => {
       const applicationResult = await client.query<ClanApplicationRow>(
-        `SELECT * FROM clan_applications WHERE id = $1 AND clan_id = $2 FOR UPDATE`,
+        `
+          SELECT id, clan_id, user_id, status, message, reviewed_by, reviewed_at, created_at, updated_at
+          FROM clan_join_requests
+          WHERE id = $1 AND clan_id = $2 AND type = 'application'
+          FOR UPDATE
+        `,
         [applicationId, clanId],
       )
 
@@ -211,10 +216,10 @@ export class ClanMembershipService {
 
       const result = await client.query<ClanApplicationRow>(
         `
-          UPDATE clan_applications
+          UPDATE clan_join_requests
           SET status = $1, reviewed_by = $2, reviewed_at = CURRENT_TIMESTAMP
           WHERE id = $3
-          RETURNING *
+          RETURNING id, clan_id, user_id, status, message, reviewed_by, reviewed_at, created_at, updated_at
         `,
         [newStatus, reviewerId, applicationId],
       )

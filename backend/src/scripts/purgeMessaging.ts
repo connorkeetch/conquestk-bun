@@ -10,7 +10,6 @@ type TableName =
   | 'conversations'
   | 'conversation_messages'
   | 'conversation_members'
-  | 'message_read_receipts'
   | 'clan_chat_messages'
   | 'user_blocks'
 
@@ -68,7 +67,6 @@ async function main() {
     conversations: await countRows('conversations'),
     conversation_messages: await countRows('conversation_messages'),
     conversation_members: await countRows('conversation_members'),
-    message_read_receipts: await countRows('message_read_receipts'),
     clan_chat_messages: await countRows('clan_chat_messages'),
     user_blocks: includeUserBlocks ? await countRows('user_blocks') : undefined,
   }
@@ -88,7 +86,6 @@ async function main() {
     conversations: await countRows('conversations'),
     conversation_messages: await countRows('conversation_messages'),
     conversation_members: await countRows('conversation_members'),
-    message_read_receipts: await countRows('message_read_receipts'),
     clan_chat_messages: await countRows('clan_chat_messages'),
     user_blocks: includeUserBlocks ? await countRows('user_blocks') : undefined,
   }

@@ -205,21 +205,7 @@ export class MapService {
         sectors: (mapData.metadata as MapMetadataPayload | undefined)?.sectors?.length || 0,
       })
 
-      // Add to content approval queue for admin review
-      try {
-        await client.query(
-          `
-          INSERT INTO content_approval_queue (
-            content_type, content_id, submitter_id, status, submitted_at
-          ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-          `,
-          ['map', map.id, userId, 'pending'],
-        )
-        logger.info(`Added map ${map.id} to approval queue`)
-      } catch (queueError) {
-        logger.warn('Failed to add map to approval queue (non-critical):', queueError)
-        // Don't fail the map creation if queue insertion fails
-      }
+      // Approval is now driven by map_approval_requests via submitForReview flow (no queue insert here)
 
       return this.formatMapFromDb(map)
     } catch (error: unknown) {
@@ -248,20 +234,7 @@ export class MapService {
         const map = mapResult.rows[0]
         logger.info(`Created new map without metadata: ${map.name} (${map.id})`)
 
-        // Add to content approval queue for admin review
-        try {
-          await client.query(
-            `
-            INSERT INTO content_approval_queue (
-              content_type, content_id, submitter_id, status, submitted_at
-            ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-            `,
-            ['map', map.id, userId, 'pending'],
-          )
-          logger.info(`Added map ${map.id} to approval queue`)
-        } catch (queueError) {
-          logger.warn('Failed to add map to approval queue (non-critical):', queueError)
-        }
+        // Approval requests created via submitForReview (no queue insert here)
 
         return this.formatMapFromDb(map)
       }
@@ -620,7 +593,7 @@ export class MapService {
 
     try {
       await client.query(
-        'DELETE FROM map_territory_modifiers WHERE map_id = $1 AND (territory_id = $2 OR territory_name = $2)',
+        'DELETE FROM map_territory_modifiers WHERE map_id = $1 AND territory_id = $2',
         [mapId, territoryKey],
       )
     } catch (error) {
@@ -665,35 +638,6 @@ export class MapService {
       await client.query(insertWithTerritoryId, values)
       return
     } catch (error) {
-      if (error instanceof Error && error.message.includes('territory_id')) {
-        const insertWithTerritoryName = `
-          INSERT INTO map_territory_modifiers (
-            map_id,
-            territory_name,
-            modifier_template_id,
-            name,
-            icon,
-            color,
-            defense_bonus,
-            attack_bonus,
-            troop_generation_bonus,
-            movement_restriction,
-            supply_line_bonus
-          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-        `
-        try {
-          await client.query(insertWithTerritoryName, values)
-          return
-        } catch (legacyError) {
-          logger.warn('Failed to persist territory modifier (legacy schema)', {
-            mapId,
-            territoryKey,
-            error: legacyError,
-          })
-          return
-        }
-      }
-
       logger.warn('Failed to persist territory modifier for map', {
         mapId,
         territoryKey,

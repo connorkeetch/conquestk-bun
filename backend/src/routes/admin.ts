@@ -1131,7 +1131,7 @@ router.get(
           (SELECT COUNT(*) FROM maps WHERE status = 'pending_review') as maps_pending_review,
           (SELECT COUNT(*) FROM maps WHERE is_public = TRUE) as public_maps,
           (SELECT COUNT(*) FROM game_rooms WHERE status IN ('in_progress', 'starting')) as active_games,
-          (SELECT COUNT(*) FROM content_approval_queue WHERE status = 'pending') as pending_approvals
+          (SELECT COUNT(*) FROM map_approval_requests WHERE decision IS NULL) as pending_approvals
       `)
 
       const featureFlags = await adminService.getFeatureFlags()
