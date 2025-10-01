@@ -288,6 +288,15 @@ This allows themes to work with any color scheme!
   z-index: 1;
 }
 
+/* Overlay scaffolding for all themes: ensure ::after exists even when grid is disabled */
+[data-theme] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* ===========================================================================
  * SHARED UTILITIES & COMPONENT STYLES
  * =========================================================================== */
