@@ -21,7 +21,7 @@ export default function MuteButton() {
       onClick={handleToggleMute}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 p-3 bg-[color:var(--panel-bg)] hover:bg-[color:var(--hover-bg)]/90 backdrop-blur-sm border border-[color:var(--panel-border)] rounded-full transition-all hover:scale-110 group shadow"
+      className="fixed bottom-8 right-4 md:bottom-10 md:right-6 z-50 p-3 bg-[color:var(--panel-bg)] hover:bg-[color:var(--hover-bg)]/90 backdrop-blur-sm border border-[color:var(--panel-border)] rounded-full transition-all hover:scale-110 group shadow"
       title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
       aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
     >
@@ -72,10 +72,7 @@ export default function MuteButton() {
         </div>
       )}
 
-      {/* Visual feedback ring */}
-      {isMuted && (
-        <div className="absolute inset-0 rounded-full border-2 border-[color:var(--color-danger)] animate-ping pointer-events-none" />
-      )}
+      {/* No pulsing ring when muted to avoid distraction */}
     </button>
   )
 }
