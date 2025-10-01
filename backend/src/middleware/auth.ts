@@ -66,10 +66,9 @@ export const authenticateToken: RequestHandler = async (
         status: string
         reason: string | null
         expires_at: string | null
-      }>(
-        'SELECT status, reason, expires_at FROM user_account_status WHERE user_id = $1',
-        [payload.userId],
-      )
+      }>('SELECT status, reason, expires_at FROM user_account_status WHERE user_id = $1', [
+        payload.userId,
+      ])
 
       const row = statusResult.rows[0]
       if (row) {

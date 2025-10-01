@@ -1,7 +1,7 @@
 import type { GameDelta } from '@risk-game/shared/types'
-import { query } from '../config/database'
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
+import { query } from '../config/database'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import {

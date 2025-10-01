@@ -62,7 +62,10 @@ async function validateAndFixProduction() {
         await ensureColumn('show_online_status', 'show_online_status BOOLEAN DEFAULT TRUE')
         await ensureColumn('direct_messages', "direct_messages VARCHAR(20) DEFAULT 'friends'")
         await ensureColumn('preferred_color', "preferred_color VARCHAR(50) DEFAULT '#DC2626'")
-        await ensureColumn('dm_notifications_browser', 'dm_notifications_browser BOOLEAN DEFAULT TRUE')
+        await ensureColumn(
+          'dm_notifications_browser',
+          'dm_notifications_browser BOOLEAN DEFAULT TRUE',
+        )
         await ensureColumn('dm_notifications_email', 'dm_notifications_email BOOLEAN DEFAULT FALSE')
         await ensureColumn('sound_enabled', 'sound_enabled BOOLEAN DEFAULT TRUE')
         await ensureColumn('music_enabled', 'music_enabled BOOLEAN DEFAULT TRUE')

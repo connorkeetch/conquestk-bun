@@ -765,7 +765,9 @@ export class MapWorkflowService {
         mapId: row.map_id,
         submittedBy: row.creator_id,
         submitterName: row.submitter_name,
-        status: row.decision ? (row.decision as 'approved' | 'rejected' | 'needs_changes') : 'pending',
+        status: row.decision
+          ? (row.decision as 'approved' | 'rejected' | 'needs_changes')
+          : 'pending',
         priority: 0,
         assignedTo: row.assigned_moderator_id ?? undefined,
         submittedAt: row.created_at,

@@ -295,7 +295,9 @@ export async function validateDatabaseSchema(): Promise<boolean> {
   logger.info(`📈 Schema validation summary:`)
   logger.info(`  ✅ Tables present: ${existingTables.length}/${REQUIRED_TABLES.length}`)
   logger.info(`  ❌ Tables missing: ${missingTables.length}`)
-  logger.info('\nℹ️ Baseline migrations: This project maintains a single baseline SQL file for fresh databases, plus incremental migrations as needed. If you recently switched to the baseline-only approach, ensure old migration files are removed in your repo after generating the baseline.')
+  logger.info(
+    '\nℹ️ Baseline migrations: This project maintains a single baseline SQL file for fresh databases, plus incremental migrations as needed. If you recently switched to the baseline-only approach, ensure old migration files are removed in your repo after generating the baseline.',
+  )
 
   if (missingTables.length > 0) {
     logger.error('\n⚠️  Missing tables:')

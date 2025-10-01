@@ -146,8 +146,8 @@
 }
 
 [data-theme="frontier"] body::after {
+  /* Reduce decorative glyphs; keep a sparse star tile plus soft glows */
   background-image:
-    /* Reduce decorative glyphs; keep a sparse star tile plus soft glows */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 58 58'%3E%3Cpolygon fill='%23f4d9a0' fill-opacity='0.28' points='29 2 35.6 20.4 55.5 20.4 39.7 32.8 46.2 51.2 29 39.4 11.8 51.2 18.3 32.8 2.5 20.4 22.4 20.4'/%3E%3C/svg%3E"),
     radial-gradient(3px 3px at 14% 20%, rgba(228, 166, 89, 0.3), transparent),
     radial-gradient(2px 2px at 66% 58%, rgba(47, 156, 149, 0.24), transparent),

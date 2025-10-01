@@ -142,8 +142,8 @@
 }
 
 [data-theme="metal"] body::after {
+  /* Keep lightning bolt; reduce clutter by removing extra glyphs */
   background-image:
-    /* Keep lightning bolt; reduce clutter by removing extra glyphs */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 64'%3E%3Cpath fill='%23ff7c3b' fill-opacity='0.55' d='M28 2 8 34h12L20 62l20-32H28l8-28z'/%3E%3C/svg%3E"),
     linear-gradient(
       180deg,
