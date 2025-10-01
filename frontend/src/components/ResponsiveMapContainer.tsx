@@ -1,4 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import type { ZoomControls } from '@/types/zoom'
+
+export type { ZoomControls }
 
 interface ResponsiveMapContainerProps {
   children: React.ReactNode
@@ -10,6 +13,7 @@ interface ResponsiveMapContainerProps {
   focus?: { x: number; y: number } | null
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
+  onZoomControlsReady?: (controls: ZoomControls) => void
 }
 
 interface MapViewportContextValue {
@@ -37,10 +41,31 @@ export default function ResponsiveMapContainer({
   focus = null,
   onSwipeLeft,
   onSwipeRight,
+  onZoomControlsReady,
 }: ResponsiveMapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [baseScale, setBaseScale] = useState(1)
   const [zoom, setZoom] = useState(1)
+
+  // Create stable zoom control callbacks
+  const zoomIn = useCallback(() => {
+    setZoom((z) => Math.min(2, Math.round((z + 0.05) * 100) / 100))
+  }, [])
+
+  const zoomOut = useCallback(() => {
+    setZoom((z) => Math.max(0.5, Math.round((z - 0.05) * 100) / 100))
+  }, [])
+
+  const resetZoom = useCallback(() => {
+    setZoom(1)
+  }, [])
+
+  // Notify parent when zoom controls are ready
+  useEffect(() => {
+    if (onZoomControlsReady) {
+      onZoomControlsReady({ zoom, zoomIn, zoomOut, resetZoom })
+    }
+  }, [zoom, zoomIn, zoomOut, resetZoom, onZoomControlsReady])
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef<{
     x: number
