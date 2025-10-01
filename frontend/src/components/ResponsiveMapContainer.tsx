@@ -95,7 +95,7 @@ export default function ResponsiveMapContainer({
       const raw = localStorage.getItem(`ui.zoom.${storageKey}`)
       if (!raw) return
       const z = Number.parseFloat(raw)
-      if (Number.isFinite(z) && z >= 0.2 && z <= 3) setZoom(z)
+      if (Number.isFinite(z) && z >= 0.5 && z <= 3) setZoom(z)
     } catch {
       // ignore storage errors
     }
@@ -129,20 +129,50 @@ export default function ResponsiveMapContainer({
     [zoom, baseScale, display.width, display.height],
   )
 
-  // Zoom handlers (Ctrl/Meta + wheel). Also provide UI buttons.
+  // Zoom handlers (Ctrl/Meta + wheel)
+
+  // Ctrl/Cmd + Wheel to zoom (zoom around cursor)
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
+
     const onWheel = (e: WheelEvent) => {
-      // Only zoom when user intent is clear (Ctrl/Cmd or trackpad pinch which sets ctrlKey)
       if (!e.ctrlKey && !e.metaKey) return
       e.preventDefault()
-      const delta = e.deltaY > 0 ? -0.1 : 0.1
-      setZoom((z) => Math.min(3, Math.max(0.2, Math.round((z + delta) * 10) / 10)))
+      const rect = el.getBoundingClientRect()
+      const viewX = e.clientX - rect.left
+      const viewY = e.clientY - rect.top
+      const contentX = el.scrollLeft + viewX
+      const contentY = el.scrollTop + viewY
+      const relX = display.width > 0 ? contentX / display.width : 0
+      const relY = display.height > 0 ? contentY / display.height : 0
+
+      const delta = e.deltaY
+      const step = delta > 0 ? -0.1 : 0.1
+      let nextZoom = Math.round((zoom + step) * 10) / 10
+      nextZoom = Math.max(0.5, Math.min(3, nextZoom))
+      if (nextZoom === zoom) return
+
+      setZoom(nextZoom)
+
+      const nextWidth = Math.max(1, Math.round(mapWidth * baseScale * nextZoom))
+      const nextHeight = Math.max(1, Math.round(mapHeight * baseScale * nextZoom))
+      const targetLeft = relX * nextWidth - viewX
+      const targetTop = relY * nextHeight - viewY
+
+      requestAnimationFrame(() => {
+        const maxLeft = Math.max(0, nextWidth - el.clientWidth)
+        const maxTop = Math.max(0, nextHeight - el.clientHeight)
+        el.scrollLeft = Math.max(0, Math.min(maxLeft, targetLeft))
+        el.scrollTop = Math.max(0, Math.min(maxTop, targetTop))
+      })
     }
+
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [])
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+    }
+  }, [zoom, baseScale, mapWidth, mapHeight, display.width, display.height])
 
   // Drag-to-pan using middle (button=1) or right mouse (button=2) to avoid conflicts with left-click
   useEffect(() => {
@@ -237,7 +267,7 @@ export default function ResponsiveMapContainer({
         e.preventDefault()
         const newDistance = getDistance(e.touches[0], e.touches[1])
         const scale = newDistance / pinchStartRef.current.distance
-        const newZoom = Math.min(3, Math.max(0.2, pinchStartRef.current.zoom * scale))
+        const newZoom = Math.min(3, Math.max(0.5, pinchStartRef.current.zoom * scale))
         setZoom(Math.round(newZoom * 10) / 10)
       } else if (e.touches.length === 1 && touchPanStartRef.current) {
         // Single finger pan
@@ -397,7 +427,7 @@ export default function ResponsiveMapContainer({
           <button
             type="button"
             className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
-            onClick={() => setZoom((z) => Math.max(0.2, Math.round((z - 0.1) * 10) / 10))}
+            onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
             title="Zoom out (Ctrl/Cmd + scroll or pinch)"
           >
             −
