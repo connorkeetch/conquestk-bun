@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
-import { socketService } from '@/services/socketService'
-import { selectTerritory } from '@/store/gameSlice'
-import { setLastPingAt, setOverlay } from '@/store/uiRoomSlice'
+import { mapService } from '@/services/mapService'
+import { setOverlay } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
-import { arePlayersTeammates } from '@/utils/teamHelpers'
+import { AttackableOverlay } from './map/AttackableOverlay'
+import { HillOverlay } from './map/HillOverlay'
+import { SectorsOverlay } from './map/SectorsOverlay'
+import { ThreatOverlay } from './map/ThreatOverlay'
 import ResponsiveMapContainer, { useMapViewport } from './ResponsiveMapContainer'
 
 interface Territory {
@@ -54,10 +56,6 @@ export default function CustomMapDisplay({
   const dispatch = useAppDispatch()
   const game = useAppSelector((s) => s.game.currentGame)
   const myId = useAppSelector((s) => s.auth.user?.id)
-  const userId = useAppSelector((s) => s.auth.user?.id)
-  const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
-  const pings = useAppSelector((s) => s.uiRoom.pings ?? [])
-  const lastPingAt = useAppSelector((s) => s.uiRoom.lastPingAt ?? 0)
   const players = game?.players ?? []
   const kingOfTheHillState =
     game?.gameConfig?.gameMode === 'king_of_the_hill' ? game.kingOfTheHillState : null
@@ -69,64 +67,36 @@ export default function CustomMapDisplay({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const hillOverlay = useMemo(() => {
-    if (!kingOfTheHillState || !mapData) return null
+  const hillOverlayEnabled = Boolean(kingOfTheHillState && mapData)
 
-    const hill = territories.find(
-      (territory) => territory.id === kingOfTheHillState.currentHillTerritoryId,
-    )
-    if (!hill) return null
-
-    const ownerId = hill.owner ?? null
-    const owner = ownerId ? players.find((player) => player.id === ownerId) : null
-    const ownerColor = owner ? getColorValue(owner.color as PlayerColor) : 'rgba(250,204,21,0.9)'
-    const turnsUntilRotation = kingOfTheHillState.turnsUntilRotation
-    const rotationInterval = kingOfTheHillState.rotationInterval
-    const previewTurns = kingOfTheHillState.previewTurns ?? 0
-    const rotationActive = Boolean(rotationInterval && rotationInterval > 0)
-    const showCountdown =
-      rotationActive && typeof turnsUntilRotation === 'number' && turnsUntilRotation >= 0
-
-    const labelParts = [
-      owner
-        ? `Controlled by ${owner.username}`
-        : ownerId === 'neutral'
-          ? 'Held by neutral forces'
-          : 'Currently unclaimed',
-    ]
-    if (showCountdown) {
-      const turns = Math.max(0, turnsUntilRotation ?? 0)
-      const unit = turns === 1 ? 'turn' : 'turns'
-      if (previewTurns > 0 && turns > previewTurns) {
-        labelParts.push(`Rotation reveals in ${turns - previewTurns} ${unit}`)
-      } else {
-        labelParts.push(`Rotates in ${turns} ${unit}`)
+  // Keyboard hotkeys: g (sectors), a (attackable), h (threat)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        (target && (target as HTMLElement).isContentEditable)
+      ) {
+        return
+      }
+      const k = e.key.toLowerCase()
+      if (k === 'g') {
+        e.preventDefault()
+        dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
+      } else if (k === 'a') {
+        e.preventDefault()
+        dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
+      } else if (k === 'h') {
+        e.preventDefault()
+        dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
       }
     }
-
-    const left = (hill.x / mapData.width) * 100
-    const top = (hill.y / mapData.height) * 100
-
-    return (
-      <div
-        className="absolute z-30 pointer-events-none"
-        style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
-      >
-        <span className="pointer-events-none relative block">
-          <span className="absolute -left-12 -top-12 h-24 w-24 rounded-full border-4 border-yellow-300/80 opacity-70 blur-sm" />
-          <span className="absolute -left-10 -top-10 h-20 w-20 animate-ping rounded-full border-4 border-yellow-300/60" />
-          <span
-            className="absolute -left-8 -top-8 h-16 w-16 rounded-full border-4"
-            style={{ borderColor: ownerColor, boxShadow: '0 0 24px rgba(250,204,21,0.75)' }}
-          />
-        </span>
-        <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded bg-black/70 px-3 py-1 text-xs text-white shadow-lg">
-          <p className="font-semibold text-amber-200">{hill.name ?? hill.id ?? 'Hill'}</p>
-          <p>{labelParts.join(' · ')}</p>
-        </div>
-      </div>
-    )
-  }, [kingOfTheHillState, mapData, players, territories])
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [dispatch, overlays.attackable, overlays.continents, overlays.threat])
 
   useEffect(() => {
     const hydrateFromProps = () => {
@@ -142,30 +112,20 @@ export default function CustomMapDisplay({
       try {
         setLoading(true)
         setError(null)
-
-        // Load full map payload and read nested map fields
-        const apiUrl =
-          import.meta.env.MODE === 'production'
-            ? `/api/maps/${mapId}`
-            : `http://localhost:5001/api/maps/${mapId}`
-
-        const response = await fetch(apiUrl, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to load map')
-        }
-
-        const payload = await response.json()
-        const map = payload?.map ?? payload
-
+        // Load full map payload via mapService for consistent env/auth handling
+        const data = await mapService.getMap(mapId)
+        const map = (
+          data as unknown as {
+            map?: { imageUrl?: string; imageWidth?: number; imageHeight?: number }
+          }
+        ).map
         setMapData({
-          imageUrl: map.imageUrl || map.image_url,
-          width: map.imageWidth || 1280,
-          height: map.imageHeight || 720,
+          imageUrl:
+            (map?.imageUrl as string | undefined) ||
+            (data as unknown as { imageUrl?: string }).imageUrl ||
+            '',
+          width: (map?.imageWidth as number | undefined) || 1280,
+          height: (map?.imageHeight as number | undefined) || 720,
         })
       } catch (error) {
         logger.error('Failed to load custom map data', error)
@@ -262,6 +222,7 @@ export default function CustomMapDisplay({
       className="custom-map-display"
       showMinimap={true}
       backgroundImageUrl={mapData.imageUrl}
+      storageKey={mapId}
       focus={focus ?? undefined}
       onSwipeLeft={() => cycleOverlay('left')}
       onSwipeRight={() => cycleOverlay('right')}
@@ -299,7 +260,7 @@ export default function CustomMapDisplay({
                   dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
                   haptic()
                 }}
-                title="Toggle attackable overlay"
+                title="Toggle attackable overlay (a)"
               >
                 <span aria-hidden>🎯</span>
                 <span className="hidden sm:inline">Attackable</span>
@@ -319,169 +280,49 @@ export default function CustomMapDisplay({
             </>
           )
         })()}
-        {/* Ping button */}
-        {(() => {
-          const now = Date.now()
-          const cooldownMs = 2000
-          const coolingDown = (lastPingAt ?? 0) > 0 && now - lastPingAt < cooldownMs
-          const targetId = selectedTerritoryId || hoveredId
-          const disabled = !isMyTurn || !game?.roomId || !targetId || coolingDown
-          const label = coolingDown ? 'Ping (cooldown)' : 'Ping'
-          return (
-            <button
-              type="button"
-              className={`btn btn-ghost btn-xs ${coolingDown ? 'opacity-60 cursor-not-allowed' : ''}`}
-              onClick={() => {
-                if (!game?.roomId || !targetId || coolingDown) return
-                try {
-                  socketService.emit('ping:territory', {
-                    roomId: game.roomId,
-                    territoryId: targetId,
-                  })
-                } catch {
-                  // ignore ping emit errors
-                }
-                dispatch(setLastPingAt(now))
-                try {
-                  ;(
-                    navigator as unknown as { vibrate?: (pattern: number | number[]) => void }
-                  ).vibrate?.(15)
-                } catch {
-                  // ignore haptics errors
-                }
-              }}
-              disabled={disabled}
-              title={(() => {
-                if (!targetId) return 'Select or hover a territory to ping'
-                const name = territories.find((t) => t.id === targetId)?.name ?? targetId
-                return `Ping ${name}`
-              })()}
-            >
-              <span aria-hidden>📍</span>
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          )
-        })()}
       </div>
 
-      {hillOverlay}
+      {hillOverlayEnabled && (
+        <HillOverlay
+          mapWidth={mapData.width}
+          mapHeight={mapData.height}
+          territories={territories}
+          players={players.map((p) => ({ id: p.id, username: p.username, color: p.color }))}
+          state={kingOfTheHillState}
+        />
+      )}
+
       {/* Sectors overlay: colored dots per territory */}
-      {overlays.continents &&
-        (() => {
-          const uniqueContinents = Array.from(
-            new Set(territories.map((t) => t.continent || 'unknown')),
-          )
-          const palette = [
-            '#22c55e',
-            '#06b6d4',
-            '#f59e0b',
-            '#ef4444',
-            '#8b5cf6',
-            '#eab308',
-            '#14b8a6',
-            '#f97316',
-          ]
-          const cMap = new Map<string, string>()
-          uniqueContinents.forEach((c, i) => {
-            cMap.set(c, palette[i % palette.length])
-          })
-          return territories.map((t) => {
-            const color = cMap.get(t.continent || 'unknown') || '#94a3b8'
-            return (
-              <div
-                key={`cont-${t.id}`}
-                className="absolute z-10 pointer-events-none"
-                style={{
-                  left: `${(t.x / mapData.width) * 100}%`,
-                  top: `${(t.y / mapData.height) * 100}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-                title={`Sector: ${t.continent ?? 'unknown'}`}
-              >
-                <span
-                  className="inline-block w-3 h-3 rounded-full border border-white/60 shadow"
-                  style={{ backgroundColor: color }}
-                />
-              </div>
-            )
-          })
-        })()}
+      {overlays.continents && (
+        <SectorsOverlay
+          mapWidth={mapData.width}
+          mapHeight={mapData.height}
+          territories={territories}
+        />
+      )}
 
       {/* Attackable overlay: ring highlights for selected + valid targets */}
-      {overlays.attackable &&
-        selectedTerritoryId &&
-        (() => {
-          const entries: Array<{ id: string; x: number; y: number; kind: 'src' | 'tgt' }> = []
-          const src = territories.find((t) => t.id === selectedTerritoryId)
-          if (src) entries.push({ id: src.id, x: src.x, y: src.y, kind: 'src' })
-          for (const tgt of validTargets) {
-            const t = territories.find((tt) => tt.id === tgt)
-            if (t) entries.push({ id: t.id, x: t.x, y: t.y, kind: 'tgt' })
-          }
-          return entries.map((e) => (
-            <div
-              key={`atk-${e.id}`}
-              className="absolute z-10 pointer-events-none"
-              style={{
-                left: `${(e.x / mapData.width) * 100}%`,
-                top: `${(e.y / mapData.height) * 100}%`,
-                transform: 'translate(-50%, -50%)',
-              }}
-            >
-              <AttackOverlayRing kind={e.kind} />
-            </div>
-          ))
-        })()}
+      {overlays.attackable && selectedTerritoryId && (
+        <AttackableOverlay
+          mapWidth={mapData.width}
+          mapHeight={mapData.height}
+          territories={territories}
+          selectedTerritoryId={selectedTerritoryId}
+          validTargets={validTargets}
+        />
+      )}
 
       {/* Threat overlay: heat rings on friendly territories proportional to adjacent enemy armies */}
-      {overlays.threat &&
-        game &&
-        myId &&
-        adjacency &&
-        (() => {
-          const byId = new Map<string, Territory>()
-          for (const t of territories) {
-            byId.set(t.id, t)
-          }
-          const isFriendly = (owner?: string | null) =>
-            owner ? owner === myId || arePlayersTeammates(game, owner, myId) : false
-          const items: Array<{ id: string; x: number; y: number; score: number }> = []
-          for (const t of territories) {
-            if (!isFriendly(t.owner)) continue
-            let s = 0
-            for (const adjId of adjacency[t.id] || []) {
-              const adj = byId.get(adjId)
-              if (!adj) continue
-              if (!isFriendly(adj.owner)) s += Math.max(0, adj.armies ?? 0)
-            }
-            if (s > 0) items.push({ id: t.id, x: t.x, y: t.y, score: s })
-          }
-          const max = Math.max(1, ...items.map((i) => i.score))
-          const colorFor = (r: number) => {
-            if (r > 0.66) return 'rgba(239,68,68,0.85)'
-            if (r > 0.33) return 'rgba(245,158,11,0.85)'
-            if (r > 0.1) return 'rgba(34,197,94,0.85)'
-            return 'rgba(148,163,184,0.6)'
-          }
-          return items.map((i) => {
-            const ratio = Math.min(1, i.score / max)
-            const color = colorFor(ratio)
-            return (
-              <div
-                key={`thr-${i.id}`}
-                className="absolute z-10 pointer-events-none"
-                style={{
-                  left: `${(i.x / (mapData.width || 1)) * 100}%`,
-                  top: `${(i.y / (mapData.height || 1)) * 100}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-                title={`Threat score: ${i.score}`}
-              >
-                <ThreatOverlayRing color={color} ratio={ratio} />
-              </div>
-            )
-          })
-        })()}
+      {overlays.threat && game && myId && adjacency && (
+        <ThreatOverlay
+          mapWidth={mapData.width}
+          mapHeight={mapData.height}
+          territories={territories}
+          adjacency={adjacency}
+          myUserId={myId}
+          game={game}
+        />
+      )}
       {/* Map background */}
       <div
         className="absolute inset-0"
@@ -563,51 +404,7 @@ export default function CustomMapDisplay({
         </div>
       )}
 
-      {/* Focus animation on selected territory */}
-      {focus && (
-        <output
-          className="absolute pointer-events-none z-10"
-          style={{
-            left: `${(focus.x / mapData.width) * 100}%`,
-            top: `${(focus.y / mapData.height) * 100}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-          aria-live="polite"
-          aria-label={(() => {
-            const focusId = selectedTerritoryId
-            if (!focusId) return 'Focused territory'
-            const name = territories.find((t) => t.id === focusId)?.name ?? focusId
-            return `Focused on ${name}`
-          })()}
-        >
-          <div className="w-10 h-10 rounded-full border-2 border-cyan-300/80 animate-ping" />
-        </output>
-      )}
-
-      {/* Ping markers */}
-      {pings
-        .filter((p) => p.expiresAt > Date.now())
-        .map((ping) => {
-          const t = territories.find((territory) => territory.id === ping.territoryId)
-          if (!t) return null
-          const left = (t.x / mapData.width) * 100
-          const top = (t.y / mapData.height) * 100
-          return (
-            <button
-              key={`ping-${ping.id}`}
-              type="button"
-              className="absolute z-30"
-              style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
-              onClick={() => dispatch(selectTerritory(ping.territoryId))}
-              title={ping.username ? `${ping.username} pinged` : 'Ping'}
-            >
-              <span className="relative block w-10 h-10">
-                <span className="absolute inset-0 rounded-full border-2 border-cyan-300/80 animate-ping" />
-                <span className="absolute inset-2 rounded-full bg-cyan-400/70" />
-              </span>
-            </button>
-          )
-        })}
+      {/* Removed focus animation and ping markers */}
 
       {oddsTooltip && (
         <div
@@ -709,52 +506,5 @@ function TerritoryToken({
         ) : null}
       </span>
     </button>
-  )
-}
-
-function AttackOverlayRing({ kind }: { kind: 'src' | 'tgt' }) {
-  const viewport = useMapViewport()
-  const scale = clampViewportScale(viewport?.scale ?? 1)
-  const baseSize = kind === 'src' ? 48 : 40
-  const size = Math.max(14, Math.round(baseSize * scale))
-  const ringWidth = Math.max(3, Math.round(scale * 3))
-  const glowRadius = Math.max(16, Math.round(24 * scale))
-  const baseColor = kind === 'src' ? 'rgba(56,189,248,0.9)' : 'rgba(239,68,68,0.9)'
-  const glowColor = kind === 'src' ? 'rgba(56,189,248,0.45)' : 'rgba(239,68,68,0.45)'
-
-  return (
-    <span
-      className="block rounded-full"
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        boxShadow: `0 0 0 ${ringWidth}px ${baseColor}, 0 0 ${glowRadius}px ${glowColor}`,
-      }}
-    />
-  )
-}
-
-interface ThreatOverlayRingProps {
-  color: string
-  ratio: number
-}
-
-function ThreatOverlayRing({ color, ratio }: ThreatOverlayRingProps) {
-  const viewport = useMapViewport()
-  const scale = clampViewportScale(viewport?.scale ?? 1)
-  const baseSize = 14 + Math.round(10 * ratio)
-  const size = Math.max(10, Math.round(baseSize * scale))
-  const ringWidth = Math.max(2, Math.round(scale * 3))
-  const glowRadius = Math.max(12, Math.round(22 * scale))
-
-  return (
-    <span
-      className="block rounded-full"
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        boxShadow: `0 0 0 ${ringWidth}px ${color}, 0 0 ${glowRadius}px ${color}`,
-      }}
-    />
   )
 }

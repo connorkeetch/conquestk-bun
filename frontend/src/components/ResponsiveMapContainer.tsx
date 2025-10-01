@@ -69,7 +69,8 @@ export default function ResponsiveMapContainer({
     // Calculate scale to fit map within container
     const scaleX = containerWidth / mapWidth
     const scaleY = containerHeight / mapHeight
-    const newScale = Math.max(1, Math.min(scaleX, scaleY))
+    // Fit the whole map within the container (allow shrinking below 1:1)
+    const newScale = Math.min(scaleX, scaleY)
     setBaseScale(newScale)
   }, [mapWidth, mapHeight])
 
@@ -313,7 +314,8 @@ export default function ResponsiveMapContainer({
   const handleMinimapClick = (e: React.MouseEvent<HTMLElement>) => {
     const el = containerRef.current
     if (!el) return
-    const rect = (e.target as HTMLElement).getBoundingClientRect()
+    // Use currentTarget to get the button's rect, not an inner child
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     const relX = e.clientX - rect.left
     const relY = e.clientY - rect.top
     // Center viewport around clicked point
