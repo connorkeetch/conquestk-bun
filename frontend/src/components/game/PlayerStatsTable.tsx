@@ -19,9 +19,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = ({
 
   // Calculate stats for each player
   const playerStats = players.map((player) => {
-    const territoryCount = Object.values(territories).filter(
-      (t) => t.owner === player.id,
-    ).length
+    const territoryCount = Object.values(territories).filter((t) => t.owner === player.id).length
 
     const totalArmies = player.armies ?? 0
     const treasureCount = Array.isArray(player.treasures)

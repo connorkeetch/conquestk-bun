@@ -8,11 +8,13 @@ import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+/* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
+*/
 import { logger } from '@/utils/logger'
-import { RiskGameBoard } from '../components/RiskGameBoard'
 import { PlayerStatsTable } from '../components/game/PlayerStatsTable'
+import { RiskGameBoard } from '../components/RiskGameBoard'
 import { Skeleton } from '../components/ui/Skeleton'
 import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -32,7 +34,7 @@ import {
 import { setCurrentRoom } from '../store/roomSlice'
 import { hydrateFromStorage, setDice, setOverlay } from '../store/uiRoomSlice'
 import type { AIDifficulty } from '../types/game'
-import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
+// import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
 import { hostDisplay, seatUsage } from '../utils/lobby'
 
@@ -280,7 +282,7 @@ export default function GameRoom() {
     [],
   )
 
-  const ratingToTier = useCallback(
+  const _ratingToTier = useCallback(
     (rating: number | null | undefined) => {
       if (typeof rating !== 'number') return null
       return (
@@ -292,7 +294,7 @@ export default function GameRoom() {
     [TIER_BOUNDS],
   )
 
-  const romanNumeral = useCallback((index1: number) => {
+  const _romanNumeral = useCallback((index1: number) => {
     const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
     return romans[Math.max(1, Math.min(index1, romans.length)) - 1] ?? String(index1)
   }, [])
@@ -1435,11 +1437,9 @@ export default function GameRoom() {
             <PlayerStatsTable
               players={currentGame.players || []}
               currentPlayerId={currentGame.currentPlayer}
-              territories={
-                Object.fromEntries(
-                  (currentGame.board || []).map((t) => [t.id, { owner: t.owner }]),
-                )
-              }
+              territories={Object.fromEntries(
+                (currentGame.board || []).map((t) => [t.id, { owner: t.owner }]),
+              )}
             />
           ) : (
             <div className="panel space-y-3">
