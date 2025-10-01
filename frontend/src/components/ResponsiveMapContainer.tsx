@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 interface ResponsiveMapContainerProps {
   children: React.ReactNode
@@ -11,6 +11,20 @@ interface ResponsiveMapContainerProps {
   storageKey?: string
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
+}
+
+interface MapViewportContextValue {
+  zoom: number
+  baseScale: number
+  scale: number
+  displayWidth: number
+  displayHeight: number
+}
+
+const MapViewportContext = createContext<MapViewportContextValue | null>(null)
+
+export function useMapViewport() {
+  return useContext(MapViewportContext)
 }
 
 export default function ResponsiveMapContainer({
@@ -55,7 +69,7 @@ export default function ResponsiveMapContainer({
     // Calculate scale to fit map within container
     const scaleX = containerWidth / mapWidth
     const scaleY = containerHeight / mapHeight
-    const newScale = Math.min(scaleX, scaleY, 1) // fit-to-container, never upscale baseline
+    const newScale = Math.max(1, Math.min(scaleX, scaleY))
     setBaseScale(newScale)
   }, [mapWidth, mapHeight])
 
@@ -80,7 +94,7 @@ export default function ResponsiveMapContainer({
       const raw = localStorage.getItem(`ui.zoom.${storageKey}`)
       if (!raw) return
       const z = Number.parseFloat(raw)
-      if (Number.isFinite(z) && z >= 0.5 && z <= 3) setZoom(z)
+      if (Number.isFinite(z) && z >= 0.2 && z <= 3) setZoom(z)
     } catch {
       // ignore storage errors
     }
@@ -103,6 +117,17 @@ export default function ResponsiveMapContainer({
     return { width, height }
   }, [mapWidth, mapHeight, baseScale, zoom])
 
+  const viewportContext = useMemo<MapViewportContextValue>(
+    () => ({
+      zoom,
+      baseScale,
+      scale: baseScale * zoom,
+      displayWidth: display.width,
+      displayHeight: display.height,
+    }),
+    [zoom, baseScale, display.width, display.height],
+  )
+
   // Zoom handlers (Ctrl/Meta + wheel). Also provide UI buttons.
   useEffect(() => {
     const el = containerRef.current
@@ -112,7 +137,7 @@ export default function ResponsiveMapContainer({
       if (!e.ctrlKey && !e.metaKey) return
       e.preventDefault()
       const delta = e.deltaY > 0 ? -0.1 : 0.1
-      setZoom((z) => Math.min(3, Math.max(0.5, Math.round((z + delta) * 10) / 10)))
+      setZoom((z) => Math.min(3, Math.max(0.2, Math.round((z + delta) * 10) / 10)))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -211,7 +236,7 @@ export default function ResponsiveMapContainer({
         e.preventDefault()
         const newDistance = getDistance(e.touches[0], e.touches[1])
         const scale = newDistance / pinchStartRef.current.distance
-        const newZoom = Math.min(3, Math.max(0.5, pinchStartRef.current.zoom * scale))
+        const newZoom = Math.min(3, Math.max(0.2, pinchStartRef.current.zoom * scale))
         setZoom(Math.round(newZoom * 10) / 10)
       } else if (e.touches.length === 1 && touchPanStartRef.current) {
         // Single finger pan
@@ -350,90 +375,92 @@ export default function ResponsiveMapContainer({
       className={`relative w-full h-full flex items-center justify-center bg-surface-1 overflow-auto ${className}`}
       style={{ cursor: isDraggingRef.current ? 'grabbing' : undefined }}
     >
-      <div
-        className="relative"
-        style={{ width: `${display.width}px`, height: `${display.height}px` }}
-      >
-        {children}
-      </div>
-
-      {/* Scale indicator */}
-      {baseScale < 1 && zoom === 1 && (
-        <div className="absolute top-2 right-2 bg-surface-2/90 px-2 py-1 rounded text-xs text-muted">
-          Scaled to {Math.round(baseScale * 100)}%
+      <MapViewportContext.Provider value={viewportContext}>
+        <div
+          className="relative"
+          style={{ width: `${display.width}px`, height: `${display.height}px` }}
+        >
+          {children}
         </div>
-      )}
 
-      {/* Zoom controls */}
-      <div className="absolute bottom-2 right-2 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
-        <button
-          type="button"
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
-          onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
-          title="Zoom out (Ctrl/Cmd + scroll or pinch)"
-        >
-          −
-        </button>
-        <div className="text-xs self-center min-w-[44px] text-center text-muted font-mono">
-          {Math.round(zoom * 100)}%
+        {/* Scale indicator */}
+        {baseScale < 1 && zoom === 1 && (
+          <div className="absolute top-2 right-2 bg-surface-2/90 px-2 py-1 rounded text-xs text-muted">
+            Scaled to {Math.round(baseScale * 100)}%
+          </div>
+        )}
+
+        {/* Zoom controls */}
+        <div className="absolute bottom-2 right-2 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
+          <button
+            type="button"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+            onClick={() => setZoom((z) => Math.max(0.2, Math.round((z - 0.1) * 10) / 10))}
+            title="Zoom out (Ctrl/Cmd + scroll or pinch)"
+          >
+            −
+          </button>
+          <div className="text-xs self-center min-w-[44px] text-center text-muted font-mono">
+            {Math.round(zoom * 100)}%
+          </div>
+          <button
+            type="button"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+            onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.1) * 10) / 10))}
+            title="Zoom in (Ctrl/Cmd + scroll or pinch)"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-ghost hover:bg-surface-2 active:bg-surface-2 transition-colors text-xs"
+            onClick={() => setZoom(1)}
+            title="Reset zoom to 100%"
+          >
+            1:1
+          </button>
         </div>
-        <button
-          type="button"
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
-          onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.1) * 10) / 10))}
-          title="Zoom in (Ctrl/Cmd + scroll or pinch)"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-ghost hover:bg-surface-2 active:bg-surface-2 transition-colors text-xs"
-          onClick={() => setZoom(1)}
-          title="Reset zoom to 100%"
-        >
-          1:1
-        </button>
-      </div>
 
-      {/* Minimap */}
-      {showMinimap && (
-        <button
-          type="button"
-          className="absolute bottom-2 left-2 rounded border border-border overflow-hidden bg-surface-2/80 backdrop-blur"
-          style={{ width: minimap.mmWidth, height: minimap.mmHeight }}
-          onClick={handleMinimapClick}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              handleMinimapClick(e as unknown as React.MouseEvent<HTMLDivElement>)
-            }
-          }}
-        >
-          <div
-            className="w-full h-full"
-            style={
-              backgroundImageUrl
-                ? {
-                    backgroundImage: `url(${backgroundImageUrl})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                  }
-                : { background: 'linear-gradient(45deg, #1f2937, #374151)' }
-            }
-          />
-          <div
-            className="absolute border-2 border-primary/90 bg-black/10 pointer-events-none"
-            style={{
-              width: Math.max(8, minimap.viewW),
-              height: Math.max(8, minimap.viewH),
-              left: minimap.viewX,
-              top: minimap.viewY,
+        {/* Minimap */}
+        {showMinimap && (
+          <button
+            type="button"
+            className="absolute bottom-2 left-2 rounded border border-border overflow-hidden bg-surface-2/80 backdrop-blur"
+            style={{ width: minimap.mmWidth, height: minimap.mmHeight }}
+            onClick={handleMinimapClick}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleMinimapClick(e as unknown as React.MouseEvent<HTMLDivElement>)
+              }
             }}
-          />
-        </button>
-      )}
+          >
+            <div
+              className="w-full h-full"
+              style={
+                backgroundImageUrl
+                  ? {
+                      backgroundImage: `url(${backgroundImageUrl})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                    }
+                  : { background: 'linear-gradient(45deg, #1f2937, #374151)' }
+              }
+            />
+            <div
+              className="absolute border-2 border-primary/90 bg-black/10 pointer-events-none"
+              style={{
+                width: Math.max(8, minimap.viewW),
+                height: Math.max(8, minimap.viewH),
+                left: minimap.viewX,
+                top: minimap.viewY,
+              }}
+            />
+          </button>
+        )}
+      </MapViewportContext.Provider>
     </div>
   )
 }

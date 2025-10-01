@@ -1,6 +1,5 @@
 import type React from 'react'
 import { useMemo } from 'react'
-import { getColorValue, type PlayerColor } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
 import CustomMapDisplay from '../CustomMapDisplay'
 import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
@@ -11,7 +10,6 @@ interface RiskGameMapProps {
   mapId: string
   territories: TerritoryDisplayMap
   players: GamePlayer[]
-  hoveredTerritory: string | null
   selectedTerritory: string | null
   selectedTargetTerritory: string | null
   validTargets: string[]
@@ -25,7 +23,6 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   mapId,
   territories,
   players,
-  hoveredTerritory,
   selectedTerritory,
   selectedTargetTerritory,
   validTargets,

@@ -7,7 +7,7 @@ import { selectTerritory } from '@/store/gameSlice'
 import { setLastPingAt, setOverlay } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import { arePlayersTeammates } from '@/utils/teamHelpers'
-import ResponsiveMapContainer from './ResponsiveMapContainer'
+import ResponsiveMapContainer, { useMapViewport } from './ResponsiveMapContainer'
 
 interface Territory {
   id: string
@@ -218,6 +218,11 @@ export default function CustomMapDisplay({
     onTerritoryClick?.(territoryId)
   }
 
+  const handleHoverChange = (territoryId: string | null) => {
+    setHoveredId(territoryId)
+    onTerritoryHover?.(territoryId)
+  }
+
   // Swipe to cycle overlays (none -> continents -> attackable -> threat)
   const cycleOverlay = (dir: 'left' | 'right') => {
     const order = ['none', 'continents', 'attackable', 'threat'] as const
@@ -266,9 +271,9 @@ export default function CustomMapDisplay({
         {(() => {
           const haptic = () => {
             try {
-              ;(navigator as unknown as { vibrate?: (pattern: number | number[]) => void }).vibrate?.(
-                10,
-              )
+              ;(
+                navigator as unknown as { vibrate?: (pattern: number | number[]) => void }
+              ).vibrate?.(10)
             } catch {
               // ignore haptics errors
             }
@@ -348,8 +353,7 @@ export default function CustomMapDisplay({
               disabled={disabled}
               title={(() => {
                 if (!targetId) return 'Select or hover a territory to ping'
-                const name =
-                  territories.find((t) => t.id === targetId)?.name ?? targetId
+                const name = territories.find((t) => t.id === targetId)?.name ?? targetId
                 return `Ping ${name}`
               })()}
             >
@@ -424,15 +428,7 @@ export default function CustomMapDisplay({
                 transform: 'translate(-50%, -50%)',
               }}
             >
-              <span
-                className={`block rounded-full ${e.kind === 'src' ? 'w-12 h-12' : 'w-10 h-10'}`}
-                style={{
-                  boxShadow:
-                    e.kind === 'src'
-                      ? '0 0 0 3px rgba(56,189,248,0.9), 0 0 24px rgba(56,189,248,0.45)'
-                      : '0 0 0 3px rgba(239,68,68,0.9), 0 0 24px rgba(239,68,68,0.45)',
-                }}
-              />
+              <AttackOverlayRing kind={e.kind} />
             </div>
           ))
         })()}
@@ -469,7 +465,6 @@ export default function CustomMapDisplay({
           }
           return items.map((i) => {
             const ratio = Math.min(1, i.score / max)
-            const size = 14 + Math.round(10 * ratio)
             const color = colorFor(ratio)
             return (
               <div
@@ -482,14 +477,7 @@ export default function CustomMapDisplay({
                 }}
                 title={`Threat score: ${i.score}`}
               >
-                <span
-                  className="block rounded-full"
-                  style={{
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    boxShadow: `0 0 0 3px ${color}, 0 0 24px ${color}`,
-                  }}
-                />
+                <ThreatOverlayRing color={color} ratio={ratio} />
               </div>
             )
           })
@@ -510,9 +498,11 @@ export default function CustomMapDisplay({
       {territories.map((territory) => {
         const isSelected = territory.id === selectedTerritoryId
         const ownerColor = territory.owner ? playerColors[territory.owner] : undefined
-        const color = ownerColor ? getColorValue(ownerColor as PlayerColor) : '#6b7280' // gray-500 as fallback
+        const color = ownerColor ? getColorValue(ownerColor as PlayerColor) : '#6b7280'
         const isValidTarget =
-          pendingAction === 'attack' && validTargets.includes(territory.id) && selectedTerritoryId
+          pendingAction === 'attack' &&
+          validTargets.includes(territory.id) &&
+          Boolean(selectedTerritoryId)
 
         return (
           <div
@@ -524,55 +514,14 @@ export default function CustomMapDisplay({
               transform: 'translate(-50%, -50%)',
             }}
           >
-            <button
-              type="button"
-              onClick={() => handleTerritoryActivate(territory.id)}
-              onMouseEnter={() => {
-                setHoveredId(territory.id)
-                onTerritoryHover?.(territory.id)
-              }}
-              onMouseLeave={() => {
-                setHoveredId(null)
-                onTerritoryHover?.(null)
-              }}
-              className={`relative block ${isValidTarget ? 'animate-pulse' : ''}`}
-              title={territory.name}
-              aria-label={`Territory: ${territory.name}`}
-              style={{ cursor: isValidTarget ? ('crosshair' as const) : 'pointer' }}
-            >
-              <span
-                className="block"
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  backgroundColor: color,
-                  opacity: isSelected ? 0.85 : 0.7,
-                  clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
-                  boxShadow: isSelected
-                    ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
-                    : isValidTarget
-                      ? '0 0 8px rgba(56,189,248,0.7), 0 2px 4px rgba(0,0,0,0.3)'
-                      : '0 2px 4px rgba(0,0,0,0.3)',
-                  border: isValidTarget ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {territory.armies && territory.armies > 0 ? (
-                  <span
-                    style={{
-                      color: 'white',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-                    }}
-                  >
-                    {territory.armies}
-                  </span>
-                ) : null}
-              </span>
-            </button>
+            <TerritoryToken
+              territory={territory}
+              color={color}
+              isSelected={isSelected}
+              isValidTarget={Boolean(isValidTarget)}
+              onActivate={handleTerritoryActivate}
+              onHoverChange={handleHoverChange}
+            />
           </div>
         )
       })}
@@ -676,5 +625,136 @@ export default function CustomMapDisplay({
         </div>
       )}
     </ResponsiveMapContainer>
+  )
+}
+
+const clampViewportScale = (scale: number) => Math.min(3, Math.max(0.25, scale))
+
+interface TerritoryTokenProps {
+  territory: Territory
+  color: string
+  isSelected: boolean
+  isValidTarget: boolean
+  onActivate: (territoryId: string) => void
+  onHoverChange: (territoryId: string | null) => void
+}
+
+function TerritoryToken({
+  territory,
+  color,
+  isSelected,
+  isValidTarget,
+  onActivate,
+  onHoverChange,
+}: TerritoryTokenProps) {
+  const viewport = useMapViewport()
+  const effectiveScale = clampViewportScale(viewport?.scale ?? 1)
+  const size = Math.max(8, Math.round(32 * effectiveScale))
+  const borderWidth = isValidTarget
+    ? Math.max(2, Math.round(effectiveScale * 2))
+    : Math.max(1, Math.round(effectiveScale))
+  const fontSize = Math.max(10, Math.min(26, Math.round(14 * effectiveScale)))
+  const glowRadius = Math.round(6 * effectiveScale)
+
+  const boxShadow = isSelected
+    ? `0 0 ${10 + glowRadius}px rgba(255,255,255,0.65), 0 2px 6px rgba(0,0,0,0.35)`
+    : isValidTarget
+      ? `0 0 ${6 + glowRadius}px rgba(56,189,248,0.7), 0 2px 4px rgba(0,0,0,0.3)`
+      : '0 2px 4px rgba(0,0,0,0.3)'
+
+  return (
+    <button
+      type="button"
+      onClick={() => onActivate(territory.id)}
+      onMouseEnter={() => onHoverChange(territory.id)}
+      onMouseLeave={() => onHoverChange(null)}
+      onFocus={() => onHoverChange(territory.id)}
+      onBlur={() => onHoverChange(null)}
+      onTouchStart={() => onHoverChange(territory.id)}
+      onTouchEnd={() => onHoverChange(null)}
+      onTouchCancel={() => onHoverChange(null)}
+      className={`relative block ${isValidTarget ? 'animate-pulse' : ''}`}
+      title={territory.name}
+      aria-label={`Territory: ${territory.name}`}
+      style={{ cursor: isValidTarget ? ('crosshair' as const) : 'pointer' }}
+    >
+      <span
+        className="block"
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          backgroundColor: color,
+          opacity: isSelected ? 0.85 : 0.7,
+          clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+          boxShadow,
+          border: `${borderWidth}px solid ${isValidTarget ? '#38bdf8' : 'rgba(255,255,255,0.25)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'transform 0.15s ease-out',
+        }}
+      >
+        {territory.armies && territory.armies > 0 ? (
+          <span
+            style={{
+              color: 'white',
+              fontSize: `${fontSize}px`,
+              fontWeight: 700,
+              textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+              lineHeight: 1,
+            }}
+          >
+            {territory.armies}
+          </span>
+        ) : null}
+      </span>
+    </button>
+  )
+}
+
+function AttackOverlayRing({ kind }: { kind: 'src' | 'tgt' }) {
+  const viewport = useMapViewport()
+  const scale = clampViewportScale(viewport?.scale ?? 1)
+  const baseSize = kind === 'src' ? 48 : 40
+  const size = Math.max(14, Math.round(baseSize * scale))
+  const ringWidth = Math.max(3, Math.round(scale * 3))
+  const glowRadius = Math.max(16, Math.round(24 * scale))
+  const baseColor = kind === 'src' ? 'rgba(56,189,248,0.9)' : 'rgba(239,68,68,0.9)'
+  const glowColor = kind === 'src' ? 'rgba(56,189,248,0.45)' : 'rgba(239,68,68,0.45)'
+
+  return (
+    <span
+      className="block rounded-full"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        boxShadow: `0 0 0 ${ringWidth}px ${baseColor}, 0 0 ${glowRadius}px ${glowColor}`,
+      }}
+    />
+  )
+}
+
+interface ThreatOverlayRingProps {
+  color: string
+  ratio: number
+}
+
+function ThreatOverlayRing({ color, ratio }: ThreatOverlayRingProps) {
+  const viewport = useMapViewport()
+  const scale = clampViewportScale(viewport?.scale ?? 1)
+  const baseSize = 14 + Math.round(10 * ratio)
+  const size = Math.max(10, Math.round(baseSize * scale))
+  const ringWidth = Math.max(2, Math.round(scale * 3))
+  const glowRadius = Math.max(12, Math.round(22 * scale))
+
+  return (
+    <span
+      className="block rounded-full"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        boxShadow: `0 0 0 ${ringWidth}px ${color}, 0 0 ${glowRadius}px ${color}`,
+      }}
+    />
   )
 }
