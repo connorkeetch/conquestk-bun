@@ -1511,241 +1511,249 @@ const CreateGamePage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Map List */}
               <div className="lg:col-span-1">
-              <input
-                placeholder="Search maps..."
-                value={mapSearch}
-                onChange={(e) => setMapSearch(e.target.value)}
-                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <div className="flex items-center gap-2 mb-2">
-                <select
-                  value={mapSizeFilter}
-                  onChange={(e) => setMapSizeFilter(e.target.value as typeof mapSizeFilter)}
-                  className="bg-surface-2 border border-border rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">All Sizes</option>
-                  <option value="Small">Small (≤35)</option>
-                  <option value="Medium">Medium (36–45)</option>
-                  <option value="Large">Large (46–65)</option>
-                  <option value="Very Large">Very Large (66–90)</option>
-                  <option value="Massive">Massive (91+)</option>
-                </select>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface-2">
-                {mapsLoading ? (
-                  <div className="text-center py-4 text-muted">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                    Loading maps...
-                  </div>
-                ) : (
-                  maps
-                    .filter((map) => {
-                      const matchesSearch =
-                        mapSearch === '' ||
-                        map.name.toLowerCase().includes(mapSearch.toLowerCase()) ||
-                        map.description?.toLowerCase().includes(mapSearch.toLowerCase()) ||
-                        map.tags?.some((tag) => tag.toLowerCase().includes(mapSearch.toLowerCase()))
-                      const matchesSize =
-                        mapSizeFilter === '' ||
-                        computeMapSizeFromCounts(map.territory_count) === mapSizeFilter
-                      return matchesSearch && matchesSize
-                    })
-                    .map((map) => {
-                      const ratingAverage = Number(map.rating_average ?? 0)
-                      const totalPlays = Number(map.play_count ?? 0)
+                <input
+                  placeholder="Search maps..."
+                  value={mapSearch}
+                  onChange={(e) => setMapSearch(e.target.value)}
+                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <div className="flex items-center gap-2 mb-2">
+                  <select
+                    value={mapSizeFilter}
+                    onChange={(e) => setMapSizeFilter(e.target.value as typeof mapSizeFilter)}
+                    className="bg-surface-2 border border-border rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">All Sizes</option>
+                    <option value="Small">Small (≤35)</option>
+                    <option value="Medium">Medium (36–45)</option>
+                    <option value="Large">Large (46–65)</option>
+                    <option value="Very Large">Very Large (66–90)</option>
+                    <option value="Massive">Massive (91+)</option>
+                  </select>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface-2">
+                  {mapsLoading ? (
+                    <div className="text-center py-4 text-muted">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                      Loading maps...
+                    </div>
+                  ) : (
+                    maps
+                      .filter((map) => {
+                        const matchesSearch =
+                          mapSearch === '' ||
+                          map.name.toLowerCase().includes(mapSearch.toLowerCase()) ||
+                          map.description?.toLowerCase().includes(mapSearch.toLowerCase()) ||
+                          map.tags?.some((tag) =>
+                            tag.toLowerCase().includes(mapSearch.toLowerCase()),
+                          )
+                        const matchesSize =
+                          mapSizeFilter === '' ||
+                          computeMapSizeFromCounts(map.territory_count) === mapSizeFilter
+                        return matchesSearch && matchesSize
+                      })
+                      .map((map) => {
+                        const ratingAverage = Number(map.rating_average ?? 0)
+                        const totalPlays = Number(map.play_count ?? 0)
 
-                      return (
-                        <button
-                          key={map.id}
-                          type="button"
-                          className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
-                            selectedMap === map.id
-                              ? map.id === 'random'
-                                ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg'
-                                : 'theme-selected shadow-lg'
-                              : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
-                          }`}
-                          onClick={() => setSelectedMap(map.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="font-bold text-white">
-                              {map.id === 'random' && '🎲 '}
-                              {map.is_featured && '⭐ '}
-                              {map.is_vip_only && '👑 '}
-                              {map.name}
+                        return (
+                          <button
+                            key={map.id}
+                            type="button"
+                            className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
+                              selectedMap === map.id
+                                ? map.id === 'random'
+                                  ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg'
+                                  : 'theme-selected shadow-lg'
+                                : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
+                            }`}
+                            onClick={() => setSelectedMap(map.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-bold text-white">
+                                {map.id === 'random' && '🎲 '}
+                                {map.is_featured && '⭐ '}
+                                {map.is_vip_only && '👑 '}
+                                {map.name}
+                              </div>
+                              {ratingAverage > 0 && (
+                                <div className="text-xs text-yellow-400">
+                                  {'⭐'.repeat(Math.floor(ratingAverage))}
+                                </div>
+                              )}
                             </div>
-                            {ratingAverage > 0 && (
-                              <div className="text-xs text-yellow-400">
-                                {'⭐'.repeat(Math.floor(ratingAverage))}
+                            <div className="text-sm text-muted">
+                              {map.territory_count > 0
+                                ? `${map.territory_count} territories • Map Size: ${computeMapSizeFromCounts(map.territory_count)}`
+                                : 'Randomly selected when game starts'}
+                            </div>
+                            {map.creator_name && map.id !== 'classic' && map.id !== 'random' && (
+                              <div className="text-xs text-muted mt-1">
+                                by {map.creator_name}
+                                {totalPlays > 0 && ` • ${totalPlays} plays`}
                               </div>
                             )}
-                          </div>
-                          <div className="text-sm text-muted">
-                            {map.territory_count > 0
-                              ? `${map.territory_count} territories • Map Size: ${computeMapSizeFromCounts(map.territory_count)}`
-                              : 'Randomly selected when game starts'}
-                          </div>
-                          {map.creator_name && map.id !== 'classic' && map.id !== 'random' && (
-                            <div className="text-xs text-muted mt-1">
-                              by {map.creator_name}
-                              {totalPlays > 0 && ` • ${totalPlays} plays`}
-                            </div>
+                          </button>
+                        )
+                      })
+                  )}
+                </div>
+              </div>
+
+              {/* Map Preview */}
+              <div className="lg:col-span-2">
+                <div className="panel-outline rounded-lg p-4">
+                  {(() => {
+                    const selectedMapData = maps.find((m) => m.id === selectedMap)
+
+                    if (!selectedMapData) {
+                      return (
+                        <div className="text-center text-muted py-8">
+                          Select a map to see details
+                        </div>
+                      )
+                    }
+
+                    const imageSrc = selectedMapData.imageUrl || selectedMapData.image_url
+                    const isRandomMap = selectedMapData.id === 'random'
+                    const ratingAverage = Number(selectedMapData.rating_average ?? 0)
+                    const ratingCount = Number(selectedMapData.rating_count ?? 0)
+                    const totalPlays = Number(selectedMapData.play_count ?? 0)
+                    const monthlyPlays = Number(selectedMapData.play_count_30d ?? 0)
+
+                    const handleOpenMapDetails = () => {
+                      if (isRandomMap) {
+                        return
+                      }
+                      setMapDetailModalId(selectedMapData.id)
+                    }
+
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleOpenMapDetails}
+                          disabled={isRandomMap}
+                          className={`relative w-full h-48 md:h-56 rounded-lg mb-4 flex items-center justify-center border overflow-hidden transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                            isRandomMap
+                              ? 'panel-muted'
+                              : 'panel-outline hover:border-[color:var(--color-primary)] cursor-zoom-in group'
+                          }`}
+                          aria-label={
+                            isRandomMap ? 'Map preview' : 'Open detailed map preview with tokens'
+                          }
+                        >
+                          {imageSrc ? (
+                            <img
+                              src={imageSrc}
+                              alt={selectedMapData.name}
+                              className="h-full max-h-full w-full max-w-full object-contain"
+                              onError={(e) => {
+                                ;(e.target as HTMLImageElement).style.display = 'none'
+                                const parent = (e.target as HTMLImageElement).parentElement
+                                if (parent) {
+                                  const fallback = document.createElement('div')
+                                  fallback.className = 'text-muted text-center'
+                                  fallback.innerHTML =
+                                    selectedMap === 'random'
+                                      ? '🎲 Random Map Selection'
+                                      : '🗺️ Map Preview'
+                                  parent.appendChild(fallback)
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-muted">
+                              {selectedMap === 'random'
+                                ? '🎲 Random Map Selection'
+                                : '🗺️ Map Preview'}
+                            </span>
+                          )}
+                          {!isRandomMap && (
+                            <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                              Click to expand
+                            </span>
                           )}
                         </button>
-                      )
-                    })
-                )}
-              </div>
-            </div>
-
-            {/* Map Preview */}
-            <div className="lg:col-span-2">
-              <div className="panel-outline rounded-lg p-4">
-                {(() => {
-                  const selectedMapData = maps.find((m) => m.id === selectedMap)
-
-                  if (!selectedMapData) {
-                    return (
-                      <div className="text-center text-muted py-8">Select a map to see details</div>
-                    )
-                  }
-
-                  const imageSrc = selectedMapData.imageUrl || selectedMapData.image_url
-                  const isRandomMap = selectedMapData.id === 'random'
-                  const ratingAverage = Number(selectedMapData.rating_average ?? 0)
-                  const ratingCount = Number(selectedMapData.rating_count ?? 0)
-                  const totalPlays = Number(selectedMapData.play_count ?? 0)
-                  const monthlyPlays = Number(selectedMapData.play_count_30d ?? 0)
-
-                  const handleOpenMapDetails = () => {
-                    if (isRandomMap) {
-                      return
-                    }
-                    setMapDetailModalId(selectedMapData.id)
-                  }
-
-                  return (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleOpenMapDetails}
-                        disabled={isRandomMap}
-                        className={`relative w-full h-48 md:h-56 rounded-lg mb-4 flex items-center justify-center border overflow-hidden transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                          isRandomMap
-                            ? 'panel-muted'
-                            : 'panel-outline hover:border-[color:var(--color-primary)] cursor-zoom-in group'
-                        }`}
-                        aria-label={
-                          isRandomMap ? 'Map preview' : 'Open detailed map preview with tokens'
-                        }
-                      >
-                        {imageSrc ? (
-                          <img
-                            src={imageSrc}
-                            alt={selectedMapData.name}
-                            className="h-full max-h-full w-full max-w-full object-contain"
-                            onError={(e) => {
-                              ;(e.target as HTMLImageElement).style.display = 'none'
-                              const parent = (e.target as HTMLImageElement).parentElement
-                              if (parent) {
-                                const fallback = document.createElement('div')
-                                fallback.className = 'text-muted text-center'
-                                fallback.innerHTML =
-                                  selectedMap === 'random'
-                                    ? '🎲 Random Map Selection'
-                                    : '🗺️ Map Preview'
-                                parent.appendChild(fallback)
-                              }
-                            }}
-                          />
-                        ) : (
-                          <span className="text-muted">
-                            {selectedMap === 'random' ? '🎲 Random Map Selection' : '🗺️ Map Preview'}
-                          </span>
-                        )}
-                        {!isRandomMap && (
-                          <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-                            Click to expand
-                          </span>
-                        )}
-                      </button>
-                      {selectedMap !== 'random' && (
-                        <div>
-                          {selectedMapData.description && (
-                            <p className="text-sm text-muted mb-3">{selectedMapData.description}</p>
-                          )}
-                          <dl className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <dt className="text-muted">Territories</dt>
-                              <dd className="text-white">
-                                {selectedMapData.territory_count || 'Unknown'}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-muted">Sectors</dt>
-                              <dd className="text-white">
-                                {(selectedMapData as unknown as { sector_count?: number })
-                                  .sector_count ||
-                                  selectedMapData.continent_count ||
-                                  'Unknown'}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-muted">Map Size</dt>
-                              <dd className="text-white">
-                                {computeMapSizeFromCounts(selectedMapData.territory_count)}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-muted">Games Last Month</dt>
-                              <dd className="text-white">
-                                {monthlyPlays > 0 ? monthlyPlays : '—'}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-muted">Games Played</dt>
-                              <dd className="text-white">{totalPlays > 0 ? totalPlays : '—'}</dd>
-                            </div>
-                            {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
-                              <div className="col-span-2">
-                                <dt className="text-muted">Created by</dt>
-                                <dd className="text-white">{selectedMapData.creator_name}</dd>
-                              </div>
+                        {selectedMap !== 'random' && (
+                          <div>
+                            {selectedMapData.description && (
+                              <p className="text-sm text-muted mb-3">
+                                {selectedMapData.description}
+                              </p>
                             )}
-                            {selectedMapData.createdAt && (
-                              <div className="col-span-2">
-                                <dt className="text-muted">Created</dt>
+                            <dl className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <dt className="text-muted">Territories</dt>
                                 <dd className="text-white">
-                                  {new Date(selectedMapData.createdAt).toLocaleDateString(
-                                    undefined,
-                                    {
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric',
-                                    },
-                                  )}
+                                  {selectedMapData.territory_count || 'Unknown'}
                                 </dd>
                               </div>
-                            )}
-                            {ratingAverage > 0 && (
-                              <div className="col-span-2">
-                                <dt className="text-muted">Rating</dt>
-                                <dd className="text-yellow-400">
-                                  {'⭐'.repeat(Math.floor(ratingAverage))}
-                                  <span className="text-white ml-1">
-                                    ({ratingAverage.toFixed(1)}/5 from {ratingCount} reviews)
-                                  </span>
+                              <div>
+                                <dt className="text-muted">Sectors</dt>
+                                <dd className="text-white">
+                                  {(selectedMapData as unknown as { sector_count?: number })
+                                    .sector_count ||
+                                    selectedMapData.continent_count ||
+                                    'Unknown'}
                                 </dd>
                               </div>
-                            )}
-                          </dl>
-                        </div>
-                      )}
-                    </>
-                  )
-                })()}
+                              <div>
+                                <dt className="text-muted">Map Size</dt>
+                                <dd className="text-white">
+                                  {computeMapSizeFromCounts(selectedMapData.territory_count)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className="text-muted">Games Last Month</dt>
+                                <dd className="text-white">
+                                  {monthlyPlays > 0 ? monthlyPlays : '—'}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className="text-muted">Games Played</dt>
+                                <dd className="text-white">{totalPlays > 0 ? totalPlays : '—'}</dd>
+                              </div>
+                              {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
+                                <div className="col-span-2">
+                                  <dt className="text-muted">Created by</dt>
+                                  <dd className="text-white">{selectedMapData.creator_name}</dd>
+                                </div>
+                              )}
+                              {selectedMapData.createdAt && (
+                                <div className="col-span-2">
+                                  <dt className="text-muted">Created</dt>
+                                  <dd className="text-white">
+                                    {new Date(selectedMapData.createdAt).toLocaleDateString(
+                                      undefined,
+                                      {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                      },
+                                    )}
+                                  </dd>
+                                </div>
+                              )}
+                              {ratingAverage > 0 && (
+                                <div className="col-span-2">
+                                  <dt className="text-muted">Rating</dt>
+                                  <dd className="text-yellow-400">
+                                    {'⭐'.repeat(Math.floor(ratingAverage))}
+                                    <span className="text-white ml-1">
+                                      ({ratingAverage.toFixed(1)}/5 from {ratingCount} reviews)
+                                    </span>
+                                  </dd>
+                                </div>
+                              )}
+                            </dl>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
               </div>
-            </div>
             </div>
           </div>
         </div>
