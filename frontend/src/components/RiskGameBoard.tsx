@@ -117,7 +117,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const players = lobbyMode ? lobbyPlayers : (gameState?.players ?? [])
   const currentPlayer = lobbyMode ? '' : (gameState?.currentPlayer ?? '')
   const currentPhase = lobbyMode ? 'lobby' : (gameState?.phase ?? 'reinforcement')
-  
+
   const isSpectator = useMemo(() => {
     if (!viewerId) return true
     return !players.some((player) => player.id === viewerId)
