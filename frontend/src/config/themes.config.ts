@@ -320,6 +320,10 @@ function updateDynamicOverlay(themeId: ThemeId) {
     const css = generateHalloweenOverlayCSS(motionEnabled())
     el.textContent = css
     themeDebugLog('overlay: halloween applied')
+  } else if (themeId === 'cutlers-cheese') {
+    const css = generateCheeseOverlayCSS(motionEnabled())
+    el.textContent = css
+    themeDebugLog('overlay: cheese applied')
   } else {
     // Clear overlays for other themes (let static CSS drive them)
     el.textContent = ''
@@ -424,6 +428,79 @@ function generateHalloweenOverlayCSS(withMotion: boolean): string {
 @keyframes halloween-scroll {
   0% { transform: translateY(0); }
   100% { transform: translateY(480px); }
+}
+`
+}
+
+function generateCheeseOverlayCSS(withMotion: boolean): string {
+  // Updated wedge (rich detail)
+  const wedge = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23e0a03d' d='M216.459 41.099C85.671 52.629 7.604 142.674 7.604 142.674v328.342h496.792V142.674z'/%3E%3Ccircle fill='%23f6e088' cx='251.407' cy='152.809' r='55.935'/%3E%3Cpath fill='%23f6e088' d='M7.604 379.638v91.377h91.377c0-50.465-40.911-91.377-91.377-91.377m430.891-113.442c0 36.396 29.505 65.901 65.901 65.901V200.295c-36.396 0-65.901 29.505-65.901 65.901'/%3E%3Ccircle fill='%23f6e088' cx='135.35' cy='288.504' r='38.527'/%3E%3Cpath fill='%23f6e088' d='M320.887 335.14c-48.488 0-87.795 39.307-87.795 87.795 0 17.752 5.273 34.268 14.332 48.081H394.35c9.059-13.812 14.332-30.33 14.332-48.081 0-48.489-39.307-87.795-87.795-87.795'/%3E%3Cpath fill='%23491e17' d='m217.434 33.38-1.642.145C146.629 39.622 92.224 67.54 58.762 89.887c-36.298 24.242-56.08 46.855-56.904 47.806L0 139.837V478.62h512V137.292zM15.208 463.412v-75.828c40.139 3.629 72.199 35.689 75.828 75.828zm236.444 0c-7.179-12.25-10.956-26.16-10.956-40.477 0-44.218 35.973-80.191 80.191-80.191s80.191 35.974 80.191 80.191c0 14.318-3.777 28.227-10.956 40.477zm155.632 0c5.914-12.6 9.002-26.373 9.002-40.477 0-52.603-42.796-95.399-95.399-95.399s-95.399 42.796-95.399 95.399c0 14.105 3.088 27.877 9.002 40.477H106.296c-3.704-48.529-42.559-87.384-91.088-91.088V150.278h83.644V135.07H25.885c9.208-8.57 23.31-20.545 41.757-32.825 31.643-21.063 82.885-47.335 147.852-53.422l244.49 86.247H312.401c-7.699-26.423-32.12-45.791-60.995-45.791s-53.296 19.369-60.995 45.791H119.13v15.208h68.806a65 65 0 0 0-.065 2.536c0 35.033 28.502 63.535 63.535 63.535s63.535-28.502 63.535-63.535c0-.85-.03-1.693-.065-2.536h181.916v42.807c-36.971 3.817-65.901 35.149-65.901 73.112s28.93 69.295 65.901 73.112v124.104zm-107.551-310.6c0 26.647-21.679 48.327-48.327 48.327s-48.327-21.679-48.327-48.327 21.679-48.327 48.327-48.327c26.648.001 48.327 21.68 48.327 48.327M496.792 324c-28.567-3.737-50.693-28.235-50.693-57.803 0-29.569 22.127-54.067 50.693-57.803z'/%3E%3Cpath fill='%23491e17' d='M320.887 297.12v15.208c60.989 0 110.607 49.617 110.607 110.607h15.208c0-69.375-56.44-125.815-125.815-125.815M135.35 242.371c-25.437 0-46.131 20.694-46.131 46.131s20.694 46.131 46.131 46.131 46.131-20.694 46.131-46.131-20.694-46.131-46.131-46.131m0 77.053c-17.051 0-30.923-13.872-30.923-30.923s13.872-30.923 30.923-30.923 30.923 13.872 30.923 30.923-13.871 30.923-30.923 30.923'/%3E%3C/svg%3E")`
+  // Cheese wheel (stylized fill)
+  const wheel = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 47.301 47.301'%3E%3Cpath fill='%23F5B700' d='M40.429 21.948c6.817-7.027 4.138-14.586-5.985-16.88-10.124-2.296-23.86 1.542-30.679 8.57-5.643 5.815-4.764 11.985 1.44 15.244.419.221.927.188 1.313-.086l15.578-11.002 1.497 11.182a1.263 1.263 0 0 0 1.553 1.056c6-1.483 11.632-4.324 15.283-8.084'/%3E%3Cpath fill='%23F5B700' d='M47.209 25.615c-.016-.114-.957-3.97-1.816-7.486-.716 1.77-1.999 3.438-3.53 5.21-5.061 5.854-13.696 8.14-16.783 8.795a1.26 1.26 0 0 0-.988 1.391l1.059 8.272a1.26 1.26 0 0 0 1.457 1.084 45 45 0 0 0 2.473-.478c2.824-.638 19.608-6.549 18.128-16.788m-26.51-3.214a.655.655 0 0 0-1.027-.449c-.128.888-.668 1.554-1.316 1.554a1 1 0 0 1-.597-.205L6.822 31.026c-.172.711-.665 1.294-1.174 1.46l-.243-1.291-.335-.155a16 16 0 0 1-1.956-1.067.698.698 0 0 0-1.056.755l1.236 5.024a9.25 9.25 0 0 0 3.167 4.63 1.26 1.26 0 0 0 1.508.043l3.75-2.644c-.003-.044-.01-.087-.01-.133 0-.803.446-1.453.997-1.453.267 0 .509.155.688.405l8.024-5.655c-.253-.357-.412-.855-.412-1.409 0-.582.174-1.104.45-1.463zM6.74 37.918l-.071.008-.501-2.673c.174-.128.411-.241.572-.241.551 0 .998.649.998 1.452 0 .804-.446 1.454-.998 1.454m3.626-4.423c-.742 0-1.344-.877-1.344-1.959s.602-1.958 1.344-1.958 1.344.876 1.344 1.958c-.001 1.081-.603 1.959-1.344 1.959m3.994.767c-.276 0-.5-.326-.5-.729s.224-.729.5-.729c.277 0 .501.326.501.729s-.224.729-.501.729m1-4.994c-.277 0-.5-.326-.5-.729 0-.401.223-.729.5-.729.276 0 .5.327.5.729-.001.403-.224.729-.5.729m2.995.725c-.55 0-.997-.65-.997-1.454 0-.802.447-1.453.997-1.453.551 0 .998.651.998 1.453 0 .803-.446 1.454-.998 1.454'/%3E%3C/svg%3E")`
+
+  const shapes = [wedge, wheel]
+  const weights = [3, 2]
+
+  const pick = (): string => {
+    const sum = weights.reduce((a, b) => a + b, 0)
+    let r = Math.random() * sum
+    for (let i = 0; i < shapes.length; i++) {
+      if ((r -= weights[i]) < 0) return shapes[i]
+    }
+    return shapes[0]
+  }
+
+  const count = 12
+  const images: string[] = []
+  const sizes: string[] = []
+  const positions: string[] = []
+  const repeats: string[] = []
+
+  for (let i = 0; i < count; i++) {
+    images.push(pick())
+    const base = 60 + Math.random() * 140 // 60–200px
+    const w = Math.round(base)
+    const h = Math.round(base * (0.8 + Math.random() * 0.4))
+    sizes.push(`${w}px ${h}px`)
+    const x = Math.round(Math.random() * 100)
+    const y = Math.round(Math.random() * 100)
+    positions.push(`${x}% ${y}%`)
+    repeats.push('no-repeat')
+  }
+
+  // Subtle background holes as repeating tile
+  const holes = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='6' cy='6' r='2.5' fill='%23FFD97A'/%3E%3Ccircle cx='18' cy='8' r='2' fill='%23FFE18D'/%3E%3Ccircle cx='10' cy='18' r='1.8' fill='%23F5C33B'/%3E%3C/svg%3E")`
+  images.push(holes)
+  sizes.push('44px 44px')
+  positions.push('0 0')
+  repeats.push('repeat')
+
+  const imageList = images.join(',\n    ')
+  const sizeList = sizes.join(',\n    ')
+  const posList = positions.join(',\n    ')
+  const repeatList = repeats.join(',\n    ')
+
+  const motionCss = withMotion
+    ? `animation: cheese-scroll 90s linear infinite; will-change: transform;`
+    : `animation: none;`
+
+  return `
+/* dynamic cheese overlay */
+[data-theme="cutlers-cheese"] body::after {
+  background-image:
+    ${imageList};
+  background-size:
+    ${sizeList};
+  background-position:
+    ${posList};
+  background-repeat:
+    ${repeatList};
+  ${motionCss}
+}
+
+@keyframes cheese-scroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(420px); }
 }
 `
 }
