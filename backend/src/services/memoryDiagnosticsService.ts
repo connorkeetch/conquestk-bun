@@ -43,12 +43,21 @@ class MemoryDiagnosticsService {
   private lastAlertAt = 0
 
   constructor(options: MemoryDiagnosticsOptions = {}) {
-    this.intervalMs = Math.max(5000, options.intervalMs ?? this.readNumberEnv('MEMORY_MONITOR_INTERVAL_MS', 15000))
-    this.growthThresholdBytes = (options.growthThresholdMb ?? this.readNumberEnv('MEMORY_MONITOR_GROWTH_THRESHOLD_MB', 120)) * MB
-    this.minSamples = Math.max(4, options.minSamples ?? this.readNumberEnv('MEMORY_MONITOR_MIN_SAMPLES', 8))
+    this.intervalMs = Math.max(
+      5000,
+      options.intervalMs ?? this.readNumberEnv('MEMORY_MONITOR_INTERVAL_MS', 15000),
+    )
+    this.growthThresholdBytes =
+      (options.growthThresholdMb ?? this.readNumberEnv('MEMORY_MONITOR_GROWTH_THRESHOLD_MB', 120)) *
+      MB
+    this.minSamples = Math.max(
+      4,
+      options.minSamples ?? this.readNumberEnv('MEMORY_MONITOR_MIN_SAMPLES', 8),
+    )
     this.alertCooldownMs = Math.max(
       60000,
-      options.alertCooldownMs ?? this.readNumberEnv('MEMORY_MONITOR_ALERT_COOLDOWN_MS', 10 * 60 * 1000),
+      options.alertCooldownMs ??
+        this.readNumberEnv('MEMORY_MONITOR_ALERT_COOLDOWN_MS', 10 * 60 * 1000),
     )
     this.historySize = Math.max(
       this.minSamples,
@@ -150,12 +159,10 @@ class MemoryDiagnosticsService {
       return
     }
 
-    const increasingSamples = this.samples
-      .slice(1)
-      .reduce((count, sample, index) => {
-        const previous = this.samples[index]
-        return sample.heapUsed >= previous.heapUsed * 0.9 ? count + 1 : count
-      }, 0)
+    const increasingSamples = this.samples.slice(1).reduce((count, sample, index) => {
+      const previous = this.samples[index]
+      return sample.heapUsed >= previous.heapUsed * 0.9 ? count + 1 : count
+    }, 0)
 
     const trendRatio = increasingSamples / (this.samples.length - 1)
     if (trendRatio < 0.6) {
