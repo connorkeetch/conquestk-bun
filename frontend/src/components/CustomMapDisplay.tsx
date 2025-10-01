@@ -35,6 +35,9 @@ interface CustomMapDisplayProps {
   pendingAction?: string | null
   focus?: { x: number; y: number } | null
   adjacency?: Record<string, string[]>
+  showZoomControls?: boolean
+  showOverlayToggles?: boolean
+  showMinimap?: boolean
 }
 
 export default function CustomMapDisplay({
@@ -50,6 +53,9 @@ export default function CustomMapDisplay({
   validTargets = [],
   pendingAction,
   focus = null,
+  showZoomControls = true,
+  showOverlayToggles = true,
+  showMinimap = true,
   adjacency,
 }: CustomMapDisplayProps) {
   const overlays = useAppSelector((s) => s.uiRoom.overlays)
@@ -220,14 +226,15 @@ export default function CustomMapDisplay({
       mapWidth={mapData.width}
       mapHeight={mapData.height}
       className="custom-map-display"
-      showMinimap={true}
+      showMinimap={showMinimap}
       backgroundImageUrl={mapData.imageUrl}
       focus={focus ?? undefined}
       onSwipeLeft={() => cycleOverlay('left')}
       onSwipeRight={() => cycleOverlay('right')}
     >
       {/* Overlay toggle buttons */}
-      <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded border border-border">
+      {showOverlayToggles && (
+        <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded border border-border">
         {(() => {
           const haptic = () => {
             try {
@@ -279,10 +286,11 @@ export default function CustomMapDisplay({
             </>
           )
         })()}
-      </div>
+        </div>
+      )}
 
       {/* Zoom controls */}
-      <ZoomControls />
+      {showZoomControls && <ZoomControls />}
 
       {hillOverlayEnabled && (
         <HillOverlay
@@ -437,12 +445,35 @@ function ZoomControls() {
 
   const { zoom, setZoom } = viewport
 
+  const handleZoomOut = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setZoom((z) => Math.max(0.5, Math.round((z - 0.05) * 100) / 100))
+  }
+
+  const handleZoomIn = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setZoom((z) => Math.min(2, Math.round((z + 0.05) * 100) / 100))
+  }
+
+  const handleReset = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setZoom(1)
+  }
+
   return (
-    <div className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
+    <div
+      className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <button
         type="button"
         className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
-        onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.05) * 100) / 100))}
+        onClick={handleZoomOut}
+        onMouseDown={(e) => e.stopPropagation()}
         title="Zoom out (Ctrl/Cmd + scroll or pinch)"
       >
         −
@@ -453,7 +484,8 @@ function ZoomControls() {
       <button
         type="button"
         className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
-        onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.05) * 100) / 100))}
+        onClick={handleZoomIn}
+        onMouseDown={(e) => e.stopPropagation()}
         title="Zoom in (Ctrl/Cmd + scroll or pinch)"
       >
         +
@@ -461,7 +493,8 @@ function ZoomControls() {
       <button
         type="button"
         className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-ghost hover:bg-surface-2 active:bg-surface-2 transition-colors text-xs"
-        onClick={() => setZoom(1)}
+        onClick={handleReset}
+        onMouseDown={(e) => e.stopPropagation()}
         title="Reset zoom to 100%"
       >
         1:1
