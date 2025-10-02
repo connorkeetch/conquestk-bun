@@ -80,6 +80,9 @@ interface SoundEffect {
   category: 'effect' | 'music'
 }
 
+const AUDIO_PREFERENCES_KEY = 'audioPreferences'
+const AUDIO_MUTED_KEY = 'audioMuted'
+
 class AudioService {
   private static instance: AudioService
   private sounds: Map<string, SoundEffect> = new Map()
@@ -155,20 +158,71 @@ class AudioService {
     return AudioService.instance
   }
 
+  private getStorage(): Storage | null {
+    if (typeof window === 'undefined') {
+      return null
+    }
+
+    try {
+      return window.localStorage
+    } catch (error) {
+      logger.error('Accessing localStorage failed', error)
+      return null
+    }
+  }
+
   private loadPreferences(): void {
-    const stored = localStorage.getItem('audioPreferences')
-    if (stored) {
-      try {
-        this.preferences = JSON.parse(stored)
+    const storage = this.getStorage()
+    if (!storage) {
+      return
+    }
+
+    try {
+      const stored = storage.getItem(AUDIO_PREFERENCES_KEY)
+      if (stored) {
+        this.preferences = { ...this.preferences, ...JSON.parse(stored) }
         this.applyVolumes()
-      } catch (error) {
-        logger.error('Failed to load audio preferences', error)
       }
+    } catch (error) {
+      logger.error('Failed to load audio preferences', error)
+    }
+
+    try {
+      const mutedValue = storage.getItem(AUDIO_MUTED_KEY)
+      if (mutedValue === 'true') {
+        this.isMuted = true
+      } else if (mutedValue === 'false') {
+        this.isMuted = false
+      }
+    } catch (error) {
+      logger.error('Failed to load audio mute state', error)
     }
   }
 
   private savePreferences(): void {
-    localStorage.setItem('audioPreferences', JSON.stringify(this.preferences))
+    const storage = this.getStorage()
+    if (!storage) {
+      return
+    }
+
+    try {
+      storage.setItem(AUDIO_PREFERENCES_KEY, JSON.stringify(this.preferences))
+    } catch (error) {
+      logger.error('Failed to persist audio preferences', error)
+    }
+  }
+
+  private saveMuteState(): void {
+    const storage = this.getStorage()
+    if (!storage) {
+      return
+    }
+
+    try {
+      storage.setItem(AUDIO_MUTED_KEY, this.isMuted ? 'true' : 'false')
+    } catch (error) {
+      logger.error('Failed to persist audio mute state', error)
+    }
   }
 
   private setupVisibilityListener(): void {
@@ -552,6 +606,7 @@ class AudioService {
     }
 
     this.applyVolumes()
+    this.saveMuteState()
   }
 
   public isMutedState(): boolean {

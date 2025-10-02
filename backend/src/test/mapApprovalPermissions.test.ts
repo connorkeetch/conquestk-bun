@@ -8,7 +8,7 @@ import request from 'supertest'
 const queryMock = jest.fn()
 
 jest.mock(
-  '../config/database.js',
+  '../config/database',
   () => ({
     __esModule: true,
     query: queryMock,
@@ -20,7 +20,7 @@ jest.mock(
 )
 
 jest.mock(
-  '../middleware/auth.js',
+  '../middleware/auth',
   () => ({
     authenticateToken: (
       req: express.Request,
@@ -43,7 +43,7 @@ jest.mock(
 const logActivityMock = jest.fn()
 
 jest.mock(
-  '../middleware/adminAuth.js',
+  '../middleware/adminAuth',
   () => ({
     requireAdmin: (req: express.Request, res: express.Response, next: express.NextFunction) => {
       if (req.headers['x-test-admin'] !== 'true') {
@@ -98,7 +98,7 @@ jest.mock('../services/mapPermissionService', () => {
 })
 
 jest.mock(
-  '../services/mapApprovalService.js',
+  '../services/mapApprovalService',
   () => ({
     __esModule: true,
     default: {
@@ -123,7 +123,7 @@ jest.mock(
   { virtual: true },
 )
 
-const mapApprovalService = require('../services/mapApprovalService.js').default as {
+const mapApprovalService = require('../services/mapApprovalService').default as {
   getVersionHistory: jest.Mock
   getPendingApprovalRequests: jest.Mock
 }
@@ -137,7 +137,7 @@ const { mapPermissionService } = require('../services/mapPermissionService') as 
 }
 
 jest.mock(
-  '../utils/errorHelpers.js',
+  '../utils/errorHelpers',
   () => ({
     __esModule: true,
     getErrorMessage: jest.fn((error: unknown) =>

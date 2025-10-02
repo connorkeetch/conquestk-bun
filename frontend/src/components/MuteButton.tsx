@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import audioService from '../services/audioService'
 
 interface MuteButtonProps {
@@ -6,19 +6,17 @@ interface MuteButtonProps {
 }
 
 export default function MuteButton({ offsetBottom = 56 }: MuteButtonProps) {
-  const [isMuted, setIsMuted] = useState(false)
+  const [isMuted, setIsMuted] = useState(() => audioService.isMutedState())
   const [isHovered, setIsHovered] = useState(false)
 
-  const bottomStyle = useMemo(() => `calc(${Math.max(0, offsetBottom)}px + env(safe-area-inset-bottom, 0px))`, [offsetBottom])
-
-  useEffect(() => {
-    // Check initial mute state
-    setIsMuted(audioService.isMutedState())
-  }, [])
+  const bottomStyle = useMemo(
+    () => `calc(${Math.max(0, offsetBottom)}px + env(safe-area-inset-bottom, 0px))`,
+    [offsetBottom],
+  )
 
   const handleToggleMute = () => {
     audioService.toggleMute()
-    setIsMuted(!isMuted)
+    setIsMuted(audioService.isMutedState())
   }
 
   return (

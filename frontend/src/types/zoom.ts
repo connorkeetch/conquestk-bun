@@ -4,3 +4,5 @@ export interface ZoomControls {
   zoomOut: () => void
   resetZoom: () => void
 }
+
+export type ZoomControlsReadyHandler = (controls: ZoomControls | null) => void

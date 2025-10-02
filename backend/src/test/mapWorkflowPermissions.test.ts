@@ -185,7 +185,8 @@ describe('Map workflow authorization', () => {
 
     queryMock
       .mockResolvedValueOnce({ rowCount: 1 }) // update maps
-      .mockResolvedValueOnce({ rowCount: 1 }) // insert review queue
+      .mockResolvedValueOnce({ rows: [{ id: 'version-1' }] }) // latest version lookup
+      .mockResolvedValueOnce({ rowCount: 1 }) // insert approval request
       .mockResolvedValueOnce({ rows: [{ name: 'Test Map' }] }) // select map name
       .mockResolvedValueOnce({
         rows: [{ id: 'notif-1', admin_id: null, created_at: new Date().toISOString() }],
