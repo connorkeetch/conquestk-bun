@@ -1,6 +1,5 @@
 # Docker Compose for Local Development
 # This ensures developers use local databases instead of production/staging
-version: '3.8'
 
 services:
   postgres:
@@ -14,7 +13,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -39,7 +37,6 @@ volumes:
     name: risk-game-postgres-data
   redis_data:
     name: risk-game-redis-data
-
 # Usage:
 # 1. Start services: docker-compose up -d
 # 2. Stop services: docker-compose down
