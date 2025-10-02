@@ -123,6 +123,15 @@ export async function emitFogFilteredDelta(
     return
   }
 
+  const fogMode =
+    (gameState.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' } | undefined)?.fogOfWar ??
+    'off'
+
+  if (fogMode === 'off') {
+    io.to(channel).emit('game-delta', delta)
+    return
+  }
+
   // Compute masks per viewer and emit filtered deltas
   for (const s of sockets) {
     // RemoteSocket exposes 'data' not arbitrary properties
