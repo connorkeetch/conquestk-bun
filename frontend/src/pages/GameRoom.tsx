@@ -153,6 +153,10 @@ export default function GameRoom() {
     return currentRoom.players.find((player) => player.userId === user.id)
   }, [currentRoom?.players, user?.id])
 
+  // Derived membership/host flags must be declared before downstream hooks that depend on them
+  const isMember = Boolean(currentPlayer)
+  const isHost = currentRoom?.hostId === user?.id
+
   const muteOffsetBottom = useMemo(() => {
     // Base offset so it clears typical bottom paddings/footers
     let px = 56
@@ -177,10 +181,6 @@ export default function GameRoom() {
       setShowGameOver(true)
     }
   }, [currentGame?.phase])
-
-  const isMember = Boolean(currentPlayer)
-
-  const isHost = currentRoom?.hostId === user?.id
 
   const lobbyFull = Boolean(
     currentRoom && (currentRoom.players?.length ?? 0) >= currentRoom.maxPlayers,
