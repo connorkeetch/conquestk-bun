@@ -5,8 +5,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { FullMapData } from '@/services/mapService'
 import { mapService } from '@/services/mapService'
 import { socketService } from '@/services/socketService'
-import type { ZoomControls } from '@/types/zoom'
 import type { Territory } from '@/types/game'
+import type { ZoomControls } from '@/types/zoom'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
 import {
@@ -304,7 +304,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     : undefined
 
   return (
-    <div className="flex flex-col w-full h-full panel p-0 overflow-hidden">
+    <div className="flex flex-col w-full h-full min-h-[420px] sm:min-h-[520px] lg:min-h-[640px] xl:min-h-[720px] panel p-0 overflow-hidden">
       {lobbyMode ? (
         <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
           <div className="flex items-center justify-between">
