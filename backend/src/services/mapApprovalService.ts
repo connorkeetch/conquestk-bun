@@ -1,6 +1,6 @@
 import type { QueryResultRow } from 'pg'
-import { query } from '../config/database.js'
-import { adminService } from './adminService.js'
+import { query } from '../config/database'
+import { adminService } from './adminService'
 import notificationService from './notificationService'
 
 export interface MapVersion {
