@@ -69,12 +69,21 @@ async function createPostgreSQLTables(): Promise<void> {
     `CREATE TABLE IF NOT EXISTS game_states (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         room_id UUID NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
-        game_data JSONB NOT NULL,
-        turn_number INTEGER DEFAULT 1,
+        game_data JSONB,
+        turn_number INTEGER DEFAULT 1 NOT NULL,
         current_player_id UUID REFERENCES users(id),
-        phase VARCHAR(20) DEFAULT 'reinforcement' CHECK (phase IN ('reinforcement', 'attack', 'fortify', 'finished')),
+        game_phase VARCHAR(20) DEFAULT 'reinforcement' CHECK (game_phase IN ('reinforcement','deployment','attack','fortify','finished')),
+        territories JSONB NOT NULL DEFAULT '{}'::jsonb,
+        player_stats JSONB NOT NULL DEFAULT '{}'::jsonb,
+        game_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+        replay_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        ai_players JSONB NOT NULL DEFAULT '[]'::jsonb,
+        winner_id UUID,
+        turn_stats JSONB NOT NULL DEFAULT '[]'::jsonb,
+        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(room_id)
     )`,
 
     `CREATE TABLE IF NOT EXISTS game_moves (
