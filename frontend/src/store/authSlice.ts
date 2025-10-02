@@ -55,9 +55,7 @@ export const login = createAsyncThunk(
         localStorage.setItem('colorTheme', response.user.preferences.theme)
         try {
           if (localStorage.getItem('themeDebug') === '1') {
-            console.info('[theme/auth] applied theme from login preferences', {
-              theme: response.user.preferences.theme,
-            })
+            // Theme applied from login preferences
           }
         } catch {
           // ignore theme debug logging issues (e.g., localStorage unavailable)
@@ -115,9 +113,7 @@ export const checkAuth = createAsyncThunk(
         localStorage.setItem('colorTheme', response.user.preferences.theme)
         try {
           if (localStorage.getItem('themeDebug') === '1') {
-            console.info('[theme/auth] applied theme from profile preferences', {
-              theme: response.user.preferences.theme,
-            })
+            // Theme applied from profile preferences
           }
         } catch {
           // ignore theme debug logging issues (e.g., localStorage unavailable)

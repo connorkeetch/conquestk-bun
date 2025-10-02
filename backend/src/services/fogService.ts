@@ -124,8 +124,8 @@ export async function emitFogFilteredDelta(
   }
 
   const fogMode =
-    (gameState.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' } | undefined)?.fogOfWar ??
-    'off'
+    (gameState.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' } | undefined)
+      ?.fogOfWar ?? 'off'
 
   if (fogMode === 'off') {
     io.to(channel).emit('game-delta', delta)
@@ -137,12 +137,14 @@ export async function emitFogFilteredDelta(
     // RemoteSocket exposes 'data' not arbitrary properties
     // biome-ignore lint/suspicious/noExplicitAny: RemoteSocket .data is generic
     const viewerId = (s as any).data?.userId as string | undefined
-    if (!viewerId) continue
+    if (!viewerId) {
+      // Fallback: if viewer identity is missing, emit unfiltered delta to avoid silent drops
+      io.to(s.id).emit('game-delta', delta)
+      continue
+    }
     const mask = computeVisibilityMask(gameState, viewerId)
     const filtered = filterDeltaForMask(delta, mask)
-    if (filtered) {
-      io.to(s.id).emit('game-delta', filtered)
-    }
+    if (filtered) io.to(s.id).emit('game-delta', filtered)
   }
 }
 

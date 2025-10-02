@@ -88,10 +88,7 @@ export function isPremiumColorChoice(value: unknown): boolean {
     return true
   }
 
-  if (normalizedGradient.startsWith('linear-gradient(')) {
-    return true
-  }
-
+  // Only treat the specific Dragonfire gradient as premium, not all gradients
   return false
 }
 
