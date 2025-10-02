@@ -16,16 +16,14 @@ BEGIN
     WHERE table_schema = 'public' AND table_name = 'game_rooms' AND column_name = 'lifecycle_phase'
   ) THEN
     -- Normalize status using lifecycle_phase as source of truth when available
-    EXECUTE $$
-      UPDATE public.game_rooms
-      SET status = CASE
-        WHEN lifecycle_phase IN ('lobby', 'initializing') THEN lifecycle_phase
-        WHEN lifecycle_phase IN ('reinforcement', 'deployment', 'attack', 'fortify') THEN 'active'
-        WHEN lifecycle_phase IN ('finished', 'completed') THEN 'completed'
-        ELSE status
-      END
-      WHERE lifecycle_phase IS NOT NULL
-    $$;
+    UPDATE public.game_rooms
+    SET status = CASE
+      WHEN lifecycle_phase IN ('lobby', 'initializing') THEN lifecycle_phase
+      WHEN lifecycle_phase IN ('reinforcement', 'deployment', 'attack', 'fortify') THEN 'active'
+      WHEN lifecycle_phase IN ('finished', 'completed') THEN 'completed'
+      ELSE status
+    END
+    WHERE lifecycle_phase IS NOT NULL;
   END IF;
 END$$;
 
@@ -52,4 +50,3 @@ DROP FUNCTION IF EXISTS public.sync_games_from_game_rooms();
 DROP TABLE IF EXISTS public.games;
 
 COMMIT;
-
