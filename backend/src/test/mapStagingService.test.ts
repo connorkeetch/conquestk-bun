@@ -71,7 +71,15 @@ describe('mapStagingService', () => {
 
     expect(summary).toEqual({ processed: 1, purged: 1, failed: 0, bytesPurged: 4 })
     expect(fs.existsSync(filePath)).toBe(false)
-    expect(mockQuery).toHaveBeenCalledTimes(3)
+    expect(mockQuery).toHaveBeenCalledTimes(5)
+
+    const [selectCall, updateCall, insertRunCall, deleteOldCall, capCall] = mockQuery.mock.calls
+
+    expect(selectCall?.[0]).toContain('FROM map_images_staging')
+    expect(updateCall?.[0]).toContain('UPDATE map_images_staging')
+    expect(insertRunCall?.[0]).toContain('INSERT INTO map_asset_purge_runs')
+    expect(deleteOldCall?.[0]).toContain('DELETE FROM map_asset_purge_runs')
+    expect(capCall?.[0]).toContain('WITH ranked AS')
   })
 
   it('reclaims a soft-deleted image when file exists', async () => {

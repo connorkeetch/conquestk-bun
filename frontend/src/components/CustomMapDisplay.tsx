@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
 import { mapService } from '@/services/mapService'
 import { setOverlay } from '@/store/uiRoomSlice'
-import type { ZoomControls } from '@/types/zoom'
+import type { ZoomControlsReadyHandler } from '@/types/zoom'
 import { logger } from '@/utils/logger'
 import { AttackableOverlay } from './map/AttackableOverlay'
 import { HillOverlay } from './map/HillOverlay'
@@ -39,7 +39,7 @@ interface CustomMapDisplayProps {
   showZoomControls?: boolean
   showOverlayToggles?: boolean
   showMinimap?: boolean
-  onZoomControlsReady?: (controls: ZoomControls) => void
+  onZoomControlsReady?: ZoomControlsReadyHandler
 }
 
 export default function CustomMapDisplay({

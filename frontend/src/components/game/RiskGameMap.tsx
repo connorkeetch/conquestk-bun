@@ -1,7 +1,7 @@
 import type React from 'react'
 import { useMemo } from 'react'
 import type { GamePlayer } from '@/types/game'
-import type { ZoomControls } from '@/types/zoom'
+import type { ZoomControlsReadyHandler } from '@/types/zoom'
 import CustomMapDisplay from '../CustomMapDisplay'
 import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
 import { TerritoryModifierLegend } from '../TerritoryModifierLegend'
@@ -19,7 +19,7 @@ interface RiskGameMapProps {
   onTerritoryClick: (territoryId: string) => void
   onTerritoryHover: (territoryId: string | null) => void
   showMinimap?: boolean
-  onZoomControlsReady?: (controls: ZoomControls) => void
+  onZoomControlsReady?: ZoomControlsReadyHandler
 }
 
 export const RiskGameMap: React.FC<RiskGameMapProps> = ({
