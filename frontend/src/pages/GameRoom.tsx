@@ -1287,11 +1287,11 @@ export default function GameRoom() {
           </div>
 
           {/* Desktop action bar - positioned directly under the map */}
-          {currentGame && (
+          (
             <div className="hidden md:block">
               <GameActionBar />
             </div>
-          )}
+          )
         </div>
 
         {/* Player Stats & Chat Row - below action bar */}
@@ -1339,7 +1339,7 @@ export default function GameRoom() {
           )}
 
           {/* Chat & Log panel */}
-          {currentGame && (
+          
             <div className="panel p-0 overflow-hidden shrink-0">
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
@@ -1392,7 +1392,7 @@ export default function GameRoom() {
                 </div>
               )}
             </div>
-          )}
+          
         </div>
 
         {/* Removed duplicate player list section and AI controls - now only showing once in left rail */}

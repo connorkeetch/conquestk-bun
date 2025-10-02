@@ -133,6 +133,8 @@ export function GameActionBar({
   }, [isMyTurn, mustCashIn])
 
   if (!game) return null
+  // Only show the action bar when it's my turn
+  if (!isMyTurn) return null
 
   const endTurnBtn = (
     <button
