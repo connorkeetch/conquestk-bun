@@ -43,7 +43,6 @@ interface GameRoomRow {
   status: string
   room_code?: number | string | null
   expires_at?: Date | string | null
-  lifecycle_phase?: string | null
   turn_number?: number | string | null
   turn_expires_at?: Date | string | null
   ready_check_started_at?: Date | string | null
@@ -434,6 +433,9 @@ export class GameRoomService {
 
   private mapRoomRow(row: GameRoomRow): GameRoom {
     const players = this.mapPlayers(row.players)
+    const normalizedStatus = this.normalizeStatus(
+      typeof row.status === 'string' ? row.status : null,
+    )
     const aggregatedCurrentPlayers = this.parseNullableNumber(
       (row as Partial<ActiveGameRoomRow>).current_players,
     )
@@ -454,7 +456,7 @@ export class GameRoomService {
       hostId: row.host_id,
       maxPlayers: row.max_players,
       isPrivate: row.is_private,
-      status: this.normalizeStatus(typeof row.status === 'string' ? row.status : null),
+      status: normalizedStatus,
       expiresAt: this.toDate(row.expires_at) ?? undefined,
       is_ranked:
         typeof row.is_ranked === 'boolean'
@@ -503,10 +505,13 @@ export class GameRoomService {
       mapName: (row as Partial<ActiveGameRoomRow>).map_name ?? undefined,
       gameStarted: typeof row.game_started === 'boolean' ? row.game_started : undefined,
       currentTurnUserId: row.current_turn_user_id ?? undefined,
-      lifecyclePhase:
-        typeof row.lifecycle_phase === 'string'
-          ? ((row.lifecycle_phase as GameRoom['lifecyclePhase']) ?? undefined)
-          : undefined,
+      // lifecyclePhase is derived from status when helpful for lobby/initializing/completed views.
+      lifecyclePhase: (() => {
+        const s = normalizedStatus
+        if (s === 'lobby' || s === 'initializing') return s
+        if (s === 'completed') return 'finished'
+        return undefined
+      })() as GameRoom['lifecyclePhase'],
       turnNumber: this.parseNullableNumber(row.turn_number) ?? undefined,
       turnExpiresAt: this.toDate(row.turn_expires_at) ?? null,
       timeBankSecondsRemaining: this.parseNullableNumber(
@@ -636,10 +641,9 @@ export class GameRoomService {
           number_of_teams,
           is_ranked,
           treasure_config,
-          status,
-          lifecycle_phase
+          status
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'lobby', 'lobby')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'lobby')
         RETURNING *
       `
 
@@ -1160,7 +1164,7 @@ export class GameRoomService {
         'SELECT 1 FROM room_players WHERE room_id = $1 AND user_id = $2 LIMIT 1',
         [roomId, userId],
       )
-      const alreadyInRoom = membershipResult.rowCount > 0
+      const alreadyInRoom = (membershipResult.rowCount ?? 0) > 0
 
       if (!userHasPremium && !alreadyInRoom) {
         const activeCountResult = await client.query<{ count: number }>(
@@ -1416,7 +1420,6 @@ export class GameRoomService {
       `
       UPDATE game_rooms
       SET status = 'lobby',
-          lifecycle_phase = 'lobby',
           ready_check_started_at = NULL,
           turn_number = 0,
           turn_expires_at = NULL,

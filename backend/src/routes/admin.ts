@@ -495,8 +495,11 @@ const normalizeAdminGameStatus = (
   switch (status) {
     case 'in_progress':
     case 'starting':
+    case 'active':
+    case 'initializing':
       return 'active'
     case 'finished':
+    case 'completed':
       return 'completed'
     case 'abandoned':
       return 'abandoned'
@@ -524,10 +527,9 @@ router.get(
       const search = req.query.search as string
 
       const statusFilterMap: Record<string, string[]> = {
-        active: ['in_progress', 'starting'],
-        waiting: ['waiting'],
-        finished: ['finished'],
-        completed: ['finished'],
+        active: ['active', 'initializing'],
+        waiting: ['lobby'],
+        completed: ['completed'],
         abandoned: ['abandoned'],
         paused: ['paused'],
       }
@@ -702,7 +704,7 @@ router.get(
       const result = await dbQuery(`
         SELECT COUNT(*) as count 
         FROM game_rooms 
-        WHERE status IN ('in_progress', 'starting')
+        WHERE status IN ('active', 'initializing')
       `)
 
       res.json({

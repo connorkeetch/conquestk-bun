@@ -167,102 +167,19 @@ export class MigrationRunner {
       await query('CREATE EXTENSION IF NOT EXISTS citext')
       await query('CREATE EXTENSION IF NOT EXISTS pg_trgm')
 
+      // Legacy 'games' shim is no longer created. New schema treats game_rooms as the canonical table.
+      // Keep existing 'games' table if present, but do not auto-create it anymore.
       const gamesExistsResult = await query<{ exists: boolean }>(
-        `
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = 'games'
-        ) AS exists
-      `,
+        `SELECT EXISTS (
+           SELECT 1 FROM information_schema.tables
+           WHERE table_schema = 'public' AND table_name = 'games'
+         ) AS exists`,
       )
-
       const gamesExists = Boolean(gamesExistsResult.rows[0]?.exists)
-
       if (gamesExists) {
-        logger.info('  ✅ games table already present — no compatibility shim required')
+        logger.info('  ✅ games table present (legacy) — leaving as-is')
       } else {
-        const gameRoomsExistsResult = await query<{ exists: boolean }>(
-          `
-          SELECT EXISTS (
-            SELECT 1 FROM information_schema.tables
-            WHERE table_schema = 'public' AND table_name = 'game_rooms'
-          ) AS exists
-        `,
-        )
-
-        const gameRoomsExists = Boolean(gameRoomsExistsResult.rows[0]?.exists)
-
-        if (!gameRoomsExists) {
-          logger.warn(
-            '  ⚠️ game_rooms table is missing; skipping games compatibility shim (migration 031 may still fail)',
-          )
-          return
-        }
-
-        logger.warn(
-          '  ⚠️ games table missing — creating compatibility table so conversation migrations can complete',
-        )
-
-        await query(`
-          CREATE TABLE games (
-            id UUID PRIMARY KEY,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-          )
-        `)
-
-        await query(
-          `
-          ALTER TABLE games
-          ADD CONSTRAINT games_room_fk
-          FOREIGN KEY (id) REFERENCES game_rooms(id) ON DELETE CASCADE
-        `,
-        )
-
-        await query(
-          `
-          INSERT INTO games (id, created_at, updated_at)
-          SELECT
-            id,
-            COALESCE(started_at, created_at, CURRENT_TIMESTAMP),
-            COALESCE(updated_at, CURRENT_TIMESTAMP)
-          FROM game_rooms
-          ON CONFLICT (id) DO NOTHING
-        `,
-        )
-
-        await query(
-          `
-          CREATE OR REPLACE FUNCTION sync_games_from_game_rooms()
-          RETURNS TRIGGER AS $$
-          BEGIN
-            INSERT INTO games (id, created_at, updated_at)
-            VALUES (
-              NEW.id,
-              COALESCE(NEW.started_at, NEW.created_at, CURRENT_TIMESTAMP),
-              COALESCE(NEW.updated_at, CURRENT_TIMESTAMP)
-            )
-            ON CONFLICT (id)
-            DO UPDATE SET
-              updated_at = EXCLUDED.updated_at;
-            RETURN NEW;
-          END;
-          $$ LANGUAGE plpgsql;
-        `,
-        )
-
-        await query('DROP TRIGGER IF EXISTS trg_game_rooms_sync_games ON game_rooms')
-
-        await query(
-          `
-          CREATE TRIGGER trg_game_rooms_sync_games
-          AFTER INSERT OR UPDATE ON game_rooms
-          FOR EACH ROW
-          EXECUTE FUNCTION sync_games_from_game_rooms()
-        `,
-        )
-
-        logger.info('  ✅ Created compatibility games table and sync trigger')
+        logger.info('  ℹ️ games table missing — skipping legacy compatibility shim (deprecated)')
       }
     } catch (error) {
       logger.error('  ❌ Failed to prepare legacy compatibility tables', error)

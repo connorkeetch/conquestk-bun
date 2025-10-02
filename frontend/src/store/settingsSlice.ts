@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { DEFAULT_THEME_ID, normalizeThemeId, type ThemeId } from '@shared/types/themes'
 import type { PlayerColor } from '../constants/colors'
 import preferencesService from '../services/preferencesService'
+import { logger } from '../utils/logger'
 
 // Theme types - Extended for multi-theme support
 export type ColorTheme = ThemeId
@@ -158,7 +159,7 @@ const loadSettings = (): SettingsState => {
         // Debug (opt-in): log theme application source in production when enabled
         try {
           if (localStorage.getItem('themeDebug') === '1') {
-            console.info('[theme/settings] loadSettings apply', { themeToUse, themeSource })
+            logger.info('[theme/settings] loadSettings apply', { themeToUse, themeSource })
           }
         } catch {
           // ignore theme debug logging issues (e.g., localStorage unavailable)
@@ -190,7 +191,7 @@ const loadSettings = (): SettingsState => {
           document.documentElement.setAttribute('data-theme', themeToUse)
           try {
             if (localStorage.getItem('themeDebug') === '1') {
-              console.info('[theme/settings] recover theme after parse error', { themeToUse })
+              logger.info('[theme/settings] recover theme after parse error', { themeToUse })
             }
           } catch {
             // ignore theme debug logging issues (e.g., localStorage unavailable)
@@ -214,7 +215,7 @@ const loadSettings = (): SettingsState => {
     document.documentElement.setAttribute('data-theme', fallbackTheme)
     try {
       if (localStorage.getItem('themeDebug') === '1') {
-        console.info('[theme/settings] no stored settings; using fallback', { fallbackTheme })
+        logger.info('[theme/settings] no stored settings; using fallback', { fallbackTheme })
       }
     } catch {
       // ignore theme debug logging issues (e.g., localStorage unavailable)

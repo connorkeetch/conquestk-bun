@@ -23,12 +23,13 @@ for the current "refresh required" behaviour.
 
 ## 2. Queueing and processing a gameplay action
 
-* Every gameplay emit (`deployArmies`, `attack`, `endTurn`, etc.) is normalised
-  into a `game-action` job and pushed to the Bull queue. If the queue service is
-  unavailable (Redis down or worker not initialised) we currently just log and
-  return `null`, meaning the action never reaches the game engine. This would
-  manifest as other players never seeing updates until a full refresh pulls the
-  persisted state again.【F:backend/src/services/socketService.ts†L363-L411】【F:backend/src/services/queueService.ts†L289-L339】
+* Actions using the queue today: `deployArmies` and `attack` enqueue a
+  `game-action` job. `fortify` and `endTurn` are processed synchronously in the
+  socket handler (no queue) and broadcast immediately.
+* If the queue service is unavailable (Redis down or worker not initialised),
+  `queueService.addGameAction` returns `null`. Our socket handlers currently
+  only log in that case and do not apply the action directly — so those actions
+  won’t process at all until queues are healthy. This is a gap to fix.【F:backend/src/services/queueService.ts†L289-L339】【F:backend/src/services/socketService.ts†L397-L444】
 * The `WorkerManager` spins up `GameActionWorker`, which dequeues those jobs,
   rehydrates the cached game state, validates the move, and applies it via
   `GameService`. Any generated `GameDelta` is then dispatched through the fog
@@ -44,7 +45,8 @@ for the current "refresh required" behaviour.
 * Because this relies on `socket.data.userId`, any regression during the
   handshake (for example, the JWT decode fails so we never set `socket.data`) or
   a Redis adapter bug that drops the per-socket metadata would prevent deltas
-  from being sent to that viewer.
+  from being sent to that viewer. To avoid silent drops, we now fall back to
+  sending the raw delta to sockets missing `data.userId`.
 
 ## 4. Frontend consumption of updates
 
@@ -52,10 +54,17 @@ for the current "refresh required" behaviour.
   that handles notifications, runs several defensive desync checks, and finally
   dispatches `applyDelta` to patch the Redux store in place.【F:frontend/src/services/socketService.ts†L286-L380】
 * `applyDelta` is a no-op until `currentGame` is populated. If a viewer receives
-  deltas before `fetchGameState` finishes (or if the local state was cleared by
-  navigation) the guard drops the update and sets the global `desync` flag. The
-  UI then waits for a manual refetch, which matches the "refresh to see changes"
-  symptom.【F:frontend/src/store/gameSlice.ts†L309-L359】
+  deltas before `fetchGameState` finishes (or if local state was cleared), the
+  handler triggers a one-off refetch for that room and returns. Desync flags are
+  set only when entity ids in a delta don’t exist in local state.
+  【F:frontend/src/services/socketService.ts†L409-L468】【F:frontend/src/store/gameSlice.ts†L309-L359】
+  
+## 5. Reconnect and rejoin
+
+* On reconnect, clients must rejoin the game room to resume broadcasts. The
+  previous implementation didn’t auto-rejoin, which can explain “no updates
+  until refresh” after transient disconnects. We now auto-rejoin the active
+  room on `connect` based on Redux state.
 * The action creators issue optimistic updates for the acting player, but the
   authoritative state still depends on receiving the follow-up `game-delta` or
   `game-update`. Without that socket event, other players keep their old Redux
@@ -69,13 +78,30 @@ for the current "refresh required" behaviour.
 2. **Room subscription race** – verify that `isMember` flips to `true` before
    the first delta arrives. If we drop the join because the room payload is
    delayed, the socket never enters `game:${roomId}` and will miss every emit.
-3. **Desync guard trips** – inspect `uiRoom.desyncDetected` in Redux. If the
-   guard fires, the delta is dropped and the UI reverts to waiting for a manual
-   `fetchGameState` (which is why refresh temporarily fixes the view).
-4. **Socket metadata** – double-check logs to ensure each connection logs
-   "subscribed to game channel"; missing entries mean the handshake did not set
-   `socket.data.userId`, so `emitFogFilteredDelta` has nobody to emit to.
+3. **Reconnect rejoin** – after any reconnect, ensure the server logs “subscribed
+   to game channel …” again for that user/room. Without rejoining, no deltas
+   will arrive until a page refresh.
+4. **Desync guard trips** – inspect `uiRoom.desyncDetected` in Redux. If entity
+   IDs referenced in a delta aren’t in local state, the delta is dropped and a
+   refetch is triggered.
+5. **Socket metadata** – ensure handshake sets both `socket.userId` and
+   `socket.data.userId` so fog filtering can personalise deltas.
 
 Addressing those checkpoints should isolate whether this is a queue/worker
 outage, a client subscription bug, or a desync guard that is a little too
 aggressive.
+
+## Targeted fixes applied
+
+* Frontend: auto rejoin active room on socket `connect` to restore subscriptions.
+* Backend: fog emitter now falls back to unfiltered delta if `userId` metadata
+  is missing, preventing silent drops.
+* Backend (degraded mode): inline processing for `deployArmies` and `attack`
+  when queues are unavailable, emitting the same fog-filtered deltas so players
+  see updates without refreshing.
+
+## Follow-ups (recommended)
+* Consider a read-only spectator join path with fog filtering if spectators
+  should see live board changes.
+* Surface queue health in the admin panel and a subtle client warning when
+  queues are unhealthy.

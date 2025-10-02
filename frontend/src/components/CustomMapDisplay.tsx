@@ -68,6 +68,28 @@ export default function CustomMapDisplay({
   const players = game?.players ?? []
   const kingOfTheHillState =
     game?.gameConfig?.gameMode === 'king_of_the_hill' ? game.kingOfTheHillState : null
+  const hillState: {
+    currentHillTerritoryId: string
+    turnsUntilRotation?: number
+    rotationInterval?: number
+    previewTurns?: number
+  } | null = kingOfTheHillState
+    ? {
+        currentHillTerritoryId: kingOfTheHillState.currentHillTerritoryId,
+        turnsUntilRotation:
+          typeof kingOfTheHillState.turnsUntilRotation === 'number'
+            ? kingOfTheHillState.turnsUntilRotation
+            : undefined,
+        rotationInterval:
+          typeof kingOfTheHillState.rotationInterval === 'number'
+            ? kingOfTheHillState.rotationInterval
+            : undefined,
+        previewTurns:
+          typeof kingOfTheHillState.previewTurns === 'number'
+            ? kingOfTheHillState.previewTurns
+            : undefined,
+      }
+    : null
   const [mapData, setMapData] = useState<{
     imageUrl: string
     width: number
@@ -239,57 +261,57 @@ export default function CustomMapDisplay({
       {/* Overlay toggle buttons */}
       {showOverlayToggles && (
         <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded border border-border">
-        {(() => {
-          const haptic = () => {
-            try {
-              ;(
-                navigator as unknown as { vibrate?: (pattern: number | number[]) => void }
-              ).vibrate?.(10)
-            } catch {
-              // ignore haptics errors
+          {(() => {
+            const haptic = () => {
+              try {
+                ;(
+                  navigator as unknown as { vibrate?: (pattern: number | number[]) => void }
+                ).vibrate?.(10)
+              } catch {
+                // ignore haptics errors
+              }
             }
-          }
-          return (
-            <>
-              <button
-                type="button"
-                className={`btn btn-ghost btn-xs ${overlays.continents ? 'ring-1 ring-white' : ''}`}
-                onClick={() => {
-                  dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
-                  haptic()
-                }}
-                title="Toggle sectors overlay (g)"
-              >
-                <span aria-hidden>🗺️</span>
-                <span className="hidden sm:inline">Sectors</span>
-              </button>
-              <button
-                type="button"
-                className={`btn btn-ghost btn-xs ${overlays.attackable ? 'ring-1 ring-white' : ''}`}
-                onClick={() => {
-                  dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
-                  haptic()
-                }}
-                title="Toggle attackable overlay (a)"
-              >
-                <span aria-hidden>🎯</span>
-                <span className="hidden sm:inline">Attackable</span>
-              </button>
-              <button
-                type="button"
-                className={`btn btn-ghost btn-xs ${overlays.threat ? 'ring-1 ring-white' : ''}`}
-                onClick={() => {
-                  dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
-                  haptic()
-                }}
-                title="Toggle threat overlay (h)"
-              >
-                <span aria-hidden>🔥</span>
-                <span className="hidden sm:inline">Threat</span>
-              </button>
-            </>
-          )
-        })()}
+            return (
+              <>
+                <button
+                  type="button"
+                  className={`btn btn-ghost btn-xs ${overlays.continents ? 'ring-1 ring-white' : ''}`}
+                  onClick={() => {
+                    dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
+                    haptic()
+                  }}
+                  title="Toggle sectors overlay (g)"
+                >
+                  <span aria-hidden>🗺️</span>
+                  <span className="hidden sm:inline">Sectors</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-ghost btn-xs ${overlays.attackable ? 'ring-1 ring-white' : ''}`}
+                  onClick={() => {
+                    dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
+                    haptic()
+                  }}
+                  title="Toggle attackable overlay (a)"
+                >
+                  <span aria-hidden>🎯</span>
+                  <span className="hidden sm:inline">Attackable</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-ghost btn-xs ${overlays.threat ? 'ring-1 ring-white' : ''}`}
+                  onClick={() => {
+                    dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
+                    haptic()
+                  }}
+                  title="Toggle threat overlay (h)"
+                >
+                  <span aria-hidden>🔥</span>
+                  <span className="hidden sm:inline">Threat</span>
+                </button>
+              </>
+            )
+          })()}
         </div>
       )}
 
@@ -302,7 +324,7 @@ export default function CustomMapDisplay({
           mapHeight={mapData.height}
           territories={territories}
           players={players.map((p) => ({ id: p.id, username: p.username, color: p.color }))}
-          state={kingOfTheHillState}
+          state={hillState}
         />
       )}
 
@@ -468,11 +490,7 @@ function ZoomControls() {
   }
 
   return (
-    <div
-      className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg"
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+    <div className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
       <button
         type="button"
         className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"

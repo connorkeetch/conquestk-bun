@@ -110,7 +110,7 @@ export class ProfileService {
           EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60 as duration_minutes
         FROM game_rooms gr
         JOIN room_players rp ON gr.id = rp.room_id
-        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
+        WHERE rp.user_id = $1 AND gr.status IN ('completed')
         ORDER BY gr.started_at DESC LIMIT 10`,
         [userId],
       )
@@ -436,7 +436,7 @@ export class ProfileService {
           EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60 as duration_minutes
         FROM game_rooms gr
         JOIN room_players rp ON gr.id = rp.room_id
-        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
+        WHERE rp.user_id = $1 AND gr.status IN ('completed')
         ORDER BY gr.started_at DESC 
         LIMIT $2 OFFSET $3
       `,
