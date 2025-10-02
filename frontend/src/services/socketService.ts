@@ -18,6 +18,7 @@ import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
 import {
   applyDelta,
+  fetchGameState,
   selectTargetTerritory,
   selectTerritory,
   setBattleResult,
@@ -27,7 +28,6 @@ import {
   setReinforcementArmies,
   updateGameState,
   updateTerritory,
-  fetchGameState,
 } from '../store/gameSlice'
 import {
   loadInbox,
@@ -54,8 +54,11 @@ type RoomLifecyclePayload = LifecycleUpdatePayload
 class SocketService {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
   private lastReadEmitAt: Record<string, number> = {}
+  private pendingRoomStateFetches = new Set<string>()
 
   connect() {
+    // Reset any pending fetch tracking on a fresh connection attempt
+    this.pendingRoomStateFetches.clear()
     // Early return if already connected to the same socket
     if (this.socket?.connected) {
       return
@@ -100,6 +103,7 @@ class SocketService {
       this.socket.disconnect()
       this.socket = null
     }
+    this.pendingRoomStateFetches.clear()
   }
 
   joinRoom(roomId: string) {
@@ -286,7 +290,33 @@ class SocketService {
     // Delta update handler - efficient real-time updates
     this.socket.on('game-delta', (delta) => {
       const payload = delta as unknown as GameDelta
-      const currentUserId = store.getState().auth.user?.id
+      const state = store.getState()
+      const viewerId = state.auth.user?.id ?? null
+      const currentGame = state.game.currentGame
+
+      if (!currentGame || currentGame.roomId !== payload.roomId) {
+        if (!this.pendingRoomStateFetches.has(payload.roomId)) {
+          this.pendingRoomStateFetches.add(payload.roomId)
+          const allowSpectateFetch = Boolean(
+            !viewerId ||
+              !state.room.currentRoom?.players?.some((player) => player.userId === viewerId),
+          )
+          void (
+            store.dispatch(
+              fetchGameState({ roomId: payload.roomId, allowSpectate: allowSpectateFetch }),
+            ) as Promise<unknown>
+          )
+            .catch(() => {
+              /* swallow fetch errors - fallback is manual refresh */
+            })
+            .finally(() => {
+              this.pendingRoomStateFetches.delete(payload.roomId)
+            })
+        }
+        return
+      }
+
+      const currentUserId = viewerId
 
       // Handle turn notifications for phase changes
       if (payload.type === 'PHASE_CHANGE' && payload.currentPlayer === currentUserId) {
@@ -332,24 +362,21 @@ class SocketService {
       try {
         if (payload.type === 'TERRITORY_UPDATE') {
           const td = payload as TerritoryDelta
-          const currentBoard = store.getState().game.currentGame?.board ?? []
-          if (!currentBoard.some((t) => t.id === td.territoryId)) {
+          if (!currentGame.board.some((t) => t.id === td.territoryId)) {
             store.dispatch(setDesyncDetected(true))
             return
           }
         } else if (payload.type === 'PLAYER_UPDATE') {
           const pd = payload as PlayerDelta
-          const currentPlayers = store.getState().game.currentGame?.players ?? []
-          if (!currentPlayers.some((p) => p.id === pd.playerId)) {
+          if (!currentGame.players.some((p) => p.id === pd.playerId)) {
             store.dispatch(setDesyncDetected(true))
             return
           }
         } else if (payload.type === 'BATTLE_RESULT') {
           const br = (payload as BattleResultDelta).battleResult
-          const currentBoard = store.getState().game.currentGame?.board ?? []
           if (
-            !currentBoard.some((t) => t.id === br.fromTerritory.id) ||
-            !currentBoard.some((t) => t.id === br.toTerritory.id)
+            !currentGame.board.some((t) => t.id === br.fromTerritory.id) ||
+            !currentGame.board.some((t) => t.id === br.toTerritory.id)
           ) {
             store.dispatch(setDesyncDetected(true))
             return
