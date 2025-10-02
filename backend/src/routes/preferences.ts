@@ -1,6 +1,15 @@
+import { normalizeThemeId } from '@risk-game/shared/types/themes'
 import type { Request, Response } from 'express'
 import { Router } from 'express'
 import type { Pool } from 'pg'
+import {
+  isPremiumColorChoice,
+  isPremiumThemeId,
+  normalizePremiumAwareColor,
+  PREMIUM_COLOR_MESSAGE,
+  PREMIUM_THEME_MESSAGE,
+  PREMIUM_UPSELL_ERROR_CODE,
+} from '../constants/premium'
 import { authenticateToken } from '../middleware/auth'
 import { UserPreferencesService } from '../services/UserPreferencesService'
 import { handleRouteError } from '../utils/routeErrorHandler'
@@ -38,6 +47,36 @@ export function createPreferencesRouter(pool: Pool): Router {
         return res.status(401).json({ error: 'Authentication required' })
       }
 
+      const hasPremium =
+        req.user?.hasPremium === true ||
+        (typeof req.user?.premiumTier === 'string' && req.user?.premiumTier !== 'free')
+
+      if (typeof req.body?.theme === 'string') {
+        const normalizedTheme = normalizeThemeId(req.body.theme)
+        if (!hasPremium && isPremiumThemeId(normalizedTheme)) {
+          return res.status(403).json({
+            error: PREMIUM_UPSELL_ERROR_CODE,
+            message: PREMIUM_THEME_MESSAGE,
+          })
+        }
+        req.body.theme = normalizedTheme
+      }
+
+      if (typeof req.body?.preferredColor === 'string') {
+        const normalizedPreferredColor = normalizePremiumAwareColor(req.body.preferredColor)
+        if (
+          normalizedPreferredColor &&
+          !hasPremium &&
+          isPremiumColorChoice(normalizedPreferredColor)
+        ) {
+          return res.status(403).json({
+            error: PREMIUM_UPSELL_ERROR_CODE,
+            message: PREMIUM_COLOR_MESSAGE,
+          })
+        }
+        req.body.preferredColor = normalizedPreferredColor ?? req.body.preferredColor
+      }
+
       const preferences = await preferencesService.updatePreferences(userId, req.body)
 
       if (!preferences) {
@@ -64,7 +103,19 @@ export function createPreferencesRouter(pool: Pool): Router {
         return res.status(400).json({ error: 'Theme is required' })
       }
 
-      const updatedTheme = await preferencesService.updateTheme(userId, theme)
+      const hasPremium =
+        req.user?.hasPremium === true ||
+        (typeof req.user?.premiumTier === 'string' && req.user?.premiumTier !== 'free')
+      const normalizedTheme = normalizeThemeId(theme)
+
+      if (!hasPremium && isPremiumThemeId(normalizedTheme)) {
+        return res.status(403).json({
+          error: PREMIUM_UPSELL_ERROR_CODE,
+          message: PREMIUM_THEME_MESSAGE,
+        })
+      }
+
+      const updatedTheme = await preferencesService.updateTheme(userId, normalizedTheme)
 
       if (!updatedTheme) {
         return res.status(500).json({ error: 'Failed to update theme' })

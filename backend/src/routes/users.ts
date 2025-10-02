@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { type Request, type Response, Router } from 'express'
 import { query } from '../config/database'
+import { PREMIUM_COLOR_KEYS } from '../constants/premium'
 import { authenticateToken } from '../middleware/auth'
 import { profileService } from '../services/profileService'
 import { logger } from '../utils/logger'
@@ -25,14 +26,6 @@ const ensureUserProfileColumns = async () => {
 }
 
 const PLAYER_COLOR_DEFAULT = '#DC2626'
-
-const PREMIUM_COLOR_KEYS = new Set([
-  'MidnightBlack',
-  'PureWhite',
-  'MetallicGold',
-  'NeonGreen',
-  'Dragonfire',
-])
 
 const LEGACY_COLOR_MAP: Record<string, string> = {
   red: '#DC2626',

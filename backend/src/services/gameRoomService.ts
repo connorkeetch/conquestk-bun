@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { getClient, query, transaction } from '../config/database'
+import {
+  isPremiumColorChoice,
+  PREMIUM_ACTIVE_STATUS_VALUES,
+  PREMIUM_COLOR_MESSAGE,
+  PREMIUM_GAME_LIMIT,
+  PREMIUM_GAME_LIMIT_MESSAGE,
+} from '../constants/premium'
 import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom'
 import { logger } from '../utils/logger'
 
@@ -94,6 +101,8 @@ interface PlayerRow {
 interface GameRoomWithPlayersRow extends GameRoomRow {
   players: (PlayerRow | null)[] | null
 }
+
+const ACTIVE_ROOM_STATUS_VALUES = Array.from(PREMIUM_ACTIVE_STATUS_VALUES)
 
 export class GameRoomService {
   private validateTeamConfiguration(
@@ -535,6 +544,38 @@ export class GameRoomService {
       throw new Error('Please select a map to create a game')
     }
 
+    const hostResult = await query<{ is_vip: boolean | null; premium_tier: string | null }>(
+      'SELECT is_vip, premium_tier FROM users WHERE id = $1',
+      [roomData.hostId],
+    )
+
+    const hostRow = hostResult.rows[0]
+    if (!hostRow) {
+      throw new Error('User not found')
+    }
+
+    const hostPremiumTier = hostRow.premium_tier ?? 'free'
+    const hostHasPremium = hostPremiumTier !== 'free'
+    const hostIsVip = hostRow.is_vip === true
+
+    if (!hostHasPremium) {
+      const activeCountResult = await query<{ count: number }>(
+        `
+        SELECT COUNT(*)::int AS count
+        FROM room_players rp
+        JOIN game_rooms gr ON gr.id = rp.room_id
+        WHERE rp.user_id = $1
+          AND COALESCE(gr.status, 'lobby') = ANY($2)
+      `,
+        [roomData.hostId, ACTIVE_ROOM_STATUS_VALUES],
+      )
+
+      const activeCount = Number(activeCountResult.rows[0]?.count ?? 0)
+      if (activeCount >= PREMIUM_GAME_LIMIT) {
+        throw new Error(PREMIUM_GAME_LIMIT_MESSAGE)
+      }
+    }
+
     // Check if map is VIP-only
     if (roomData.mapId) {
       const mapResult = await query<{ is_vip_only: boolean | null }>(
@@ -543,13 +584,7 @@ export class GameRoomService {
       )
 
       if (mapResult.rows.length > 0 && mapResult.rows[0].is_vip_only) {
-        // Check if user is VIP
-        const userResult = await query<{ is_vip: boolean | null }>(
-          'SELECT is_vip FROM users WHERE id = $1',
-          [roomData.hostId],
-        )
-
-        if (!userResult.rows[0]?.is_vip) {
+        if (!hostIsVip) {
           throw new Error('This map is VIP-only. Upgrade to VIP to play on this map.')
         }
       }
@@ -1095,19 +1130,53 @@ export class GameRoomService {
         throw new Error('Room is not accepting new players')
       }
 
+      const userResult = await client.query<{
+        premium_tier: string | null
+        is_vip: boolean | null
+        skill_rating: number | null
+      }>('SELECT premium_tier, is_vip, skill_rating FROM users WHERE id = $1', [userId])
+
+      const userRow = userResult.rows[0]
+      if (!userRow) {
+        throw new Error('User not found')
+      }
+
+      const premiumTier = userRow.premium_tier ?? 'free'
+      const userHasPremium = premiumTier !== 'free'
+      const userIsVip = userRow.is_vip === true
+      const userRating = typeof userRow.skill_rating === 'number' ? userRow.skill_rating : 1000
+
       // Check if the map is VIP-only
       if (room.map_id) {
         const mapQuery = 'SELECT is_vip_only FROM maps WHERE id = $1'
         const mapResult = await client.query(mapQuery, [room.map_id])
 
-        if (mapResult.rows.length > 0 && mapResult.rows[0].is_vip_only) {
-          // Check if user is VIP
-          const userVipQuery = 'SELECT is_vip FROM users WHERE id = $1'
-          const userVipResult = await client.query(userVipQuery, [userId])
+        if (mapResult.rows.length > 0 && mapResult.rows[0].is_vip_only && !userIsVip) {
+          throw new Error('This map is VIP-only. Upgrade to VIP to join this game.')
+        }
+      }
 
-          if (!userVipResult.rows[0]?.is_vip) {
-            throw new Error('This map is VIP-only. Upgrade to VIP to join this game.')
-          }
+      const membershipResult = await client.query(
+        'SELECT 1 FROM room_players WHERE room_id = $1 AND user_id = $2 LIMIT 1',
+        [roomId, userId],
+      )
+      const alreadyInRoom = membershipResult.rowCount > 0
+
+      if (!userHasPremium && !alreadyInRoom) {
+        const activeCountResult = await client.query<{ count: number }>(
+          `
+          SELECT COUNT(*)::int AS count
+          FROM room_players rp
+          JOIN game_rooms gr ON gr.id = rp.room_id
+          WHERE rp.user_id = $1
+            AND COALESCE(gr.status, 'lobby') = ANY($2)
+        `,
+          [userId, ACTIVE_ROOM_STATUS_VALUES],
+        )
+
+        const activeCount = Number(activeCountResult.rows[0]?.count ?? 0)
+        if (activeCount >= PREMIUM_GAME_LIMIT) {
+          throw new Error(PREMIUM_GAME_LIMIT_MESSAGE)
         }
       }
 
@@ -1121,16 +1190,6 @@ export class GameRoomService {
 
       // Check skill rating gap for ranked games
       if (room.is_ranked) {
-        // Get the user's skill rating
-        const userQuery = `SELECT skill_rating FROM users WHERE id = $1`
-        const userResult = await client.query(userQuery, [userId])
-
-        if (userResult.rows.length === 0) {
-          throw new Error('User not found')
-        }
-
-        const userRating = userResult.rows[0].skill_rating || 1000
-
         // Get current players' average rating
         const playersQuery = `
           SELECT AVG(u.skill_rating) as avg_rating,
@@ -1144,8 +1203,6 @@ export class GameRoomService {
 
         if (playersResult.rows[0].avg_rating) {
           const avgRating = parseFloat(playersResult.rows[0].avg_rating)
-          const _minRating = parseFloat(playersResult.rows[0].min_rating)
-          const _maxRating = parseFloat(playersResult.rows[0].max_rating)
 
           // Check if the skill gap is too large (500 points)
           if (Math.abs(userRating - avgRating) > 500) {
@@ -1156,8 +1213,6 @@ export class GameRoomService {
 
           // Note: Room skill ratings can be tracked separately if needed
           // For now, we just validate the skill gap without storing in game_rooms
-        } else {
-          // First player joining, no skill gap to check
         }
       }
 
@@ -1182,6 +1237,9 @@ export class GameRoomService {
       const requested = options?.selectedColor ?? null
       const requestedNorm = requested ? normalize(requested) : null
       if (requested && requestedNorm) {
+        if (!userHasPremium && isPremiumColorChoice(requested)) {
+          throw new Error(PREMIUM_COLOR_MESSAGE)
+        }
         if (used.has(requestedNorm)) {
           throw new Error('Color already taken')
         }
@@ -1194,7 +1252,12 @@ export class GameRoomService {
         )
         const preferred = prefRes.rows[0]?.preferred_color ?? null
         const preferredNorm = preferred ? normalize(preferred) : null
-        if (preferred && (!preferredNorm || !used.has(preferredNorm))) {
+        const preferredIsPremium = preferred ? isPremiumColorChoice(preferred) : false
+        if (
+          preferred &&
+          (!preferredIsPremium || userHasPremium) &&
+          (!preferredNorm || !used.has(preferredNorm))
+        ) {
           finalColor = preferred
         } else {
           // Fallback palette of 12 distinct colors

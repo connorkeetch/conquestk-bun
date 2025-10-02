@@ -1,5 +1,10 @@
 import type { Request, Response } from 'express'
 import { query } from '../config/database'
+import {
+  PREMIUM_COLOR_MESSAGE,
+  PREMIUM_GAME_LIMIT_MESSAGE,
+  PREMIUM_UPSELL_ERROR_CODE,
+} from '../constants/premium'
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
@@ -176,6 +181,10 @@ export class GameController {
         return res.status(400).json({ message: error.message })
       }
 
+      if (error instanceof Error && error.message === PREMIUM_GAME_LIMIT_MESSAGE) {
+        return res.status(403).json({ code: PREMIUM_UPSELL_ERROR_CODE, message: error.message })
+      }
+
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
@@ -324,6 +333,12 @@ export class GameController {
         }
         if (error.message.includes('Room not found')) {
           return res.status(404).json({ message: error.message })
+        }
+        if (
+          error.message === PREMIUM_GAME_LIMIT_MESSAGE ||
+          error.message === PREMIUM_COLOR_MESSAGE
+        ) {
+          return res.status(403).json({ code: PREMIUM_UPSELL_ERROR_CODE, message: error.message })
         }
       }
       return res.status(500).json({ message: 'Internal server error' })
