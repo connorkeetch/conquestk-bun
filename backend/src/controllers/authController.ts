@@ -2,6 +2,14 @@ import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/them
 import bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
+import {
+  isPremiumColorChoice,
+  isPremiumThemeId,
+  normalizePremiumAwareColor,
+  PREMIUM_COLOR_MESSAGE,
+  PREMIUM_THEME_MESSAGE,
+  PREMIUM_UPSELL_ERROR_CODE,
+} from '../constants/premium'
 import { adminService } from '../services/adminService'
 import { authTrackingService } from '../services/authTrackingService'
 import emailService from '../services/emailService'
@@ -775,7 +783,55 @@ export class AuthController {
         })
       }
 
+      if (!userId) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          message: 'Please sign in to update settings',
+        })
+      }
+
       const { query } = await import('../config/database')
+
+      let resolvedHasPremium: boolean | undefined =
+        typeof req.user?.hasPremium === 'boolean' ? req.user?.hasPremium : undefined
+      let resolvedPremiumTier: string | undefined =
+        typeof req.user?.premiumTier === 'string' ? req.user?.premiumTier : undefined
+
+      if (resolvedHasPremium === undefined || !resolvedPremiumTier) {
+        const premiumLookup = await query<{ premium_tier: string | null }>(
+          'SELECT premium_tier FROM users WHERE id = $1',
+          [userId],
+        )
+        resolvedPremiumTier = premiumLookup.rows[0]?.premium_tier ?? 'free'
+        resolvedHasPremium = resolvedPremiumTier !== 'free'
+      }
+
+      const hasPremium = resolvedHasPremium === true
+
+      const hasThemeUpdate = typeof settings.theme === 'string'
+      const normalizedTheme = hasThemeUpdate ? normalizeThemeId(settings.theme) : null
+
+      if (normalizedTheme && !hasPremium && isPremiumThemeId(normalizedTheme)) {
+        return res.status(403).json({
+          error: PREMIUM_UPSELL_ERROR_CODE,
+          message: PREMIUM_THEME_MESSAGE,
+        })
+      }
+
+      const normalizedPreferredColor = normalizePremiumAwareColor(settings.preferredColor)
+
+      if (
+        normalizedPreferredColor &&
+        !hasPremium &&
+        isPremiumColorChoice(normalizedPreferredColor)
+      ) {
+        return res.status(403).json({
+          error: PREMIUM_UPSELL_ERROR_CODE,
+          message: PREMIUM_COLOR_MESSAGE,
+        })
+      }
+
+      const preferredColorForStorage = normalizedPreferredColor ?? '#DC2626'
 
       // Upsert user preferences
       const updateQuery = `
@@ -811,16 +867,13 @@ export class AuthController {
       const dmEmailPref =
         typeof dmNotificationPrefs.email === 'boolean' ? dmNotificationPrefs.email : false
 
-      const hasThemeUpdate = typeof settings.theme === 'string'
-      const normalizedTheme = hasThemeUpdate ? normalizeThemeId(settings.theme) : null
-
       const result = await query(updateQuery, [
         userId,
         normalizedTheme,
         settings.notifications?.enabled !== undefined ? settings.notifications.enabled : true,
         settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : true,
         settings.directMessages || 'friends',
-        settings.preferredColor || '#DC2626',
+        preferredColorForStorage,
         dmBrowserPref,
         dmEmailPref,
         DEFAULT_THEME_ID,
