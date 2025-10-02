@@ -2,6 +2,50 @@ import readline from 'node:readline'
 import { getClient } from '../config/database'
 import { logger } from '../utils/logger'
 
+type Filters = {
+  ids?: string[]
+  nameLike?: string | null
+  statusIn?: string[]
+  createdBefore?: string | null
+  createdAfter?: string | null
+}
+
+function parseFilters(): Filters {
+  const getArg = (flag: string) => {
+    const idx = process.argv.indexOf(flag)
+    return idx >= 0 && process.argv[idx + 1] ? process.argv[idx + 1] : null
+  }
+  const idsArg = getArg('--ids')
+  const nameLike = getArg('--name-like')
+  const statusInArg = getArg('--status-in')
+  const createdBefore = getArg('--created-before')
+  const createdAfter = getArg('--created-after')
+
+  return {
+    ids: idsArg
+      ? idsArg
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined,
+    nameLike,
+    statusIn: statusInArg
+      ? statusInArg
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined,
+    createdBefore,
+    createdAfter,
+  }
+}
+
+function hasAnyFilter(f: Filters) {
+  return Boolean(
+    f.ids?.length || f.nameLike || f.statusIn?.length || f.createdAfter || f.createdBefore,
+  )
+}
+
 async function promptConfirm(message: string): Promise<boolean> {
   if (process.argv.includes('--yes') || process.argv.includes('-y')) return true
 
@@ -15,18 +59,51 @@ async function promptConfirm(message: string): Promise<boolean> {
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run')
+  const filters = parseFilters()
 
-  logger.warn(`Wipe Games Script starting${dryRun ? ' (dry-run)' : ''}`)
+  logger.warn(
+    `Wipe Games Script starting${dryRun ? ' (dry-run)' : ''}${
+      hasAnyFilter(filters) ? ' (filtered)' : ''
+    }`,
+  )
 
   const client = await getClient()
   try {
     await client.query('BEGIN')
 
-    // Count current game rooms
-    const preCount = await client.query<{ count: number }>(
-      'SELECT COUNT(*)::int as count FROM game_rooms',
-    )
-    const gameRoomCount = preCount.rows[0]?.count ?? 0
+    // Determine target game IDs (filtered or all)
+    let idSelectionSQL = 'SELECT id FROM game_rooms'
+    const conds: string[] = []
+    const params: unknown[] = []
+
+    if (filters.ids && filters.ids.length > 0) {
+      const placeholders = filters.ids.map((_id, i) => `$${params.length + i + 1}`).join(',')
+      conds.push(`id IN (${placeholders})`)
+      params.push(...filters.ids)
+    }
+    if (filters.nameLike) {
+      conds.push(`name ILIKE $${params.length + 1}`)
+      params.push(filters.nameLike)
+    }
+    if (filters.statusIn && filters.statusIn.length > 0) {
+      conds.push(`status = ANY($${params.length + 1})`)
+      params.push(filters.statusIn)
+    }
+    if (filters.createdBefore) {
+      conds.push(`created_at < $${params.length + 1}`)
+      params.push(filters.createdBefore)
+    }
+    if (filters.createdAfter) {
+      conds.push(`created_at > $${params.length + 1}`)
+      params.push(filters.createdAfter)
+    }
+    if (conds.length > 0) {
+      idSelectionSQL += ` WHERE ${conds.join(' AND ')}`
+    }
+
+    const targetRes = await client.query<{ id: string }>(idSelectionSQL, params)
+    const targetIds = targetRes.rows.map((r) => r.id)
+    const gameRoomCount = targetIds.length
 
     if (gameRoomCount === 0) {
       logger.info('No game rooms found; nothing to delete')
@@ -35,6 +112,7 @@ async function main() {
     }
 
     logger.warn(`Found ${gameRoomCount} game room(s) to delete`)
+    logger.debug(`Target IDs: ${targetIds.join(', ')}`)
 
     if (
       !(await promptConfirm('This will permanently delete ALL games and related data. Proceed?'))
@@ -59,15 +137,15 @@ async function main() {
       for (const t of tablesToCheck) {
         const res = await client.query<{ count: number }>(
           `SELECT COUNT(*)::int as count FROM ${t} WHERE (
-             ($1::text = 'room_players' AND room_id IS NOT NULL) OR
-             ($1::text = 'game_states' AND room_id IS NOT NULL) OR
-             ($1::text = 'game_moves' AND room_id IS NOT NULL) OR
-             ($1::text = 'game_results' AND room_id IS NOT NULL) OR
-             ($1::text = 'game_territory_modifiers' AND game_id IS NOT NULL) OR
-             ($1::text = 'capital_eliminations' AND game_id IS NOT NULL) OR
-             ($1::text = 'rating_history' AND game_room_id IS NOT NULL)
+             ($1::text = 'room_players' AND room_id = ANY($2)) OR
+             ($1::text = 'game_states' AND room_id = ANY($2)) OR
+             ($1::text = 'game_moves' AND room_id = ANY($2)) OR
+             ($1::text = 'game_results' AND room_id = ANY($2)) OR
+             ($1::text = 'game_territory_modifiers' AND game_id = ANY($2)) OR
+             ($1::text = 'capital_eliminations' AND game_id = ANY($2)) OR
+             ($1::text = 'rating_history' AND game_room_id = ANY($2))
            )`,
-          [t],
+          [t, targetIds],
         )
         logger.info(`${t}: ~${res.rows[0]?.count ?? 0} row(s) associated`)
       }
@@ -81,43 +159,53 @@ async function main() {
     const steps: Array<{ label: string; sql: string; params?: unknown[] }> = [
       {
         label: 'Null conversations.game_id references',
-        sql: `UPDATE conversations SET game_id = NULL WHERE game_id IN (SELECT id FROM game_rooms)`,
+        sql: `UPDATE conversations SET game_id = NULL WHERE game_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Null clan_war_matches.game_id references',
-        sql: `UPDATE clan_war_matches SET game_id = NULL WHERE game_id IN (SELECT id FROM game_rooms)`,
+        sql: `UPDATE clan_war_matches SET game_id = NULL WHERE game_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete rating_history rows',
-        sql: `DELETE FROM rating_history WHERE game_room_id IN (SELECT id FROM game_rooms)`,
+        sql: `DELETE FROM rating_history WHERE game_room_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete capital_eliminations',
-        sql: `DELETE FROM capital_eliminations WHERE game_id IN (SELECT id FROM game_rooms)`,
+        sql: `DELETE FROM capital_eliminations WHERE game_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete game_territory_modifiers',
-        sql: `DELETE FROM game_territory_modifiers WHERE game_id IN (SELECT id FROM game_rooms)`,
+        sql: `DELETE FROM game_territory_modifiers WHERE game_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete game_moves',
-        sql: `DELETE FROM game_moves WHERE room_id IN (SELECT id FROM game_rooms)`,
+        sql: `DELETE FROM game_moves WHERE room_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete game_results',
-        sql: `DELETE FROM game_results WHERE room_id IN (SELECT id FROM game_rooms)`,
+        sql: `DELETE FROM game_results WHERE room_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete game_states',
-        sql: `DELETE FROM game_states WHERE room_id IN (SELECT id FROM game_rooms)`,
+        sql: `DELETE FROM game_states WHERE room_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete room_players',
-        sql: `DELETE FROM room_players WHERE room_id IN (SELECT id FROM game_rooms)`,
+        sql: `DELETE FROM room_players WHERE room_id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Delete game_rooms',
-        sql: `DELETE FROM game_rooms`,
+        sql: `DELETE FROM game_rooms WHERE id = ANY($1)`,
+        params: [targetIds],
       },
       {
         label: 'Reset game_room_code_seq (if present)',

@@ -37,6 +37,8 @@
     "purge:messages:yes": "ts-node src/scripts/purgeMessaging.ts --yes",
     "wipe:games": "ts-node src/scripts/wipeGames.ts",
     "wipe:games:yes": "ts-node src/scripts/wipeGames.ts --yes",
+    "wipe:redis": "ts-node src/scripts/wipeRedisGames.ts",
+    "wipe:redis:yes": "ts-node src/scripts/wipeRedisGames.ts --yes",
     "purge:messages:include-blocks": "ts-node src/scripts/purgeMessaging.ts --yes --include-user-blocks",
     "maps:import": "ts-node src/scripts/importMapsPackage.ts",
     "maps:fix-image-urls": "ts-node src/scripts/fixMapImageUrls.ts",
