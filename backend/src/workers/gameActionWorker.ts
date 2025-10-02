@@ -143,6 +143,8 @@ export class GameActionWorker {
       switch (action.type) {
         case 'deploy':
           delta = await this.processPlaceArmies(gameId, playerId, action)
+          // Record deployment move
+          await this.recordMove(gameId, playerId, currentState.turn, 'deploy', action.payload)
           break
 
         case 'attack': {
@@ -165,6 +167,9 @@ export class GameActionWorker {
 
           await queueService.addBattleSimulation(battleJob)
 
+          // Record attack move
+          await this.recordMove(gameId, playerId, currentState.turn, 'attack', action.payload)
+
           // Don't broadcast immediately for attacks - wait for battle result
           shouldBroadcast = false
           break
@@ -172,11 +177,15 @@ export class GameActionWorker {
 
         case 'fortify':
           delta = await this.processFortify(gameId, playerId, action)
+          // Record fortify move
+          await this.recordMove(gameId, playerId, currentState.turn, 'fortify', action.payload)
           break
 
         case 'end_turn': {
           // Manual end-turn: just end immediately
           delta = await this.processEndTurn(gameId, playerId)
+          // Record end turn
+          await this.recordMove(gameId, playerId, currentState.turn, 'end_turn', {})
           break
         }
 
@@ -275,6 +284,32 @@ export class GameActionWorker {
     }
 
     return true
+  }
+
+  private async recordMove(
+    gameId: string,
+    playerId: string,
+    turnNumber: number,
+    moveType: string,
+    payload: unknown,
+  ): Promise<void> {
+    try {
+      await query(
+        `INSERT INTO game_moves (room_id, player_id, turn_number, move_type, move_data)
+         VALUES ($1, $2, $3, $4, $5::jsonb)`,
+        [gameId, playerId, turnNumber, moveType, JSON.stringify(payload || {})],
+      )
+      logger.debug('Recorded game move', { gameId, playerId, turnNumber, moveType })
+    } catch (error) {
+      // Non-fatal: move recording is for analytics/troubleshooting
+      logger.warn('Failed to record game move', {
+        gameId,
+        playerId,
+        turnNumber,
+        moveType,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
   }
 
   private async processPlaceArmies(
