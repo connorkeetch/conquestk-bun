@@ -1021,9 +1021,11 @@ export class GameEngine {
       }
     }
 
-    // Determine number of dice
-    const attackerDiceCount = Math.min(3, fromTerritory.armies - 1)
-    const defenderDiceCount = Math.min(2, toTerritory.armies)
+    // Determine number of dice - always use maximum available
+    // Attackers: 3 dice max (or armies - 1 if less), minimum 1
+    // Defenders: 2 dice max (or armies if less), minimum 1
+    const attackerDiceCount = Math.max(1, Math.min(3, fromTerritory.armies - 1))
+    const defenderDiceCount = Math.max(1, Math.min(2, toTerritory.armies))
 
     const battleResult = this.simulateBattle(attackerDiceCount, defenderDiceCount)
 

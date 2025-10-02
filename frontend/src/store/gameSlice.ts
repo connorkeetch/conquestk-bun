@@ -163,6 +163,11 @@ interface GameSliceState {
   }>
   battleResult: BattleResult | null
   reinforcementArmies: number
+  conquestTransfer: {
+    fromTerritoryId: string
+    toTerritoryId: string
+    availableArmies: number
+  } | null
 }
 
 const initialState: GameSliceState = {
@@ -176,6 +181,7 @@ const initialState: GameSliceState = {
   territoryActionHistory: [],
   battleResult: null,
   reinforcementArmies: 0,
+  conquestTransfer: null,
 }
 
 export const fetchGameState = createAsyncThunk<
@@ -305,6 +311,16 @@ const gameSlice = createSlice({
     setReinforcementArmies: (state, action: PayloadAction<number>) => {
       state.reinforcementArmies = action.payload
     },
+    setConquestTransfer: (
+      state,
+      action: PayloadAction<{
+        fromTerritoryId: string
+        toTerritoryId: string
+        availableArmies: number
+      } | null>,
+    ) => {
+      state.conquestTransfer = action.payload
+    },
 
     // Delta update handlers for efficient real-time updates
     applyDelta: (state, action: PayloadAction<GameDelta>) => {
@@ -421,6 +437,7 @@ export const {
   setValidTargets,
   setBattleResult,
   setReinforcementArmies,
+  setConquestTransfer,
   applyDelta,
 } = gameSlice.actions
 

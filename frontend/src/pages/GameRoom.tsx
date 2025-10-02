@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
+import { ConquestArmyTransferModal } from '@/components/game/ConquestArmyTransferModal'
 import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TurnTimer } from '@/components/game/TurnTimer'
@@ -24,12 +25,13 @@ import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
-import { endTurn, undoLastPlacement } from '../store/gameActions'
+import { endTurn, transferConquestArmies, undoLastPlacement } from '../store/gameActions'
 import {
   clearGame,
   fetchGameState,
   selectTargetTerritory,
   selectTerritory,
+  setConquestTransfer,
   setPendingAction,
 } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
@@ -819,6 +821,48 @@ export default function GameRoom() {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [dispatch])
+
+  // Watch for conquest to show army transfer modal
+  const battleResult = useAppSelector((s) => s.game.battleResult)
+  const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
+
+  useEffect(() => {
+    if (!battleResult || !battleResult.conquered || !currentGame || !user) return
+
+    // Only show modal for the current player who just conquered
+    if (currentGame.currentPlayer !== user.id) return
+
+    const fromTerritory = currentGame.board.find(
+      (t) =>
+        t.id ===
+        (typeof battleResult.fromTerritory === 'string'
+          ? battleResult.fromTerritory
+          : battleResult.fromTerritory.id),
+    )
+    const toTerritory = currentGame.board.find(
+      (t) =>
+        t.id ===
+        (typeof battleResult.toTerritory === 'string'
+          ? battleResult.toTerritory
+          : battleResult.toTerritory.id),
+    )
+
+    if (!fromTerritory || !toTerritory) return
+
+    // Calculate available armies (current - 1 that must stay)
+    const availableArmies = Math.max(0, fromTerritory.armies - 1)
+
+    // If there are armies to transfer, show the modal
+    if (availableArmies > 0) {
+      dispatch(
+        setConquestTransfer({
+          fromTerritoryId: fromTerritory.id,
+          toTerritoryId: toTerritory.id,
+          availableArmies,
+        }),
+      )
+    }
+  }, [battleResult, currentGame, user, dispatch])
 
   // No ready toggle; start triggers when lobby is full
 
@@ -1665,6 +1709,36 @@ export default function GameRoom() {
         username={profileUsername}
         onClose={() => setProfileUsername(null)}
       />
+
+      {/* Conquest Army Transfer Modal */}
+      {conquestTransfer && currentGame && (
+        <ConquestArmyTransferModal
+          isOpen={true}
+          fromTerritoryName={
+            currentGame.board.find((t) => t.id === conquestTransfer.fromTerritoryId)?.name ??
+            conquestTransfer.fromTerritoryId
+          }
+          toTerritoryName={
+            currentGame.board.find((t) => t.id === conquestTransfer.toTerritoryId)?.name ??
+            conquestTransfer.toTerritoryId
+          }
+          availableArmies={conquestTransfer.availableArmies}
+          onConfirm={(armies) => {
+            dispatch(
+              transferConquestArmies({
+                fromTerritoryId: conquestTransfer.fromTerritoryId,
+                toTerritoryId: conquestTransfer.toTerritoryId,
+                armies,
+              }),
+            )
+            dispatch(setConquestTransfer(null))
+          }}
+          onCancel={() => {
+            dispatch(setConquestTransfer(null))
+          }}
+        />
+      )}
+
       {/* Floating, less-obtrusive mute control */}
       <MuteButton offsetBottom={muteOffsetBottom} />
     </div>

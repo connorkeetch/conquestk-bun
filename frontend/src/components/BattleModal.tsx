@@ -1,7 +1,6 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { setAttackCommit } from '@/store/uiRoomSlice'
+import { useAppSelector } from '@/hooks/redux'
 import audioService from '../services/audioService'
 import type { BattleResult, BattleTerritorySnapshot } from '../types/game'
 
@@ -18,11 +17,8 @@ export const BattleModal: React.FC<BattleModalProps> = ({
   onClose,
   onContinueAttack,
 }) => {
-  const dispatch = useAppDispatch()
   const [showAnimation, setShowAnimation] = useState(false)
   const speed = useAppSelector((s) => s.uiRoom.animationSpeed)
-  const currentCommit = useAppSelector((s) => s.uiRoom.attackCommit)
-  const [nextCommit, setNextCommit] = useState<number>(currentCommit)
 
   const resolveTerritory = (
     territory: BattleResult['fromTerritory'],
@@ -175,31 +171,9 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                 <p className="text-yellow-200 text-sm">
                   {toTerritory.name} is now under your control
                 </p>
-              </div>
-              <div className="mt-3 text-xs text-yellow-200/90">
-                <div className="mb-1">Commit on next conquest:</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min={1}
-                    max={Math.max(1, (fromTerritory.armies || 1) - 1)}
-                    value={nextCommit}
-                    onChange={(e) => setNextCommit(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    className="w-full"
-                  />
-                  <div className="w-10 text-right">{nextCommit}</div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => dispatch(setAttackCommit(nextCommit))}
-                    title="Save default move amount for next conquest"
-                  >
-                    Save
-                  </button>
-                </div>
-                <div className="mt-1 text-[0.7rem] opacity-80">
-                  This sets how many armies move into a territory when you conquer it next.
-                </div>
+                <p className="text-yellow-200/80 text-xs mt-2">
+                  Choose how many armies to transfer on the next screen
+                </p>
               </div>
             </div>
           )}
