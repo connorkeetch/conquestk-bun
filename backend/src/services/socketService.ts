@@ -853,7 +853,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               isAi: true,
               aiDifficulty: aiDifficulty ?? 'recruit',
             }
-            await (await import('./cacheService')).gameStateCache.setGameState(roomId, state)
+            // Persist to DB + cache for durability
+            await gameService.saveSnapshot(
+              roomId,
+              state as unknown as import('../types/game').SerializedGameState,
+            )
             // Persist on room_players for visibility in room state
             await query(
               `UPDATE room_players SET is_ai = TRUE, ai_difficulty = COALESCE($3, 'recruit') WHERE room_id = $1 AND user_id = $2`,

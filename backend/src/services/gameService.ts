@@ -138,6 +138,48 @@ export class GameService {
   // Removed: private activeGames = new Map<string, GameState>()
   // Now using Redis-backed gameStateCache for persistence and scalability
 
+  private async persistGameStateSnapshot(
+    roomId: string,
+    state: SerializedGameState,
+  ): Promise<void> {
+    try {
+      await query(
+        `
+        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
+        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
+        ON CONFLICT (room_id) DO UPDATE
+          SET game_data = EXCLUDED.game_data,
+              turn_number = EXCLUDED.turn_number,
+              current_player_id = EXCLUDED.current_player_id,
+              game_phase = EXCLUDED.game_phase,
+              last_activity = NOW()
+        `,
+        [roomId, JSON.stringify(state), state.turn ?? 1, state.currentPlayer ?? null, state.phase],
+      )
+    } catch (error) {
+      logger.error('Failed to persist game state snapshot to database', {
+        roomId,
+        phase: state.phase,
+        turn: state.turn,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+
+    try {
+      await gameStateCache.setGameState(roomId, state)
+    } catch (error) {
+      logger.warn('Failed to cache game state snapshot', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
+  // Expose safe wrapper for other services to persist a full snapshot
+  async saveSnapshot(roomId: string, state: SerializedGameState): Promise<void> {
+    await this.persistGameStateSnapshot(roomId, state)
+  }
+
   private serializeGameState(gameState: GameState): SerializedGameState {
     const { territoryModifiers, ...rest } = gameState
     const baseState = rest as Omit<GameState, 'territoryModifiers'>
@@ -371,7 +413,7 @@ export class GameService {
       fallbackReason = fallbackReason ?? 'invalid_plan'
     }
 
-    await gameStateCache.setGameState(roomId, this.serializeGameState(finalState))
+    await this.persistGameStateSnapshot(roomId, this.serializeGameState(finalState))
 
     const decisionDiagnostics = decisionPlan.diagnostics
     const thinkTimeMs = decisionDiagnostics?.durationMs
@@ -448,7 +490,7 @@ export class GameService {
     }
 
     const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
-    await gameStateCache.setGameState(action.roomId, this.serializeGameState(updatedState))
+    await this.persistGameStateSnapshot(action.roomId, this.serializeGameState(updatedState))
 
     logger.info(`Game action processed for room ${action.roomId}: ${action.type}`)
     return updatedState
@@ -529,7 +571,7 @@ export class GameService {
     }
 
     // Cache the game state with TTL for automatic cleanup (24 hours)
-    await gameStateCache.setGameState(roomId, this.serializeGameState(gameState))
+    await this.persistGameStateSnapshot(roomId, this.serializeGameState(gameState))
 
     this.recordAssassinationAssignments(roomId, gameState)
 
@@ -603,7 +645,7 @@ export class GameService {
       await gameStateCache.setInactiveGameState(roomId, serializedState)
       this.gameEngine.clearModifiersCache(roomId)
     } else {
-      await gameStateCache.setGameState(roomId, serializedState)
+      await this.persistGameStateSnapshot(roomId, serializedState)
     }
 
     return { state: serializedState, elimination }
@@ -625,7 +667,7 @@ export class GameService {
           cachedState = JSON.parse(dbResult.rows[0].game_data) as SerializedGameState
 
           // Repopulate cache for next time
-          await gameStateCache.setGameState(roomId, cachedState)
+          await this.persistGameStateSnapshot(roomId, cachedState)
           logger.info('Loaded game state from database and repopulated cache', { roomId })
         } else {
           return null
@@ -667,7 +709,7 @@ export class GameService {
     }
 
     const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
-    await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
+    await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
 
     return {
       gameState: this.serializeGameState(updatedState),
@@ -703,7 +745,7 @@ export class GameService {
       throw new Error('Attack did not produce a battle result')
     }
 
-    await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
+    await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
 
     if (battleResult.gameEnded) {
       // Clean up GameEngine cache when game ends
@@ -766,7 +808,7 @@ export class GameService {
     }
 
     const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
-    await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
+    await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
 
     return {
       gameState: this.serializeGameState(updatedState),
@@ -796,7 +838,7 @@ export class GameService {
     if (updatedState.phase === 'finished') {
       await gameStateCache.setInactiveGameState(roomId, this.serializeGameState(updatedState))
     } else {
-      await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
+      await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
     }
 
     // Persist DB view of turn + actor for room-level queries/UI
@@ -993,7 +1035,7 @@ export class GameService {
       gameState.reinforcementHistory = [...(gameState.reinforcementHistory ?? []), entry]
     }
 
-    await gameStateCache.setGameState(gameId, this.serializeGameState(gameState))
+    await this.persistGameStateSnapshot(gameId, this.serializeGameState(gameState))
 
     return territory.armies
   }
@@ -1049,7 +1091,7 @@ export class GameService {
     }
 
     gameState.phase = phase
-    await gameStateCache.setGameState(gameId, this.serializeGameState(gameState))
+    await this.persistGameStateSnapshot(gameId, this.serializeGameState(gameState))
   }
 
   async applyBattleResult(
@@ -1286,7 +1328,7 @@ export class GameService {
       }
 
       serializedState = this.serializeGameState(updatedGameState)
-      await gameStateCache.setGameState(gameId, serializedState)
+      await this.persistGameStateSnapshot(gameId, serializedState)
     }
 
     if (persistenceOutcome.applied && gameEnded) {
