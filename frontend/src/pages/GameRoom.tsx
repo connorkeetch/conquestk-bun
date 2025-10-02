@@ -1186,10 +1186,12 @@ export default function GameRoom() {
       {/* No ready errors expected */}
 
       <div className="flex flex-col gap-6">
-        {/* Game Board - full width */}
-        <div className="flex-1 min-w-0 flex flex-col min-h-[55vh] xl:min-h-[70vh]">
-          {currentGame ? (
-            <RiskGameBoard
+        {/* Game Board and Action Bar Container */}
+        <div className="flex flex-col gap-3">
+          {/* Game Board - full width */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-[55vh] xl:min-h-[70vh]">
+            {currentGame ? (
+              <RiskGameBoard
               mapId={currentRoom?.mapId || 'world'}
               onTerritoryClick={(_territoryId) => {
                 // TODO: Handle territory interactions based on game phase
@@ -1282,9 +1284,17 @@ export default function GameRoom() {
               </div>
             </div>
           )}
+          </div>
+
+          {/* Desktop action bar - positioned directly under the map */}
+          {currentGame && (
+            <div className="hidden md:block">
+              <GameActionBar />
+            </div>
+          )}
         </div>
 
-        {/* Player Stats & Chat Row - below map */}
+        {/* Player Stats & Chat Row - below action bar */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Player Stats */}
           {currentGame ? (
@@ -1487,13 +1497,6 @@ export default function GameRoom() {
               ))}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Desktop action bar */}
-      {currentGame && (
-        <div className="hidden md:block">
-          <GameActionBar />
         </div>
       )}
 

@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv'
 // Load environment variables before importing database configuration.
 // Prefer local overrides, then project defaults, and finally fall back to
 // development credentials so the script works out of the box.
-const envCandidates = ['../../.env.local', '../../.env', '../../.env.development']
+const envCandidates = ['../../.env.local', '../../.env']
 for (const candidate of envCandidates) {
   const candidatePath = path.join(__dirname, candidate)
   if (existsSync(candidatePath)) {
@@ -26,50 +26,66 @@ const REQUIRED_TABLES = [
   'admin_activity_logs',
   'admin_roles',
   'capital_eliminations',
-  // Conversations-based messaging (required)
+  // Messaging + push
   'conversations',
   'conversation_members',
   'conversation_messages',
-  'email_verification_logs',
-  'events',
+  'web_push_subscriptions',
+  // Users + admin
+  'users',
+  'user_preferences',
+  'admin_roles',
+  'user_admin_roles',
+  'admin_activity_logs',
+  'user_account_status',
+  'user_bans',
+  'user_reports',
   'feature_flags',
+  'user_feature_flags',
+  'email_verification_logs',
+  'password_reset_tokens',
+  'notifications',
+  'events',
   'friendships',
-  'game_moves',
+  // Gameplay
   'game_rooms',
+  'room_players',
   'game_states',
+  'game_moves',
+  'game_results',
+  'player_game_results',
+  'rating_history',
   'game_territory_modifiers',
-  'map_continents',
+  // Maps + workflow
+  'maps',
+  'map_versions',
+  'map_sectors',
+  'map_territories',
+  'territory_adjacencies',
   'map_ratings',
   'map_submissions',
-  'map_territories',
+  'map_collaborators',
   'map_territory_modifiers',
-  'maps',
-  'notifications',
-  'password_reset_tokens',
-  'player_stats',
-  'rating_history',
-  'room_players',
+  'territory_modifier_templates',
+  'map_reviews',
+  // Infra
   'schema_migrations',
   'skill_leaderboard_cache',
-  'territory_adjacencies',
-  'territory_modifier_templates',
-  'user_account_status',
-  'user_achievements',
-  'user_admin_roles',
-  'user_bans',
-  'user_behavior_patterns',
-  'user_feature_flags',
-  'user_preferences',
-  'user_reports',
   'user_sessions',
-  'user_terms_acceptance',
-  'users',
-  'user_blocks',
-  'web_push_subscriptions',
 ]
 
 // Tables that are being tracked for future features but are not present in production
 const OPTIONAL_TABLES = [
+  // Deprecated/legacy
+  'map_continents',
+  'chat_messages',
+  'message_link_previews',
+  'message_reactions',
+  'unread_message_counts',
+  'sessions',
+  'ranking_history',
+
+  // Future/optional
   'active_territory_effects',
   'audit_logs',
   'custom_maps',
@@ -81,26 +97,20 @@ const OPTIONAL_TABLES = [
   'map_downloads',
   'map_editor_sessions',
   'map_featured_history',
-  'map_reviews',
   'map_tags',
   'map_tag_associations',
   'map_test_games',
   'map_usage_stats',
   'player_game_stats',
   'private_messages',
-  // Legacy chat tables retained optionally for old snapshots
-  'chat_messages',
-  'message_link_previews',
-  'message_reactions',
-  'unread_message_counts',
-  'ranking_history',
-  'sessions',
   'territory_events',
   'territory_modifiers',
   'tournament_matches',
   'tournament_participants',
   'tournaments',
   'user_activity',
+  'user_behavior_patterns',
+  'user_terms_acceptance',
 ]
 
 interface CliOptions {
@@ -192,6 +202,8 @@ async function checkRequiredColumns(): Promise<void> {
     { table: 'users', columns: ['id', 'username', 'email', 'password_hash'] },
     { table: 'game_rooms', columns: ['id', 'name', 'host_id', 'status'] },
     { table: 'maps', columns: ['id', 'name', 'creator_id'] },
+    { table: 'map_versions', columns: ['id', 'map_id', 'version_number'] },
+    { table: 'player_game_results', columns: ['room_id', 'user_id', 'is_winner'] },
   ]
 
   for (const check of criticalColumns) {

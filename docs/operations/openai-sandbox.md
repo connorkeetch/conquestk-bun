@@ -41,18 +41,17 @@ These commands:
 
 ```bash
 cd backend
-cp .env.development .env
+cp .env.example .env
 ```
 
-`backend/.env.development` now defaults to the sandbox-friendly connection
-string:
+Edit `backend/.env` and ensure it contains the sandbox‑friendly connection string:
 
 ```
 DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/risk_game_local
 ```
 
-If you ever run the project outside the sandbox, swap the value for the shared
-Railway URL (still present but commented out in the same file).
+If you ever run the project outside the sandbox, swap the value for your Railway
+URL (managed in the Railway dashboard). Production/staging never load a `.env` file.
 
 ## 4. Apply database migrations
 

@@ -240,6 +240,28 @@ export class MigrationRunner {
     const approvalExists = Boolean(approvalTable.rows[0]?.exists)
 
     if (!approvalExists) {
+      // Only create compatibility table if referenced tables exist (fresh DBs run baseline first)
+      const mapVersionsExistsRes = await query<{ exists: boolean }>(
+        `SELECT EXISTS (
+           SELECT 1 FROM information_schema.tables
+           WHERE table_schema = 'public' AND table_name = 'map_versions'
+         ) AS exists`,
+      )
+      const usersExistsRes = await query<{ exists: boolean }>(
+        `SELECT EXISTS (
+           SELECT 1 FROM information_schema.tables
+           WHERE table_schema = 'public' AND table_name = 'users'
+         ) AS exists`,
+      )
+      const mapVersionsExists = Boolean(mapVersionsExistsRes.rows[0]?.exists)
+      const usersExists = Boolean(usersExistsRes.rows[0]?.exists)
+
+      if (!mapVersionsExists || !usersExists) {
+        logger.info(
+          '  ℹ️ Skipping compatibility map_approval_requests creation (missing prerequisites: map_versions/users). Baseline will create full schema.',
+        )
+        return
+      }
       logger.warn('  ⚠️ map_approval_requests table missing — creating compatibility table')
 
       await query(`

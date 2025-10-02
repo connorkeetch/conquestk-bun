@@ -65,6 +65,26 @@ npm run setup
    workers.
 4. Configure email settings (`RESEND_API_KEY` or SMTP fields) if you plan to test verification flows.
 
+#### Local database quick start
+
+- Using Docker (recommended):
+  ```bash
+  docker-compose up -d   # starts PostgreSQL (risk_game_local) and Redis
+  cd backend && npm run migrate
+  ```
+
+- Using native Postgres (WSL/macOS/Windows):
+  ```bash
+  # Ensure Postgres is installed and running
+  # Create user password and database (example shown for Linux/WSL)
+  sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'localpassword123';"
+  sudo -u postgres createdb risk_game_local
+
+  # In backend/.env set:
+  # DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/risk_game_local
+  cd backend && npm run migrate
+  ```
+
 ### Running the app locally
 
 - `npm run dev` – launches the backend and frontend with the setup guard (requires PowerShell or
@@ -72,6 +92,10 @@ npm run setup
 - `npm run dev:manual` – cross-platform alternative that uses `concurrently` without PowerShell.
 - `npm run dev:frontend` / `npm run dev:backend` – start either service independently.
 - `npm run dev:quick` – skip the setup guard after the first successful run.
+
+Cross‑platform env setup (WSL/macOS/Linux):
+
+- `npm run setup:env` – creates `backend/.env.local` (local Postgres + Redis) and `frontend/.env` if missing.
 
 The frontend is served at [http://localhost:5173](http://localhost:5173) and the backend at
 [http://localhost:5001](http://localhost:5001).
@@ -95,6 +119,8 @@ npm run build            # Build backend and frontend bundles
 npm start                # Run migrations and start the production backend server
 cd backend && npm run migrate   # Apply database migrations
 cd backend && npm run seed:users # Populate demo accounts
+npm run check:services   # Check local Postgres/Redis health
+npm run check:services:start  # Try to start via Docker Compose if not running
 ```
 
 ### Migrations (baseline + incremental)

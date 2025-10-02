@@ -270,7 +270,7 @@ cd backend && npm run migrate:status
 cd backend && npm run check:schema
 
 # Direct database inspection (requires ts-node)
-npx ts-node src/scripts/checkProductionDb.ts
+cd backend && npm run check:schema
 ```
 
 ### Migration Files

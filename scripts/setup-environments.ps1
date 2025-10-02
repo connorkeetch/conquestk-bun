@@ -28,7 +28,7 @@ function Setup-GitBranches {
 function Setup-EnvironmentFiles {
     Write-Host "`n📁 Setting up environment files..." -ForegroundColor Yellow
     
-    # Create .env.local for local development
+    # Create .env.local for local development (Postgres + Redis on localhost)
     $localEnvPath = "backend\.env.local"
     if (-not (Test-Path $localEnvPath)) {
         @"
@@ -41,13 +41,16 @@ PORT=5001
 FRONTEND_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173
 
-# Use Railway Dev Database (Public URL)
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+# Local PostgreSQL
+DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/risk_game_local
 
-# Development Secrets
+# Development Secrets (use strong values locally)
 JWT_SECRET=local-dev-jwt-secret-change-in-production
 SESSION_SECRET=local-dev-session-secret-change-in-production
 JWT_EXPIRES_IN=7d
+
+# Local Redis
+REDIS_URL=redis://127.0.0.1:6379
 
 # Optional Services (disabled for local dev)
 EMAIL_ENABLED=false
@@ -98,7 +101,7 @@ function Show-RailwayInstructions {
     Write-Host "   - SESSION_SECRET (strong, unique)"
     
     Write-Host "`n   For DEVELOPMENT service, set:"
-    Write-Host "   - DATABASE_URL (dev database - yamabiko.proxy.rlwy.net)"
+    Write-Host "   - DATABASE_URL (your dev database, or use local/WSL)"
     Write-Host "   - JWT_SECRET (different from prod)"
     Write-Host "   - SESSION_SECRET (different from prod)"
     

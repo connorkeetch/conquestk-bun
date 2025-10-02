@@ -56,7 +56,7 @@ guide; the hosted Railway port is unreachable from within the sandbox network.
 1. Clear browser cache/cookies for the site
 2. Run migrations: cd backend && npm run migrate
 3. Check production database directly:
-   npx ts-node src/scripts/checkProductionDb.ts
+   cd backend && npm run check:schema
 ```
 
 ### ❌ "column 'theme' does not exist"

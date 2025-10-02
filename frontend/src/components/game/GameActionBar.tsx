@@ -146,14 +146,11 @@ export function GameActionBar({
     </button>
   )
 
-  const containerClasses =
-    mode === 'fixed' ? 'fixed inset-x-0 bottom-0 z-30 mx-auto max-w-7xl p-2' : 'p-2'
+  const containerClasses = mode === 'fixed' ? 'p-2' : 'p-2'
 
   return (
     <div className={containerClasses}>
-      <div
-        className={`rounded-xl border border-border ${mode === 'fixed' ? 'backdrop-blur supports-[backdrop-filter]:bg-surface-1/80 bg-surface-1/95' : 'bg-surface-1'} p-2 shadow-lg`}
-      >
+      <div className={`rounded-xl border border-border bg-surface-1 p-2 shadow-lg`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="chip text-xs">{phase.charAt(0).toUpperCase() + phase.slice(1)}</span>

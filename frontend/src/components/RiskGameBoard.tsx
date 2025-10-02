@@ -55,6 +55,14 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const [_hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
   const [showMinimap, setShowMinimap] = useState(true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ui.mapSidebarCollapsed')
+      return stored === 'true'
+    } catch {
+      return false
+    }
+  })
   const [zoomControls, setZoomControls] = useState<ZoomControls | null>(null)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
@@ -388,6 +396,16 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           <MapControlsSidebar
             showMinimap={showMinimap}
             onToggleMinimap={() => setShowMinimap((prev) => !prev)}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => {
+              const newValue = !sidebarCollapsed
+              setSidebarCollapsed(newValue)
+              try {
+                localStorage.setItem('ui.mapSidebarCollapsed', String(newValue))
+              } catch {
+                // ignore storage errors
+              }
+            }}
           />
         )}
       </div>
