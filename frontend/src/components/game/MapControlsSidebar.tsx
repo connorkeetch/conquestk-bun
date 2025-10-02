@@ -5,11 +5,15 @@ import { setOverlay } from '@/store/uiRoomSlice'
 interface MapControlsSidebarProps {
   showMinimap: boolean
   onToggleMinimap: () => void
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 export const MapControlsSidebar: React.FC<MapControlsSidebarProps> = ({
   showMinimap,
   onToggleMinimap,
+  isCollapsed = false,
+  onToggleCollapse,
 }) => {
   const dispatch = useAppDispatch()
   const overlays = useAppSelector((s) => s.uiRoom.overlays)
@@ -53,38 +57,54 @@ export const MapControlsSidebar: React.FC<MapControlsSidebarProps> = ({
   )
 
   return (
-    <div className="flex flex-col gap-2 bg-[color:var(--surface-1)] border-l border-[color:var(--panel-border)] p-3 min-w-[180px]">
-      <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">
-        Map Controls
-      </h3>
+    <div className="flex flex-col bg-[color:var(--surface-1)] border-l border-[color:var(--panel-border)]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--panel-border)]">
+        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
+          {isCollapsed ? 'Map' : 'Map Controls'}
+        </h3>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            className="text-xs text-muted hover:text-[color:var(--heading)] transition-colors"
+            onClick={onToggleCollapse}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? '◀' : '▶'}
+          </button>
+        )}
+      </div>
 
-      {toggleButton(
-        'Sectors',
-        '🗺️',
-        overlays.continents,
-        () => dispatch(setOverlay({ key: 'continents', value: !overlays.continents })),
-        'G',
+      {!isCollapsed && (
+        <div className="flex flex-col gap-2 p-3 min-w-[180px]">
+          {toggleButton(
+            'Sectors',
+            '🗺️',
+            overlays.continents,
+            () => dispatch(setOverlay({ key: 'continents', value: !overlays.continents })),
+            'G',
+          )}
+
+          {toggleButton(
+            'Attackable',
+            '🎯',
+            overlays.attackable,
+            () => dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable })),
+            'A',
+          )}
+
+          {toggleButton(
+            'Threat',
+            '🔥',
+            overlays.threat,
+            () => dispatch(setOverlay({ key: 'threat', value: !overlays.threat })),
+            'H',
+          )}
+
+          <div className="border-t border-[color:var(--panel-border)] my-1" />
+
+          {toggleButton('Minimap', '🗺', showMinimap, onToggleMinimap)}
+        </div>
       )}
-
-      {toggleButton(
-        'Attackable',
-        '🎯',
-        overlays.attackable,
-        () => dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable })),
-        'A',
-      )}
-
-      {toggleButton(
-        'Threat',
-        '🔥',
-        overlays.threat,
-        () => dispatch(setOverlay({ key: 'threat', value: !overlays.threat })),
-        'H',
-      )}
-
-      <div className="border-t border-[color:var(--panel-border)] my-1" />
-
-      {toggleButton('Minimap', '🗺', showMinimap, onToggleMinimap)}
     </div>
   )
 }

@@ -172,7 +172,7 @@ socket.on('game:update', (data) => {
 ### 📝 Scripts (Keep console.log)
 CLI scripts should keep console.log for user interaction:
 - `makeAdmin.ts`, `runMigration.ts`, `setupProductionAdmin.ts`
-- `checkMapsTable.ts`, `diagnoseAdminIssue.ts`, `testEmail.ts`
+- `checkSchema.ts`, `diagnoseAdminIssue.ts`, `testEmail.ts`
 
 ## Best Practices
 

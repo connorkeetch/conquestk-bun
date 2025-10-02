@@ -25,8 +25,8 @@ cd backend && npm run check:schema -- --skip-validation --export ../docs/operati
 # Production connection
 postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway
 
-# Check database state
-npx ts-node src/scripts/checkProductionDb.ts
+# Check database state / schema
+cd backend && npm run check:schema
 ```
 
 ## 📁 Migration Files
@@ -64,8 +64,8 @@ ADD COLUMN IF NOT EXISTS column_name TYPE DEFAULT value;
 
 **Solution**:
 ```bash
-# Check all tables
-npx ts-node src/scripts/checkProductionDb.ts
+# Check schema status
+cd backend && npm run check:schema
 
 # If table missing, check migration 011
 # May need to run manually via pgAdmin
