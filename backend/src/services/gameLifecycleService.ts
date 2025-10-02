@@ -518,9 +518,8 @@ export class GameLifecycleService {
     // Persist the latest snapshot from cache (capitals and other post-init changes included)
     try {
       const { gameStateCache } = await import('./cacheService')
-      const latest = await gameStateCache.getGameState<import('../types/game').SerializedGameState>(
-        roomId,
-      )
+      const latest =
+        await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
       if (latest) {
         await this.gameService.saveSnapshot(roomId, latest)
       } else {
