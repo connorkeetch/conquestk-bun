@@ -224,6 +224,21 @@ class SocketService {
       store.dispatch(setConnectionStatus('connected'))
       store.dispatch(loadUnreadSummary())
       store.dispatch(loadInbox())
+
+      // Rejoin active game room on reconnect to restore subscriptions
+      try {
+        const state = store.getState()
+        const roomId = state.room.currentRoom?.id ?? state.game.currentGame?.roomId ?? null
+        const userId = state.auth.user?.id
+        const isMember = Boolean(
+          roomId && userId && state.room.currentRoom?.players?.some((p) => p.userId === userId),
+        )
+        if (roomId && isMember) {
+          this.joinRoom(roomId)
+        }
+      } catch {
+        // best-effort; if state not accessible, skip rejoin
+      }
     })
 
     this.socket.on('disconnect', () => {

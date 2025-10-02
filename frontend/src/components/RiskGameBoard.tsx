@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { FullMapData } from '@/services/mapService'
 import { mapService } from '@/services/mapService'
 import { socketService } from '@/services/socketService'
-import type { Territory } from '@/types/game'
+import type { GamePlayer, PlayerColor, Territory } from '@/types/game'
 import type { ZoomControls } from '@/types/zoom'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
@@ -118,7 +118,21 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
   // Use lobby map data or game state data
   const board = lobbyTerritories ?? gameState?.board ?? []
-  const players = lobbyMode ? lobbyPlayers : (gameState?.players ?? [])
+  const players: GamePlayer[] = useMemo(() => {
+    if (lobbyMode) {
+      return lobbyPlayers.map((p) => ({
+        id: p.id,
+        userId: p.id,
+        username: p.username,
+        color: p.color as unknown as PlayerColor,
+        territories: [],
+        armies: 0,
+        cards: [],
+        isEliminated: false,
+      }))
+    }
+    return gameState?.players ?? []
+  }, [gameState?.players, lobbyMode, lobbyPlayers])
   const currentPlayer = lobbyMode ? '' : (gameState?.currentPlayer ?? '')
   const currentPhase = lobbyMode ? 'lobby' : (gameState?.phase ?? 'reinforcement')
 

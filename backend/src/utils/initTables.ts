@@ -46,7 +46,7 @@ async function createPostgreSQLTables(): Promise<void> {
         host_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         max_players INTEGER NOT NULL DEFAULT 6,
         is_private BOOLEAN DEFAULT FALSE,
-        status VARCHAR(20) DEFAULT 'waiting' CHECK (status IN ('waiting', 'starting', 'in_progress', 'finished', 'abandoned', 'paused')),
+        status VARCHAR(20) DEFAULT 'lobby' CHECK (status IN ('lobby', 'initializing', 'active', 'completed', 'abandoned', 'paused')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,

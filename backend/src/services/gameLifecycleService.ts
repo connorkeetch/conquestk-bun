@@ -138,7 +138,6 @@ export class GameLifecycleService {
           `
           UPDATE game_rooms
           SET status = 'initializing',
-              lifecycle_phase = 'initializing',
               ready_check_started_at = NOW(),
               turn_number = 0,
               turn_expires_at = NULL
@@ -154,7 +153,6 @@ export class GameLifecycleService {
           `
           UPDATE game_rooms
           SET status = 'lobby',
-              lifecycle_phase = 'lobby',
               ready_check_started_at = NULL,
               turn_number = 0,
               turn_expires_at = NULL
@@ -187,7 +185,6 @@ export class GameLifecycleService {
           `
           UPDATE game_rooms
           SET status = 'lobby',
-              lifecycle_phase = 'lobby',
               ready_check_started_at = NULL,
               turn_number = 0,
               current_turn_user_id = NULL,
@@ -275,7 +272,6 @@ export class GameLifecycleService {
             `
             UPDATE game_rooms
             SET status = 'initializing',
-                lifecycle_phase = 'initializing',
                 ready_check_started_at = NOW(),
                 turn_number = 0,
                 turn_expires_at = NULL
@@ -315,7 +311,6 @@ export class GameLifecycleService {
         `
         UPDATE game_rooms
         SET status = 'lobby',
-            lifecycle_phase = 'lobby',
             ready_check_started_at = NULL,
             turn_number = 0,
             current_turn_user_id = NULL,
@@ -542,15 +537,14 @@ export class GameLifecycleService {
       `
       UPDATE game_rooms
       SET status = 'active',
-          lifecycle_phase = $2,
-          turn_number = $3,
-          current_turn_user_id = $4,
-          turn_expires_at = CASE WHEN $5 > 0 THEN NOW() + ($5 * INTERVAL '1 second') ELSE NULL END,
+          turn_number = $2,
+          current_turn_user_id = $3,
+          turn_expires_at = CASE WHEN $4 > 0 THEN NOW() + ($4 * INTERVAL '1 second') ELSE NULL END,
           ready_check_started_at = NULL,
           started_at = COALESCE(started_at, NOW())
       WHERE id = $1
     `,
-      [roomId, gameState.phase, gameState.turn, gameState.currentPlayer, turnTimer],
+      [roomId, gameState.turn, gameState.currentPlayer, turnTimer],
     )
 
     await query('UPDATE room_players SET is_ready = FALSE, ready_at = NULL WHERE room_id = $1', [
@@ -697,6 +691,27 @@ export class GameLifecycleService {
       return
     }
 
+    // Derive lifecyclePhase for payloads from status + current game phase
+    let computedLifecyclePhase: NonNullable<GameRoom['lifecyclePhase']> = 'lobby'
+    const roomStatus = snapshot.room.status
+    if (roomStatus === 'active') {
+      try {
+        const state = await this.gameService.getGameState(snapshot.room.id)
+        computedLifecyclePhase = (state?.phase ?? 'reinforcement') as NonNullable<
+          GameRoom['lifecyclePhase']
+        >
+      } catch {
+        computedLifecyclePhase = 'reinforcement'
+      }
+    } else if (roomStatus === 'lobby' || roomStatus === 'initializing') {
+      computedLifecyclePhase = roomStatus as NonNullable<GameRoom['lifecyclePhase']>
+    } else if (roomStatus === 'completed') {
+      computedLifecyclePhase = 'reinforcement'
+    } else {
+      // For paused/abandoned or other statuses, default to lobby-like phase
+      computedLifecyclePhase = 'lobby'
+    }
+
     const players = snapshot.room.players?.map((player) => ({
       id: player.id,
       userId: player.userId ?? player.id,
@@ -714,7 +729,7 @@ export class GameLifecycleService {
     const payload = {
       roomId: snapshot.room.id,
       status: snapshot.room.status,
-      lifecyclePhase: snapshot.room.lifecyclePhase ?? 'lobby',
+      lifecyclePhase: computedLifecyclePhase,
       turnNumber: snapshot.room.turnNumber ?? 0,
       currentTurnUserId: snapshot.room.currentTurnUserId ?? null,
       turnExpiresAt: snapshot.room.turnExpiresAt ? snapshot.room.turnExpiresAt.toISOString() : null,
@@ -735,7 +750,7 @@ export class GameLifecycleService {
     io.to(snapshot.room.id).emit('room-update', {
       id: snapshot.room.id,
       status: snapshot.room.status,
-      lifecyclePhase: snapshot.room.lifecyclePhase,
+      lifecyclePhase: computedLifecyclePhase,
       turnNumber: snapshot.room.turnNumber,
       currentTurnUserId: snapshot.room.currentTurnUserId,
       turnExpiresAt: snapshot.room.turnExpiresAt ? snapshot.room.turnExpiresAt.toISOString() : null,
@@ -837,13 +852,12 @@ export class GameLifecycleService {
       const roomRes = await client.query<{
         id: string
         current_turn_user_id: string | null
-        lifecycle_phase: string | null
         turn_number: number | null
         grace_window_seconds: number | null
         grace_actor_user_id: string | null
         grace_expires_at: Date | null
       }>(
-        `SELECT id, current_turn_user_id, lifecycle_phase, turn_number, grace_window_seconds, grace_actor_user_id, grace_expires_at
+        `SELECT id, current_turn_user_id, turn_number, grace_window_seconds, grace_actor_user_id, grace_expires_at
          FROM game_rooms
          WHERE id = $1
          FOR UPDATE`,

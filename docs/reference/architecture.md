@@ -87,4 +87,20 @@ _Last updated: September 30, 2025_
 - **G2 – Large file safeguards:** Duplicate audio assets and backup artefacts remain; Git LFS or commit hooks must be finalized to prevent regressions.
 - **G3 – Minimal analytics & telemetry:** Funnel events (lobby → start → end, approval decisions) and correlated error logging still need to be instrumented with dashboards.
 
+### Game Lifecycle (status vs lifecyclePhase)
+- Canonical lifecycle is stored in `game_rooms.status` with values: `lobby`, `initializing`, `active`, `completed`, `paused`, `abandoned`.
+- The deprecated DB column `lifecycle_phase` was removed. Code no longer reads or writes it.
+- Socket payloads include `lifecyclePhase` for UI convenience:
+  - When `status` is `active`, the server derives `lifecyclePhase` from the current game state phase (`reinforcement`, `attack`, `fortify`, `finished`).
+  - When `status` is `lobby` or `initializing`, `lifecyclePhase` mirrors the `status`.
+  - When `status` is `completed`, `lifecyclePhase` is reported as `finished`.
+- The DB view of the current turn is kept in sync on every turn end:
+  - `game_rooms.current_turn_user_id` and `game_rooms.turn_number` are updated in `GameService.endTurn`.
+  - `game_rooms.turn_expires_at` is updated when turn timers are scheduled (lifecycle/socket flows), not during every action.
+
+Data migration notes
+- Legacy `status = 'finished'` is migrated to `status = 'completed'`, and the DB constraint now disallows `finished`.
+- Unused columns dropped from `game_rooms`: `spectators_allowed`, `replay_available`.
+- The historical `games` shim table (compat for older migrations) is no longer created and is removed by migration in current environments.
+
 Refer to `docs/planning/go-live-plan.md` for daily status, sequencing, and acceptance criteria across these remaining tasks.

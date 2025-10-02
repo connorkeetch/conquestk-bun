@@ -1681,7 +1681,7 @@ export class GameService {
 
       await client.query(
         `UPDATE game_rooms
-         SET status = 'finished',
+         SET status = 'completed',
              ended_at = COALESCE(ended_at, NOW()),
              winner_id = $2,
              updated_at = NOW()

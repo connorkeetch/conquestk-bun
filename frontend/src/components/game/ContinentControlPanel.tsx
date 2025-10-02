@@ -1,6 +1,6 @@
 import type React from 'react'
-import type { GamePlayer } from '@/types/game'
 import { getColorValue } from '@/constants/colors'
+import type { GamePlayer } from '@/types/game'
 import type { ContinentDefinition, PlayerContinentStatus } from '@/utils/continentBonuses'
 
 interface ContinentControlPanelProps {

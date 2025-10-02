@@ -39,13 +39,8 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = ({
     }
   })
 
-  // Sort by turn order (if available) or keep original order
-  const sortedPlayers = [...playerStats].sort((a, b) => {
-    if (typeof a.turnOrder === 'number' && typeof b.turnOrder === 'number') {
-      return a.turnOrder - b.turnOrder
-    }
-    return 0
-  })
+  // Keep current order; turn order metadata not available on player entries
+  const sortedPlayers = playerStats
 
   return (
     <>

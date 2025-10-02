@@ -1161,11 +1161,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           })),
         })
 
-        // Update room status to finished
+        // Update room status to completed
         await query(
           `
           UPDATE game_rooms 
-          SET status = 'finished' 
+          SET status = 'completed' 
           WHERE id = $1
         `,
           [roomId],

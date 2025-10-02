@@ -45,7 +45,7 @@ const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
   grandmaster: 'Grandmaster',
 }
 
-const AI_DIFFICULTY_ORDER: AIDifficulty[] = ['recruit', 'commander', 'grandmaster']
+// AI difficulty ordering constant removed (unused here)
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -64,22 +64,15 @@ export default function GameRoom() {
   const [isRoomLoading, setIsRoomLoading] = useState(false)
   const [roomError, setRoomError] = useState<string | null>(null)
   // Mute button moved to bottom-right floating control; local state not needed here
-  const [_teamUpdating, setTeamUpdating] = useState(false)
-  const [_teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
+  // Removed unused team update state
   const [joinSubmitting, setJoinSubmitting] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
   const [selectedJoinColor, setSelectedJoinColor] = useState<string | null>(null)
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
   // AI opponents generally available in non-ranked lobbies (no flags)
-  const [aiDraftCounts, setAiDraftCounts] = useState<Record<AIDifficulty, number>>({
-    recruit: 0,
-    commander: 0,
-    grandmaster: 0,
-  })
-  const [aiDraftDirty, setAiDraftDirty] = useState(false)
-  const [_aiSaving, setAiSaving] = useState(false)
-  const [_aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
+  // AI drafting controls disabled (state removed)
+  // Removed unused AI update state
   const [mapPreview, setMapPreview] = useState<{
     imageUrl: string | null
     width?: number
@@ -192,21 +185,7 @@ export default function GameRoom() {
     return (currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && count <= 1
   }, [currentRoom, isHost])
 
-  const _showTeamAssignment = useMemo(() => {
-    if (!currentRoom) {
-      return false
-    }
-
-    if (!currentRoom.allowTeamPlay) {
-      return false
-    }
-
-    if (currentRoom.teamMode !== 'teams') {
-      return false
-    }
-
-    return (currentRoom.numberOfTeams ?? 0) > 1
-  }, [currentRoom])
+  // Team assignment UI not used here
 
   // Expiration display for lobby/initializing
   const expiresAtDate = useMemo(() => {
@@ -228,57 +207,9 @@ export default function GameRoom() {
     return `Expires in ${minutes}m`
   }, [])
 
-  const _lobbyTeamPlayers = useMemo(
-    () =>
-      (currentRoom?.players || []).map((player) => ({
-        id: player.id,
-        username: player.username,
-        teamId: player.teamId ?? null,
-        isAi: player.isAi,
-        aiDifficulty: player.aiDifficulty ?? undefined,
-      })),
-    [currentRoom?.players],
-  )
+  // Lobby team details omitted in this view
 
-  const aiPlayersInRoom = useMemo(
-    () => (currentRoom?.players ?? []).filter((player) => player.isAi),
-    [currentRoom?.players],
-  )
-
-  const existingAiCounts = useMemo(() => {
-    const counts: Record<AIDifficulty, number> = {
-      recruit: 0,
-      commander: 0,
-      grandmaster: 0,
-    }
-    aiPlayersInRoom.forEach((player) => {
-      const difficulty = (player.aiDifficulty ?? 'recruit') as AIDifficulty
-      if (AI_DIFFICULTY_ORDER.includes(difficulty)) {
-        counts[difficulty] += 1
-      }
-    })
-    return counts
-  }, [aiPlayersInRoom])
-
-  const flaggedAiDifficulties = useMemo(
-    () => ['recruit', 'commander', 'grandmaster'] as AIDifficulty[],
-    [],
-  )
-
-  const allowedAiDifficulties = useMemo(() => {
-    const allowed = new Set<AIDifficulty>(flaggedAiDifficulties)
-    AI_DIFFICULTY_ORDER.forEach((difficulty) => {
-      if (existingAiCounts[difficulty] > 0) {
-        allowed.add(difficulty)
-      }
-    })
-    return Array.from(allowed)
-  }, [flaggedAiDifficulties, existingAiCounts])
-
-  const humanPlayersCount = useMemo(
-    () => currentRoom?.players?.filter((player) => !player.isAi)?.length ?? 0,
-    [currentRoom?.players],
-  )
+  // AI-related counters removed (not shown in this view)
 
   const mapDisplayName = currentRoom?.mapName || mapPreview?.name || null
 
@@ -290,39 +221,11 @@ export default function GameRoom() {
     return undefined
   }, [mapPreview?.height, mapPreview?.width])
 
-  // Tier mapping and roman numerals for rank display
-  const TIER_BOUNDS = useMemo(
-    () => [
-      { name: 'Chieftain', min: 0, max: 599 },
-      { name: 'Warlord', min: 600, max: 799 },
-      { name: 'Raider King', min: 800, max: 999 },
-      { name: 'Sultan', min: 1000, max: 1199 },
-      { name: 'Caesar', min: 1200, max: 1399 },
-      { name: 'Khan', min: 1400, max: 1599 },
-      { name: 'Emperor', min: 1600, max: 1799 },
-      { name: 'The Great King', min: 1800, max: 1999 },
-      { name: 'Overlord', min: 2000, max: 2199 },
-      { name: 'Worldbreaker', min: 2200, max: 9999 },
-    ],
-    [],
-  )
+  // Tier mapping helpers removed (unused)
 
-  const _ratingToTier = useCallback(
-    (rating: number | null | undefined) => {
-      if (typeof rating !== 'number') return null
-      return (
-        TIER_BOUNDS.find((t) => rating >= t.min && rating <= t.max) ??
-        TIER_BOUNDS.find((t) => t.name === 'Sultan') ??
-        null
-      )
-    },
-    [TIER_BOUNDS],
-  )
+  // Tier mapping helpers unused in this component
 
-  const _romanNumeral = useCallback((index1: number) => {
-    const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
-    return romans[Math.max(1, Math.min(index1, romans.length)) - 1] ?? String(index1)
-  }, [])
+  // Roman numeral helper unused
 
   useEffect(() => {
     let isActive = true
@@ -518,157 +421,13 @@ export default function GameRoom() {
     return () => document.removeEventListener('keydown', handleKey)
   }, [joinDialogOpen])
 
-  const roomMaxPlayers = currentRoom?.maxPlayers ?? 0
-  const maxAiCapacity = useMemo(
-    () => Math.max(0, roomMaxPlayers - humanPlayersCount),
-    [roomMaxPlayers, humanPlayersCount],
-  )
+  // In-room AI controls disabled; AI set at creation time
 
-  // In-room AI controls are disabled; AI should be set at creation time
-  const showAiControls = false
+  // AI draft normalization and effects removed
 
-  const normalizeAiDraftCounts = useCallback(
-    (counts: Record<AIDifficulty, number>): Record<AIDifficulty, number> => {
-      const baseline: Record<AIDifficulty, number> = {
-        recruit: 0,
-        commander: 0,
-        grandmaster: 0,
-      }
+  // Omit derived AI controls (unused)
 
-      if (!showAiControls || allowedAiDifficulties.length === 0) {
-        return baseline
-      }
-
-      const sanitized: Record<AIDifficulty, number> = { ...baseline }
-      let total = 0
-
-      allowedAiDifficulties.forEach((difficulty) => {
-        const raw = counts[difficulty] ?? 0
-        const value = Math.max(0, Math.trunc(raw))
-        sanitized[difficulty] = value
-        total += value
-      })
-
-      let overflow = total - maxAiCapacity
-      if (overflow > 0) {
-        const reductionOrder = [...AI_DIFFICULTY_ORDER].reverse()
-        while (overflow > 0) {
-          const target = reductionOrder.find(
-            (difficulty) => allowedAiDifficulties.includes(difficulty) && sanitized[difficulty] > 0,
-          )
-          if (!target) {
-            break
-          }
-          sanitized[target] -= 1
-          overflow -= 1
-        }
-      }
-
-      return sanitized
-    },
-    [allowedAiDifficulties, maxAiCapacity],
-  )
-
-  useEffect(() => {
-    setAiDraftCounts((previous) => normalizeAiDraftCounts(previous))
-  }, [normalizeAiDraftCounts])
-
-  useEffect(() => {
-    if (!showAiControls) {
-      if (aiDraftDirty || aiPlayersInRoom.length === 0) {
-        setAiDraftCounts({ recruit: 0, commander: 0, grandmaster: 0 })
-        setAiDraftDirty(false)
-        setAiErrorMessage(null)
-      }
-      return
-    }
-
-    if (!aiDraftDirty) {
-      setAiDraftCounts(normalizeAiDraftCounts(existingAiCounts))
-    }
-  }, [aiDraftDirty, aiPlayersInRoom.length, existingAiCounts, normalizeAiDraftCounts])
-
-  const draftTotalAi = allowedAiDifficulties.reduce(
-    (sum, difficulty) => sum + (aiDraftCounts[difficulty] ?? 0),
-    0,
-  )
-  const _aiSlotsRemaining = Math.max(0, maxAiCapacity - draftTotalAi)
-
-  const _hasAiChanges = useMemo(() => {
-    if (!showAiControls) {
-      return false
-    }
-    return AI_DIFFICULTY_ORDER.some(
-      (difficulty) => (aiDraftCounts[difficulty] ?? 0) !== (existingAiCounts[difficulty] ?? 0),
-    )
-  }, [aiDraftCounts, existingAiCounts])
-
-  const buildAiOpponentPayload = useCallback(
-    (counts: Record<AIDifficulty, number>) => {
-      const payload: Array<{ difficulty: AIDifficulty; personalitySeed?: number | null }> = []
-      allowedAiDifficulties.forEach((difficulty) => {
-        const count = counts[difficulty] ?? 0
-        for (let index = 0; index < count; index += 1) {
-          payload.push({ difficulty })
-        }
-      })
-      return payload
-    },
-    [allowedAiDifficulties],
-  )
-
-  const _updateAiCount = useCallback(
-    (difficulty: AIDifficulty, value: number) => {
-      setAiDraftDirty(true)
-      setAiErrorMessage(null)
-      setAiDraftCounts((previous) => normalizeAiDraftCounts({ ...previous, [difficulty]: value }))
-    },
-    [normalizeAiDraftCounts],
-  )
-
-  const _stepAiCount = useCallback(
-    (difficulty: AIDifficulty, delta: number) => {
-      setAiDraftDirty(true)
-      setAiErrorMessage(null)
-      setAiDraftCounts((previous) =>
-        normalizeAiDraftCounts({ ...previous, [difficulty]: (previous[difficulty] ?? 0) + delta }),
-      )
-    },
-    [normalizeAiDraftCounts],
-  )
-
-  const _resetAiDraft = useCallback(() => {
-    setAiDraftCounts(normalizeAiDraftCounts(existingAiCounts))
-    setAiDraftDirty(false)
-    setAiErrorMessage(null)
-  }, [existingAiCounts, normalizeAiDraftCounts])
-
-  const _handleAiSave = useCallback(async () => {
-    if (!currentRoom) {
-      return
-    }
-    setAiSaving(true)
-    setAiErrorMessage(null)
-    try {
-      const payload = buildAiOpponentPayload(normalizeAiDraftCounts(aiDraftCounts))
-      const response = await gameService.updateAiOpponents(currentRoom.id, payload)
-      if (response?.room) {
-        dispatch(setCurrentRoom(response.room))
-      }
-      setAiDraftDirty(false)
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error && 'response' in error) {
-        const apiError = error as { response?: { data?: { message?: string } } }
-        setAiErrorMessage(apiError.response?.data?.message ?? 'Failed to update AI opponents')
-      } else if (error instanceof Error) {
-        setAiErrorMessage(error.message)
-      } else {
-        setAiErrorMessage('Failed to update AI opponents')
-      }
-    } finally {
-      setAiSaving(false)
-    }
-  }, [aiDraftCounts, buildAiOpponentPayload, currentRoom, dispatch, normalizeAiDraftCounts])
+  // Omit AI save handlers (unused)
 
   const joinActionDisabled =
     joinSubmitting || !currentRoom || currentRoom.status !== 'lobby' || lobbyFull
@@ -1100,49 +859,7 @@ export default function GameRoom() {
     }
   }, [roomId, isMember, currentRoom, lobbyFull, dispatch, selectedJoinColor])
 
-  const _handleTeamChange = useCallback(
-    async (playerId: string, teamId: number) => {
-      if (!roomId || !isHost) {
-        return
-      }
-
-      const existingTeamId =
-        currentRoom?.players?.find((player) => player.id === playerId)?.teamId ?? null
-
-      if (existingTeamId === teamId) {
-        return
-      }
-
-      try {
-        setTeamUpdating(true)
-        setTeamUpdateError(null)
-        const response = await gameService.assignPlayerTeam(roomId, playerId, teamId)
-        if (response?.room) {
-          dispatch(setCurrentRoom(response.room))
-        }
-      } catch (error: unknown) {
-        let message = 'Failed to update team assignment'
-        if (typeof error === 'object' && error !== null) {
-          if ('response' in error) {
-            const apiError = error as { response?: { data?: { message?: string } } }
-            message = apiError.response?.data?.message ?? message
-          } else if (
-            'message' in error &&
-            typeof (error as { message?: unknown }).message === 'string'
-          ) {
-            message = (error as { message: string }).message
-          }
-        } else if (error instanceof Error) {
-          message = error.message
-        }
-
-        setTeamUpdateError(message)
-      } finally {
-        setTeamUpdating(false)
-      }
-    },
-    [roomId, dispatch, isHost, currentRoom],
-  )
+  // Team change handler not used here
 
   if (roomError) {
     return (
@@ -1540,15 +1257,21 @@ export default function GameRoom() {
                 </h2>
                 <p className="text-sm text-muted">
                   {(() => {
-                    const total = currentRoom.maxPlayers
-                    const joined = currentRoom.players?.length || 0
+                    const cr = currentRoom as {
+                      maxPlayers?: number
+                      players?: unknown[]
+                      status?: string
+                    } | null
+                    const total = cr?.maxPlayers ?? 0
+                    const joined = (cr?.players as unknown[] | undefined)?.length ?? 0
                     const needed = Math.max(0, total - joined)
                     return needed > 0
                       ? `Need ${needed} more ${needed === 1 ? 'player' : 'players'} to begin`
                       : `All players present • ${joined}/${total}`
                   })()}
                 </p>
-                {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
+                {((currentRoom as { status?: string } | null)?.status === 'lobby' ||
+                  (currentRoom as { status?: string } | null)?.status === 'initializing') && (
                   <p
                     className="text-xs text-muted"
                     title={expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined}
@@ -1569,7 +1292,7 @@ export default function GameRoom() {
               players={currentGame.players || []}
               currentPlayerId={currentGame.currentPlayer}
               territories={Object.fromEntries(
-                (currentGame.board || []).map((t) => [t.id, { owner: t.owner }]),
+                (currentGame.board || []).map((t) => [t.id, { owner: t.ownerId }]),
               )}
             />
           ) : (

@@ -443,7 +443,6 @@ export default function ResponsiveMapContainer({
           </div>
         )}
 
-
         {/* Minimap */}
         {showMinimap && (
           <button

@@ -39,7 +39,7 @@ describe('GameRoomService.ensureAiReadyStates', () => {
           team_mode: false,
           number_of_teams: null,
           is_ranked: false,
-          lifecycle_phase: 'lobby',
+          // lifecycle_phase removed; status drives lobby/initializing now
           turn_number: 0,
           turn_expires_at: null,
           ready_check_started_at: null,
