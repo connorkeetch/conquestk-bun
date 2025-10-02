@@ -7,6 +7,8 @@ import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TurnTimer } from '@/components/game/TurnTimer'
+// audioService toggled via floating MuteButton component
+import MuteButton from '@/components/MuteButton'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
@@ -18,8 +20,6 @@ import { RiskGameBoard } from '../components/RiskGameBoard'
 import { Skeleton } from '../components/ui/Skeleton'
 import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-// audioService toggled via floating MuteButton component
-import MuteButton from '@/components/MuteButton'
 import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
@@ -1194,7 +1194,7 @@ export default function GameRoom() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-20 pt-8 lg:px-10">
+    <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] flex-col gap-6 px-6 pb-20 pt-8 lg:px-10">
       {/* Mini HUD for mobile */}
       {currentGame && (
         <div className="md:hidden fixed top-2 left-1/2 z-40 -translate-x-1/2">
@@ -1270,7 +1270,11 @@ export default function GameRoom() {
                 {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
               </button>
               {hostIsAloneInLobby ? (
-                <button onClick={() => void handleCancelRoom()} type="button" className="btn btn-danger">
+                <button
+                  onClick={() => void handleCancelRoom()}
+                  type="button"
+                  className="btn btn-danger"
+                >
                   Close Room
                 </button>
               ) : (
@@ -1466,101 +1470,95 @@ export default function GameRoom() {
 
       <div className="flex flex-col gap-6">
         {/* Game Board - full width */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <div className="panel flex-1 p-0 overflow-hidden">
-            {currentGame ? (
-              <RiskGameBoard
-                mapId={currentRoom?.mapId || 'world'}
-                onTerritoryClick={(_territoryId) => {
-                  // TODO: Handle territory interactions based on game phase
-                }}
-              />
-            ) : currentRoom ? (
-              <RiskGameBoard
-                mapId={currentRoom.mapId || 'world'}
-                lobbyMode={true}
-                lobbyPlayers={
-                  currentRoom.players?.map((p) => ({
-                    id: p.id,
-                    username: p.username,
-                    // biome-ignore lint/suspicious/noExplicitAny: Lobby snapshot still exposes legacy snake_case color field
-                    color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
-                  })) || []
-                }
-                onTerritoryClick={(_territoryId) => {
-                  // No interaction in lobby mode
-                }}
-              />
-            ) : (
-              <div className="flex h-full flex-col">
-                <div
-                  className="relative flex flex-1 items-center justify-center overflow-hidden bg-[color:var(--surface-2)] p-6"
-                  style={mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined}
-                >
-                  {mapPreviewLoading ? (
-                    <div className="flex flex-col items-center gap-2 text-center">
-                      <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent"></div>
-                      <p className="text-sm text-muted">Loading map preview...</p>
-                    </div>
-                  ) : mapPreview?.imageUrl ? (
-                    <img
-                      src={mapPreview.imageUrl}
-                      alt={
-                        mapDisplayName
-                          ? `Map preview for ${mapDisplayName}`
-                          : 'Selected map preview'
-                      }
-                      className="max-h-full max-w-full object-contain"
-                      style={
-                        mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined
-                      }
-                    />
-                  ) : (
-                    <div className="px-6 text-center text-muted">
-                      <p>{mapPreviewError ?? 'Map preview will appear once it is ready.'}</p>
-                    </div>
-                  )}
-                  {mapDisplayName && (
-                    <div className="pointer-events-none absolute left-6 top-6 rounded-full bg-black/65 px-4 py-1 text-sm font-medium text-white backdrop-blur">
-                      {mapDisplayName}
-                      {typeof mapPreview?.territoryCount === 'number' &&
-                        mapPreview.territoryCount > 0 && (
-                          <span className="ml-2 text-xs text-white/80">
-                            · {mapPreview.territoryCount}{' '}
-                            {mapPreview.territoryCount === 1 ? 'territory' : 'territories'}
-                          </span>
-                        )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-center justify-center gap-3 px-6 pb-6 pt-4 text-center">
-                  <h2 className="text-xl font-semibold text-[color:var(--heading)]">
-                    Waiting for game to start...
-                  </h2>
-                  <p className="text-sm text-muted">
-                    {(() => {
-                      const total = currentRoom.maxPlayers
-                      const joined = currentRoom.players?.length || 0
-                      const needed = Math.max(0, total - joined)
-                      return needed > 0
-                        ? `Need ${needed} more ${needed === 1 ? 'player' : 'players'} to begin`
-                        : `All players present • ${joined}/${total}`
-                    })()}
-                  </p>
-                  {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
-                    <p
-                      className="text-xs text-muted"
-                      title={
-                        expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined
-                      }
-                    >
-                      {formatTimeUntil(expiresAtDate)}
-                    </p>
-                  )}
-                </div>
+        <div className="flex-1 min-w-0 flex flex-col min-h-[55vh] xl:min-h-[70vh]">
+          {currentGame ? (
+            <RiskGameBoard
+              mapId={currentRoom?.mapId || 'world'}
+              onTerritoryClick={(_territoryId) => {
+                // TODO: Handle territory interactions based on game phase
+              }}
+            />
+          ) : currentRoom ? (
+            <RiskGameBoard
+              mapId={currentRoom.mapId || 'world'}
+              lobbyMode={true}
+              lobbyPlayers={
+                currentRoom.players?.map((p) => ({
+                  id: p.id,
+                  username: p.username,
+                  // biome-ignore lint/suspicious/noExplicitAny: Lobby snapshot still exposes legacy snake_case color field
+                  color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
+                })) || []
+              }
+              onTerritoryClick={(_territoryId) => {
+                // No interaction in lobby mode
+              }}
+            />
+          ) : (
+            <div className="flex h-full flex-col">
+              <div
+                className="relative flex flex-1 items-center justify-center overflow-hidden bg-[color:var(--surface-2)] p-6"
+                style={mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined}
+              >
+                {mapPreviewLoading ? (
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent"></div>
+                    <p className="text-sm text-muted">Loading map preview...</p>
+                  </div>
+                ) : mapPreview?.imageUrl ? (
+                  <img
+                    src={mapPreview.imageUrl}
+                    alt={
+                      mapDisplayName ? `Map preview for ${mapDisplayName}` : 'Selected map preview'
+                    }
+                    className="max-h-full max-w-full object-contain"
+                    style={
+                      mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined
+                    }
+                  />
+                ) : (
+                  <div className="px-6 text-center text-muted">
+                    <p>{mapPreviewError ?? 'Map preview will appear once it is ready.'}</p>
+                  </div>
+                )}
+                {mapDisplayName && (
+                  <div className="pointer-events-none absolute left-6 top-6 rounded-full bg-black/65 px-4 py-1 text-sm font-medium text-white backdrop-blur">
+                    {mapDisplayName}
+                    {typeof mapPreview?.territoryCount === 'number' &&
+                      mapPreview.territoryCount > 0 && (
+                        <span className="ml-2 text-xs text-white/80">
+                          · {mapPreview.territoryCount}{' '}
+                          {mapPreview.territoryCount === 1 ? 'territory' : 'territories'}
+                        </span>
+                      )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+              <div className="flex flex-col items-center justify-center gap-3 px-6 pb-6 pt-4 text-center">
+                <h2 className="text-xl font-semibold text-[color:var(--heading)]">
+                  Waiting for game to start...
+                </h2>
+                <p className="text-sm text-muted">
+                  {(() => {
+                    const total = currentRoom.maxPlayers
+                    const joined = currentRoom.players?.length || 0
+                    const needed = Math.max(0, total - joined)
+                    return needed > 0
+                      ? `Need ${needed} more ${needed === 1 ? 'player' : 'players'} to begin`
+                      : `All players present • ${joined}/${total}`
+                  })()}
+                </p>
+                {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
+                  <p
+                    className="text-xs text-muted"
+                    title={expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined}
+                  >
+                    {formatTimeUntil(expiresAtDate)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Player Stats & Chat Row - below map */}

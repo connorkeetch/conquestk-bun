@@ -52,7 +52,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   }, [selectedTargetTerritory, selectedTerritory, territories])
 
   return (
-    <div className="game-board flex-1 relative bg-surface-2 p-2 sm:p-4">
+    <div className="game-board flex-1 relative bg-surface-2 p-2 sm:p-4 min-h-[360px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[640px]">
       <div className="relative w-full h-full">
         <CustomMapDisplay
           mapId={mapId}
