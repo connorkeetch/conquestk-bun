@@ -2,6 +2,7 @@ import type { GameDelta } from '@risk-game/shared/types'
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { query } from '../config/database'
+import { gameStateCache } from '../services/cacheService'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import {
@@ -17,6 +18,7 @@ import type {
   GameAction,
   GamePhase,
   GameState,
+  SerializedGameState,
 } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
@@ -226,6 +228,22 @@ export class GameActionWorker {
         case 'go_back_to_reinforcement':
           delta = await this.processPhaseChange(gameId, playerId, action)
           break
+
+        case 'undo_fortify': {
+          // Process undo fortify by delegating to the generic action path
+          await this.gameService.processGameAction(
+            { type: 'undo_fortify', roomId: gameId, playerId },
+            playerId,
+          )
+          // Emit full state update since we don't have a lightweight delta
+          const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+          if (serialized) {
+            this.io.to(`game:${gameId}`).emit('game-update', serialized)
+          }
+          // Avoid emitting an extra delta below
+          shouldBroadcast = false
+          break
+        }
 
         default: {
           const _exhaustive: never = action

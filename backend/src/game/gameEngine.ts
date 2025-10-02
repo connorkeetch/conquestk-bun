@@ -657,8 +657,9 @@ export class GameEngine {
       return
     }
 
+    // Guard against double-processing within the same round. If we've already
+    // processed scoring/rotation for this gameState.turn, do nothing.
     if (state.lastScoreTurn === gameState.turn) {
-      this.progressKingOfTheHillRotation(gameState)
       return
     }
 
@@ -691,6 +692,14 @@ export class GameEngine {
       return
     }
 
+    // DEBUG: trace KOTH rotation progression during tests
+    // console.log('[KOTH] progress start', {
+    //   turn: gameState.turn,
+    //   current: state.currentHillTerritoryId,
+    //   turnsUntilRotation: state.turnsUntilRotation,
+    //   queueHead: state.rotationQueue?.[0],
+    // })
+
     const remaining =
       typeof state.turnsUntilRotation === 'number'
         ? state.turnsUntilRotation - 1
@@ -711,6 +720,14 @@ export class GameEngine {
     if (!state || !state.rotationInterval || state.rotationInterval <= 0) {
       return
     }
+
+    // DEBUG: trace KOTH rotation
+    // console.log('[KOTH] rotate', {
+    //   turn: gameState.turn,
+    //   from: state.currentHillTerritoryId,
+    //   to: state.rotationQueue?.[0],
+    //   queueLen: state.rotationQueue?.length,
+    // })
 
     const queue = state.rotationQueue ? [...state.rotationQueue] : []
     if (queue.length === 0) {
@@ -1136,7 +1153,7 @@ export class GameEngine {
 
   private handleUndoFortify(
     gameState: GameState,
-    action: import('./../../types/game').UndoFortifyAction,
+    action: import('../types/game').UndoFortifyAction,
   ): GameState {
     if (!this.validateUndoFortify(gameState, action)) {
       throw new Error('Invalid undo fortify action')
@@ -1484,7 +1501,7 @@ export class GameEngine {
 
   private validateUndoFortify(
     gameState: GameState,
-    action: import('./../../types/game').UndoFortifyAction,
+    action: import('../types/game').UndoFortifyAction,
   ): boolean {
     // Must be in fortify phase
     if (gameState.phase !== 'fortify') return false
