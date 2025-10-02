@@ -20,6 +20,7 @@ interface ReadyPlayerRow {
   is_ai: boolean | null
   ai_difficulty: string | null
   ai_personality_seed: number | null
+  selected_color: string | null
 }
 
 export interface LifecycleSnapshot {
@@ -100,7 +101,18 @@ export class GameLifecycleService {
 
       const playersResult = await client.query<ReadyPlayerRow>(
         `
-        SELECT id, user_id, ai_player_id, is_ready, ready_at, joined_at, team_id, is_ai, ai_difficulty, ai_personality_seed
+        SELECT
+          id,
+          user_id,
+          ai_player_id,
+          is_ready,
+          ready_at,
+          joined_at,
+          team_id,
+          is_ai,
+          ai_difficulty,
+          ai_personality_seed,
+          selected_color
         FROM room_players
         WHERE room_id = $1
         ORDER BY joined_at ASC
@@ -233,7 +245,18 @@ export class GameLifecycleService {
       if (lifecycleStatus === 'lobby') {
         const playersResult = await client.query<ReadyPlayerRow>(
           `
-          SELECT id, user_id, ai_player_id, is_ready, ready_at, joined_at, team_id, is_ai, ai_difficulty, ai_personality_seed
+          SELECT
+            id,
+            user_id,
+            ai_player_id,
+            is_ready,
+            ready_at,
+            joined_at,
+            team_id,
+            is_ai,
+            ai_difficulty,
+            ai_personality_seed,
+            selected_color
           FROM room_players
           WHERE room_id = $1
           ORDER BY joined_at ASC
@@ -385,6 +408,20 @@ export class GameLifecycleService {
         return undefined
       })()
 
+      const selectedColor = (() => {
+        const fromRoom = matchingRoomPlayer?.selected_color
+        if (typeof fromRoom === 'string' && fromRoom.trim().length > 0) {
+          return fromRoom.trim()
+        }
+
+        const fromRow = player.selected_color
+        if (typeof fromRow === 'string' && fromRow.trim().length > 0) {
+          return fromRow.trim()
+        }
+
+        return null
+      })()
+
       return {
         userId: configUserId,
         username: matchingRoomPlayer?.username,
@@ -392,6 +429,7 @@ export class GameLifecycleService {
         isAi: player.is_ai === true || matchingRoomPlayer?.isAi === true,
         aiDifficulty: normalizedDifficulty,
         aiPersonalitySeed: personalitySeed,
+        color: selectedColor ?? undefined,
       }
     })
 

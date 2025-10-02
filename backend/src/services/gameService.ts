@@ -53,6 +53,7 @@ type PlayerConfig = {
   isAi?: boolean
   aiDifficulty?: AIDifficulty | null
   aiPersonalitySeed?: number | null
+  color?: string | null
 }
 
 type BattleLogEntry = {

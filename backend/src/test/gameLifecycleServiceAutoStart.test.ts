@@ -101,6 +101,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
         is_ai: false,
         ai_difficulty: null,
         ai_personality_seed: null,
+        selected_color: '#DC2626',
       },
       {
         id: 'slot-2',
@@ -113,6 +114,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
         is_ai: false,
         ai_difficulty: null,
         ai_personality_seed: null,
+        selected_color: '#851D2D',
       },
       {
         id: 'slot-3',
@@ -125,6 +127,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
         is_ai: false,
         ai_difficulty: null,
         ai_personality_seed: null,
+        selected_color: '#EC4899',
       },
     ]
 
@@ -150,7 +153,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
         }
       }
 
-      if (sql.includes('SELECT id, user_id')) {
+      if (sql.includes('FROM room_players')) {
         return { rows: playerRows, rowCount: playerRows.length }
       }
 
@@ -216,6 +219,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
         is_ai: false,
         ai_difficulty: null,
         ai_personality_seed: null,
+        selected_color: '#DC2626',
       },
       {
         id: 'slot-2',
@@ -228,6 +232,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
         is_ai: false,
         ai_difficulty: null,
         ai_personality_seed: null,
+        selected_color: '#851D2D',
       },
     ]
 
@@ -253,7 +258,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
         }
       }
 
-      if (sql.includes('SELECT id, user_id')) {
+      if (sql.includes('FROM room_players')) {
         return { rows: playerRows, rowCount: playerRows.length }
       }
 

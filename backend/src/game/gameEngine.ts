@@ -200,27 +200,98 @@ export class GameEngine {
       isAi?: boolean
       aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null
       aiPersonalitySeed?: number | null
+      color?: string | null
     }>,
   ): GamePlayer[] {
-    const colors = [
-      'red',
-      'blue',
-      'green',
-      'yellow',
-      'purple',
-      'orange',
-      'cyan',
-      'pink',
-      'brown',
-      'lime',
-      'teal',
-      'indigo',
+    const fallbackPalette = [
+      '#DC2626',
+      '#851D2D',
+      '#EC4899',
+      '#EA580C',
+      '#F59E0B',
+      '#014421',
+      '#059669',
+      '#2563EB',
+      '#06B6D4',
+      '#7C3AED',
+      '#918151',
+      '#5C4033',
     ]
+
+    const namedPalette: Record<string, string> = {
+      red: '#DC2626',
+      blue: '#2563EB',
+      green: '#059669',
+      yellow: '#F59E0B',
+      purple: '#7C3AED',
+      orange: '#EA580C',
+      cyan: '#06B6D4',
+      pink: '#EC4899',
+      brown: '#5C4033',
+      lime: '#014421',
+      indigo: '#7C3AED',
+      teal: '#06B6D4',
+    }
+
+    const assigned = new Set<string>()
+
+    const colorKey = (value: string): string => {
+      const trimmed = value.trim()
+      if (trimmed.startsWith('#')) {
+        return trimmed.toUpperCase()
+      }
+      return trimmed.toLowerCase()
+    }
+
+    const normalizeColor = (value?: string | null): string | null => {
+      if (!value || typeof value !== 'string') {
+        return null
+      }
+
+      const trimmed = value.trim()
+      if (!trimmed) {
+        return null
+      }
+
+      if (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(trimmed)) {
+        return trimmed.toUpperCase()
+      }
+
+      const mapped = namedPalette[trimmed.toLowerCase()]
+      if (mapped) {
+        return mapped
+      }
+
+      return trimmed
+    }
+
+    const resolveColor = (candidate: string | null | undefined, fallbackIndex: number): string => {
+      const normalized = normalizeColor(candidate)
+      if (normalized) {
+        const key = colorKey(normalized)
+        if (!assigned.has(key)) {
+          assigned.add(key)
+          return normalized
+        }
+      }
+
+      for (const fallback of fallbackPalette) {
+        const key = colorKey(fallback)
+        if (!assigned.has(key)) {
+          assigned.add(key)
+          return fallback
+        }
+      }
+
+      const fallback = fallbackPalette[fallbackIndex % fallbackPalette.length]
+      assigned.add(colorKey(fallback))
+      return fallback
+    }
 
     return playerConfigs.map((player, index) => ({
       id: player.userId,
       username: player.username || `Player ${index + 1}`,
-      color: colors[index % colors.length],
+      color: resolveColor(player.color, index),
       armies: this.calculateInitialArmies(playerConfigs.length),
       territories: [],
       cards: [],
