@@ -105,6 +105,7 @@ export default function GameRoom() {
   const mobileDrawerId = useId()
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
+  const lastConquestHandledRef = useRef<string | null>(null)
 
   // Prevent background scroll when the bottom drawer is open
   useEffect(() => {
@@ -827,42 +828,69 @@ export default function GameRoom() {
   const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
 
   useEffect(() => {
-    if (!battleResult || !battleResult.conquered || !currentGame || !user) return
-
-    // Only show modal for the current player who just conquered
-    if (currentGame.currentPlayer !== user.id) return
-
-    const fromTerritory = currentGame.board.find(
-      (t) =>
-        t.id ===
-        (typeof battleResult.fromTerritory === 'string'
-          ? battleResult.fromTerritory
-          : battleResult.fromTerritory.id),
-    )
-    const toTerritory = currentGame.board.find(
-      (t) =>
-        t.id ===
-        (typeof battleResult.toTerritory === 'string'
-          ? battleResult.toTerritory
-          : battleResult.toTerritory.id),
-    )
-
-    if (!fromTerritory || !toTerritory) return
-
-    // Calculate available armies (current - 1 that must stay)
-    const availableArmies = Math.max(0, fromTerritory.armies - 1)
-
-    // If there are armies to transfer, show the modal
-    if (availableArmies > 0) {
-      dispatch(
-        setConquestTransfer({
-          fromTerritoryId: fromTerritory.id,
-          toTerritoryId: toTerritory.id,
-          availableArmies,
-        }),
-      )
+    if (!battleResult || !battleResult.conquered || !currentGame || !user) {
+      return
     }
-  }, [battleResult, currentGame, user, dispatch])
+
+    const actingPlayer = currentGame.players.find(
+      (player) => player.id === currentGame.currentPlayer,
+    )
+    const actingUserId = actingPlayer?.userId ?? actingPlayer?.id ?? null
+
+    if (!actingUserId || actingUserId !== user.id) {
+      return
+    }
+
+    const fromId =
+      typeof battleResult.fromTerritory === 'string'
+        ? battleResult.fromTerritory
+        : battleResult.fromTerritory.id
+    const toId =
+      typeof battleResult.toTerritory === 'string'
+        ? battleResult.toTerritory
+        : battleResult.toTerritory.id
+
+    const fromTerritory = currentGame.board.find((territory) => territory.id === fromId)
+    const toTerritory = currentGame.board.find((territory) => territory.id === toId)
+
+    if (!fromTerritory || !toTerritory) {
+      return
+    }
+
+    const availableArmies = Math.max(0, fromTerritory.armies - 1)
+    if (availableArmies <= 0) {
+      return
+    }
+
+    const conquestKey = `${currentGame.turn}:${fromTerritory.id}->${toTerritory.id}`
+
+    if (lastConquestHandledRef.current === conquestKey) {
+      if (
+        conquestTransfer &&
+        (conquestTransfer.fromTerritoryId !== fromTerritory.id ||
+          conquestTransfer.toTerritoryId !== toTerritory.id ||
+          conquestTransfer.availableArmies !== availableArmies)
+      ) {
+        dispatch(
+          setConquestTransfer({
+            fromTerritoryId: fromTerritory.id,
+            toTerritoryId: toTerritory.id,
+            availableArmies,
+          }),
+        )
+      }
+      return
+    }
+
+    lastConquestHandledRef.current = conquestKey
+    dispatch(
+      setConquestTransfer({
+        fromTerritoryId: fromTerritory.id,
+        toTerritoryId: toTerritory.id,
+        availableArmies,
+      }),
+    )
+  }, [battleResult, conquestTransfer, currentGame, user, dispatch])
 
   // No ready toggle; start triggers when lobby is full
 
