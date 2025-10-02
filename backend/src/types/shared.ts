@@ -348,6 +348,12 @@ export interface ClientToServerEvents {
     toTerritoryId: string
     armies: number
   }) => void
+  transferConquestArmies: (data: {
+    roomId: string
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+  }) => void
   endTurn: (data: { roomId: string }) => void
   'afk:skip': (data: { roomId: string }) => void
   'afk:remind': (data: { roomId: string }) => void

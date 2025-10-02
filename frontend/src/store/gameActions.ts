@@ -308,11 +308,7 @@ export const undoLastPlacement = createAsyncThunk(
 export const executeAttack = createAsyncThunk(
   'game/executeAttack',
   async (
-    {
-      fromTerritoryId,
-      toTerritoryId,
-      commitArmies,
-    }: { fromTerritoryId: string; toTerritoryId: string; commitArmies?: number },
+    { fromTerritoryId, toTerritoryId }: { fromTerritoryId: string; toTerritoryId: string },
     { getState, dispatch },
   ) => {
     const state = getState() as RootState
@@ -321,11 +317,8 @@ export const executeAttack = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      const commit =
-        typeof commitArmies === 'number' && commitArmies > 0
-          ? commitArmies
-          : (state.uiRoom?.attackCommit ?? 1)
-      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId, commit)
+      // Always commit 1 army initially; user will decide transfer amount via modal after conquest
+      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId, 1)
 
       dispatch(
         addTerritoryAction({
@@ -338,6 +331,44 @@ export const executeAttack = createAsyncThunk(
       dispatch(selectTargetTerritory(toTerritoryId))
     } catch (_error) {
       dispatch(setError('Failed to execute attack'))
+    }
+  },
+)
+
+// Transfer armies after conquest
+export const transferConquestArmies = createAsyncThunk(
+  'game/transferConquestArmies',
+  async (
+    {
+      fromTerritoryId,
+      toTerritoryId,
+      armies,
+    }: { fromTerritoryId: string; toTerritoryId: string; armies: number },
+    { getState, dispatch },
+  ) => {
+    const state = getState() as RootState
+    const { currentGame } = state.game
+
+    if (!currentGame) throw new Error('No active game')
+
+    try {
+      // Use the new transferConquestArmies socket event
+      socketService.transferConquestArmies(
+        currentGame.roomId,
+        fromTerritoryId,
+        toTerritoryId,
+        armies,
+      )
+
+      dispatch(
+        addTerritoryAction({
+          territoryId: fromTerritoryId,
+          action: `Transfer ${armies} to ${toTerritoryId}`,
+        }),
+      )
+    } catch (_error) {
+      dispatch(setError('Failed to transfer armies'))
+      toast.error('Failed to transfer armies')
     }
   },
 )

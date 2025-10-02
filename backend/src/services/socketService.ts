@@ -722,6 +722,94 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
+    // Transfer armies after conquest (during attack phase)
+    socket.on(
+      'transferConquestArmies',
+      withErrorHandler(socket, 'transferConquestArmies', async (data) => {
+        if (
+          !data ||
+          !data.roomId ||
+          !data.fromTerritoryId ||
+          !data.toTerritoryId ||
+          typeof data.armies !== 'number'
+        ) {
+          throw new Error('Invalid conquest transfer data')
+        }
+
+        const userId = requireUserId(socket)
+
+        // Authorization check: verify player is in the room
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) {
+          throw new Error('Unauthorized: You are not a member of this game')
+        }
+
+        // Get current game state
+        const gameState = await gameService.getGameState(data.roomId)
+        if (!gameState) {
+          throw new Error('Game not found')
+        }
+
+        // Validate this is during attack phase
+        if (gameState.phase !== 'attack') {
+          throw new Error('Can only transfer conquest armies during attack phase')
+        }
+
+        // Validate both territories are owned by the player
+        const fromTerritory = gameState.board.find((t) => t.id === data.fromTerritoryId)
+        const toTerritory = gameState.board.find((t) => t.id === data.toTerritoryId)
+
+        if (!fromTerritory || !toTerritory) {
+          throw new Error('Territory not found')
+        }
+
+        if (fromTerritory.ownerId !== userId || toTerritory.ownerId !== userId) {
+          throw new Error('You must own both territories')
+        }
+
+        // Validate territories are adjacent (conquest just happened)
+        if (!fromTerritory.adjacentTerritories.includes(toTerritory.id)) {
+          throw new Error('Territories must be adjacent for conquest transfer')
+        }
+
+        // Validate army counts
+        if (data.armies < 0 || data.armies >= fromTerritory.armies) {
+          throw new Error('Invalid army count for transfer')
+        }
+
+        // Perform the transfer
+        fromTerritory.armies -= data.armies
+        toTerritory.armies += data.armies
+
+        // Save using the game service's snapshot method
+        const serialized = serializeGameStateForClient(gameState)
+        if (!serialized) {
+          throw new Error('Failed to serialize game state')
+        }
+        await gameService.saveSnapshot(data.roomId, serialized)
+
+        // Broadcast updated game state
+        const channel = getGameChannel(data.roomId)
+        io.to(channel).emit('game-update', serialized)
+
+        // Also send territory deltas for efficient updates
+        io.to(channel).emit('game-delta', {
+          type: 'TERRITORY_UPDATE',
+          roomId: data.roomId,
+          territoryId: data.fromTerritoryId,
+          changes: { armies: fromTerritory.armies },
+          timestamp: Date.now(),
+        })
+        io.to(channel).emit('game-delta', {
+          type: 'TERRITORY_UPDATE',
+          roomId: data.roomId,
+          territoryId: data.toTerritoryId,
+          changes: { armies: toTerritory.armies },
+          timestamp: Date.now(),
+        })
+      }),
+    )
+
     // Fortification phase
     socket.on(
       'fortify',

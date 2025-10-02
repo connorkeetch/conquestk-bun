@@ -142,6 +142,15 @@ class SocketService {
     this.socket?.emit('fortify', { roomId, fromTerritoryId, toTerritoryId, armies })
   }
 
+  transferConquestArmies(
+    roomId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    armies: number,
+  ) {
+    this.socket?.emit('transferConquestArmies', { roomId, fromTerritoryId, toTerritoryId, armies })
+  }
+
   endTurn(roomId: string) {
     this.socket?.emit('endTurn', { roomId })
   }

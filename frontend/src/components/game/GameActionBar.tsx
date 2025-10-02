@@ -8,7 +8,7 @@ import {
   undoLastPlacement,
 } from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
-import { setAttackCommit, setAutoAttacking, setDice } from '@/store/uiRoomSlice'
+import { setAutoAttacking } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
@@ -28,8 +28,6 @@ export function GameActionBar({
   const selected = useAppSelector((s) => s.game.selectedTerritory)
   const target = useAppSelector((s) => s.game.selectedTargetTerritory)
   const validTargets = useAppSelector((s) => s.game.validTargets)
-  const dice = useAppSelector((s) => s.uiRoom.dice)
-  const commit = useAppSelector((s) => s.uiRoom.attackCommit)
   const userId = useAppSelector((s) => s.auth.user?.id)
   const me = useAppSelector((s) =>
     s.game.currentGame?.players.find((p) => p.id === s.auth.user?.id),
@@ -92,10 +90,11 @@ export function GameActionBar({
     const src = game.board.find((t) => t.id === selected)
     const dst = game.board.find((t) => t.id === target)
     if (!src || !dst) return null
-    const attDice = Math.max(1, Math.min(3, Math.min(dice, (src.armies ?? 0) - 1))) as 1 | 2 | 3
+    // Always use max dice
+    const attDice = Math.max(1, Math.min(3, (src.armies ?? 0) - 1)) as 1 | 2 | 3
     const defDice = Math.max(1, Math.min(2, dst.armies > 1 ? 2 : 1)) as 1 | 2
     return computeRollOdds(attDice, defDice)
-  }, [game, selected, target, dice])
+  }, [game, selected, target])
 
   // Auto-attack loop
   const battle = useAppSelector((s) => s.game.battleResult)
@@ -129,13 +128,12 @@ export function GameActionBar({
         executeAttack({
           fromTerritoryId: selected,
           toTerritoryId: lastTargetRef.current || target,
-          commitArmies: commit,
         }),
       )
     }, AUTO_ATTACK_DELAY_MS)
 
     return () => clearTimeout(timeoutId)
-  }, [auto, battle, commit, dispatch, game, selected, target])
+  }, [auto, battle, dispatch, game, selected, target])
 
   // Auto-open treasure modal if must cash in (only when it's my turn)
   useEffect(() => {
@@ -173,30 +171,6 @@ export function GameActionBar({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="chip text-xs">{phase.charAt(0).toUpperCase() + phase.slice(1)}</span>
-            {phase === 'attack' && (
-              <div className="flex items-center gap-1">
-                {[1, 2, 3].map((n) => {
-                  const srcTerritory = game.board.find((t) => t.id === selected)
-                  const maxDice = srcTerritory
-                    ? Math.min(3, Math.max(1, (srcTerritory.armies ?? 1) - 1))
-                    : 0
-                  const disabled = n > maxDice
-
-                  return (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => dispatch(setDice(n as 1 | 2 | 3))}
-                      disabled={disabled}
-                      className={`btn btn-ghost btn-sm ${dice === n ? 'ring-1 ring-white' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      title={disabled ? `Need ${n + 1} armies to roll ${n} dice` : undefined}
-                    >
-                      {n} die{n === 1 ? '' : 's'}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -282,7 +256,6 @@ export function GameActionBar({
                         executeAttack({
                           fromTerritoryId: selected,
                           toTerritoryId: target,
-                          commitArmies: commit,
                         }),
                       )
                     }
@@ -305,7 +278,6 @@ export function GameActionBar({
                         executeAttack({
                           fromTerritoryId: selected,
                           toTerritoryId: target,
-                          commitArmies: commit,
                         }),
                       )
                     }
@@ -404,23 +376,6 @@ export function GameActionBar({
               </span>
             )}
           </div>
-          {phase === 'attack' && (
-            <div className="flex items-center gap-3 text-xs text-muted w-full mt-1">
-              <div>Commit on conquer:</div>
-              <input
-                type="number"
-                min={1}
-                max={Math.max(1, (game.board.find((t) => t.id === selected)?.armies ?? 1) - 1)}
-                value={commit}
-                onChange={(e) =>
-                  dispatch(setAttackCommit(Math.max(1, Number.parseInt(e.target.value, 10) || 1)))
-                }
-                className="form-input w-16 text-center"
-                title="Armies to move into conquered territory"
-              />
-              <div className="text-xs">Select a valid target to roll</div>
-            </div>
-          )}
         </div>
       </div>
       <TreasureTradeModal isOpen={showTreasures} onClose={() => setShowTreasures(false)} />

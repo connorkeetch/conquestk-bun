@@ -525,7 +525,7 @@ export class GameLifecycleService {
       } else {
         await this.persistGameState(roomId, gameState)
       }
-    } catch (e) {
+    } catch (_e) {
       // Fallback to original object if cache lookup fails
       await this.persistGameState(roomId, gameState)
     }
