@@ -880,14 +880,20 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           })
         } else {
           // Queue disabled/unavailable: execute synchronously
-          const result = await gameService.processGameAction({
-            type: 'undo_fortify',
-            roomId: data.roomId,
-            playerId: userId,
-            payload: undefined,
-          })
+          await gameService.processGameAction(
+            {
+              type: 'undo_fortify',
+              roomId: data.roomId,
+              playerId: userId,
+              payload: undefined,
+            },
+            userId,
+          )
           const channel = getGameChannel(data.roomId)
-          io.to(channel).emit('game-update', result.gameState)
+          const serialized = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
+          if (serialized) {
+            io.to(channel).emit('game-update', serialized)
+          }
         }
       }),
     )
