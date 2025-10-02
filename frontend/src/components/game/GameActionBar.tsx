@@ -36,7 +36,6 @@ export function GameActionBar({
   )
   const mustCashIn = useAppSelector((s) => s.game.currentGame?.mustCashInTreasures)
   const myHandCount = (me?.treasures?.length ?? 0) as number
-  const [reinforce, setReinforce] = useState(1)
   const baseReinforcements = useAppSelector((s) => s.game.reinforcementArmies)
   const localSpent = useAppSelector((s) =>
     (s.uiRoom.placementHistory ?? []).reduce(
@@ -46,6 +45,20 @@ export function GameActionBar({
   )
   const serverSpent = useAppSelector((s) => s.uiRoom.placementServerSpent ?? 0)
   const remaining = Math.max(0, (baseReinforcements || 0) - (serverSpent + localSpent))
+
+  const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
+  const phase = game?.phase ?? 'reinforcement'
+
+  // Auto-populate with max troops when a territory is selected in reinforcement phase
+  const [reinforce, setReinforce] = useState(remaining)
+
+  // Update reinforce to max when remaining changes
+  useEffect(() => {
+    if (phase === 'reinforcement' && remaining > 0) {
+      setReinforce(remaining)
+    }
+  }, [remaining, phase])
+
   const [fortify, setFortify] = useState(1)
   // Auto-attack is global so it can be toggled from map tooltip
   const auto = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
@@ -54,9 +67,6 @@ export function GameActionBar({
   const lastTargetRef = useRef<string | null>(null)
   const reinforceId = useId()
   const fortifyId = useId()
-
-  const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
-  const phase = game?.phase ?? 'reinforcement'
 
   const selectedName = useMemo(
     () => game?.board.find((t) => t.id === selected)?.name ?? selected ?? '',
@@ -142,9 +152,16 @@ export function GameActionBar({
       onClick={() => void dispatch(endTurn())}
       disabled={!isMyTurn}
       className="btn btn-primary"
-      title={isMyTurn ? 'End your turn' : 'Wait for your turn'}
+      title={
+        isMyTurn
+          ? `End ${phase} phase${phase === 'reinforcement' ? ' → Attack' : phase === 'attack' ? ' → Fortify' : ' → End Turn'}`
+          : 'Wait for your turn'
+      }
     >
-      End Turn
+      End Phase
+      {phase === 'reinforcement' && ' → Attack'}
+      {phase === 'attack' && ' → Fortify'}
+      {phase === 'fortify' && ' → End Turn'}
     </button>
   )
 
@@ -197,13 +214,13 @@ export function GameActionBar({
             {/* Primary actions by phase */}
             {phase === 'reinforcement' && (
               <>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs" htmlFor={reinforceId}>
-                    Armies
+                <div className="flex items-center gap-3">
+                  <label className="text-xs whitespace-nowrap" htmlFor={reinforceId}>
+                    Deploy {reinforce} {reinforce === 1 ? 'army' : 'armies'}
                   </label>
                   <input
-                    className="form-input w-16 text-center"
-                    type="number"
+                    className="w-32"
+                    type="range"
                     min={1}
                     max={remaining > 0 ? remaining : 1}
                     id={reinforceId}
@@ -211,6 +228,7 @@ export function GameActionBar({
                     onChange={(e) =>
                       setReinforce(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
                     }
+                    disabled={!isMyTurn || !selected || remaining <= 0}
                   />
                 </div>
                 <button
@@ -225,7 +243,11 @@ export function GameActionBar({
                   }}
                   disabled={!isMyTurn || !selected || remaining <= 0}
                   className="btn btn-success"
-                  title={selected ? `Deploy to ${selectedName}` : 'Select a territory to deploy'}
+                  title={
+                    selected
+                      ? `Deploy ${reinforce} to ${selectedName}`
+                      : 'Select a territory to deploy'
+                  }
                 >
                   Place
                 </button>
