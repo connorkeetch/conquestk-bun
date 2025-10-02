@@ -156,6 +156,8 @@ export class GameEngine {
       }
       case 'fortify':
         return { gameState: this.handleFortify(newState, action) }
+      case 'undo_fortify':
+        return { gameState: this.handleUndoFortify(newState, action) }
       case 'end_turn':
         return { gameState: this.handleEndTurn(newState) }
       case 'trade_cards':
@@ -181,6 +183,8 @@ export class GameEngine {
         return this.validateAttack(gameState, action)
       case 'fortify':
         return this.validateFortify(gameState, action)
+      case 'undo_fortify':
+        return this.validateUndoFortify(gameState, action)
       case 'end_turn':
         return true
       case 'trade_cards':
@@ -1115,6 +1119,57 @@ export class GameEngine {
     // Mark territory as having moved (for multi-move types)
     this.markTerritoryAsMoved(gameState, fromTerritoryId)
 
+    // Track fortify history for undo functionality
+    if (!gameState.fortifyHistory) {
+      gameState.fortifyHistory = []
+    }
+    gameState.fortifyHistory.push({
+      playerId: action.playerId,
+      fromTerritoryId,
+      toTerritoryId,
+      armies,
+      ts: Date.now(),
+    })
+
+    return gameState
+  }
+
+  private handleUndoFortify(
+    gameState: GameState,
+    action: import('./../../types/game').UndoFortifyAction,
+  ): GameState {
+    if (!this.validateUndoFortify(gameState, action)) {
+      throw new Error('Invalid undo fortify action')
+    }
+
+    const history = gameState.fortifyHistory ?? []
+    if (history.length === 0) {
+      throw new Error('No fortify moves to undo')
+    }
+
+    // Get the last fortify move
+    const lastMove = history[history.length - 1]
+
+    // Find the territories
+    const fromTerritory = gameState.board.find((t) => t.id === lastMove.fromTerritoryId)
+    const toTerritory = gameState.board.find((t) => t.id === lastMove.toTerritoryId)
+
+    if (!fromTerritory || !toTerritory) {
+      throw new Error('Territories not found for undo')
+    }
+
+    // Reverse the fortification
+    fromTerritory.armies += lastMove.armies
+    toTerritory.armies -= lastMove.armies
+
+    // Remove from movement tracking so the territory can move again
+    if (gameState.movementTracking?.[lastMove.fromTerritoryId]) {
+      delete gameState.movementTracking[lastMove.fromTerritoryId]
+    }
+
+    // Remove the last entry from history
+    gameState.fortifyHistory = history.slice(0, -1)
+
     return gameState
   }
 
@@ -1174,10 +1229,12 @@ export class GameEngine {
         // After attack, move to fortify phase
         gameState.phase = 'fortify'
         this.resetMovementTracking(gameState) // Reset movement tracking for fortify phase
+        gameState.fortifyHistory = [] // Clear fortify history when entering fortify phase
         break
       case 'fortify':
         // After fortify, move to next player
         this.endPlayerTurn(gameState)
+        // Fortify history will be cleared when the next player enters fortify phase
         break
     }
 
@@ -1423,6 +1480,27 @@ export class GameEngine {
 
     // Check movement type restrictions
     return this.validateMovementByType(gameState, fromTerritoryId, toTerritoryId, action.playerId)
+  }
+
+  private validateUndoFortify(
+    gameState: GameState,
+    action: import('./../../types/game').UndoFortifyAction,
+  ): boolean {
+    // Must be in fortify phase
+    if (gameState.phase !== 'fortify') return false
+
+    // Must be the current player
+    if (action.playerId !== gameState.currentPlayer) return false
+
+    // Must have fortify history to undo
+    const history = gameState.fortifyHistory ?? []
+    if (history.length === 0) return false
+
+    // The last move must belong to the current player
+    const lastMove = history[history.length - 1]
+    if (lastMove.playerId !== action.playerId) return false
+
+    return true
   }
 
   private validateTreasureTrade(gameState: GameState, action: TradeCardsAction): boolean {

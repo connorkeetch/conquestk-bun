@@ -151,6 +151,10 @@ class SocketService {
     this.socket?.emit('transferConquestArmies', { roomId, fromTerritoryId, toTerritoryId, armies })
   }
 
+  undoFortify(roomId: string) {
+    this.socket?.emit('undoFortify', { roomId })
+  }
+
   endTurn(roomId: string) {
     this.socket?.emit('endTurn', { roomId })
   }
