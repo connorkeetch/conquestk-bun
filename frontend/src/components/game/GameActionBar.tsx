@@ -31,7 +31,9 @@ export function GameActionBar({
   const validTargets = useAppSelector((s) => s.game.validTargets)
   const userId = useAppSelector((s) => s.auth.user?.id)
   const me = useAppSelector((s) =>
-    s.game.currentGame?.players.find((p) => p.id === s.auth.user?.id),
+    s.game.currentGame?.players.find(
+      (p) => p.userId === s.auth.user?.id || p.id === s.auth.user?.id,
+    ),
   )
   const mustCashIn = useAppSelector((s) => s.game.currentGame?.mustCashInTreasures)
   const myHandCount = (me?.treasures?.length ?? 0) as number
@@ -49,7 +51,7 @@ export function GameActionBar({
   const phase = game?.phase ?? 'reinforcement'
 
   // Auto-populate with max troops when a territory is selected in reinforcement phase
-  const [reinforce, setReinforce] = useState(remaining)
+  const [reinforce, setReinforce] = useState(remaining > 0 ? remaining : 1)
 
   // Update reinforce to max when remaining changes
   useEffect(() => {
