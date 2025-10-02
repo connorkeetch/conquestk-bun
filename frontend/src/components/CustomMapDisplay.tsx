@@ -469,18 +469,18 @@ function ZoomControls() {
 
   if (!viewport) return null
 
-  const { zoom, setZoom } = viewport
+  const { scale, setZoom } = viewport
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
-    setZoom((z) => Math.max(0.5, Math.round((z - 0.05) * 100) / 100))
+    setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 100) / 100))
   }
 
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
-    setZoom((z) => Math.min(2, Math.round((z + 0.05) * 100) / 100))
+    setZoom((z) => Math.round((z + 0.1) * 100) / 100)
   }
 
   const handleReset = (e: React.MouseEvent) => {
@@ -501,7 +501,7 @@ function ZoomControls() {
         −
       </button>
       <div className="text-xs self-center min-w-[44px] text-center text-muted font-mono">
-        {Math.round(zoom * 100)}%
+        {Math.round(scale * 100)}%
       </div>
       <button
         type="button"

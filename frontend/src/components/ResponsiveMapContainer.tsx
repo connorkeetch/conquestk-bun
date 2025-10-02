@@ -47,14 +47,27 @@ export default function ResponsiveMapContainer({
   const [baseScale, setBaseScale] = useState(1)
   const [zoom, setZoom] = useState(1)
 
-  // Create stable zoom control callbacks
+  // Clamp helpers based on current baseScale
+  const clampZoom = useCallback(
+    (z: number) => {
+      const safeBase = Math.max(0.000001, Math.min(1, baseScale))
+      // Allow up to 200% effective scale relative to source
+      const maxZoom = 2 / safeBase
+      const minZoom = 0.5
+      const rounded = Math.round(z * 100) / 100
+      return Math.max(minZoom, Math.min(maxZoom, rounded))
+    },
+    [baseScale],
+  )
+
+  // Create stable zoom control callbacks (10% steps)
   const zoomIn = useCallback(() => {
-    setZoom((z) => Math.min(2, Math.round((z + 0.05) * 100) / 100))
-  }, [])
+    setZoom((z) => clampZoom(z + 0.1))
+  }, [clampZoom])
 
   const zoomOut = useCallback(() => {
-    setZoom((z) => Math.max(0.5, Math.round((z - 0.05) * 100) / 100))
-  }, [])
+    setZoom((z) => clampZoom(z - 0.1))
+  }, [clampZoom])
 
   const resetZoom = useCallback(() => {
     setZoom(1)
@@ -63,11 +76,13 @@ export default function ResponsiveMapContainer({
   const controls = useMemo(
     () => ({
       zoom,
+      scale: Math.min(1, baseScale) * zoom,
+      baseScale: Math.min(1, baseScale),
       zoomIn,
       zoomOut,
       resetZoom,
     }),
-    [zoom, zoomIn, zoomOut, resetZoom],
+    [zoom, baseScale, zoomIn, zoomOut, resetZoom],
   )
 
   useEffect(() => {
@@ -110,8 +125,9 @@ export default function ResponsiveMapContainer({
     const scaleX = containerWidth / mapWidth
     const scaleY = containerHeight / mapHeight
     // Fit the whole map within the container (allow shrinking below 1:1)
+    // Fit the whole map within the container, but do not upscale past 1:1
     const newScale = Math.min(scaleX, scaleY)
-    setBaseScale(newScale)
+    setBaseScale(Math.min(1, newScale))
   }, [mapWidth, mapHeight])
 
   useEffect(() => {
@@ -138,6 +154,17 @@ export default function ResponsiveMapContainer({
     return { width, height }
   }, [mapWidth, mapHeight, baseScale, zoom])
 
+  const setZoomClamped = useCallback(
+    (next: number | ((prev: number) => number)) => {
+      if (typeof next === 'function') {
+        setZoom((prev) => clampZoom((next as (p: number) => number)(prev)))
+      } else {
+        setZoom(clampZoom(next))
+      }
+    },
+    [clampZoom],
+  )
+
   const viewportContext = useMemo<MapViewportContextValue>(
     () => ({
       zoom,
@@ -145,14 +172,14 @@ export default function ResponsiveMapContainer({
       scale: baseScale * zoom,
       displayWidth: display.width,
       displayHeight: display.height,
-      setZoom,
+      setZoom: setZoomClamped,
     }),
-    [zoom, baseScale, display.width, display.height],
+    [zoom, baseScale, display.width, display.height, setZoomClamped],
   )
 
   // Zoom handlers (Ctrl/Meta + wheel)
 
-  // Ctrl/Cmd + Wheel to zoom (zoom around cursor)
+  // Ctrl/Cmd + Wheel to zoom (zoom around cursor) in 10% steps
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -169,9 +196,8 @@ export default function ResponsiveMapContainer({
       const relY = display.height > 0 ? contentY / display.height : 0
 
       const delta = e.deltaY
-      const step = delta > 0 ? -0.05 : 0.05
-      let nextZoom = Math.round((zoom + step) * 100) / 100
-      nextZoom = Math.max(0.5, Math.min(2, nextZoom))
+      const step = delta > 0 ? -0.1 : 0.1
+      const nextZoom = clampZoom(zoom + step)
       if (nextZoom === zoom) return
 
       setZoom(nextZoom)
@@ -193,7 +219,7 @@ export default function ResponsiveMapContainer({
     return () => {
       el.removeEventListener('wheel', onWheel)
     }
-  }, [zoom, baseScale, mapWidth, mapHeight, display.width, display.height])
+  }, [zoom, baseScale, mapWidth, mapHeight, display.width, display.height, clampZoom])
 
   // Drag-to-pan using middle (button=1) or right mouse (button=2) to avoid conflicts with left-click
   useEffect(() => {
@@ -288,8 +314,8 @@ export default function ResponsiveMapContainer({
         e.preventDefault()
         const newDistance = getDistance(e.touches[0], e.touches[1])
         const scale = newDistance / pinchStartRef.current.distance
-        const newZoom = Math.min(2, Math.max(0.5, pinchStartRef.current.zoom * scale))
-        setZoom(Math.round(newZoom * 100) / 100)
+        const newZoom = clampZoom(pinchStartRef.current.zoom * scale)
+        setZoom(newZoom)
       } else if (e.touches.length === 1 && touchPanStartRef.current) {
         // Single finger pan
         const t = e.touches[0]
@@ -343,7 +369,7 @@ export default function ResponsiveMapContainer({
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [onSwipeLeft, onSwipeRight, zoom])
+  }, [onSwipeLeft, onSwipeRight, zoom, clampZoom])
 
   // Minimap computations
   const minimap = useMemo(() => {

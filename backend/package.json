@@ -35,6 +35,8 @@
     "flags:sync:runtime": "node dist/scripts/checkFeatureFlags.js --apply",
     "purge:messages": "ts-node src/scripts/purgeMessaging.ts",
     "purge:messages:yes": "ts-node src/scripts/purgeMessaging.ts --yes",
+    "wipe:games": "ts-node src/scripts/wipeGames.ts",
+    "wipe:games:yes": "ts-node src/scripts/wipeGames.ts --yes",
     "purge:messages:include-blocks": "ts-node src/scripts/purgeMessaging.ts --yes --include-user-blocks",
     "maps:import": "ts-node src/scripts/importMapsPackage.ts",
     "maps:fix-image-urls": "ts-node src/scripts/fixMapImageUrls.ts",
