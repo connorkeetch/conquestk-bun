@@ -839,17 +839,17 @@ const ProfilePage: React.FC = () => {
                       : 'Commander of the Conquest Realms'}
                 </p>
                 {/* Rank summary under username */}
-                <div className="mt-2 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:gap-4">
-                  <div className="flex items-center gap-2">
+                <div className="mt-2 flex flex-col items-center gap-3 text-sm sm:flex-row sm:items-center sm:gap-4">
+                  <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                     <span className="text-xl" title="Rank insignia">
                       {rankDetails.insignia}
                     </span>
                     <span className="font-semibold">{rankDetails.name}</span>
+                    <span className="font-semibold text-white/70">{rankTierLabel}</span>
                   </div>
-                  <div className="flex flex-1 flex-col gap-1 text-muted">
-                    <span className="font-semibold text-white/80">{rankTierLabel}</span>
+                  <div className="flex w-full flex-col items-center gap-1 text-muted sm:w-auto sm:items-start">
                     <div
-                      className="flex items-center gap-1"
+                      className="flex items-center justify-center gap-1 sm:justify-start"
                       role="img"
                       aria-label={`${rankSegmentsFilled} of ${totalRankTiers} rank tiers completed`}
                     >
