@@ -1045,7 +1045,7 @@ Generated on 2025-09-30T22:47:07Z
 | `max_players` | `integer` | No | `6` |
 | `is_private` | `boolean` | No | `false` |
 | `password_hash` | `varchar(255)` | Yes | — |
-| `status` | `varchar(20)` | No | `'waiting'` |
+| `status` | `varchar(20)` | No | `'lobby'` |
 | `game_mode` | `varchar(20)` | No | `'classic'` |
 | `turn_timer` | `integer` | No | `60` |
 | `time_bank_seconds` | `integer` | No | `0` |
@@ -1057,14 +1057,11 @@ Generated on 2025-09-30T22:47:07Z
 | `variant_id` | `uuid` | Yes | — |
 | `season_id` | `uuid` | Yes | — |
 | `is_ranked` | `boolean` | No | `true` |
-| `spectators_allowed` | `boolean` | No | `false` |
-| `replay_available` | `boolean` | No | `true` |
 | `started_at` | `timestamp` | Yes | — |
 | `ended_at` | `timestamp` | Yes | — |
 | `winner_id` | `uuid` | Yes | — |
 | `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
 | `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
-| `lifecycle_phase` | `varchar(32)` | No | `'lobby'` |
 | `turn_number` | `integer` | No | `0` |
 | `current_turn_user_id` | `uuid` | Yes | — |
 | `turn_expires_at` | `timestamptz` | Yes | — |
@@ -2959,4 +2956,3 @@ Generated on 2025-09-30T22:47:07Z
 | `update_user_settings_updated_at` | `user_settings` | CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
 | `update_users_updated_at` | `users` | CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
 | `web_push_subscriptions_updated_at` | `web_push_subscriptions` | CREATE TRIGGER web_push_subscriptions_updated_at BEFORE UPDATE ON web_push_subscriptions FOR EACH ROW EXECUTE FUNCTION update_web_push_subscriptions_updated_at() |
-

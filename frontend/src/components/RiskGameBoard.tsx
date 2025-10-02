@@ -337,7 +337,8 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             currentPhase={currentPhase}
             turn={gameState?.turn ?? 0}
             currentPlayerInfo={headerPlayerInfo}
-            zoom={zoomControls?.zoom}
+            // Display effective rendered percent, not logical zoom
+            zoom={zoomControls?.scale}
             onZoomIn={zoomControls?.zoomIn}
             onZoomOut={zoomControls?.zoomOut}
             onZoomReset={zoomControls?.resetZoom}
