@@ -46,19 +46,23 @@ function TerritoryTokenComponent({
       cursor: isDragging ? 'grabbing' : 'pointer',
       transition: isDragging ? 'none' : 'all 0.2s ease',
       // Center on (x,y) first, then apply scale so the center stays fixed
-      transform: `translate(-50%, -50%) ${isSelected ? 'scale(1.15)' : 'scale(1)'}`,
+      transform: `translate(-50%, -50%) ${isSelected ? 'scale(1.3)' : 'scale(1)'}`,
       transformOrigin: '50% 50%',
       padding: 0,
       boxSizing: 'border-box',
       boxShadow: isSelected
-        ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
+        ? '0 0 0 3px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 4px 8px rgba(0,0,0,0.4)'
         : '0 2px 4px rgba(0,0,0,0.3)',
       zIndex: isDragging ? 1000 : isSelected ? 100 : 10,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       userSelect: 'none',
-      border: outlineColor ? `2px solid ${outlineColor}` : `1px solid rgba(255,255,255,0.2)`,
+      border: isSelected
+        ? '3px solid rgba(255,255,255,1)'
+        : outlineColor
+          ? `2px solid ${outlineColor}`
+          : `1px solid rgba(255,255,255,0.2)`,
     }
 
     switch (shape) {
