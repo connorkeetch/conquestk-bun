@@ -5,6 +5,7 @@ import {
   endTurn,
   executeAttack,
   executeFortify,
+  undoFortify,
   undoLastPlacement,
 } from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
@@ -310,6 +311,17 @@ export function GameActionBar({
                     }
                   />
                 </div>
+                {/* Undo button - only show if there's history */}
+                {isMyTurn && (game.fortifyHistory?.length ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void dispatch(undoFortify())}
+                    className="btn btn-ghost"
+                    title="Undo last fortify"
+                  >
+                    ↶ Undo
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

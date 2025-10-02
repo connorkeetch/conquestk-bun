@@ -354,6 +354,7 @@ export interface ClientToServerEvents {
     toTerritoryId: string
     armies: number
   }) => void
+  undoFortify: (data: { roomId: string }) => void
   endTurn: (data: { roomId: string }) => void
   'afk:skip': (data: { roomId: string }) => void
   'afk:remind': (data: { roomId: string }) => void

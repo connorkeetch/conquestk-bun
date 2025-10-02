@@ -845,6 +845,53 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
+    // Undo fortify action
+    socket.on(
+      'undoFortify',
+      withErrorHandler(socket, 'undoFortify', async (data) => {
+        if (!data || !data.roomId) {
+          throw new Error('Invalid undo fortify data')
+        }
+
+        const userId = requireUserId(socket)
+
+        // Authorization check: verify player is in the room
+        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+        if (!hasAccess) {
+          throw new Error('Unauthorized: You are not a member of this game')
+        }
+
+        // Queue the undo action
+        const job = await queueService.addGameAction({
+          gameId: data.roomId,
+          playerId: userId,
+          action: {
+            type: 'undo_fortify',
+            roomId: data.roomId,
+            playerId: userId,
+            payload: undefined,
+          },
+          socketId: socket.id,
+        })
+
+        if (job) {
+          logger.info(`Queued undo fortify for game ${data.roomId}`, {
+            jobId: job.id,
+          })
+        } else {
+          // Queue disabled/unavailable: execute synchronously
+          const result = await gameService.processGameAction({
+            type: 'undo_fortify',
+            roomId: data.roomId,
+            playerId: userId,
+            payload: undefined,
+          })
+          const channel = getGameChannel(data.roomId)
+          io.to(channel).emit('game-update', result.gameState)
+        }
+      }),
+    )
+
     // AFK grace: actor can skip or remind
     socket.on(
       'afk:skip',

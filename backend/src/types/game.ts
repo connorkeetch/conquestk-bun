@@ -65,6 +65,17 @@ export interface GameState {
     armies: number
     ts: number
   }>
+  /**
+   * History of fortify moves in the current fortify phase.
+   * Allows undo of the last fortify action. Cleared when turn ends.
+   */
+  fortifyHistory?: Array<{
+    playerId: string
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+    ts: number
+  }>
 }
 
 export interface GamePlayer {
@@ -112,6 +123,7 @@ export type GameAction =
   | DeployAction
   | AttackAction
   | FortifyAction
+  | UndoFortifyAction
   | EndTurnAction
   | TradeCardsAction
   | GoBackToReinforcementAction
@@ -120,6 +132,7 @@ type GameActionType =
   | 'deploy'
   | 'attack'
   | 'fortify'
+  | 'undo_fortify'
   | 'end_turn'
   | 'trade_cards'
   | 'go_back_to_reinforcement'
@@ -151,6 +164,10 @@ export type FortifyAction = ActionBase<'fortify'> & {
     toTerritoryId: string
     armies: number
   }
+}
+
+export type UndoFortifyAction = ActionBase<'undo_fortify'> & {
+  payload?: undefined
 }
 
 export type EndTurnAction = ActionBase<'end_turn'> & {

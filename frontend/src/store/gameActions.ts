@@ -409,6 +409,29 @@ export const executeFortify = createAsyncThunk(
   },
 )
 
+// Undo fortify action
+export const undoFortify = createAsyncThunk(
+  'game/undoFortify',
+  async (_, { getState, dispatch }) => {
+    const state = getState() as RootState
+    const { currentGame } = state.game
+
+    if (!currentGame) throw new Error('No active game')
+
+    try {
+      socketService.undoFortify(currentGame.roomId)
+
+      // Clear selections after undo
+      dispatch(selectTerritory(null))
+      dispatch(selectTargetTerritory(null))
+      dispatch(setPendingAction(null))
+    } catch (_error) {
+      dispatch(setError('Failed to undo fortify'))
+      toast.error('Failed to undo fortify')
+    }
+  },
+)
+
 // End turn action
 export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, dispatch }) => {
   const state = getState() as RootState
