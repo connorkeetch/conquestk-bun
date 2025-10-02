@@ -170,6 +170,48 @@ describe('GameEngine', () => {
       expect(weakTerritories).toHaveLength(0)
     })
 
+    it('uses provided player colors when supplied', () => {
+      const players = [
+        { userId: 'player1', username: 'Alpha', color: '#abc123' },
+        { userId: 'player2', username: 'Beta', color: '#123abc' },
+      ]
+
+      const gameState = gameEngine.initializeGame(
+        'room123',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      )
+
+      const colorMap = new Map(gameState.players.map((player) => [player.id, player.color]))
+      expect(colorMap.get('player1')).toBe('#ABC123')
+      expect(colorMap.get('player2')).toBe('#123ABC')
+    })
+
+    it('assigns unique fallback colors when duplicate selections occur', () => {
+      const players = [
+        { userId: 'player1', username: 'Alpha', color: '#DC2626' },
+        { userId: 'player2', username: 'Beta', color: '#DC2626' },
+        { userId: 'player3', username: 'Gamma' },
+      ]
+
+      const gameState = gameEngine.initializeGame(
+        'room123',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      )
+
+      const colorMap = new Map(gameState.players.map((player) => [player.id, player.color]))
+      const assignedColors = Array.from(colorMap.values())
+
+      expect(colorMap.get('player1')).toBe('#DC2626')
+      expect(colorMap.get('player2')).toBeDefined()
+      expect(colorMap.get('player3')).toBeDefined()
+      expect(colorMap.get('player2')).not.toBe('#DC2626')
+      expect(new Set(assignedColors).size).toBe(players.length)
+    })
+
     it('assigns assassination targets and disables team play when mode is assassination', () => {
       const players = createPlayers('player1', 'player2', 'player3')
       const gameState = gameEngine.initializeGame(
