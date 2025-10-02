@@ -431,7 +431,25 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             armies: data.armies,
           })
         } else {
-          logger.info(`Processed army deployment directly (no queue) for game ${data.roomId}`, {
+          // Queue disabled/unavailable: process synchronously and emit delta
+          const newArmyCount = await gameService.processPlaceArmies(data.roomId, {
+            territoryId: data.territoryId,
+            armies: data.armies,
+            playerId: userId,
+          })
+          const delta = DeltaBuilder.territoryUpdate(data.roomId, data.territoryId, {
+            armies: newArmyCount,
+          })
+          try {
+            const { emitFogFilteredDelta } = await import('./fogService')
+            await emitFogFilteredDelta(io, data.roomId, delta)
+          } catch (e) {
+            logger.warn('Failed to emit deployArmies delta in inline mode', {
+              roomId: data.roomId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
+          logger.info(`Processed army deployment inline (no queue) for game ${data.roomId}`, {
             territoryId: data.territoryId,
             armies: data.armies,
           })
@@ -480,10 +498,206 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             to: data.toTerritoryId,
           })
         } else {
-          logger.info(`Processed attack directly (no queue) for game ${data.roomId}`, {
-            from: data.fromTerritoryId,
-            to: data.toTerritoryId,
-          })
+          // Queue disabled/unavailable: simulate battle synchronously and emit deltas
+          try {
+            const state = await gameService.getGameState(data.roomId)
+            if (!state) throw new Error('Game state not found')
+
+            // Basic validations mirroring worker expectations
+            if (state.currentPlayer !== userId) throw new Error('Not your turn')
+            const from = state.board.find((t) => t.id === data.fromTerritoryId)
+            const to = state.board.find((t) => t.id === data.toTerritoryId)
+            if (!from || !to) throw new Error('Territory not found')
+            if (from.ownerId !== userId) throw new Error('You do not own the attacking territory')
+            if (!from.adjacentTerritories.includes(to.id))
+              throw new Error('Territories not adjacent')
+            if (from.armies <= 1) throw new Error('Not enough armies to attack')
+
+            const attackingArmies = Math.max(1, typeof data.armies === 'number' ? data.armies : 1)
+            const defendingArmies = to.armies ?? 1
+
+            // Dice simulation (max 3 attack, max 2 defend), same rules as worker
+            const attackerDiceCount = Math.min(attackingArmies, 3)
+            const defenderDiceCount = Math.min(defendingArmies, 2)
+            const roll = (n: number) =>
+              Array.from({ length: n }, () => Math.floor(Math.random() * 6) + 1)
+            const attackerRolls = roll(attackerDiceCount).sort((a, b) => b - a)
+            const defenderRolls = roll(defenderDiceCount).sort((a, b) => b - a)
+            let attackerLosses = 0
+            let defenderLosses = 0
+            for (let i = 0; i < Math.min(attackerRolls.length, defenderRolls.length); i += 1) {
+              if (attackerRolls[i] > defenderRolls[i]) defenderLosses += 1
+              else attackerLosses += 1
+            }
+
+            // Apply results to snapshot for delta construction
+            const newAttackingArmies = Math.max(0, (from.armies ?? 0) - attackerLosses)
+            const newDefendingArmies = Math.max(0, (to.armies ?? 0) - defenderLosses)
+            const territoryConquered = newDefendingArmies === 0
+
+            const preMoveArmies = Math.max(newAttackingArmies, 0)
+            const movingArmies = territoryConquered
+              ? Math.max(0, Math.min(attackingArmies, preMoveArmies - 1))
+              : 0
+            const finalAttackerArmies = territoryConquered
+              ? Math.max(preMoveArmies - movingArmies, 1)
+              : Math.max(preMoveArmies, 1)
+            const finalDefenderArmies = territoryConquered
+              ? movingArmies
+              : Math.max(newDefendingArmies, 0)
+
+            const attackerOwnerId = from.ownerId ?? userId
+            const defenderOwnerId = to.ownerId ?? null
+
+            const deltas = [] as Array<
+              | ReturnType<typeof DeltaBuilder.territoryUpdate>
+              | ReturnType<typeof DeltaBuilder.playerUpdate>
+              | import('@risk-game/shared/types').GameEndDelta
+            >
+
+            if (territoryConquered) {
+              deltas.push(
+                DeltaBuilder.territoryUpdate(data.roomId, data.fromTerritoryId, {
+                  armies: finalAttackerArmies,
+                }),
+              )
+              deltas.push(
+                DeltaBuilder.territoryUpdate(data.roomId, data.toTerritoryId, {
+                  armies: finalDefenderArmies,
+                  ownerId: attackerOwnerId,
+                }),
+              )
+
+              // Check elimination (no remaining territories for defender)
+              const remainingDefender = state.board.filter(
+                (t) => t.ownerId === defenderOwnerId && t.id !== data.toTerritoryId,
+              )
+              if (defenderOwnerId && remainingDefender.length === 0) {
+                deltas.push(
+                  DeltaBuilder.playerUpdate(data.roomId, defenderOwnerId, {
+                    isEliminated: true,
+                    territories: [],
+                  }),
+                )
+              }
+
+              // Check victory
+              const remainingPlayers = state.players.filter((p) =>
+                state.board.some((t) => (t.ownerId ?? null) === p.id),
+              )
+              if (remainingPlayers.length === 1) {
+                deltas.push({
+                  type: 'GAME_END',
+                  roomId: data.roomId,
+                  winner: userId,
+                  eliminatedPlayers: state.players
+                    .filter((p) => !state.board.some((t) => (t.ownerId ?? null) === p.id))
+                    .map((p) => p.id),
+                  timestamp: Date.now(),
+                } as import('@risk-game/shared/types').GameEndDelta)
+              }
+            } else {
+              deltas.push(
+                DeltaBuilder.territoryUpdate(data.roomId, data.fromTerritoryId, {
+                  armies: finalAttackerArmies,
+                }),
+              )
+              deltas.push(
+                DeltaBuilder.territoryUpdate(data.roomId, data.toTerritoryId, {
+                  armies: finalDefenderArmies,
+                }),
+              )
+            }
+
+            const battleDelta: import('@risk-game/shared/types').BattleResultDelta & {
+              changes: Array<import('@risk-game/shared/types').GameDelta>
+            } = {
+              type: 'BATTLE_RESULT',
+              roomId: data.roomId,
+              timestamp: Date.now(),
+              battleResult: {
+                attackerId: attackerOwnerId,
+                defenderId: defenderOwnerId ?? null,
+                attackerLosses,
+                defenderLosses,
+                attackerDice: attackerRolls,
+                defenderDice: defenderRolls,
+                fromTerritory: { id: data.fromTerritoryId, armies: finalAttackerArmies },
+                toTerritory: {
+                  id: data.toTerritoryId,
+                  armies: finalDefenderArmies,
+                  ownerId: territoryConquered
+                    ? attackerOwnerId
+                    : (defenderOwnerId ?? attackerOwnerId),
+                },
+                conquered: territoryConquered,
+              },
+              // Cast deltas to shared GameDelta type for consumers
+              changes: deltas as unknown as Array<import('@risk-game/shared/types').GameDelta>,
+            }
+
+            const { emitFogFilteredDelta, emitRevealSnapshot } = await import('./fogService')
+            await emitFogFilteredDelta(io, data.roomId, battleDelta)
+
+            // Persist battle effects
+            await gameService.applyBattleResult(data.roomId, {
+              jobId: `inline:${Date.now()}`,
+              attackerLosses,
+              defenderLosses,
+              territoryConquered,
+              attackingArmiesRemaining: Math.max(from.armies - attackerLosses, 0),
+              defendingArmiesRemaining: Math.max(to.armies - defenderLosses, 0),
+              dice: { attacker: attackerRolls, defender: defenderRolls },
+              attackingTerritoryId: data.fromTerritoryId,
+              defendingTerritoryId: data.toTerritoryId,
+              attackingPlayerId: attackerOwnerId,
+              defendingPlayerId: defenderOwnerId,
+              attackingArmiesCommitted: attackingArmies,
+            })
+
+            // Reveal updates for relevant players on conquest
+            if (territoryConquered) {
+              try {
+                const updated = await gameService.getGameState(data.roomId)
+                const viewers = new Set<string>()
+                if (attackerOwnerId) viewers.add(attackerOwnerId)
+                if (defenderOwnerId) viewers.add(defenderOwnerId)
+                if (updated?.gameConfig?.allowTeamPlay) {
+                  const attackerTeam = updated.players.find((p) => p.id === attackerOwnerId)?.teamId
+                  const defenderTeam = updated.players.find((p) => p.id === defenderOwnerId)?.teamId
+                  if (attackerTeam && attackerTeam > 0) {
+                    updated.players
+                      .filter((p) => p.teamId === attackerTeam)
+                      .forEach((p) => {
+                        viewers.add(p.id)
+                      })
+                  }
+                  if (defenderTeam && defenderTeam > 0) {
+                    updated.players
+                      .filter((p) => p.teamId === defenderTeam)
+                      .forEach((p) => {
+                        viewers.add(p.id)
+                      })
+                  }
+                }
+                for (const vid of viewers) {
+                  await emitRevealSnapshot(io, data.roomId, vid, updated ?? undefined)
+                }
+              } catch (e) {
+                logger.warn('Failed to emit reveal snapshot in inline attack mode', {
+                  roomId: data.roomId,
+                  error: e instanceof Error ? e.message : e,
+                })
+              }
+            }
+
+            logger.info(`Processed attack inline (no queue) for game ${data.roomId}`, {
+              from: data.fromTerritoryId,
+              to: data.toTerritoryId,
+            })
+          } catch (err) {
+            handleSocketError(socket, 'attack:inline', err)
+          }
         }
       }),
     )

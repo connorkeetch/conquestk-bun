@@ -1,6 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals'
-import type { Server } from 'socket.io'
 import type { GameDelta } from '@risk-game/shared/types'
+import type { Server } from 'socket.io'
 import { emitFogFilteredDelta } from '../services/fogService'
 import type { GameState } from '../types/game'
 

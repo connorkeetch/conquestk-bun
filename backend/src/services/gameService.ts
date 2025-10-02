@@ -618,7 +618,7 @@ export class GameService {
       try {
         const dbResult = await query<{ game_data: string }>(
           'SELECT game_data FROM game_states WHERE room_id = $1',
-          [roomId]
+          [roomId],
         )
 
         if (dbResult.rows.length > 0 && dbResult.rows[0].game_data) {
@@ -797,6 +797,19 @@ export class GameService {
       await gameStateCache.setInactiveGameState(roomId, this.serializeGameState(updatedState))
     } else {
       await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
+    }
+
+    // Persist DB view of turn + actor for room-level queries/UI
+    try {
+      await query(
+        `UPDATE game_rooms SET current_turn_user_id = $2, turn_number = $3 WHERE id = $1`,
+        [roomId, updatedState.currentPlayer, updatedState.turn],
+      )
+    } catch (e) {
+      logger.warn('Failed to persist current_turn_user_id/turn_number after endTurn', {
+        roomId,
+        error: e instanceof Error ? e.message : e,
+      })
     }
 
     if (notificationService.isEnabled()) {
