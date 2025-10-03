@@ -138,7 +138,7 @@ function App() {
 
       const additionalHosts = (import.meta.env.VITE_CANONICAL_REDIRECT_HOSTS ?? '')
         .split(',')
-        .map((host) => host.trim().toLowerCase())
+        .map((host: string) => host.trim().toLowerCase())
         .filter(Boolean)
 
       const defaultAlias = canonicalEnv.startsWith('www.')
