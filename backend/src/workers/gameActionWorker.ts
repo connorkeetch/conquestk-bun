@@ -168,8 +168,8 @@ export class GameActionWorker {
             attackingTerritory: attackAction.payload?.fromTerritoryId ?? '',
             defendingTerritory: attackAction.payload?.toTerritoryId ?? '',
             // Use current territory armies for dice calculation (max dice derived later)
-            attackingArmies: attackingTerritoryState?.armies ??
-              Math.max(1, attackAction.payload?.armies ?? 1),
+            attackingArmies:
+              attackingTerritoryState?.armies ?? Math.max(1, attackAction.payload?.armies ?? 1),
             defendingArmies,
             playerId,
             idempotencyKey: `${idKey}:battle:${attackAction.payload?.fromTerritoryId ?? 'unknown'}:${attackAction.payload?.toTerritoryId ?? 'unknown'}`,
