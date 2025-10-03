@@ -44,15 +44,19 @@ export default function AdminGameDetailsPage() {
 
   // Log
   const [logEntries, setLogEntries] = useState<LogEntry[]>([])
-  const [summaryLoaded, setSummaryLoaded] = useState(false)
-  const [moveCount, setMoveCount] = useState<number | null>(null)
-  const [logSummary, setLogSummary] = useState<null | {
-    attacks: number
-    fortifies: number
-    reinforcements: number
-    eliminations: number
-    turnEvents: number
-  }>(null)
+  // Per-player diagnostics
+  const [perPlayerStats, setPerPlayerStats] = useState<
+    Record<
+      string,
+      {
+        totalMoves: number | null
+        attacks: number
+        reinforcements: number
+        fortifies: number
+        eliminations: number
+      }
+    >
+  >({})
 
   // State
   const [rawState, setRawState] = useState<Record<string, unknown> | null>(null)
@@ -106,52 +110,75 @@ export default function AdminGameDetailsPage() {
     void load()
   }, [gameId])
 
-  // Lightweight overview summary: move count + log breakdown
+  // Compute per-player stats for overview
   useEffect(() => {
-    const loadOverviewSummary = async () => {
-      if (!gameId || summaryLoaded === true) return
+    const compute = async () => {
+      if (!gameId || !details || !details.players?.length) return
+      const base: Record<
+        string,
+        {
+          totalMoves: number | null
+          attacks: number
+          reinforcements: number
+          fortifies: number
+          eliminations: number
+        }
+      > = {}
+      for (const p of details.players) {
+        base[p.id] = {
+          totalMoves: null,
+          attacks: 0,
+          reinforcements: 0,
+          fortifies: 0,
+          eliminations: 0,
+        }
+      }
       try {
-        // Total moves (cheap count fetch)
-        const movesResp = await adminService.getGameMoves(gameId, { limit: 1, offset: 0 })
-        setMoveCount(movesResp.total)
-
-        // Battle/event log breakdown
         const logResp = await adminService.getGameLog(gameId)
         const entries = Array.isArray(logResp.entries) ? logResp.entries : []
-        let attacks = 0
-        let fortifies = 0
-        let reinforcements = 0
-        let eliminations = 0
-        let turnEvents = 0
-
         for (const e of entries) {
           const type = (e as { type?: string }).type
           if (type === 'BATTLE') {
-            attacks += 1
-            const eliminated = Array.isArray(
-              (e as { eliminatedPlayers?: unknown[] }).eliminatedPlayers,
-            )
-              ? (e as { eliminatedPlayers: unknown[] }).eliminatedPlayers.length || 0
-              : 0
-            eliminations += eliminated
-          } else if (type === 'FORTIFY') {
-            fortifies += 1
+            const attackerId = (e as { attackerId?: string }).attackerId
+            if (attackerId && base[attackerId]) {
+              base[attackerId].attacks += 1
+              const eliminated = Array.isArray(
+                (e as { eliminatedPlayers?: unknown[] }).eliminatedPlayers,
+              )
+                ? (e as { eliminatedPlayers: unknown[] }).eliminatedPlayers.length || 0
+                : 0
+              base[attackerId].eliminations += eliminated
+            }
           } else if (type === 'REINFORCE') {
-            reinforcements += 1
-          } else if (type === 'TURN') {
-            turnEvents += 1
+            const playerId = (e as { playerId?: string }).playerId
+            if (playerId && base[playerId]) base[playerId].reinforcements += 1
+          } else if (type === 'FORTIFY') {
+            const playerId = (e as { playerId?: string }).playerId
+            if (playerId && base[playerId]) base[playerId].fortifies += 1
           }
         }
 
-        setLogSummary({ attacks, fortifies, reinforcements, eliminations, turnEvents })
+        await Promise.all(
+          details.players.map(async (p) => {
+            try {
+              const resp = await adminService.getGameMoves(gameId, {
+                limit: 1,
+                offset: 0,
+                playerId: p.id,
+              })
+              base[p.id].totalMoves = resp.total
+            } catch {
+              base[p.id].totalMoves = null
+            }
+          }),
+        )
       } catch {
-        // Non-fatal; leave as nulls
-      } finally {
-        setSummaryLoaded(true)
+        // no-op; keep base defaults
       }
+      setPerPlayerStats(base)
     }
-    void loadOverviewSummary()
-  }, [gameId, summaryLoaded])
+    void compute()
+  }, [gameId, details])
 
   // Load moves when tab or filters change
   useEffect(() => {
@@ -381,31 +408,6 @@ export default function AdminGameDetailsPage() {
           </div>
         </div>
 
-        {/* Quick Diagnostic Stats */}
-        <div className="glass-box p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <div className="text-muted">Total Moves</div>
-              <div className="font-medium">{moveCount ?? '—'}</div>
-            </div>
-            <div>
-              <div className="text-muted">Attacks</div>
-              <div className="font-medium">{logSummary?.attacks ?? '—'}</div>
-            </div>
-            <div>
-              <div className="text-muted">Reinforcements</div>
-              <div className="font-medium">{logSummary?.reinforcements ?? '—'}</div>
-            </div>
-            <div>
-              <div className="text-muted">Fortifies</div>
-              <div className="font-medium">{logSummary?.fortifies ?? '—'}</div>
-            </div>
-          </div>
-          {logSummary ? (
-            <div className="mt-3 text-xs text-muted">Eliminations: {logSummary.eliminations}</div>
-          ) : null}
-        </div>
-
         {/* Tabs */}
         <div className="glass-box">
           <div className="border-b border-border px-4 py-2 flex gap-2">
@@ -434,24 +436,39 @@ export default function AdminGameDetailsPage() {
             {activeTab === 'overview' && (
               <div className="space-y-4">
                 <div className="text-lg font-medium">Players</div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted">
-                      <th className="py-2 pr-2">Username</th>
-                      <th className="py-2 pr-2">Status</th>
-                      <th className="py-2 pr-2">AI</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {details.players.map((p) => (
-                      <tr key={p.id} className="border-t border-border/60">
-                        <td className="py-2 pr-2">{p.username}</td>
-                        <td className="py-2 pr-2">{p.status}</td>
-                        <td className="py-2 pr-2">{p.isAi ? 'Yes' : 'No'}</td>
+                <div className="overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-muted">
+                        <th className="py-2 pr-2">Username</th>
+                        <th className="py-2 pr-2">Status</th>
+                        <th className="py-2 pr-2">AI</th>
+                        <th className="py-2 pr-2">Total Moves</th>
+                        <th className="py-2 pr-2">Attacks</th>
+                        <th className="py-2 pr-2">Reinforcements</th>
+                        <th className="py-2 pr-2">Fortifies</th>
+                        <th className="py-2 pr-2">Eliminations</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {details.players.map((p) => {
+                        const s = perPlayerStats[p.id]
+                        return (
+                          <tr key={p.id} className="border-t border-border/60">
+                            <td className="py-2 pr-2">{p.username}</td>
+                            <td className="py-2 pr-2">{p.status}</td>
+                            <td className="py-2 pr-2">{p.isAi ? 'Yes' : 'No'}</td>
+                            <td className="py-2 pr-2">{s?.totalMoves ?? '—'}</td>
+                            <td className="py-2 pr-2">{s?.attacks ?? 0}</td>
+                            <td className="py-2 pr-2">{s?.reinforcements ?? 0}</td>
+                            <td className="py-2 pr-2">{s?.fortifies ?? 0}</td>
+                            <td className="py-2 pr-2">{s?.eliminations ?? 0}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
