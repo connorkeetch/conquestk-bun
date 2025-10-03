@@ -363,6 +363,19 @@ export class GameLifecycleService {
   private async startGame(roomId: string, players: ReadyPlayerRow[], turnTimer: number) {
     const room = await this.gameRoomService.getRoomById(roomId)
 
+    // Validate prerequisites before attempting to start
+    if (!room) {
+      throw new Error('Room not found')
+    }
+
+    if (!room.mapId) {
+      throw new Error('No map selected for this game')
+    }
+
+    if (players.length < 2) {
+      throw new Error(`Insufficient players to start game (${players.length}/2 minimum)`)
+    }
+
     const teamAssignments: Record<number, string[]> = {}
     const playerConfigs = players.map((player) => {
       const slotIdentifier = player.user_id ?? player.ai_player_id
@@ -499,7 +512,20 @@ export class GameLifecycleService {
       // Non-fatal: continue with defaults
     }
 
-    const gameState = await this.gameService.initializeGame(roomId, playerConfigs, configOverrides)
+    // Initialize the game - this is the critical step that can fail
+    let gameState: GameState
+    try {
+      gameState = await this.gameService.initializeGame(roomId, playerConfigs, configOverrides)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      logger.error('Failed to initialize game state', {
+        roomId,
+        mapId: room?.mapId,
+        playerCount: players.length,
+        error: errorMsg,
+      })
+      throw new Error(`Game initialization failed: ${errorMsg}`)
+    }
 
     // Initialize time bank remaining for each player to room capacity (if configured)
     try {
@@ -530,6 +556,15 @@ export class GameLifecycleService {
       }
     }
 
+    // Validate game state before persisting
+    if (!gameState || !gameState.players || gameState.players.length === 0) {
+      throw new Error('Invalid game state: missing players or game data')
+    }
+
+    if (!gameState.board || gameState.board.length === 0) {
+      throw new Error('Invalid game state: no territories on board')
+    }
+
     // Persist the latest snapshot from cache (capitals and other post-init changes included)
     try {
       const { gameStateCache } = await import('./cacheService')
@@ -540,9 +575,15 @@ export class GameLifecycleService {
       } else {
         await this.persistGameState(roomId, gameState)
       }
-    } catch (_e) {
-      // Fallback to original object if cache lookup fails
-      await this.persistGameState(roomId, gameState)
+    } catch (error) {
+      // This is a critical error - we must persist the game state
+      logger.error('Failed to persist game state to database', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
+      throw new Error(
+        `Failed to save game state: ${error instanceof Error ? error.message : error}`,
+      )
     }
 
     // Append lifecycle logs: CREATED (using room.createdAt if present) and STARTED (now)
