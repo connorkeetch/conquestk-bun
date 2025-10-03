@@ -1,7 +1,8 @@
 import dotenv from 'dotenv'
 
 // Load environment variables FIRST before any other imports
-dotenv.config()
+// Keep quiet to avoid noisy logs in production
+dotenv.config({ quiet: true })
 
 import { initDatabase } from '../config/database'
 import { MigrationRunner } from '../utils/migrationRunner'

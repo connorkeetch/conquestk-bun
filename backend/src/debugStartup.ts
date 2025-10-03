@@ -1,7 +1,23 @@
 import { logger } from './utils/logger'
 
+function isVerbose(): boolean {
+  const lvl = (process.env.LOG_LEVEL || 'info').toLowerCase()
+  return process.env.STARTUP_VERBOSE === 'true' || lvl === 'debug' || lvl === 'silly'
+}
+
 // Comprehensive startup debugging
 export function logStartupDiagnostics() {
+  const verbose = isVerbose()
+  if (!verbose) {
+    logger.info(
+      `Startup: Node ${process.version}, env=${process.env.NODE_ENV || 'development'}, cwd=${process.cwd()}`,
+    )
+    logger.info(
+      `Env: PORT=${process.env.PORT || '5001'}, DB=${process.env.DATABASE_URL ? 'SET' : 'MISSING'}, REDIS=${process.env.REDIS_URL ? 'SET' : 'MISSING'}`,
+    )
+    return
+  }
+
   logger.info('========================================')
   logger.info('🔍 RAILWAY STARTUP DIAGNOSTICS')
   logger.info('========================================')
@@ -59,7 +75,12 @@ export function logStartupDiagnostics() {
 }
 
 export async function testDatabaseConnection() {
-  logger.info('🔌 Testing database connection...')
+  const verbose = isVerbose()
+  if (verbose) {
+    logger.info('🔌 Testing database connection...')
+  } else {
+    logger.debug('🔌 Testing database connection...')
+  }
 
   if (!process.env.DATABASE_URL) {
     logger.error('❌ DATABASE_URL is not set!')
@@ -71,28 +92,30 @@ export async function testDatabaseConnection() {
     const { query } = await import('./config/database')
 
     // Test basic connection
-    logger.info('  Testing SELECT 1...')
+    logger.debug('  Testing SELECT 1...')
     const result = await query('SELECT 1 as test')
-    logger.info(`  ✅ Basic query successful: ${JSON.stringify(result.rows[0])}`)
+    logger.debug(`  ✅ Basic query successful: ${JSON.stringify(result.rows[0])}`)
 
     // Test PostgreSQL specific
-    logger.info('  Testing PostgreSQL version...')
+    logger.debug('  Testing PostgreSQL version...')
     const versionResult = await query('SELECT version()')
-    logger.info(`  ✅ PostgreSQL version: ${versionResult.rows[0].version}`)
+    logger.debug(`  ✅ PostgreSQL version: ${versionResult.rows[0].version}`)
 
     // Test if we can create a table
-    logger.info('  Testing table creation...')
+    logger.debug('  Testing table creation...')
     await query(`
       CREATE TABLE IF NOT EXISTS startup_test (
         id SERIAL PRIMARY KEY,
         test_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
-    logger.info('  ✅ Can create tables')
+    logger.debug('  ✅ Can create tables')
 
     // Clean up
     await query('DROP TABLE IF EXISTS startup_test')
 
+    if (verbose) logger.info('✅ Database connectivity check passed')
+    else logger.debug('✅ Database connectivity check passed')
     return true
   } catch (error) {
     logger.error(`❌ Database connection test failed: ${error}`)
@@ -106,14 +129,17 @@ export async function testDatabaseConnection() {
 }
 
 export async function testMigrationFiles() {
-  logger.info('📁 Checking migration files...')
+  const verbose = isVerbose()
+  if (verbose) logger.info('📁 Checking migration files...')
+  else logger.debug('📁 Checking migration files...')
 
   try {
     const fs = require('node:fs')
     const path = require('node:path')
 
     const migrationsPath = path.join(__dirname, '../migrations')
-    logger.info(`  Looking for migrations in: ${migrationsPath}`)
+    if (verbose) logger.info(`  Looking for migrations in: ${migrationsPath}`)
+    else logger.debug(`  Looking for migrations in: ${migrationsPath}`)
 
     if (!fs.existsSync(migrationsPath)) {
       logger.error(`  ❌ Migrations directory does not exist!`)
@@ -123,12 +149,16 @@ export async function testMigrationFiles() {
     const files = fs.readdirSync(migrationsPath)
     const sqlFiles = files.filter((f: string) => f.endsWith('.sql'))
 
-    logger.info(`  ✅ Found ${sqlFiles.length} migration files:`)
-    sqlFiles.forEach((file: string) => {
-      const filePath = path.join(migrationsPath, file)
-      const stats = fs.statSync(filePath)
-      logger.info(`    - ${file} (${stats.size} bytes)`)
-    })
+    if (verbose) {
+      logger.info(`  ✅ Found ${sqlFiles.length} migration files:`)
+      sqlFiles.forEach((file: string) => {
+        const filePath = path.join(migrationsPath, file)
+        const stats = fs.statSync(filePath)
+        logger.info(`    - ${file} (${stats.size} bytes)`)
+      })
+    } else {
+      logger.debug(`  ✅ Found ${sqlFiles.length} migration files`)
+    }
 
     return true
   } catch (error) {

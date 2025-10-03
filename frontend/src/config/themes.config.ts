@@ -394,15 +394,15 @@ function layoutNonOverlapping(
   sizeRange: [number, number],
   aspectRange: [number, number],
   buffer: number,
-  maxTries = 40
+  maxTries = 40,
 ) {
   const images: string[] = []
   const sizes: string[] = []
   const positions: string[] = []
   const repeats: string[] = []
 
-  const vw = Math.max(320, Math.floor((window?.innerWidth ?? 1280)))
-  const vh = Math.max(320, Math.floor((window?.innerHeight ?? 800)))
+  const vw = Math.max(320, Math.floor(window?.innerWidth ?? 1280))
+  const vh = Math.max(320, Math.floor(window?.innerHeight ?? 800))
 
   const placed: Rect[] = []
 
@@ -474,7 +474,7 @@ function generateHalloweenOverlayCSS(withMotion: boolean): string {
     count,
     [60, 200],
     [0.9, 1.2],
-    18
+    18,
   )
 
   // Add soft glow gradients at the end
@@ -545,7 +545,7 @@ function generateCheeseOverlayCSS(withMotion: boolean): string {
     count,
     [70, 220],
     [0.8, 1.2],
-    20
+    20,
   )
 
   // Subtle background holes as repeating tile
@@ -638,7 +638,7 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     count,
     [80, 220],
     [0.8, 1.3],
-    22
+    22,
   )
 
   // A few soft glows for depth
