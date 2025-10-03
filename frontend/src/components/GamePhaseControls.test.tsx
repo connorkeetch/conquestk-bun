@@ -229,6 +229,7 @@ describe('GamePhaseControls', () => {
             territoryActionHistory: [],
             battleResult: null,
             reinforcementArmies: 0,
+            conquestTransfer: null,
           },
           auth: {
             user: mockUser,
