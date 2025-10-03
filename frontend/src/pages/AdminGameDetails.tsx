@@ -101,6 +101,9 @@ export default function AdminGameDetailsPage() {
     return map
   }, [details])
 
+  // Helper: map territoryId -> name for friendlier logs (loaded on demand)
+  const [territoryNameById, setTerritoryNameById] = useState<Record<string, string>>({})
+
   useEffect(() => {
     const load = async () => {
       if (!gameId) return
@@ -238,6 +241,29 @@ export default function AdminGameDetailsPage() {
       }
     }
     void loadLog()
+  }, [activeTab, gameId])
+
+  // When viewing the log, fetch the latest state to resolve territory names
+  useEffect(() => {
+    const loadNames = async () => {
+      if (!gameId || activeTab !== 'log') return
+      try {
+        const res = await adminService.getGameState(gameId)
+        const board = Array.isArray((res.state as { board?: unknown } | null)?.board)
+          ? (res.state as { board: Array<{ id: string; name?: string }> }).board
+          : null
+        if (board) {
+          const map: Record<string, string> = {}
+          for (const t of board) {
+            if (t && typeof t.id === 'string') map[t.id] = t.name || t.id.slice(0, 8)
+          }
+          setTerritoryNameById(map)
+        }
+      } catch {
+        // non-fatal, keep IDs
+      }
+    }
+    void loadNames()
   }, [activeTab, gameId])
 
   // Load state on demand
@@ -657,9 +683,78 @@ export default function AdminGameDetailsPage() {
                 ) : (
                   logEntries.map((e) => {
                     const k = e.id || e.timestamp || JSON.stringify(e)
+                    const type = (e as { type?: string }).type || 'UNKNOWN'
+                    const ts = (e as { timestamp?: string }).timestamp
+                    const when = ts ? new Date(ts).toLocaleString() : ''
+                    const fmtUser = (id?: string | null) =>
+                      id ? usernameById[id] || id.slice(0, 8) : '—'
+                    const fmtTerr = (id?: string | null) =>
+                      id ? territoryNameById[id] || id.slice(0, 8) : '—'
+
+                    let summary = ''
+                    if (type === 'BATTLE') {
+                      const aId = (e as { attackerId?: string }).attackerId
+                      const dId = (e as { defenderId?: string | null }).defenderId || null
+                      const aTer = (e as { attackingTerritoryId?: string }).attackingTerritoryId
+                      const dTer = (e as { defendingTerritoryId?: string }).defendingTerritoryId
+                      const losses =
+                        (e as { losses?: { attacker?: number; defender?: number } }).losses || {}
+                      const conquered = (e as { conquered?: boolean }).conquered === true
+                      const moved = (e as { movedArmies?: number }).movedArmies
+                      const eliminated = Array.isArray(
+                        (e as { eliminatedPlayers?: string[] }).eliminatedPlayers,
+                      )
+                        ? ((e as { eliminatedPlayers: string[] }).eliminatedPlayers as string[])
+                        : []
+                      const elimText = eliminated.length
+                        ? ` • Eliminated: ${eliminated.map((id) => fmtUser(id)).join(', ')}`
+                        : ''
+                      summary = `${when} • ${fmtUser(aId)} attacked ${fmtUser(dId)} from ${fmtTerr(aTer)} → ${fmtTerr(dTer)} • losses A:${
+                        losses.attacker ?? 0
+                      } D:${losses.defender ?? 0}${
+                        conquered ? ` • conquered${moved ? `, moved +${moved}` : ''}` : ' • held'
+                      }${elimText}`
+                    } else if (type === 'FORTIFY') {
+                      const p = (e as { playerId?: string }).playerId
+                      const from = (e as { fromTerritoryId?: string }).fromTerritoryId
+                      const to = (e as { toTerritoryId?: string }).toTerritoryId
+                      const moved = (e as { movedArmies?: number }).movedArmies
+                      const fromArmies = (e as { fromArmies?: number }).fromArmies
+                      const toArmies = (e as { toArmies?: number }).toArmies
+                      summary = `${when} • ${fmtUser(p)} fortified ${fmtTerr(from)} → ${fmtTerr(
+                        to,
+                      )} • +${moved ?? 0} (from:${fromArmies ?? '—'} to:${toArmies ?? '—'})`
+                    } else if (type === 'REINFORCE') {
+                      const p = (e as { playerId?: string }).playerId
+                      const t = (e as { territoryId?: string }).territoryId
+                      const armies = (e as { armies?: number }).armies
+                      const remaining = (e as { remainingArmies?: number }).remainingArmies
+                      summary = `${when} • ${fmtUser(p)} reinforced ${fmtTerr(t)} +${armies ?? 0}$${
+                        remaining != null ? ` (remaining ${remaining})` : ''
+                      }`
+                    } else if (type === 'TURN') {
+                      const p = (e as { playerId?: string }).playerId
+                      const event = (e as { event?: string }).event || ''
+                      const reinf = (e as { reinforcementArmies?: number }).reinforcementArmies
+                      const terr = (e as { territoryCount?: number }).territoryCount
+                      summary = `${when} • Turn ${event} for ${fmtUser(p)}${
+                        reinf != null ? ` (+${reinf} armies)` : ''
+                      }${terr != null ? ` • ${terr} territories` : ''}`
+                    } else if (type === 'TREASURE') {
+                      const u = (e as { userId?: string }).userId
+                      const metal = (e as { metal?: unknown }).metal
+                      summary = `${when} • ${fmtUser(u)} found treasure: ${String(metal ?? '?')}`
+                    } else if (type === 'LIFECYCLE') {
+                      const event = (e as { event?: string }).event || ''
+                      summary = `${when} • Game ${event.toLowerCase()}`
+                    } else {
+                      summary = `${when} • ${type}`
+                    }
+
                     return (
                       <div key={k} className="border border-border rounded p-2 bg-surface-2">
-                        <pre className="whitespace-pre-wrap break-words">
+                        <div className="mb-1">{summary}</div>
+                        <pre className="whitespace-pre-wrap break-words opacity-70">
                           {JSON.stringify(e, null, 2)}
                         </pre>
                       </div>
