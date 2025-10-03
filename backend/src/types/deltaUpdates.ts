@@ -20,6 +20,7 @@ export const DeltaBuilder = {
     roomId: string,
     territoryId: string,
     changes: { armies?: number; ownerId?: string },
+    version?: number,
   ): TerritoryUpdateDelta {
     const normalizedArmies =
       typeof changes.armies === 'number' && Number.isFinite(changes.armies)
@@ -38,6 +39,7 @@ export const DeltaBuilder = {
         ...(normalizedOwner !== undefined ? { ownerId: normalizedOwner } : {}),
       },
       timestamp: Date.now(),
+      version,
     }
   },
 
@@ -45,6 +47,7 @@ export const DeltaBuilder = {
     roomId: string,
     playerId: string,
     changes: { armies?: number; territories?: string[]; isEliminated?: boolean },
+    version?: number,
   ): PlayerUpdateDelta {
     return {
       type: 'PLAYER_UPDATE',
@@ -52,6 +55,7 @@ export const DeltaBuilder = {
       playerId,
       changes,
       timestamp: Date.now(),
+      version,
     }
   },
 
@@ -61,6 +65,7 @@ export const DeltaBuilder = {
     currentPlayer: string,
     turn?: number,
     reinforcementArmies?: number,
+    version?: number,
   ): PhaseChangeDelta {
     const safeTurn =
       typeof turn === 'number' && Number.isFinite(turn) ? Math.max(0, Math.trunc(turn)) : undefined
@@ -76,25 +81,37 @@ export const DeltaBuilder = {
       turn: safeTurn,
       reinforcementArmies: safeReinforce,
       timestamp: Date.now(),
+      version,
     }
   },
 
-  battleResult(roomId: string, battleResult: BattleResultPayload): BattleResultDelta {
+  battleResult(
+    roomId: string,
+    battleResult: BattleResultPayload,
+    version?: number,
+  ): BattleResultDelta {
     return {
       type: 'BATTLE_RESULT',
       roomId,
       battleResult,
       timestamp: Date.now(),
+      version,
     }
   },
 
-  gameEnd(roomId: string, winner: string, eliminatedPlayers: string[]): GameEndDelta {
+  gameEnd(
+    roomId: string,
+    winner: string,
+    eliminatedPlayers: string[],
+    version?: number,
+  ): GameEndDelta {
     return {
       type: 'GAME_END',
       roomId,
       winner,
       eliminatedPlayers,
       timestamp: Date.now(),
+      version,
     }
   },
 } as const
