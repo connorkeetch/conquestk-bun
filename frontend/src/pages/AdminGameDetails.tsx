@@ -92,6 +92,15 @@ export default function AdminGameDetailsPage() {
   const filterPlayerIdId = useId()
   const filterTurnId = useId()
 
+  // Helper: map playerId -> username for friendly display
+  const usernameById = useMemo(() => {
+    const map: Record<string, string> = {}
+    if (details?.players) {
+      for (const p of details.players) map[p.id] = p.username
+    }
+    return map
+  }, [details])
+
   useEffect(() => {
     const load = async () => {
       if (!gameId) return
@@ -595,17 +604,46 @@ export default function AdminGameDetailsPage() {
                         <th className="py-2 pr-2">Turn</th>
                         <th className="py-2 pr-2">Phase</th>
                         <th className="py-2 pr-2">Current Player</th>
+                        <th className="py-2 pr-2">Active</th>
+                        <th className="py-2 pr-2">Players Snapshot</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {turnStats.map((s) => (
-                        <tr key={`${s.timestamp}-${s.turn}`} className="border-t border-border/60">
-                          <td className="py-2 pr-2">{s.timestamp}</td>
-                          <td className="py-2 pr-2">{String(s.turn)}</td>
-                          <td className="py-2 pr-2">{s.phase}</td>
-                          <td className="py-2 pr-2">{s.currentPlayerId}</td>
-                        </tr>
-                      ))}
+                      {turnStats.map((s) => {
+                        const activeCount = Array.isArray(s.players)
+                          ? s.players.filter((p) => !p.eliminated).length
+                          : undefined
+                        const playersSummary = Array.isArray(s.players)
+                          ? s.players
+                              .map((p) => {
+                                const name = usernameById[p.id] || p.id.slice(0, 8)
+                                const elim = p.eliminated ? ' ✖' : ''
+                                return `${name}: ${p.territories}/${p.armies}${elim}`
+                              })
+                              .join(' • ')
+                          : '—'
+                        const currentPlayerName =
+                          usernameById[s.currentPlayerId] || s.currentPlayerId
+                        return (
+                          <tr
+                            key={`${s.timestamp}-${s.turn}`}
+                            className="border-t border-border/60 align-top"
+                          >
+                            <td className="py-2 pr-2 whitespace-nowrap">
+                              {new Date(s.timestamp).toLocaleString()}
+                            </td>
+                            <td className="py-2 pr-2">{String(s.turn)}</td>
+                            <td className="py-2 pr-2">{s.phase}</td>
+                            <td className="py-2 pr-2">{currentPlayerName}</td>
+                            <td className="py-2 pr-2">{activeCount ?? '—'}</td>
+                            <td className="py-2 pr-2">
+                              <div className="max-w-[900px] whitespace-pre-wrap break-words">
+                                {playersSummary}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 )}
