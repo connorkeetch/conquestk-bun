@@ -16,6 +16,24 @@ const createMessage = (endpoint: string, limit: number, window: string) => {
 }
 
 // Create Redis store if available, otherwise use memory store
+// Aggregate noisy fallback logs into a single message per tick
+const inMemoryPrefixes = new Set<string>()
+let scheduledAggregateLog = false
+function scheduleAggregateLog() {
+  if (scheduledAggregateLog) return
+  scheduledAggregateLog = true
+  setImmediate(() => {
+    if (inMemoryPrefixes.size > 0) {
+      const list = Array.from(inMemoryPrefixes).sort().join(', ')
+      logger.warn(
+        `Using in-memory store for rate limiting (temporary) – Redis not available yet. Policies: ${list}`,
+      )
+    }
+    inMemoryPrefixes.clear()
+    scheduledAggregateLog = false
+  })
+}
+
 function createRateLimitStore(prefix: string): RedisStore | undefined {
   const redisClient = getRedisClient()
   if (redisClient) {
@@ -31,13 +49,13 @@ function createRateLimitStore(prefix: string): RedisStore | undefined {
       })
     } catch (error) {
       logger.error(`Failed to create Redis store for ${prefix}:`, getErrorMessage(error))
-      logger.warn(
-        `Using in-memory store for rate limiting (${prefix}) - Redis store creation failed`,
-      )
+      inMemoryPrefixes.add(prefix)
+      scheduleAggregateLog()
       return undefined
     }
   }
-  logger.warn(`Using in-memory store for rate limiting (${prefix}) - Redis not available`)
+  inMemoryPrefixes.add(prefix)
+  scheduleAggregateLog()
   return undefined // Uses default memory store
 }
 

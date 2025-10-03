@@ -7,12 +7,13 @@ import { type MigrationRecord, type MigrationStatus, MigrationTracker } from './
 export class MigrationRunner {
   private migrationTracker: MigrationTracker
   private migrationsPath: string = ''
+  private static didLogPathScan = false
 
   constructor(migrationTracker?: MigrationTracker) {
     this.migrationTracker = migrationTracker || new MigrationTracker()
 
     // Try multiple possible migration paths (simplified - no postgres subdirectory)
-    const possiblePaths = [
+    const rawPaths = [
       // Production paths (Railway) - check these first
       '/app/backend/dist/migrations', // Railway dist
       '/app/backend/migrations', // Railway source
@@ -25,12 +26,24 @@ export class MigrationRunner {
       join(process.cwd(), 'backend/migrations'), // Current working directory/backend/migrations
     ]
 
+    // Deduplicate normalized paths to avoid repeated logs
+    const possiblePaths = Array.from(new Set(rawPaths))
+
     // Log all paths being checked for debugging
-    logger.info('📁 Checking migration paths:')
-    possiblePaths.forEach((path, index) => {
-      const exists = existsSync(path)
-      logger.info(`  ${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`)
-    })
+    if (
+      process.env.STARTUP_VERBOSE === 'true' ||
+      (process.env.LOG_LEVEL || '').toLowerCase() === 'debug'
+    ) {
+      logger.debug('📁 Checking migration paths:')
+      possiblePaths.forEach((path, index) => {
+        const exists = existsSync(path)
+        logger.debug(`  ${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`)
+      })
+    } else if (!MigrationRunner.didLogPathScan) {
+      // In normal mode, only log a single line once per process
+      logger.debug('📁 Scanning for migrations (paths deduplicated)')
+      MigrationRunner.didLogPathScan = true
+    }
 
     // Find the first existing path
     let foundPath = false
@@ -41,12 +54,12 @@ export class MigrationRunner {
         // Count SQL files in the directory
         try {
           const files = readdirSync(path).filter((f) => f.endsWith('.sql'))
-          logger.info(`✅ Found migrations at: ${this.migrationsPath}`)
-          logger.info(`  ✓ Contains ${files.length} SQL files: ${files.join(', ')}`)
+          logger.debug(`✅ Found migrations at: ${this.migrationsPath}`)
+          logger.debug(`  ✓ Contains ${files.length} SQL files: ${files.join(', ')}`)
           foundPath = true
           break
         } catch (err) {
-          logger.warn(`⚠️  Could not read directory ${path}: ${err}`)
+          logger.debug(`⚠️  Could not read directory ${path}: ${err}`)
         }
       }
     }
@@ -420,7 +433,7 @@ export class MigrationRunner {
 
   private getAvailableMigrations(): string[] {
     try {
-      logger.info(`📁 Checking migration files in: ${this.migrationsPath}`)
+      logger.debug(`📁 Checking migration files in: ${this.migrationsPath}`)
 
       if (!existsSync(this.migrationsPath)) {
         logger.warn(`⚠️  Migrations directory not found: ${this.migrationsPath}`)
@@ -428,7 +441,7 @@ export class MigrationRunner {
       }
 
       const allFiles = readdirSync(this.migrationsPath)
-      logger.info(`  Found ${allFiles.length} total files: ${allFiles.join(', ')}`)
+      logger.debug(`  Found ${allFiles.length} total files: ${allFiles.join(', ')}`)
 
       const sqlFiles = allFiles
         .filter(
@@ -436,7 +449,7 @@ export class MigrationRunner {
         )
         .sort() // Ensure migrations run in order
 
-      logger.info(`  ✅ Found ${sqlFiles.length} migration files: ${sqlFiles.join(', ')}`)
+      logger.debug(`  ✅ Found ${sqlFiles.length} migration files: ${sqlFiles.join(', ')}`)
       return sqlFiles
     } catch (error) {
       logger.error(`❌ Failed to read migrations directory ${this.migrationsPath}:`, error)

@@ -24,8 +24,8 @@ export async function initializeRedis(): Promise<RedisClients> {
     return { redisClient: null, pubClient: null, subClient: null }
   }
 
-  logger.info(`Initializing Redis connection...`)
-  logger.info(`Using Redis URL: ${redisUrl.replace(/:[^:]*@/, ':****@')}`)
+  logger.debug(`Initializing Redis connection...`)
+  logger.debug(`Using Redis URL: ${redisUrl.replace(/:[^:]*@/, ':****@')}`)
 
   // Enhanced Railway detection and network wait logic
   const isRailwayEnvironment =
@@ -43,7 +43,7 @@ export async function initializeRedis(): Promise<RedisClients> {
     logger.info(
       `🚂 Railway environment detected - waiting ${waitTime / 1000}s for private network initialization...`,
     )
-    logger.info(
+    logger.debug(
       `Environment indicators: NODE_ENV=${process.env.NODE_ENV}, RAILWAY_ENV=${process.env.RAILWAY_ENVIRONMENT}, PROJECT_ID=${process.env.RAILWAY_PROJECT_ID}`,
     )
     await new Promise((resolve) => setTimeout(resolve, waitTime))
@@ -188,11 +188,11 @@ export async function initializeRedis(): Promise<RedisClients> {
     })
 
     // Additional Railway-specific diagnostics
-    logger.info(`Redis connection attempt details:`)
-    logger.info(`  - Final Redis URL: ${finalRedisUrl.replace(/:[^:]*@/, ':****@')}`)
-    logger.info(`  - Connection timeout: ${redisOptions.connectTimeout}ms`)
-    logger.info(`  - Command timeout: ${redisOptions.commandTimeout}ms`)
-    logger.info(`  - Railway environment: ${isRailwayEnvironment}`)
+    logger.debug(`Redis connection attempt details:`)
+    logger.debug(`  - Final Redis URL: ${finalRedisUrl.replace(/:[^:]*@/, ':****@')}`)
+    logger.debug(`  - Connection timeout: ${redisOptions.connectTimeout}ms`)
+    logger.debug(`  - Command timeout: ${redisOptions.commandTimeout}ms`)
+    logger.debug(`  - Railway environment: ${isRailwayEnvironment}`)
 
     // Test connection with extended timeout for Railway
     try {

@@ -563,15 +563,15 @@ if (isProductionLike) {
   const fs = require('node:fs')
   const frontendPath = path.join(__dirname, '../public')
 
-  logger.info(`📁 Setting up static file serving from: ${frontendPath}`)
-  logger.info(`📁 Frontend path exists: ${fs.existsSync(frontendPath)}`)
+  logger.debug(`📁 Setting up static file serving from: ${frontendPath}`)
+  logger.debug(`📁 Frontend path exists: ${fs.existsSync(frontendPath)}`)
 
   if (fs.existsSync(frontendPath)) {
     const files = fs.readdirSync(frontendPath)
-    logger.info(`📁 Files in frontend directory: ${files.join(', ')}`)
+    logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`)
 
     const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'))
-    logger.info(`📁 index.html exists: ${indexExists}`)
+    logger.debug(`📁 index.html exists: ${indexExists}`)
   }
 
   // IMPORTANT: Serve static files with explicit options
@@ -732,7 +732,6 @@ async function startServer() {
 
           // Run our enhanced migration system
           const migrationRunner = new MigrationRunner()
-          logger.info('🔄 Starting migration system...')
 
           try {
             await migrationRunner.runPendingMigrations()
@@ -749,6 +748,37 @@ async function startServer() {
             // Ensure owner has admin privileges
             const { ensureOwnerAdmin } = require('./scripts/ensureOwnerAdmin')
             await ensureOwnerAdmin()
+
+            // Optionally enforce deploy accounts (owner + test users) on start
+            if (process.env.RUN_DEPLOY_ACCOUNT_ENFORCEMENT_ON_START === 'true') {
+              try {
+                const { ensureDeployAccounts } = await import('./scripts/ensureDeployAccounts')
+                logger.info('🔐 Enforcing deploy accounts (owner + tests)')
+                await ensureDeployAccounts()
+              } catch (e) {
+                logger.warn('Failed to enforce deploy accounts on start:', getErrorMessage(e))
+              }
+            }
+
+            // Optionally sync feature flags from code usage into DB
+            if (process.env.SYNC_FEATURE_FLAGS_ON_START === 'true') {
+              try {
+                const { spawnSync } = require('node:child_process')
+                const scriptPath = path.join(__dirname, 'scripts', 'checkFeatureFlags.js')
+                logger.info('🏁 Syncing feature flags from code usage into DB')
+                const result = spawnSync(process.execPath, [scriptPath, '--apply'], {
+                  stdio: 'ignore',
+                  env: process.env,
+                })
+                if (result.status === 0) {
+                  logger.info('✅ Feature flags sync completed')
+                } else {
+                  logger.warn('⚠️ Feature flags sync exited with non-zero status')
+                }
+              } catch (e) {
+                logger.warn('Failed to sync feature flags on start:', getErrorMessage(e))
+              }
+            }
 
             // Background queue workers are now initialized after Redis connection (see Redis initialization block)
 
