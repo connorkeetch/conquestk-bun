@@ -138,12 +138,20 @@ class MemoryDiagnosticsService {
       external: usage.external,
     }
 
+    // Only log on startup, not on every interval check
+    if (reason === 'startup') {
+      logger.info('🧠 Memory diagnostics initialized', {
+        rssMb: this.toMb(usage.rss),
+        heapUsedMb: this.toMb(usage.heapUsed),
+      })
+    }
+
     this.samples.push(sample)
     if (this.samples.length > this.historySize) {
       this.samples.shift()
     }
 
-    this.reportUsage(reason)
+    // Don't log on every sample - only log when there's an issue (in evaluateTrend)
   }
 
   private evaluateTrend(): void {

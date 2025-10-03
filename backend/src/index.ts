@@ -612,18 +612,14 @@ if (isProductionLike) {
   // Handle React Router - serve index.html for all non-API and non-asset routes
   // This catch-all route MUST come after static middleware
   app.get('/', (_req: Request, res: Response) => {
-    logger.info(`🌐 Root request`)
     const indexPath = path.join(frontendPath, 'index.html')
-    logger.info(`📄 Serving index.html from: ${indexPath}`)
-    logger.info(`📄 index.html exists: ${fs.existsSync(indexPath)}`)
 
     return res.sendFile(indexPath, (err) => {
       if (err) {
-        logger.error(`❌ Error serving index.html:`, err)
+        logger.error(`Failed to serve index.html for root path`, { error: err.message })
         res.status(500).send('Error serving page')
-      } else {
-        logger.info(`✅ Successfully served index.html for root`)
       }
+      // Success case - no logging needed, this happens constantly
     })
   })
 
@@ -638,16 +634,14 @@ if (isProductionLike) {
       return next()
     }
 
-    logger.info(`🌐 Request to: ${req.path}`)
     const indexPath = path.join(frontendPath, 'index.html')
 
     return res.sendFile(indexPath, (err) => {
       if (err) {
-        logger.error(`❌ Error serving index.html:`, err)
+        logger.error(`Failed to serve index.html`, { path: req.path, error: err.message })
         res.status(500).send('Error serving page')
-      } else {
-        logger.info(`✅ Successfully served index.html for: ${req.path}`)
       }
+      // Success case - no logging needed for normal SPA routing
     })
   })
 }
