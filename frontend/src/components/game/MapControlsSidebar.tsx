@@ -7,6 +7,7 @@ interface MapControlsSidebarProps {
   onToggleMinimap: () => void
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  zoom?: { scale?: number; zoomIn?: () => void; zoomOut?: () => void; resetZoom?: () => void }
 }
 
 export const MapControlsSidebar: React.FC<MapControlsSidebarProps> = ({
@@ -14,6 +15,7 @@ export const MapControlsSidebar: React.FC<MapControlsSidebarProps> = ({
   onToggleMinimap,
   isCollapsed = false,
   onToggleCollapse,
+  zoom,
 }) => {
   const dispatch = useAppDispatch()
   const overlays = useAppSelector((s) => s.uiRoom.overlays)
@@ -101,6 +103,41 @@ export const MapControlsSidebar: React.FC<MapControlsSidebarProps> = ({
           )}
 
           <div className="border-t border-[color:var(--panel-border)] my-1" />
+
+          {/* Zoom controls moved from header */}
+          {zoom?.zoomIn && zoom.zoomOut && (
+            <div className="flex items-center gap-1 bg-[color:var(--surface-2)] px-2 py-2 rounded">
+              <button
+                type="button"
+                className="w-8 h-8 rounded hover:bg-[color:var(--surface-3)]"
+                onClick={zoom.zoomOut}
+                title="Zoom out"
+              >
+                −
+              </button>
+              <div className="text-xs min-w-[44px] text-center text-muted font-mono">
+                {Math.round((zoom.scale ?? 1) * 100)}%
+              </div>
+              <button
+                type="button"
+                className="w-8 h-8 rounded hover:bg-[color:var(--surface-3)]"
+                onClick={zoom.zoomIn}
+                title="Zoom in"
+              >
+                +
+              </button>
+              {zoom.resetZoom && (
+                <button
+                  type="button"
+                  className="w-10 h-8 rounded hover:bg-[color:var(--surface-3)] text-xs"
+                  onClick={zoom.resetZoom}
+                  title="Reset zoom"
+                >
+                  1:1
+                </button>
+              )}
+            </div>
+          )}
 
           {toggleButton('Minimap', '🗺', showMinimap, onToggleMinimap)}
         </div>

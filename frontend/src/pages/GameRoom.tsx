@@ -1381,10 +1381,7 @@ export default function GameRoom() {
             )}
           </div>
 
-          {/* Desktop action bar - positioned directly under the map */}
-          <div className="hidden md:block">
-            <GameActionBar />
-          </div>
+          {/* Desktop action bar moved inside the game board as an overlay */}
         </div>
 
         {/* Player Stats & Chat Row - below action bar */}
@@ -1666,7 +1663,7 @@ export default function GameRoom() {
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
               {mobileDrawerTab === 'actions' ? (
-                <GameActionBar mode="inline" />
+                <GameActionBar mode="inline" hidePhaseChip hideTreasures hideEndPhase />
               ) : roomId && user ? (
                 shouldHydrateChat ? (
                   <Suspense

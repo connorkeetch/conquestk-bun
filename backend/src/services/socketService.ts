@@ -513,7 +513,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
             const preMoveArmies = Math.max(newAttackingArmies, 0)
             // Default move-on-conquest is 1 (later adjustable via transferConquestArmies)
-            const movingArmies = territoryConquered ? Math.max(0, Math.min(1, preMoveArmies - 1)) : 0
+            const movingArmies = territoryConquered
+              ? Math.max(0, Math.min(1, preMoveArmies - 1))
+              : 0
             const finalAttackerArmies = territoryConquered
               ? Math.max(preMoveArmies - movingArmies, 1)
               : Math.max(preMoveArmies, 1)

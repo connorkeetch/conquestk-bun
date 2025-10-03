@@ -59,7 +59,6 @@ export function TurnTimer({ className = '' }: Props) {
   }
 
   const color = ratio > 0.5 ? 'text-green-400' : ratio > 0.2 ? 'text-yellow-300' : 'text-red-400'
-  const bar = ratio > 0.5 ? 'bg-green-500' : ratio > 0.2 ? 'bg-yellow-500' : 'bg-red-500'
 
   // Optional: time bank display if the backend provides it
   const bankSeconds =
@@ -83,10 +82,8 @@ export function TurnTimer({ className = '' }: Props) {
   if (!expiresAt) return null
 
   return (
-    <div className={`flex items-center gap-2 min-w-[140px] ${className}`} title="Turn timer">
-      <div className="w-24 h-2 rounded bg-surface-2 overflow-hidden">
-        <div className={`h-full ${bar}`} style={{ width: `${ratio * 100}%` }} />
-      </div>
+    <div className={`flex items-center gap-2 min-w-[80px] ${className}`} title="Turn timer">
+      {/* Display only time text (no progress bar) */}
       <div className={`text-xs tabular-nums ${color}`}>{formatWorded(totalSeconds)}</div>
       {typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
         <span className="chip text-[10px]" title="Time bank remaining">

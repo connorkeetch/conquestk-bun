@@ -1,37 +1,37 @@
 import type React from 'react'
 import { useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
-import { getColorValue } from '@/constants/colors'
-import { useAppSelector } from '@/hooks/redux'
-import { TurnTimer } from './TurnTimer'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { endTurn } from '@/store/gameActions'
 import { DiceResultsBar } from './DiceResultsBar'
+import { TurnTimer } from './TurnTimer'
 
 interface GameHeaderProps {
   currentPhase: string
-  turn: number
   currentPlayerInfo?: {
     id: string
     username: string
     color: string
     troops?: number
   }
-  zoom?: number
-  onZoomIn?: () => void
-  onZoomOut?: () => void
-  onZoomReset?: () => void
 }
 
-export const GameHeader: React.FC<GameHeaderProps> = ({
-  currentPhase,
-  turn,
-  currentPlayerInfo,
-  zoom,
-  onZoomIn,
-  onZoomOut,
-  onZoomReset,
-}) => {
+export const GameHeader: React.FC<GameHeaderProps> = ({ currentPhase }) => {
+  const dispatch = useAppDispatch()
   const connection = useAppSelector((s) => s.uiRoom.connectionStatus)
+  const game = useAppSelector((s) => s.game.currentGame)
+  const userId = useAppSelector((s) => s.auth.user?.id)
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
+  const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
+  const phase = game?.phase ?? currentPhase
+  const endPhaseLabel =
+    phase === 'reinforcement'
+      ? 'End Phase → Attack'
+      : phase === 'attack'
+        ? 'End Phase → Fortify'
+        : phase === 'fortify'
+          ? 'End Phase → End Turn'
+          : 'End Phase'
   return (
     <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
       <div className="flex justify-between items-center gap-4">
@@ -39,7 +39,6 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]">
             {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
           </span>
-          <span className="text-[color:var(--text)]">Turn {turn}</span>
           <TurnTimer />
           <span
             className="inline-flex items-center gap-1 text-xs"
@@ -62,54 +61,16 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             />
           </span>
         </div>
-
-        {/* Zoom controls */}
-        {zoom !== undefined && onZoomIn && onZoomOut && onZoomReset && (
-          <div className="flex gap-1 bg-[color:var(--surface-1)] px-1.5 py-1 rounded shadow-sm">
+        {/* Current turn label removed; show End Phase button when it's my turn */}
+        {isMyTurn && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              className="flex items-center justify-center w-8 h-8 rounded hover:bg-[color:var(--surface-3)] transition-colors text-sm font-bold"
-              onClick={onZoomOut}
-              title="Zoom out"
+              className="btn btn-primary"
+              onClick={() => void dispatch(endTurn())}
+              title={endPhaseLabel}
             >
-              −
-            </button>
-            <div className="text-xs self-center min-w-[44px] text-center text-muted font-mono">
-              {Math.round(zoom * 100)}%
-            </div>
-            <button
-              type="button"
-              className="flex items-center justify-center w-8 h-8 rounded hover:bg-[color:var(--surface-3)] transition-colors text-sm font-bold"
-              onClick={onZoomIn}
-              title="Zoom in"
-            >
-              +
-            </button>
-            <button
-              type="button"
-              className="flex items-center justify-center w-8 h-8 rounded hover:bg-[color:var(--surface-3)] transition-colors text-xs"
-              onClick={onZoomReset}
-              title="Reset zoom"
-            >
-              1:1
-            </button>
-          </div>
-        )}
-
-        {currentPlayerInfo && (
-          <div className="flex items-center space-x-2 text-sm">
-            <span className="text-muted">Current Turn:</span>
-            <div
-              className="w-3 h-3 rounded-full border border-[color:var(--panel-border)]"
-              style={{ backgroundColor: getColorValue(currentPlayerInfo.color) }}
-            />
-            <button
-              type="button"
-              className="font-semibold underline-offset-2 hover:underline text-[color:var(--text)]"
-              onClick={() => setProfileUsername(currentPlayerInfo.username)}
-              title={`View ${currentPlayerInfo.username}'s profile`}
-            >
-              {currentPlayerInfo.username}
+              {endPhaseLabel}
             </button>
           </div>
         )}

@@ -17,6 +17,7 @@ import {
 } from '../store/gameSlice'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { AssassinationContract } from './game/AssassinationContract'
+import { GameActionBar } from './game/GameActionBar'
 // import { GamePhaseControls } from './GamePhaseControls'
 import { GameHeader } from './game/GameHeader'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
@@ -315,15 +316,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     )
   }
 
-  const currentPlayerInfo = players.find((player) => player.id === currentPlayer)
-  const headerPlayerInfo = currentPlayerInfo
-    ? {
-        id: currentPlayerInfo.id,
-        username: currentPlayerInfo.username,
-        color: currentPlayerInfo.color,
-        troops: gameState?.reinforcementArmies ?? 0,
-      }
-    : undefined
+  const _currentPlayerInfo = players.find((player) => player.id === currentPlayer)
 
   return (
     <div className="flex flex-col w-full h-full min-h-[420px] sm:min-h-[520px] lg:min-h-[640px] xl:min-h-[720px] panel p-0 overflow-hidden">
@@ -341,16 +334,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         </div>
       ) : (
         <>
-          <GameHeader
-            currentPhase={currentPhase}
-            turn={gameState?.turn ?? 0}
-            currentPlayerInfo={headerPlayerInfo}
-            // Display effective rendered percent, not logical zoom
-            zoom={zoomControls?.scale}
-            onZoomIn={zoomControls?.zoomIn}
-            onZoomOut={zoomControls?.zoomOut}
-            onZoomReset={zoomControls?.resetZoom}
-          />
+          <GameHeader currentPhase={currentPhase} />
           {assassinationMode && (
             <AssassinationContract
               target={targetPlayer}
@@ -378,24 +362,35 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       )}
 
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <RiskGameMap
-          mapId={mapId}
-          territories={territories}
-          players={players}
-          selectedTerritory={selectedTerritory}
-          selectedTargetTerritory={selectedTargetTerritory}
-          validTargets={validTargets}
-          pendingAction={pendingAction}
-          territoryModifierMap={territoryModifierMap}
-          onTerritoryClick={handleTerritoryClick}
-          onTerritoryHover={handleTerritoryHover}
-          showMinimap={showMinimap}
-          onZoomControlsReady={setZoomControls}
-        />
+        <div className="relative flex-1 min-w-0">
+          <RiskGameMap
+            mapId={mapId}
+            territories={territories}
+            players={players}
+            selectedTerritory={selectedTerritory}
+            selectedTargetTerritory={selectedTargetTerritory}
+            validTargets={validTargets}
+            pendingAction={pendingAction}
+            territoryModifierMap={territoryModifierMap}
+            onTerritoryClick={handleTerritoryClick}
+            onTerritoryHover={handleTerritoryHover}
+            showMinimap={showMinimap}
+            onZoomControlsReady={setZoomControls}
+          />
+          {/* In-board action bar overlay (always visible above map) */}
+          {!lobbyMode && (
+            <div className="pointer-events-none absolute left-0 right-0 bottom-0 z-20">
+              <div className="pointer-events-auto p-2 sm:p-3">
+                <GameActionBar mode="inline" hidePhaseChip hideTreasures hideEndPhase />
+              </div>
+            </div>
+          )}
+        </div>
         {!lobbyMode && (
           <MapControlsSidebar
             showMinimap={showMinimap}
             onToggleMinimap={() => setShowMinimap((prev) => !prev)}
+            zoom={zoomControls ?? undefined}
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={() => {
               const newValue = !sidebarCollapsed

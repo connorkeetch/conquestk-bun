@@ -22,8 +22,14 @@ const AUTO_ATTACK_DELAY_MS = 150
 
 export function GameActionBar({
   mode = 'fixed' as 'fixed' | 'inline',
+  hidePhaseChip = false,
+  hideTreasures = false,
+  hideEndPhase = false,
 }: {
   mode?: 'fixed' | 'inline'
+  hidePhaseChip?: boolean
+  hideTreasures?: boolean
+  hideEndPhase?: boolean
 }) {
   const dispatch = useAppDispatch()
   const game = useAppSelector((s) => s.game.currentGame)
@@ -147,7 +153,7 @@ export function GameActionBar({
   // Only show the action bar when it's my turn
   if (!isMyTurn) return null
 
-  const endTurnBtn = (
+  const endTurnBtn = hideEndPhase ? null : (
     <button
       type="button"
       onClick={() => void dispatch(endTurn())}
@@ -173,12 +179,14 @@ export function GameActionBar({
       <div className={`rounded-xl border border-border bg-surface-1 p-2 shadow-lg`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="chip text-xs">{phase.charAt(0).toUpperCase() + phase.slice(1)}</span>
+            {!hidePhaseChip && (
+              <span className="chip text-xs">{phase.charAt(0).toUpperCase() + phase.slice(1)}</span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             {/* Treasures chip */}
-            {isMyTurn && (
+            {isMyTurn && !hideTreasures && (
               <button
                 type="button"
                 className={`chip text-xs ${mustCashIn ? 'ring-1 ring-yellow-400' : ''}`}
