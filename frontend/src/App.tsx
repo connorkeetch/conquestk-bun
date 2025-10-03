@@ -115,16 +115,44 @@ function App() {
   // Initialize favicon badge service
   useFaviconBadge()
 
-  // Frontend safety net: redirect www -> apex in production
+  // Frontend safety net: align with backend canonical host redirects
   useEffect(() => {
     try {
-      if (import.meta.env.PROD) {
-        const hn = window.location.hostname.toLowerCase()
-        if (hn === 'www.conquestk.com') {
-          const { pathname, search, hash } = window.location
-          window.location.replace(`https://conquestk.com${pathname}${search}${hash}`)
-        }
+      if (!import.meta.env.PROD) {
+        return
       }
+
+      const canonicalEnv = (import.meta.env.VITE_CANONICAL_HOST ?? '').toLowerCase().trim()
+      if (!canonicalEnv) {
+        return
+      }
+
+      const currentHost = window.location.hostname.toLowerCase()
+      if (currentHost === canonicalEnv) {
+        return
+      }
+
+      if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+        return
+      }
+
+      const additionalHosts = (import.meta.env.VITE_CANONICAL_REDIRECT_HOSTS ?? '')
+        .split(',')
+        .map((host) => host.trim().toLowerCase())
+        .filter(Boolean)
+
+      const defaultAlias = canonicalEnv.startsWith('www.')
+        ? canonicalEnv.slice(4)
+        : `www.${canonicalEnv}`
+
+      const redirectHosts = new Set([...additionalHosts, defaultAlias])
+
+      if (!redirectHosts.has(currentHost)) {
+        return
+      }
+
+      const { protocol, pathname, search, hash } = window.location
+      window.location.replace(`${protocol}//${canonicalEnv}${pathname}${search}${hash}`)
     } catch {
       // no-op
     }

@@ -31,6 +31,10 @@ SESSION_SECRET=[32+ char secret - rotate every 90 days]
 # URLs & CORS
 CORS_ORIGIN=https://conquestk.com
 FRONTEND_URL=https://conquestk.com
+CANONICAL_HOST=conquestk.com
+VITE_CANONICAL_HOST=conquestk.com
+# Optional: comma separated aliases that should redirect to the canonical host
+VITE_CANONICAL_REDIRECT_HOSTS=www.conquestk.com
 
 # Email Service (Resend or SMTP)
 EMAIL_ENABLED=true
