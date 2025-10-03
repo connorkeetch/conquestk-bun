@@ -3,6 +3,7 @@ import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { query } from '../config/database'
 import { gameStateCache } from '../services/cacheService'
+import { DeltaEmitter } from '../services/deltaEmitter'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import {
@@ -32,10 +33,12 @@ interface ProcessGameActionResult {
 export class GameActionWorker {
   private queue: Bull.Queue<GameActionJob>
   private gameService: GameService
+  private deltaEmitter: DeltaEmitter
   private io: Server<ClientToServerEvents, ServerToClientEvents>
 
   constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
     this.gameService = new GameService()
+    this.deltaEmitter = new DeltaEmitter(io)
     this.io = io
     this.queue = queueService.getGameActionQueue()
   }
@@ -343,46 +346,17 @@ export class GameActionWorker {
     playerId: string,
     action: DeployAction,
   ): Promise<GameDelta> {
+    const territoryId = action.payload?.territoryId || ''
     const result = await this.gameService.processPlaceArmies(gameId, {
-      territoryId: action.payload?.territoryId || '',
+      territoryId,
       armies: action.payload?.armies || 0,
       playerId,
     })
 
-    let fogEmitter: ((io: Server, roomId: string, delta: GameDelta) => Promise<void>) | null = null
-    const ensureEmitter = async () => {
-      if (!fogEmitter) {
-        const { emitFogFilteredDelta } = await import('../services/fogService')
-        fogEmitter = emitFogFilteredDelta
-      }
-      return fogEmitter
-    }
+    // Use unified delta emitter
+    await this.deltaEmitter.emitDeploymentDeltas(gameId, playerId, territoryId, result)
 
-    if (typeof result.playerArmies === 'number') {
-      const playerDelta = DeltaBuilder.playerUpdate(gameId, playerId, {
-        armies: result.playerArmies,
-      })
-      const emitter = await ensureEmitter()
-      if (emitter) {
-        await emitter(this.io as unknown as Server, gameId, playerDelta)
-      }
-    }
-
-    if (result.phaseChanged) {
-      const phaseDelta = DeltaBuilder.phaseChange(
-        gameId,
-        result.phaseChanged.phase,
-        result.phaseChanged.currentPlayer,
-        result.phaseChanged.turn,
-        result.phaseChanged.reinforcementArmies,
-      )
-      const emitter = await ensureEmitter()
-      if (emitter) {
-        await emitter(this.io as unknown as Server, gameId, phaseDelta)
-      }
-    }
-
-    return DeltaBuilder.territoryUpdate(gameId, action.payload?.territoryId || '', {
+    return DeltaBuilder.territoryUpdate(gameId, territoryId, {
       armies: result.armies,
     })
   }
@@ -392,35 +366,28 @@ export class GameActionWorker {
     playerId: string,
     action: FortifyAction,
   ): Promise<GameDelta> {
+    const fromTerritoryId = action.payload?.fromTerritoryId || ''
+    const toTerritoryId = action.payload?.toTerritoryId || ''
+
     // Process fortification
     const result = await this.gameService.processFortify(gameId, {
-      fromTerritoryId: action.payload?.fromTerritoryId || '',
-      toTerritoryId: action.payload?.toTerritoryId || '',
+      fromTerritoryId,
+      toTerritoryId,
       armies: action.payload?.armies || 0,
       playerId,
     })
 
-    // Emit separate territory updates to align with shared GameDelta union
-    const fromDelta = DeltaBuilder.territoryUpdate(gameId, action.payload?.fromTerritoryId || '', {
-      armies: result.fromArmies,
-    })
-    const toDelta = DeltaBuilder.territoryUpdate(gameId, action.payload?.toTerritoryId || '', {
-      armies: result.toArmies,
-    })
+    // Use unified delta emitter
+    await this.deltaEmitter.emitFortifyDeltas(gameId, fromTerritoryId, toTerritoryId, result)
 
-    // Broadcast first update immediately; caller will broadcast returned delta
-    {
-      const { emitFogFilteredDelta } = await import('../services/fogService')
-      await emitFogFilteredDelta(this.io as unknown as Server, gameId, fromDelta)
-    }
     // Emit a consolidated fortify result delta for logging/UX purposes
     try {
       const fortifyDelta: import('@risk-game/shared/types').GameDelta = {
         type: 'FORTIFY_RESULT',
         roomId: gameId,
         timestamp: Date.now(),
-        fromTerritoryId: action.payload?.fromTerritoryId || '',
-        toTerritoryId: action.payload?.toTerritoryId || '',
+        fromTerritoryId,
+        toTerritoryId,
         movedArmies: action.payload?.armies || 0,
         fromArmies: result.fromArmies,
         toArmies: result.toArmies,
@@ -431,7 +398,10 @@ export class GameActionWorker {
     } catch (_e) {
       // Non-fatal: fortify summary is best-effort
     }
-    return toDelta
+
+    return DeltaBuilder.territoryUpdate(gameId, toTerritoryId, {
+      armies: result.toArmies,
+    })
   }
 
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {

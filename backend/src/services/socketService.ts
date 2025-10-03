@@ -10,6 +10,7 @@ import { logger } from '../utils/logger'
 import { gameStateCache } from './cacheService'
 import { clanService } from './clanService'
 import { eloService, type PlayerRating } from './eloService'
+import { GameActionProcessor } from './gameActionProcessor'
 import { GameRoomService } from './gameRoomService'
 import { GameService } from './gameService'
 import { queueService } from './queueService'
@@ -164,6 +165,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   registerSocketServer(io)
   const gameService = new GameService()
   const gameRoomService = new GameRoomService()
+  const gameActionProcessor = new GameActionProcessor(io)
   const { GameLifecycleService } =
     require('./gameLifecycleService') as typeof import('./gameLifecycleService')
   const lifecycleService = new GameLifecycleService()
@@ -447,86 +449,14 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Unauthorized: You are not a member of this game')
         }
 
-        // Queue the place armies action
-        const job = await queueService.addGameAction({
-          gameId: data.roomId,
-          playerId: userId,
-          action: {
-            type: 'deploy',
-            roomId: data.roomId,
-            playerId: userId,
-            payload: {
-              territoryId: data.territoryId,
-              armies: data.armies,
-            },
-          },
-          socketId: socket.id,
-        })
-
-        if (job) {
-          const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-          if (hasWorkers) {
-            logger.info(`Queued army deployment for game ${data.roomId}`, {
-              jobId: job.id,
-              territoryId: data.territoryId,
-              armies: data.armies,
-            })
-            return
-          }
-
-          try {
-            await job.remove()
-          } catch (err) {
-            logger.warn('Failed to remove queued deploy job for inline fallback', {
-              roomId: data.roomId,
-              jobId: job.id,
-              error: err instanceof Error ? err.message : err,
-            })
-          }
-        }
-
-        // Queue disabled/unavailable: process synchronously and emit delta
-        const result = await gameService.processPlaceArmies(data.roomId, {
-          territoryId: data.territoryId,
-          armies: data.armies,
-          playerId: userId,
-        })
-
-        try {
-          const { emitFogFilteredDelta } = await import('./fogService')
-
-          if (typeof result.playerArmies === 'number') {
-            const playerDelta = DeltaBuilder.playerUpdate(data.roomId, userId, {
-              armies: result.playerArmies,
-            })
-            await emitFogFilteredDelta(io, data.roomId, playerDelta)
-          }
-
-          if (result.phaseChanged) {
-            const phaseDelta = DeltaBuilder.phaseChange(
-              data.roomId,
-              result.phaseChanged.phase,
-              result.phaseChanged.currentPlayer,
-              result.phaseChanged.turn,
-              result.phaseChanged.reinforcementArmies,
-            )
-            await emitFogFilteredDelta(io, data.roomId, phaseDelta)
-          }
-
-          const delta = DeltaBuilder.territoryUpdate(data.roomId, data.territoryId, {
-            armies: result.armies,
-          })
-          await emitFogFilteredDelta(io, data.roomId, delta)
-        } catch (e) {
-          logger.warn('Failed to emit deployArmies delta in inline mode', {
-            roomId: data.roomId,
-            error: e instanceof Error ? e.message : e,
-          })
-        }
-        logger.info(`Processed army deployment inline (no queue) for game ${data.roomId}`, {
-          territoryId: data.territoryId,
-          armies: data.armies,
-        })
+        // Process via unified processor (handles queue vs inline internally)
+        await gameActionProcessor.processDeployment(
+          data.roomId,
+          userId,
+          data.territoryId,
+          data.armies,
+          socket.id,
+        )
       }),
     )
 
