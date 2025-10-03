@@ -1384,8 +1384,8 @@ export default function GameRoom() {
           {/* Desktop action bar moved inside the game board as an overlay */}
         </div>
 
-        {/* Player Stats & Chat Row - below action bar */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Player Stats & Chat Row - positioned directly under the board */}
+        <div className="flex flex-col gap-4">
           {/* Player Stats */}
           {currentGame ? (
             <PlayerStatsTable
@@ -1429,8 +1429,7 @@ export default function GameRoom() {
           )}
 
           {/* Chat & Log panel */}
-
-          <div className="panel p-0 overflow-hidden shrink-0">
+          <div className="panel p-0 overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
               <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
               <button
