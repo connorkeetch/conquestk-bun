@@ -1460,10 +1460,7 @@ export class GameService {
         const existingLog = Array.isArray(existingRow?.game_log) ? existingRow?.game_log : []
         latestBattleLog = existingLog
         const alreadyApplied = existingLog.some((entry) => entry?.jobId === jobId)
-        const divergence = this.calculateTerritoryDivergence(
-          existingRow?.territories ?? null,
-          updatedBoard,
-        )
+        const divergence = this.calculateTerritoryDivergence(existingRow?.territories ?? null, updatedBoard)
 
         if (alreadyApplied) {
           return { applied: false, divergence }
@@ -1632,12 +1629,15 @@ export class GameService {
     persisted: Territory[] | null,
     updatedBoard: Territory[],
   ): number {
-    if (!persisted || persisted.length === 0) {
+    // Normalize legacy or malformed persisted payloads defensively
+    const normalized = this.normalizeTerritoriesInput(persisted as unknown)
+
+    if (!normalized || normalized.length === 0) {
       return updatedBoard.length
     }
 
     const persistedById = new Map<string, Territory>()
-    for (const territory of persisted) {
+    for (const territory of normalized) {
       persistedById.set(territory.id, territory)
     }
 
@@ -1659,6 +1659,32 @@ export class GameService {
     }
 
     return divergences
+  }
+
+  /**
+   * Coerce a value into a Territory[] if possible. Handles legacy JSON strings
+   * or objects that contain a `board` field, otherwise returns null.
+   */
+  private normalizeTerritoriesInput(input: unknown): Territory[] | null {
+    if (Array.isArray(input)) {
+      return input as Territory[]
+    }
+    if (typeof input === 'string') {
+      try {
+        const parsed = JSON.parse(input)
+        if (Array.isArray(parsed)) return parsed as Territory[]
+        if (parsed && Array.isArray((parsed as { board?: unknown }).board)) {
+          return (parsed as { board: Territory[] }).board
+        }
+      } catch {
+        return null
+      }
+    }
+    if (input && typeof input === 'object') {
+      const maybe = input as { board?: unknown }
+      if (Array.isArray(maybe.board)) return maybe.board as Territory[]
+    }
+    return null
   }
 
   /**
