@@ -2,6 +2,7 @@ import { Clock, Gamepad2, Trophy } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { formatTurnTimer as formatTurnTimerWord } from '@/utils/lobby'
 import { logger } from '@/utils/logger'
 import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
@@ -149,13 +150,10 @@ const formatTeamSetup = (room: NormalizedLobbyRoom) => {
 
 const formatTurnTimer = (seconds?: number) => {
   if (!seconds || Number.isNaN(seconds)) {
-    return 'Turn timer: 60s (default)'
+    return 'Turn timer: 1m (default)'
   }
-  if (seconds % 60 === 0) {
-    const minutes = seconds / 60
-    return minutes === 1 ? 'Turn timer: 1 minute' : `Turn timer: ${minutes} minutes`
-  }
-  return `Turn timer: ${seconds}s`
+  const label = formatTurnTimerWord(seconds)
+  return `Turn timer: ${label}`
 }
 
 const formatFogOfWar = (fog?: NormalizedLobbyRoom['fogOfWar']) => {

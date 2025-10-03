@@ -43,7 +43,20 @@ export function TurnTimer({ className = '' }: Props) {
 
   const total = Math.max(1, (game?.settings?.turnTimer ?? game?.gameConfig?.turnTimer ?? 60) * 1000)
   const ratio = Math.max(0, Math.min(1, (remainingMs ?? 0) / total))
-  const seconds = Math.ceil((remainingMs ?? 0) / 1000)
+  const totalSeconds = Math.ceil((remainingMs ?? 0) / 1000)
+
+  // Worded time format: e.g., "1h 02m 03s", "2m 05s", "45s"
+  const formatWorded = (secs: number) => {
+    const s = Math.max(0, Math.trunc(secs))
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const r = s % 60
+    const parts: string[] = []
+    if (h > 0) parts.push(`${h}h`)
+    if (m > 0) parts.push(`${m}m`)
+    if (r > 0 || parts.length === 0) parts.push(`${r}s`)
+    return parts.join(' ')
+  }
 
   const color = ratio > 0.5 ? 'text-green-400' : ratio > 0.2 ? 'text-yellow-300' : 'text-red-400'
   const bar = ratio > 0.5 ? 'bg-green-500' : ratio > 0.2 ? 'bg-yellow-500' : 'bg-red-500'
@@ -74,10 +87,10 @@ export function TurnTimer({ className = '' }: Props) {
       <div className="w-24 h-2 rounded bg-surface-2 overflow-hidden">
         <div className={`h-full ${bar}`} style={{ width: `${ratio * 100}%` }} />
       </div>
-      <div className={`text-xs tabular-nums ${color}`}>{seconds}s</div>
+      <div className={`text-xs tabular-nums ${color}`}>{formatWorded(totalSeconds)}</div>
       {typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
         <span className="chip text-[10px]" title="Time bank remaining">
-          +{effectiveBankSeconds}s
+          +{formatWorded(effectiveBankSeconds)}
         </span>
       )}
     </div>
