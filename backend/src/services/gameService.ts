@@ -1157,6 +1157,7 @@ export class GameService {
         armies: afterArmies,
         playerArmies: playerAfter?.armies ?? previousPlayerArmies,
         phaseChanged,
+        version: updatedState.version,
       }
     })
   }
@@ -1256,6 +1257,7 @@ export class GameService {
       return {
         fromArmies,
         toArmies,
+        version: updatedState.version,
       }
     })
   }

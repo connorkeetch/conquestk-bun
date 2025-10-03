@@ -7,6 +7,11 @@ export interface DeltaBase {
   type: string
   roomId: string
   timestamp: number
+  /**
+   * Version number from GameState at time of emission
+   * Used for automatic desync detection on client
+   */
+  version?: number
 }
 
 export interface TerritoryDelta extends DeltaBase {

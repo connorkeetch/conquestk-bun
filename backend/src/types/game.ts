@@ -37,6 +37,11 @@ export interface GameState {
   currentPlayer: string
   phase: GamePhase
   turn: number
+  /**
+   * Version number - increments on every state mutation
+   * Used for automatic desync detection on client
+   */
+  version?: number
   board: Territory[]
   cards: Card[]
   hasAttackedThisTurn?: boolean

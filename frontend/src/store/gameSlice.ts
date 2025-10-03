@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/tool
 import type { BattleResultDelta, GameDelta } from '@shared/types'
 import { gameService } from '../services/gameService'
 import type { BattleResult, GameState } from '../types/game'
+import { logger } from '../utils/logger'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 
 // Helper function to check if territories are connected through owned territories
@@ -344,6 +345,21 @@ const gameSlice = createSlice({
 
       if (!state.currentGame) return
 
+      // Version check for automatic desync detection
+      if (delta.version !== undefined && state.currentGame.version !== undefined) {
+        // Server version should be exactly currentGame.version + 1
+        // If not, we have a desync
+        if (delta.version !== state.currentGame.version + 1) {
+          logger.warn('[Desync detected] Version mismatch:', {
+            clientVersion: state.currentGame.version,
+            serverVersion: delta.version,
+            deltaType: delta.type,
+          })
+          // TODO: Trigger full state resync from server
+          // For now, just log the warning and continue applying delta
+        }
+      }
+
       const applyDeltaToState = (incoming: GameDelta): void => {
         switch (incoming.type) {
           case 'TERRITORY_UPDATE': {
@@ -419,6 +435,11 @@ const gameSlice = createSlice({
       }
 
       applyDeltaToState(delta)
+
+      // Update client version after applying delta
+      if (delta.version !== undefined) {
+        state.currentGame.version = delta.version
+      }
 
       // Recalculate valid targets if territory selection is active
       if (state.selectedTerritory && state.currentGame) {

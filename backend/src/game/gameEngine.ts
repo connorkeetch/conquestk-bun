@@ -146,6 +146,8 @@ export class GameEngine {
 
   async processAction(gameState: GameState, action: GameAction): Promise<ProcessActionResult> {
     const newState = { ...gameState }
+    // Increment version on every state mutation for desync detection
+    newState.version = (newState.version ?? 0) + 1
 
     switch (action.type) {
       case 'deploy':

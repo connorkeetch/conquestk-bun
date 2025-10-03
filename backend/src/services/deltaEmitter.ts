@@ -21,6 +21,7 @@ export interface ActionResult {
     turn: number
     reinforcementArmies?: number
   }
+  version?: number
 }
 
 /**
@@ -63,9 +64,14 @@ export class DeltaEmitter {
 
       // Emit player armies update
       if (typeof result.playerArmies === 'number') {
-        const playerDelta = DeltaBuilder.playerUpdate(gameId, playerId, {
-          armies: result.playerArmies,
-        })
+        const playerDelta = DeltaBuilder.playerUpdate(
+          gameId,
+          playerId,
+          {
+            armies: result.playerArmies,
+          },
+          result.version,
+        )
         await emitter(this.io as unknown as Server, gameId, playerDelta)
       }
 
@@ -82,15 +88,21 @@ export class DeltaEmitter {
           result.phaseChanged.currentPlayer,
           result.phaseChanged.turn,
           result.phaseChanged.reinforcementArmies,
+          result.version,
         )
         await emitter(this.io as unknown as Server, gameId, phaseDelta)
       }
 
       // Emit territory update
       if (typeof result.armies === 'number') {
-        const territoryDelta = DeltaBuilder.territoryUpdate(gameId, territoryId, {
-          armies: result.armies,
-        })
+        const territoryDelta = DeltaBuilder.territoryUpdate(
+          gameId,
+          territoryId,
+          {
+            armies: result.armies,
+          },
+          result.version,
+        )
         await emitter(this.io as unknown as Server, gameId, territoryDelta)
       }
     } catch (error) {
@@ -117,17 +129,27 @@ export class DeltaEmitter {
 
       // Emit from territory update
       if (typeof result.fromArmies === 'number') {
-        const fromDelta = DeltaBuilder.territoryUpdate(gameId, fromTerritoryId, {
-          armies: result.fromArmies,
-        })
+        const fromDelta = DeltaBuilder.territoryUpdate(
+          gameId,
+          fromTerritoryId,
+          {
+            armies: result.fromArmies,
+          },
+          result.version,
+        )
         await emitter(this.io as unknown as Server, gameId, fromDelta)
       }
 
       // Emit to territory update
       if (typeof result.toArmies === 'number') {
-        const toDelta = DeltaBuilder.territoryUpdate(gameId, toTerritoryId, {
-          armies: result.toArmies,
-        })
+        const toDelta = DeltaBuilder.territoryUpdate(
+          gameId,
+          toTerritoryId,
+          {
+            armies: result.toArmies,
+          },
+          result.version,
+        )
         await emitter(this.io as unknown as Server, gameId, toDelta)
       }
 
@@ -144,6 +166,7 @@ export class DeltaEmitter {
           result.phaseChanged.currentPlayer,
           result.phaseChanged.turn,
           result.phaseChanged.reinforcementArmies,
+          result.version,
         )
         await emitter(this.io as unknown as Server, gameId, phaseDelta)
       }
