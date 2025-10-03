@@ -676,10 +676,13 @@ export class GameService {
           await this.persistGameStateSnapshot(roomId, cachedState)
           logger.info('Loaded game state from database and repopulated cache', { roomId })
         } else {
+          // No game state found - this is expected for rooms that haven't started yet
           return null
         }
       } catch (error) {
-        logger.error('Failed to load game state from database', { roomId, error })
+        // Only log as error if it's a real database/parsing error, not just missing data
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        logger.warn('Error loading game state from database', { roomId, error: errorMessage })
         return null
       }
     }
