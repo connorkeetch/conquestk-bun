@@ -60,6 +60,7 @@ const AdminUsers = lazyWithRetry(() => import('./pages/AdminUsers'))
 const AdminContent = lazyWithRetry(() => import('./pages/AdminContent'))
 const AdminMaps = lazyWithRetry(() => import('./pages/AdminMaps'))
 const AdminGames = lazyWithRetry(() => import('./pages/AdminGames'))
+const AdminGameDetails = lazyWithRetry(() => import('./pages/AdminGameDetails'))
 const AdminMapReview = lazyWithRetry(() => import('./pages/AdminMapReview'))
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'))
 const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'))
@@ -724,6 +725,20 @@ function App() {
                   }
                 >
                   <AdminGames />
+                </Suspense>
+              }
+            />
+            <Route
+              path="games/:gameId"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="p-6">
+                      <div className="text-white">Loading...</div>
+                    </div>
+                  }
+                >
+                  <AdminGameDetails />
                 </Suspense>
               }
             />

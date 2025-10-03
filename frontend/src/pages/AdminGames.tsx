@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getColorValue } from '@/constants/colors'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { type AdminGame, adminService } from '../services/adminService'
 
@@ -24,6 +23,12 @@ export default function AdminGames() {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchInput, setSearchInput] = useState('')
 
+  // Sorting
+  const [sortBy, setSortBy] = useState<
+    'lastActivity' | 'turn' | 'createdAt' | 'updatedAt' | 'status'
+  >('lastActivity')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
   // Modal state
   const [actionModal, setActionModal] = useState<GameActionModal | null>(null)
   const [actionNotes, setActionNotes] = useState('')
@@ -40,6 +45,8 @@ export default function AdminGames() {
         offset,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         search: searchTerm || undefined,
+        sortBy,
+        sortDir,
       })
 
       setGames(result.games)
@@ -50,7 +57,7 @@ export default function AdminGames() {
     } finally {
       setLoading(false)
     }
-  }, [currentPage, limit, statusFilter, searchTerm])
+  }, [currentPage, limit, statusFilter, searchTerm, sortBy, sortDir])
 
   useEffect(() => {
     void loadGames()
@@ -304,119 +311,124 @@ export default function AdminGames() {
               <div className="text-muted">No games match your current filters</div>
             </div>
           ) : (
-            <div className="divide-y divide-gray-700">
-              {games.map((game) => (
-                <div key={game.id} className="p-6 hover:bg-gray-750">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div>
-                          <div className="font-medium text-lg">
-                            {game.name || `Game ${game.id.slice(0, 8)}`}
-                            {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
-                          </div>
-                          <div className="text-sm text-muted">
-                            Map: {game.mapName} • Created by {game.createdByUsername}
-                          </div>
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted">
+                    <th className="py-3 px-4">Room</th>
+                    <th className="py-3 px-4">Name</th>
+                    <th className="py-3 px-4">Map</th>
+                    <th className="py-3 px-4">Host</th>
+                    <th
+                      className="py-3 px-4 cursor-pointer select-none"
+                      onClick={() => {
+                        setSortBy('status')
+                        setSortDir(sortBy === 'status' && sortDir === 'desc' ? 'asc' : 'desc')
+                      }}
+                    >
+                      Status {sortBy === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </th>
+                    <th className="py-3 px-4">Phase</th>
+                    <th
+                      className="py-3 px-4 cursor-pointer select-none"
+                      onClick={() => {
+                        setSortBy('turn')
+                        setSortDir(sortBy === 'turn' && sortDir === 'desc' ? 'asc' : 'desc')
+                      }}
+                    >
+                      Turn {sortBy === 'turn' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </th>
+                    <th className="py-3 px-4">Current Player</th>
+                    <th className="py-3 px-4">Players</th>
+                    <th
+                      className="py-3 px-4 cursor-pointer select-none"
+                      onClick={() => {
+                        setSortBy('lastActivity')
+                        setSortDir(sortBy === 'lastActivity' && sortDir === 'desc' ? 'asc' : 'desc')
+                      }}
+                    >
+                      Last Activity{' '}
+                      {sortBy === 'lastActivity' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </th>
+                    <th className="py-3 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {games.map((game) => (
+                    <tr key={game.id} className="border-t border-border/60">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        {typeof game.roomCode === 'number' ? game.roomCode : '—'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-medium">
+                          {game.name || `Game ${game.id.slice(0, 8)}`}
                         </div>
-                        <span className={`font-medium ${getGameStatusColor(game.status)}`}>
-                          {game.status.toUpperCase()}
+                      </td>
+                      <td className="py-3 px-4">{game.mapName}</td>
+                      <td className="py-3 px-4">{game.createdByUsername}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs ${getGameStatusColor(game.status)}`}
+                        >
+                          {game.status}
                         </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4">
-                        <div>
-                          <div className="text-muted">Players</div>
-                          <div>
-                            {game.players.length}/{game.maxPlayers}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-muted">Turn</div>
-                          <div>
-                            #{game.turnCount} ({game.phase})
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-muted">Current Player</div>
-                          <div>{game.currentTurnUsername || 'None'}</div>
-                        </div>
-                        <div>
-                          <div className="text-muted">Last Activity</div>
-                          <div>{getTimeSinceLastActivity(game.lastActivity)}</div>
-                        </div>
-                      </div>
-
-                      {/* Player Status */}
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {game.players.map((player) => (
-                          <div
-                            key={player.id}
-                            className="flex items-center space-x-2 bg-surface-2 rounded-lg px-3 py-1 text-sm"
+                      </td>
+                      <td className="py-3 px-4">{game.phase}</td>
+                      <td className="py-3 px-4">{game.turnCount}</td>
+                      <td className="py-3 px-4">{game.currentTurnUsername ?? '—'}</td>
+                      <td className="py-3 px-4">
+                        {game.players.length} / {game.maxPlayers}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        {getTimeSinceLastActivity(game.lastActivity)}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex gap-2">
+                          <a
+                            href={`/admin/games/${game.id}`}
+                            className="bg-surface-2 hover:bg-gray-600 px-3 py-1 rounded text-sm"
                           >
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: getColorValue(player.color) }}
-                            />
-                            <span>{player.username}</span>
-                            <span className="text-muted">
-                              ({player.territoriesCount}T, {player.armiesCount}A)
-                            </span>
-                            {player.status !== 'active' && (
-                              <span className="text-yellow-400 text-xs">{player.status}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="text-xs text-muted">
-                        Created: {new Date(game.createdAt).toLocaleString()} • Updated:{' '}
-                        {new Date(game.updatedAt).toLocaleString()}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col space-y-2 ml-6">
-                      <button
-                        type="button"
-                        onClick={() => openActionModal(game, 'spectate')}
-                        className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
-                      >
-                        👁️ Open (spectate)
-                      </button>
-
-                      {game.status === 'active' && (
-                        <button
-                          type="button"
-                          onClick={() => openActionModal(game, 'pause')}
-                          className="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded text-sm"
-                        >
-                          ⏸️ Pause
-                        </button>
-                      )}
-
-                      {game.status === 'paused' && (
-                        <button
-                          type="button"
-                          onClick={() => openActionModal(game, 'resume')}
-                          className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
-                        >
-                          ▶️ Resume
-                        </button>
-                      )}
-
-                      {['active', 'paused', 'waiting'].includes(game.status) && (
-                        <button
-                          type="button"
-                          onClick={() => openActionModal(game, 'force_end')}
-                          className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
-                        >
-                          🛑 Force End
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                            Details
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => openActionModal(game, 'spectate')}
+                            className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
+                          >
+                            👁️ Spectate
+                          </button>
+                          {game.status === 'paused' ? (
+                            <button
+                              type="button"
+                              onClick={() => openActionModal(game, 'resume')}
+                              className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+                            >
+                              ▶️ Resume
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openActionModal(game, 'pause')}
+                              className="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded text-sm"
+                            >
+                              ⏸️ Pause
+                            </button>
+                          )}
+                          {['active', 'paused', 'waiting'].includes(game.status) && (
+                            <button
+                              type="button"
+                              onClick={() => openActionModal(game, 'force_end')}
+                              className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
+                            >
+                              🛑 Force End
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 

@@ -175,6 +175,29 @@ export class GameService {
     }
   }
 
+  private async insertImmutableTurnSnapshot(
+    roomId: string,
+    state: SerializedGameState,
+  ): Promise<void> {
+    try {
+      const turn = Math.max(1, Number(state.turn ?? 1))
+      const phase = String(state.phase ?? 'reinforcement')
+      await query(
+        `INSERT INTO game_state_snapshots (room_id, turn_number, phase, snapshot)
+         VALUES ($1, $2, $3, $4::jsonb)
+         ON CONFLICT (room_id, turn_number, phase) DO NOTHING`,
+        [roomId, turn, phase, JSON.stringify(state)],
+      )
+    } catch (error) {
+      logger.warn('Failed to insert immutable turn snapshot', {
+        roomId,
+        phase: state.phase,
+        turn: state.turn,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
   // Expose safe wrapper for other services to persist a full snapshot
   async saveSnapshot(roomId: string, state: SerializedGameState): Promise<void> {
     await this.persistGameStateSnapshot(roomId, state)
@@ -845,9 +868,15 @@ export class GameService {
 
     // Use longer TTL for finished games
     if (updatedState.phase === 'finished') {
-      await gameStateCache.setInactiveGameState(roomId, this.serializeGameState(updatedState))
+      const finalSerialized = this.serializeGameState(updatedState)
+      await gameStateCache.setInactiveGameState(roomId, finalSerialized)
+      // Capture a final immutable snapshot for replay/debugging
+      await this.insertImmutableTurnSnapshot(roomId, finalSerialized)
     } else {
-      await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
+      const serialized = this.serializeGameState(updatedState)
+      await this.persistGameStateSnapshot(roomId, serialized)
+      // Capture per-turn immutable snapshot at phase transition (end of turn)
+      await this.insertImmutableTurnSnapshot(roomId, serialized)
     }
 
     // Persist DB view of turn + actor for room-level queries/UI

@@ -30,6 +30,12 @@ type AdminGameRow = {
   map_name: string | null
   player_count: string | number | null
   room_code?: number | string | null
+  // joined from game_states
+  gs_turn_number?: number | null
+  gs_game_phase?: string | null
+  gs_last_activity?: Date | string | null
+  gs_current_player_id?: string | null
+  gs_current_player_username?: string | null
 }
 
 type AdminGamePlayerRow = {
@@ -518,6 +524,8 @@ router.get(
   queryParam('offset').optional().isInt({ min: 0 }),
   queryParam('status').optional().isString(),
   queryParam('search').optional().isString(),
+  queryParam('sortBy').optional().isString(),
+  queryParam('sortDir').optional().isIn(['asc', 'desc']),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
@@ -525,6 +533,18 @@ router.get(
       const offset = parseInt(req.query.offset as string, 10) || 0
       const status = req.query.status as string
       const search = req.query.search as string
+      const sortBy = ((req.query.sortBy as string) || 'lastActivity').toLowerCase()
+      const sortDir =
+        ((req.query.sortDir as string) || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC'
+
+      const sortMap: Record<string, string> = {
+        lastactivity: `COALESCE(gs.last_activity, gr.updated_at)`,
+        turn: `COALESCE(gs.turn_number, 0)`,
+        createdat: `gr.created_at`,
+        updatedat: `gr.updated_at`,
+        status: `gr.status`,
+      }
+      const sortExpr = sortMap[sortBy] ?? sortMap.lastactivity
 
       const statusFilterMap: Record<string, string[]> = {
         active: ['active', 'initializing'],
@@ -553,10 +573,17 @@ router.get(
           gr.room_code,
           u.username as host_username,
           m.name as map_name,
-          COUNT(rp.user_id) as player_count
+          COUNT(rp.user_id) as player_count,
+          gs.turn_number as gs_turn_number,
+          gs.game_phase as gs_game_phase,
+          gs.last_activity as gs_last_activity,
+          gs.current_player_id as gs_current_player_id,
+          cu.username as gs_current_player_username
         FROM game_rooms gr
         LEFT JOIN users u ON gr.host_id = u.id
         LEFT JOIN maps m ON gr.map_id = m.id
+        LEFT JOIN game_states gs ON gs.room_id = gr.id
+        LEFT JOIN users cu ON gs.current_player_id = cu.id
         LEFT JOIN room_players rp ON gr.id = rp.room_id
         WHERE 1=1
       `
@@ -577,8 +604,8 @@ router.get(
       }
 
       gamesQuery += `
-        GROUP BY gr.id, u.username, m.name
-        ORDER BY gr.updated_at DESC NULLS LAST
+        GROUP BY gr.id, u.username, m.name, gs.turn_number, gs.game_phase, gs.last_activity, gs.current_player_id, cu.username
+        ORDER BY ${sortExpr} ${sortDir} NULLS LAST
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `
       queryParams.push(limit, offset)
@@ -659,15 +686,16 @@ router.get(
           createdBy: game.host_id,
           createdByUsername: game.host_username,
           status: normalizedStatus,
-          currentTurn: null,
-          currentTurnUsername: null,
-          phase: 'reinforcement',
-          turnCount: 0,
+          currentTurn: game.gs_current_player_id ?? null,
+          currentTurnUsername: game.gs_current_player_username ?? null,
+          phase: (game.gs_game_phase as 'reinforcement' | 'attack' | 'fortify') ?? 'reinforcement',
+          turnCount: Number(game.gs_turn_number ?? 0),
           maxPlayers: game.max_players || 6,
           isPrivate: Boolean(game.is_private),
           createdAt: game.created_at,
           updatedAt: game.updated_at,
-          lastActivity: game.updated_at || game.created_at,
+          lastActivity:
+            (game.gs_last_activity as Date | string | null) || game.updated_at || game.created_at,
           roomCode:
             typeof game.room_code === 'number'
               ? game.room_code
@@ -691,6 +719,333 @@ router.get(
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to get games',
       })
+    }
+  },
+)
+
+// Get game details for a specific game
+router.get(
+  '/games/:gameId/details',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId } = req.params
+
+      const detailsQuery = `
+        SELECT 
+          gr.id,
+          gr.name,
+          gr.status,
+          gr.max_players,
+          gr.is_private,
+          gr.created_at,
+          gr.updated_at,
+          gr.host_id,
+          gr.map_id,
+          gr.game_mode,
+          gr.is_ranked,
+          gr.started_at,
+          gr.ended_at,
+          gr.winner_id,
+          gr.room_code,
+          u.username as host_username,
+          m.name as map_name,
+          gs.turn_number,
+          gs.game_phase,
+          gs.current_player_id,
+          gs.last_activity,
+          cu.username as current_player_username
+        FROM game_rooms gr
+        LEFT JOIN users u ON gr.host_id = u.id
+        LEFT JOIN maps m ON gr.map_id = m.id
+        LEFT JOIN game_states gs ON gs.room_id = gr.id
+        LEFT JOIN users cu ON gs.current_player_id = cu.id
+        WHERE gr.id = $1
+        LIMIT 1
+      `
+
+      const detailsResult = await dbQuery(detailsQuery, [gameId])
+      if (detailsResult.rowCount === 0) {
+        res.status(404).json({ error: 'Game not found' })
+        return
+      }
+
+      const row = detailsResult.rows[0] as Record<string, unknown>
+
+      const playersResult = await dbQuery<AdminGamePlayerRow>(
+        `SELECT rp.room_id, rp.user_id, u.username, rp.joined_at, rp.is_ai, rp.ai_difficulty, rp.ai_personality_seed
+         FROM room_players rp
+         LEFT JOIN users u ON rp.user_id = u.id
+         WHERE rp.room_id = $1
+         ORDER BY rp.joined_at ASC NULLS FIRST`,
+        [gameId],
+      )
+
+      const players = (playersResult.rows || []).map((p) => ({
+        id: p.user_id,
+        username: p.username,
+        status: 'active' as const,
+        color: '#666666',
+        territoriesCount: 0,
+        armiesCount: 0,
+        isAi: p.is_ai === true,
+        aiDifficulty: p.ai_difficulty,
+      }))
+
+      res.json({
+        id: row.id,
+        name: row.name,
+        mapName: row.map_name,
+        createdBy: row.host_id,
+        createdByUsername: row.host_username,
+        status: normalizeAdminGameStatus((row.status as string) ?? null),
+        currentTurn: row.current_player_id ?? null,
+        currentTurnUsername: row.current_player_username ?? null,
+        phase: (row.game_phase as string) ?? 'reinforcement',
+        turnCount: Number(row.turn_number ?? 0),
+        maxPlayers: Number(row.max_players ?? 6),
+        isPrivate: Boolean(row.is_private),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        lastActivity: row.last_activity ?? row.updated_at ?? row.created_at,
+        roomCode:
+          typeof row.room_code === 'number'
+            ? (row.room_code as number)
+            : typeof row.room_code === 'string'
+              ? Number.parseInt(row.room_code as string, 10)
+              : undefined,
+        players,
+      })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to get game details', 500, {
+        gameId: req.params.gameId,
+      })
+      res.status(500).json({ error: 'Failed to get game details' })
+    }
+  },
+)
+
+// Get game moves with filters/pagination
+router.get(
+  '/games/:gameId/moves',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  queryParam('limit').optional().isInt({ min: 1, max: 200 }),
+  queryParam('offset').optional().isInt({ min: 0 }),
+  queryParam('moveType').optional().isString(),
+  queryParam('playerId').optional().isUUID(),
+  queryParam('turn').optional().isInt({ min: 1 }),
+  queryParam('sort').optional().isString(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId } = req.params
+      const limit = parseInt((req.query.limit as string) ?? '50', 10)
+      const offset = parseInt((req.query.offset as string) ?? '0', 10)
+      const moveType = (req.query.moveType as string) || undefined
+      const playerId = (req.query.playerId as string) || undefined
+      const turn = req.query.turn ? Number.parseInt(req.query.turn as string, 10) : undefined
+      const sort = (req.query.sort as string) || 'created_at_desc'
+
+      const orderBy =
+        sort === 'created_at_asc'
+          ? 'gm.created_at ASC'
+          : sort === 'turn_asc'
+            ? 'gm.turn_number ASC, gm.created_at ASC'
+            : sort === 'turn_desc'
+              ? 'gm.turn_number DESC, gm.created_at DESC'
+              : 'gm.created_at DESC'
+
+      const where: string[] = ['gm.room_id = $1']
+      const params: unknown[] = [gameId]
+      let idx = 2
+      if (moveType) {
+        where.push(`gm.move_type = $${idx++}`)
+        params.push(moveType)
+      }
+      if (playerId) {
+        where.push(`gm.player_id = $${idx++}`)
+        params.push(playerId)
+      }
+      if (typeof turn === 'number' && Number.isFinite(turn)) {
+        where.push(`gm.turn_number = $${idx++}`)
+        params.push(turn)
+      }
+
+      const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ''
+
+      const sql = `
+        SELECT gm.id, gm.player_id, u.username as player_username, gm.turn_number, gm.move_type, gm.move_data, gm.is_valid, gm.validation_error, gm.created_at
+        FROM game_moves gm
+        LEFT JOIN users u ON gm.player_id = u.id
+        ${whereSql}
+        ORDER BY ${orderBy}
+        LIMIT $${idx} OFFSET $${idx + 1}
+      `
+      const listParams = [...params, limit, offset]
+      const rowsRes = await dbQuery(sql, listParams)
+
+      const countRes = await dbQuery(
+        `SELECT COUNT(*) as total FROM game_moves gm ${whereSql}`,
+        params,
+      )
+
+      res.json({
+        moves: rowsRes.rows || [],
+        total: Number.parseInt((countRes.rows?.[0]?.total as string) ?? '0', 10),
+      })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to get game moves', 500, {
+        gameId: req.params.gameId,
+      })
+      res.status(500).json({ error: 'Failed to get game moves' })
+    }
+  },
+)
+
+// Get per-turn stats timeline
+router.get(
+  '/games/:gameId/turn-stats',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId } = req.params
+      const result = await dbQuery<{ turn_stats: unknown[] | null }>(
+        'SELECT turn_stats FROM game_states WHERE room_id = $1',
+        [gameId],
+      )
+      const arr = Array.isArray(result.rows?.[0]?.turn_stats)
+        ? (result.rows[0]?.turn_stats as unknown[])
+        : []
+      res.json({ turnStats: arr, count: arr.length })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to get turn stats', 500, {
+        gameId: req.params.gameId,
+      })
+      res.status(500).json({ error: 'Failed to get turn stats' })
+    }
+  },
+)
+
+// Get battle/event log entries
+router.get(
+  '/games/:gameId/log',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId } = req.params
+      const result = await dbQuery<{ game_log: unknown[] | null }>(
+        'SELECT game_log FROM game_states WHERE room_id = $1',
+        [gameId],
+      )
+      const arr = Array.isArray(result.rows?.[0]?.game_log)
+        ? (result.rows[0]?.game_log as unknown[])
+        : []
+      res.json({ entries: arr, count: arr.length })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to get game log', 500, {
+        gameId: req.params.gameId,
+      })
+      res.status(500).json({ error: 'Failed to get game log' })
+    }
+  },
+)
+
+// Get latest full state snapshot
+router.get(
+  '/games/:gameId/state',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId } = req.params
+      const result = await dbQuery<{ game_data: unknown | null }>(
+        'SELECT game_data FROM game_states WHERE room_id = $1',
+        [gameId],
+      )
+      res.json({ state: result.rows?.[0]?.game_data ?? null })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to get game state', 500, {
+        gameId: req.params.gameId,
+      })
+      res.status(500).json({ error: 'Failed to get game state' })
+    }
+  },
+)
+
+// List immutable state snapshots (meta only)
+router.get(
+  '/games/:gameId/snapshots',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  queryParam('limit').optional().isInt({ min: 1, max: 200 }),
+  queryParam('offset').optional().isInt({ min: 0 }),
+  queryParam('order').optional().isIn(['asc', 'desc']),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId } = req.params
+      const limit = Math.min(parseInt((req.query.limit as string) || '20', 10), 200)
+      const offset = parseInt((req.query.offset as string) || '0', 10)
+      const order = ((req.query.order as string) || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC'
+
+      const listSql = `
+        SELECT id, room_id, turn_number, phase, created_at
+        FROM game_state_snapshots
+        WHERE room_id = $1
+        ORDER BY created_at ${order}
+        LIMIT $2 OFFSET $3
+      `
+      const rowsRes = await dbQuery(listSql, [gameId, limit, offset])
+      const countRes = await dbQuery(
+        `SELECT COUNT(*) as total FROM game_state_snapshots WHERE room_id = $1`,
+        [gameId],
+      )
+      res.json({
+        snapshots: rowsRes.rows || [],
+        total: Number.parseInt((countRes.rows?.[0]?.total as string) ?? '0', 10),
+      })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to list snapshots', 500, { gameId: req.params.gameId })
+      res.status(500).json({ error: 'Failed to list snapshots' })
+    }
+  },
+)
+
+// Get one immutable snapshot (full JSON)
+router.get(
+  '/games/:gameId/snapshots/:snapshotId',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  param('snapshotId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId, snapshotId } = req.params
+      const result = await dbQuery(
+        `SELECT id, room_id, turn_number, phase, snapshot, created_at
+         FROM game_state_snapshots
+         WHERE id = $1 AND room_id = $2`,
+        [snapshotId, gameId],
+      )
+      if (result.rowCount === 0) {
+        res.status(404).json({ error: 'Snapshot not found' })
+        return
+      }
+      res.json(result.rows[0])
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to get snapshot', 500, {
+        gameId: req.params.gameId,
+        snapshotId: req.params.snapshotId,
+      })
+      res.status(500).json({ error: 'Failed to get snapshot' })
     }
   },
 )
