@@ -14,7 +14,6 @@ export class GameActionProcessor {
   private deltaEmitter: DeltaEmitter
 
   constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
-    this.io = io
     this.gameService = new GameService()
     this.deltaEmitter = new DeltaEmitter(io)
   }
