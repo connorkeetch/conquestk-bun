@@ -51,7 +51,7 @@ function TerritoryTokenComponent({
       padding: 0,
       boxSizing: 'border-box',
       boxShadow: isSelected
-        ? '0 0 0 3px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.8), 0 4px 8px rgba(0,0,0,0.4)'
+        ? `0 0 0 3px ${color}, 0 0 25px ${color}, 0 0 40px ${color}, 0 4px 8px rgba(0,0,0,0.4)`
         : '0 2px 4px rgba(0,0,0,0.3)',
       zIndex: isDragging ? 1000 : isSelected ? 100 : 10,
       display: 'flex',
@@ -59,10 +59,11 @@ function TerritoryTokenComponent({
       justifyContent: 'center',
       userSelect: 'none',
       border: isSelected
-        ? '3px solid rgba(255,255,255,1)'
+        ? `3px solid ${color}`
         : outlineColor
           ? `2px solid ${outlineColor}`
           : `1px solid rgba(255,255,255,0.2)`,
+      animation: isSelected ? 'tokenPulse 2s ease-in-out infinite' : 'none',
     }
 
     switch (shape) {
