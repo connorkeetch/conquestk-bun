@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import InfoTooltip from '@/components/InfoTooltip'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import {
   deployArmies,
@@ -375,6 +376,7 @@ export function GameActionBar({
                 Remaining: {remaining}
               </span>
             )}
+            <InfoTooltip title="Tip: Press Z to undo your last placement during Reinforcement, or your last move during Fortify." />
             {!selected && (
               <span>
                 {phase === 'reinforcement' && 'Select a territory to deploy'}

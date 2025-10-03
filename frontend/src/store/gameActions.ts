@@ -12,7 +12,7 @@ import {
   setPendingAction,
 } from './gameSlice'
 import type { AppDispatch, RootState } from './index'
-import { addClientLog } from './uiRoomSlice'
+import { addClientLog, recordPlacement, removeLastPlacement } from './uiRoomSlice'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -234,6 +234,11 @@ export const deployArmies = createAsyncThunk(
         }),
       )
 
+      // Track client-side placement history for undo during reinforcement phase
+      if (currentGame.phase === 'reinforcement' && armies > 0) {
+        dispatch(recordPlacement({ territoryId, armies }))
+      }
+
       // Clear selection after sending deployment
       dispatch(selectTerritory(null))
       dispatch(setPendingAction(null))
@@ -241,6 +246,45 @@ export const deployArmies = createAsyncThunk(
       dispatch(setError('Failed to deploy armies'))
       toast.error('Deploy failed')
       dispatch(addClientLog({ text: `Deployment to ${territoryId} failed` }))
+    }
+  },
+)
+
+// Undo the most recent reinforcement placement (client-tracked)
+export const undoLastPlacement = createAsyncThunk(
+  'game/undoLastPlacement',
+  async (_, { getState, dispatch }) => {
+    const state = getState() as RootState
+    const { currentGame } = state.game
+    const history = state.uiRoom.placementHistory ?? []
+    const userId = state.auth.user?.id
+
+    if (!currentGame || !userId || currentGame.currentPlayer !== userId) {
+      dispatch(setError('Not your turn'))
+      return
+    }
+    if (currentGame.phase !== 'reinforcement') {
+      dispatch(setError('Undo is only available during reinforcement'))
+      return
+    }
+    if (history.length === 0) {
+      dispatch(setError('Nothing to undo'))
+      return
+    }
+
+    const last = history[history.length - 1]
+    try {
+      socketService.deployArmies(currentGame.roomId, last.territoryId, -last.armies)
+      dispatch(removeLastPlacement())
+      dispatch(
+        addClientLog({
+          text: `Undid placement of ${last.armies} on ${last.territoryId}`,
+          roomId: currentGame.roomId,
+        }),
+      )
+    } catch (_e) {
+      dispatch(setError('Failed to undo placement'))
+      toast.error('Undo placement failed')
     }
   },
 )
