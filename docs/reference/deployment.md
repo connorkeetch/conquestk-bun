@@ -15,7 +15,46 @@ git checkout dev
 git push origin dev  # Auto-deploys via Railway
 ```
 
-> **Configuration note (September 2025):** The repo no longer ships a `railway.json`. Manage services and environment variables directly in the Railway dashboard to avoid the deployment regression that file triggered. Document any changes in the GUI so the team can keep this guide current.
+> Configuration notes
+>
+> - (September 2025) The repo no longer ships a legacy `railway.json`. Manage services and environment variables directly in the Railway dashboard to avoid the deployment regression that file triggered. Document any changes in the GUI so the team can keep this guide current.
+> - (October 2025) We now include a `railpack.json` at the repository root to guide Nixpacks build steps (install/build/start). This is not the old `railway.json` and does not define services or environment variables; it only standardizes how Nixpacks installs dependencies, builds, prunes dev dependencies, and starts the server.
+
+## 🧰 Build & Install Strategy (Nixpacks/Railpack)
+
+We use Nixpacks on Railway with a repo‑root `railpack.json` that makes installs reproducible and eliminates npm’s production warning.
+
+Key choices:
+- Install with `npm ci` (keeps devDependencies available for TypeScript/Vite builds).
+- Build with `npm run build`.
+- Prune devDependencies for runtime with `npm prune --omit=dev`.
+- Start with Node directly (no `npm start`) to avoid the npm production warning.
+
+railpack.json (excerpt):
+```json
+{
+  "steps": {
+    "install": { "commands": ["npm ci"], "caches": ["npm-install"] },
+    "build": {
+      "inputs": [{ "step": "install" }],
+      "commands": ["npm run build", "npm prune --omit=dev"],
+      "caches": ["npm-install"]
+    }
+  },
+  "deploy": {
+    "startCommand": "node backend/dist/index.js"
+  }
+}
+```
+
+Why not `npm ci --omit=dev`? Because the build requires devDependencies (TypeScript, Vite). We install devDependencies for the build and prune them afterward so the runtime image only contains production dependencies.
+
+Runtime expectations:
+- The frontend build outputs into `backend/public` (via Vite config). The backend serves these static assets in production/staging.
+- The backend server entry is `backend/dist/index.js`.
+- Optional startup tasks can be toggled via env vars without changing the build:
+  - `SYNC_FEATURE_FLAGS_ON_START=true` to sync feature flags used in code into the DB at boot.
+  - `RUN_DEPLOY_ACCOUNT_ENFORCEMENT_ON_START=true` to normalize owner/test accounts at boot (use in staging when needed).
 
 ## 🔐 Environment Variables
 
