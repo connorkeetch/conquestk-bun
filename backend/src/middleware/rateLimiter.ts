@@ -300,7 +300,28 @@ export class SuspiciousActivityTracker {
   }
 
   middleware() {
+    const shouldEvaluateRequest = (req: Request) => {
+      const base = req.baseUrl ?? ''
+      const path = req.path ?? ''
+      const combined = `${base}${path}`
+
+      if (combined.startsWith('/api')) {
+        return true
+      }
+
+      if (combined.startsWith('/socket.io')) {
+        return true
+      }
+
+      return false
+    }
+
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      if (!shouldEvaluateRequest(req)) {
+        next()
+        return
+      }
+
       const ip = req.ip || 'unknown'
 
       if (await this.isBlocked(ip)) {

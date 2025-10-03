@@ -199,7 +199,7 @@ export class GameService {
 
   private cloneGameState(state: GameState): GameState {
     const serialized = this.serializeGameState(state)
-    return this.hydrateGameState(structuredClone(serialized))
+    return this.hydrateGameState(structuredClone(serialized), state.roomId)
   }
 
   private normalizeAction(action: GameAction, roomId: string, playerId: string): GameAction | null {
@@ -321,19 +321,25 @@ export class GameService {
     })
   }
 
-  private hydrateGameState(state: GameState | SerializedGameState): GameState {
-    if (state.territoryModifiers && !(state.territoryModifiers instanceof Map)) {
+  private hydrateGameState(state: GameState | SerializedGameState, roomId?: string): GameState {
+    const normalizedState =
+      roomId && (!state.roomId || typeof state.roomId !== 'string') ? { ...state, roomId } : state
+
+    if (
+      normalizedState.territoryModifiers &&
+      !(normalizedState.territoryModifiers instanceof Map)
+    ) {
       const modifierMap = new Map<string, GameTerritoryModifier>(
-        Object.entries(state.territoryModifiers),
+        Object.entries(normalizedState.territoryModifiers),
       )
 
       return {
-        ...state,
+        ...normalizedState,
         territoryModifiers: modifierMap,
       }
     }
 
-    return state as GameState
+    return normalizedState as GameState
   }
 
   async executeAiTurn(
@@ -351,7 +357,7 @@ export class GameService {
       throw new Error('Game not found')
     }
 
-    const hydrated = this.hydrateGameState(cachedState)
+    const hydrated = this.hydrateGameState(cachedState, roomId)
     const currentPlayer = hydrated.players.find((player) => player.id === hydrated.currentPlayer)
 
     if (!currentPlayer) {
@@ -469,7 +475,7 @@ export class GameService {
       return false
     }
 
-    const gameState = this.hydrateGameState(rawState)
+    const gameState = this.hydrateGameState(rawState, roomId)
     const normalizedId = typeof territoryId === 'number' ? territoryId.toString() : territoryId
     const territory = gameState.board.find((entry) => entry.id === normalizedId)
 
@@ -483,7 +489,7 @@ export class GameService {
       throw new Error('Game not found')
     }
 
-    const gameState = this.hydrateGameState(cachedState)
+    const gameState = this.hydrateGameState(cachedState, action.roomId)
 
     if (!this.isValidAction(action, userId, gameState)) {
       throw new Error('Invalid action')
@@ -605,7 +611,7 @@ export class GameService {
       return null
     }
 
-    let gameState = this.hydrateGameState(cachedState)
+    let gameState = this.hydrateGameState(cachedState, roomId)
     const targetPlayer = gameState.players.find((player) => player.id === userId)
 
     if (targetPlayer) {
@@ -678,7 +684,7 @@ export class GameService {
       }
     }
 
-    const hydratedState = this.hydrateGameState(cachedState)
+    const hydratedState = this.hydrateGameState(cachedState, roomId)
 
     if (hydratedState.gameConfig?.useTerritoryModifiers && !hydratedState.territoryModifiers) {
       const modifiers = await territoryModifierService.getGameModifiers(roomId)
@@ -693,7 +699,7 @@ export class GameService {
   async deployArmies(roomId: string, userId: string, territoryId: string, armies: number) {
     const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
-    const gameState = this.hydrateGameState(cachedState)
+    const gameState = this.hydrateGameState(cachedState, roomId)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
     if (gameState.phase !== 'reinforcement') throw new Error('Not reinforcement phase')
 
@@ -721,7 +727,7 @@ export class GameService {
   async attack(roomId: string, userId: string, fromTerritoryId: string, toTerritoryId: string) {
     const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
-    const gameState = this.hydrateGameState(cachedState)
+    const gameState = this.hydrateGameState(cachedState, roomId)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
     if (gameState.phase !== 'attack') throw new Error('Not attack phase')
 
@@ -792,7 +798,7 @@ export class GameService {
   ) {
     const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
-    const gameState = this.hydrateGameState(cachedState)
+    const gameState = this.hydrateGameState(cachedState, roomId)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
     if (gameState.phase !== 'fortify') throw new Error('Not fortify phase')
 

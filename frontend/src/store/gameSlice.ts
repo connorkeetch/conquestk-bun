@@ -410,7 +410,11 @@ const gameSlice = createSlice({
       })
       .addCase(fetchGameState.fulfilled, (state, action) => {
         state.isLoading = false
-        state.currentGame = action.payload
+        const payload = action.payload
+        state.currentGame = {
+          ...payload,
+          roomId: payload.roomId ?? action.meta.arg.roomId,
+        }
       })
       .addCase(fetchGameState.rejected, (state, action) => {
         state.isLoading = false
