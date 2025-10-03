@@ -95,6 +95,8 @@ export interface AdminGamePlayer {
   status: 'waiting' | 'active' | 'eliminated' | 'disconnected'
   territoriesCount: number
   armiesCount: number
+  isAi?: boolean
+  aiDifficulty?: string | null
 }
 
 export interface AdminGame {
@@ -115,6 +117,20 @@ export interface AdminGame {
   isPrivate: boolean
   lastActivity: string
   roomCode?: number
+}
+
+export type AdminGameDetails = AdminGame
+
+export interface AdminMoveRecord {
+  id: string
+  player_id: string
+  player_username: string | null
+  turn_number: number
+  move_type: string
+  move_data: Record<string, unknown>
+  is_valid: boolean
+  validation_error?: string | null
+  created_at: string
 }
 
 export interface SystemStatus {
@@ -248,9 +264,87 @@ class AdminService {
   // ============= GAME MANAGEMENT =============
 
   async getGames(
-    params: { limit?: number; offset?: number; status?: string; search?: string } = {},
+    params: {
+      limit?: number
+      offset?: number
+      status?: string
+      search?: string
+      sortBy?: 'lastActivity' | 'turn' | 'createdAt' | 'updatedAt' | 'status'
+      sortDir?: 'asc' | 'desc'
+    } = {},
   ): Promise<{ games: AdminGame[]; total: number }> {
     const response = await apiClient.get(`${this.baseUrl}/games`, { params })
+    return response.data
+  }
+
+  async getGameDetails(gameId: string): Promise<AdminGameDetails> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/details`)
+    return response.data
+  }
+
+  async getGameMoves(
+    gameId: string,
+    params: {
+      limit?: number
+      offset?: number
+      moveType?: string
+      playerId?: string
+      turn?: number
+      sort?: 'created_at_desc' | 'created_at_asc' | 'turn_desc' | 'turn_asc'
+    } = {},
+  ): Promise<{ moves: AdminMoveRecord[]; total: number }> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/moves`, { params })
+    return response.data
+  }
+
+  async getGameTurnStats(
+    gameId: string,
+  ): Promise<{ turnStats: Array<Record<string, unknown>>; count: number }> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/turn-stats`)
+    return response.data
+  }
+
+  async getGameLog(
+    gameId: string,
+  ): Promise<{ entries: Array<Record<string, unknown>>; count: number }> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/log`)
+    return response.data
+  }
+
+  async getGameState(gameId: string): Promise<{ state: Record<string, unknown> | null }> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/state`)
+    return response.data
+  }
+
+  async getGameSnapshots(
+    gameId: string,
+    params: { limit?: number; offset?: number; order?: 'asc' | 'desc' } = {},
+  ): Promise<{
+    snapshots: Array<{
+      id: string
+      room_id: string
+      turn_number: number
+      phase: string
+      created_at: string
+    }>
+    total: number
+  }> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/snapshots`, { params })
+    return response.data
+  }
+
+  async getGameSnapshotById(
+    gameId: string,
+    snapshotId: string,
+  ): Promise<{
+    id: string
+    room_id: string
+    turn_number: number
+    phase: string
+    created_at: string
+    snapshot: Record<string, unknown>
+  } | null> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/snapshots/${snapshotId}`)
     return response.data
   }
 
