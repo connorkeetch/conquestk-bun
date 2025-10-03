@@ -376,6 +376,76 @@ function updateDynamicOverlay(themeId: ThemeId) {
   }
 }
 
+// ===== Helper: non-overlapping background image layout =====
+type Rect = { x: number; y: number; w: number; h: number }
+
+function rectsOverlap(a: Rect, b: Rect, buffer: number): boolean {
+  return !(
+    a.x + a.w + buffer <= b.x ||
+    b.x + b.w + buffer <= a.x ||
+    a.y + a.h + buffer <= b.y ||
+    b.y + b.h + buffer <= a.y
+  )
+}
+
+function layoutNonOverlapping(
+  pickImage: () => string,
+  count: number,
+  sizeRange: [number, number],
+  aspectRange: [number, number],
+  buffer: number,
+  maxTries = 40
+) {
+  const images: string[] = []
+  const sizes: string[] = []
+  const positions: string[] = []
+  const repeats: string[] = []
+
+  const vw = Math.max(320, Math.floor((window?.innerWidth ?? 1280)))
+  const vh = Math.max(320, Math.floor((window?.innerHeight ?? 800)))
+
+  const placed: Rect[] = []
+
+  for (let i = 0; i < count; i++) {
+    const img = pickImage()
+    // Choose size
+    const base = sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0])
+    let w = Math.round(base)
+    let h = Math.round(base * (aspectRange[0] + Math.random() * (aspectRange[1] - aspectRange[0])))
+
+    let placedOk = false
+    let attempt = 0
+    let x = 0
+    let y = 0
+    while (attempt < maxTries && !placedOk) {
+      // Random top-left ensuring it fits viewport
+      x = Math.max(0, Math.round(Math.random() * Math.max(1, vw - w)))
+      y = Math.max(0, Math.round(Math.random() * Math.max(1, vh - h)))
+      const rect: Rect = { x, y, w, h }
+      placedOk = !placed.some((r) => rectsOverlap(r, rect, buffer))
+      if (!placedOk) {
+        // On later attempts, slightly shrink to help packing
+        if (attempt > maxTries * 0.6) {
+          w = Math.max(32, Math.round(w * 0.9))
+          h = Math.max(32, Math.round(h * 0.9))
+        }
+      }
+      attempt++
+    }
+
+    // If we failed to place without overlap, just place anyway to guarantee density
+    const rect: Rect = { x, y, w, h }
+    placed.push(rect)
+
+    images.push(img)
+    sizes.push(`${rect.w}px ${rect.h}px`)
+    positions.push(`${((rect.x / vw) * 100).toFixed(2)}% ${((rect.y / vh) * 100).toFixed(2)}%`)
+    repeats.push('no-repeat')
+  }
+
+  return { images, sizes, positions, repeats }
+}
+
 function generateHalloweenOverlayCSS(withMotion: boolean): string {
   // SVG tiles (data URIs)
   const pumpkins = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23FF7A1A' d='M20 24c-6 0-10 7-10 14s4 14 10 14c4 0 6-2 12-2s8 2 12 2c6 0 10-7 10-14s-4-14-10-14c-4 0-6 2-12 2s-8-2-12-2z'/%3E%3Cpath fill='%238A4B0A' d='M30 14h4v8h-4z'/%3E%3Cpath fill='%23FF9248' d='M24 24c-3 2-5 6-5 13s2 13 5 15c4 0 7-2 11-2s7 2 11 2c3-2 5-8 5-15s-2-11-5-13c-4 0-7 2-11 2s-7-2-11-2z' opacity='.55'/%3E%3C/svg%3E")`
@@ -397,21 +467,15 @@ function generateHalloweenOverlayCSS(withMotion: boolean): string {
     return shapes[0]
   }
 
-  const count = 14
-  const images: string[] = []
-  const sizes: string[] = []
-  const positions: string[] = []
-  const repeats: string[] = []
-
-  for (let i = 0; i < count; i++) {
-    images.push(pick())
-    const size = Math.round(40 + Math.random() * 140) // 40–180px
-    sizes.push(`${size}px ${Math.round(size * (0.9 + Math.random() * 0.3))}px`)
-    const x = Math.round(Math.random() * 100)
-    const y = Math.round(Math.random() * 100)
-    positions.push(`${x}% ${y}%`)
-    repeats.push('no-repeat')
-  }
+  // Denser layout with non-overlapping placement + small buffer
+  const count = 20
+  const { images, sizes, positions, repeats } = layoutNonOverlapping(
+    pick,
+    count,
+    [60, 200],
+    [0.9, 1.2],
+    18
+  )
 
   // Add soft glow gradients at the end
   const gradients = [
@@ -421,7 +485,7 @@ function generateHalloweenOverlayCSS(withMotion: boolean): string {
   ]
 
   images.push(...gradients)
-  sizes.push('300px 300px', '200px 200px', '200px 200px')
+  sizes.push('300px 300px', '220px 220px', '220px 220px')
   positions.push('10% 20%', '80% 60%', '30% 70%')
   repeats.push('no-repeat', 'no-repeat', 'no-repeat')
 
@@ -474,23 +538,15 @@ function generateCheeseOverlayCSS(withMotion: boolean): string {
     return shapes[0]
   }
 
-  const count = 12
-  const images: string[] = []
-  const sizes: string[] = []
-  const positions: string[] = []
-  const repeats: string[] = []
-
-  for (let i = 0; i < count; i++) {
-    images.push(pick())
-    const base = 60 + Math.random() * 140 // 60–200px
-    const w = Math.round(base)
-    const h = Math.round(base * (0.8 + Math.random() * 0.4))
-    sizes.push(`${w}px ${h}px`)
-    const x = Math.round(Math.random() * 100)
-    const y = Math.round(Math.random() * 100)
-    positions.push(`${x}% ${y}%`)
-    repeats.push('no-repeat')
-  }
+  // Slightly denser and non-overlapping placement
+  const count = 18
+  const { images, sizes, positions, repeats } = layoutNonOverlapping(
+    pick,
+    count,
+    [70, 220],
+    [0.8, 1.2],
+    20
+  )
 
   // Subtle background holes as repeating tile
   const holes = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='6' cy='6' r='2.5' fill='%23FFD97A'/%3E%3Ccircle cx='18' cy='8' r='2' fill='%23FFE18D'/%3E%3Ccircle cx='10' cy='18' r='1.8' fill='%23F5C33B'/%3E%3C/svg%3E")`
@@ -575,23 +631,15 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     return shapes[0]
   }
 
-  const count = 16
-  const images: string[] = []
-  const sizes: string[] = []
-  const positions: string[] = []
-  const repeats: string[] = []
-
-  for (let i = 0; i < count; i++) {
-    images.push(choose())
-    const base = 48 + Math.random() * 160 // 48–208px
-    const w = Math.round(base)
-    const h = Math.round(base * (0.8 + Math.random() * 0.5))
-    sizes.push(`${w}px ${h}px`)
-    const x = Math.round(Math.random() * 100)
-    const y = Math.round(Math.random() * 100)
-    positions.push(`${x}% ${y}%`)
-    repeats.push('no-repeat')
-  }
+  // Denser and non-overlapping placement with a bigger buffer to showcase icons
+  const count = 22
+  const { images, sizes, positions, repeats } = layoutNonOverlapping(
+    choose,
+    count,
+    [80, 220],
+    [0.8, 1.3],
+    22
+  )
 
   // A few soft glows for depth
   const glows = [
@@ -624,8 +672,7 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     ${posList};
   background-repeat:
     ${repeatList};
-  mix-blend-mode: screen;
-  opacity: 0.78;
+  opacity: 0.9;
   ${motionCss}
 }
 
