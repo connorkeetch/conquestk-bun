@@ -50,7 +50,9 @@ export class BattleWorker {
     this.queue.on('failed', (job, error) => {
       logger.error('❌ Battle simulation job failed', {
         jobId: job.id,
-        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
       })
     })
 
@@ -300,7 +302,9 @@ export class BattleWorker {
         gameId,
         attackingTerritory,
         defendingTerritory,
-        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
       })
 
       // Emit battle error to game room
@@ -316,8 +320,10 @@ export class BattleWorker {
 
   private calculateBattleResult(attackingArmies: number, defendingArmies: number): BattleResult {
     // Limit armies in battle (max 3 attacking, max 2 defending). One army must remain behind.
-    const attackerDice = Math.max(1, Math.min(Math.max(attackingArmies - 1, 1), 3))
-    const defenderDice = Math.min(defendingArmies, 2)
+    const att = Number.isFinite(attackingArmies) ? Math.trunc(attackingArmies) : 1
+    const def = Number.isFinite(defendingArmies) ? Math.trunc(defendingArmies) : 1
+    const attackerDice = Math.max(1, Math.min(Math.max(att - 1, 1), 3))
+    const defenderDice = Math.max(1, Math.min(def, 2))
 
     // Roll dice
     const attackerRolls = this.rollDice(attackerDice).sort((a, b) => b - a)

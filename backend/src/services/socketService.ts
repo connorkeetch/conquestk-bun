@@ -691,8 +691,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         })
 
         if (job) {
-          const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-          if (hasWorkers) {
+          const hasActionWorkers = await queueService.hasActiveWorkers('gameActions')
+          const hasBattleWorkers = await queueService.hasActiveWorkers('battleSimulations')
+          if (hasActionWorkers && hasBattleWorkers) {
             logger.info(`Queued attack for game ${data.roomId}`, {
               jobId: job.id,
               from: data.fromTerritoryId,
@@ -710,6 +711,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               error: err instanceof Error ? err.message : err,
             })
           }
+          logger.warn('Falling back to inline attack processing due to missing workers', {
+            roomId: data.roomId,
+            actionWorkers: hasActionWorkers,
+            battleWorkers: hasBattleWorkers,
+          })
         }
 
         await processInline()
