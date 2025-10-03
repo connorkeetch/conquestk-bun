@@ -29,6 +29,8 @@ export interface UIRoomState {
   clientLogs?: Array<{ id: string; ts: number; text: string; roomId?: string }>
   // Simple per-user cooldown tracking for ping button
   lastPingAt?: number
+  // Client-side reinforcement placement history (for undo within the same phase)
+  placementHistory?: Array<{ territoryId: string; armies: number; ts: number }>
 }
 
 const initialState: UIRoomState = {
@@ -48,6 +50,7 @@ const initialState: UIRoomState = {
   mutedUserIds: [],
   clientLogs: [],
   lastPingAt: 0,
+  placementHistory: [],
 }
 
 const uiRoomSlice = createSlice({
@@ -157,6 +160,22 @@ const uiRoomSlice = createSlice({
     setLastPingAt(state, action: PayloadAction<number>) {
       state.lastPingAt = Math.max(0, Math.trunc(action.payload) || 0)
     },
+    recordPlacement(
+      state,
+      action: PayloadAction<{ territoryId: string; armies: number; ts?: number }>,
+    ) {
+      const list = state.placementHistory ?? []
+      const entry = {
+        territoryId: action.payload.territoryId,
+        armies: Math.max(1, Math.trunc(action.payload.armies) || 1),
+        ts: action.payload.ts ?? Date.now(),
+      }
+      state.placementHistory = [...list, entry].slice(-100)
+    },
+    removeLastPlacement(state) {
+      const list = state.placementHistory ?? []
+      state.placementHistory = list.slice(0, Math.max(0, list.length - 1))
+    },
     toggleMuteUser(state, action: PayloadAction<string>) {
       const id = action.payload
       const list = new Set(state.mutedUserIds ?? [])
@@ -239,6 +258,8 @@ export const {
   clearClientLogs,
   toggleMuteUser,
   setLastPingAt,
+  recordPlacement,
+  removeLastPlacement,
 } = uiRoomSlice.actions
 
 export default uiRoomSlice.reducer
