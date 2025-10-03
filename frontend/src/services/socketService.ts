@@ -42,7 +42,7 @@ import {
   removePlayerFromRoom,
   updateRoom,
 } from '../store/roomSlice'
-import { setConnectionStatus, setDesyncDetected } from '../store/uiRoomSlice'
+import { recordBattleResult, setConnectionStatus, setDesyncDetected } from '../store/uiRoomSlice'
 import type { BattleResult, GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
@@ -400,12 +400,30 @@ class SocketService {
         }
       }
 
-      // Handle battle result audio
+      // Handle battle result audio and record dice recap
       if (payload.type === 'BATTLE_RESULT') {
-        if (payload.battleResult.conquered) {
+        const br = (payload as BattleResultDelta).battleResult
+        if (br.conquered) {
           audioService.playEffect('victory')
         } else {
           audioService.playEffect('defeat')
+        }
+        try {
+          store.dispatch(
+            recordBattleResult({
+              fromId: br.fromTerritory.id,
+              toId: br.toTerritory.id,
+              attackerId: br.attackerId ?? undefined,
+              defenderId: br.defenderId ?? undefined,
+              attackerDice: Array.isArray(br.attackerDice) ? br.attackerDice : [],
+              defenderDice: Array.isArray(br.defenderDice) ? br.defenderDice : [],
+              attackerLosses: br.attackerLosses ?? 0,
+              defenderLosses: br.defenderLosses ?? 0,
+              conquered: Boolean(br.conquered),
+            }),
+          )
+        } catch {
+          // best-effort only
         }
       }
 
@@ -866,6 +884,25 @@ class SocketService {
 
       // Show battle results
       store.dispatch(setBattleResult(battleResult))
+
+      // Record dice recap for header bar
+      try {
+        store.dispatch(
+          recordBattleResult({
+            fromId: fromTerritory.id,
+            toId: toTerritory.id,
+            attackerId: fromTerritory.ownerId ?? undefined,
+            defenderId: toTerritory.ownerId ?? undefined,
+            attackerDice,
+            defenderDice,
+            attackerLosses,
+            defenderLosses,
+            conquered,
+          }),
+        )
+      } catch {
+        // best-effort only
+      }
 
       // If conquered, show inline conquest transfer overlay for next-commit adjustment
       if (conquered) {

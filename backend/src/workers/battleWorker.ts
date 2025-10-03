@@ -246,7 +246,8 @@ export class BattleWorker {
         defendingTerritoryId: defendingTerritory,
         attackingPlayerId: attackerOwnerId,
         defendingPlayerId: defenderOwnerId,
-        attackingArmiesCommitted: attackingArmies,
+        // Default commit 1 army on conquest; player can transfer more via subsequent action
+        attackingArmiesCommitted: 1,
       })
 
       // If visibility changed (on conquest), send filtered snapshots to affected players
@@ -314,8 +315,8 @@ export class BattleWorker {
   }
 
   private calculateBattleResult(attackingArmies: number, defendingArmies: number): BattleResult {
-    // Limit armies in battle (max 3 attacking, max 2 defending)
-    const attackerDice = Math.min(attackingArmies, 3)
+    // Limit armies in battle (max 3 attacking, max 2 defending). One army must remain behind.
+    const attackerDice = Math.max(1, Math.min(Math.max(attackingArmies - 1, 1), 3))
     const defenderDice = Math.min(defendingArmies, 2)
 
     // Roll dice

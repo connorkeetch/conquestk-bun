@@ -492,10 +492,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               throw new Error('Territories not adjacent')
             if (from.armies <= 1) throw new Error('Not enough armies to attack')
 
-            const attackingArmies = Math.max(1, typeof data.armies === 'number' ? data.armies : 1)
+            // Dice count should be based on available armies in the territory (1 must remain)
             const defendingArmies = to.armies ?? 1
-
-            const attackerDiceCount = Math.min(attackingArmies, 3)
+            const attackerDiceCount = Math.max(1, Math.min(3, Math.max(0, (from.armies ?? 0) - 1)))
             const defenderDiceCount = Math.min(defendingArmies, 2)
             const roll = (n: number) =>
               Array.from({ length: n }, () => Math.floor(Math.random() * 6) + 1)
@@ -513,9 +512,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const territoryConquered = newDefendingArmies === 0
 
             const preMoveArmies = Math.max(newAttackingArmies, 0)
-            const movingArmies = territoryConquered
-              ? Math.max(0, Math.min(attackingArmies, preMoveArmies - 1))
-              : 0
+            // Default move-on-conquest is 1 (later adjustable via transferConquestArmies)
+            const movingArmies = territoryConquered ? Math.max(0, Math.min(1, preMoveArmies - 1)) : 0
             const finalAttackerArmies = territoryConquered
               ? Math.max(preMoveArmies - movingArmies, 1)
               : Math.max(preMoveArmies, 1)
@@ -625,7 +623,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               defendingTerritoryId: data.toTerritoryId,
               attackingPlayerId: attackerOwnerId,
               defendingPlayerId: defenderOwnerId,
-              attackingArmiesCommitted: attackingArmies,
+              // Default commit 1 army on conquest; player can adjust afterwards
+              attackingArmiesCommitted: 1,
             })
 
             if (territoryConquered) {
