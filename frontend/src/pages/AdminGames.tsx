@@ -375,7 +375,11 @@ export default function AdminGames() {
                       </td>
                       <td className="py-3 px-4">{game.phase}</td>
                       <td className="py-3 px-4">{game.turnCount}</td>
-                      <td className="py-3 px-4">{game.currentTurnUsername ?? '—'}</td>
+                      <td className="py-3 px-4">
+                        {['completed', 'abandoned'].includes(game.status)
+                          ? '—'
+                          : (game.currentTurnUsername ?? '—')}
+                      </td>
                       <td className="py-3 px-4">
                         {game.players.length} / {game.maxPlayers}
                       </td>
@@ -397,7 +401,7 @@ export default function AdminGames() {
                           >
                             👁️ Spectate
                           </button>
-                          {game.status === 'paused' ? (
+                          {game.status === 'paused' && (
                             <button
                               type="button"
                               onClick={() => openActionModal(game, 'resume')}
@@ -405,7 +409,8 @@ export default function AdminGames() {
                             >
                               ▶️ Resume
                             </button>
-                          ) : (
+                          )}
+                          {game.status === 'active' && (
                             <button
                               type="button"
                               onClick={() => openActionModal(game, 'pause')}
