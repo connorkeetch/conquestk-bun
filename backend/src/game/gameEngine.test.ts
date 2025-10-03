@@ -212,6 +212,46 @@ describe('GameEngine', () => {
       expect(new Set(assignedColors).size).toBe(players.length)
     })
 
+    it('auto-advances to attack phase after spending all reinforcements', async () => {
+      const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5)
+      try {
+        const players = createPlayers('player1', 'player2')
+        const gameState = gameEngine.initializeGame(
+          'room-auto',
+          players,
+          createConfig(players.length),
+          mapOverrides,
+        )
+
+        const currentPlayerId = gameState.currentPlayer
+        const currentPlayer = gameState.players.find((p) => p.id === currentPlayerId)
+        expect(currentPlayer).toBeDefined()
+        if (!currentPlayer) throw new Error('Current player not found')
+
+        const territory = gameState.board.find((t) => t.ownerId === currentPlayer.id)
+        expect(territory).toBeDefined()
+        if (!territory) throw new Error('Owned territory not found')
+
+        const startingArmies = currentPlayer.armies
+        expect(startingArmies).toBeGreaterThan(0)
+
+        const action: GameAction = {
+          type: 'deploy',
+          roomId: gameState.roomId,
+          playerId: currentPlayer.id,
+          payload: { territoryId: territory.id, armies: startingArmies },
+        }
+
+        const { gameState: updated } = await gameEngine.processAction(gameState, action)
+
+        expect(updated.phase).toBe('attack')
+        const updatedPlayer = updated.players.find((p) => p.id === currentPlayer.id)
+        expect(updatedPlayer?.armies).toBe(0)
+      } finally {
+        randomSpy.mockRestore()
+      }
+    })
+
     it('assigns assassination targets and disables team play when mode is assassination', () => {
       const players = createPlayers('player1', 'player2', 'player3')
       const gameState = gameEngine.initializeGame(

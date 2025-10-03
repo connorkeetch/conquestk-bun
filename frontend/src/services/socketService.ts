@@ -538,6 +538,16 @@ class SocketService {
 
       store.dispatch(setGameState(typedGameState))
 
+      if (typedGameState.phase === 'reinforcement') {
+        const currentPlayer = typedGameState.players.find(
+          (p) => p.id === typedGameState.currentPlayer,
+        )
+        const armies = Math.max(0, currentPlayer?.armies ?? 0)
+        store.dispatch(setReinforcementArmies(armies))
+      } else {
+        store.dispatch(setReinforcementArmies(0))
+      }
+
       // Reconcile placement counter from server baseline if available
       try {
         // biome-ignore lint/suspicious/noExplicitAny: tolerate extended state shape
@@ -773,8 +783,7 @@ class SocketService {
 
     // Game-specific legacy events removed in favor of game-delta and phaseChanged
 
-    this.socket.on('armiesDeployed', (data: unknown) => {
-      const payload = data as { territoryId?: string; armies?: number }
+    this.socket.on('armiesDeployed', (payload) => {
       // Play troop placement sound
       audioService.playEffect('placetroop')
 
@@ -814,6 +823,16 @@ class SocketService {
           }
         } catch {
           // ignore UI logging issues
+        }
+      }
+
+      if (typeof payload.serverSpent === 'number') {
+        try {
+          const { setPlacementServerSpent } =
+            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+          store.dispatch(setPlacementServerSpent(Math.max(0, Math.trunc(payload.serverSpent))))
+        } catch {
+          // ignore placement spent reconciliation errors
         }
       }
     })
@@ -913,8 +932,10 @@ class SocketService {
       )
 
       // Set reinforcement armies when entering reinforcement phase
-      if (payload.phase === 'reinforcement' && payload.reinforcementArmies) {
-        store.dispatch(setReinforcementArmies(payload.reinforcementArmies))
+      if (payload.phase === 'reinforcement') {
+        store.dispatch(setReinforcementArmies(payload.reinforcementArmies ?? 0))
+      } else {
+        store.dispatch(setReinforcementArmies(0))
       }
 
       // Clear selections when phase changes

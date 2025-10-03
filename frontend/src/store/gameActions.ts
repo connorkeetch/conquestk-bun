@@ -1,7 +1,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from 'react-hot-toast'
+import { computeBoardReinforcements } from '@/utils/reinforcements'
 import { socketService } from '../services/socketService'
-import type { GameState, TradeCardsAction } from '../types/game'
+import type { GameState, GoBackToReinforcementAction, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import {
   addTerritoryAction,
@@ -486,7 +487,12 @@ export const goBackToReinforcement = createAsyncThunk(
     if (currentGame.hasAttackedThisTurn) throw new Error('Cannot go back after attacking')
 
     try {
-      socketService.emit('goBackToReinforcement', { roomId: currentGame.roomId })
+      const action: GoBackToReinforcementAction = {
+        type: 'go_back_to_reinforcement',
+        roomId: currentGame.roomId,
+        playerId: state.auth.user?.id || currentGame.currentPlayer,
+      }
+      socketService.sendGameAction({ roomId: currentGame.roomId, action })
 
       // Clear all selections when going back
       dispatch(selectTerritory(null))
@@ -500,12 +506,5 @@ export const goBackToReinforcement = createAsyncThunk(
 
 // Calculate reinforcement armies for a player
 export const calculateReinforcementArmies = (playerId: string, gameState: GameState) => {
-  const playerTerritories = gameState.board.filter((t) => t.ownerId === playerId)
-  const territoryCount = playerTerritories.length
-  const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
-
-  // TODO: Add sector bonuses
-  // const continentBonuses = calculateContinentBonuses(playerId, gameState);
-
-  return baseArmies
+  return computeBoardReinforcements(gameState, playerId)
 }

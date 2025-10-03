@@ -225,9 +225,17 @@ export class GameActionWorker {
           delta = await this.processPhaseChange(gameId, playerId, action)
           break
         }
-        case 'go_back_to_reinforcement':
-          delta = await this.processPhaseChange(gameId, playerId, action)
+        case 'go_back_to_reinforcement': {
+          const result = await this.gameService.processGoBackToReinforcement(gameId, playerId)
+          delta = DeltaBuilder.phaseChange(
+            gameId,
+            result.phase,
+            result.currentPlayer,
+            result.turn,
+            result.reinforcementArmies,
+          )
           break
+        }
 
         case 'undo_fortify': {
           // Process undo fortify by delegating to the generic action path
@@ -335,15 +343,47 @@ export class GameActionWorker {
     playerId: string,
     action: DeployAction,
   ): Promise<GameDelta> {
-    // Update territory armies
-    const newArmyCount = await this.gameService.processPlaceArmies(gameId, {
+    const result = await this.gameService.processPlaceArmies(gameId, {
       territoryId: action.payload?.territoryId || '',
       armies: action.payload?.armies || 0,
       playerId,
     })
 
+    let fogEmitter: ((io: Server, roomId: string, delta: GameDelta) => Promise<void>) | null = null
+    const ensureEmitter = async () => {
+      if (!fogEmitter) {
+        const { emitFogFilteredDelta } = await import('../services/fogService')
+        fogEmitter = emitFogFilteredDelta
+      }
+      return fogEmitter
+    }
+
+    if (typeof result.playerArmies === 'number') {
+      const playerDelta = DeltaBuilder.playerUpdate(gameId, playerId, {
+        armies: result.playerArmies,
+      })
+      const emitter = await ensureEmitter()
+      if (emitter) {
+        await emitter(this.io as unknown as Server, gameId, playerDelta)
+      }
+    }
+
+    if (result.phaseChanged) {
+      const phaseDelta = DeltaBuilder.phaseChange(
+        gameId,
+        result.phaseChanged.phase,
+        result.phaseChanged.currentPlayer,
+        result.phaseChanged.turn,
+        result.phaseChanged.reinforcementArmies,
+      )
+      const emitter = await ensureEmitter()
+      if (emitter) {
+        await emitter(this.io as unknown as Server, gameId, phaseDelta)
+      }
+    }
+
     return DeltaBuilder.territoryUpdate(gameId, action.payload?.territoryId || '', {
-      armies: newArmyCount,
+      armies: result.armies,
     })
   }
 

@@ -591,7 +591,7 @@ export interface ServerToClientEvents {
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game-update': (gameState: GameState) => void
   'game-delta': (delta: GameDelta) => void
-  armiesDeployed: (result: { gameState: GameState }) => void
+  armiesDeployed: (result: { territoryId?: string; armies?: number; serverSpent?: number }) => void
   attackResult: (result: BattleResult) => void
   territoriesFortified: (result: { gameState: GameState }) => void
   'clan:progress': (payload: ClanProgressionSocketPayload) => void

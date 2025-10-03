@@ -330,7 +330,7 @@ describe('GameService', () => {
         throw new Error(`No territory found for ${currentPlayer}`)
       }
 
-      const result = await gameService.deployArmies(roomId, currentPlayer, territory.id, 3)
+      const result = await gameService.deployArmies(roomId, currentPlayer, territory.id, 2)
       expect(result.gameState.phase).toBe('reinforcement')
       expect(result.territoryId).toBe(territory.id)
     })

@@ -368,11 +368,14 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const userId = requireUserId(socket)
+        const channel = getGameChannel(data.roomId)
+        const normalizedAction = { ...data.action, roomId: data.roomId, playerId: userId }
+
         // Queue the game action for processing
         const job = await queueService.addGameAction({
           gameId: data.roomId,
           playerId: userId,
-          action: data.action,
+          action: normalizedAction,
           socketId: socket.id,
         })
 
@@ -383,11 +386,47 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           })
         } else {
           logger.info(
-            `Processed game action directly (no queue): ${data.action.type} for game ${data.roomId}`,
+            `Processed game action directly (no queue): ${normalizedAction.type} for game ${data.roomId}`,
             {
               playerId: userId,
             },
           )
+
+          try {
+            const updatedState = await gameService.processGameAction(normalizedAction, userId)
+            const serialized = serializeGameStateForClient(updatedState)
+            if (serialized) {
+              io.to(channel).emit('game-update', serialized)
+            }
+
+            if (normalizedAction.type === 'go_back_to_reinforcement') {
+              try {
+                const currentPlayer = updatedState.players.find((p) => p.id === userId)
+                const reinforcementArmies = Math.max(0, currentPlayer?.armies ?? 0)
+                const phaseDelta = DeltaBuilder.phaseChange(
+                  data.roomId,
+                  updatedState.phase,
+                  updatedState.currentPlayer,
+                  updatedState.turn,
+                  reinforcementArmies,
+                )
+                const { emitFogFilteredDelta } = await import('./fogService')
+                await emitFogFilteredDelta(
+                  io as unknown as Server,
+                  data.roomId,
+                  phaseDelta,
+                  updatedState,
+                )
+              } catch (emitError) {
+                logger.warn('Failed to emit go-back delta inline', {
+                  roomId: data.roomId,
+                  error: emitError instanceof Error ? emitError.message : emitError,
+                })
+              }
+            }
+          } catch (inlineError) {
+            handleSocketError(socket, 'game-action:inline', inlineError)
+          }
         }
       }),
     )
@@ -425,35 +464,69 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         })
 
         if (job) {
-          logger.info(`Queued army deployment for game ${data.roomId}`, {
-            jobId: job.id,
-            territoryId: data.territoryId,
-            armies: data.armies,
-          })
-        } else {
-          // Queue disabled/unavailable: process synchronously and emit delta
-          const newArmyCount = await gameService.processPlaceArmies(data.roomId, {
-            territoryId: data.territoryId,
-            armies: data.armies,
-            playerId: userId,
-          })
-          const delta = DeltaBuilder.territoryUpdate(data.roomId, data.territoryId, {
-            armies: newArmyCount,
-          })
+          const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+          if (hasWorkers) {
+            logger.info(`Queued army deployment for game ${data.roomId}`, {
+              jobId: job.id,
+              territoryId: data.territoryId,
+              armies: data.armies,
+            })
+            return
+          }
+
           try {
-            const { emitFogFilteredDelta } = await import('./fogService')
-            await emitFogFilteredDelta(io, data.roomId, delta)
-          } catch (e) {
-            logger.warn('Failed to emit deployArmies delta in inline mode', {
+            await job.remove()
+          } catch (err) {
+            logger.warn('Failed to remove queued deploy job for inline fallback', {
               roomId: data.roomId,
-              error: e instanceof Error ? e.message : e,
+              jobId: job.id,
+              error: err instanceof Error ? err.message : err,
             })
           }
-          logger.info(`Processed army deployment inline (no queue) for game ${data.roomId}`, {
-            territoryId: data.territoryId,
-            armies: data.armies,
+        }
+
+        // Queue disabled/unavailable: process synchronously and emit delta
+        const result = await gameService.processPlaceArmies(data.roomId, {
+          territoryId: data.territoryId,
+          armies: data.armies,
+          playerId: userId,
+        })
+
+        try {
+          const { emitFogFilteredDelta } = await import('./fogService')
+
+          if (typeof result.playerArmies === 'number') {
+            const playerDelta = DeltaBuilder.playerUpdate(data.roomId, userId, {
+              armies: result.playerArmies,
+            })
+            await emitFogFilteredDelta(io, data.roomId, playerDelta)
+          }
+
+          if (result.phaseChanged) {
+            const phaseDelta = DeltaBuilder.phaseChange(
+              data.roomId,
+              result.phaseChanged.phase,
+              result.phaseChanged.currentPlayer,
+              result.phaseChanged.turn,
+              result.phaseChanged.reinforcementArmies,
+            )
+            await emitFogFilteredDelta(io, data.roomId, phaseDelta)
+          }
+
+          const delta = DeltaBuilder.territoryUpdate(data.roomId, data.territoryId, {
+            armies: result.armies,
+          })
+          await emitFogFilteredDelta(io, data.roomId, delta)
+        } catch (e) {
+          logger.warn('Failed to emit deployArmies delta in inline mode', {
+            roomId: data.roomId,
+            error: e instanceof Error ? e.message : e,
           })
         }
+        logger.info(`Processed army deployment inline (no queue) for game ${data.roomId}`, {
+          territoryId: data.territoryId,
+          armies: data.armies,
+        })
       }),
     )
 
@@ -474,36 +547,12 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const armies = typeof data.armies === 'number' ? data.armies : 1
-        // Queue the attack action - battle simulation will be handled in background
-        const job = await queueService.addGameAction({
-          gameId: data.roomId,
-          playerId: userId,
-          action: {
-            type: 'attack',
-            roomId: data.roomId,
-            playerId: userId,
-            payload: {
-              fromTerritoryId: data.fromTerritoryId,
-              toTerritoryId: data.toTerritoryId,
-              armies,
-            },
-          },
-          socketId: socket.id,
-        })
 
-        if (job) {
-          logger.info(`Queued attack for game ${data.roomId}`, {
-            jobId: job.id,
-            from: data.fromTerritoryId,
-            to: data.toTerritoryId,
-          })
-        } else {
-          // Queue disabled/unavailable: simulate battle synchronously and emit deltas
+        const processInline = async () => {
           try {
             const state = await gameService.getGameState(data.roomId)
             if (!state) throw new Error('Game state not found')
 
-            // Basic validations mirroring worker expectations
             if (state.currentPlayer !== userId) throw new Error('Not your turn')
             const from = state.board.find((t) => t.id === data.fromTerritoryId)
             const to = state.board.find((t) => t.id === data.toTerritoryId)
@@ -516,7 +565,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const attackingArmies = Math.max(1, typeof data.armies === 'number' ? data.armies : 1)
             const defendingArmies = to.armies ?? 1
 
-            // Dice simulation (max 3 attack, max 2 defend), same rules as worker
             const attackerDiceCount = Math.min(attackingArmies, 3)
             const defenderDiceCount = Math.min(defendingArmies, 2)
             const roll = (n: number) =>
@@ -530,7 +578,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               else attackerLosses += 1
             }
 
-            // Apply results to snapshot for delta construction
             const newAttackingArmies = Math.max(0, (from.armies ?? 0) - attackerLosses)
             const newDefendingArmies = Math.max(0, (to.armies ?? 0) - defenderLosses)
             const territoryConquered = newDefendingArmies === 0
@@ -568,7 +615,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 }),
               )
 
-              // Check elimination (no remaining territories for defender)
               const remainingDefender = state.board.filter(
                 (t) => t.ownerId === defenderOwnerId && t.id !== data.toTerritoryId,
               )
@@ -581,7 +627,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 )
               }
 
-              // Check victory
               const remainingPlayers = state.players.filter((p) =>
                 state.board.some((t) => (t.ownerId ?? null) === p.id),
               )
@@ -632,14 +677,12 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 },
                 conquered: territoryConquered,
               },
-              // Cast deltas to shared GameDelta type for consumers
               changes: deltas as unknown as Array<import('@risk-game/shared/types').GameDelta>,
             }
 
             const { emitFogFilteredDelta, emitRevealSnapshot } = await import('./fogService')
             await emitFogFilteredDelta(io, data.roomId, battleDelta)
 
-            // Persist battle effects
             await gameService.applyBattleResult(data.roomId, {
               jobId: `inline:${Date.now()}`,
               attackerLosses,
@@ -655,7 +698,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               attackingArmiesCommitted: attackingArmies,
             })
 
-            // Reveal updates for relevant players on conquest
             if (territoryConquered) {
               try {
                 const updated = await gameService.getGameState(data.roomId)
@@ -699,6 +741,47 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             handleSocketError(socket, 'attack:inline', err)
           }
         }
+
+        // Queue the attack action - battle simulation will be handled in background
+        const job = await queueService.addGameAction({
+          gameId: data.roomId,
+          playerId: userId,
+          action: {
+            type: 'attack',
+            roomId: data.roomId,
+            playerId: userId,
+            payload: {
+              fromTerritoryId: data.fromTerritoryId,
+              toTerritoryId: data.toTerritoryId,
+              armies,
+            },
+          },
+          socketId: socket.id,
+        })
+
+        if (job) {
+          const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+          if (hasWorkers) {
+            logger.info(`Queued attack for game ${data.roomId}`, {
+              jobId: job.id,
+              from: data.fromTerritoryId,
+              to: data.toTerritoryId,
+            })
+            return
+          }
+
+          try {
+            await job.remove()
+          } catch (err) {
+            logger.warn('Failed to remove queued attack job for inline fallback', {
+              roomId: data.roomId,
+              jobId: job.id,
+              error: err instanceof Error ? err.message : err,
+            })
+          }
+        }
+
+        await processInline()
       }),
     )
 
@@ -1141,6 +1224,74 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             roomId: data.roomId,
             error: e instanceof Error ? e.message : e,
           })
+        }
+      }),
+    )
+
+    socket.on(
+      'goBackToReinforcement',
+      withErrorHandler(socket, 'goBackToReinforcement', async (data) => {
+        if (!data || !data.roomId) {
+          throw new Error('Invalid go-back data')
+        }
+
+        const userId = requireUserId(socket)
+
+        const job = await queueService.addGameAction({
+          gameId: data.roomId,
+          playerId: userId,
+          action: {
+            type: 'go_back_to_reinforcement',
+            roomId: data.roomId,
+            playerId: userId,
+          },
+          socketId: socket.id,
+        })
+
+        if (job) {
+          const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+          if (hasWorkers) {
+            logger.info(`Queued go-back-to-reinforcement for game ${data.roomId}`, {
+              jobId: job.id,
+            })
+            return
+          }
+
+          try {
+            await job.remove()
+          } catch (err) {
+            logger.warn('Failed to remove queued go-back job for inline fallback', {
+              roomId: data.roomId,
+              jobId: job.id,
+              error: err instanceof Error ? err.message : err,
+            })
+          }
+        }
+
+        try {
+          const updatedState = await gameService.processGameAction(
+            { type: 'go_back_to_reinforcement', roomId: data.roomId, playerId: userId },
+            userId,
+          )
+          const reinforcementArmies =
+            updatedState.players.find((p) => p.id === updatedState.currentPlayer)?.armies ?? 0
+          const delta = DeltaBuilder.phaseChange(
+            data.roomId,
+            updatedState.phase,
+            updatedState.currentPlayer,
+            updatedState.turn,
+            reinforcementArmies,
+          )
+          const channel = getGameChannel(data.roomId)
+          io.to(channel).emit('game-delta', delta)
+          io.to(channel).emit('phaseChanged', {
+            phase: updatedState.phase,
+            currentPlayer: updatedState.currentPlayer,
+            turn: updatedState.turn,
+            reinforcementArmies,
+          })
+        } catch (err) {
+          handleSocketError(socket, 'goBackToReinforcement:inline', err)
         }
       }),
     )

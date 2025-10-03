@@ -106,12 +106,23 @@ type LifecycleLogEntry = {
   event: 'CREATED' | 'STARTED'
 }
 
+type ReinforceLogEntry = {
+  type: 'REINFORCE'
+  timestamp: string
+  playerId: string
+  territoryId: string
+  armies: number
+  remainingArmies: number
+}
+
 type GameLogEntry =
   | BattleLogEntry
   | FortifyLogEntry
   | TurnLogEntry
   | TreasureLogEntry
+  | ReinforceLogEntry
   | LifecycleLogEntry
+  | ReinforceLogEntry
 
 type PlayerRankingSummary = {
   userId: string
@@ -1023,59 +1034,90 @@ export class GameService {
   async processPlaceArmies(
     gameId: string,
     data: { territoryId: string; armies: number; playerId: string },
-  ): Promise<number> {
+  ): Promise<{
+    armies: number
+    playerArmies?: number
+    phaseChanged?: {
+      phase: GamePhase
+      currentPlayer: string
+      turn: number
+      reinforcementArmies?: number
+    }
+  }> {
     const gameState = await this.getGameState(gameId)
     if (!gameState) throw new Error('Game not found')
 
-    const territory = gameState.board.find((t) => t.id === data.territoryId)
-    if (!territory) throw new Error('Territory not found')
-
-    // Only allow placement/undo for the current player during reinforcement
     if (gameState.currentPlayer !== data.playerId || gameState.phase !== 'reinforcement') {
       throw new Error('Invalid placement phase or player')
     }
 
-    const change = Math.trunc(data.armies)
-    if (change === 0) {
-      return territory.armies
+    const territoryBefore = gameState.board.find((t) => t.id === data.territoryId)
+    if (!territoryBefore) throw new Error('Territory not found')
+
+    const action: GameAction = {
+      type: 'deploy',
+      roomId: gameId,
+      playerId: data.playerId,
+      payload: { territoryId: data.territoryId, armies: data.armies },
     }
 
-    if (change < 0) {
-      // Enforce baseline: don't allow reductions below start-of-phase baseline
-      const baseline = gameState.reinforcementBaseline?.[data.territoryId]
-      const current = territory.armies
-      if (typeof baseline === 'number') {
-        const allowedUndo = Math.max(0, current - baseline)
-        const requested = Math.abs(change)
-        const actual = Math.min(allowedUndo, requested)
-        territory.armies = Math.max(baseline, current - actual)
-        // Track history (negative)
-        const entry = {
+    if (!this.gameEngine.validateAction(gameState, action)) {
+      throw new Error('Invalid deployment')
+    }
+
+    const previousPhase = gameState.phase
+    const previousPlayerArmies = gameState.players.find((p) => p.id === data.playerId)?.armies ?? 0
+
+    const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
+
+    const updatedTerritory = updatedState.board.find((t) => t.id === data.territoryId)
+    const playerAfter = updatedState.players.find((p) => p.id === data.playerId)
+
+    await this.persistGameStateSnapshot(gameId, this.serializeGameState(updatedState))
+
+    const beforeArmies = territoryBefore.armies
+    const afterArmies = updatedTerritory?.armies ?? beforeArmies
+    const delta = afterArmies - beforeArmies
+
+    if (delta !== 0) {
+      try {
+        const entry: ReinforceLogEntry = {
+          type: 'REINFORCE',
+          timestamp: new Date().toISOString(),
           playerId: data.playerId,
           territoryId: data.territoryId,
-          armies: -actual,
-          ts: Date.now(),
+          armies: delta,
+          remainingArmies: Math.max(0, playerAfter?.armies ?? 0),
         }
-        gameState.reinforcementHistory = [...(gameState.reinforcementHistory ?? []), entry]
-      } else {
-        // If no baseline, do not apply negative change
-        // Keep territory armies unchanged
+        await this.appendLog(gameId, [entry])
+      } catch (err) {
+        logger.warn('Failed to append reinforce log', {
+          gameId,
+          playerId: data.playerId,
+          territoryId: data.territoryId,
+          error: err instanceof Error ? err.message : err,
+        })
       }
-    } else {
-      // Positive placement
-      territory.armies = Math.max(0, territory.armies + change)
-      const entry = {
-        playerId: data.playerId,
-        territoryId: data.territoryId,
-        armies: change,
-        ts: Date.now(),
-      }
-      gameState.reinforcementHistory = [...(gameState.reinforcementHistory ?? []), entry]
     }
 
-    await this.persistGameStateSnapshot(gameId, this.serializeGameState(gameState))
+    let phaseChanged:
+      | { phase: GamePhase; currentPlayer: string; turn: number; reinforcementArmies?: number }
+      | undefined
+    if (previousPhase !== updatedState.phase) {
+      phaseChanged = {
+        phase: updatedState.phase,
+        currentPlayer: updatedState.currentPlayer,
+        turn: updatedState.turn,
+        reinforcementArmies:
+          updatedState.phase === 'reinforcement' ? Math.max(0, playerAfter?.armies ?? 0) : 0,
+      }
+    }
 
-    return territory.armies
+    return {
+      armies: afterArmies,
+      playerArmies: playerAfter?.armies ?? previousPlayerArmies,
+      phaseChanged,
+    }
   }
 
   async processFortify(
@@ -1118,6 +1160,33 @@ export class GameService {
   async processEndTurn(gameId: string, playerId: string): Promise<{ id: string }> {
     const result = await this.endTurn(gameId, playerId)
     return { id: result.gameState.currentPlayer }
+  }
+
+  async processGoBackToReinforcement(
+    gameId: string,
+    playerId: string,
+  ): Promise<{
+    phase: GamePhase
+    currentPlayer: string
+    turn: number
+    reinforcementArmies: number
+  }> {
+    const action: GameAction = {
+      type: 'go_back_to_reinforcement',
+      roomId: gameId,
+      playerId,
+    }
+
+    const updatedState = await this.processGameAction(action, playerId)
+    const currentPlayer = updatedState.players.find((p) => p.id === playerId)
+    const reinforcementArmies = Math.max(0, currentPlayer?.armies ?? 0)
+
+    return {
+      phase: updatedState.phase,
+      currentPlayer: updatedState.currentPlayer,
+      turn: updatedState.turn,
+      reinforcementArmies,
+    }
   }
 
   async processPhaseChange(gameId: string, playerId: string, phase: GamePhase): Promise<void> {

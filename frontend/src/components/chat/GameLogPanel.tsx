@@ -199,6 +199,24 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             })
             continue
           }
+          if (type === 'REINFORCE') {
+            const name = nameOf(er.playerId as string) || 'Unknown'
+            const territory = toName(String(er.territoryId))
+            const change = toSafeInt(er.armies, 0)
+            if (change > 0) {
+              formatted.push({
+                ts,
+                text: `${territory} (${name}) received ${change} ${change === 1 ? 'troop' : 'troops'}.`,
+              })
+            } else if (change < 0) {
+              const n = Math.abs(change)
+              formatted.push({
+                ts,
+                text: `${territory} (${name}) returned ${n} ${n === 1 ? 'troop' : 'troops'} to the reserves.`,
+              })
+            }
+            continue
+          }
           if (type === 'TURN') {
             const name = nameOf(er.playerId as string) || 'Unknown'
             const event = String(er.event)
@@ -274,6 +292,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     const handlePhaseChange = (delta: PhaseChangeDelta) => {
       const prevPlayer = lastPlayerRef.current
       const nextPlayer = delta.currentPlayer
+      const previousPhase = phaseRef.current
       // When a new reinforcement phase begins, previous player just ended turn
       if (phaseRef.current === 'fortify' || (phaseRef.current && delta.phase === 'reinforcement')) {
         if (prevPlayer && prevPlayer !== nextPlayer) {
@@ -281,27 +300,38 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           add(`${prevName} ended the turn.`)
         }
       }
+      if (previousPhase === 'reinforcement' && delta.phase === 'attack') {
+        const name = playerName.get(nextPlayer) || nextPlayer
+        add(`${name} finished deploying troops.`)
+      }
       phaseRef.current = delta.phase
       lastPlayerRef.current = nextPlayer
 
       if (delta.phase === 'reinforcement') {
         const name = playerName.get(nextPlayer) || nextPlayer
-        // In fog-of-war games during play, do not show reinforcement amounts
-        if (!redact) {
-          if (typeof delta.reinforcementArmies === 'number' && delta.reinforcementArmies > 0) {
+        const reinforcementAmount =
+          typeof delta.reinforcementArmies === 'number' ? delta.reinforcementArmies : null
+
+        if (previousPhase === 'attack') {
+          if (!redact && reinforcementAmount && reinforcementAmount > 0) {
+            add(`${name} reclaimed ${reinforcementAmount} troops to redeploy.`)
+          }
+          add(`${name} returned to reinforcement to deploy remaining troops.`)
+        } else {
+          if (!redact && reinforcementAmount && reinforcementAmount > 0) {
             const territoryCount = (game?.board || []).filter(
               (t) => t.ownerId === nextPlayer,
             ).length
             if (territoryCount > 0) {
               add(
-                `${name} received ${delta.reinforcementArmies} troops for ${territoryCount} territories.`,
+                `${name} received ${reinforcementAmount} troops for ${territoryCount} territories.`,
               )
             } else {
-              add(`${name} received ${delta.reinforcementArmies} troops.`)
+              add(`${name} received ${reinforcementAmount} troops.`)
             }
           }
+          add(`${name} started the turn.`)
         }
-        add(`${name} started the turn.`)
       }
     }
 
