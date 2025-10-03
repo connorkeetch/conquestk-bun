@@ -1460,7 +1460,10 @@ export class GameService {
         const existingLog = Array.isArray(existingRow?.game_log) ? existingRow?.game_log : []
         latestBattleLog = existingLog
         const alreadyApplied = existingLog.some((entry) => entry?.jobId === jobId)
-        const divergence = this.calculateTerritoryDivergence(existingRow?.territories ?? null, updatedBoard)
+        const divergence = this.calculateTerritoryDivergence(
+          existingRow?.territories ?? null,
+          updatedBoard,
+        )
 
         if (alreadyApplied) {
           return { applied: false, divergence }

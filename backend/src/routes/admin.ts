@@ -1137,7 +1137,7 @@ router.post(
       const result = await dbQuery(
         `UPDATE game_rooms 
          SET status = 'paused', updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $1 AND status IN ('in_progress', 'starting')
+         WHERE id = $1 AND status IN ('in_progress', 'starting', 'active')
          RETURNING id`,
         [gameId],
       )
@@ -1192,7 +1192,7 @@ router.post(
 
       const result = await dbQuery(
         `UPDATE game_rooms 
-         SET status = 'in_progress', updated_at = CURRENT_TIMESTAMP 
+         SET status = 'active', updated_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND status = 'paused'
          RETURNING id`,
         [gameId],

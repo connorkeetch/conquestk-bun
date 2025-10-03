@@ -44,6 +44,15 @@ export default function AdminGameDetailsPage() {
 
   // Log
   const [logEntries, setLogEntries] = useState<LogEntry[]>([])
+  const [summaryLoaded, setSummaryLoaded] = useState(false)
+  const [moveCount, setMoveCount] = useState<number | null>(null)
+  const [logSummary, setLogSummary] = useState<null | {
+    attacks: number
+    fortifies: number
+    reinforcements: number
+    eliminations: number
+    turnEvents: number
+  }>(null)
 
   // State
   const [rawState, setRawState] = useState<Record<string, unknown> | null>(null)
@@ -96,6 +105,53 @@ export default function AdminGameDetailsPage() {
     }
     void load()
   }, [gameId])
+
+  // Lightweight overview summary: move count + log breakdown
+  useEffect(() => {
+    const loadOverviewSummary = async () => {
+      if (!gameId || summaryLoaded === true) return
+      try {
+        // Total moves (cheap count fetch)
+        const movesResp = await adminService.getGameMoves(gameId, { limit: 1, offset: 0 })
+        setMoveCount(movesResp.total)
+
+        // Battle/event log breakdown
+        const logResp = await adminService.getGameLog(gameId)
+        const entries = Array.isArray(logResp.entries) ? logResp.entries : []
+        let attacks = 0
+        let fortifies = 0
+        let reinforcements = 0
+        let eliminations = 0
+        let turnEvents = 0
+
+        for (const e of entries) {
+          const type = (e as { type?: string }).type
+          if (type === 'BATTLE') {
+            attacks += 1
+            const eliminated = Array.isArray(
+              (e as { eliminatedPlayers?: unknown[] }).eliminatedPlayers,
+            )
+              ? (e as { eliminatedPlayers: unknown[] }).eliminatedPlayers.length || 0
+              : 0
+            eliminations += eliminated
+          } else if (type === 'FORTIFY') {
+            fortifies += 1
+          } else if (type === 'REINFORCE') {
+            reinforcements += 1
+          } else if (type === 'TURN') {
+            turnEvents += 1
+          }
+        }
+
+        setLogSummary({ attacks, fortifies, reinforcements, eliminations, turnEvents })
+      } catch {
+        // Non-fatal; leave as nulls
+      } finally {
+        setSummaryLoaded(true)
+      }
+    }
+    void loadOverviewSummary()
+  }, [gameId, summaryLoaded])
 
   // Load moves when tab or filters change
   useEffect(() => {
@@ -250,7 +306,7 @@ export default function AdminGameDetailsPage() {
           <button type="button" onClick={handleSpectate} className="bg-primary px-3 py-2 rounded">
             👁️ Spectate
           </button>
-          {details.status === 'paused' ? (
+          {details.status === 'paused' && (
             <button
               type="button"
               onClick={handleResume}
@@ -258,7 +314,8 @@ export default function AdminGameDetailsPage() {
             >
               ▶️ Resume
             </button>
-          ) : (
+          )}
+          {details.status === 'active' && (
             <button
               type="button"
               onClick={handlePause}
@@ -295,7 +352,11 @@ export default function AdminGameDetailsPage() {
             </div>
             <div>
               <div className="text-muted">Current Player</div>
-              <div className="font-medium">{details.currentTurnUsername ?? '—'}</div>
+              <div className="font-medium">
+                {['completed', 'abandoned'].includes(details.status)
+                  ? '—'
+                  : (details.currentTurnUsername ?? '—')}
+              </div>
             </div>
             <div>
               <div className="text-muted">Players</div>
@@ -318,6 +379,31 @@ export default function AdminGameDetailsPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Quick Diagnostic Stats */}
+        <div className="glass-box p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <div className="text-muted">Total Moves</div>
+              <div className="font-medium">{moveCount ?? '—'}</div>
+            </div>
+            <div>
+              <div className="text-muted">Attacks</div>
+              <div className="font-medium">{logSummary?.attacks ?? '—'}</div>
+            </div>
+            <div>
+              <div className="text-muted">Reinforcements</div>
+              <div className="font-medium">{logSummary?.reinforcements ?? '—'}</div>
+            </div>
+            <div>
+              <div className="text-muted">Fortifies</div>
+              <div className="font-medium">{logSummary?.fortifies ?? '—'}</div>
+            </div>
+          </div>
+          {logSummary ? (
+            <div className="mt-3 text-xs text-muted">Eliminations: {logSummary.eliminations}</div>
+          ) : null}
         </div>
 
         {/* Tabs */}
@@ -482,26 +568,30 @@ export default function AdminGameDetailsPage() {
 
             {activeTab === 'turnStats' && (
               <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted">
-                      <th className="py-2 pr-2">Time</th>
-                      <th className="py-2 pr-2">Turn</th>
-                      <th className="py-2 pr-2">Phase</th>
-                      <th className="py-2 pr-2">Current Player</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {turnStats.map((s) => (
-                      <tr key={`${s.timestamp}-${s.turn}`} className="border-t border-border/60">
-                        <td className="py-2 pr-2">{s.timestamp}</td>
-                        <td className="py-2 pr-2">{String(s.turn)}</td>
-                        <td className="py-2 pr-2">{s.phase}</td>
-                        <td className="py-2 pr-2">{s.currentPlayerId}</td>
+                {turnStats.length === 0 ? (
+                  <div className="text-muted text-sm">No turn stats available</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-muted">
+                        <th className="py-2 pr-2">Time</th>
+                        <th className="py-2 pr-2">Turn</th>
+                        <th className="py-2 pr-2">Phase</th>
+                        <th className="py-2 pr-2">Current Player</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {turnStats.map((s) => (
+                        <tr key={`${s.timestamp}-${s.turn}`} className="border-t border-border/60">
+                          <td className="py-2 pr-2">{s.timestamp}</td>
+                          <td className="py-2 pr-2">{String(s.turn)}</td>
+                          <td className="py-2 pr-2">{s.phase}</td>
+                          <td className="py-2 pr-2">{s.currentPlayerId}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
 
