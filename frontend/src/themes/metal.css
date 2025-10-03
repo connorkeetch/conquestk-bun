@@ -143,7 +143,9 @@
 
 /* Overlay now generated dynamically in themes.config.ts (random SVG stamps).
    Keep this block empty to avoid conflicts; base overlay scaffolding lives in app.css. */
-[data-theme="metal"] body::after {}
+/* biome-ignore lint/suspicious/noEmptyBlock: Placeholder to preserve selector specificity */
+[data-theme="metal"] body::after {
+}
 
 @media (max-width: 768px) {
   :root[data-theme="metal"] {
