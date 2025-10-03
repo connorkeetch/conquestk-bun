@@ -305,8 +305,11 @@ export class GameLifecycleService {
       logger.error('Failed to auto-start game', {
         roomId,
         error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        playerCount: players.length,
       })
 
+      // Cleanup: revert room to lobby and clean up any partial game state
       await query(
         `
         UPDATE game_rooms
@@ -319,6 +322,18 @@ export class GameLifecycleService {
       `,
         [roomId],
       )
+
+      // Also delete any partial game state that was created
+      try {
+        await query('DELETE FROM game_states WHERE room_id = $1', [roomId])
+        const { gameStateCache } = await import('./cacheService')
+        await gameStateCache.deleteGameState(roomId)
+      } catch (cleanupError) {
+        logger.warn('Failed to cleanup partial game state after start failure', {
+          roomId,
+          error: cleanupError instanceof Error ? cleanupError.message : cleanupError,
+        })
+      }
 
       return false
     }
