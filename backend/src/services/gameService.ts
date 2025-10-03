@@ -1044,43 +1044,85 @@ export class GameService {
       reinforcementArmies?: number
     }
   }> {
-    const gameState = await this.getGameState(gameId)
-    if (!gameState) throw new Error('Game not found')
+    // Wrap entire operation in database transaction for atomicity
+    return await transaction(async (client) => {
+      const gameState = await this.getGameState(gameId)
+      if (!gameState) throw new Error('Game not found')
 
-    if (gameState.currentPlayer !== data.playerId || gameState.phase !== 'reinforcement') {
-      throw new Error('Invalid placement phase or player')
-    }
+      if (gameState.currentPlayer !== data.playerId || gameState.phase !== 'reinforcement') {
+        throw new Error('Invalid placement phase or player')
+      }
 
-    const territoryBefore = gameState.board.find((t) => t.id === data.territoryId)
-    if (!territoryBefore) throw new Error('Territory not found')
+      const territoryBefore = gameState.board.find((t) => t.id === data.territoryId)
+      if (!territoryBefore) throw new Error('Territory not found')
 
-    const action: GameAction = {
-      type: 'deploy',
-      roomId: gameId,
-      playerId: data.playerId,
-      payload: { territoryId: data.territoryId, armies: data.armies },
-    }
+      const action: GameAction = {
+        type: 'deploy',
+        roomId: gameId,
+        playerId: data.playerId,
+        payload: { territoryId: data.territoryId, armies: data.armies },
+      }
 
-    if (!this.gameEngine.validateAction(gameState, action)) {
-      throw new Error('Invalid deployment')
-    }
+      if (!this.gameEngine.validateAction(gameState, action)) {
+        throw new Error('Invalid deployment')
+      }
 
-    const previousPhase = gameState.phase
-    const previousPlayerArmies = gameState.players.find((p) => p.id === data.playerId)?.armies ?? 0
+      const previousPhase = gameState.phase
+      const previousPlayerArmies =
+        gameState.players.find((p) => p.id === data.playerId)?.armies ?? 0
 
-    const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
+      const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
 
-    const updatedTerritory = updatedState.board.find((t) => t.id === data.territoryId)
-    const playerAfter = updatedState.players.find((p) => p.id === data.playerId)
+      const updatedTerritory = updatedState.board.find((t) => t.id === data.territoryId)
+      const playerAfter = updatedState.players.find((p) => p.id === data.playerId)
 
-    await this.persistGameStateSnapshot(gameId, this.serializeGameState(updatedState))
+      const serializedState = this.serializeGameState(updatedState)
 
-    const beforeArmies = territoryBefore.armies
-    const afterArmies = updatedTerritory?.armies ?? beforeArmies
-    const delta = afterArmies - beforeArmies
+      // Persist state within transaction
+      await client.query(
+        `
+        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
+        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
+        ON CONFLICT (room_id) DO UPDATE
+          SET game_data = EXCLUDED.game_data,
+              turn_number = EXCLUDED.turn_number,
+              current_player_id = EXCLUDED.current_player_id,
+              game_phase = EXCLUDED.game_phase,
+              last_activity = NOW()
+        `,
+        [
+          gameId,
+          JSON.stringify(serializedState),
+          serializedState.turn ?? 1,
+          serializedState.currentPlayer ?? null,
+          serializedState.phase,
+        ],
+      )
 
-    if (delta !== 0) {
+      // Update cache (outside critical path, best-effort)
       try {
+        await gameStateCache.setGameState(gameId, serializedState)
+      } catch (error) {
+        logger.warn('Failed to cache game state during deployment', {
+          gameId,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+
+      const beforeArmies = territoryBefore.armies
+      const afterArmies = updatedTerritory?.armies ?? beforeArmies
+      const delta = afterArmies - beforeArmies
+
+      // Append log within transaction
+      if (delta !== 0) {
+        const existing = await client.query<{ game_log: ReinforceLogEntry[] | null }>(
+          'SELECT game_log FROM game_states WHERE room_id = $1',
+          [gameId],
+        )
+        const current = Array.isArray(existing.rows[0]?.game_log)
+          ? (existing.rows[0]?.game_log as ReinforceLogEntry[])
+          : []
+
         const entry: ReinforceLogEntry = {
           type: 'REINFORCE',
           timestamp: new Date().toISOString(),
@@ -1089,50 +1131,110 @@ export class GameService {
           armies: delta,
           remainingArmies: Math.max(0, playerAfter?.armies ?? 0),
         }
-        await this.appendLog(gameId, [entry])
-      } catch (err) {
-        logger.warn('Failed to append reinforce log', {
-          gameId,
-          playerId: data.playerId,
-          territoryId: data.territoryId,
-          error: err instanceof Error ? err.message : err,
-        })
-      }
-    }
 
-    let phaseChanged:
-      | { phase: GamePhase; currentPlayer: string; turn: number; reinforcementArmies?: number }
-      | undefined
-    if (previousPhase !== updatedState.phase) {
-      phaseChanged = {
-        phase: updatedState.phase,
-        currentPlayer: updatedState.currentPlayer,
-        turn: updatedState.turn,
-        reinforcementArmies:
-          updatedState.phase === 'reinforcement' ? Math.max(0, playerAfter?.armies ?? 0) : 0,
-      }
-    }
+        const updated = [...current, entry].slice(-500)
 
-    return {
-      armies: afterArmies,
-      playerArmies: playerAfter?.armies ?? previousPlayerArmies,
-      phaseChanged,
-    }
+        await client.query(
+          `UPDATE game_states SET game_log = $1, last_activity = NOW() WHERE room_id = $2`,
+          [JSON.stringify(updated), gameId],
+        )
+      }
+
+      let phaseChanged:
+        | { phase: GamePhase; currentPlayer: string; turn: number; reinforcementArmies?: number }
+        | undefined
+      if (previousPhase !== updatedState.phase) {
+        phaseChanged = {
+          phase: updatedState.phase,
+          currentPlayer: updatedState.currentPlayer,
+          turn: updatedState.turn,
+          reinforcementArmies:
+            updatedState.phase === 'reinforcement' ? Math.max(0, playerAfter?.armies ?? 0) : 0,
+        }
+      }
+
+      return {
+        armies: afterArmies,
+        playerArmies: playerAfter?.armies ?? previousPlayerArmies,
+        phaseChanged,
+      }
+    })
   }
 
   async processFortify(
     gameId: string,
     data: { fromTerritoryId: string; toTerritoryId: string; armies: number; playerId: string },
   ): Promise<{ fromArmies: number; toArmies: number }> {
-    const result = await this.fortify(
-      gameId,
-      data.playerId,
-      data.fromTerritoryId,
-      data.toTerritoryId,
-      data.armies,
-    )
-    // Persist fortify to game log
-    try {
+    // Wrap entire operation in database transaction for atomicity
+    return await transaction(async (client) => {
+      const cachedState = await gameStateCache.getGameState<SerializedGameState>(gameId)
+      if (!cachedState) throw new Error('Game not found')
+      const gameState = this.hydrateGameState(cachedState, gameId)
+      if (gameState.currentPlayer !== data.playerId) throw new Error('Not your turn')
+      if (gameState.phase !== 'fortify') throw new Error('Not fortify phase')
+
+      const action: GameAction = {
+        type: 'fortify',
+        roomId: gameId,
+        playerId: data.playerId,
+        payload: {
+          fromTerritoryId: data.fromTerritoryId,
+          toTerritoryId: data.toTerritoryId,
+          armies: data.armies,
+        },
+      }
+
+      if (!this.gameEngine.validateAction(gameState, action)) {
+        throw new Error('Invalid fortification')
+      }
+
+      const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
+
+      const serializedState = this.serializeGameState(updatedState)
+
+      // Persist state within transaction
+      await client.query(
+        `
+        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
+        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
+        ON CONFLICT (room_id) DO UPDATE
+          SET game_data = EXCLUDED.game_data,
+              turn_number = EXCLUDED.turn_number,
+              current_player_id = EXCLUDED.current_player_id,
+              game_phase = EXCLUDED.game_phase,
+              last_activity = NOW()
+        `,
+        [
+          gameId,
+          JSON.stringify(serializedState),
+          serializedState.turn ?? 1,
+          serializedState.currentPlayer ?? null,
+          serializedState.phase,
+        ],
+      )
+
+      // Update cache (outside critical path, best-effort)
+      try {
+        await gameStateCache.setGameState(gameId, serializedState)
+      } catch (error) {
+        logger.warn('Failed to cache game state during fortify', {
+          gameId,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+
+      const fromArmies = updatedState.board.find((t) => t.id === data.fromTerritoryId)?.armies || 0
+      const toArmies = updatedState.board.find((t) => t.id === data.toTerritoryId)?.armies || 0
+
+      // Append log within transaction
+      const existing = await client.query<{ game_log: FortifyLogEntry[] | null }>(
+        'SELECT game_log FROM game_states WHERE room_id = $1',
+        [gameId],
+      )
+      const current = Array.isArray(existing.rows[0]?.game_log)
+        ? (existing.rows[0]?.game_log as FortifyLogEntry[])
+        : []
+
       const entry: FortifyLogEntry = {
         type: 'FORTIFY',
         timestamp: new Date().toISOString(),
@@ -1140,21 +1242,22 @@ export class GameService {
         fromTerritoryId: data.fromTerritoryId,
         toTerritoryId: data.toTerritoryId,
         movedArmies: data.armies,
-        fromArmies: result.fromArmies,
-        toArmies: result.toArmies,
+        fromArmies,
+        toArmies,
       }
-      await this.appendLog(gameId, [entry])
-    } catch (err) {
-      logger.warn('Failed to append fortify log', {
-        gameId,
-        error: err instanceof Error ? err.message : err,
-      })
-    }
 
-    return {
-      fromArmies: result.fromArmies,
-      toArmies: result.toArmies,
-    }
+      const updated = [...current, entry].slice(-500)
+
+      await client.query(
+        `UPDATE game_states SET game_log = $1, last_activity = NOW() WHERE room_id = $2`,
+        [JSON.stringify(updated), gameId],
+      )
+
+      return {
+        fromArmies,
+        toArmies,
+      }
+    })
   }
 
   async processEndTurn(gameId: string, playerId: string): Promise<{ id: string }> {
