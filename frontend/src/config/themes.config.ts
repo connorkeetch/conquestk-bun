@@ -330,6 +330,10 @@ function updateDynamicOverlay(themeId: ThemeId) {
     const css = generateHalloweenOverlayCSS(motionEnabled())
     el.textContent = css
     themeDebugLog('overlay: halloween applied')
+  } else if (themeId === 'metal') {
+    const css = generateMetalOverlayCSS(motionEnabled())
+    el.textContent = css
+    themeDebugLog('overlay: metal applied')
   } else if (themeId === 'cutlers-cheese') {
     const css = generateCheeseOverlayCSS(motionEnabled())
     el.textContent = css
@@ -516,6 +520,111 @@ function generateCheeseOverlayCSS(withMotion: boolean): string {
   background-repeat:
     ${repeatList};
   ${motionCss}
+}
+
+// Dynamic Metal overlay: randomized SVG stamps with subtle motion
+function generateMetalOverlayCSS(withMotion: boolean): string {
+  // Allow runtime-injected SVGs (optional): window.__METAL_SVGS__ = [rawSVG, ...]
+  // Falls back to built-in shapes if not provided.
+  let provided: string[] | undefined
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    provided = (window as any)?.__METAL_SVGS__ as string[] | undefined
+  } catch {
+    provided = undefined
+  }
+
+  const toDataUrl = (raw: string): string => `url("data:image/svg+xml,${encodeURIComponent(raw)}")`
+
+  // Built-in metal shapes (simple, license-safe originals)
+  const skull = toDataUrl(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g fill='none' stroke-linecap='round' stroke-linejoin='round'><path fill='%23C7C7D7' d='M32 6c12 0 22 9 22 20 0 7-4 11-7 13v5c0 2-1 3-3 3h-3v3c0 2-1 3-3 3h-6c-2 0-3-1-3-3v-3h-3c-2 0-3-1-3-3v-5c-3-2-7-6-7-13 0-11 10-20 22-20z'/><circle cx='24' cy='30' r='4' fill='%23000'/><circle cx='40' cy='30' r='4' fill='%23000'/><path stroke='%23666' stroke-width='2' d='M26 42h12'/><path stroke='%23666' stroke-width='2' d='M24 47h16'/></g></svg>"
+  )
+  const pick = toDataUrl(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 60'><path fill='%23FF2D95' d='M24 2C12 2 2 12 2 24c0 14 12 24 22 34 10-10 22-20 22-34C46 12 36 2 24 2z'/><circle cx='24' cy='22' r='2' fill='%23fff' fill-opacity='0.75'/></svg>"
+  )
+  const chain = toDataUrl(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g fill='none' stroke='%2399A' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' opacity='.9'><path d='M19 45l-6 6a10 10 0 0 0 0 14h0a10 10 0 0 0 14 0l6-6'/><path d='M45 19l6-6a10 10 0 0 0 0-14h0a10 10 0 0 0-14 0l-6 6'/><path d='M24 40l16-16'/></g></svg>"
+  )
+  const flame = toDataUrl(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 64'><path fill='url(%23g)' d='M24 62c10 0 18-8 18-18 0-12-9-16-10-26-5 4-8 9-8 14-4-3-6-7-6-12C10 26 6 32 6 42c0 10 8 20 18 20z'/><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='%23FFD37A'/><stop offset='100%' stop-color='%23FF355E'/></linearGradient></defs></svg>"
+  )
+  const star = toDataUrl(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><path fill='%239FF' fill-opacity='.7' d='M30 2l7 17 18 2-13 12 4 18-16-9-16 9 4-18L5 21l18-2 7-17z'/></svg>"
+  )
+
+  const shapes = (provided && provided.length > 0 ? provided.map(toDataUrl) : [skull, pick, chain, flame, star])
+  const weights = provided && provided.length > 0 ? new Array(provided.length).fill(1) : [3, 3, 2, 2, 2]
+
+  const choose = (): string => {
+    const sum = weights.reduce((a, b) => a + b, 0)
+    let r = Math.random() * sum
+    for (let i = 0; i < shapes.length; i++) {
+      r -= weights[i]
+      if (r < 0) return shapes[i]
+    }
+    return shapes[0]
+  }
+
+  const count = 16
+  const images: string[] = []
+  const sizes: string[] = []
+  const positions: string[] = []
+  const repeats: string[] = []
+
+  for (let i = 0; i < count; i++) {
+    images.push(choose())
+    const base = 48 + Math.random() * 160 // 48–208px
+    const w = Math.round(base)
+    const h = Math.round(base * (0.8 + Math.random() * 0.5))
+    sizes.push(`${w}px ${h}px`)
+    const x = Math.round(Math.random() * 100)
+    const y = Math.round(Math.random() * 100)
+    positions.push(`${x}% ${y}%`)
+    repeats.push('no-repeat')
+  }
+
+  // A few soft glows for depth
+  const glows = [
+    'radial-gradient(220px 180px at 20% 30%, rgba(255, 53, 94, 0.18), transparent)',
+    'radial-gradient(280px 200px at 78% 24%, rgba(123, 135, 255, 0.14), transparent)',
+    'radial-gradient(180px 160px at 48% 72%, rgba(159, 252, 255, 0.12), transparent)'
+  ]
+  images.push(...glows)
+  sizes.push('auto', 'auto', 'auto')
+  positions.push('20% 30%', '78% 24%', '48% 72%')
+  repeats.push('no-repeat', 'no-repeat', 'no-repeat')
+
+  const imageList = images.join(',\n    ')
+  const sizeList = sizes.join(',\n    ')
+  const posList = positions.join(',\n    ')
+  const repeatList = repeats.join(',\n    ')
+
+  const motionCss = withMotion
+    ? `animation: metal-scroll 72s linear infinite; will-change: transform;`
+    : `animation: none;`
+
+  return `
+/* dynamic metal overlay */
+[data-theme="metal"] body::after {
+  background-image:
+    ${imageList};
+  background-size:
+    ${sizeList};
+  background-position:
+    ${posList};
+  background-repeat:
+    ${repeatList};
+  mix-blend-mode: screen;
+  opacity: 0.78;
+  ${motionCss}
+}
+
+@keyframes metal-scroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(520px); }
+}
+`
 }
 
 @keyframes cheese-scroll {

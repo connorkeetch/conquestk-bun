@@ -698,13 +698,21 @@ export class GameService {
     // If not in cache, try to load from database
     if (!cachedState) {
       try {
-        const dbResult = await query<{ game_data: string }>(
+        const dbResult = await query<{ game_data: unknown | null }>(
           'SELECT game_data FROM game_states WHERE room_id = $1',
           [roomId],
         )
 
-        if (dbResult.rows.length > 0 && dbResult.rows[0].game_data) {
-          cachedState = JSON.parse(dbResult.rows[0].game_data) as SerializedGameState
+        if (dbResult.rows.length > 0 && dbResult.rows[0].game_data != null) {
+          const raw = dbResult.rows[0].game_data
+          if (typeof raw === 'string') {
+            cachedState = JSON.parse(raw) as SerializedGameState
+          } else if (typeof raw === 'object') {
+            // pg returns JSON/JSONB as objects by default
+            cachedState = raw as SerializedGameState
+          } else {
+            throw new Error('game_data has unexpected type')
+          }
 
           // Repopulate cache for next time
           await this.persistGameStateSnapshot(roomId, cachedState)
