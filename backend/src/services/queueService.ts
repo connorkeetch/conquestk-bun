@@ -162,6 +162,10 @@ export class QueueService {
   private isInitialized = false
   private readonly queueReadyTimeoutMs = Number(process.env.QUEUE_READY_TIMEOUT_MS ?? 15000)
 
+  private resolveQueue<Key extends QueueConfigKey>(key: Key): Bull.Queue | null {
+    return (this.queues.get(key) as Bull.Queue | undefined) ?? null
+  }
+
   async initialize(): Promise<void> {
     if (this.isInitialized) return
 
@@ -293,7 +297,7 @@ export class QueueService {
       return null
     }
 
-    const queue = this.queues.get('gameActions')
+    const queue = this.resolveQueue('gameActions')
     if (!queue) throw new Error('Game actions queue not initialized')
 
     const idempotencyKey = job.idempotencyKey ?? randomUUID()
@@ -320,7 +324,7 @@ export class QueueService {
       return null
     }
 
-    const queue = this.queues.get('gameActions')
+    const queue = this.resolveQueue('gameActions')
     if (!queue) throw new Error('Game actions queue not initialized')
 
     const idempotencyKey = options?.idempotencyKey ?? job.idempotencyKey ?? randomUUID()
@@ -348,7 +352,7 @@ export class QueueService {
       return null
     }
 
-    const queue = this.queues.get('battleSimulations')
+    const queue = this.resolveQueue('battleSimulations')
     if (!queue) throw new Error('Battle simulations queue not initialized')
 
     const idempotencyKey = job.idempotencyKey ?? randomUUID()
@@ -371,7 +375,7 @@ export class QueueService {
       return null
     }
 
-    const queue = this.queues.get('gameCleanup')
+    const queue = this.resolveQueue('gameCleanup')
     if (!queue) throw new Error('Game cleanup queue not initialized')
 
     const idempotencyKey = job.idempotencyKey ?? job.gameId
@@ -482,6 +486,37 @@ export class QueueService {
     }
 
     return stats
+  }
+
+  async hasActiveWorkers(queueName: QueueConfigKey): Promise<boolean> {
+    if (!this.redis || !this.isInitialized) {
+      return false
+    }
+
+    const queue = this.resolveQueue(queueName)
+    if (!queue) {
+      return false
+    }
+
+    try {
+      // Bull's getWorkers provides connected processors (may throw on older Redis versions)
+      const workers = await (
+        queue as Bull.Queue & {
+          getWorkers?: () => Promise<Array<{ name: string }>>
+        }
+      ).getWorkers?.()
+
+      if (Array.isArray(workers)) {
+        return workers.length > 0
+      }
+    } catch (error) {
+      logger.warn('Failed to inspect queue workers', {
+        queue: this.queueDisplayNames.get(queueName) ?? queueName,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+
+    return false
   }
 
   // Priority system for game actions
@@ -740,7 +775,7 @@ export class QueueService {
     }
   }
 
-  private getQueue(name: QueueConfigKey): Bull.Queue {
+  private requireQueue(name: QueueConfigKey): Bull.Queue {
     const queue = this.queues.get(name)
     if (!queue) {
       throw new Error(`Queue ${name} not found. Make sure initialize() was called first.`)
@@ -749,15 +784,15 @@ export class QueueService {
   }
 
   getBattleQueue(): Bull.Queue<BattleSimulationJob> {
-    return this.getQueue('battleSimulations') as Bull.Queue<BattleSimulationJob>
+    return this.requireQueue('battleSimulations') as Bull.Queue<BattleSimulationJob>
   }
 
   getGameActionQueue(): Bull.Queue<GameActionJob> {
-    return this.getQueue('gameActions') as Bull.Queue<GameActionJob>
+    return this.requireQueue('gameActions') as Bull.Queue<GameActionJob>
   }
 
   getCleanupQueue(): Bull.Queue<GameCleanupJob> {
-    return this.getQueue('gameCleanup') as Bull.Queue<GameCleanupJob>
+    return this.requireQueue('gameCleanup') as Bull.Queue<GameCleanupJob>
   }
 }
 

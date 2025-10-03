@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useId, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { computeBoardReinforcements } from '@/utils/reinforcements'
 import type { AppDispatch, RootState } from '../store'
 import {
   deployArmies,
@@ -68,17 +69,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
 
     if (!currentPlayer) return 0
 
-    const territoryCount = gameState.board.filter((t) => t.ownerId === currentPlayer.id).length
-    const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
-
-    // Add sector bonuses
-    const continentBonuses = getContinentBonusArmies(
-      currentPlayer.id,
-      gameState.board,
-      continentDefinitions,
-    )
-
-    return baseArmies + continentBonuses
+    return computeBoardReinforcements(gameState, currentPlayer.id)
   }
 
   // Get detailed continent status for current player
@@ -100,6 +91,11 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
     !!currentPlayer &&
     selectedTerritoryData.ownerId !== currentPlayer.id &&
     isFriendlyTerritoryOwner(gameState, selectedTerritoryData.ownerId, currentPlayer.id)
+
+  const movementType = gameState.gameConfig?.movementType ?? 'classic_adjacent'
+  const fortifyLimitReached =
+    (movementType === 'classic_adjacent' || movementType === 'path_single') &&
+    Object.keys(gameState.movementTracking || {}).length > 0
 
   const resolveBattleTerritory = (
     territory: BattleResult['fromTerritory'],
@@ -155,6 +151,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
   }
 
   const handleFortify = () => {
+    if (fortifyLimitReached) return
     if (selectedTerritory && selectedTargetTerritory && fortifyArmies > 0) {
       dispatch(
         executeFortify({
@@ -492,11 +489,13 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                     id={fortifyInputId}
                     onChange={(e) => setFortifyArmies(parseInt(e.target.value, 10) || 1)}
                     className="w-20 px-2 py-1 border border-slate-600 bg-slate-700 text-white rounded text-center"
+                    disabled={fortifyLimitReached}
                   />
                   <button
                     type="button"
                     onClick={handleFortify}
                     className="bg-primary hover:bg-primary text-white px-3 py-1 rounded text-sm"
+                    disabled={fortifyLimitReached}
                   >
                     Move
                   </button>

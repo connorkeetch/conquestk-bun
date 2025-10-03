@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { BattleResultDelta, GameDelta } from '@shared/types'
+import { computeBoardReinforcements } from '@/utils/reinforcements'
 import { gameService } from '../services/gameService'
 import type { BattleResult, GameState } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
@@ -184,6 +185,24 @@ const initialState: GameSliceState = {
   conquestTransfer: null,
 }
 
+const computeReinforcementArmies = (game: GameState | null): number => {
+  if (!game || game.phase !== 'reinforcement') {
+    return 0
+  }
+
+  const currentPlayer = game.players.find((player) => player.id === game.currentPlayer)
+  if (!currentPlayer) {
+    return 0
+  }
+
+  const explicitArmies = Math.trunc(currentPlayer.armies ?? 0)
+  if (explicitArmies > 0) {
+    return explicitArmies
+  }
+
+  return Math.max(0, computeBoardReinforcements(game, currentPlayer.id))
+}
+
 export const fetchGameState = createAsyncThunk<
   GameState,
   { roomId: string; allowSpectate?: boolean },
@@ -221,10 +240,12 @@ const gameSlice = createSlice({
   reducers: {
     setGameState: (state, action: PayloadAction<GameState>) => {
       state.currentGame = action.payload
+      state.reinforcementArmies = computeReinforcementArmies(state.currentGame)
     },
     updateGameState: (state, action: PayloadAction<Partial<GameState>>) => {
       if (state.currentGame) {
         state.currentGame = { ...state.currentGame, ...action.payload }
+        state.reinforcementArmies = computeReinforcementArmies(state.currentGame)
       }
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -328,62 +349,81 @@ const gameSlice = createSlice({
 
       if (!state.currentGame) return
 
-      switch (delta.type) {
-        case 'TERRITORY_UPDATE': {
-          const territory = state.currentGame.board.find((t) => t.id === delta.territoryId)
-          if (territory) {
-            if (delta.changes.armies !== undefined) {
-              territory.armies = delta.changes.armies
+      const applyDeltaToState = (incoming: GameDelta): void => {
+        switch (incoming.type) {
+          case 'TERRITORY_UPDATE': {
+            const territory = state.currentGame?.board.find((t) => t.id === incoming.territoryId)
+            if (territory) {
+              if (incoming.changes.armies !== undefined) {
+                territory.armies = incoming.changes.armies
+              }
+              if (incoming.changes.ownerId !== undefined) {
+                territory.ownerId = incoming.changes.ownerId
+              }
             }
-            if (delta.changes.ownerId !== undefined) {
-              territory.ownerId = delta.changes.ownerId
-            }
+            break
           }
-          break
-        }
 
-        case 'PLAYER_UPDATE': {
-          const player = state.currentGame.players.find((p) => p.id === delta.playerId)
-          if (player) {
-            if (delta.changes.armies !== undefined) {
-              player.armies = delta.changes.armies
+          case 'PLAYER_UPDATE': {
+            const player = state.currentGame?.players.find((p) => p.id === incoming.playerId)
+            if (player) {
+              if (incoming.changes.armies !== undefined) {
+                player.armies = incoming.changes.armies
+                if (
+                  incoming.playerId === state.currentGame?.currentPlayer &&
+                  state.currentGame?.phase === 'reinforcement'
+                ) {
+                  state.reinforcementArmies = incoming.changes.armies
+                }
+              }
+              if (incoming.changes.territories !== undefined) {
+                player.territories = incoming.changes.territories
+              }
+              if (incoming.changes.isEliminated !== undefined) {
+                player.isEliminated = incoming.changes.isEliminated
+              }
             }
-            if (delta.changes.territories !== undefined) {
-              player.territories = delta.changes.territories
+            break
+          }
+
+          case 'PHASE_CHANGE': {
+            state.currentGame.phase = incoming.phase
+            state.currentGame.currentPlayer = incoming.currentPlayer
+            if (incoming.turn !== undefined) {
+              state.currentGame.turn = incoming.turn
             }
-            if (delta.changes.isEliminated !== undefined) {
-              player.isEliminated = delta.changes.isEliminated
+            if (incoming.reinforcementArmies !== undefined) {
+              state.reinforcementArmies = incoming.reinforcementArmies
+            } else if (incoming.phase !== 'reinforcement') {
+              state.reinforcementArmies = 0
             }
+            break
           }
-          break
-        }
 
-        case 'PHASE_CHANGE': {
-          state.currentGame.phase = delta.phase
-          state.currentGame.currentPlayer = delta.currentPlayer
-          if (delta.turn !== undefined) {
-            state.currentGame.turn = delta.turn
+          case 'BATTLE_RESULT': {
+            if (state.currentGame) {
+              state.battleResult = adaptBattleResult(incoming.battleResult, state.currentGame)
+            }
+            const nested = (incoming as BattleResultDelta & { changes?: GameDelta[] }).changes
+            if (Array.isArray(nested)) {
+              for (const change of nested) {
+                applyDeltaToState(change as GameDelta)
+              }
+            }
+            break
           }
-          if (delta.reinforcementArmies !== undefined) {
-            state.reinforcementArmies = delta.reinforcementArmies
-          }
-          break
-        }
 
-        case 'BATTLE_RESULT': {
-          if (state.currentGame) {
-            state.battleResult = adaptBattleResult(delta.battleResult, state.currentGame)
+          case 'GAME_END': {
+            state.currentGame.phase = 'finished'
+            break
           }
-          // Territory updates are handled by separate TERRITORY_UPDATE deltas
-          break
-        }
 
-        case 'GAME_END': {
-          state.currentGame.phase = 'finished'
-          // Winner and elimination details handled separately
-          break
+          default:
+            break
         }
       }
+
+      applyDeltaToState(delta)
 
       // Recalculate valid targets if territory selection is active
       if (state.selectedTerritory && state.currentGame) {
@@ -414,6 +454,12 @@ const gameSlice = createSlice({
         state.currentGame = {
           ...payload,
           roomId: payload.roomId ?? action.meta.arg.roomId,
+        }
+        if (payload.phase === 'reinforcement') {
+          const current = payload.players.find((p) => p.id === payload.currentPlayer)
+          state.reinforcementArmies = Math.max(0, current?.armies ?? 0)
+        } else {
+          state.reinforcementArmies = 0
         }
       })
       .addCase(fetchGameState.rejected, (state, action) => {

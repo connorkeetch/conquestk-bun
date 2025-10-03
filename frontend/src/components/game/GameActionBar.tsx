@@ -5,12 +5,14 @@ import {
   endTurn,
   executeAttack,
   executeFortify,
+  goBackToReinforcement,
   undoFortify,
   undoLastPlacement,
 } from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
 import { setAutoAttacking } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
+import { computeBoardReinforcements } from '@/utils/reinforcements'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
 /**
@@ -38,6 +40,18 @@ export function GameActionBar({
   const mustCashIn = useAppSelector((s) => s.game.currentGame?.mustCashInTreasures)
   const myHandCount = (me?.treasures?.length ?? 0) as number
   const baseReinforcements = useAppSelector((s) => s.game.reinforcementArmies)
+  const fallbackReinforcements = useMemo(() => {
+    if (!game || !userId || game.phase !== 'reinforcement') {
+      return 0
+    }
+    try {
+      return computeBoardReinforcements(game, userId)
+    } catch {
+      return 0
+    }
+  }, [game, userId])
+  const effectiveReinforcements =
+    baseReinforcements > 0 ? baseReinforcements : fallbackReinforcements
   const localSpent = useAppSelector((s) =>
     (s.uiRoom.placementHistory ?? []).reduce(
       (sum, it) => sum + Math.max(0, Math.trunc(it.armies) || 0),
@@ -45,10 +59,17 @@ export function GameActionBar({
     ),
   )
   const serverSpent = useAppSelector((s) => s.uiRoom.placementServerSpent ?? 0)
-  const remaining = Math.max(0, (baseReinforcements || 0) - (serverSpent + localSpent))
+  const remaining = Math.max(0, (effectiveReinforcements || 0) - (serverSpent + localSpent))
 
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
   const phase = game?.phase ?? 'reinforcement'
+  const canGoBackToReinforcement = phase === 'attack' && !game?.hasAttackedThisTurn
+
+  const movementType = game?.gameConfig?.movementType ?? 'classic_adjacent'
+  const movementTracking = game?.movementTracking ?? {}
+  const singleMoveFortify = movementType === 'classic_adjacent' || movementType === 'path_single'
+  const fortifyLimitReached = singleMoveFortify && Object.keys(movementTracking).length > 0
+  const selectedHasMoved = Boolean(selected && movementTracking[selected])
 
   // Auto-populate with max troops when a territory is selected in reinforcement phase
   const [reinforce, setReinforce] = useState(remaining > 0 ? remaining : 1)
@@ -66,6 +87,7 @@ export function GameActionBar({
   const hasUndo = useAppSelector((s) => (s.uiRoom.placementHistory?.length ?? 0) > 0)
   const [showTreasures, setShowTreasures] = useState(false)
   const lastTargetRef = useRef<string | null>(null)
+  const autoAdvanceKeyRef = useRef<string | null>(null)
   const reinforceId = useId()
   const fortifyId = useId()
 
@@ -137,6 +159,25 @@ export function GameActionBar({
 
     return () => clearTimeout(timeoutId)
   }, [auto, battle, dispatch, game, selected, target])
+
+  useEffect(() => {
+    if (!isMyTurn || phase !== 'reinforcement' || !game) {
+      autoAdvanceKeyRef.current = null
+      return
+    }
+
+    const key = `${game.turn}:${game.currentPlayer}`
+    const hasActivity = (effectiveReinforcements || 0) > 0 || serverSpent > 0 || localSpent > 0
+
+    if (remaining === 0 && hasActivity) {
+      if (autoAdvanceKeyRef.current !== key) {
+        autoAdvanceKeyRef.current = key
+        void dispatch(endTurn())
+      }
+    } else if (remaining > 0) {
+      autoAdvanceKeyRef.current = null
+    }
+  }, [dispatch, effectiveReinforcements, game, isMyTurn, localSpent, phase, remaining, serverSpent])
 
   // Auto-open treasure modal if must cash in (only when it's my turn)
   useEffect(() => {
@@ -250,6 +291,17 @@ export function GameActionBar({
 
             {phase === 'attack' && (
               <>
+                {canGoBackToReinforcement && (
+                  <button
+                    type="button"
+                    onClick={() => void dispatch(goBackToReinforcement())}
+                    disabled={!isMyTurn}
+                    className="btn btn-secondary"
+                    title="Return to reinforcement phase"
+                  >
+                    ← Reinforce
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -291,6 +343,16 @@ export function GameActionBar({
                 >
                   {auto ? 'Stop' : 'Auto'}
                 </button>
+                {!game.hasAttackedThisTurn && (
+                  <button
+                    type="button"
+                    onClick={() => void dispatch(goBackToReinforcement())}
+                    className="btn btn-secondary"
+                    title="Return to reinforcement phase"
+                  >
+                    Reinforce Again
+                  </button>
+                )}
                 {endTurnBtn}
               </>
             )}
@@ -311,6 +373,7 @@ export function GameActionBar({
                     onChange={(e) =>
                       setFortify(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
                     }
+                    disabled={fortifyLimitReached || selectedHasMoved}
                   />
                 </div>
                 {/* Undo button - only show if there's history */}
@@ -337,7 +400,14 @@ export function GameActionBar({
                       )
                     }
                   }}
-                  disabled={!isMyTurn || !selected || !target || !validTargets.includes(target)}
+                  disabled={
+                    !isMyTurn ||
+                    !selected ||
+                    !target ||
+                    !validTargets.includes(target) ||
+                    fortifyLimitReached ||
+                    selectedHasMoved
+                  }
                   className="btn btn-primary"
                   title={
                     selected && target ? `Fortify ${targetName}` : 'Select source and destination'
@@ -345,6 +415,13 @@ export function GameActionBar({
                 >
                   Fortify
                 </button>
+                {(fortifyLimitReached || selectedHasMoved) && (
+                  <span className="text-xs text-muted">
+                    {fortifyLimitReached
+                      ? 'Fortify limit reached for this phase. Use Undo to adjust.'
+                      : `${selectedName} has already moved this phase.`}
+                  </span>
+                )}
                 {endTurnBtn}
               </>
             )}

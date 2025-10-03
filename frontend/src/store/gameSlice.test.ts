@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import type { GameState, PlayerColor } from '../types/game'
 import gameReducer, {
+  applyDelta,
   selectTargetTerritory,
   selectTerritory,
   setGameState,
@@ -144,6 +145,88 @@ describe('gameSlice', () => {
 
       expect(alaskaTerritory?.armies).toBe(5)
       expect(alaskaTerritory?.ownerId).toBe('player2')
+    })
+
+    it('applies nested battle result changes to the game state', () => {
+      const battleState: GameState = {
+        ...mockGameState,
+        players: [
+          {
+            ...mockGameState.players[0],
+            armies: 3,
+            territories: ['alaska'],
+          },
+          {
+            id: 'player2',
+            userId: 'player2',
+            username: 'Player 2',
+            color: 'blue',
+            armies: 2,
+            territories: ['siberia'],
+            cards: [],
+            isEliminated: false,
+          },
+        ],
+        board: [
+          {
+            id: 'alaska',
+            name: 'Alaska',
+            sector: 'north_america',
+            ownerId: 'player1',
+            armies: 3,
+            adjacentTerritories: ['siberia'],
+          },
+          {
+            id: 'siberia',
+            name: 'Siberia',
+            sector: 'asia',
+            ownerId: 'player2',
+            armies: 2,
+            adjacentTerritories: ['alaska'],
+          },
+        ],
+      }
+
+      store.dispatch(setGameState(battleState))
+
+      const battleDelta = {
+        type: 'BATTLE_RESULT',
+        roomId: 'test-room',
+        timestamp: Date.now(),
+        battleResult: {
+          attackerId: 'player1',
+          defenderId: 'player2',
+          attackerDice: [6, 5, 4],
+          defenderDice: [3, 2],
+          attackerLosses: 0,
+          defenderLosses: 2,
+          conquered: true,
+          fromTerritory: { id: 'alaska', armies: 3 },
+          toTerritory: { id: 'siberia', armies: 2, ownerId: 'player1' },
+        },
+        changes: [
+          {
+            type: 'TERRITORY_UPDATE',
+            roomId: 'test-room',
+            territoryId: 'alaska',
+            changes: { armies: 3 },
+            timestamp: Date.now(),
+          },
+          {
+            type: 'TERRITORY_UPDATE',
+            roomId: 'test-room',
+            territoryId: 'siberia',
+            changes: { armies: 2, ownerId: 'player1' },
+            timestamp: Date.now(),
+          },
+        ],
+      } as unknown as GameDelta
+
+      store.dispatch(applyDelta(battleDelta))
+
+      const updated = store.getState().game.currentGame
+      expect(updated?.board.find((t) => t.id === 'siberia')?.ownerId).toBe('player1')
+      expect(store.getState().game.battleResult?.conquered).toBe(true)
     })
   })
 

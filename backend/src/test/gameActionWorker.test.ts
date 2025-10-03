@@ -8,12 +8,17 @@ import { GameActionWorker } from '../workers/gameActionWorker'
 
 const mockGetProcessedJob = jest.fn()
 const mockMarkProcessedJob = jest.fn()
+const mockEmitFogFilteredDelta = jest.fn()
 
 jest.mock('../services/jobIdempotencyService', () => ({
   jobIdempotencyService: {
     getProcessedJob: (...args: unknown[]) => mockGetProcessedJob(...args),
     markProcessedJob: (...args: unknown[]) => mockMarkProcessedJob(...args),
   },
+}))
+
+jest.mock('../services/fogService', () => ({
+  emitFogFilteredDelta: (...args: unknown[]) => mockEmitFogFilteredDelta(...args),
 }))
 
 const mockAddBattleSimulation = jest.fn()
@@ -31,6 +36,7 @@ const mockProcessPlaceArmies = jest.fn()
 const mockProcessFortify = jest.fn()
 const mockProcessEndTurn = jest.fn()
 const mockProcessPhaseChange = jest.fn()
+const mockProcessGoBackToReinforcement = jest.fn()
 
 jest.mock('../services/gameService', () => ({
   GameService: jest.fn(() => ({
@@ -39,6 +45,7 @@ jest.mock('../services/gameService', () => ({
     processFortify: (...args: unknown[]) => mockProcessFortify(...args),
     processEndTurn: (...args: unknown[]) => mockProcessEndTurn(...args),
     processPhaseChange: (...args: unknown[]) => mockProcessPhaseChange(...args),
+    processGoBackToReinforcement: (...args: unknown[]) => mockProcessGoBackToReinforcement(...args),
   })),
 }))
 
@@ -119,6 +126,7 @@ describe('GameActionWorker', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockEmitFogFilteredDelta.mockClear()
 
     roomEmit = jest.fn()
     io = {
@@ -139,7 +147,7 @@ describe('GameActionWorker', () => {
 
   it('processes deploy actions and broadcasts territory delta', async () => {
     mockGetGameState.mockResolvedValue(buildGameState())
-    mockProcessPlaceArmies.mockResolvedValue(7)
+    mockProcessPlaceArmies.mockResolvedValue({ armies: 7, playerArmies: 5 })
 
     const job = {
       id: 'job-123',
@@ -163,14 +171,12 @@ describe('GameActionWorker', () => {
       armies: 2,
       playerId: 'player-1',
     })
-    expect(io.to).toHaveBeenCalledWith('game:game-1')
-    expect(roomEmit).toHaveBeenCalledWith(
-      'game-delta',
-      expect.objectContaining({
-        type: 'TERRITORY_UPDATE',
-        roomId: 'game-1',
-      }),
-    )
+    const emittedTypes = mockEmitFogFilteredDelta.mock.calls.map(([, roomId, delta]) => {
+      expect(roomId).toBe('game-1')
+      return (delta as { type: string }).type
+    })
+    expect(emittedTypes).toContain('PLAYER_UPDATE')
+    expect(emittedTypes).toContain('TERRITORY_UPDATE')
     expect(mockMarkProcessedJob).toHaveBeenCalledWith(
       'game-actions',
       'job-123',
@@ -215,6 +221,7 @@ describe('GameActionWorker', () => {
     )
     expect(io.to).not.toHaveBeenCalledWith('game:game-1')
     expect(roomEmit).not.toHaveBeenCalled()
+    expect(mockEmitFogFilteredDelta).not.toHaveBeenCalled()
     expect(result).toEqual({ success: true, delta: null, processed: true })
     expect(mockMarkProcessedJob).toHaveBeenCalledWith(
       'game-actions',
@@ -222,5 +229,41 @@ describe('GameActionWorker', () => {
       expect.objectContaining({ success: true, processed: true }),
       60 * 60,
     )
+  })
+
+  it('processes go back to reinforcement and emits phase change delta', async () => {
+    mockGetGameState.mockResolvedValue(
+      buildGameState({ phase: 'attack', hasAttackedThisTurn: false }),
+    )
+    mockProcessGoBackToReinforcement.mockResolvedValue({
+      phase: 'reinforcement',
+      currentPlayer: 'player-1',
+      turn: 2,
+      reinforcementArmies: 6,
+    })
+
+    const job = {
+      id: 'job-go-back',
+      data: {
+        gameId: 'game-1',
+        playerId: 'player-1',
+        action: {
+          type: 'go_back_to_reinforcement',
+          roomId: 'game-1',
+          playerId: 'player-1',
+        },
+      },
+    } as unknown as Bull.Job<GameActionJob>
+
+    const result = await invokeProcess(job)
+
+    expect(mockProcessGoBackToReinforcement).toHaveBeenCalledWith('game-1', 'player-1')
+    const emitted = mockEmitFogFilteredDelta.mock.calls.find(([, roomId]) => roomId === 'game-1')
+    expect(emitted).toBeDefined()
+    const delta = emitted?.[2] as { type: string; phase?: string; reinforcementArmies?: number }
+    expect(delta?.type).toBe('PHASE_CHANGE')
+    expect(delta?.phase).toBe('reinforcement')
+    expect(delta?.reinforcementArmies).toBe(6)
+    expect(result).toEqual(expect.objectContaining({ success: true, processed: true }))
   })
 })

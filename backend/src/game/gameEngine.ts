@@ -990,6 +990,13 @@ export class GameEngine {
         const player = gameState.players.find((p) => p.id === action.playerId)
         if (player) {
           player.armies -= armies
+          if (player.armies <= 0) {
+            player.armies = 0
+            if (gameState.phase === 'reinforcement') {
+              gameState.phase = 'attack'
+              gameState.hasAttackedThisTurn = false
+            }
+          }
         }
         const entry = {
           playerId: action.playerId,
@@ -1398,14 +1405,20 @@ export class GameEngine {
     if (gameState.phase === 'attack' && !gameState.hasAttackedThisTurn) {
       gameState.phase = 'reinforcement'
 
-      // Recalculate reinforcement armies for current player
+      // Recalculate reinforcement armies for current player and account for prior placements
       const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayer)
       if (currentPlayer) {
-        currentPlayer.armies = this.calculateReinforcementArmies(
+        const baseReinforcements = this.calculateReinforcementArmies(
           currentPlayer.territories,
           gameState.board,
           gameState.gameConfig,
         )
+        const history = (gameState.reinforcementHistory ?? []).filter(
+          (entry) => entry.playerId === currentPlayer.id,
+        )
+        const netPlacements = history.reduce((sum, entry) => sum + entry.armies, 0)
+        const remaining = Math.max(0, baseReinforcements - netPlacements)
+        currentPlayer.armies = remaining
       }
     }
 
