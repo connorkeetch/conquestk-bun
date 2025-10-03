@@ -4,6 +4,7 @@ import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
 import { TurnTimer } from './TurnTimer'
+import { DiceResultsBar } from './DiceResultsBar'
 
 interface GameHeaderProps {
   currentPhase: string
@@ -113,6 +114,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </div>
         )}
       </div>
+      {/* Dice recap bar (last battle) */}
+      <DiceResultsBar />
       <PlayerProfileModal
         open={profileUsername !== null}
         username={profileUsername}

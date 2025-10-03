@@ -155,6 +155,9 @@ export class GameActionWorker {
         case 'attack': {
           const attackAction = action as AttackAction
           // For attacks, we queue a battle simulation
+          const attackingTerritoryState = currentState.board.find(
+            (territory) => territory.id === attackAction.payload?.fromTerritoryId,
+          )
           const defendingArmies =
             currentState.board.find(
               (territory) => territory.id === attackAction.payload?.toTerritoryId,
@@ -164,7 +167,9 @@ export class GameActionWorker {
             gameId,
             attackingTerritory: attackAction.payload?.fromTerritoryId ?? '',
             defendingTerritory: attackAction.payload?.toTerritoryId ?? '',
-            attackingArmies: attackAction.payload?.armies ?? 1,
+            // Use current territory armies for dice calculation (max dice derived later)
+            attackingArmies: attackingTerritoryState?.armies ??
+              Math.max(1, attackAction.payload?.armies ?? 1),
             defendingArmies,
             playerId,
             idempotencyKey: `${idKey}:battle:${attackAction.payload?.fromTerritoryId ?? 'unknown'}:${attackAction.payload?.toTerritoryId ?? 'unknown'}`,

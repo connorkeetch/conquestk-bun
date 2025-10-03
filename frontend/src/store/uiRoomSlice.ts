@@ -31,6 +31,20 @@ export interface UIRoomState {
   lastPingAt?: number
   // Client-side reinforcement placement history (for undo within the same phase)
   placementHistory?: Array<{ territoryId: string; armies: number; ts: number }>
+  // Rolling, non-blocking history of battle results for header dice UI
+  battleHistory?: Array<{
+    id: string
+    ts: number
+    fromId: string
+    toId: string
+    attackerId?: string | null
+    defenderId?: string | null
+    attackerDice: number[]
+    defenderDice: number[]
+    attackerLosses: number
+    defenderLosses: number
+    conquered: boolean
+  }>
 }
 
 const initialState: UIRoomState = {
@@ -51,6 +65,7 @@ const initialState: UIRoomState = {
   clientLogs: [],
   lastPingAt: 0,
   placementHistory: [],
+  battleHistory: [],
 }
 
 const uiRoomSlice = createSlice({
@@ -176,6 +191,43 @@ const uiRoomSlice = createSlice({
       const list = state.placementHistory ?? []
       state.placementHistory = list.slice(0, Math.max(0, list.length - 1))
     },
+    // Record a battle result for quick dice recap UI
+    recordBattleResult(
+      state,
+      action: PayloadAction<{
+        id?: string
+        ts?: number
+        fromId: string
+        toId: string
+        attackerId?: string | null
+        defenderId?: string | null
+        attackerDice: number[]
+        defenderDice: number[]
+        attackerLosses: number
+        defenderLosses: number
+        conquered: boolean
+      }>,
+    ) {
+      const entry = {
+        id: action.payload.id ?? `${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+        ts: action.payload.ts ?? Date.now(),
+        fromId: action.payload.fromId,
+        toId: action.payload.toId,
+        attackerId: action.payload.attackerId ?? null,
+        defenderId: action.payload.defenderId ?? null,
+        attackerDice: [...action.payload.attackerDice],
+        defenderDice: [...action.payload.defenderDice],
+        attackerLosses: Math.max(0, Math.trunc(action.payload.attackerLosses) || 0),
+        defenderLosses: Math.max(0, Math.trunc(action.payload.defenderLosses) || 0),
+        conquered: Boolean(action.payload.conquered),
+      }
+      const list = state.battleHistory ?? []
+      // Keep the last 20 results for quick recall
+      state.battleHistory = [...list, entry].slice(-20)
+    },
+    clearBattleHistory(state) {
+      state.battleHistory = []
+    },
     toggleMuteUser(state, action: PayloadAction<string>) {
       const id = action.payload
       const list = new Set(state.mutedUserIds ?? [])
@@ -260,6 +312,8 @@ export const {
   setLastPingAt,
   recordPlacement,
   removeLastPlacement,
+  recordBattleResult,
+  clearBattleHistory,
 } = uiRoomSlice.actions
 
 export default uiRoomSlice.reducer
