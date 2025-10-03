@@ -26,12 +26,7 @@ export interface UIRoomState {
     expiresAt: number
   }>
   mutedUserIds?: string[]
-  optimisticPlacements?: Record<string, { expectedArmies: number; ts: number }>
   clientLogs?: Array<{ id: string; ts: number; text: string; roomId?: string }>
-  // Reinforcement placement history (client-side) to enable Undo within turn
-  placementHistory?: Array<{ territoryId: string; armies: number; ts: number }>
-  // Net armies already placed this reinforcement phase according to server (baseline-diff)
-  placementServerSpent?: number
   // Simple per-user cooldown tracking for ping button
   lastPingAt?: number
 }
@@ -51,10 +46,7 @@ const initialState: UIRoomState = {
   resyncing: false,
   pings: [],
   mutedUserIds: [],
-  optimisticPlacements: {},
   clientLogs: [],
-  placementHistory: [],
-  placementServerSpent: 0,
   lastPingAt: 0,
 }
 
@@ -147,22 +139,6 @@ const uiRoomSlice = createSlice({
       const now = Date.now()
       state.pings = (state.pings ?? []).filter((p) => p.expiresAt > now)
     },
-    trackOptimisticPlacement(
-      state,
-      action: PayloadAction<{ territoryId: string; expectedArmies: number }>,
-    ) {
-      const map = state.optimisticPlacements ?? {}
-      map[action.payload.territoryId] = {
-        expectedArmies: Math.max(0, Math.trunc(action.payload.expectedArmies) || 0),
-        ts: Date.now(),
-      }
-      state.optimisticPlacements = map
-    },
-    clearOptimisticPlacement(state, action: PayloadAction<{ territoryId: string }>) {
-      const map = { ...(state.optimisticPlacements ?? {}) }
-      delete map[action.payload.territoryId]
-      state.optimisticPlacements = map
-    },
     addClientLog(
       state,
       action: PayloadAction<{ text: string; roomId?: string; ts?: number; id?: string }>,
@@ -177,24 +153,6 @@ const uiRoomSlice = createSlice({
     },
     clearClientLogs(state) {
       state.clientLogs = []
-    },
-    pushPlacement(state, action: PayloadAction<{ territoryId: string; armies: number }>) {
-      const list = state.placementHistory ?? []
-      state.placementHistory = [
-        ...list,
-        { territoryId: action.payload.territoryId, armies: action.payload.armies, ts: Date.now() },
-      ].slice(-50)
-    },
-    popPlacement(state) {
-      const list = state.placementHistory ?? []
-      state.placementHistory = list.slice(0, Math.max(0, list.length - 1))
-    },
-    clearPlacementHistory(state) {
-      state.placementHistory = []
-    },
-    setPlacementServerSpent(state, action: PayloadAction<number>) {
-      const n = Math.max(0, Math.trunc(action.payload) || 0)
-      state.placementServerSpent = n
     },
     setLastPingAt(state, action: PayloadAction<number>) {
       state.lastPingAt = Math.max(0, Math.trunc(action.payload) || 0)
@@ -277,15 +235,9 @@ export const {
   hydrateFromStorage,
   addPing,
   prunePings,
-  trackOptimisticPlacement,
-  clearOptimisticPlacement,
   addClientLog,
   clearClientLogs,
   toggleMuteUser,
-  pushPlacement,
-  popPlacement,
-  clearPlacementHistory,
-  setPlacementServerSpent,
   setLastPingAt,
 } = uiRoomSlice.actions
 

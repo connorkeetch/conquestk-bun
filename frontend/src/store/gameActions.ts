@@ -10,16 +10,9 @@ import {
   selectTerritory,
   setError,
   setPendingAction,
-  updateTerritory,
 } from './gameSlice'
 import type { AppDispatch, RootState } from './index'
-import {
-  addClientLog,
-  clearOptimisticPlacement,
-  popPlacement,
-  pushPlacement,
-  trackOptimisticPlacement,
-} from './uiRoomSlice'
+import { addClientLog } from './uiRoomSlice'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -218,7 +211,7 @@ export const handleFortifyClick = createAsyncThunk<
   },
 )
 
-// Deploy armies action
+// Deploy armies action - wait for server confirmation
 export const deployArmies = createAsyncThunk(
   'game/deployArmies',
   async (
@@ -231,26 +224,7 @@ export const deployArmies = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      // Optimistic update: bump local armies immediately
-      const prev = currentGame.board.find((t) => t.id === territoryId)?.armies ?? 0
-      const expected = Math.max(0, prev + Math.max(1, Math.trunc(armies)))
-      dispatch(
-        updateTerritory({
-          territoryId,
-          armies: expected,
-        }),
-      )
-      dispatch(trackOptimisticPlacement({ territoryId, expectedArmies: expected }))
-      // Track client-side placement history for Undo (reinforcement phase only)
-      try {
-        const phase = (getState() as RootState).game.currentGame?.phase
-        if (phase === 'reinforcement') {
-          dispatch(pushPlacement({ territoryId, armies: Math.max(1, Math.trunc(armies)) }))
-        }
-      } catch {
-        // ignore placement history tracking errors
-      }
-
+      // Send to server - UI updates via socket deltas
       socketService.deployArmies(currentGame.roomId, territoryId, armies)
 
       dispatch(
@@ -260,48 +234,14 @@ export const deployArmies = createAsyncThunk(
         }),
       )
 
-      // Clear selection after successful deployment
+      // Clear selection after sending deployment
       dispatch(selectTerritory(null))
       dispatch(setPendingAction(null))
     } catch (_error) {
       dispatch(setError('Failed to deploy armies'))
-      dispatch(clearOptimisticPlacement({ territoryId }))
       toast.error('Deploy failed')
       dispatch(addClientLog({ text: `Deployment to ${territoryId} failed` }))
     }
-  },
-)
-
-// Undo last placement in reinforcement phase (client convenience)
-export const undoLastPlacement = createAsyncThunk(
-  'game/undoLastPlacement',
-  async (_: undefined, { getState, dispatch }) => {
-    const state = getState() as RootState
-    const game = state.game.currentGame
-    if (!game) return
-    if (game.phase !== 'reinforcement') return
-    const history = state.uiRoom.placementHistory ?? []
-    if (history.length === 0) return
-    const last = history[history.length - 1]
-    const territory = game.board.find((t) => t.id === last.territoryId)
-    const currentArmies = territory?.armies ?? 0
-    const newExpected = Math.max(0, currentArmies - last.armies)
-    // Optimistic revert
-    dispatch(
-      updateTerritory({
-        territoryId: last.territoryId,
-        armies: newExpected,
-      }),
-    )
-    dispatch(
-      trackOptimisticPlacement({ territoryId: last.territoryId, expectedArmies: newExpected }),
-    )
-    dispatch(popPlacement())
-    // Send negative placement to server (engine clamps to baseline)
-    socketService.deployArmies(game.roomId, last.territoryId, -last.armies)
-    dispatch(
-      addTerritoryAction({ territoryId: last.territoryId, action: `Undo ${last.armies} armies` }),
-    )
   },
 )
 

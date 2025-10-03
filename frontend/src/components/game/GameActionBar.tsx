@@ -7,12 +7,10 @@ import {
   executeFortify,
   goBackToReinforcement,
   undoFortify,
-  undoLastPlacement,
 } from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
 import { setAutoAttacking } from '@/store/uiRoomSlice'
 import { computeRollOdds } from '@/utils/odds'
-import { computeBoardReinforcements } from '@/utils/reinforcements'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
 /**
@@ -39,27 +37,8 @@ export function GameActionBar({
   )
   const mustCashIn = useAppSelector((s) => s.game.currentGame?.mustCashInTreasures)
   const myHandCount = (me?.treasures?.length ?? 0) as number
-  const baseReinforcements = useAppSelector((s) => s.game.reinforcementArmies)
-  const fallbackReinforcements = useMemo(() => {
-    if (!game || !userId || game.phase !== 'reinforcement') {
-      return 0
-    }
-    try {
-      return computeBoardReinforcements(game, userId)
-    } catch {
-      return 0
-    }
-  }, [game, userId])
-  const effectiveReinforcements =
-    baseReinforcements > 0 ? baseReinforcements : fallbackReinforcements
-  const localSpent = useAppSelector((s) =>
-    (s.uiRoom.placementHistory ?? []).reduce(
-      (sum, it) => sum + Math.max(0, Math.trunc(it.armies) || 0),
-      0,
-    ),
-  )
-  const serverSpent = useAppSelector((s) => s.uiRoom.placementServerSpent ?? 0)
-  const remaining = Math.max(0, (effectiveReinforcements || 0) - (serverSpent + localSpent))
+  // Trust server-provided reinforcement armies - no fallback, no local tracking
+  const remaining = useAppSelector((s) => s.game.reinforcementArmies)
 
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
   const phase = game?.phase ?? 'reinforcement'
@@ -84,10 +63,8 @@ export function GameActionBar({
   const [fortify, setFortify] = useState(1)
   // Auto-attack is global so it can be toggled from map tooltip
   const auto = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
-  const hasUndo = useAppSelector((s) => (s.uiRoom.placementHistory?.length ?? 0) > 0)
   const [showTreasures, setShowTreasures] = useState(false)
   const lastTargetRef = useRef<string | null>(null)
-  const autoAdvanceKeyRef = useRef<string | null>(null)
   const reinforceId = useId()
   const fortifyId = useId()
 
@@ -159,25 +136,6 @@ export function GameActionBar({
 
     return () => clearTimeout(timeoutId)
   }, [auto, battle, dispatch, game, selected, target])
-
-  useEffect(() => {
-    if (!isMyTurn || phase !== 'reinforcement' || !game) {
-      autoAdvanceKeyRef.current = null
-      return
-    }
-
-    const key = `${game.turn}:${game.currentPlayer}`
-    const hasActivity = (effectiveReinforcements || 0) > 0 || serverSpent > 0 || localSpent > 0
-
-    if (remaining === 0 && hasActivity) {
-      if (autoAdvanceKeyRef.current !== key) {
-        autoAdvanceKeyRef.current = key
-        void dispatch(endTurn())
-      }
-    } else if (remaining > 0) {
-      autoAdvanceKeyRef.current = null
-    }
-  }, [dispatch, effectiveReinforcements, game, isMyTurn, localSpent, phase, remaining, serverSpent])
 
   // Auto-open treasure modal if must cash in (only when it's my turn)
   useEffect(() => {
@@ -268,22 +226,6 @@ export function GameActionBar({
                   }
                 >
                   Place
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void dispatch(undoLastPlacement())}
-                  disabled={!isMyTurn || !hasUndo}
-                  className={`btn ${hasUndo ? 'btn-warning' : 'btn-secondary'}`}
-                  title={`Undo last placement${hasUndo ? ' (Z)' : ''}`}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    ↶ Undo
-                    {hasUndo && (
-                      <kbd className="text-xs opacity-75 font-mono px-1 py-0.5 rounded bg-black/20">
-                        Z
-                      </kbd>
-                    )}
-                  </span>
                 </button>
                 {endTurnBtn}
               </>

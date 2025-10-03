@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { BattleResultDelta, GameDelta } from '@shared/types'
-import { computeBoardReinforcements } from '@/utils/reinforcements'
 import { gameService } from '../services/gameService'
 import type { BattleResult, GameState } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
@@ -195,12 +194,8 @@ const computeReinforcementArmies = (game: GameState | null): number => {
     return 0
   }
 
-  const explicitArmies = Math.trunc(currentPlayer.armies ?? 0)
-  if (explicitArmies > 0) {
-    return explicitArmies
-  }
-
-  return Math.max(0, computeBoardReinforcements(game, currentPlayer.id))
+  // Trust server-provided armies - no fallback calculation
+  return Math.max(0, Math.trunc(currentPlayer.armies ?? 0))
 }
 
 export const fetchGameState = createAsyncThunk<
