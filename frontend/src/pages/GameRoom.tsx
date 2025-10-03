@@ -105,6 +105,7 @@ export default function GameRoom() {
   const mobileDrawerId = useId()
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
+  const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
 
   // Prevent background scroll when the bottom drawer is open
@@ -633,6 +634,7 @@ export default function GameRoom() {
         window.clearTimeout(lifecycleAutoFetchTimeoutRef.current)
         lifecycleAutoFetchTimeoutRef.current = null
       }
+      lifecycleAutoFetchRetryCountRef.current = 0
       return
     }
 
@@ -662,14 +664,24 @@ export default function GameRoom() {
           if (error === 'NOT_READY') {
             const latestState = store.getState()
             const latestRoom = latestState.room.currentRoom
+            const MAX_RETRIES = 10
+
+            // Only retry for 'initializing' status - active/paused rooms should have game state
             if (
               latestRoom &&
               latestRoom.id === roomId &&
-              (latestRoom.status === 'initializing' ||
-                latestRoom.status === 'active' ||
-                latestRoom.status === 'paused')
+              latestRoom.status === 'initializing' &&
+              lifecycleAutoFetchRetryCountRef.current < MAX_RETRIES
             ) {
+              lifecycleAutoFetchRetryCountRef.current++
               lifecycleAutoFetchTimeoutRef.current = window.setTimeout(attemptFetch, 750)
+            } else if (lifecycleAutoFetchRetryCountRef.current >= MAX_RETRIES) {
+              logger.warn('Max retries exceeded for fetchGameState', {
+                roomId,
+                retries: lifecycleAutoFetchRetryCountRef.current,
+                status: latestRoom?.status,
+              })
+              lifecycleAutoFetchRetryCountRef.current = 0
             }
             return
           }
