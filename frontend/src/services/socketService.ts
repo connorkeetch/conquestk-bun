@@ -344,6 +344,29 @@ class SocketService {
         return
       }
 
+      // Check if we need to resync due to desync detection
+      if (state.game.needsResync) {
+        if (!this.pendingRoomStateFetches.has(payload.roomId)) {
+          this.pendingRoomStateFetches.add(payload.roomId)
+          const allowSpectateFetch = Boolean(
+            !viewerId ||
+              !state.room.currentRoom?.players?.some((player) => player.userId === viewerId),
+          )
+          void (
+            store.dispatch(
+              fetchGameState({ roomId: payload.roomId, allowSpectate: allowSpectateFetch }),
+            ) as Promise<unknown>
+          )
+            .catch(() => {
+              /* swallow fetch errors - fallback is manual refresh */
+            })
+            .finally(() => {
+              this.pendingRoomStateFetches.delete(payload.roomId)
+            })
+        }
+        return
+      }
+
       const currentUserId = viewerId
 
       // Handle turn notifications for phase changes

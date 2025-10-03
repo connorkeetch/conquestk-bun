@@ -116,6 +116,40 @@ export class DeltaEmitter {
   }
 
   /**
+   * Emit phase change delta
+   */
+  async emitPhaseChange(
+    gameId: string,
+    result: {
+      phase: string
+      currentPlayer: string
+      turn: number
+      reinforcementArmies?: number
+      version?: number
+    },
+  ): Promise<void> {
+    try {
+      const emitter = await this.getEmitter()
+
+      const phaseDelta = DeltaBuilder.phaseChange(
+        gameId,
+        result.phase as 'reinforcement' | 'attack' | 'fortify' | 'finished' | 'waiting',
+        result.currentPlayer,
+        result.turn,
+        result.reinforcementArmies,
+        result.version,
+      )
+
+      await emitter(this.io as unknown as Server, gameId, phaseDelta)
+    } catch (error) {
+      logger.warn('Failed to emit phase change delta', {
+        gameId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
+  /**
    * Emit deltas for a fortify action
    */
   async emitFortifyDeltas(

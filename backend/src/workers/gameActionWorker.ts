@@ -230,13 +230,10 @@ export class GameActionWorker {
         }
         case 'go_back_to_reinforcement': {
           const result = await this.gameService.processGoBackToReinforcement(gameId, playerId)
-          delta = DeltaBuilder.phaseChange(
-            gameId,
-            result.phase,
-            result.currentPlayer,
-            result.turn,
-            result.reinforcementArmies,
-          )
+          // Emit phase change delta with version
+          await this.deltaEmitter.emitPhaseChange(gameId, result)
+          // Don't broadcast extra delta below
+          shouldBroadcast = false
           break
         }
 

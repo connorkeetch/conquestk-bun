@@ -169,6 +169,7 @@ interface GameSliceState {
     toTerritoryId: string
     availableArmies: number
   } | null
+  needsResync: boolean
 }
 
 const initialState: GameSliceState = {
@@ -177,6 +178,7 @@ const initialState: GameSliceState = {
   error: null,
   selectedTerritory: null,
   selectedTargetTerritory: null,
+  needsResync: false,
   validTargets: [],
   pendingAction: null,
   territoryActionHistory: [],
@@ -350,13 +352,15 @@ const gameSlice = createSlice({
         // Server version should be exactly currentGame.version + 1
         // If not, we have a desync
         if (delta.version !== state.currentGame.version + 1) {
-          logger.warn('[Desync detected] Version mismatch:', {
+          logger.warn('[Desync detected] Version mismatch - triggering resync:', {
             clientVersion: state.currentGame.version,
             serverVersion: delta.version,
             deltaType: delta.type,
           })
-          // TODO: Trigger full state resync from server
-          // For now, just log the warning and continue applying delta
+          // Mark that we need a resync
+          state.needsResync = true
+          // Don't apply this delta - wait for full resync
+          return
         }
       }
 
@@ -477,6 +481,8 @@ const gameSlice = createSlice({
         } else {
           state.reinforcementArmies = 0
         }
+        // Clear resync flag after successful fetch
+        state.needsResync = false
       })
       .addCase(fetchGameState.rejected, (state, action) => {
         state.isLoading = false

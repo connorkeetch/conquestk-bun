@@ -1166,63 +1166,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const userId = requireUserId(socket)
-
-        const job = await queueService.addGameAction({
-          gameId: data.roomId,
-          playerId: userId,
-          action: {
-            type: 'go_back_to_reinforcement',
-            roomId: data.roomId,
-            playerId: userId,
-          },
-          socketId: socket.id,
-        })
-
-        if (job) {
-          const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-          if (hasWorkers) {
-            logger.info(`Queued go-back-to-reinforcement for game ${data.roomId}`, {
-              jobId: job.id,
-            })
-            return
-          }
-
-          try {
-            await job.remove()
-          } catch (err) {
-            logger.warn('Failed to remove queued go-back job for inline fallback', {
-              roomId: data.roomId,
-              jobId: job.id,
-              error: err instanceof Error ? err.message : err,
-            })
-          }
-        }
-
-        try {
-          const updatedState = await gameService.processGameAction(
-            { type: 'go_back_to_reinforcement', roomId: data.roomId, playerId: userId },
-            userId,
-          )
-          const reinforcementArmies =
-            updatedState.players.find((p) => p.id === updatedState.currentPlayer)?.armies ?? 0
-          const delta = DeltaBuilder.phaseChange(
-            data.roomId,
-            updatedState.phase,
-            updatedState.currentPlayer,
-            updatedState.turn,
-            reinforcementArmies,
-          )
-          const channel = getGameChannel(data.roomId)
-          io.to(channel).emit('game-delta', delta)
-          io.to(channel).emit('phaseChanged', {
-            phase: updatedState.phase,
-            currentPlayer: updatedState.currentPlayer,
-            turn: updatedState.turn,
-            reinforcementArmies,
-          })
-        } catch (err) {
-          handleSocketError(socket, 'goBackToReinforcement:inline', err)
-        }
+        await gameActionProcessor.processGoBack(data.roomId, userId, socket.id)
       }),
     )
 
