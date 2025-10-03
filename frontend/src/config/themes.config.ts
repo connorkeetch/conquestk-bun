@@ -324,6 +324,16 @@ function motionEnabled(): boolean {
   return attr !== 'off'
 }
 
+function isPremiumTheme(themeId: ThemeId): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const meta = (THEME_METADATA as any)[themeId]
+    return Boolean(meta?.isPremium)
+  } catch {
+    return false
+  }
+}
+
 function updateDynamicOverlay(themeId: ThemeId) {
   const el = ensureOverlayEl()
   if (themeId === 'halloween') {
@@ -338,6 +348,11 @@ function updateDynamicOverlay(themeId: ThemeId) {
     const css = generateCheeseOverlayCSS(motionEnabled())
     el.textContent = css
     themeDebugLog('overlay: cheese applied')
+  } else if (isPremiumTheme(themeId)) {
+    // Generic premium handler: if SVG shapes are provided at runtime
+    const css = generateGenericSVGOverlayCSS(themeId, motionEnabled())
+    el.textContent = css
+    if (css) themeDebugLog('overlay: generic premium applied', { themeId })
   } else {
     // Clear overlays for other themes (let static CSS drive them)
     el.textContent = ''
@@ -591,8 +606,9 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
   // Falls back to built-in shapes if not provided.
   let provided: string[] | undefined
   try {
-    const win = window as Window & { __METAL_SVGS__?: string[] }
-    provided = win.__METAL_SVGS__
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any
+    provided = (w.__THEME_SVGS__?.metal as string[] | undefined) || (w.__METAL_SVGS__ as string[] | undefined)
   } catch {
     provided = undefined
   }
@@ -674,6 +690,78 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     ${repeatList};
   opacity: 0.9;
   ${motionCss}
+}
+
+// Generic SVG overlay for any premium theme that provides shapes via
+//   window.__THEME_SVGS__ = { [themeId: string]: string[] }
+function generateGenericSVGOverlayCSS(themeId: ThemeId, withMotion: boolean): string {
+  let shapes: string[] | undefined
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    shapes = (window as any)?.__THEME_SVGS__?.[themeId] as string[] | undefined
+  } catch {
+    shapes = undefined
+  }
+
+  if (!shapes || shapes.length === 0) return ''
+
+  const toDataUrl = (raw: string): string => `url("data:image/svg+xml,${encodeURIComponent(raw)}")`
+  const urls = shapes.map(toDataUrl)
+  const weights = new Array(urls.length).fill(1)
+  const pick = (): string => {
+    const sum = weights.reduce((a, b) => a + b, 0)
+    let r = Math.random() * sum
+    for (let i = 0; i < urls.length; i++) {
+      r -= weights[i]
+      if (r < 0) return urls[i]
+    }
+    return urls[0]
+  }
+
+  // Density scales lightly with viewport area
+  const vw = Math.max(320, Math.floor(window?.innerWidth ?? 1280))
+  const vh = Math.max(320, Math.floor(window?.innerHeight ?? 800))
+  const area = (vw * vh) / (1280 * 800)
+  const baseCount = 18
+  const count = Math.round(baseCount * Math.min(2.2, Math.max(0.8, area)))
+
+  const { images, sizes, positions, repeats } = layoutNonOverlapping(
+    pick,
+    count,
+    [70, 220],
+    [0.8, 1.25],
+    20,
+  )
+
+  const imageList = images.join(',\n    ')
+  const sizeList = sizes.join(',\n    ')
+  const posList = positions.join(',\n    ')
+  const repeatList = repeats.join(',\n    ')
+
+  const motionCss = withMotion
+    ? `animation: svg-scroll-${themeId} 80s linear infinite; will-change: transform;`
+    : `animation: none;`
+
+  return `
+/* dynamic generic overlay: ${themeId} */
+[data-theme="${themeId}"] body::after {
+  background-image:
+    ${imageList};
+  background-size:
+    ${sizeList};
+  background-position:
+    ${posList};
+  background-repeat:
+    ${repeatList};
+  opacity: 0.9;
+  ${motionCss}
+}
+
+@keyframes svg-scroll-${themeId} {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(520px); }
+}
+`
 }
 
 @keyframes metal-scroll {
