@@ -181,6 +181,65 @@ export class GameActionProcessor {
   }
 
   /**
+   * Process a go-back-to-reinforcement action
+   * Attempts to queue, falls back to inline if no workers
+   */
+  async processGoBack(gameId: string, playerId: string, socketId?: string): Promise<void> {
+    // Try to queue the action
+    const job = await queueService.addGameAction({
+      gameId,
+      playerId,
+      action: {
+        type: 'go_back_to_reinforcement',
+        roomId: gameId,
+        playerId,
+      },
+      socketId,
+    })
+
+    // If queued successfully and workers are available, let worker handle it
+    if (job) {
+      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+      if (hasWorkers) {
+        logger.info('Queued go-back action for worker processing', {
+          gameId,
+          jobId: job.id,
+        })
+        return
+      }
+
+      // No workers available - remove job and process inline
+      try {
+        await job.remove()
+      } catch (err) {
+        logger.warn('Failed to remove queued job for inline fallback', {
+          gameId,
+          jobId: job.id,
+          error: err instanceof Error ? err.message : err,
+        })
+      }
+    }
+
+    // Process inline and emit deltas
+    await this.processGoBackInline(gameId, playerId)
+  }
+
+  /**
+   * Process go-back inline (synchronously)
+   */
+  private async processGoBackInline(gameId: string, playerId: string): Promise<void> {
+    logger.info('Processing go-back inline (no queue)', {
+      gameId,
+      playerId,
+    })
+
+    const result = await this.gameService.processGoBackToReinforcement(gameId, playerId)
+
+    // Emit single phase change delta (no nested complexity)
+    await this.deltaEmitter.emitPhaseChange(gameId, result)
+  }
+
+  /**
    * Get the delta emitter for use by workers
    */
   getDeltaEmitter(): DeltaEmitter {

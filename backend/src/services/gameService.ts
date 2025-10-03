@@ -1275,6 +1275,7 @@ export class GameService {
     currentPlayer: string
     turn: number
     reinforcementArmies: number
+    version?: number
   }> {
     const action: GameAction = {
       type: 'go_back_to_reinforcement',
@@ -1291,6 +1292,7 @@ export class GameService {
       currentPlayer: updatedState.currentPlayer,
       turn: updatedState.turn,
       reinforcementArmies,
+      version: updatedState.version,
     }
   }
 
