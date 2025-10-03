@@ -29,10 +29,11 @@
         "include": [
           "package.json",
           "package-lock.json",
+          "node_modules",
+          "shared",
           "backend/dist",
           "backend/public",
-          "backend/migrations",
-          "backend/node_modules"
+          "backend/migrations"
         ]
       }
     ]

@@ -326,8 +326,8 @@ function motionEnabled(): boolean {
 
 function isPremiumTheme(themeId: ThemeId): boolean {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const meta = (THEME_METADATA as any)[themeId]
+    const dict = THEME_METADATA as Record<string, { isPremium?: boolean } | undefined>
+    const meta = dict[themeId]
     return Boolean(meta?.isPremium)
   } catch {
     return false
@@ -606,9 +606,11 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
   // Falls back to built-in shapes if not provided.
   let provided: string[] | undefined
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any
-    provided = (w.__THEME_SVGS__?.metal as string[] | undefined) || (w.__METAL_SVGS__ as string[] | undefined)
+    const w = window as unknown as {
+      __THEME_SVGS__?: { metal?: string[] }
+      __METAL_SVGS__?: string[]
+    }
+    provided = w.__THEME_SVGS__?.metal ?? w.__METAL_SVGS__
   } catch {
     provided = undefined
   }
@@ -692,13 +694,16 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
   ${motionCss}
 }
 
+`
+}
+
 // Generic SVG overlay for any premium theme that provides shapes via
 //   window.__THEME_SVGS__ = { [themeId: string]: string[] }
 function generateGenericSVGOverlayCSS(themeId: ThemeId, withMotion: boolean): string {
   let shapes: string[] | undefined
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    shapes = (window as any)?.__THEME_SVGS__?.[themeId] as string[] | undefined
+    const ww = window as unknown as { __THEME_SVGS__?: Record<string, string[]> }
+    shapes = ww.__THEME_SVGS__?.[themeId]
   } catch {
     shapes = undefined
   }
@@ -758,13 +763,6 @@ function generateGenericSVGOverlayCSS(themeId: ThemeId, withMotion: boolean): st
 }
 
 @keyframes svg-scroll-${themeId} {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(520px); }
-}
-`
-}
-
-@keyframes metal-scroll {
   0% { transform: translateY(0); }
   100% { transform: translateY(520px); }
 }
