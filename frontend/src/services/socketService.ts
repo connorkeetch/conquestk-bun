@@ -417,21 +417,6 @@ class SocketService {
 
       // Apply delta to Redux store
       store.dispatch(applyDelta(payload))
-
-      // Clear optimistic placement tracking when server confirms territory armies
-      if (payload.type === 'TERRITORY_UPDATE') {
-        try {
-          const territoryId = (payload as TerritoryDelta).territoryId
-          const opt = store.getState().uiRoom.optimisticPlacements?.[territoryId]
-          if (opt) {
-            const { clearOptimisticPlacement } =
-              require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-            store.dispatch(clearOptimisticPlacement({ territoryId }))
-          }
-        } catch {
-          /* ignore */
-        }
-      }
     })
 
     // Legacy game-update handler - kept for backward compatibility during transition
@@ -783,58 +768,10 @@ class SocketService {
 
     // Game-specific legacy events removed in favor of game-delta and phaseChanged
 
-    this.socket.on('armiesDeployed', (payload) => {
+    this.socket.on('armiesDeployed', () => {
       // Play troop placement sound
+      // Territory/player updates now handled via game-delta
       audioService.playEffect('placetroop')
-
-      if (payload.territoryId) {
-        store.dispatch(
-          updateTerritory({
-            territoryId: payload.territoryId,
-            armies: payload.armies,
-          }),
-        )
-
-        try {
-          const { optimisticPlacements } = store.getState().uiRoom
-          const opt = optimisticPlacements?.[payload.territoryId]
-          if (opt) {
-            if (typeof payload.armies === 'number' && payload.armies !== opt.expectedArmies) {
-              toast.error('Placement reconciled by server')
-              const name =
-                store.getState().game.currentGame?.board.find((t) => t.id === payload.territoryId)
-                  ?.name || payload.territoryId
-              store.dispatch(
-                (
-                  require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-                ).addClientLog({
-                  text: `${name} adjusted to ${payload.armies} troops (server)`,
-                  roomId: store.getState().game.currentGame?.roomId,
-                }),
-              )
-            }
-            store.dispatch(
-              (
-                require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-              ).clearOptimisticPlacement({
-                territoryId: payload.territoryId,
-              }),
-            )
-          }
-        } catch {
-          // ignore UI logging issues
-        }
-      }
-
-      if (typeof payload.serverSpent === 'number') {
-        try {
-          const { setPlacementServerSpent } =
-            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-          store.dispatch(setPlacementServerSpent(Math.max(0, Math.trunc(payload.serverSpent))))
-        } catch {
-          // ignore placement spent reconciliation errors
-        }
-      }
     })
 
     this.socket.on('attackResult', (data: unknown) => {
