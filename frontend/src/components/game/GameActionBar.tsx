@@ -356,9 +356,16 @@ export function GameActionBar({
                 Remaining: {remaining}
               </span>
             )}
-            {!selected && <span>Select a territory to begin</span>}
-            {selected && !target && phase !== 'reinforcement' && (
-              <span>Select a target territory</span>
+            {!selected && (
+              <span>
+                {phase === 'reinforcement' && 'Select a territory to deploy'}
+                {phase === 'attack' && 'Select a territory to attack from'}
+                {phase === 'fortify' && 'Select a territory to move from'}
+              </span>
+            )}
+            {selected && !target && phase === 'attack' && <span>Select a target territory</span>}
+            {selected && !target && phase === 'fortify' && (
+              <span>Select a destination territory</span>
             )}
             {(selected || target) && (
               <button
