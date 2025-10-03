@@ -1148,8 +1148,7 @@ export class GameService {
           phase: updatedState.phase,
           currentPlayer: updatedState.currentPlayer,
           turn: updatedState.turn,
-          reinforcementArmies:
-            updatedState.phase === 'reinforcement' ? Math.max(0, playerAfter?.armies ?? 0) : 0,
+          reinforcementArmies: undefined,
         }
       }
 

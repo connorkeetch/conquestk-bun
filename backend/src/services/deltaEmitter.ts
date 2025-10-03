@@ -79,12 +79,7 @@ export class DeltaEmitter {
       if (result.phaseChanged) {
         const phaseDelta = DeltaBuilder.phaseChange(
           gameId,
-          result.phaseChanged.phase as
-            | 'reinforcement'
-            | 'attack'
-            | 'fortify'
-            | 'finished'
-            | 'waiting',
+          result.phaseChanged.phase as 'reinforcement' | 'attack' | 'fortify' | 'finished',
           result.phaseChanged.currentPlayer,
           result.phaseChanged.turn,
           result.phaseChanged.reinforcementArmies,
@@ -133,7 +128,7 @@ export class DeltaEmitter {
 
       const phaseDelta = DeltaBuilder.phaseChange(
         gameId,
-        result.phase as 'reinforcement' | 'attack' | 'fortify' | 'finished' | 'waiting',
+        result.phase as 'reinforcement' | 'attack' | 'fortify' | 'finished',
         result.currentPlayer,
         result.turn,
         result.reinforcementArmies,
@@ -191,12 +186,7 @@ export class DeltaEmitter {
       if (result.phaseChanged) {
         const phaseDelta = DeltaBuilder.phaseChange(
           gameId,
-          result.phaseChanged.phase as
-            | 'reinforcement'
-            | 'attack'
-            | 'fortify'
-            | 'finished'
-            | 'waiting',
+          result.phaseChanged.phase as 'reinforcement' | 'attack' | 'fortify' | 'finished',
           result.phaseChanged.currentPlayer,
           result.phaseChanged.turn,
           result.phaseChanged.reinforcementArmies,

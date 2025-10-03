@@ -25,7 +25,7 @@ import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
-import { endTurn, transferConquestArmies, undoLastPlacement } from '../store/gameActions'
+import { endTurn, transferConquestArmies, undoFortify } from '../store/gameActions'
 import {
   clearGame,
   fetchGameState,
@@ -788,15 +788,14 @@ export default function GameRoom() {
         dispatch(setPendingAction('deploy'))
         return
       }
-      // Undo placement (Z key) - only in reinforcement phase
+      // Undo (Z key)
       if (key === 'z') {
         e.preventDefault()
         const phase = currentGame?.phase
-        const hasUndo = state.uiRoom?.placementHistory && state.uiRoom.placementHistory.length > 0
-        if (phase === 'reinforcement' && hasUndo) {
-          dispatch(undoLastPlacement())
+        // Support fortify undo when available; otherwise clear selection
+        if (phase === 'fortify' && (currentGame?.fortifyHistory?.length ?? 0) > 0) {
+          void dispatch(undoFortify())
         } else {
-          // Fallback to clear selection if not in reinforcement or no history
           dispatch(selectTerritory(null))
           dispatch(selectTargetTerritory(null))
           dispatch(setPendingAction(null))
