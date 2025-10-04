@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FullMapData } from '../services/mapService'
 import { mapService } from '../services/mapService'
-import CustomMapDisplay from './CustomMapDisplay'
+import UnifiedMapDisplay from './UnifiedMapDisplay'
 
 interface MapDetailModalProps {
   isOpen: boolean
@@ -152,12 +152,13 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
 
             {!loading && !error && mapData && territoriesForDisplay.length > 0 && (
               <div className="h-[520px]">
-                <CustomMapDisplay
+                <UnifiedMapDisplay
                   mapId={mapId}
                   territories={territoriesForDisplay}
-                  imageUrl={mapData.map.imageUrl}
+                  imageUrl={mapData.map.imageUrl || undefined}
                   mapWidth={mapData.map.imageWidth}
                   mapHeight={mapData.map.imageHeight}
+                  previewMode={true}
                 />
               </div>
             )}
