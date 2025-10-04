@@ -855,7 +855,7 @@ export class GameLifecycleService {
         [
           roomId,
           JSON.stringify(serializable),
-          gameState.turn,
+          Math.max(1, Number(gameState.turn ?? 1)),
           gameState.currentPlayer,
           gameState.phase ?? 'deployment',
         ],

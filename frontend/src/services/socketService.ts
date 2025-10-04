@@ -42,7 +42,16 @@ import {
   removePlayerFromRoom,
   updateRoom,
 } from '../store/roomSlice'
-import { recordBattleResult, setConnectionStatus, setDesyncDetected } from '../store/uiRoomSlice'
+import {
+  addClientLog,
+  addPing,
+  clearPlacementHistory,
+  recordBattleResult,
+  setConnectionStatus,
+  setDesyncDetected,
+  setPlacementServerSpent,
+  showConquestOverlay,
+} from '../store/uiRoomSlice'
 import type { BattleResult, GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
@@ -387,16 +396,10 @@ class SocketService {
 
       // Reset local placement tracking at the start of reinforcement
       if (payload.type === 'PHASE_CHANGE') {
-        try {
-          const { clearPlacementHistory, setPlacementServerSpent } =
-            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-          if (payload.phase === 'reinforcement') {
-            store.dispatch(clearPlacementHistory())
-            // Server may include reinforcementArmies; server-spent resets to 0 at phase start
-            store.dispatch(setPlacementServerSpent(0))
-          }
-        } catch {
-          // ignore placement spent reconciliation errors
+        if (payload.phase === 'reinforcement') {
+          store.dispatch(clearPlacementHistory())
+          // Server may include reinforcementArmies; server-spent resets to 0 at phase start
+          store.dispatch(setPlacementServerSpent(0))
         }
       }
 
@@ -592,12 +595,8 @@ class SocketService {
               }
             }
           }
-          const { setPlacementServerSpent } =
-            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
           store.dispatch(setPlacementServerSpent(spent))
         } else {
-          const { setPlacementServerSpent } =
-            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
           store.dispatch(setPlacementServerSpent(0))
         }
       } catch {
@@ -791,20 +790,15 @@ class SocketService {
     this.socket.on('ping:territory', (data) => {
       const payload = data as Parameters<ServerToClientEvents['ping:territory']>[0]
       const id = `${payload.userId}:${payload.territoryId}:${payload.createdAt}`
-      try {
-        const { addPing } = require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-        store.dispatch(
-          addPing({
-            id,
-            territoryId: payload.territoryId,
-            userId: payload.userId,
-            username: payload.username ?? null,
-            ttlMs: 3000,
-          }),
-        )
-      } catch {
-        // best-effort; ignore if slice not available
-      }
+      store.dispatch(
+        addPing({
+          id,
+          territoryId: payload.territoryId,
+          userId: payload.userId,
+          username: payload.username ?? null,
+          ttlMs: 3000,
+        }),
+      )
     })
 
     // Game-specific legacy events removed in favor of game-delta and phaseChanged
@@ -906,13 +900,7 @@ class SocketService {
 
       // If conquered, show inline conquest transfer overlay for next-commit adjustment
       if (conquered) {
-        try {
-          const { showConquestOverlay } =
-            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
-          store.dispatch(showConquestOverlay({ fromId: fromTerritory.id, toId: toTerritory.id }))
-        } catch {
-          // best-effort; ignore if slice not available
-        }
+        store.dispatch(showConquestOverlay({ fromId: fromTerritory.id, toId: toTerritory.id }))
       }
 
       // Clear target selection after attack
@@ -995,8 +983,6 @@ class SocketService {
       store.dispatch(setError(payload.message))
       try {
         toast.error(payload.message || 'Game error')
-        const { addClientLog } =
-          require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
         const rid = store.getState().game.currentGame?.roomId
         store.dispatch(addClientLog({ text: `Error: ${payload.message}`, roomId: rid }))
       } catch {

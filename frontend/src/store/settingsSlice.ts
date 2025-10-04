@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { DEFAULT_THEME_ID, normalizeThemeId, type ThemeId } from '@shared/types/themes'
+import { setBackgroundMotionPreference } from '../config/themes.config'
 import type { PlayerColor } from '../constants/colors'
 import preferencesService from '../services/preferencesService'
 import { logger } from '../utils/logger'
@@ -452,7 +453,6 @@ const settingsSlice = createSlice({
       saveSettings(state)
       // Apply background motion preference immediately
       if (typeof document !== 'undefined') {
-        const { setBackgroundMotionPreference } = require('../config/themes.config')
         setBackgroundMotionPreference(!action.payload, true)
       }
     },

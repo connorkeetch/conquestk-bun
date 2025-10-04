@@ -31,6 +31,8 @@ export interface UIRoomState {
   lastPingAt?: number
   // Client-side reinforcement placement history (for undo within the same phase)
   placementHistory?: Array<{ territoryId: string; armies: number; ts: number }>
+  // Server baseline spent count for reinforcement phase (for UX reconciliation only)
+  placementServerSpent?: number
   // Rolling, non-blocking history of battle results for header dice UI
   battleHistory?: Array<{
     id: string
@@ -65,6 +67,7 @@ const initialState: UIRoomState = {
   clientLogs: [],
   lastPingAt: 0,
   placementHistory: [],
+  placementServerSpent: 0,
   battleHistory: [],
 }
 
@@ -191,6 +194,13 @@ const uiRoomSlice = createSlice({
       const list = state.placementHistory ?? []
       state.placementHistory = list.slice(0, Math.max(0, list.length - 1))
     },
+    clearPlacementHistory(state) {
+      state.placementHistory = []
+    },
+    setPlacementServerSpent(state, action: PayloadAction<number>) {
+      const n = Math.max(0, Math.trunc(action.payload) || 0)
+      state.placementServerSpent = n
+    },
     // Record a battle result for quick dice recap UI
     recordBattleResult(
       state,
@@ -312,6 +322,8 @@ export const {
   setLastPingAt,
   recordPlacement,
   removeLastPlacement,
+  clearPlacementHistory,
+  setPlacementServerSpent,
   recordBattleResult,
   clearBattleHistory,
 } = uiRoomSlice.actions

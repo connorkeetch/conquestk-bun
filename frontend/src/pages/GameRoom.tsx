@@ -19,6 +19,10 @@ import { logger } from '@/utils/logger'
 import { PlayerStatsTable } from '../components/game/PlayerStatsTable'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import { Skeleton } from '../components/ui/Skeleton'
+import {
+  getBackgroundMotionPreference,
+  setBackgroundMotionPreference,
+} from '../config/themes.config'
 import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { gameService } from '../services/gameService'
@@ -40,7 +44,7 @@ import {
   setPendingAction,
 } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
-import { hydrateFromStorage, setDice, setOverlay } from '../store/uiRoomSlice'
+import { addClientLog, hydrateFromStorage, setDice, setOverlay } from '../store/uiRoomSlice'
 import type { AIDifficulty } from '../types/game'
 // import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
@@ -200,17 +204,12 @@ export default function GameRoom() {
 
     // Game just started - save user preference and disable animations
     if (isGameActive && userBackgroundMotionRef.current === null) {
-      const {
-        getBackgroundMotionPreference,
-        setBackgroundMotionPreference,
-      } = require('../config/themes.config')
       userBackgroundMotionRef.current = getBackgroundMotionPreference()
       setBackgroundMotionPreference(false, false) // don't persist
     }
 
     // Game ended - restore user preference
     if (!isGameActive && userBackgroundMotionRef.current !== null) {
-      const { setBackgroundMotionPreference } = require('../config/themes.config')
       setBackgroundMotionPreference(userBackgroundMotionRef.current, false)
       userBackgroundMotionRef.current = null
     }
@@ -1216,8 +1215,6 @@ export default function GameRoom() {
                 onClick={() => {
                   try {
                     socketService.emit('player:resign', { roomId: currentRoom.id })
-                    const { addClientLog } =
-                      require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
                     dispatch(
                       addClientLog({ text: 'You requested to resign.', roomId: currentRoom.id }),
                     )

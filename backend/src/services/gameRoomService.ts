@@ -707,7 +707,7 @@ export class GameRoomService {
       // Create initial game_state with 'lobby' phase so frontend doesn't get 404
       const initialGameState = {
         phase: 'lobby' as const,
-        turn: 0,
+        turn: 1,
         currentPlayer: roomData.hostId,
         players: [],
         board: [],
@@ -717,7 +717,7 @@ export class GameRoomService {
         `INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
          VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
          ON CONFLICT (room_id) DO NOTHING`,
-        [createdRoom.id, JSON.stringify(initialGameState), 0, roomData.hostId, 'lobby'],
+        [createdRoom.id, JSON.stringify(initialGameState), 1, roomData.hostId, 'lobby'],
       )
 
       return createdRoom

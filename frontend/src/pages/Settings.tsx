@@ -36,6 +36,7 @@ import {
   type DMPermission,
   type NotificationPrefs,
   resetSettings,
+  setColorblindMode,
   setColorTheme,
   setDirectMessages,
   setNotificationPref,
@@ -1625,7 +1626,7 @@ export default function Settings() {
           defaultValue: Boolean(settings.display?.colorblindMode),
           onChange: (value) => {
             if (typeof value !== 'boolean') return
-            dispatch(require('../store/settingsSlice').setColorblindMode(value))
+            dispatch(setColorblindMode(value))
           },
         })
 

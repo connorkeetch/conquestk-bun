@@ -8,6 +8,7 @@ import {
   setHoveredTarget,
   triggerInvalidShake,
 } from '@/store/gameInteractionSlice'
+import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
 import { setOverlay } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import AttackOddsPopup from './game/AttackOddsPopup'
@@ -216,8 +217,6 @@ export default function UnifiedMapDisplay({
       }
       if (e.key === 'Escape') {
         e.preventDefault()
-        const { selectTerritory, selectTargetTerritory, setPendingAction } =
-          require('@/store/gameSlice') as typeof import('@/store/gameSlice')
         dispatch(selectTerritory(null))
         dispatch(selectTargetTerritory(null))
         dispatch(setPendingAction(null))
@@ -228,7 +227,6 @@ export default function UnifiedMapDisplay({
       const backward = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
       if (!forward && !backward) return
       e.preventDefault()
-      const { selectTerritory } = require('@/store/gameSlice') as typeof import('@/store/gameSlice')
       const current = selectedTerritoryId
       const idx = Math.max(0, ownedIds.indexOf(current || ''))
       const nextIdx = forward
