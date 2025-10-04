@@ -168,7 +168,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     const result = await query(
       `
       SELECT
-        u.id, u.username, u.email, u.created_at, u.email_verified, u.bio, u.tagline,
+        u.id, u.username, u.created_at, u.email_verified, u.bio, u.tagline,
         u.skill_rating,
         COALESCE(ps.games_played, 0) AS games_played,
         COALESCE(ps.games_won, 0) AS games_won,
@@ -204,7 +204,6 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     return res.json({
       id: user.id,
       username: user.username,
-      email: user.email, // Only visible to own profile or admins
       emailVerified: user.email_verified,
       avatarUrl: null,
       bio: user.bio,

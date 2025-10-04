@@ -22,6 +22,20 @@ type PasswordResetTokenRow = {
 
 type PasswordResetToken = PasswordResetTokenRow & { used: boolean }
 
+type EmailVerificationLogRow = {
+  user_id: string
+  email: string
+  token: string
+  created_at: Date | string
+}
+
+export type EmailVerificationLog = {
+  user_id: string
+  email: string
+  token: string
+  created_at: Date
+}
+
 function isMissingColumnError(error: unknown): error is DatabaseError {
   if (!(error instanceof Error)) {
     return false
@@ -147,11 +161,40 @@ export class UserService {
 
   async updateEmailVerificationLog(token: string): Promise<void> {
     const updateQuery = `
-      UPDATE email_verification_logs 
+      UPDATE email_verification_logs
       SET verified_at = CURRENT_TIMESTAMP
       WHERE token = $1
     `
     await query(updateQuery, [token])
+  }
+
+  async getEmailVerificationLogByToken(token: string): Promise<EmailVerificationLog | null> {
+    const findQuery = `
+      SELECT user_id, email, token, created_at
+      FROM email_verification_logs
+      WHERE token = $1
+      ORDER BY created_at DESC
+      LIMIT 1
+    `
+
+    const result = await query(findQuery, [token])
+    const row = result.rows[0] as EmailVerificationLogRow | undefined
+
+    if (!row) {
+      return null
+    }
+
+    const createdAt =
+      row.created_at instanceof Date ? row.created_at : new Date(row.created_at)
+
+    if (Number.isNaN(createdAt.getTime())) {
+      return null
+    }
+
+    return {
+      ...row,
+      created_at: createdAt,
+    }
   }
 
   async getRecentVerificationAttempts(userId: string): Promise<number> {
