@@ -7,7 +7,7 @@ import type { GamePlayer } from '@/types/game'
 interface PlayerStatsTableProps {
   players: GamePlayer[]
   currentPlayerId?: string
-  territories: Record<string, { owner?: string | null }>
+  territories: Record<string, { owner?: string | null; armies?: number }>
 }
 
 export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
@@ -17,11 +17,14 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
     // Memoize expensive stats calculation
     const sortedPlayers = useMemo(() => {
       return players.map((player) => {
-        const territoryCount = Object.values(territories).filter(
-          (t) => t.owner === player.id,
-        ).length
+        const terrList = Object.values(territories)
+        const owned = terrList.filter((t) => t.owner === player.id)
+        const territoryCount = owned.length
 
-        const totalArmies = player.armies ?? 0
+        // Armies should reflect total armies currently on the board for the player
+        // including starting armies and any transfers, minus losses or transfers away
+        const totalArmies = owned.reduce((sum, t) => sum + Math.max(0, t.armies ?? 0), 0)
+
         const treasureCount = Array.isArray(player.treasures)
           ? player.treasures.length
           : player.cards?.length || 0
@@ -57,7 +60,10 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                   <th className="px-2 py-2 text-left font-medium text-muted">#</th>
                   <th className="px-2 py-2 text-left font-medium text-muted">Player</th>
                   <th className="px-2 py-2 text-right font-medium text-muted">Armies</th>
-                  <th className="px-2 py-2 text-right font-medium text-muted">Terr.</th>
+                  <th className="px-2 py-2 text-right font-medium text-muted">
+                    <span className="sm:hidden">Terr.</span>
+                    <span className="hidden sm:inline">Territories</span>
+                  </th>
                   <th className="px-2 py-2 text-right font-medium text-muted">+/Turn</th>
                   <th className="px-2 py-2 text-right font-medium text-muted">Cards</th>
                 </tr>
