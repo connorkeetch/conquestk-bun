@@ -162,14 +162,19 @@ export class GameActionWorker {
             currentState.board.find(
               (territory) => territory.id === attackAction.payload?.toTerritoryId,
             )?.armies ?? 1
+          const attackingArmiesAvailable = Math.max(0, attackingTerritoryState?.armies ?? 0)
+          const requestedArmies = Math.max(1, attackAction.payload?.armies ?? 1)
+          const attackingArmies =
+            attackingArmiesAvailable > 0
+              ? Math.max(1, Math.min(attackingArmiesAvailable, requestedArmies))
+              : requestedArmies
 
           const battleJob: BattleSimulationJob = {
             gameId,
             attackingTerritory: attackAction.payload?.fromTerritoryId ?? '',
             defendingTerritory: attackAction.payload?.toTerritoryId ?? '',
             // Use current territory armies for dice calculation (max dice derived later)
-            attackingArmies:
-              attackingTerritoryState?.armies ?? Math.max(1, attackAction.payload?.armies ?? 1),
+            attackingArmies,
             defendingArmies,
             playerId,
             idempotencyKey: `${idKey}:battle:${attackAction.payload?.fromTerritoryId ?? 'unknown'}:${attackAction.payload?.toTerritoryId ?? 'unknown'}`,
@@ -230,7 +235,13 @@ export class GameActionWorker {
               error: e instanceof Error ? e.message : e,
             })
           }
-          delta = await this.processPhaseChange(gameId, playerId, action)
+          await this.gameService.processGameAction(action, playerId)
+          const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+          if (serialized) {
+            this.io.to(`game:${gameId}`).emit('game-update', serialized)
+          }
+          shouldBroadcast = false
+          delta = null
           break
         }
         case 'go_back_to_reinforcement': {

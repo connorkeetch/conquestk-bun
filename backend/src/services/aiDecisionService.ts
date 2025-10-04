@@ -354,6 +354,9 @@ class AIDecisionService {
     const actions: GameAction[] = []
     const roomId = gameState.roomId
     const phase = gameState.phase
+    const player = gameState.players.find((entry) => entry.id === playerId)
+    const armiesToDeploy = Math.max(0, Math.trunc(player?.armies ?? 0))
+    const firstTerritoryId = player?.territories?.[0]
 
     const addEndTurn = () => {
       actions.push({ type: 'end_turn', roomId, playerId })
@@ -361,7 +364,14 @@ class AIDecisionService {
 
     switch (phase) {
       case 'reinforcement':
-        addEndTurn()
+        if (firstTerritoryId && armiesToDeploy > 0) {
+          actions.push({
+            type: 'deploy',
+            roomId,
+            playerId,
+            payload: { territoryId: firstTerritoryId, armies: armiesToDeploy },
+          })
+        }
         addEndTurn()
         addEndTurn()
         break

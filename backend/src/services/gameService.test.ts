@@ -682,7 +682,10 @@ describe('GameService', () => {
       expect(result.fallbackUsed).toBe(true)
       expect(result.fallbackReason).toBe('stubbed')
       expect(result.appliedActions).toHaveLength(3)
-      expect(result.appliedActions.every((action) => action.type === 'end_turn')).toBe(true)
+      const [firstAction, ...remainingActions] = result.appliedActions
+      const actionsToCheck =
+        firstAction.type === 'deploy' ? remainingActions : result.appliedActions
+      expect(actionsToCheck.every((action) => action.type === 'end_turn')).toBe(true)
       expect(result.gameState.currentPlayer).not.toBe('ai')
 
       const persisted = await gameService.getGameState(roomId)

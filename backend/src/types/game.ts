@@ -71,6 +71,13 @@ export interface GameState {
     ts: number
   }>
   /**
+   * When treasures are cashed in outside the normal reinforcement start, we temporarily
+   * return to reinforcement to place the bonus troops. Track the phase/attack state to
+   * restore afterwards.
+   */
+  resumePhaseAfterReinforcement?: GamePhase | null
+  resumeHasAttackedAfterReinforcement?: boolean
+  /**
    * History of fortify moves in the current fortify phase.
    * Allows undo of the last fortify action. Cleared when turn ends.
    */

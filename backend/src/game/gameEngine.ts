@@ -187,8 +187,20 @@ export class GameEngine {
         return this.validateFortify(gameState, action)
       case 'undo_fortify':
         return this.validateUndoFortify(gameState, action)
-      case 'end_turn':
+      case 'end_turn': {
+        if (gameState.mustCashInTreasures) {
+          return false
+        }
+
+        if (gameState.phase === 'reinforcement') {
+          const player = gameState.players.find((p) => p.id === action.playerId)
+          if (player && player.armies > 0) {
+            return false
+          }
+        }
+
         return true
+      }
       case 'trade_cards':
         return this.validateTreasureTrade(gameState, action)
       case 'go_back_to_reinforcement':
@@ -357,7 +369,9 @@ export class GameEngine {
     }
 
     const hand = this.getPlayerTreasureHand(currentPlayer)
-    currentPlayer.mustCashInTreasures = hand.length >= treasureConfig.handCap
+    const hasValidSet = findRedeemableSets(hand).length > 0
+    currentPlayer.mustCashInTreasures =
+      hand.length >= treasureConfig.handCap && hasValidSet
     gameState.mustCashInTreasures = currentPlayer.mustCashInTreasures ?? false
   }
 
@@ -378,7 +392,7 @@ export class GameEngine {
     treasureMetrics.recordDraw(treasureConfig, treasure)
 
     if (hand.length >= treasureConfig.handCap) {
-      player.mustCashInTreasures = true
+      player.mustCashInTreasures = findRedeemableSets(hand).length > 0
     }
   }
 
@@ -413,8 +427,9 @@ export class GameEngine {
     }
 
     if (transferred > 0 && eliminatorHand.length >= treasureConfig.handCap) {
-      eliminator.mustCashInTreasures = true
-      if (eliminator.id === gameState.currentPlayer) {
+      const hasValidSet = findRedeemableSets(eliminatorHand).length > 0
+      eliminator.mustCashInTreasures = hasValidSet
+      if (hasValidSet && eliminator.id === gameState.currentPlayer) {
         gameState.mustCashInTreasures = true
       }
     }
@@ -995,8 +1010,19 @@ export class GameEngine {
           if (player.armies <= 0) {
             player.armies = 0
             if (gameState.phase === 'reinforcement') {
-              gameState.phase = 'attack'
-              gameState.hasAttackedThisTurn = false
+              const resumePhase = gameState.resumePhaseAfterReinforcement
+              if (resumePhase && resumePhase !== 'reinforcement') {
+                gameState.phase = resumePhase
+                if (resumePhase === 'attack') {
+                  gameState.hasAttackedThisTurn =
+                    gameState.resumeHasAttackedAfterReinforcement ?? gameState.hasAttackedThisTurn ?? false
+                }
+              } else {
+                gameState.phase = 'attack'
+                gameState.hasAttackedThisTurn = false
+              }
+              gameState.resumePhaseAfterReinforcement = null
+              gameState.resumeHasAttackedAfterReinforcement = undefined
             }
           }
         }
@@ -1286,6 +1312,7 @@ export class GameEngine {
       return gameState
     }
 
+    const previousPhase = gameState.phase
     const selection = action.payload?.treasureSet
     if (!Array.isArray(selection) || selection.length !== 3) {
       throw new Error('Treasure set selection is required')
@@ -1307,8 +1334,20 @@ export class GameEngine {
 
     player.treasures = result.updatedHand
     player.armies += result.troops
-    player.mustCashInTreasures = player.treasures.length >= treasureConfig.handCap
+    const remainingMatches = findRedeemableSets(result.updatedHand)
+    player.mustCashInTreasures =
+      result.updatedHand.length >= treasureConfig.handCap && remainingMatches.length > 0
     gameState.treasureState = result.updatedState
+
+    if (result.troops > 0 && previousPhase !== 'reinforcement') {
+      gameState.resumePhaseAfterReinforcement = previousPhase
+      gameState.resumeHasAttackedAfterReinforcement = gameState.hasAttackedThisTurn ?? false
+      gameState.phase = 'reinforcement'
+      this.refreshReinforcementTracking(gameState)
+    } else if (previousPhase === 'reinforcement') {
+      gameState.resumePhaseAfterReinforcement = null
+      gameState.resumeHasAttackedAfterReinforcement = undefined
+    }
 
     treasureMetrics.recordCash(treasureConfig, result.hasDiamond)
     this.updateCurrentPlayerCashRequirement(gameState, treasureConfig)
@@ -1326,6 +1365,8 @@ export class GameEngine {
         // Clear reinforcement tracking when leaving reinforcement
         gameState.reinforcementHistory = []
         gameState.reinforcementBaseline = undefined
+        gameState.resumePhaseAfterReinforcement = null
+        gameState.resumeHasAttackedAfterReinforcement = undefined
         break
       case 'attack':
         // After attack, move to fortify phase
@@ -1392,6 +1433,22 @@ export class GameEngine {
     this.prepareReinforcementPhase(gameState, treasureConfig)
   }
 
+  private refreshReinforcementTracking(gameState: GameState): void {
+    try {
+      const baseline: Record<string, number> = {}
+      for (const territory of gameState.board) {
+        if (territory.ownerId === gameState.currentPlayer) {
+          baseline[territory.id] = Math.max(0, Math.trunc(territory.armies))
+        }
+      }
+      gameState.reinforcementBaseline = baseline
+    } catch {
+      gameState.reinforcementBaseline = {}
+    }
+
+    gameState.reinforcementHistory = []
+  }
+
   private prepareReinforcementPhase(
     gameState: GameState,
     providedTreasureConfig?: TreasureConfig,
@@ -1407,19 +1464,9 @@ export class GameEngine {
       )
     }
 
-    try {
-      const baseline: Record<string, number> = {}
-      for (const territory of gameState.board) {
-        if (territory.ownerId === gameState.currentPlayer) {
-          baseline[territory.id] = Math.max(0, Math.trunc(territory.armies))
-        }
-      }
-      gameState.reinforcementBaseline = baseline
-    } catch {
-      gameState.reinforcementBaseline = {}
-    }
-
-    gameState.reinforcementHistory = []
+    this.refreshReinforcementTracking(gameState)
+    gameState.resumePhaseAfterReinforcement = null
+    gameState.resumeHasAttackedAfterReinforcement = undefined
 
     if (treasureConfig.enabled) {
       gameState.treasureState = ensureTreasureState(gameState.treasureState)
@@ -1509,6 +1556,10 @@ export class GameEngine {
     const territory = gameState.board.find((t) => t.id === territoryId)
 
     if (!player || !territory || gameState.phase !== 'reinforcement') return false
+
+    if (armies > 0 && gameState.mustCashInTreasures) {
+      return false
+    }
 
     if (armies > 0) {
       // Prevent deploying more armies than player has available

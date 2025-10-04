@@ -238,6 +238,8 @@ export interface GameState {
   mustCashInTreasures?: boolean
   conqueredDuringTurn?: boolean
   kingOfTheHillState?: KingOfTheHillState
+  resumePhaseAfterReinforcement?: GamePhase | null
+  resumeHasAttackedAfterReinforcement?: boolean
 }
 
 export interface GameTerritoryModifier {
