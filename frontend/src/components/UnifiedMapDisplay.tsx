@@ -1,5 +1,5 @@
 import { computeRollOdds } from '@shared/utils/combatOdds'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { mapService } from '@/services/mapService'
@@ -103,6 +103,11 @@ export default function UnifiedMapDisplay({
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const hillOverlayEnabled = Boolean(kingOfTheHillState && mapData)
   const currentScale = useAppSelector((s) => s.mapView.scale)
+  const [zoomToast, setZoomToast] = useState<{ text: string; visible: boolean }>({
+    text: '',
+    visible: false,
+  })
+  const zoomToastTimer = useRef<number | null>(null)
 
   // Removed overlay hotkeys for simpler UI
 
@@ -261,7 +266,14 @@ export default function UnifiedMapDisplay({
       dir === 'in'
         ? (safeIdx + 1) % allowedScales.length
         : (safeIdx - 1 + allowedScales.length) % allowedScales.length
-    dispatch(setScale(allowedScales[nextIdx]))
+    const next = allowedScales[nextIdx]
+    dispatch(setScale(next))
+    setZoomToast({ text: `${Math.round(next * 100)}%`, visible: true })
+    if (zoomToastTimer.current) window.clearTimeout(zoomToastTimer.current)
+    zoomToastTimer.current = window.setTimeout(
+      () => setZoomToast((t) => ({ ...t, visible: false })),
+      900,
+    )
   }
 
   return (
@@ -384,10 +396,10 @@ export default function UnifiedMapDisplay({
       </MapCanvas>
 
       {/* Floating zoom controls (bottom-right) */}
-      <div className="absolute bottom-2 right-2 z-30 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
+      <div className="absolute bottom-2 right-2 z-30 flex gap-1 bg-surface-2/70 backdrop-blur px-1 py-1 rounded-lg shadow-lg">
         <button
           type="button"
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+          className="flex items-center justify-center min-w-[36px] min-h-[36px] rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-base font-bold"
           onClick={() => stepScale('out')}
           title="Zoom out"
         >
@@ -395,12 +407,18 @@ export default function UnifiedMapDisplay({
         </button>
         <button
           type="button"
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+          className="flex items-center justify-center min-w-[36px] min-h-[36px] rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-base font-bold"
           onClick={() => stepScale('in')}
           title="Zoom in"
         >
           +
         </button>
+      </div>
+      <div
+        className="absolute bottom-14 right-2 z-30 px-2 py-1 rounded bg-black/50 text-white text-xs"
+        style={{ opacity: zoomToast.visible ? 1 : 0, transition: 'opacity 200ms ease' }}
+      >
+        {zoomToast.text}
       </div>
     </div>
   )
