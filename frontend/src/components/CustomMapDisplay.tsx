@@ -2,13 +2,9 @@ import { useEffect, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { mapService } from '@/services/mapService'
-import { setOverlay } from '@/store/uiRoomSlice'
 import type { ZoomControlsReadyHandler } from '@/types/zoom'
 import { logger } from '@/utils/logger'
-import { AttackableOverlay } from './map/AttackableOverlay'
 import { HillOverlay } from './map/HillOverlay'
-import { SectorsOverlay } from './map/SectorsOverlay'
-import { ThreatOverlay } from './map/ThreatOverlay'
 import ResponsiveMapContainer, { useMapViewport } from './ResponsiveMapContainer'
 
 interface Territory {
@@ -36,7 +32,6 @@ interface CustomMapDisplayProps {
   focus?: { x: number; y: number } | null
   adjacency?: Record<string, string[]>
   showZoomControls?: boolean
-  showOverlayToggles?: boolean
   showMinimap?: boolean
   onZoomControlsReady?: ZoomControlsReadyHandler
 }
@@ -55,15 +50,13 @@ export default function CustomMapDisplay({
   pendingAction,
   focus = null,
   showZoomControls = true,
-  showOverlayToggles = true,
   showMinimap = true,
-  adjacency,
+  adjacency: _adjacency,
   onZoomControlsReady,
 }: CustomMapDisplayProps) {
-  const overlays = useAppSelector((s) => s.uiRoom.overlays)
-  const dispatch = useAppDispatch()
+  const _dispatch = useAppDispatch()
   const game = useAppSelector((s) => s.game.currentGame)
-  const myId = useAppSelector((s) => s.auth.user?.id)
+  const _myId = useAppSelector((s) => s.auth.user?.id)
   const players = game?.players ?? []
   const kingOfTheHillState =
     game?.gameConfig?.gameMode === 'king_of_the_hill' ? game.kingOfTheHillState : null
@@ -99,34 +92,7 @@ export default function CustomMapDisplay({
   const [_hoveredId, setHoveredId] = useState<string | null>(null)
   const hillOverlayEnabled = Boolean(kingOfTheHillState && mapData)
 
-  // Keyboard hotkeys: g (sectors), a (attackable), h (threat)
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null
-      const tag = target?.tagName
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        (target && (target as HTMLElement).isContentEditable)
-      ) {
-        return
-      }
-      const k = e.key.toLowerCase()
-      if (k === 'g') {
-        e.preventDefault()
-        dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
-      } else if (k === 'a') {
-        e.preventDefault()
-        dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
-      } else if (k === 'h') {
-        e.preventDefault()
-        dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [dispatch, overlays.attackable, overlays.continents, overlays.threat])
+  // Removed overlay keyboard hotkeys
 
   useEffect(() => {
     const hydrateFromProps = () => {
@@ -205,37 +171,7 @@ export default function CustomMapDisplay({
     onTerritoryHover?.(territoryId)
   }
 
-  // Swipe to cycle overlays (none -> continents -> attackable -> threat)
-  const cycleOverlay = (dir: 'left' | 'right') => {
-    const order = ['none', 'continents', 'attackable', 'threat'] as const
-    const current = overlays.continents
-      ? 'continents'
-      : overlays.attackable
-        ? 'attackable'
-        : overlays.threat
-          ? 'threat'
-          : 'none'
-    const idx = order.indexOf(current)
-    const nextIdx =
-      dir === 'left' ? (idx + 1) % order.length : (idx - 1 + order.length) % order.length
-    const next = order[nextIdx]
-    const setAll = (c: boolean, a: boolean, t: boolean) => {
-      dispatch(setOverlay({ key: 'continents', value: c }))
-      dispatch(setOverlay({ key: 'attackable', value: a }))
-      dispatch(setOverlay({ key: 'threat', value: t }))
-    }
-    try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        ;(navigator as unknown as { vibrate?: (pattern: number | number[]) => void }).vibrate?.(10)
-      }
-    } catch {
-      /* ignore */
-    }
-    if (next === 'none') setAll(false, false, false)
-    else if (next === 'continents') setAll(true, false, false)
-    else if (next === 'attackable') setAll(false, true, false)
-    else setAll(false, false, true)
-  }
+  // Removed overlay swipe cycle code
 
   return (
     <ResponsiveMapContainer
@@ -245,66 +181,9 @@ export default function CustomMapDisplay({
       showMinimap={showMinimap}
       backgroundImageUrl={mapData.imageUrl}
       focus={focus ?? undefined}
-      onSwipeLeft={() => cycleOverlay('left')}
-      onSwipeRight={() => cycleOverlay('right')}
       onZoomControlsReady={onZoomControlsReady}
     >
-      {/* Overlay toggle buttons */}
-      {showOverlayToggles && (
-        <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded border border-border">
-          {(() => {
-            const haptic = () => {
-              try {
-                ;(
-                  navigator as unknown as { vibrate?: (pattern: number | number[]) => void }
-                ).vibrate?.(10)
-              } catch {
-                // ignore haptics errors
-              }
-            }
-            return (
-              <>
-                <button
-                  type="button"
-                  className={`btn btn-ghost btn-xs ${overlays.continents ? 'ring-1 ring-white' : ''}`}
-                  onClick={() => {
-                    dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
-                    haptic()
-                  }}
-                  title="Toggle sectors overlay (g)"
-                >
-                  <span aria-hidden>🗺️</span>
-                  <span className="hidden sm:inline">Sectors</span>
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-ghost btn-xs ${overlays.attackable ? 'ring-1 ring-white' : ''}`}
-                  onClick={() => {
-                    dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
-                    haptic()
-                  }}
-                  title="Toggle attackable overlay (a)"
-                >
-                  <span aria-hidden>🎯</span>
-                  <span className="hidden sm:inline">Attackable</span>
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-ghost btn-xs ${overlays.threat ? 'ring-1 ring-white' : ''}`}
-                  onClick={() => {
-                    dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
-                    haptic()
-                  }}
-                  title="Toggle threat overlay (h)"
-                >
-                  <span aria-hidden>🔥</span>
-                  <span className="hidden sm:inline">Threat</span>
-                </button>
-              </>
-            )
-          })()}
-        </div>
-      )}
+      {/* Overlay toggle UI removed */}
 
       {/* Zoom controls */}
       {showZoomControls && <ZoomControls />}
@@ -319,37 +198,7 @@ export default function CustomMapDisplay({
         />
       )}
 
-      {/* Sectors overlay: colored dots per territory */}
-      {overlays.continents && (
-        <SectorsOverlay
-          mapWidth={mapData.width}
-          mapHeight={mapData.height}
-          territories={territories}
-        />
-      )}
-
-      {/* Attackable overlay: ring highlights for selected + valid targets */}
-      {overlays.attackable && selectedTerritoryId && (
-        <AttackableOverlay
-          mapWidth={mapData.width}
-          mapHeight={mapData.height}
-          territories={territories}
-          selectedTerritoryId={selectedTerritoryId}
-          validTargets={validTargets}
-        />
-      )}
-
-      {/* Threat overlay: heat rings on friendly territories proportional to adjacent enemy armies */}
-      {overlays.threat && game && myId && adjacency && (
-        <ThreatOverlay
-          mapWidth={mapData.width}
-          mapHeight={mapData.height}
-          territories={territories}
-          adjacency={adjacency}
-          myUserId={myId}
-          game={game}
-        />
-      )}
+      {/* Removed Sectors/Attackable/Threat overlays */}
       {/* Map background */}
       <div
         className="absolute inset-0"
@@ -394,42 +243,7 @@ export default function CustomMapDisplay({
         )
       })}
 
-      {overlays.continents && (
-        <div className="absolute bottom-2 right-2 z-30 bg-surface-2/80 backdrop-blur border border-border rounded px-2 py-1 text-xs">
-          {(() => {
-            const uniqueContinents = Array.from(
-              new Set(territories.map((t) => t.continent || 'unknown')),
-            )
-            const palette = [
-              '#22c55e',
-              '#06b6d4',
-              '#f59e0b',
-              '#ef4444',
-              '#8b5cf6',
-              '#eab308',
-              '#14b8a6',
-              '#f97316',
-            ]
-            const cMap = new Map<string, string>()
-            uniqueContinents.forEach((c, i) => {
-              cMap.set(c, palette[i % palette.length])
-            })
-            return (
-              <div className="flex items-center gap-3 flex-wrap max-w-[320px]">
-                {uniqueContinents.map((c) => (
-                  <span key={`legend-${c}`} className="inline-flex items-center gap-1">
-                    <span
-                      className="inline-block w-2.5 h-2.5 rounded-full border border-white/60"
-                      style={{ backgroundColor: cMap.get(c) || '#94a3b8' }}
-                    />
-                    <span className="text-white/90 capitalize">{c}</span>
-                  </span>
-                ))}
-              </div>
-            )
-          })()}
-        </div>
-      )}
+      {/* Removed sectors legend */}
 
       {/* Removed focus animation and ping markers */}
 

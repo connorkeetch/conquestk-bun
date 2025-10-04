@@ -44,7 +44,7 @@ import {
   setPendingAction,
 } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
-import { addClientLog, hydrateFromStorage, setDice, setOverlay } from '../store/uiRoomSlice'
+import { addClientLog, hydrateFromStorage, setDice } from '../store/uiRoomSlice'
 import type { AIDifficulty } from '../types/game'
 // import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
@@ -849,17 +849,7 @@ export default function GameRoom() {
         dispatch(setPendingAction(null))
         return
       }
-      // Toggle overlays
-      if (key === 'g' || key === 'h') {
-        e.preventDefault()
-        const overlays = state.uiRoom?.overlays
-        if (key === 'g') {
-          dispatch(setOverlay({ key: 'continents', value: !overlays?.continents }))
-        } else {
-          dispatch(setOverlay({ key: 'threat', value: !overlays?.threat }))
-        }
-        return
-      }
+      // Removed overlay toggle hotkeys (g/h) for a simpler UI
       // Focus last log/last action territory
       if (key === 'l') {
         e.preventDefault()

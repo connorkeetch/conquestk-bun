@@ -49,7 +49,6 @@ export function MapSidebar({
             layout="vertical"
             zoom={zoom}
             showMinimapToggle={true}
-            showOverlayToggles={true}
             showZoomPresets={true}
             showMinimap={showMinimap}
             onToggleMinimap={onToggleMinimap}
