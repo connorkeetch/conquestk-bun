@@ -1152,7 +1152,7 @@ export class GameService {
         [
           gameId,
           JSON.stringify(serializedState),
-          serializedState.turn ?? 1,
+          Math.max(1, Number(serializedState.turn ?? 1)),
           serializedState.currentPlayer ?? null,
           serializedState.phase,
         ],
@@ -1266,7 +1266,7 @@ export class GameService {
         [
           gameId,
           JSON.stringify(serializedState),
-          serializedState.turn ?? 1,
+          Math.max(1, Number(serializedState.turn ?? 1)),
           serializedState.currentPlayer ?? null,
           serializedState.phase,
         ],
