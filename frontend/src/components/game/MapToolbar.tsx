@@ -70,7 +70,7 @@ export function MapToolbar({ layout, zoom, showZoomPresets = true }: MapToolbarP
 
   return (
     <div className={layoutClasses}>
-      {showZoomPresets && zoom && (
+      {showZoomPresets && (
         <div
           className={`bg-[color:var(--surface-2)] rounded-lg p-2 flex ${
             layout === 'horizontal' ? 'flex-wrap items-center gap-2' : 'flex-col gap-2'
