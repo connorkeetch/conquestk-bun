@@ -375,7 +375,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
               <MapToolbar
                 layout="vertical"
                 zoom={zoomControls ?? undefined}
-                showOverlayToggles={false}
                 showZoomPresets={true}
               />
             }
@@ -404,7 +403,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             )}
           </div>
         </div>
-        {!lobbyMode && (
+        {
           <MapSidebar
             showMinimap={showMinimap}
             onToggleMinimap={() => setShowMinimap((v) => !v)}
@@ -420,7 +419,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
               }
             }}
           />
-        )}
+        }
       </div>
     </div>
   )

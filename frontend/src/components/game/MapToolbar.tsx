@@ -1,33 +1,18 @@
 import { useCallback } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { resetView, setScale } from '@/store/mapViewSlice'
-import { setOverlay } from '@/store/uiRoomSlice'
 import type { ZoomControls } from '@/types/zoom'
-
-type OverlayKey = 'continents' | 'attackable' | 'threat'
 
 type MapToolbarLayout = 'horizontal' | 'vertical'
 
 interface MapToolbarProps {
   layout: MapToolbarLayout
   zoom?: ZoomControls
-  showOverlayToggles?: boolean
   showMinimapToggle?: boolean
   showZoomPresets?: boolean
   showMinimap?: boolean
   onToggleMinimap?: () => void
 }
-
-const overlayOptions: Array<{
-  key: OverlayKey
-  label: string
-  emoji: string
-  hotkey?: string
-}> = [
-  { key: 'continents', label: 'Sectors', emoji: '🗺️', hotkey: 'G' },
-  { key: 'attackable', label: 'Attackable', emoji: '🎯', hotkey: 'A' },
-  { key: 'threat', label: 'Threat', emoji: '🔥', hotkey: 'H' },
-]
 
 const zoomTargets = [
   { label: '80%', scale: 0.8 },
@@ -45,14 +30,12 @@ function buttonBaseClasses(layout: MapToolbarLayout) {
 export function MapToolbar({
   layout,
   zoom,
-  showOverlayToggles = true,
   showMinimapToggle = true,
   showZoomPresets = true,
   showMinimap = false,
   onToggleMinimap,
 }: MapToolbarProps) {
   const dispatch = useAppDispatch()
-  const overlays = useAppSelector((s) => s.uiRoom.overlays)
   const mapView = useAppSelector((s) => s.mapView)
 
   const handleHaptic = useCallback(() => {
@@ -67,14 +50,6 @@ export function MapToolbar({
 
   const layoutClasses =
     layout === 'horizontal' ? 'flex flex-wrap items-center gap-2' : 'flex flex-col gap-2'
-
-  const toggleOverlay = useCallback(
-    (key: OverlayKey, value: boolean) => {
-      dispatch(setOverlay({ key, value }))
-      handleHaptic()
-    },
-    [dispatch, handleHaptic],
-  )
 
   const applyScaleTarget = useCallback(
     (targetScale: number) => {
@@ -105,32 +80,6 @@ export function MapToolbar({
 
   return (
     <div className={layoutClasses}>
-      {showOverlayToggles &&
-        overlayOptions.map((overlay) => {
-          const active = overlays[overlay.key]
-          return (
-            <button
-              key={overlay.key}
-              type="button"
-              className={`${buttonBaseClasses(layout)} ${
-                active
-                  ? 'bg-[color:var(--surface-3)] ring-1 ring-[color:var(--violet)]'
-                  : 'bg-[color:var(--surface-2)] hover:bg-[color:var(--surface-3)]'
-              } flex items-center gap-2`}
-              onClick={() => toggleOverlay(overlay.key, !active)}
-              title={overlay.hotkey ? `${overlay.label} (${overlay.hotkey})` : overlay.label}
-            >
-              <span aria-hidden className="text-base">
-                {overlay.emoji}
-              </span>
-              <span className="whitespace-nowrap">{overlay.label}</span>
-              {overlay.hotkey && (
-                <span className="text-xs text-muted font-mono">{overlay.hotkey}</span>
-              )}
-            </button>
-          )
-        })}
-
       {showZoomPresets && zoom && (
         <div
           className={`bg-[color:var(--surface-2)] rounded-lg p-2 flex ${

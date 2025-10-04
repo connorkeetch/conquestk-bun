@@ -9,16 +9,12 @@ import {
   triggerInvalidShake,
 } from '@/store/gameInteractionSlice'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
-import { setOverlay } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import AttackOddsPopup from './game/AttackOddsPopup'
 import MapCanvas from './game/MapCanvas'
 import TerritoryLayer from './game/TerritoryLayer'
 import TokenLayer from './game/TokenLayer'
-import { AttackableOverlay } from './map/AttackableOverlay'
 import { HillOverlay } from './map/HillOverlay'
-import { SectorsOverlay } from './map/SectorsOverlay'
-import { ThreatOverlay } from './map/ThreatOverlay'
 
 interface Territory {
   id: string
@@ -44,7 +40,6 @@ interface UnifiedMapDisplayProps {
   pendingAction?: string | null
   focus?: { x: number; y: number } | null
   adjacency?: Record<string, string[]>
-  showOverlayToggles?: boolean
 }
 
 export default function UnifiedMapDisplay({
@@ -61,16 +56,14 @@ export default function UnifiedMapDisplay({
   pendingAction,
   // focus (centering) is handled outside by gameplay logs selections; we keep it TODO
   // focus = null,
-  adjacency,
-  showOverlayToggles = true,
+  adjacency: _adjacency,
 }: UnifiedMapDisplayProps) {
-  const overlays = useAppSelector((s) => s.uiRoom.overlays)
   const dispatch = useAppDispatch()
   const markerId = useId()
   const hoveredTargetId = useAppSelector((s) => s.gameInteraction.hoveredTargetId)
   const invalidShakeId = useAppSelector((s) => s.gameInteraction.invalidShakeId)
   const game = useAppSelector((s) => s.game.currentGame)
-  const myId = useAppSelector((s) => s.auth.user?.id)
+  const _myId = useAppSelector((s) => s.auth.user?.id)
   const players = game?.players ?? []
   const kingOfTheHillState =
     game?.gameConfig?.gameMode === 'king_of_the_hill' ? game.kingOfTheHillState : null
@@ -106,34 +99,7 @@ export default function UnifiedMapDisplay({
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const hillOverlayEnabled = Boolean(kingOfTheHillState && mapData)
 
-  // Keyboard hotkeys: g (sectors), a (attackable), h (threat)
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null
-      const tag = target?.tagName
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        (target && (target as HTMLElement).isContentEditable)
-      ) {
-        return
-      }
-      const k = e.key.toLowerCase()
-      if (k === 'g') {
-        e.preventDefault()
-        dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
-      } else if (k === 'a') {
-        e.preventDefault()
-        dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
-      } else if (k === 'h') {
-        e.preventDefault()
-        dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [dispatch, overlays.attackable, overlays.continents, overlays.threat])
+  // Removed overlay hotkeys for simpler UI
 
   useEffect(() => {
     const hydrateFromProps = () => {
@@ -280,61 +246,7 @@ export default function UnifiedMapDisplay({
 
   return (
     <div className="relative w-full h-full">
-      {showOverlayToggles && (
-        <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-surface-2/80 backdrop-blur px-2 py-1 rounded border border-border">
-          {(() => {
-            const haptic = () => {
-              try {
-                ;(
-                  navigator as unknown as { vibrate?: (pattern: number | number[]) => void }
-                ).vibrate?.(10)
-              } catch {
-                // ignore
-              }
-            }
-            return (
-              <>
-                <button
-                  type="button"
-                  className={`btn btn-ghost btn-xs ${overlays.continents ? 'ring-1 ring-white' : ''}`}
-                  onClick={() => {
-                    dispatch(setOverlay({ key: 'continents', value: !overlays.continents }))
-                    haptic()
-                  }}
-                  title="Toggle sectors overlay (g)"
-                >
-                  <span aria-hidden>🗺️</span>
-                  <span className="hidden sm:inline">Sectors</span>
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-ghost btn-xs ${overlays.attackable ? 'ring-1 ring-white' : ''}`}
-                  onClick={() => {
-                    dispatch(setOverlay({ key: 'attackable', value: !overlays.attackable }))
-                    haptic()
-                  }}
-                  title="Toggle attackable overlay (a)"
-                >
-                  <span aria-hidden>🎯</span>
-                  <span className="hidden sm:inline">Attackable</span>
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-ghost btn-xs ${overlays.threat ? 'ring-1 ring-white' : ''}`}
-                  onClick={() => {
-                    dispatch(setOverlay({ key: 'threat', value: !overlays.threat }))
-                    haptic()
-                  }}
-                  title="Toggle threat overlay (h)"
-                >
-                  <span aria-hidden>🔥</span>
-                  <span className="hidden sm:inline">Threat</span>
-                </button>
-              </>
-            )
-          })()}
-        </div>
-      )}
+      {/* Overlay toggle UI removed for simplicity */}
 
       <MapCanvas
         imageUrl={mapData.imageUrl}
@@ -409,34 +321,7 @@ export default function UnifiedMapDisplay({
           />
         )}
 
-        {overlays.continents && (
-          <SectorsOverlay
-            mapWidth={mapData.width}
-            mapHeight={mapData.height}
-            territories={territories}
-          />
-        )}
-
-        {overlays.attackable && selectedTerritoryId && (
-          <AttackableOverlay
-            mapWidth={mapData.width}
-            mapHeight={mapData.height}
-            territories={territories}
-            selectedTerritoryId={selectedTerritoryId}
-            validTargets={validTargets}
-          />
-        )}
-
-        {overlays.threat && game && myId && adjacency && (
-          <ThreatOverlay
-            mapWidth={mapData.width}
-            mapHeight={mapData.height}
-            territories={territories}
-            adjacency={adjacency}
-            myUserId={myId}
-            game={game}
-          />
-        )}
+        {/* Sectors/Attackable/Threat overlays removed */}
 
         <TokenLayer
           width={mapData.width}

@@ -67,14 +67,13 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
           playerColors={playerColors}
           pendingAction={pendingAction}
           validTargets={validTargets}
-          // focus={focusCoords}
+          // focus centering handled elsewhere
           adjacency={Object.fromEntries(
             territoryEntries.map(([id, t]) => [
               id,
               Array.isArray(t.adjacentTerritories) ? t.adjacentTerritories : [],
             ]),
           )}
-          showOverlayToggles={false}
         />
       </div>
 

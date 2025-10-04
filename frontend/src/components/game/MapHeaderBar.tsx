@@ -43,7 +43,6 @@ export function MapHeaderBar({
         <MapToolbar
           layout="horizontal"
           zoom={zoom}
-          showOverlayToggles={true}
           showZoomPresets={true}
           showMinimapToggle={false}
           showMinimap={showMinimap}
