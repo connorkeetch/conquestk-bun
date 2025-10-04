@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import { GameEngine } from '../game/gameEngine'
 import type { AttackAction, GameState } from '../types/game'
 
@@ -66,7 +66,10 @@ describe('GameEngine conquest transfers', () => {
 
   function mockVictory() {
     const spy = jest
-      .spyOn(engine as unknown as { simulateBattle: GameEngine['simulateBattle'] }, 'simulateBattle')
+      .spyOn(
+        engine as unknown as { simulateBattle: GameEngine['simulateBattle'] },
+        'simulateBattle',
+      )
       .mockReturnValue({
         attackerDice: [6],
         defenderDice: [1],
@@ -118,8 +121,8 @@ describe('GameEngine conquest transfers', () => {
     const { state } = await executeConquest()
 
     state.phase = 'attack'
-    expect(() =>
-      engine.transferConquestArmies(state, 'defender', 'alpha', 'beta', 1),
-    ).toThrow('Only the conquering player can transfer armies')
+    expect(() => engine.transferConquestArmies(state, 'defender', 'alpha', 'beta', 1)).toThrow(
+      'Only the conquering player can transfer armies',
+    )
   })
 })

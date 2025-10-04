@@ -1,10 +1,9 @@
 import type React from 'react'
 import { useMemo } from 'react'
 import type { GamePlayer } from '@/types/game'
-import type { ZoomControlsReadyHandler } from '@/types/zoom'
-import CustomMapDisplay from '../CustomMapDisplay'
 import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
 import { TerritoryModifierLegend } from '../TerritoryModifierLegend'
+import UnifiedMapDisplay from '../UnifiedMapDisplay'
 import type { TerritoryDisplayMap } from './territoryDisplay'
 
 interface RiskGameMapProps {
@@ -18,8 +17,6 @@ interface RiskGameMapProps {
   territoryModifierMap: Map<string, IconTerritoryModifier> | null
   onTerritoryClick: (territoryId: string) => void
   onTerritoryHover: (territoryId: string | null) => void
-  showMinimap?: boolean
-  onZoomControlsReady?: ZoomControlsReadyHandler
 }
 
 export const RiskGameMap: React.FC<RiskGameMapProps> = ({
@@ -33,8 +30,6 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   territoryModifierMap,
   onTerritoryClick,
   onTerritoryHover,
-  showMinimap = true,
-  onZoomControlsReady,
 }) => {
   const playerColors = useMemo(
     () => Object.fromEntries(players.map((player) => [player.id, player.color])),
@@ -43,7 +38,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
 
   const territoryEntries = useMemo(() => Object.entries(territories), [territories])
 
-  const focusCoords = useMemo(() => {
+  const _focusCoords = useMemo(() => {
     const id = selectedTargetTerritory || selectedTerritory
     if (!id) return null
     const t = territories[id]
@@ -54,7 +49,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   return (
     <div className="game-board flex-1 min-w-0 relative bg-surface-2 p-2 sm:p-4 min-h-[360px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[640px]">
       <div className="relative w-full h-full">
-        <CustomMapDisplay
+        <UnifiedMapDisplay
           mapId={mapId}
           territories={territoryEntries.map(([, territory]) => ({
             id: territory.id,
@@ -71,17 +66,14 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
           playerColors={playerColors}
           pendingAction={pendingAction}
           validTargets={validTargets}
-          focus={focusCoords}
+          // focus={focusCoords}
           adjacency={Object.fromEntries(
             territoryEntries.map(([id, t]) => [
               id,
               Array.isArray(t.adjacentTerritories) ? t.adjacentTerritories : [],
             ]),
           )}
-          showZoomControls={false}
           showOverlayToggles={false}
-          showMinimap={showMinimap}
-          onZoomControlsReady={onZoomControlsReady}
         />
       </div>
 

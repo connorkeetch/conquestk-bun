@@ -5,6 +5,7 @@ jest.mock('../config/database', () => ({
 }))
 
 import { GameEngine } from '../game/gameEngine'
+import { ensureTreasureState } from '../game/hiddenTreasures'
 import { gameStateCache } from '../services/cacheService'
 import { GameService } from '../services/gameService'
 import type {
@@ -20,7 +21,6 @@ import type {
   TradeCardsAction,
   TreasureConfig,
 } from '../types/game'
-import { ensureTreasureState } from '../game/hiddenTreasures'
 
 const createBaseGameState = (override?: Partial<GameState>): GameState => {
   const players: GamePlayer[] = [

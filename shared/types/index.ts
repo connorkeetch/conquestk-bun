@@ -716,7 +716,12 @@ export interface ClientToServerEvents {
     armies: number
   }) => void
   endTurn: (data: { roomId: string }) => void
-  transferConquestArmies: (data: { roomId: string; armies: number }) => void
+  transferConquestArmies: (data: {
+    roomId: string
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+  }) => void
   undoFortify: (data: { roomId: string }) => void
   'afk:skip': (data: { roomId: string }) => void
   'afk:remind': (data: { roomId: string }) => void

@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { resetView, setScale } from '@/store/mapViewSlice'
 import { setOverlay } from '@/store/uiRoomSlice'
 import type { ZoomControls } from '@/types/zoom'
 
@@ -52,6 +53,7 @@ export function MapToolbar({
 }: MapToolbarProps) {
   const dispatch = useAppDispatch()
   const overlays = useAppSelector((s) => s.uiRoom.overlays)
+  const mapView = useAppSelector((s) => s.mapView)
 
   const handleHaptic = useCallback(() => {
     try {
@@ -76,29 +78,30 @@ export function MapToolbar({
 
   const applyScaleTarget = useCallback(
     (targetScale: number) => {
-      if (!zoom) return
-
-      const safeBase = Math.max(0.000001, Math.min(1, zoom.baseScale))
-      const targetZoom = targetScale / safeBase
-
-      if (zoom.setZoom) {
-        zoom.setZoom(targetZoom)
+      if (zoom) {
+        // Back-compat: use old controls when provided
+        const safeBase = Math.max(0.000001, Math.min(1, zoom.baseScale))
+        const targetZoom = targetScale / safeBase
+        if (zoom.setZoom) {
+          zoom.setZoom(targetZoom)
+        } else if (targetScale > zoom.scale) {
+          zoom.zoomIn()
+        } else if (targetScale < zoom.scale) {
+          zoom.zoomOut()
+        }
         handleHaptic()
         return
       }
 
-      // Fallback: approximate via zoomIn/zoomOut once
-      if (targetScale > zoom.scale) {
-        zoom.zoomIn()
-      } else if (targetScale < zoom.scale) {
-        zoom.zoomOut()
-      }
+      // Default: use discrete Redux scale
+      const s = targetScale === 0.8 ? 0.8 : targetScale === 1.2 ? 1.2 : 1
+      dispatch(setScale(s))
       handleHaptic()
     },
-    [zoom, handleHaptic],
+    [zoom, handleHaptic, dispatch],
   )
 
-  const currentScale = zoom?.scale ?? 1
+  const currentScale = zoom?.scale ?? mapView.scale
 
   return (
     <div className={layoutClasses}>
@@ -161,7 +164,11 @@ export function MapToolbar({
               layout === 'horizontal' ? 'w-[72px]' : 'w-full'
             } justify-center bg-[color:var(--surface-1)] hover:bg-[color:var(--surface-3)]`}
             onClick={() => {
-              zoom.resetZoom()
+              if (zoom) {
+                zoom.resetZoom()
+              } else {
+                dispatch(resetView())
+              }
               handleHaptic()
             }}
           >

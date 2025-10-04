@@ -817,6 +817,29 @@ This allows themes to work with any color scheme!
   }
 }
 
+/* Subtle shake for invalid clicks */
+@keyframes ck-shake-keyframes {
+  0% {
+    transform: translate(-50%, -50%) translateX(0);
+  }
+  25% {
+    transform: translate(-50%, -50%) translateX(-4px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateX(4px);
+  }
+  75% {
+    transform: translate(-50%, -50%) translateX(-2px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(0);
+  }
+}
+
+.ck-shake {
+  animation: ck-shake-keyframes 180ms ease-in-out;
+}
+
 /* Main background gradient - applied to body */
 body {
   background-color: var(--surface-0, #000000);
