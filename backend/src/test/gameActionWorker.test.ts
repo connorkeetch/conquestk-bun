@@ -214,7 +214,7 @@ describe('GameActionWorker', () => {
         gameId: 'game-1',
         attackingTerritory: 'north',
         defendingTerritory: 'south',
-        attackingArmies: 5,
+        attackingArmies: 3, // Capped at requested armies (action.payload.armies)
         defendingArmies: 3,
         playerId: 'player-1',
       }),

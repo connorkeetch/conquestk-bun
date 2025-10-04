@@ -1,3 +1,4 @@
+import { computeRollOdds } from '@shared/utils/combatOdds'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import InfoTooltip from '@/components/InfoTooltip'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
@@ -11,7 +12,6 @@ import {
 } from '@/store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
 import { setAutoAttacking } from '@/store/uiRoomSlice'
-import { computeRollOdds } from '@/utils/odds'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
 /**
