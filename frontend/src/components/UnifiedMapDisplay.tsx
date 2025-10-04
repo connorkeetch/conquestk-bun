@@ -9,6 +9,7 @@ import {
   triggerInvalidShake,
 } from '@/store/gameInteractionSlice'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
+import { allowedScales, setScale } from '@/store/mapViewSlice'
 import { logger } from '@/utils/logger'
 import AttackOddsPopup from './game/AttackOddsPopup'
 import MapCanvas from './game/MapCanvas'
@@ -101,6 +102,7 @@ export default function UnifiedMapDisplay({
   const [error, setError] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const hillOverlayEnabled = Boolean(kingOfTheHillState && mapData)
+  const currentScale = useAppSelector((s) => s.mapView.scale)
 
   // Removed overlay hotkeys for simpler UI
 
@@ -252,6 +254,16 @@ export default function UnifiedMapDisplay({
     onTerritoryHover?.(territoryId)
   }
 
+  const stepScale = (dir: 'in' | 'out') => {
+    const idx = allowedScales.findIndex((s) => Math.abs(s - currentScale) < 0.001)
+    const safeIdx = idx === -1 ? allowedScales.indexOf(1) : idx
+    const nextIdx =
+      dir === 'in'
+        ? (safeIdx + 1) % allowedScales.length
+        : (safeIdx - 1 + allowedScales.length) % allowedScales.length
+    dispatch(setScale(allowedScales[nextIdx]))
+  }
+
   return (
     <div
       className="relative w-full"
@@ -370,6 +382,26 @@ export default function UnifiedMapDisplay({
 
         {/* Plain odds tooltip removed in favor of AttackOddsPopup */}
       </MapCanvas>
+
+      {/* Floating zoom controls (bottom-right) */}
+      <div className="absolute bottom-2 right-2 z-30 flex gap-1 bg-surface-2/90 backdrop-blur px-1.5 py-1.5 rounded-lg shadow-lg">
+        <button
+          type="button"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+          onClick={() => stepScale('out')}
+          title="Zoom out"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded bg-surface-1 hover:bg-surface-3 active:bg-surface-3 transition-colors text-lg font-bold"
+          onClick={() => stepScale('in')}
+          title="Zoom in"
+        >
+          +
+        </button>
+      </div>
     </div>
   )
 }

@@ -713,6 +713,10 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
   }
 
   // Density scales with viewport area; clamp for mobile friendliness
+  const vw = Math.max(320, Math.floor(window?.innerWidth ?? 1280))
+  const vh = Math.max(320, Math.floor(window?.innerHeight ?? 800))
+  const area = (vw * vh) / (1280 * 800)
+  const sizeScale = Math.min(1, Math.max(0.7, vw / 1280))
   const baseCount = 20
   const count = Math.round(baseCount * Math.min(1.8, Math.max(0.6, area)))
   const { images, sizes, positions, repeats } = layoutNonOverlapping(
