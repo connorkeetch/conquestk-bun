@@ -31,7 +31,7 @@ export function MapHeaderBar({ zoom, settingsContent }: MapHeaderBarProps) {
   const panelContent = useMemo(() => settingsContent, [settingsContent])
 
   return (
-    <div className="md:hidden sticky top-0 z-30 bg-[color:var(--surface-1)] border-b border-[color:var(--panel-border)]">
+    <div className="sticky top-0 z-30 bg-[color:var(--surface-1)] border-b border-[color:var(--panel-border)]">
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         <MapToolbar layout="horizontal" zoom={zoom} showZoomPresets={true} />
         {panelContent && (

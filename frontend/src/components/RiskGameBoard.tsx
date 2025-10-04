@@ -22,7 +22,7 @@ import { GameActionBar } from './game/GameActionBar'
 import { GameHeader } from './game/GameHeader'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
 import { MapHeaderBar } from './game/MapHeaderBar'
-import { MapSidebar } from './game/MapSidebar'
+// MapSidebar removed; all zoom controls moved to header
 import { MapToolbar } from './game/MapToolbar'
 import { RiskGameMap } from './game/RiskGameMap'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
@@ -57,14 +57,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
   const [_hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try {
-      const stored = localStorage.getItem('ui.mapSidebarCollapsed')
-      return stored === 'true'
-    } catch {
-      return false
-    }
-  })
+  // Sidebar removed; collapse state no longer used
   const [zoomControls, setZoomControls] = useState<ZoomControls | null>(null)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
@@ -399,21 +392,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             )}
           </div>
         </div>
-        {
-          <MapSidebar
-            zoom={zoomControls ?? undefined}
-            isCollapsed={sidebarCollapsed}
-            onToggleCollapse={() => {
-              const newValue = !sidebarCollapsed
-              setSidebarCollapsed(newValue)
-              try {
-                localStorage.setItem('ui.mapSidebarCollapsed', String(newValue))
-              } catch {
-                // ignore storage errors
-              }
-            }}
-          />
-        }
+        {/* Sidebar removed */}
       </div>
     </div>
   )
