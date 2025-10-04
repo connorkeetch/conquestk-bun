@@ -1,6 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authSlice from './authSlice'
+import gameInteractionReducer from './gameInteractionSlice'
 import gameSlice from './gameSlice'
+import mapViewReducer from './mapViewSlice'
 import messagesReducer from './messagesSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
@@ -16,6 +18,8 @@ export const store = configureStore({
     messages: messagesReducer,
     ui: uiReducer,
     uiRoom: uiRoomReducer,
+    mapView: mapViewReducer,
+    gameInteraction: gameInteractionReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

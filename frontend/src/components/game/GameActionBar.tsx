@@ -94,8 +94,7 @@ export function GameActionBar({
     return ''
   }
 
-  const cannotEndReinforcement =
-    phase === 'reinforcement' && (remaining > 0 || mustCashIn)
+  const cannotEndReinforcement = phase === 'reinforcement' && (remaining > 0 || mustCashIn)
 
   const odds = useMemo(() => {
     if (!game || !selected || !target) return null

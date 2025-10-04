@@ -1,4 +1,18 @@
-export type RollOutcome = { attackerLosses: 0 | 1 | 2; defenderLosses: 0 | 1 | 2 }
+export type RollOdds = {
+  samples: number
+  probabilities: {
+    attackerLoses1: number
+    attackerLoses2: number
+    defenderLoses1: number
+    defenderLoses2: number
+    trade11: number
+  }
+  expected: {
+    attackerLoss: number
+    defenderLoss: number
+    advantage: number
+  }
+}
 
 function* diceCombos(n: number): Generator<number[]> {
   const dice = Array(n).fill(1)
@@ -12,20 +26,20 @@ function* diceCombos(n: number): Generator<number[]> {
   }
 }
 
-function compareHighest(att: number[], def: number[]): RollOutcome {
+function compareHighest(att: number[], def: number[]) {
   const a = [...att].sort((x, y) => y - x)
   const d = [...def].sort((x, y) => y - x)
   const pairs = Math.min(a.length, d.length)
-  let attackerLosses = 0 as 0 | 1 | 2
-  let defenderLosses = 0 as 0 | 1 | 2
+  let attackerLosses = 0
+  let defenderLosses = 0
   for (let i = 0; i < pairs; i++) {
-    if (a[i] > d[i]) defenderLosses = (defenderLosses + 1) as 0 | 1 | 2
-    else attackerLosses = (attackerLosses + 1) as 0 | 1 | 2
+    if (a[i] > d[i]) defenderLosses++
+    else attackerLosses++
   }
   return { attackerLosses, defenderLosses }
 }
 
-export function computeRollOdds(attDice: 1 | 2 | 3, defDice: 1 | 2) {
+export function computeRollOdds(attDice: 1 | 2 | 3, defDice: 1 | 2): RollOdds {
   const outcomes: Record<string, number> = {}
   let total = 0
   for (const a of diceCombos(attDice)) {
@@ -47,9 +61,6 @@ export function computeRollOdds(attDice: 1 | 2 | 3, defDice: 1 | 2) {
   const expectedAttackerLoss = 1 * pAL1 + 2 * pAL2 + 1 * pTrade
   const expectedDefenderLoss = 1 * pDL1 + 2 * pDL2 + 1 * pTrade
 
-  // Approximate advantage as defender losses - attacker losses per roll
-  const advantage = expectedDefenderLoss - expectedAttackerLoss
-
   return {
     samples: total,
     probabilities: {
@@ -62,7 +73,7 @@ export function computeRollOdds(attDice: 1 | 2 | 3, defDice: 1 | 2) {
     expected: {
       attackerLoss: expectedAttackerLoss,
       defenderLoss: expectedDefenderLoss,
-      advantage,
+      advantage: expectedDefenderLoss - expectedAttackerLoss,
     },
   }
 }

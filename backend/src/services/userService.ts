@@ -184,8 +184,7 @@ export class UserService {
       return null
     }
 
-    const createdAt =
-      row.created_at instanceof Date ? row.created_at : new Date(row.created_at)
+    const createdAt = row.created_at instanceof Date ? row.created_at : new Date(row.created_at)
 
     if (Number.isNaN(createdAt.getTime())) {
       return null

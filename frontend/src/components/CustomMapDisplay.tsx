@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { useAttackOddsTooltip } from '@/hooks/useAttackOddsTooltip'
 import { mapService } from '@/services/mapService'
 import { setOverlay } from '@/store/uiRoomSlice'
 import type { ZoomControlsReadyHandler } from '@/types/zoom'
@@ -97,7 +96,7 @@ export default function CustomMapDisplay({
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [_hoveredId, setHoveredId] = useState<string | null>(null)
   const hillOverlayEnabled = Boolean(kingOfTheHillState && mapData)
 
   // Keyboard hotkeys: g (sectors), a (attackable), h (threat)
@@ -174,15 +173,7 @@ export default function CustomMapDisplay({
   }, [mapId, imageUrl, mapWidth, mapHeight])
 
   // Compute attack odds tooltip using shared hook
-  const oddsTooltip = useAttackOddsTooltip({
-    pendingAction: pendingAction ?? null,
-    selectedId: selectedTerritoryId ?? null,
-    hoveredId,
-    validTargets,
-    territories,
-    mapWidth: mapData?.width ?? 0,
-    mapHeight: mapData?.height ?? 0,
-  })
+  // Odds tooltip disabled in this simplified preview component
 
   if (loading) {
     return (
@@ -442,21 +433,7 @@ export default function CustomMapDisplay({
 
       {/* Removed focus animation and ping markers */}
 
-      {oddsTooltip && (
-        <div
-          role="tooltip"
-          className="absolute z-30 pointer-events-none animate-pulse"
-          style={{
-            left: `${oddsTooltip.left}%`,
-            top: `${oddsTooltip.top}%`,
-            transform: oddsTooltip.top > 20 ? 'translate(-50%, -140%)' : 'translate(-50%, 40%)',
-          }}
-        >
-          <div className="rounded bg-surface-2/95 border border-border shadow px-2 py-1 text-xs text-white whitespace-nowrap">
-            {`Odds (${oddsTooltip.att}v${oddsTooltip.def}) · Win ${oddsTooltip.winChance.toFixed(0)}% · E[Δ] ${oddsTooltip.odds.expected.advantage >= 0 ? '+' : ''}${oddsTooltip.odds.expected.advantage.toFixed(2)}`}
-          </div>
-        </div>
-      )}
+      {/* Odds tooltip disabled in preview */}
     </ResponsiveMapContainer>
   )
 }

@@ -606,7 +606,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                     : (defenderOwnerId ?? attackerOwnerId),
                 },
                 conquered: territoryConquered,
-                pendingConquestFor: territoryConquered ? attackerOwnerId ?? null : null,
+                pendingConquestFor: territoryConquered ? (attackerOwnerId ?? null) : null,
               },
               changes: deltas as unknown as Array<import('@risk-game/shared/types').GameDelta>,
             }

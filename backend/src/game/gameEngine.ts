@@ -370,8 +370,7 @@ export class GameEngine {
 
     const hand = this.getPlayerTreasureHand(currentPlayer)
     const hasValidSet = findRedeemableSets(hand).length > 0
-    currentPlayer.mustCashInTreasures =
-      hand.length >= treasureConfig.handCap && hasValidSet
+    currentPlayer.mustCashInTreasures = hand.length >= treasureConfig.handCap && hasValidSet
     gameState.mustCashInTreasures = currentPlayer.mustCashInTreasures ?? false
   }
 
@@ -1015,7 +1014,9 @@ export class GameEngine {
                 gameState.phase = resumePhase
                 if (resumePhase === 'attack') {
                   gameState.hasAttackedThisTurn =
-                    gameState.resumeHasAttackedAfterReinforcement ?? gameState.hasAttackedThisTurn ?? false
+                    gameState.resumeHasAttackedAfterReinforcement ??
+                    gameState.hasAttackedThisTurn ??
+                    false
                 }
               } else {
                 gameState.phase = 'attack'
