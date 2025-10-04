@@ -8,6 +8,7 @@ export interface ZoomControls {
   zoomIn: () => void
   zoomOut: () => void
   resetZoom: () => void
+  setZoom?: (next: number | ((prev: number) => number)) => void
 }
 
 export type ZoomControlsReadyHandler = (controls: ZoomControls | null) => void
