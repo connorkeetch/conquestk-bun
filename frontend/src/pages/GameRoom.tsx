@@ -1301,9 +1301,9 @@ export default function GameRoom() {
 
       {/* No ready errors expected */}
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         {/* Game Board and Action Bar Container */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {/* Game Board - full width */}
           <div className="flex-1 min-w-0 flex flex-col">
             {currentGame ? (
@@ -1410,7 +1410,7 @@ export default function GameRoom() {
         </div>
 
         {/* Player Stats & Chat Row - positioned directly under the board */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {/* Player Stats */}
           {currentGame ? (
             <PlayerStatsTable

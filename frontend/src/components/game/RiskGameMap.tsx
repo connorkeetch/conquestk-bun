@@ -47,35 +47,32 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   }, [selectedTargetTerritory, selectedTerritory, territories])
 
   return (
-    <div className="game-board flex-1 min-w-0 relative bg-surface-2 p-1 sm:p-2 min-h-[520px] sm:min-h-[600px] lg:min-h-[680px] xl:min-h-[720px]">
-      {/* Fill the available board area regardless of explicit parent height */}
-      <div className="absolute inset-0">
-        <UnifiedMapDisplay
-          mapId={mapId}
-          territories={territoryEntries.map(([, territory]) => ({
-            id: territory.id,
-            name: territory.name,
-            x: territory.armyPosition.x,
-            y: territory.armyPosition.y,
-            armies: territory.armies,
-            owner: territory.owner,
-            continent: territory.continent,
-          }))}
-          onTerritoryClick={onTerritoryClick}
-          onTerritoryHover={onTerritoryHover}
-          selectedTerritoryId={selectedTerritory}
-          playerColors={playerColors}
-          pendingAction={pendingAction}
-          validTargets={validTargets}
-          // focus centering handled elsewhere
-          adjacency={Object.fromEntries(
-            territoryEntries.map(([id, t]) => [
-              id,
-              Array.isArray(t.adjacentTerritories) ? t.adjacentTerritories : [],
-            ]),
-          )}
-        />
-      </div>
+    <div className="game-board flex-1 min-w-0 bg-surface-2 p-1 sm:p-2">
+      <UnifiedMapDisplay
+        mapId={mapId}
+        territories={territoryEntries.map(([, territory]) => ({
+          id: territory.id,
+          name: territory.name,
+          x: territory.armyPosition.x,
+          y: territory.armyPosition.y,
+          armies: territory.armies,
+          owner: territory.owner,
+          continent: territory.continent,
+        }))}
+        onTerritoryClick={onTerritoryClick}
+        onTerritoryHover={onTerritoryHover}
+        selectedTerritoryId={selectedTerritory}
+        playerColors={playerColors}
+        pendingAction={pendingAction}
+        validTargets={validTargets}
+        // focus centering handled elsewhere
+        adjacency={Object.fromEntries(
+          territoryEntries.map(([id, t]) => [
+            id,
+            Array.isArray(t.adjacentTerritories) ? t.adjacentTerritories : [],
+          ]),
+        )}
+      />
 
       {territoryModifierMap && territoryModifierMap.size > 0 && (
         <TerritoryModifierLegend

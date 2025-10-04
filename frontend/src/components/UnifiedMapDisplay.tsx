@@ -213,7 +213,7 @@ export default function UnifiedMapDisplay({
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-surface-1">
+      <div className="w-full aspect-[16/9] flex items-center justify-center bg-surface-1">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet mx-auto mb-4"></div>
           <p className="text-muted">Loading map...</p>
@@ -224,7 +224,7 @@ export default function UnifiedMapDisplay({
 
   if (error || !mapData) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-surface-1">
+      <div className="w-full aspect-[16/9] flex items-center justify-center bg-surface-1">
         <div className="text-center text-red-500">
           <p className="text-lg">⚠️ {error || 'Map not found'}</p>
         </div>
@@ -253,7 +253,10 @@ export default function UnifiedMapDisplay({
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div
+      className="relative w-full"
+      style={{ aspectRatio: `${mapData.width} / ${mapData.height}` }}
+    >
       {/* Overlay toggle UI removed for simplicity */}
 
       <MapCanvas
