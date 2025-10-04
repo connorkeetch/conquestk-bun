@@ -40,6 +40,8 @@ interface UnifiedMapDisplayProps {
   pendingAction?: string | null
   focus?: { x: number; y: number } | null
   adjacency?: Record<string, string[]>
+  // Preview mode removes game-only UI/behaviors (e.g., odds popup, redux hover dispatch)
+  previewMode?: boolean
 }
 
 export default function UnifiedMapDisplay({
@@ -57,6 +59,7 @@ export default function UnifiedMapDisplay({
   // focus (centering) is handled outside by gameplay logs selections; we keep it TODO
   // focus = null,
   adjacency: _adjacency,
+  previewMode = false,
 }: UnifiedMapDisplayProps) {
   const dispatch = useAppDispatch()
   const markerId = useId()
@@ -143,25 +146,28 @@ export default function UnifiedMapDisplay({
   }, [mapId, imageUrl, mapWidth, mapHeight])
 
   const attackDice = useAppSelector((s) => s.uiRoom.dice)
-  const oddsTooltip = (() => {
-    if (!mapData) return null
-    if (pendingAction !== 'attack') return null
-    if (!selectedTerritoryId || !hoveredId) return null
-    if (!validTargets.includes(hoveredId)) return null
-    const src = territories.find((t) => t.id === selectedTerritoryId)
-    const dst = territories.find((t) => t.id === hoveredId)
-    if (!src || !dst) return null
-    const srcArmies = src.armies ?? 0
-    const dstArmies = dst.armies ?? 0
-    if (srcArmies <= 1) return null
-    const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
-    const def = Math.min(2, Math.max(1, dstArmies)) as 1 | 2
-    const odds = computeRollOdds(att, def)
-    const winChance = (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
-    const left = (dst.x / mapData.width) * 100
-    const top = (dst.y / mapData.height) * 100
-    return { att, def, odds, winChance, left, top }
-  })()
+  const oddsTooltip = previewMode
+    ? null
+    : (() => {
+        if (!mapData) return null
+        if (pendingAction !== 'attack') return null
+        if (!selectedTerritoryId || !hoveredId) return null
+        if (!validTargets.includes(hoveredId)) return null
+        const src = territories.find((t) => t.id === selectedTerritoryId)
+        const dst = territories.find((t) => t.id === hoveredId)
+        if (!src || !dst) return null
+        const srcArmies = src.armies ?? 0
+        const dstArmies = dst.armies ?? 0
+        if (srcArmies <= 1) return null
+        const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
+        const def = Math.min(2, Math.max(1, dstArmies)) as 1 | 2
+        const odds = computeRollOdds(att, def)
+        const winChance =
+          (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
+        const left = (dst.x / mapData.width) * 100
+        const top = (dst.y / mapData.height) * 100
+        return { att, def, odds, winChance, left, top }
+      })()
 
   // Arrow-key cycling through owned territories; Esc clears selection
   const viewerId = useAppSelector((s) => s.auth.user?.id)
@@ -240,7 +246,9 @@ export default function UnifiedMapDisplay({
 
   const handleHoverChange = (territoryId: string | null) => {
     setHoveredId(territoryId)
-    dispatch(setHoveredTarget(territoryId))
+    if (!previewMode) {
+      dispatch(setHoveredTarget(territoryId))
+    }
     onTerritoryHover?.(territoryId)
   }
 
