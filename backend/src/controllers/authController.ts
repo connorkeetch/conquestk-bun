@@ -495,9 +495,19 @@ export class AuthController {
         })
       }
 
-      // Check if token has expired (24 hours)
-      // Since verification_sent_at column doesn't exist, use current time as fallback
-      const sentAt = Date.now() // user.verification_sent_at not available
+      const verificationLog = await this.userService.getEmailVerificationLogByToken(token)
+
+      if (!verificationLog) {
+        logger.warn('Verification token missing audit log entry', {
+          userId: user.id,
+        })
+        return res.status(404).json({
+          error: 'Invalid token',
+          message: 'This verification link is invalid or has already been used',
+        })
+      }
+
+      const sentAt = verificationLog.created_at.getTime()
       const tokenAge = Date.now() - sentAt
       const maxAge =
         parseInt(process.env.EMAIL_VERIFICATION_EXPIRE_HOURS || '24', 10) * 60 * 60 * 1000
