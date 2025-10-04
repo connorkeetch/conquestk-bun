@@ -94,6 +94,9 @@ export function GameActionBar({
     return ''
   }
 
+  const cannotEndReinforcement =
+    phase === 'reinforcement' && (remaining > 0 || mustCashIn)
+
   const odds = useMemo(() => {
     if (!game || !selected || !target) return null
     const src = game.board.find((t) => t.id === selected)
@@ -157,12 +160,16 @@ export function GameActionBar({
     <button
       type="button"
       onClick={() => void dispatch(endTurn())}
-      disabled={!isMyTurn}
+      disabled={!isMyTurn || cannotEndReinforcement}
       className="btn btn-primary"
       title={
-        isMyTurn
-          ? `End ${phase} phase${phase === 'reinforcement' ? ' → Attack' : phase === 'attack' ? ' → Fortify' : ' → End Turn'}`
-          : 'Wait for your turn'
+        !isMyTurn
+          ? 'Wait for your turn'
+          : cannotEndReinforcement
+            ? mustCashIn
+              ? 'Trade a valid treasure set before ending reinforcement'
+              : 'Deploy all reinforcements before ending the phase'
+            : `End ${phase} phase${phase === 'reinforcement' ? ' → Attack' : phase === 'attack' ? ' → Fortify' : ' → End Turn'}`
       }
     >
       End Phase

@@ -9,13 +9,18 @@ import { gameStateCache } from '../services/cacheService'
 import { GameService } from '../services/gameService'
 import type {
   AttackAction,
+  DeployAction,
+  EndTurnAction,
   GameAction,
   GamePlayer,
   GameState,
   GameTerritoryModifier,
   SerializedGameState,
   Territory,
+  TradeCardsAction,
+  TreasureConfig,
 } from '../types/game'
+import { ensureTreasureState } from '../game/hiddenTreasures'
 
 const createBaseGameState = (override?: Partial<GameState>): GameState => {
   const players: GamePlayer[] = [
@@ -307,6 +312,146 @@ describe('GameEngine', () => {
     }
 
     expect(engine.validateAction(gameState, action)).toBe(false)
+  })
+
+  it('adds treasure payouts to available reinforcements when cashing a valid set', async () => {
+    const treasureConfig: TreasureConfig = {
+      enabled: true,
+      payoutMode: 'fixed',
+      fixedValue: 5,
+      handCap: 5,
+      diamondsPercent: 0,
+      diamondSetBonus: 0,
+    }
+
+    const gameState = createBaseGameState({
+      phase: 'reinforcement',
+      gameConfig: {
+        ...createBaseGameState().gameConfig,
+        treasureConfig,
+      },
+    })
+    const current = gameState.players[0]
+    current.armies = 3
+    current.treasures = ['bronze', 'bronze', 'bronze']
+    gameState.treasureState = ensureTreasureState()
+
+    const action: TradeCardsAction = {
+      type: 'trade_cards',
+      roomId: gameState.roomId,
+      playerId: current.id,
+      payload: { treasureSet: [0, 1, 2] },
+    }
+
+    const result = await engine.processAction(gameState, action)
+    const updatedPlayer = result.gameState.players[0]
+
+    expect(updatedPlayer.armies).toBe(8)
+    expect(updatedPlayer.treasures).toHaveLength(0)
+    expect(result.gameState.mustCashInTreasures).toBe(false)
+  })
+
+  it('prevents ending reinforcement while armies remain to deploy', () => {
+    const gameState = createBaseGameState({ phase: 'reinforcement' })
+    const current = gameState.players[0]
+    current.armies = 4
+    gameState.mustCashInTreasures = false
+
+    const endTurn: EndTurnAction = {
+      type: 'end_turn',
+      roomId: gameState.roomId,
+      playerId: current.id,
+    }
+
+    expect(engine.validateAction(gameState, endTurn)).toBe(false)
+
+    current.armies = 0
+    expect(engine.validateAction(gameState, endTurn)).toBe(true)
+  })
+
+  it('only forces a treasure cash-in when a valid set is present', () => {
+    const treasureConfig: TreasureConfig = {
+      enabled: true,
+      payoutMode: 'fixed',
+      fixedValue: 4,
+      handCap: 3,
+      diamondsPercent: 0,
+      diamondSetBonus: 0,
+    }
+
+    const gameState = createBaseGameState({
+      phase: 'reinforcement',
+      gameConfig: {
+        ...createBaseGameState().gameConfig,
+        treasureConfig,
+      },
+    })
+    const current = gameState.players[0]
+    current.treasures = ['bronze', 'bronze', 'silver']
+
+    const updateRequirement = (
+      engine as unknown as {
+        updateCurrentPlayerCashRequirement: (state: GameState, config: TreasureConfig) => void
+      }
+    ).updateCurrentPlayerCashRequirement
+
+    updateRequirement.call(engine, gameState, treasureConfig)
+    expect(current.mustCashInTreasures).toBe(false)
+    expect(gameState.mustCashInTreasures).toBe(false)
+
+    current.treasures = ['bronze', 'bronze', 'bronze']
+    updateRequirement.call(engine, gameState, treasureConfig)
+    expect(current.mustCashInTreasures).toBe(true)
+    expect(gameState.mustCashInTreasures).toBe(true)
+  })
+
+  it('returns to attack after placing treasure armies when cashing in mid-attack', async () => {
+    const treasureConfig: TreasureConfig = {
+      enabled: true,
+      payoutMode: 'fixed',
+      fixedValue: 4,
+      handCap: 5,
+      diamondsPercent: 0,
+      diamondSetBonus: 0,
+    }
+
+    const gameState = createBaseGameState({
+      phase: 'attack',
+      hasAttackedThisTurn: true,
+      gameConfig: {
+        ...createBaseGameState().gameConfig,
+        treasureConfig,
+      },
+    })
+    const current = gameState.players[0]
+    current.armies = 0
+    current.treasures = ['bronze', 'bronze', 'bronze']
+    gameState.treasureState = ensureTreasureState()
+
+    const trade: TradeCardsAction = {
+      type: 'trade_cards',
+      roomId: gameState.roomId,
+      playerId: current.id,
+      payload: { treasureSet: [0, 1, 2] },
+    }
+
+    const traded = await engine.processAction(gameState, trade)
+    const afterTrade = traded.gameState
+    const updatedPlayer = afterTrade.players[0]
+
+    expect(afterTrade.phase).toBe('reinforcement')
+    expect(updatedPlayer.armies).toBe(4)
+
+    const deploy: DeployAction = {
+      type: 'deploy',
+      roomId: afterTrade.roomId,
+      playerId: updatedPlayer.id,
+      payload: { territoryId: 'territory-a', armies: 4 },
+    }
+
+    const deployed = await engine.processAction(afterTrade, deploy)
+    expect(deployed.gameState.phase).toBe('attack')
+    expect(deployed.gameState.hasAttackedThisTurn).toBe(true)
   })
 })
 
