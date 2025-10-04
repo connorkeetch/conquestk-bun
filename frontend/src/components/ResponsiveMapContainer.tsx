@@ -73,6 +73,17 @@ export default function ResponsiveMapContainer({
     setZoom(1)
   }, [])
 
+  const setZoomClamped = useCallback(
+    (next: number | ((prev: number) => number)) => {
+      if (typeof next === 'function') {
+        setZoom((prev) => clampZoom((next as (p: number) => number)(prev)))
+      } else {
+        setZoom(clampZoom(next))
+      }
+    },
+    [clampZoom],
+  )
+
   const controls = useMemo(
     () => ({
       zoom,
@@ -81,8 +92,9 @@ export default function ResponsiveMapContainer({
       zoomIn,
       zoomOut,
       resetZoom,
+      setZoom: setZoomClamped,
     }),
-    [zoom, baseScale, zoomIn, zoomOut, resetZoom],
+    [zoom, baseScale, zoomIn, zoomOut, resetZoom, setZoomClamped],
   )
 
   useEffect(() => {
@@ -153,17 +165,6 @@ export default function ResponsiveMapContainer({
     const height = Math.max(1, Math.round(mapHeight * baseScale * zoom))
     return { width, height }
   }, [mapWidth, mapHeight, baseScale, zoom])
-
-  const setZoomClamped = useCallback(
-    (next: number | ((prev: number) => number)) => {
-      if (typeof next === 'function') {
-        setZoom((prev) => clampZoom((next as (p: number) => number)(prev)))
-      } else {
-        setZoom(clampZoom(next))
-      }
-    },
-    [clampZoom],
-  )
 
   const viewportContext = useMemo<MapViewportContextValue>(
     () => ({
