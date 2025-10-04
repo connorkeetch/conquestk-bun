@@ -1,4 +1,5 @@
 import type React from 'react'
+import { memo, useMemo } from 'react'
 import { getColorValue } from '@/constants/colors'
 
 interface Player {
@@ -19,24 +20,26 @@ interface PlayersPanelProps {
   currentPlayer: string
 }
 
-export const PlayersPanel: React.FC<PlayersPanelProps> = ({
-  players,
-  territories,
-  currentPlayer,
-}) => {
-  return (
-    <div className="p-4 border-b border-gray-200">
-      <h3 className="text-lg font-semibold mb-3">Players</h3>
-      <div className="space-y-2">
-        {players.map((player) => {
-          const territoriesOwned = Object.values(territories).filter(
-            (t) => t.owner === player.id,
-          ).length
-          const totalArmies = Object.values(territories)
-            .filter((t) => t.owner === player.id)
-            .reduce((sum, t) => sum + (t.armies || 0), 0)
-
-          return (
+export const PlayersPanel: React.FC<PlayersPanelProps> = memo(
+  ({ players, territories, currentPlayer }) => {
+    // Memoize expensive calculations
+    const playerStats = useMemo(() => {
+      return players.map((player) => {
+        const ownedTerritories = Object.values(territories).filter((t) => t.owner === player.id)
+        return {
+          id: player.id,
+          username: player.username,
+          color: player.color,
+          territoriesOwned: ownedTerritories.length,
+          totalArmies: ownedTerritories.reduce((sum, t) => sum + (t.armies || 0), 0),
+        }
+      })
+    }, [players, territories])
+    return (
+      <div className="p-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold mb-3">Players</h3>
+        <div className="space-y-2">
+          {playerStats.map((player) => (
             <div
               key={player.id}
               className={`flex items-center justify-between p-2 rounded ${
@@ -51,14 +54,22 @@ export const PlayersPanel: React.FC<PlayersPanelProps> = ({
                 <span className="font-medium">{player.username}</span>
               </div>
               <div className="text-sm text-gray-600">
-                <span>{territoriesOwned} territories</span>
+                <span>{player.territoriesOwned} territories</span>
                 <br />
-                <span>{totalArmies} armies</span>
+                <span>{player.totalArmies} armies</span>
               </div>
             </div>
-          )
-        })}
+          ))}
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison for better memoization
+    return (
+      prevProps.currentPlayer === nextProps.currentPlayer &&
+      prevProps.players === nextProps.players &&
+      prevProps.territories === nextProps.territories
+    )
+  },
+)

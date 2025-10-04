@@ -184,6 +184,38 @@ export default function GameRoom() {
     }
   }, [currentGame?.phase])
 
+  // Auto-disable background animations during active gameplay for better performance
+  // Respects user's performance mode preference
+  const settings = useAppSelector((state) => state.settings)
+  const userBackgroundMotionRef = useRef<boolean | null>(null)
+
+  useEffect(() => {
+    // Skip if performance mode is already enabled (user wants it off permanently)
+    if (settings.performance?.mode) {
+      return
+    }
+
+    const isGameActive =
+      currentGame && currentGame.phase !== 'finished' && currentGame.phase !== null
+
+    // Game just started - save user preference and disable animations
+    if (isGameActive && userBackgroundMotionRef.current === null) {
+      const {
+        getBackgroundMotionPreference,
+        setBackgroundMotionPreference,
+      } = require('../config/themes.config')
+      userBackgroundMotionRef.current = getBackgroundMotionPreference()
+      setBackgroundMotionPreference(false, false) // don't persist
+    }
+
+    // Game ended - restore user preference
+    if (!isGameActive && userBackgroundMotionRef.current !== null) {
+      const { setBackgroundMotionPreference } = require('../config/themes.config')
+      setBackgroundMotionPreference(userBackgroundMotionRef.current, false)
+      userBackgroundMotionRef.current = null
+    }
+  }, [currentGame?.phase, settings.performance?.mode, currentGame])
+
   const lobbyFull = Boolean(
     currentRoom && (currentRoom.players?.length ?? 0) >= currentRoom.maxPlayers,
   )

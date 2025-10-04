@@ -57,7 +57,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
   const [_hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
-  const [showMinimap, setShowMinimap] = useState(true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       const stored = localStorage.getItem('ui.mapSidebarCollapsed')
@@ -67,9 +66,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     }
   })
   const [zoomControls, setZoomControls] = useState<ZoomControls | null>(null)
-  const toggleMinimap = useCallback(() => {
-    setShowMinimap((prev) => !prev)
-  }, [])
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
@@ -371,17 +367,12 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           {!lobbyMode && (
             <MapHeaderBar
               zoom={zoomControls ?? undefined}
-              showMinimap={showMinimap}
-              onToggleMinimap={toggleMinimap}
               settingsContent={
                 <MapToolbar
                   layout="vertical"
                   zoom={zoomControls ?? undefined}
                   showOverlayToggles={false}
                   showZoomPresets={false}
-                  showMinimapToggle={true}
-                  showMinimap={showMinimap}
-                  onToggleMinimap={toggleMinimap}
                 />
               }
             />
@@ -398,7 +389,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
               territoryModifierMap={territoryModifierMap}
               onTerritoryClick={handleTerritoryClick}
               onTerritoryHover={handleTerritoryHover}
-              showMinimap={showMinimap}
               onZoomControlsReady={setZoomControls}
             />
             {/* In-board action bar overlay (always visible above map) */}
@@ -413,8 +403,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         </div>
         {!lobbyMode && (
           <MapSidebar
-            showMinimap={showMinimap}
-            onToggleMinimap={toggleMinimap}
             zoom={zoomControls ?? undefined}
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={() => {
