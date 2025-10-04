@@ -857,7 +857,7 @@ export class GameLifecycleService {
           JSON.stringify(serializable),
           gameState.turn,
           gameState.currentPlayer,
-          gameState.phase,
+          gameState.phase ?? 'deployment',
         ],
       )
     } catch (error) {

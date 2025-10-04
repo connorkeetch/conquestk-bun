@@ -39,6 +39,7 @@ import {
   setColorTheme,
   setDirectMessages,
   setNotificationPref,
+  setPerformanceMode,
   setPreferredColor,
   setShowOnlineStatus,
 } from '../store/settingsSlice'
@@ -1625,6 +1626,20 @@ export default function Settings() {
           onChange: (value) => {
             if (typeof value !== 'boolean') return
             dispatch(require('../store/settingsSlice').setColorblindMode(value))
+          },
+        })
+
+        items.push({
+          id: 'performance-mode',
+          label: 'Performance Mode',
+          description:
+            'Reduce visual effects during gameplay for smoother frame rates on lower-end devices. Disables background animations and particle effects.',
+          type: 'toggle',
+          isWorking: true,
+          defaultValue: Boolean(settings.performance?.mode),
+          onChange: (value) => {
+            if (typeof value !== 'boolean') return
+            dispatch(setPerformanceMode(value))
           },
         })
 

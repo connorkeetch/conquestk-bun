@@ -165,7 +165,13 @@ export class GameService {
               game_phase = EXCLUDED.game_phase,
               last_activity = NOW()
         `,
-        [roomId, JSON.stringify(state), state.turn ?? 1, state.currentPlayer ?? null, state.phase],
+        [
+          roomId,
+          JSON.stringify(state),
+          state.turn ?? 1,
+          state.currentPlayer ?? null,
+          state.phase ?? 'deployment',
+        ],
       )
     } catch (error) {
       logger.error('Failed to persist game state snapshot to database', {

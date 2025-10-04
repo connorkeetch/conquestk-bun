@@ -60,6 +60,11 @@ interface SettingsState {
   game: {
     preferredColor: PlayerColor
   }
+
+  // Performance Settings
+  performance: {
+    mode: boolean // true = performance mode (reduced visuals), false = quality mode
+  }
   // Chat Settings
   chat?: {
     profanityFilter: boolean
@@ -103,6 +108,9 @@ const defaultSettings: SettingsState = {
     gameEnded: { browser: true, email: false },
     directMessages: { browser: true, email: false },
   },
+  performance: {
+    mode: false, // Default to quality mode
+  },
 }
 
 const createSettingsState = (theme: ThemeId = DEFAULT_THEME_ID): SettingsState => ({
@@ -112,6 +120,7 @@ const createSettingsState = (theme: ThemeId = DEFAULT_THEME_ID): SettingsState =
   game: { ...defaultSettings.game },
   privacy: { ...defaultSettings.privacy },
   notifications: { ...defaultSettings.notifications },
+  performance: { ...defaultSettings.performance },
 })
 
 // Load settings from localStorage
@@ -132,6 +141,7 @@ const loadSettings = (): SettingsState => {
         game: { ...defaultSettings.game, ...parsed.game },
         privacy: { ...defaultSettings.privacy, ...parsed.privacy },
         notifications: { ...defaultSettings.notifications, ...parsed.notifications },
+        performance: { ...defaultSettings.performance, ...parsed.performance },
       }
 
       const storedColorThemeRaw = localStorage.getItem('colorTheme')
@@ -435,6 +445,17 @@ const settingsSlice = createSlice({
         }
       }
     },
+
+    // Performance settings
+    setPerformanceMode: (state, action: PayloadAction<boolean>) => {
+      state.performance.mode = Boolean(action.payload)
+      saveSettings(state)
+      // Apply background motion preference immediately
+      if (typeof document !== 'undefined') {
+        const { setBackgroundMotionPreference } = require('../config/themes.config')
+        setBackgroundMotionPreference(!action.payload, true)
+      }
+    },
   },
 })
 
@@ -449,6 +470,7 @@ export const {
   setNotificationPref,
   setColorTheme,
   setColorblindMode,
+  setPerformanceMode,
   clearCache,
   resetSettings,
   loadServerSettings,

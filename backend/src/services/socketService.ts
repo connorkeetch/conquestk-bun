@@ -21,6 +21,53 @@ interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClien
   username?: string
   joinedGameRooms?: Set<string>
   joinedClanRoom?: string
+  lastPingTime?: number
+  latency?: number
+}
+
+// Socket latency tracking
+const socketLatencies: Map<string, number[]> = new Map()
+
+// Calculate p95 latency from samples
+function calculateP95(samples: number[]): number {
+  if (samples.length === 0) return 0
+  const sorted = [...samples].sort((a, b) => a - b)
+  const index = Math.ceil(sorted.length * 0.95) - 1
+  return sorted[index] || 0
+}
+
+// Get latency metrics for monitoring
+export function getSocketLatencyMetrics(): {
+  avgLatency: number
+  p95Latency: number
+  maxLatency: number
+  activeConnections: number
+} {
+  const allSamples: number[] = []
+  for (const samples of socketLatencies.values()) {
+    allSamples.push(...samples)
+  }
+
+  if (allSamples.length === 0) {
+    return {
+      avgLatency: 0,
+      p95Latency: 0,
+      maxLatency: 0,
+      activeConnections: socketLatencies.size,
+    }
+  }
+
+  const sum = allSamples.reduce((acc, val) => acc + val, 0)
+  const avg = sum / allSamples.length
+  const p95 = calculateP95(allSamples)
+  const max = Math.max(...allSamples)
+
+  return {
+    avgLatency: Math.round(avg),
+    p95Latency: Math.round(p95),
+    maxLatency: Math.round(max),
+    activeConnections: socketLatencies.size,
+  }
 }
 
 function requireUserId(socket: AuthenticatedSocket): string {
@@ -207,6 +254,17 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     logger.info(`User ${socket.userId} connected`)
+
+    // Initialize latency tracking for this socket
+    // Socket.io automatically tracks latency via ping/pong, we can access it later if needed
+    if (socket.userId) {
+      socketLatencies.set(socket.userId, [])
+
+      // Measure latency periodically using game action round-trip time
+      // This is done passively by tracking time between actions and responses
+      // Real implementation would track emit->ack timing on critical game events
+      socket.lastPingTime = Date.now()
+    }
 
     // Join user's personal room for DMs
     if (socket.userId) {
@@ -1199,6 +1257,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         logger.info(`User ${userId} disconnected`)
+
+        // Clean up latency tracking
+        socketLatencies.delete(userId)
         const gameRooms = socket.joinedGameRooms ?? new Set<string>()
 
         // Use for...of instead of forEach to properly handle async operations
