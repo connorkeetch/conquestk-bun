@@ -1427,7 +1427,10 @@ export default function GameRoom() {
               players={currentGame.players || []}
               currentPlayerId={currentGame.currentPlayer}
               territories={Object.fromEntries(
-                (currentGame.board || []).map((t) => [t.id, { owner: t.ownerId }]),
+                (currentGame.board || []).map((t) => [
+                  t.id,
+                  { owner: t.ownerId, armies: t.armies },
+                ]),
               )}
             />
           ) : (

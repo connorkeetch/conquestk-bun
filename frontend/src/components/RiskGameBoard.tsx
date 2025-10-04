@@ -66,6 +66,8 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     }
   })
   const [zoomControls, setZoomControls] = useState<ZoomControls | null>(null)
+  // Local minimap flag for header/sidebar toggles (UI only)
+  const [showMinimap, setShowMinimap] = useState(false)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
@@ -364,19 +366,20 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 min-w-0 flex flex-col">
-          {!lobbyMode && (
-            <MapHeaderBar
-              zoom={zoomControls ?? undefined}
-              settingsContent={
-                <MapToolbar
-                  layout="vertical"
-                  zoom={zoomControls ?? undefined}
-                  showOverlayToggles={false}
-                  showZoomPresets={false}
-                />
-              }
-            />
-          )}
+          {/* Show header zoom controls in both lobby and active game */}
+          <MapHeaderBar
+            zoom={zoomControls ?? undefined}
+            showMinimap={showMinimap}
+            onToggleMinimap={() => setShowMinimap((v) => !v)}
+            settingsContent={
+              <MapToolbar
+                layout="vertical"
+                zoom={zoomControls ?? undefined}
+                showOverlayToggles={false}
+                showZoomPresets={true}
+              />
+            }
+          />
           <div className="relative flex-1 min-h-0">
             <RiskGameMap
               mapId={mapId}
@@ -403,6 +406,8 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         </div>
         {!lobbyMode && (
           <MapSidebar
+            showMinimap={showMinimap}
+            onToggleMinimap={() => setShowMinimap((v) => !v)}
             zoom={zoomControls ?? undefined}
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={() => {
