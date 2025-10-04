@@ -207,6 +207,7 @@ export interface BattleResult {
     armies: number
     ownerId: string
   }
+  pendingConquestFor?: string | null
   gameEnded?: boolean
   winner?: GamePlayer | null
   eliminatedPlayers?: string[]

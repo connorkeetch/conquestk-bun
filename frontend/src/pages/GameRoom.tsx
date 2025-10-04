@@ -847,7 +847,13 @@ export default function GameRoom() {
   const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
 
   useEffect(() => {
-    if (!battleResult || !battleResult.conquered || !currentGame || !user) {
+    if (
+      !battleResult ||
+      !battleResult.conquered ||
+      !currentGame ||
+      !user ||
+      battleResult.pendingConquestFor !== user.id
+    ) {
       return
     }
 

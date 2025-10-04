@@ -1098,6 +1098,7 @@ export class GameEngine {
         armies: toTerritory.armies,
         ownerId: toTerritory.ownerId ?? action.playerId,
       },
+      pendingConquestFor: conquered ? action.playerId : null,
     }
 
     // Store the battle result in game state
@@ -1121,6 +1122,81 @@ export class GameEngine {
     }
 
     return result
+  }
+
+  transferConquestArmies(
+    gameState: GameState,
+    playerId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    armies: number,
+  ): GameState {
+    if (gameState.phase !== 'attack') {
+      throw new Error('Can only transfer armies immediately after an attack')
+    }
+
+    const lastBattle = gameState.lastBattleResult
+    if (!lastBattle || !lastBattle.conquered) {
+      throw new Error('No conquest available for transfer')
+    }
+
+    if (lastBattle.pendingConquestFor === null) {
+      throw new Error('Conquest transfer already completed')
+    }
+
+    if (lastBattle.pendingConquestFor && lastBattle.pendingConquestFor !== playerId) {
+      throw new Error('Only the conquering player can transfer armies')
+    }
+
+    const expectedFrom = lastBattle.fromTerritory.id
+    const expectedTo = lastBattle.toTerritory.id
+
+    if (expectedFrom !== fromTerritoryId || expectedTo !== toTerritoryId) {
+      throw new Error('Transfer must match the most recent conquest')
+    }
+
+    const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
+    const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
+
+    if (!fromTerritory || !toTerritory) {
+      throw new Error('Territory not found for conquest transfer')
+    }
+
+    if (fromTerritory.ownerId !== playerId || toTerritory.ownerId !== playerId) {
+      throw new Error('You must control both territories to transfer armies')
+    }
+
+    if (!fromTerritory.adjacentTerritories.includes(toTerritory.id)) {
+      throw new Error('Conquest transfer requires adjacent territories')
+    }
+
+    if (!Number.isInteger(armies) || armies < 0 || armies >= fromTerritory.armies) {
+      throw new Error('Invalid number of armies to transfer')
+    }
+
+    fromTerritory.armies -= armies
+    toTerritory.armies += armies
+
+    const resolvedFrom = {
+      id: fromTerritory.id,
+      name: fromTerritory.name,
+      armies: fromTerritory.armies,
+    }
+    const resolvedTo = {
+      id: toTerritory.id,
+      name: toTerritory.name,
+      armies: toTerritory.armies,
+      ownerId: toTerritory.ownerId ?? playerId,
+    }
+
+    gameState.lastBattleResult = {
+      ...lastBattle,
+      fromTerritory: resolvedFrom,
+      toTerritory: resolvedTo,
+      pendingConquestFor: null,
+    }
+
+    return gameState
   }
 
   private handleFortify(gameState: GameState, action: FortifyAction): GameState {

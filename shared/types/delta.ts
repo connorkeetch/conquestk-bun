@@ -58,6 +58,7 @@ export interface BattleResultDelta extends DeltaBase {
       ownerId?: string | null
     }
     conquered: boolean
+    pendingConquestFor?: string | null
     attackerDice: number[]
     defenderDice: number[]
     attackerLosses: number
