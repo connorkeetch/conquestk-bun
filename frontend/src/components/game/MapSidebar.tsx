@@ -3,8 +3,6 @@ import type { ZoomControls } from '@/types/zoom'
 import { MapToolbar } from './MapToolbar'
 
 interface MapSidebarProps {
-  showMinimap: boolean
-  onToggleMinimap: () => void
   zoom?: ZoomControls
   isCollapsed?: boolean
   onToggleCollapse?: () => void
@@ -13,8 +11,6 @@ interface MapSidebarProps {
 }
 
 export function MapSidebar({
-  showMinimap,
-  onToggleMinimap,
   zoom,
   isCollapsed = false,
   onToggleCollapse,
@@ -45,14 +41,7 @@ export function MapSidebar({
 
       {!isCollapsed && (
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-          <MapToolbar
-            layout="vertical"
-            zoom={zoom}
-            showMinimapToggle={true}
-            showZoomPresets={true}
-            showMinimap={showMinimap}
-            onToggleMinimap={onToggleMinimap}
-          />
+          <MapToolbar layout="vertical" zoom={zoom} showZoomPresets={true} />
           {children}
         </div>
       )}

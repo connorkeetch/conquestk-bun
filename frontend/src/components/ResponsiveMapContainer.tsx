@@ -8,7 +8,6 @@ interface ResponsiveMapContainerProps {
   mapWidth: number
   mapHeight: number
   className?: string
-  showMinimap?: boolean
   backgroundImageUrl?: string
   focus?: { x: number; y: number } | null
   onSwipeLeft?: () => void
@@ -36,8 +35,7 @@ export default function ResponsiveMapContainer({
   mapWidth,
   mapHeight,
   className = '',
-  showMinimap = true,
-  backgroundImageUrl,
+  backgroundImageUrl: _backgroundImageUrl,
   focus = null,
   onSwipeLeft,
   onSwipeRight,
@@ -372,36 +370,7 @@ export default function ResponsiveMapContainer({
     }
   }, [onSwipeLeft, onSwipeRight, zoom, clampZoom])
 
-  // Minimap computations
-  const minimap = useMemo(() => {
-    const mmWidth = 140 // px
-    const ratio = mapHeight > 0 ? mapWidth / mapHeight : 1
-    const mmHeight = Math.max(60, Math.round(mmWidth / Math.max(0.1, ratio)))
-    const el = containerRef.current
-    const clientW = el?.clientWidth ?? 1
-    const clientH = el?.clientHeight ?? 1
-    const scrollL = el?.scrollLeft ?? 0
-    const scrollT = el?.scrollTop ?? 0
-    const viewW = (clientW / Math.max(1, display.width)) * mmWidth
-    const viewH = (clientH / Math.max(1, display.height)) * mmHeight
-    const viewX = (scrollL / Math.max(1, display.width)) * mmWidth
-    const viewY = (scrollT / Math.max(1, display.height)) * mmHeight
-    return { mmWidth, mmHeight, viewW, viewH, viewX, viewY }
-  }, [display.width, display.height, mapWidth, mapHeight])
-
-  const handleMinimapClick = (e: React.MouseEvent<HTMLElement>) => {
-    const el = containerRef.current
-    if (!el) return
-    // Use currentTarget to get the button's rect, not an inner child
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const relX = e.clientX - rect.left
-    const relY = e.clientY - rect.top
-    // Center viewport around clicked point
-    const targetX = (relX / minimap.mmWidth) * display.width - el.clientWidth / 2
-    const targetY = (relY / minimap.mmHeight) * display.height - el.clientHeight / 2
-    el.scrollLeft = Math.max(0, Math.min(display.width - el.clientWidth, targetX))
-    el.scrollTop = Math.max(0, Math.min(display.height - el.clientHeight, targetY))
-  }
+  // Minimap removed
 
   // Focus pan when focus coordinates change (but not on display dimension changes)
   const prevFocusRef = useRef<{ x: number; y: number } | null>(null)
@@ -470,45 +439,7 @@ export default function ResponsiveMapContainer({
           </div>
         )}
 
-        {/* Minimap */}
-        {showMinimap && (
-          <button
-            type="button"
-            className="absolute bottom-2 left-2 rounded border border-border overflow-hidden bg-surface-2/80 backdrop-blur"
-            style={{ width: minimap.mmWidth, height: minimap.mmHeight }}
-            onClick={handleMinimapClick}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                handleMinimapClick(e as unknown as React.MouseEvent<HTMLDivElement>)
-              }
-            }}
-          >
-            <div
-              className="w-full h-full"
-              style={
-                backgroundImageUrl
-                  ? {
-                      backgroundImage: `url(${backgroundImageUrl})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      backgroundRepeat: 'no-repeat',
-                    }
-                  : { background: 'linear-gradient(45deg, #1f2937, #374151)' }
-              }
-            />
-            <div
-              className="absolute border-2 border-primary/90 bg-black/10 pointer-events-none"
-              style={{
-                width: Math.max(8, minimap.viewW),
-                height: Math.max(8, minimap.viewH),
-                left: minimap.viewX,
-                top: minimap.viewY,
-              }}
-            />
-          </button>
-        )}
+        {/* Minimap removed */}
       </MapViewportContext.Provider>
     </div>
   )

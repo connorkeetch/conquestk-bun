@@ -43,6 +43,8 @@ export interface GameRoom {
   readyCheckStartedAt?: Date | null
   // Canonical time bank remaining (seconds) for current turn user
   timeBankSecondsRemaining?: number | null
+  // Configured time bank capacity for a turn (seconds)
+  timeBankSeconds?: number
   // AFK grace window
   graceWindowSeconds?: number | null
   graceActorUserId?: string | null

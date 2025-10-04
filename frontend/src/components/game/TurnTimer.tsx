@@ -4,9 +4,10 @@ import audioService from '@/services/audioService'
 
 type Props = {
   className?: string
+  showBank?: boolean
 }
 
-export function TurnTimer({ className = '' }: Props) {
+export function TurnTimer({ className = '', showBank = true }: Props) {
   const room = useAppSelector((s) => s.room.currentRoom)
   const game = useAppSelector((s) => s.game.currentGame)
   const userId = useAppSelector((s) => s.auth.user?.id)
@@ -85,7 +86,7 @@ export function TurnTimer({ className = '' }: Props) {
     <div className={`flex items-center gap-2 min-w-[80px] ${className}`} title="Turn timer">
       {/* Display only time text (no progress bar) */}
       <div className={`text-xs tabular-nums ${color}`}>{formatWorded(totalSeconds)}</div>
-      {typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
+      {showBank && typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
         <span className="chip text-[10px]" title="Time bank remaining">
           +{formatWorded(effectiveBankSeconds)}
         </span>

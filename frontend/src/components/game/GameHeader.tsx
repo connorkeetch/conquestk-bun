@@ -19,7 +19,6 @@ interface GameHeaderProps {
 export const GameHeader: React.FC<GameHeaderProps> = memo(
   ({ currentPhase }) => {
     const dispatch = useAppDispatch()
-    const connection = useAppSelector((s) => s.uiRoom.connectionStatus)
     const game = useAppSelector((s) => s.game.currentGame)
     const userId = useAppSelector((s) => s.auth.user?.id)
     const [profileUsername, setProfileUsername] = useState<string | null>(null)
@@ -45,27 +44,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]">
               {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
             </span>
-            <TurnTimer />
-            <span
-              className="inline-flex items-center gap-1 text-xs"
-              title={
-                connection === 'connected'
-                  ? 'Connected'
-                  : connection === 'connecting'
-                    ? 'Reconnecting'
-                    : 'Disconnected'
-              }
-            >
-              <span
-                className={`inline-block w-2 h-2 rounded-full ${
-                  connection === 'connected'
-                    ? 'bg-green-500'
-                    : connection === 'connecting'
-                      ? 'bg-yellow-400'
-                      : 'bg-red-500'
-                }`}
-              />
-            </span>
+            <TurnTimer showBank={false} />
           </div>
           {/* Current turn label removed; show End Phase button when it's my turn */}
           {isMyTurn && (
