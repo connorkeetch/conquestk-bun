@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-export type DiscreteScale = 0.8 | 1 | 1.2
+export type DiscreteScale = 0.6 | 0.8 | 1 | 1.2 | 1.4 | 1.6
 
 export interface ViewportSize {
   w: number
@@ -20,7 +20,7 @@ export interface MapViewState {
   image: ImageSize
 }
 
-export const allowedScales: DiscreteScale[] = [0.8, 1, 1.2]
+export const allowedScales: DiscreteScale[] = [0.6, 0.8, 1, 1.2, 1.4, 1.6]
 
 export function makeTransform(tx: number, ty: number, scale: number) {
   return `translate(${Math.round(tx)}px, ${Math.round(ty)}px) scale(${scale})`

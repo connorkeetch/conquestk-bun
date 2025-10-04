@@ -6,7 +6,6 @@ import type { FullMapData } from '@/services/mapService'
 import { mapService } from '@/services/mapService'
 import { socketService } from '@/services/socketService'
 import type { GamePlayer, PlayerColor, Territory } from '@/types/game'
-import type { ZoomControls } from '@/types/zoom'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
 import {
@@ -21,7 +20,7 @@ import { GameActionBar } from './game/GameActionBar'
 // import { GamePhaseControls } from './GamePhaseControls'
 import { GameHeader } from './game/GameHeader'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
-import { MapHeaderBar } from './game/MapHeaderBar'
+// MapHeaderBar removed; floating zoom now in-map
 // MapSidebar removed; all zoom controls moved to header
 import { RiskGameMap } from './game/RiskGameMap'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
@@ -56,8 +55,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
   const [_hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)
-  // Sidebar removed; collapse state no longer used
-  const [zoomControls, _setZoomControls] = useState<ZoomControls | null>(null)
+  // Sidebar removed; zoom controls now float inside map
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
@@ -356,8 +354,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* Show header zoom controls in both lobby and active game */}
-          <MapHeaderBar zoom={zoomControls ?? undefined} />
           <div className="relative flex-1 min-h-0">
             <RiskGameMap
               mapId={mapId}
