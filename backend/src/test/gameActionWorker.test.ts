@@ -214,7 +214,7 @@ describe('GameActionWorker', () => {
         gameId: 'game-1',
         attackingTerritory: 'north',
         defendingTerritory: 'south',
-        attackingArmies: 3,
+        attackingArmies: 5,
         defendingArmies: 3,
         playerId: 'player-1',
       }),

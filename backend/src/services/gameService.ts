@@ -834,6 +834,51 @@ export class GameService {
     }
   }
 
+  async transferConquestArmies(
+    roomId: string,
+    userId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    armies: number,
+  ): Promise<{
+    gameState: SerializedGameState
+    fromArmies: number
+    toArmies: number
+  }> {
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
+    if (!cachedState) throw new Error('Game not found')
+
+    const gameState = this.hydrateGameState(cachedState, roomId)
+
+    if (gameState.currentPlayer !== userId) {
+      throw new Error('Not your turn')
+    }
+
+    if (gameState.phase !== 'attack') {
+      throw new Error('Can only transfer conquest armies during attack phase')
+    }
+
+    const updatedState = this.gameEngine.transferConquestArmies(
+      gameState,
+      userId,
+      fromTerritoryId,
+      toTerritoryId,
+      armies,
+    )
+
+    const serialized = this.serializeGameState(updatedState)
+    await this.persistGameStateSnapshot(roomId, serialized)
+
+    const fromTerritory = updatedState.board.find((territory) => territory.id === fromTerritoryId)
+    const toTerritory = updatedState.board.find((territory) => territory.id === toTerritoryId)
+
+    return {
+      gameState: serialized,
+      fromArmies: fromTerritory?.armies ?? 0,
+      toArmies: toTerritory?.armies ?? 0,
+    }
+  }
+
   async fortify(
     roomId: string,
     userId: string,
@@ -1406,6 +1451,7 @@ export class GameService {
           ? attackerId
           : (defenderTerritory.ownerId ?? defenderId ?? attackerId),
       },
+      pendingConquestFor: territoryConquered ? attackerId : null,
       gameEnded,
       winner,
       eliminatedPlayers: playersAfterBattle

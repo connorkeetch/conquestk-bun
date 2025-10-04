@@ -367,6 +367,7 @@ export interface BattleResult {
   conquered: boolean
   fromTerritory: string
   toTerritory: string
+  pendingConquestFor?: string | null
   capitalElimination?: {
     conqueror: string
     eliminated: string

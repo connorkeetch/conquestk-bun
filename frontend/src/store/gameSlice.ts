@@ -131,6 +131,8 @@ const adaptBattleResult = (
     attackerLosses: result.attackerLosses,
     defenderLosses: result.defenderLosses,
     conquered: result.conquered,
+    pendingConquestFor:
+      typeof result.pendingConquestFor === 'string' ? result.pendingConquestFor : null,
     fromTerritory: {
       id: result.fromTerritory.id,
       name: fromDetails?.name ?? result.fromTerritory.id,
