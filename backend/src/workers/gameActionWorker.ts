@@ -163,11 +163,7 @@ export class GameActionWorker {
               (territory) => territory.id === attackAction.payload?.toTerritoryId,
             )?.armies ?? 1
           const attackingArmiesAvailable = Math.max(0, attackingTerritoryState?.armies ?? 0)
-          const requestedArmies = Math.max(1, attackAction.payload?.armies ?? 1)
-          const attackingArmies =
-            attackingArmiesAvailable > 0
-              ? Math.max(1, Math.min(attackingArmiesAvailable, requestedArmies))
-              : requestedArmies
+          const attackingArmies = attackingArmiesAvailable
 
           const battleJob: BattleSimulationJob = {
             gameId,
