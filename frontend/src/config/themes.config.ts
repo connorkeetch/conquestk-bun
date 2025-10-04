@@ -171,6 +171,35 @@ export function getBackgroundMotionPreference(): boolean {
     // Ignore storage errors and fall back to default
   }
 
+  // Heuristics: disable motion by default when the user signals bandwidth or motion limits.
+  try {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return false
+    }
+  } catch {
+    // Ignore media query failures (older browsers / SSR hydration)
+  }
+
+  try {
+    const nav = navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string }
+      mozConnection?: { saveData?: boolean; effectiveType?: string }
+      webkitConnection?: { saveData?: boolean; effectiveType?: string }
+    }
+    const connection = nav.connection ?? nav.mozConnection ?? nav.webkitConnection
+    if (connection?.saveData) {
+      return false
+    }
+    if (typeof connection?.effectiveType === 'string') {
+      const type = connection.effectiveType.toLowerCase()
+      if (type === '2g' || type === 'slow-2g') {
+        return false
+      }
+    }
+  } catch {
+    // Ignore navigator.connection access issues (unsupported browser)
+  }
+
   return true
 }
 
