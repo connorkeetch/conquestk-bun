@@ -1305,7 +1305,7 @@ export default function GameRoom() {
         {/* Game Board and Action Bar Container */}
         <div className="flex flex-col gap-3">
           {/* Game Board - full width */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-[55vh] xl:min-h-[70vh]">
+          <div className="flex-1 min-w-0 flex flex-col">
             {currentGame ? (
               <RiskGameBoard
                 mapId={currentRoom?.mapId || 'world'}

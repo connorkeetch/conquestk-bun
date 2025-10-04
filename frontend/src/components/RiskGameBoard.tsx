@@ -23,7 +23,6 @@ import { GameHeader } from './game/GameHeader'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
 import { MapHeaderBar } from './game/MapHeaderBar'
 // MapSidebar removed; all zoom controls moved to header
-import { MapToolbar } from './game/MapToolbar'
 import { RiskGameMap } from './game/RiskGameMap'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
@@ -313,7 +312,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const _currentPlayerInfo = players.find((player) => player.id === currentPlayer)
 
   return (
-    <div className="flex flex-col w-full h-full min-h-[420px] sm:min-h-[520px] lg:min-h-[640px] xl:min-h-[720px] panel p-0 overflow-hidden">
+    <div className="flex flex-col w-full h-full panel p-0 overflow-hidden">
       {lobbyMode ? (
         <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
           <div className="flex items-center justify-between">
@@ -358,16 +357,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 min-w-0 flex flex-col">
           {/* Show header zoom controls in both lobby and active game */}
-          <MapHeaderBar
-            zoom={zoomControls ?? undefined}
-            settingsContent={
-              <MapToolbar
-                layout="vertical"
-                zoom={zoomControls ?? undefined}
-                showZoomPresets={true}
-              />
-            }
-          />
+          <MapHeaderBar zoom={zoomControls ?? undefined} />
           <div className="relative flex-1 min-h-0">
             <RiskGameMap
               mapId={mapId}

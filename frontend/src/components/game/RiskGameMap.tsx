@@ -47,7 +47,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   }, [selectedTargetTerritory, selectedTerritory, territories])
 
   return (
-    <div className="game-board flex-1 min-w-0 relative bg-surface-2 p-2 sm:p-4 min-h-[360px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[640px]">
+    <div className="game-board flex-1 min-w-0 relative bg-surface-2 p-1 sm:p-2 min-h-[520px] sm:min-h-[600px] lg:min-h-[680px] xl:min-h-[720px]">
       {/* Fill the available board area regardless of explicit parent height */}
       <div className="absolute inset-0">
         <UnifiedMapDisplay
