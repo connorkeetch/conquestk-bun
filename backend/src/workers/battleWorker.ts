@@ -122,7 +122,7 @@ export class BattleWorker {
 
       const preMoveArmies = Math.max(newAttackingArmies, 0)
       const movingArmies = battleResult.territoryConquered
-        ? Math.max(0, Math.min(attackingArmies, preMoveArmies - 1))
+        ? Math.max(0, Math.min(1, preMoveArmies - 1))
         : 0
       const finalAttackerArmies = battleResult.territoryConquered
         ? Math.max(preMoveArmies - movingArmies, 1)
@@ -227,6 +227,7 @@ export class BattleWorker {
           conquered: battleResult.territoryConquered,
           attackerDice: battleResult.dice.attacker,
           defenderDice: battleResult.dice.defender,
+          pendingConquestFor: battleResult.territoryConquered ? (attackerOwnerId ?? null) : null,
         },
         changes: deltas,
       }
