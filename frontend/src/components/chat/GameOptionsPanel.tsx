@@ -19,6 +19,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     if (!room) return [] as Array<{ k: string; v: string; help?: string }>
 
     const toTitle = (v?: string | null) => (v ? String(v).replace(/_/g, ' ') : '—')
+    const capFirst = (s: string) => (s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s)
     const fog = room.fogOfWar ?? 'off'
     const ranked = room.isRanked ?? false
     const privateRoom = room.isPrivate
@@ -26,10 +27,10 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     const teamMode = room.teamMode ?? 'none'
     const numberOfTeams = room.numberOfTeams ?? null
     const turnTimer = room.turnTimerSeconds ?? 0
+    const timeBank = (room as unknown as { timeBankSeconds?: number | null }).timeBankSeconds ?? 0
     const movementType = room.movementType ?? null
     const gameMode = room.gameMode ?? null
     const cardTradeMode = room.cardTradeMode ?? null
-    const bonusType = room.bonusType ?? null
 
     const playersLabel = 'Players'
 
@@ -52,8 +53,6 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       if (normalized === 'none' || normalized === 'disabled') return 'Disabled'
       return toTitle(cardTradeMode)
     })()
-
-    const bonusesValue = bonusType ? toTitle(bonusType) : 'Classic'
 
     const formatTimer = (seconds?: number | null) => {
       const s = seconds ?? 0
@@ -96,17 +95,27 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       return enabled ? 'Enabled' : 'Disabled'
     })()
 
+    const formatBank = (seconds?: number | null) => {
+      const s = typeof seconds === 'number' ? Math.max(0, Math.trunc(seconds)) : 0
+      if (s <= 0) return '0'
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      if (h > 0 && m === 0) return `${h}hrs`
+      if (h > 0 && m > 0) return `${h}h ${m}m`
+      return `${Math.ceil(s / 60)} mins`
+    }
+
     const items: Array<{ k: string; v: string; help?: string }> = [
-      ...(gameMode ? [{ k: 'Game Mode', v: toTitle(gameMode) }] : []),
+      ...(gameMode ? [{ k: 'Game Mode', v: capFirst(toTitle(gameMode)) }] : []),
       { k: 'Map', v: room.mapName || 'Unknown map' },
       { k: playersLabel, v: String(room.maxPlayers) },
       { k: 'Teams', v: teamsValue },
       { k: 'Fog of War', v: fogValue, help: getFogDescription(fog) },
       { k: 'Turn Timer', v: formatTimer(turnTimer) },
+      { k: 'Time Bank', v: formatBank(timeBank) },
       { k: 'Card Trades', v: cardTradesValue, help: getCardTradeDescription(cardTradeMode) },
       { k: 'Fortification', v: fortificationValue },
       { k: 'Treasures', v: treasureSummary, help: getTreasureDescription(room.treasureConfig) },
-      { k: 'Bonuses', v: bonusesValue },
       { k: 'Modifiers', v: modifiersValue },
       { k: 'Ranked', v: ranked ? 'Yes' : 'No' },
       { k: 'Private Room', v: privateRoom ? 'Yes' : 'No' },

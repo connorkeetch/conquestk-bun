@@ -8,10 +8,7 @@ type MapToolbarLayout = 'horizontal' | 'vertical'
 interface MapToolbarProps {
   layout: MapToolbarLayout
   zoom?: ZoomControls
-  showMinimapToggle?: boolean
   showZoomPresets?: boolean
-  showMinimap?: boolean
-  onToggleMinimap?: () => void
 }
 
 const zoomTargets = [
@@ -27,14 +24,7 @@ function buttonBaseClasses(layout: MapToolbarLayout) {
   return 'min-h-[44px] min-w-[44px] px-3 py-2 rounded text-sm transition-colors'
 }
 
-export function MapToolbar({
-  layout,
-  zoom,
-  showMinimapToggle = true,
-  showZoomPresets = true,
-  showMinimap = false,
-  onToggleMinimap,
-}: MapToolbarProps) {
+export function MapToolbar({ layout, zoom, showZoomPresets = true }: MapToolbarProps) {
   const dispatch = useAppDispatch()
   const mapView = useAppSelector((s) => s.mapView)
 
@@ -126,25 +116,7 @@ export function MapToolbar({
         </div>
       )}
 
-      {showMinimapToggle && onToggleMinimap && (
-        <button
-          type="button"
-          className={`${buttonBaseClasses(layout)} ${
-            showMinimap
-              ? 'bg-[color:var(--surface-3)] ring-1 ring-[color:var(--violet)]'
-              : 'bg-[color:var(--surface-2)] hover:bg-[color:var(--surface-3)]'
-          } flex items-center gap-2`}
-          onClick={() => {
-            onToggleMinimap()
-            handleHaptic()
-          }}
-        >
-          <span aria-hidden className="text-base">
-            🗺
-          </span>
-          <span className="whitespace-nowrap">Minimap</span>
-        </button>
-      )}
+      {/* Minimap removed */}
     </div>
   )
 }

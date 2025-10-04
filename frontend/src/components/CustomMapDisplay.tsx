@@ -32,7 +32,6 @@ interface CustomMapDisplayProps {
   focus?: { x: number; y: number } | null
   adjacency?: Record<string, string[]>
   showZoomControls?: boolean
-  showMinimap?: boolean
   onZoomControlsReady?: ZoomControlsReadyHandler
 }
 
@@ -50,7 +49,6 @@ export default function CustomMapDisplay({
   pendingAction,
   focus = null,
   showZoomControls = true,
-  showMinimap = true,
   adjacency: _adjacency,
   onZoomControlsReady,
 }: CustomMapDisplayProps) {
@@ -178,7 +176,6 @@ export default function CustomMapDisplay({
       mapWidth={mapData.width}
       mapHeight={mapData.height}
       className="custom-map-display"
-      showMinimap={showMinimap}
       backgroundImageUrl={mapData.imageUrl}
       focus={focus ?? undefined}
       onZoomControlsReady={onZoomControlsReady}

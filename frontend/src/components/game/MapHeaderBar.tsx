@@ -5,19 +5,12 @@ import { MapToolbar } from './MapToolbar'
 
 interface MapHeaderBarProps {
   zoom?: ZoomControls
-  showMinimap: boolean
-  onToggleMinimap: () => void
   settingsContent?: ReactNode
 }
 
 const STORAGE_KEY = 'ui.mapMobileSettingsOpen'
 
-export function MapHeaderBar({
-  zoom,
-  showMinimap,
-  onToggleMinimap,
-  settingsContent,
-}: MapHeaderBarProps) {
+export function MapHeaderBar({ zoom, settingsContent }: MapHeaderBarProps) {
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') return false
     try {
@@ -40,14 +33,7 @@ export function MapHeaderBar({
   return (
     <div className="md:hidden sticky top-0 z-30 bg-[color:var(--surface-1)] border-b border-[color:var(--panel-border)]">
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-        <MapToolbar
-          layout="horizontal"
-          zoom={zoom}
-          showZoomPresets={true}
-          showMinimapToggle={false}
-          showMinimap={showMinimap}
-          onToggleMinimap={onToggleMinimap}
-        />
+        <MapToolbar layout="horizontal" zoom={zoom} showZoomPresets={true} />
         {panelContent && (
           <button
             type="button"

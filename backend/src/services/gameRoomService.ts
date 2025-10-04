@@ -514,6 +514,7 @@ export class GameRoomService {
       })() as GameRoom['lifecyclePhase'],
       turnNumber: this.parseNullableNumber(row.turn_number) ?? undefined,
       turnExpiresAt: this.toDate(row.turn_expires_at) ?? null,
+      timeBankSeconds: this.parseNullableNumber((row as Record<string, unknown>).time_bank_seconds),
       timeBankSecondsRemaining: this.parseNullableNumber(
         (row as Record<string, unknown>).time_bank_seconds_remaining,
       ),

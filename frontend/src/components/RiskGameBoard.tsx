@@ -66,8 +66,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     }
   })
   const [zoomControls, setZoomControls] = useState<ZoomControls | null>(null)
-  // Local minimap flag for header/sidebar toggles (UI only)
-  const [showMinimap, setShowMinimap] = useState(false)
   const roomId = useSelector((state: RootState) => state.room.currentRoom?.id)
   const lastClickRef = useRef<{ id: string; ts: number } | null>(null)
 
@@ -369,8 +367,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           {/* Show header zoom controls in both lobby and active game */}
           <MapHeaderBar
             zoom={zoomControls ?? undefined}
-            showMinimap={showMinimap}
-            onToggleMinimap={() => setShowMinimap((v) => !v)}
             settingsContent={
               <MapToolbar
                 layout="vertical"
@@ -405,8 +401,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         </div>
         {
           <MapSidebar
-            showMinimap={showMinimap}
-            onToggleMinimap={() => setShowMinimap((v) => !v)}
             zoom={zoomControls ?? undefined}
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={() => {
