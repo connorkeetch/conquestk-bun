@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-export type DiscreteScale = 0.6 | 0.8 | 1 | 1.2 | 1.4 | 1.6
+// Allow arbitrary scale values; UI will clamp
+export type DiscreteScale = number
 
 export interface ViewportSize {
   w: number

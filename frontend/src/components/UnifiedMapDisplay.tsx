@@ -9,7 +9,7 @@ import {
   triggerInvalidShake,
 } from '@/store/gameInteractionSlice'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
-import { allowedScales, setScale } from '@/store/mapViewSlice'
+import { setScale } from '@/store/mapViewSlice'
 import { logger } from '@/utils/logger'
 import AttackOddsPopup from './game/AttackOddsPopup'
 import MapCanvas from './game/MapCanvas'
@@ -260,13 +260,8 @@ export default function UnifiedMapDisplay({
   }
 
   const stepScale = (dir: 'in' | 'out') => {
-    const idx = allowedScales.findIndex((s) => Math.abs(s - currentScale) < 0.001)
-    const safeIdx = idx === -1 ? allowedScales.indexOf(1) : idx
-    const nextIdx =
-      dir === 'in'
-        ? (safeIdx + 1) % allowedScales.length
-        : (safeIdx - 1 + allowedScales.length) % allowedScales.length
-    const next = allowedScales[nextIdx]
+    const delta = dir === 'in' ? 0.1 : -0.1
+    const next = Math.min(2, Math.max(0.5, Math.round((currentScale + delta) * 10) / 10))
     dispatch(setScale(next))
     setZoomToast({ text: `${Math.round(next * 100)}%`, visible: true })
     if (zoomToastTimer.current) window.clearTimeout(zoomToastTimer.current)
@@ -395,8 +390,8 @@ export default function UnifiedMapDisplay({
         {/* Plain odds tooltip removed in favor of AttackOddsPopup */}
       </MapCanvas>
 
-      {/* Floating zoom controls (bottom-right) */}
-      <div className="absolute bottom-2 right-2 z-30 flex gap-1 bg-surface-2/70 backdrop-blur px-1 py-1 rounded-lg shadow-lg">
+      {/* Floating zoom controls (top-right) */}
+      <div className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/70 backdrop-blur px-1 py-1 rounded-lg shadow-lg">
         <button
           type="button"
           className="flex items-center justify-center min-w-[36px] min-h-[36px] rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-base font-bold"
@@ -415,7 +410,7 @@ export default function UnifiedMapDisplay({
         </button>
       </div>
       <div
-        className="absolute bottom-14 right-2 z-30 px-2 py-1 rounded bg-black/50 text-white text-xs"
+        className="absolute top-14 right-2 z-30 px-2 py-1 rounded bg-black/50 text-white text-xs"
         style={{ opacity: zoomToast.visible ? 1 : 0, transition: 'opacity 200ms ease' }}
       >
         {zoomToast.text}
