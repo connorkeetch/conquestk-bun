@@ -155,8 +155,20 @@ export const selectContinentControl = createSelector([selectGameState], (gameSta
     color?: string
   }> => {
     const cfg = gameState.gameConfig as unknown as {
-      sectorBonuses?: Array<{ id: string; name: string; territories: string[]; bonusArmies: number; color?: string }>
-      continentBonuses?: Array<{ id: string; name: string; territories: string[]; bonusArmies: number; color?: string }>
+      sectorBonuses?: Array<{
+        id: string
+        name: string
+        territories: string[]
+        bonusArmies: number
+        color?: string
+      }>
+      continentBonuses?: Array<{
+        id: string
+        name: string
+        territories: string[]
+        bonusArmies: number
+        color?: string
+      }>
     } | null
     return cfg?.sectorBonuses ?? cfg?.continentBonuses ?? []
   })()

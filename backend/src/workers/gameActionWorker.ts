@@ -167,7 +167,10 @@ export class GameActionWorker {
           const requested = (attackAction.payload as { armies?: number } | undefined)?.armies
           const attackingArmies = Math.max(
             1,
-            Math.min(attackingArmiesAvailable, typeof requested === 'number' ? requested : attackingArmiesAvailable),
+            Math.min(
+              attackingArmiesAvailable,
+              typeof requested === 'number' ? requested : attackingArmiesAvailable,
+            ),
           )
 
           const battleJob: BattleSimulationJob = {

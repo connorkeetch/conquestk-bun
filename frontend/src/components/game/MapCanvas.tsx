@@ -38,7 +38,7 @@ export function MapCanvas({
         dispatch(resetView())
       }
     }
-  }, [dispatch, view.image, view.scale, view.tx, view.ty, view.viewport])
+  }, [dispatch, view.viewport.w, view.viewport.h, view.image.w, view.image.h, view.tx, view.ty])
 
   const transform = useMemo(
     () => makeTransform(view.tx, view.ty, view.scale),

@@ -184,7 +184,8 @@ const TutorialPage: React.FC = () => {
                   👑 King of the Hill
                 </h3>
                 <p className="text-sm text-muted">
-                  Control the designated hill territory to earn victory points each round. First to reach the target wins—or hold the most points when time runs out.
+                  Control the designated hill territory to earn victory points each round. First to
+                  reach the target wins—or hold the most points when time runs out.
                 </p>
               </div>
             </div>
@@ -199,7 +200,10 @@ const TutorialPage: React.FC = () => {
                 <div>
                   <h4 className="font-semibold text-[color:var(--heading)] mb-2">Objective</h4>
                   <p className="text-sm text-muted">
-                    At the end of each round (after all players have taken their turns), the player controlling the hill territory earns <strong>1 victory point</strong>. The first player or team to reach the target point total (default: 10 points) wins immediately.
+                    At the end of each round (after all players have taken their turns), the player
+                    controlling the hill territory earns <strong>1 victory point</strong>. The first
+                    player or team to reach the target point total (default: 10 points) wins
+                    immediately.
                   </p>
                 </div>
 
@@ -208,15 +212,24 @@ const TutorialPage: React.FC = () => {
                   <ul className="text-sm text-muted space-y-2">
                     <li className="flex items-start gap-2">
                       <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                      <span>The hill starts neutral with elevated defenders (default: 8 armies)—you must conquer it like any other territory.</span>
+                      <span>
+                        The hill starts neutral with elevated defenders (default: 8 armies)—you must
+                        conquer it like any other territory.
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                      <span>Hill locations can be static (one territory all game) or rotating (moving to a new location every N turns).</span>
+                      <span>
+                        Hill locations can be static (one territory all game) or rotating (moving to
+                        a new location every N turns).
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                      <span>When rotation is enabled, you'll receive advance notice (default: 2 turns) of where the hill will move next.</span>
+                      <span>
+                        When rotation is enabled, you'll receive advance notice (default: 2 turns)
+                        of where the hill will move next.
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -226,19 +239,31 @@ const TutorialPage: React.FC = () => {
                   <ul className="text-sm text-muted space-y-2">
                     <li className="flex items-start gap-2">
                       <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                      <span><strong>Strike early:</strong> Securing the hill first can build an insurmountable point lead before others react.</span>
+                      <span>
+                        <strong>Strike early:</strong> Securing the hill first can build an
+                        insurmountable point lead before others react.
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                      <span><strong>Fortify heavily:</strong> Holding the hill means surviving attacks from all directions. Stack defenders and adjacent reinforcements.</span>
+                      <span>
+                        <strong>Fortify heavily:</strong> Holding the hill means surviving attacks
+                        from all directions. Stack defenders and adjacent reinforcements.
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                      <span><strong>Watch the scoreboard:</strong> If an opponent is close to victory, prioritize taking the hill rather than expanding elsewhere.</span>
+                      <span>
+                        <strong>Watch the scoreboard:</strong> If an opponent is close to victory,
+                        prioritize taking the hill rather than expanding elsewhere.
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                      <span><strong>Rotation timing:</strong> When rotation is enabled, consider whether to defend the current hill or position armies near the next one.</span>
+                      <span>
+                        <strong>Rotation timing:</strong> When rotation is enabled, consider whether
+                        to defend the current hill or position armies near the next one.
+                      </span>
                     </li>
                   </ul>
                 </div>
