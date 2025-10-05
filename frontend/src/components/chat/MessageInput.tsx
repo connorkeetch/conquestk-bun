@@ -1,4 +1,4 @@
-import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react'
+import EmojiPicker, { type EmojiClickData, Theme, EmojiStyle } from 'emoji-picker-react'
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { useAppSelector } from '@/hooks/redux'
 
@@ -127,6 +127,7 @@ export default function MessageInput({
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
             theme={Theme.DARK}
+            emojiStyle={EmojiStyle.NATIVE}
             height={350}
             width={300}
             searchDisabled={false}
