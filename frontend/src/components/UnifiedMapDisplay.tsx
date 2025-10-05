@@ -108,6 +108,14 @@ export default function UnifiedMapDisplay({
     visible: false,
   })
   const zoomToastTimer = useRef<number | null>(null)
+  const [overlayVisible, setOverlayVisible] = useState(true)
+  const overlayTimer = useRef<number | null>(null)
+
+  const bumpOverlay = () => {
+    setOverlayVisible(true)
+    if (overlayTimer.current) window.clearTimeout(overlayTimer.current)
+    overlayTimer.current = window.setTimeout(() => setOverlayVisible(false), 1500)
+  }
 
   // Removed overlay hotkeys for simpler UI
 
@@ -281,12 +289,18 @@ export default function UnifiedMapDisplay({
       () => setZoomToast((t) => ({ ...t, visible: false })),
       900,
     )
+    bumpOverlay()
   }
 
   return (
-    <div
+    <section
       className="relative w-full"
       style={{ aspectRatio: `${mapData.width} / ${mapData.height}` }}
+      aria-label="Game map"
+      onMouseEnter={bumpOverlay}
+      onMouseMove={bumpOverlay}
+      onMouseLeave={() => setOverlayVisible(false)}
+      onTouchStart={bumpOverlay}
     >
       {/* Overlay toggle UI removed for simplicity */}
 
@@ -404,7 +418,17 @@ export default function UnifiedMapDisplay({
       </MapCanvas>
 
       {/* Floating zoom controls (top-right). Smaller and responsive sizes */}
-      <div className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/70 backdrop-blur px-0.5 py-0.5 rounded-md shadow-lg">
+      <fieldset
+        className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/70 backdrop-blur px-0.5 py-0.5 rounded-md shadow-lg"
+        style={{
+          opacity: overlayVisible || zoomToast.visible ? 1 : 0,
+          transition: 'opacity 200ms ease',
+          pointerEvents: overlayVisible || zoomToast.visible ? 'auto' : 'none',
+        }}
+        aria-label="Map zoom controls"
+        onMouseEnter={() => setOverlayVisible(true)}
+        onMouseLeave={bumpOverlay}
+      >
         <button
           type="button"
           aria-label="Zoom out"
@@ -423,13 +447,13 @@ export default function UnifiedMapDisplay({
         >
           +
         </button>
-      </div>
+      </fieldset>
       <div
         className="absolute top-10 sm:top-12 md:top-14 right-2 z-30 px-1.5 py-0.5 rounded bg-black/50 text-white text-[10px] sm:text-xs"
         style={{ opacity: zoomToast.visible ? 1 : 0, transition: 'opacity 200ms ease' }}
       >
         {zoomToast.text}
       </div>
-    </div>
+    </section>
   )
 }
