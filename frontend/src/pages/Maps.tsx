@@ -191,16 +191,16 @@ const Maps: React.FC = () => {
             placeholder="Search maps by name, description, or tags..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full glass-box-sm text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-input pr-10"
           />
-          <div className="absolute right-3 top-3 text-muted">🔍</div>
+          <div className="pointer-events-none absolute right-3 top-3 text-muted">🔍</div>
         </div>
 
         {showMyMaps && (
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-select"
           >
             <option value="">All Statuses</option>
             <option value="draft">Draft</option>
@@ -215,7 +215,7 @@ const Maps: React.FC = () => {
           <select
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
-            className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-select"
           >
             <option value="">All Tags</option>
             {allTags.map((tag) => (
@@ -230,7 +230,7 @@ const Maps: React.FC = () => {
         <select
           value={filterSize}
           onChange={(e) => setFilterSize(e.target.value as typeof filterSize)}
-          className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
+          className="form-select"
         >
           <option value="">All Sizes</option>
           <option value="Small">Small (≤35)</option>
@@ -240,11 +240,7 @@ const Maps: React.FC = () => {
           <option value="Massive">Massive (91+)</option>
         </select>
 
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
-        >
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="form-select">
           <option value="popularity">Sort by Popularity</option>
           <option value="rating">Sort by Rating</option>
           <option value="newest">Sort by Newest</option>

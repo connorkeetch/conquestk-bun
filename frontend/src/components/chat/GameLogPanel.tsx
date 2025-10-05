@@ -43,7 +43,9 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
+  const lastTurnRef = useRef<number | null>(null)
   const startedLoggedRef = useRef(false)
+  const lastRoundRef = useRef<number | null>(null)
   const fogOn = (room?.fogOfWar ?? 'off') !== 'off'
   const gameEnded =
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
@@ -166,6 +168,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                   text: `${from} (${attackerName}) occupied ${to} with ${moved} troops.`,
                 })
               }
+              // Log any eliminations associated with this conquest
+              const eliminated = Array.isArray(
+                (er as { eliminatedPlayers?: unknown[] }).eliminatedPlayers,
+              )
+                ? ((er as { eliminatedPlayers?: string[] }).eliminatedPlayers ?? [])
+                : []
+              for (const eliminatedId of eliminated) {
+                const defeatedName = nameOf(eliminatedId) || eliminatedId
+                formatted.push({ ts, text: `${defeatedName} was defeated by ${attackerName}.` })
+              }
             } else {
               formatted.push({
                 ts,
@@ -177,6 +189,17 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           if (type === 'TREASURE') {
             const name = nameOf(er.userId as string) || 'Unknown'
             formatted.push({ ts, text: `${name} received a card.` })
+            continue
+          }
+          if (type === 'TREASURE_CASH') {
+            const name = nameOf(er.playerId as string) || 'Unknown'
+            const troops = toSafeInt(er.troops, 0)
+            if (troops > 0) {
+              formatted.push({
+                ts,
+                text: `${name} received ${troops} troops for cashing treasures.`,
+              })
+            }
             continue
           }
           if (type === 'LIFECYCLE') {
@@ -236,6 +259,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               }
               formatted.push({ ts, text: `${name} started the turn.` })
             }
+            continue
+          }
+          if (type === 'RATING') {
+            const userId = er.userId as string
+            const name = nameOf(userId) || userId
+            const change = toSafeInt(er.change, 0)
+            if (change !== 0) {
+              const verb = change > 0 ? 'gained' : 'lost'
+              formatted.push({ ts, text: `${name} ${verb} ${Math.abs(change)} rating.` })
+            }
           }
         }
         // Newest first
@@ -293,6 +326,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       const prevPlayer = lastPlayerRef.current
       const nextPlayer = delta.currentPlayer
       const previousPhase = phaseRef.current
+      const prevTurn = lastTurnRef.current
       // When a new reinforcement phase begins, previous player just ended turn
       if (phaseRef.current === 'fortify' || (phaseRef.current && delta.phase === 'reinforcement')) {
         if (prevPlayer && prevPlayer !== nextPlayer) {
@@ -308,6 +342,18 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       lastPlayerRef.current = nextPlayer
 
       if (delta.phase === 'reinforcement') {
+        // Round tracking (best-effort): log when a new round number is detected
+        const nextTurn = typeof delta.turn === 'number' ? delta.turn : (prevTurn ?? null)
+        if (typeof nextTurn === 'number') {
+          const activePlayersCount =
+            (game?.players || []).filter((p) => !p.isEliminated).length || 1
+          const roundNumber = Math.max(1, Math.ceil(nextTurn / activePlayersCount))
+          if (lastRoundRef.current === null || roundNumber > lastRoundRef.current) {
+            add(`Round ${roundNumber} started.`)
+            lastRoundRef.current = roundNumber
+          }
+          lastTurnRef.current = nextTurn
+        }
         const name = playerName.get(nextPlayer) || nextPlayer
         const reinforcementAmount =
           typeof delta.reinforcementArmies === 'number' ? delta.reinforcementArmies : null
@@ -386,7 +432,28 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       }
       if (d.type === 'BATTLE_RESULT') {
         if (redact) return
-        handleBattleResult(d as BattleResultDelta)
+        const brd = d as BattleResultDelta & { changes?: GameDelta[] }
+        handleBattleResult(brd)
+        // Detect eliminations from nested player updates
+        try {
+          const nested = (brd as { changes?: GameDelta[] }).changes
+          const attackerId = brd.battleResult.attackerId || lastPlayerRef.current || ''
+          if (Array.isArray(nested)) {
+            for (const ch of nested) {
+              if ((ch as { type?: string }).type === 'PLAYER_UPDATE') {
+                const pu = ch as import('@shared/types').PlayerDelta
+                if (pu.changes?.isEliminated) {
+                  const defeatedId = pu.playerId
+                  const defeatedName = playerName.get(defeatedId) || defeatedId
+                  const attackerName = playerName.get(attackerId) || attackerId
+                  add(`${defeatedName} was defeated by ${attackerName}.`)
+                }
+              }
+            }
+          }
+        } catch {
+          /* ignore */
+        }
         return
       }
       if (d.type === 'FORTIFY_RESULT') {
@@ -408,6 +475,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         const ta = d as TreasureAwardedDelta
         const name = playerName.get(ta.userId) || ta.userId
         add(`${name} received a card.`)
+        return
+      }
+      if (d.type === 'GAME_END') {
+        add('Game finished.')
         return
       }
       if (d.type === 'TERRITORY_UPDATE') {
@@ -435,14 +506,48 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     socketService.on('lifecycle:update', onLifecycle)
     socketService.on('phaseChanged', onPhaseChangedLegacy)
     socketService.on('game-delta', onDelta)
+    // Live rating updates (ranked games)
+    const onRating: Parameters<typeof socketService.on<'ratingUpdate'>>[1] = (payload) => {
+      try {
+        const p = payload as unknown as {
+          changes?: Array<{
+            userId: string
+            username?: string
+            oldRating: number
+            newRating: number
+            change: number
+          }>
+        }
+        const list = Array.isArray(p?.changes) ? p.changes : []
+        const now = new Date()
+        for (const ch of list) {
+          const name = ch.username || playerName.get(ch.userId) || ch.userId
+          const verb = ch.change > 0 ? 'gained' : 'lost'
+          add(`${name} ${verb} ${Math.abs(ch.change)} rating.`, now)
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    socketService.on('ratingUpdate', onRating)
 
     return () => {
       socketService.off('player-joined', onPlayerJoined)
       socketService.off('lifecycle:update', onLifecycle)
       socketService.off('phaseChanged', onPhaseChangedLegacy)
       socketService.off('game-delta', onDelta)
+      socketService.off('ratingUpdate', onRating)
     }
-  }, [gameId, playerName, territoryName, game?.board, game?.currentPlayer, redact, toSafeInt])
+  }, [
+    gameId,
+    playerName,
+    territoryName,
+    game?.board,
+    game?.currentPlayer,
+    redact,
+    toSafeInt,
+    game?.players,
+  ])
 
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>

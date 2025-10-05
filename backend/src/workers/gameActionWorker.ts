@@ -239,8 +239,47 @@ export class GameActionWorker {
               error: e instanceof Error ? e.message : e,
             })
           }
+          // Capture player's pre-trade reinforcement bank
+          const prevBank = currentState.players.find((p) => p.id === playerId)?.armies ?? 0
+
           await this.gameService.processGameAction(action, playerId)
           const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+          // Attempt to backfill a human-readable log entry showing troops gained from cash-in
+          try {
+            const postBank = serialized?.players?.find((p) => p.id === playerId)?.armies ?? prevBank
+            const gained = Math.max(0, (postBank as number) - prevBank)
+            if (gained > 0) {
+              await this.gameService.appendLog(gameId, [
+                {
+                  type: 'TREASURE_CASH',
+                  timestamp: new Date().toISOString(),
+                  playerId,
+                  troops: gained,
+                  // We don't know exact card names; include count when available
+                  cardCount: Array.isArray(
+                    (action as { payload?: { cards?: unknown[] } }).payload?.cards,
+                  )
+                    ? ((action as { payload?: { cards?: unknown[] } }).payload?.cards?.length ??
+                      undefined)
+                    : Array.isArray(
+                          (action as { payload?: { treasureSet?: unknown[] } }).payload
+                            ?.treasureSet,
+                        )
+                      ? (
+                          (action as { payload?: { treasureSet?: unknown[] } }).payload
+                            ?.treasureSet as unknown[]
+                        ).length
+                      : undefined,
+                },
+              ])
+            }
+          } catch (logErr) {
+            logger.debug('Skipped appending treasure cash log', {
+              roomId: gameId,
+              playerId,
+              error: logErr instanceof Error ? logErr.message : logErr,
+            })
+          }
           if (serialized) {
             this.io.to(`game:${gameId}`).emit('game-update', serialized)
           }
