@@ -1803,9 +1803,17 @@ export default function GameRoom() {
               }),
             )
             dispatch(setConquestTransfer(null))
+            // After completing transfer, clear selections and pending actions
+            dispatch(selectTerritory(null))
+            dispatch(selectTargetTerritory(null))
+            dispatch(setPendingAction(null))
           }}
           onCancel={() => {
             dispatch(setConquestTransfer(null))
+            // On cancel, also clear selections to return to neutral state
+            dispatch(selectTerritory(null))
+            dispatch(selectTargetTerritory(null))
+            dispatch(setPendingAction(null))
           }}
         />
       )}
