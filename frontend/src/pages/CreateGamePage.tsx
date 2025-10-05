@@ -222,7 +222,9 @@ const CreateGamePage: React.FC = () => {
   const [gameName, setGameName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [selectedMap, setSelectedMap] = useState('')
-  const [gameMode, setGameMode] = useState<'classic' | 'capitals' | 'king_of_the_hill' | 'random'>('classic')
+  const [gameMode, setGameMode] = useState<'classic' | 'capitals' | 'king_of_the_hill' | 'random'>(
+    'classic',
+  )
   // King of the Hill configuration
   const [kothTargetPoints, setKothTargetPoints] = useState(10)
   const [kothNeutralArmies, setKothNeutralArmies] = useState(8)
@@ -255,6 +257,10 @@ const CreateGamePage: React.FC = () => {
 
   // Accessible, unique IDs for form controls
   const fixedPayoutId = useId()
+  const kothTargetId = useId()
+  const kothNeutralId = useId()
+  const kothRotationId = useId()
+  const kothPreviewId = useId()
   // no-op ids removed with simplified UI
   const [gameType, setGameType] = useState<'casual' | 'ranked'>(initialMode)
   const [isCreating, setIsCreating] = useState(false)
@@ -603,7 +609,10 @@ const CreateGamePage: React.FC = () => {
       // Resolve random options
       const finalGameMode =
         gameMode === 'random'
-          ? (['classic', 'capitals', 'king_of_the_hill'][Math.floor(Math.random() * 3)] as 'classic' | 'capitals' | 'king_of_the_hill')
+          ? (['classic', 'capitals', 'king_of_the_hill'][Math.floor(Math.random() * 3)] as
+              | 'classic'
+              | 'capitals'
+              | 'king_of_the_hill')
           : (gameMode as 'classic' | 'capitals' | 'king_of_the_hill')
 
       const finalPlayers =
@@ -941,17 +950,24 @@ const CreateGamePage: React.FC = () => {
             <div className="space-y-4">
               {/* Target Points */}
               <div>
-                <label htmlFor="koth-target-points" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                <label
+                  htmlFor={kothTargetId}
+                  className="block text-sm font-medium text-[color:var(--heading)] mb-2"
+                >
                   Victory Points to Win
                   <InfoTooltip title="First player/team to reach this many points wins the game" />
                 </label>
                 <input
-                  id="koth-target-points"
+                  id={kothTargetId}
                   type="number"
                   min={3}
                   max={30}
                   value={kothTargetPoints}
-                  onChange={(e) => setKothTargetPoints(Math.max(3, Math.min(30, Number.parseInt(e.target.value) || 10)))}
+                  onChange={(e) =>
+                    setKothTargetPoints(
+                      Math.max(3, Math.min(30, Number.parseInt(e.target.value, 10) || 10)),
+                    )
+                  }
                   className="input w-full"
                 />
                 <p className="text-xs text-muted mt-1">Recommended: 10 points (range: 3-30)</p>
@@ -959,17 +975,24 @@ const CreateGamePage: React.FC = () => {
 
               {/* Neutral Defenders */}
               <div>
-                <label htmlFor="koth-neutral-armies" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                <label
+                  htmlFor={kothNeutralId}
+                  className="block text-sm font-medium text-[color:var(--heading)] mb-2"
+                >
                   Neutral Defenders on Hill
                   <InfoTooltip title="Number of armies defending the hill at game start and after rotations" />
                 </label>
                 <input
-                  id="koth-neutral-armies"
+                  id={kothNeutralId}
                   type="number"
                   min={1}
                   max={20}
                   value={kothNeutralArmies}
-                  onChange={(e) => setKothNeutralArmies(Math.max(1, Math.min(20, Number.parseInt(e.target.value) || 8)))}
+                  onChange={(e) =>
+                    setKothNeutralArmies(
+                      Math.max(1, Math.min(20, Number.parseInt(e.target.value, 10) || 8)),
+                    )
+                  }
                   className="input w-full"
                 />
                 <p className="text-xs text-muted mt-1">Recommended: 8 armies (range: 1-20)</p>
@@ -990,7 +1013,9 @@ const CreateGamePage: React.FC = () => {
                   </span>
                 </label>
                 <p className="text-xs text-muted mt-1 ml-6">
-                  {kothRotationEnabled ? 'Hill will move to new territories' : 'Hill stays in one location'}
+                  {kothRotationEnabled
+                    ? 'Hill will move to new territories'
+                    : 'Hill stays in one location'}
                 </p>
               </div>
 
@@ -998,37 +1023,53 @@ const CreateGamePage: React.FC = () => {
               {kothRotationEnabled && (
                 <div className="pl-4 border-l-2 border-[color:var(--panel-border)] space-y-4">
                   <div>
-                    <label htmlFor="koth-rotation-interval" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                    <label
+                      htmlFor={kothRotationId}
+                      className="block text-sm font-medium text-[color:var(--heading)] mb-2"
+                    >
                       Rotation Interval (Turns)
                       <InfoTooltip title="Number of turns before the hill moves to a new location" />
                     </label>
                     <input
-                      id="koth-rotation-interval"
+                      id={kothRotationId}
                       type="number"
                       min={2}
                       max={20}
                       value={kothRotationInterval}
-                      onChange={(e) => setKothRotationInterval(Math.max(2, Math.min(20, Number.parseInt(e.target.value) || 5)))}
+                      onChange={(e) =>
+                        setKothRotationInterval(
+                          Math.max(2, Math.min(20, Number.parseInt(e.target.value, 10) || 5)),
+                        )
+                      }
                       className="input w-full"
                     />
                     <p className="text-xs text-muted mt-1">Recommended: 5 turns (range: 2-20)</p>
                   </div>
 
                   <div>
-                    <label htmlFor="koth-preview-turns" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                    <label
+                      htmlFor={kothPreviewId}
+                      className="block text-sm font-medium text-[color:var(--heading)] mb-2"
+                    >
                       Preview Notice (Turns)
                       <InfoTooltip title="How many turns in advance players can see the next hill location" />
                     </label>
                     <input
-                      id="koth-preview-turns"
+                      id={kothPreviewId}
                       type="number"
                       min={0}
                       max={10}
                       value={kothPreviewTurns}
-                      onChange={(e) => setKothPreviewTurns(Math.max(0, Math.min(10, Number.parseInt(e.target.value) || 2)))}
+                      onChange={(e) =>
+                        setKothPreviewTurns(
+                          Math.max(0, Math.min(10, Number.parseInt(e.target.value, 10) || 2)),
+                        )
+                      }
                       className="input w-full"
                     />
-                    <p className="text-xs text-muted mt-1">Recommended: 2 turns advance notice (range: 0-10)</p>
+                    <p className="text-xs text-muted mt-1">
+                      Recommended: 2 turns advance notice (range: 0-10)
+                    </p>
                   </div>
                 </div>
               )}

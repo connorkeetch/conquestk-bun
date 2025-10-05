@@ -826,7 +826,10 @@ export default function GameRoom() {
         const hasPlacementUndo = Boolean(state.uiRoom?.placementHistory?.length)
         if (phase === 'reinforcement' && hasPlacementUndo) {
           void dispatch(undoLastPlacement())
-        } else if (phase === 'fortify' && Object.keys(currentGame?.movementTracking ?? {}).length > 0) {
+        } else if (
+          phase === 'fortify' &&
+          Object.keys(currentGame?.movementTracking ?? {}).length > 0
+        ) {
           void dispatch(undoFortify())
         } else {
           dispatch(selectTerritory(null))

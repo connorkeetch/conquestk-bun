@@ -53,7 +53,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
     const src = gameState.board.find((t) => t.id === selectedTerritory)
     const maxMovable = Math.max(1, Math.max(0, (src?.armies ?? 1) - 1))
     setFortifyArmies(maxMovable)
-  }, [gameState?.phase, selectedTerritory, gameState?.board])
+  }, [gameState, selectedTerritory])
   const deployInputId = useId()
   const fortifyInputId = useId()
 
