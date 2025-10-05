@@ -16,9 +16,10 @@ import { TreasureTradeModal } from './TreasureTradeModal'
 
 /**
  * Delay between consecutive auto-attacks (in milliseconds)
- * Provides time for battle animation and user feedback
+ * Tuned by animation speed for quicker/instant flows
  */
-const AUTO_ATTACK_DELAY_MS = 150
+const delayForSpeed = (speed: 'normal' | 'fast' | 'instant') =>
+  speed === 'instant' ? 20 : speed === 'fast' ? 80 : 150
 
 export function GameActionBar({
   mode = 'fixed' as 'fixed' | 'inline',
@@ -77,6 +78,7 @@ export function GameActionBar({
   }, [phase, selected, game])
   // Auto-attack is global so it can be toggled from map tooltip
   const auto = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
+  const animationSpeed = useAppSelector((s) => s.uiRoom.animationSpeed)
   const [showTreasures, setShowTreasures] = useState(false)
   const lastTargetRef = useRef<string | null>(null)
   const reinforceId = useId()
@@ -148,10 +150,10 @@ export function GameActionBar({
           toTerritoryId: lastTargetRef.current || target,
         }),
       )
-    }, AUTO_ATTACK_DELAY_MS)
+    }, delayForSpeed(animationSpeed))
 
     return () => clearTimeout(timeoutId)
-  }, [auto, battle, dispatch, game, selected, target])
+  }, [animationSpeed, auto, battle, dispatch, game, selected, target])
 
   // Auto-open treasure modal if must cash in (only when it's my turn)
   useEffect(() => {

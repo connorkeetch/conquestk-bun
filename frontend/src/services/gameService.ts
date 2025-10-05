@@ -31,6 +31,7 @@ export interface CreateGameData {
   teamMode?: 'none' | 'teams' | 'auto_balance'
   numberOfTeams?: number
   gameType?: string
+  gameMode?: 'classic' | 'capitals' | 'king_of_the_hill'
   capitalsEnabled?: boolean
   useTerritoryModifiers?: boolean
   modifierDistribution?: 'none' | 'sparse' | 'balanced' | 'abundant'
@@ -40,6 +41,15 @@ export interface CreateGameData {
   }>
   // Optional Hidden Treasures configuration for the game
   treasureConfig?: Partial<TreasureConfig>
+  // Optional King of the Hill configuration
+  kingOfTheHillConfig?: {
+    targetPoints: number
+    neutralArmies: number
+    previewTurns: number
+    rotationInterval: number | null
+    eligibleTerritoryIds: string[]
+    rotationOrder: string[]
+  }
   // Additional room options persisted to DB
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   turnTimerSeconds?: number
