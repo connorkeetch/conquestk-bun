@@ -352,6 +352,38 @@ This allows themes to work with any color scheme!
   .glow-primary {
     box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 30%, transparent);
   }
+
+  /* Responsive Grid Utilities */
+  .responsive-grid-layout {
+    display: grid;
+    gap: 1rem;
+    transition: grid-template-columns 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Smooth panel transitions */
+  .panel-transition {
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar-enter {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  .sidebar-enter-active {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .sidebar-exit {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .sidebar-exit-active {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
 }
 
 @layer components {

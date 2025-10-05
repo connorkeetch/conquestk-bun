@@ -75,8 +75,7 @@ Latest status (2025‑03‑12):
 - ✅ Token baseline split into light-first root + dark overrides + RetroSpace token hooks.
 - ✅ Semantic utility layer scaffolding added for surfaces, buttons, forms, nav, tables, lists, modals.
 - 🔄 In progress: convert high-traffic screens to `.panel`/`.btn`/`.form-*` classes and delete redundant Tailwind chains.
-- 🔄 Pending: migrate remaining glass/translucent components and extract hero gradients into tokens.
-- ✅ Completed: added RetroSpace-only textures and starfield overlay via `--body-bg-image`.
+- 🔄 Pending: migrate remaining glass/translucent components, extract hero gradients into tokens, add RetroSpace-only textures via `--body-bg-image` when ready.
 - 🔄 QA: visual diff (default, dark, RetroSpace), run `npm run lint`, `npm run test:frontend`, `npm run build` before launch.
 
 ## Adding or Updating Themes

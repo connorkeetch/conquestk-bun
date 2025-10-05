@@ -7,11 +7,11 @@
   --color-secondary: #ffffff; /* Neutral secondary */
   --color-accent: #ff9900; /* Retro orange accent */
 
-  --color-bg-deep: #f5f8ff; /* Soft powder blue wash */
-  --color-bg-alt: #eaf0ff; /* Light blue content striping */
+  --color-bg-deep: #ffffff; /* Plain white backdrop */
+  --color-bg-alt: #f1f4ff; /* Light blue content striping */
   --color-bg-void: #ffffff; /* No vignette */
-  --color-surface-1: rgba(255, 255, 255, 0.96); /* Card backgrounds */
-  --color-surface-2: rgba(243, 246, 255, 0.92); /* Raised surfaces */
+  --color-surface-1: #ffffff; /* Card backgrounds */
+  --color-surface-2: #f3f6ff; /* Raised surfaces */
 
   --color-text: #111111; /* Prefer near-black text for readability */
   --color-text-muted: #333333; /* Muted dark gray */
@@ -24,23 +24,20 @@
   --link: #0b3aa7;
 
   /* Surface tokens */
-  --surface-0: rgba(255, 255, 255, 0.98);
-  --surface-1: rgba(255, 255, 255, 0.96);
-  --surface-2: rgba(236, 241, 255, 0.92);
-  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(238, 242, 255, 0.94) 100%);
-  --panel-border: #a1b7df;
-  --panel-bg-alt: rgba(235, 240, 255, 0.88);
+  --surface-0: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f3f6ff;
+  --panel-bg: #ffffff;
+  --panel-border: #b3c1d9;
+  --panel-bg-alt: #f1f4ff;
   /* Lighten nav for black text contrast */
-  --nav-bg: linear-gradient(180deg, #f3f6ff 0%, #e1e9ff 100%);
-  --nav-border: #0b3aa7;
+  --nav-bg: #e7ecff;
+  --nav-border: #0b2f84;
   --footer-bg: #e7ecff;
-  --modal-bg: rgba(255, 255, 255, 0.95);
-  --modal-border: #0b3aa7;
-  --body-bg-image:
-    radial-gradient(circle at 14% 18%, rgba(255, 153, 0, 0.18) 0 24%, transparent 65%),
-    radial-gradient(circle at 85% -6%, rgba(11, 58, 167, 0.22) 0 28%, transparent 68%),
-    linear-gradient(180deg, #ffffff 0%, #f2f6ff 40%, #ffffff 100%);
-  --body-bg-attachment: fixed;
+  --modal-bg: #ffffff;
+  --modal-border: #0b2f84;
+  --body-bg-image: none;
+  --body-bg-attachment: scroll;
 
   /* Interaction tokens */
   --hover-bg: #dbe4ff;
@@ -55,19 +52,19 @@
 
   /* Shadow tokens */
   --shadow-0: none;
-  --shadow-1: 0 2px 0 rgba(11, 58, 167, 0.1);
-  --shadow-2: 0 3px 0 rgba(11, 58, 167, 0.16);
-  --shadow-modal: 0 4px 12px rgba(9, 35, 102, 0.25);
+  --shadow-1: none;
+  --shadow-2: none;
+  --shadow-modal: none;
 
-  --ck-bg-gradient: linear-gradient(180deg, #ffffff 0%, #eef3ff 55%, #ffffff 100%);
+  --ck-bg-gradient: linear-gradient(0deg, #ffffff 0%, #ffffff 100%);
 
-  --ck-glow: 0 0 30px rgba(11, 58, 167, 0.38);
+  --ck-glow: transparent;
 
-  --glass-bg: rgba(255, 255, 255, 0.94);
-  --glass-bg-light: rgba(240, 246, 255, 0.9);
-  --glass-border: #a1b7df;
-  --glass-blur: 2px;
-  --glass-shadow: 0 0 0 1px rgba(11, 58, 167, 0.1);
+  --glass-bg: #ffffff;
+  --glass-bg-light: #f3f6ff;
+  --glass-border: #b3c1d9;
+  --glass-blur: 0;
+  --glass-shadow: none;
   --glass-radius-sm: 0;
   --glass-radius-lg: 0;
 
@@ -76,13 +73,9 @@
 
   /* Box/Card overrides - blocky solid panels */
   --box-bg: var(--glass-bg);
-  --box-bg-solid: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(237, 243, 255, 0.92) 100%
-  );
+  --box-bg-solid: #ffffff;
   --box-border: var(--glass-border);
-  --box-shadow: 0 2px 0 rgba(11, 58, 167, 0.08);
+  --box-shadow: none;
   --box-blur: 0;
   --box-radius: 0;
   --box-padding: 1.25rem;
@@ -96,55 +89,12 @@
 [data-theme="retrospace"] body {
   background-color: var(--surface-0);
   background-image: var(--body-bg-image, none);
-  background-size: cover;
-  background-position: center;
   background-attachment: var(--body-bg-attachment, scroll);
   color: var(--text);
-  position: relative;
-  isolation: isolate;
-}
-
-[data-theme="retrospace"] body::before,
-[data-theme="retrospace"] body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-}
-
-[data-theme="retrospace"] body::before {
-  background-image: linear-gradient(90deg, rgba(11, 58, 167, 0.06) 0 1px, transparent 1px 140px);
-  opacity: 0.35;
-  mix-blend-mode: soft-light;
 }
 
 [data-theme="retrospace"] body::after {
-  background-image:
-    radial-gradient(2px 2px at 18% 22%, rgba(255, 255, 255, 0.55) 0, rgba(255, 255, 255, 0) 100%),
-    radial-gradient(
-      1.5px 1.5px at 78% 12%,
-      rgba(255, 255, 255, 0.45) 0,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    radial-gradient(1.25px 1.25px at 45% 70%, rgba(11, 58, 167, 0.35) 0, rgba(11, 58, 167, 0) 100%);
-  background-size:
-    280px 240px,
-    320px 280px,
-    360px 320px;
-  opacity: 0.5;
-  mix-blend-mode: screen;
-  animation: retrospaceTwinkle 14s ease-in-out infinite;
-}
-
-@keyframes retrospaceTwinkle {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.55;
-  }
+  content: none;
 }
 
 [data-theme="retrospace"] body,
@@ -154,58 +104,6 @@
 [data-theme="retrospace"] textarea {
   font-family: "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
   letter-spacing: 0.01em;
-}
-
-[data-theme="retrospace"] a {
-  color: var(--link);
-  font-weight: 600;
-  text-decoration-color: rgba(255, 153, 0, 0.5);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.22em;
-  transition:
-    color 0.15s ease,
-    text-decoration-color 0.15s ease;
-}
-
-[data-theme="retrospace"] a:hover,
-[data-theme="retrospace"] a:focus-visible {
-  color: #ff9900;
-  text-decoration-color: #ff9900;
-}
-
-[data-theme="retrospace"] h1,
-[data-theme="retrospace"] h2,
-[data-theme="retrospace"] h3,
-[data-theme="retrospace"] h4 {
-  color: #0b2f84;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
-}
-
-[data-theme="retrospace"] hr {
-  border-color: rgba(11, 58, 167, 0.35);
-  border-style: dashed;
-  border-width: 2px 0 0;
-  margin-block: 1.5rem;
-}
-
-[data-theme="retrospace"] ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-[data-theme="retrospace"] ::-webkit-scrollbar-track {
-  background: rgba(230, 235, 255, 0.8);
-}
-
-[data-theme="retrospace"] ::-webkit-scrollbar-thumb {
-  background: #0b3aa7;
-  border: 2px solid #e7ecff;
-}
-
-[data-theme="retrospace"] ::-webkit-scrollbar-thumb:hover {
-  background: #0d49c8;
 }
 
 /* RetroSpace button treatments - chunky and flat */

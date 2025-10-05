@@ -10,6 +10,7 @@ import { TurnTimer } from '@/components/game/TurnTimer'
 // audioService toggled via floating MuteButton component
 import MuteButton from '@/components/MuteButton'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
@@ -105,6 +106,17 @@ export default function GameRoom() {
     }
     return true
   })
+  const [leftRailOpen, setLeftRailOpen] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem('ui.leftRailOpen')
+      if (raw === 'true') return true
+      if (raw === 'false') return false
+    } catch {
+      // ignore storage errors (quota, privacy)
+    }
+    return true
+  })
+  const layout = useResponsiveLayout()
   const mobileDrawerId = useId()
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
@@ -1298,11 +1310,50 @@ export default function GameRoom() {
 
       {/* No ready errors expected */}
 
-      <div className="flex flex-col gap-4">
-        {/* Game Board and Action Bar Container */}
-        <div className="flex flex-col gap-2">
-          {/* Game Board - full width */}
-          <div className="flex-1 min-w-0 flex flex-col">
+      {/* Adaptive Grid Layout */}
+      <div className={`
+        grid gap-4
+        ${layout.isWideOrLarger ? 'grid-cols-[minmax(250px,1fr)_minmax(0,2.5fr)_minmax(250px,1fr)]' : layout.isDesktopOrLarger ? 'grid-cols-[minmax(0,2fr)_minmax(250px,1fr)]' : 'grid-cols-1'}
+      `}>
+        {/* Left Rail - Only visible on ultra-wide screens */}
+        {layout.isWideOrLarger && leftRailOpen && currentGame && (
+          <aside className="flex flex-col gap-4">
+            <div className="panel p-0 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-[color:var(--surface-2)]">
+                <h3 className="text-sm font-semibold text-[color:var(--heading)]">Players</h3>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('ui.leftRailOpen', String(!leftRailOpen))
+                    } catch {
+                      // ignore storage errors
+                    }
+                    setLeftRailOpen((v) => !v)
+                  }}
+                  title="Collapse left panel"
+                >
+                  ←
+                </button>
+              </div>
+              <PlayerStatsTable
+                players={currentGame.players || []}
+                currentPlayerId={currentGame.currentPlayer}
+                territories={Object.fromEntries(
+                  (currentGame.board || []).map((t) => [
+                    t.id,
+                    { owner: t.ownerId, armies: t.armies },
+                  ]),
+                )}
+                variant="compact"
+              />
+            </div>
+          </aside>
+        )}
+
+        {/* Center Column - Game Board */}
+        <div className="flex flex-col gap-2 min-w-0">
             {currentGame ? (
               <RiskGameBoard
                 mapId={currentRoom?.mapId || 'world'}
@@ -1402,118 +1453,207 @@ export default function GameRoom() {
               </div>
             )}
           </div>
-
-          {/* Desktop action bar moved inside the game board as an overlay */}
         </div>
 
-        {/* Player Stats & Chat Row - positioned directly under the board */}
-        <div className="flex flex-col gap-3">
-          {/* Player Stats */}
-          {currentGame ? (
-            <PlayerStatsTable
-              players={currentGame.players || []}
-              currentPlayerId={currentGame.currentPlayer}
-              territories={Object.fromEntries(
-                (currentGame.board || []).map((t) => [
-                  t.id,
-                  { owner: t.ownerId, armies: t.armies },
-                ]),
-              )}
-            />
-          ) : (
-            <div className="panel space-y-3">
-              <h3 className="text-sm font-semibold text-[color:var(--heading)]">
-                Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
-              </h3>
-              <ul className="space-y-1">
-                {currentRoom.players?.map((player) => {
-                  const rawColor =
-                    ((player as { selected_color?: string | null }).selected_color as
-                      | string
-                      | null) ||
-                    (player.preferred_color as string | null) ||
-                    null
-                  const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
-                  return (
-                    <li
-                      key={player.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[color:var(--surface-2)]"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full border border-[color:var(--panel-border)] shrink-0"
-                        style={{ backgroundColor: colorValue }}
-                      />
-                      <span className="text-sm text-[color:var(--text)] truncate">
-                        {player.username}
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
+        {/* Right Rail - Chat & Log (visible on desktop+) OR Player Stats on mobile/tablet */}
+        {layout.isDesktopOrLarger ? (
+          <aside className="flex flex-col gap-4">
+            {rightRailOpen && (
+              <>
+                {/* Show player stats on desktop if not ultra-wide (where it's in left rail) */}
+                {!layout.isWideOrLarger && currentGame && (
+                  <div className="panel p-0 overflow-hidden">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-[color:var(--surface-2)]">
+                      <h3 className="text-sm font-semibold text-[color:var(--heading)]">Players</h3>
+                    </div>
+                    <PlayerStatsTable
+                      players={currentGame.players || []}
+                      currentPlayerId={currentGame.currentPlayer}
+                      territories={Object.fromEntries(
+                        (currentGame.board || []).map((t) => [
+                          t.id,
+                          { owner: t.ownerId, armies: t.armies },
+                        ]),
+                      )}
+                      variant="minimal"
+                    />
+                  </div>
+                )}
 
-          {/* Chat & Log panel */}
-          <div className="panel p-0 overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-              <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
+                {/* Chat & Log panel */}
+                <div className="panel p-0 overflow-hidden flex-1">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                    <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => {
+                        try {
+                          localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen))
+                        } catch {
+                          // ignore storage errors
+                        }
+                        setRightRailOpen((v) => !v)
+                      }}
+                      title="Collapse right panel"
+                    >
+                      →
+                    </button>
+                  </div>
+                  <div ref={chatContainerRef} style={{ height: 'min(60vh, 600px)' }}>
+                    {roomId && user ? (
+                      shouldHydrateChat ? (
+                        <Suspense
+                          fallback={
+                            <div className="h-40 flex items-center justify-center p-4">
+                              <Skeleton variant="rectangular" width="100%" height="100%" />
+                            </div>
+                          }
+                        >
+                          <LazyTabbedGameChat
+                            gameId={currentRoom.id}
+                            currentUserId={user.id}
+                            userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
+                            className="h-full"
+                            onLogFocus={(territories) => {
+                              const focus = territories[territories.length - 1]
+                              if (focus) dispatch(selectTerritory(focus))
+                            }}
+                          />
+                        </Suspense>
+                      ) : (
+                        <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
+                          Preparing chat…
+                        </div>
+                      )
+                    ) : null}
+                  </div>
+                </div>
+              </>
+            )}
+            {!rightRailOpen && (
               <button
                 type="button"
-                className="btn btn-ghost btn-xs"
+                className="btn btn-ghost btn-sm self-start"
                 onClick={() => {
                   try {
-                    localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen))
+                    localStorage.setItem('ui.rightRailOpen', 'true')
                   } catch {
                     // ignore storage errors
                   }
-                  setRightRailOpen((v) => !v)
+                  setRightRailOpen(true)
                 }}
-                title={rightRailOpen ? 'Collapse' : 'Expand'}
+                title="Expand right panel"
               >
-                {rightRailOpen ? 'Hide' : 'Show'}
+                ← Show Sidebar
               </button>
-            </div>
-            {rightRailOpen && (
-              <div ref={chatContainerRef} style={{ height: 'min(40vh, 400px)' }}>
-                {roomId && user ? (
-                  shouldHydrateChat ? (
-                    <Suspense
-                      fallback={
-                        <div className="h-40 flex items-center justify-center p-4">
-                          <Skeleton variant="rectangular" width="100%" height="100%" />
-                        </div>
-                      }
-                    >
-                      <LazyTabbedGameChat
-                        gameId={currentRoom.id}
-                        currentUserId={user.id}
-                        userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
-                        className="h-full"
-                        onLogFocus={(territories) => {
-                          const focus = territories[territories.length - 1]
-                          if (focus) dispatch(selectTerritory(focus))
-                        }}
-                      />
-                    </Suspense>
-                  ) : (
-                    <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
-                      Preparing chat…
-                    </div>
-                  )
-                ) : null}
+            )}
+          </aside>
+        ) : (
+          /* Mobile/Tablet: Stack vertically below game board */
+          <div className="flex flex-col gap-3">
+            {/* Player Stats */}
+            {currentGame ? (
+              <PlayerStatsTable
+                players={currentGame.players || []}
+                currentPlayerId={currentGame.currentPlayer}
+                territories={Object.fromEntries(
+                  (currentGame.board || []).map((t) => [
+                    t.id,
+                    { owner: t.ownerId, armies: t.armies },
+                  ]),
+                )}
+              />
+            ) : (
+              <div className="panel space-y-3">
+                <h3 className="text-sm font-semibold text-[color:var(--heading)]">
+                  Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
+                </h3>
+                <ul className="space-y-1">
+                  {currentRoom.players?.map((player) => {
+                    const rawColor =
+                      ((player as { selected_color?: string | null }).selected_color as
+                        | string
+                        | null) ||
+                      (player.preferred_color as string | null) ||
+                      null
+                    const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
+                    return (
+                      <li
+                        key={player.id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[color:var(--surface-2)]"
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full border border-[color:var(--panel-border)] shrink-0"
+                          style={{ backgroundColor: colorValue }}
+                        />
+                        <span className="text-sm text-[color:var(--text)] truncate">
+                          {player.username}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Removed duplicate player list section and AI controls - now only showing once in left rail */}
-        {/* SR-only live region for announcements */}
-        <div className="sr-only" aria-live="polite">
-          {liveMessage}
-        </div>
+            {/* Chat & Log panel */}
+            <div className="panel p-0 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen))
+                    } catch {
+                      // ignore storage errors
+                    }
+                    setRightRailOpen((v) => !v)
+                  }}
+                  title={rightRailOpen ? 'Collapse' : 'Expand'}
+                >
+                  {rightRailOpen ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {rightRailOpen && (
+                <div ref={chatContainerRef} style={{ height: 'min(40vh, 400px)' }}>
+                  {roomId && user ? (
+                    shouldHydrateChat ? (
+                      <Suspense
+                        fallback={
+                          <div className="h-40 flex items-center justify-center p-4">
+                            <Skeleton variant="rectangular" width="100%" height="100%" />
+                          </div>
+                        }
+                      >
+                        <LazyTabbedGameChat
+                          gameId={currentRoom.id}
+                          currentUserId={user.id}
+                          userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
+                          className="h-full"
+                          onLogFocus={(territories) => {
+                            const focus = territories[territories.length - 1]
+                            if (focus) dispatch(selectTerritory(focus))
+                          }}
+                        />
+                      </Suspense>
+                    ) : (
+                      <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
+                        Preparing chat…
+                      </div>
+                    )
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-      {/* AFK grace action bar for the next player */}
-      {isGraceActor && graceExpiresAt && (
+      <div className="sr-only" aria-live="polite">
+        {liveMessage}
+      </div>isGraceActor && graceExpiresAt && (
         <div className="fixed inset-x-0 bottom-14 z-40 mx-auto max-w-[1200px] px-2">
           <div className="flex items-center justify-between gap-3 rounded-md bg-[color:var(--surface-2)]/90 px-3 py-2 text-sm shadow">
             <div>
@@ -1554,10 +1694,7 @@ export default function GameRoom() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Host replacement decision prompt */}
-      {isHost && replacementPending && (
+      )isHost && replacementPending && (
         <div className="fixed inset-x-0 bottom-24 z-40 mx-auto max-w-[1200px] px-2">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-[color:var(--surface-2)]/90 px-3 py-2 text-sm shadow">
             <div className="flex items-center gap-2">
@@ -1609,10 +1746,7 @@ export default function GameRoom() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Mobile FAB */}
-      {currentGame && (
+      )currentGame && (
         <button
           type="button"
           className="md:hidden fixed z-50 rounded-full bg-[color:var(--color-primary)] text-white shadow-lg px-4 py-3"
@@ -1625,10 +1759,7 @@ export default function GameRoom() {
         >
           {mobileDrawerOpen ? '✕' : mobileDrawerTab === 'actions' ? '⚔️ Actions' : '💬 Chat'}
         </button>
-      )}
-
-      {/* Mobile backdrop */}
-      {currentGame && (
+      )currentGame && (
         <button
           className={`md:hidden fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -1639,10 +1770,7 @@ export default function GameRoom() {
           type="button"
           aria-label="Close actions/chat drawer"
         />
-      )}
-
-      {/* Mobile bottom drawer */}
-      {currentGame && (
+      )currentGame && (
         <div
           id={mobileDrawerId}
           className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
@@ -1717,10 +1845,7 @@ export default function GameRoom() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Post-game results modal */}
-      {showGameOver && currentGame && (
+      )showGameOver && currentGame && (
         <GameOverModal
           isOpen={showGameOver}
           winner={(() => {
@@ -1770,18 +1895,13 @@ export default function GameRoom() {
           }}
           newGameLabel="Rematch Same Seats"
         />
-      )}
+      )
 
       <PlayerProfileModal
         open={profileUsername !== null}
         username={profileUsername}
         onClose={() => setProfileUsername(null)}
       />
-
-      {/* Conquest transfer handled inline on map via ConquestTransferPopup */}
-
-      {/* Floating, less-obtrusive mute control */}
       <MuteButton offsetBottom={muteOffsetBottom} />
     </div>
   )
-}
