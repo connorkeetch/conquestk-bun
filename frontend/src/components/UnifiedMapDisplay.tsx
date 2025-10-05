@@ -4,14 +4,27 @@ import type { PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { mapService } from '@/services/mapService'
 import {
+  deployArmies,
+  executeAttack,
+  executeFortify,
+  transferConquestArmies,
+} from '@/store/gameActions'
+import {
   clearInvalidShake,
   setHoveredTarget,
   triggerInvalidShake,
 } from '@/store/gameInteractionSlice'
-import { selectTargetTerritory, selectTerritory, setPendingAction } from '@/store/gameSlice'
-import { setScale } from '@/store/mapViewSlice'
+import {
+  selectTargetTerritory,
+  selectTerritory,
+  setConquestTransfer,
+  setPendingAction,
+} from '@/store/gameSlice'
+import { centerPan, setPan, setScale } from '@/store/mapViewSlice'
+import { setAutoAttacking } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 import AttackOddsPopup from './game/AttackOddsPopup'
+import ConquestTransferPopup from './game/ConquestTransferPopup'
 import MapCanvas from './game/MapCanvas'
 import TerritoryLayer from './game/TerritoryLayer'
 import TokenLayer from './game/TokenLayer'
@@ -33,6 +46,7 @@ interface UnifiedMapDisplayProps {
   onTerritoryClick?: (territoryId: string) => void
   onTerritoryHover?: (territoryId: string | null) => void
   selectedTerritoryId?: string | null
+  selectedTargetTerritoryId?: string | null
   playerColors?: Record<string, string>
   imageUrl?: string
   mapWidth?: number
@@ -51,6 +65,7 @@ export default function UnifiedMapDisplay({
   onTerritoryClick,
   onTerritoryHover,
   selectedTerritoryId,
+  selectedTargetTerritoryId,
   playerColors = {},
   imageUrl,
   mapWidth,
@@ -103,6 +118,8 @@ export default function UnifiedMapDisplay({
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const hillOverlayEnabled = Boolean(kingOfTheHillState && mapData)
   const currentScale = useAppSelector((s) => s.mapView.scale)
+  const viewport = useAppSelector((s) => s.mapView.viewport)
+  const imageSize = useAppSelector((s) => s.mapView.image)
   const [zoomToast, setZoomToast] = useState<{ text: string; visible: boolean }>({
     text: '',
     visible: false,
@@ -115,6 +132,26 @@ export default function UnifiedMapDisplay({
     setOverlayVisible(true)
     if (overlayTimer.current) window.clearTimeout(overlayTimer.current)
     overlayTimer.current = window.setTimeout(() => setOverlayVisible(false), 1500)
+  }
+
+  const fitToView = () => {
+    const imgW = imageSize?.w || mapData?.width || 0
+    const imgH = imageSize?.h || mapData?.height || 0
+    const vpW = viewport?.w || 0
+    const vpH = viewport?.h || 0
+    if (!imgW || !imgH || !vpW || !vpH) return
+    const fit = Math.min(vpW / imgW, vpH / imgH)
+    const next = Math.max(0.1, Math.min(2, Math.round(fit * 100) / 100))
+    dispatch(setScale(next))
+    const { tx, ty } = centerPan({ viewport, image: { w: imgW, h: imgH }, scale: next })
+    dispatch(setPan({ tx, ty }))
+    setZoomToast({ text: `${Math.round(next * 100)}%`, visible: true })
+    if (zoomToastTimer.current) window.clearTimeout(zoomToastTimer.current)
+    zoomToastTimer.current = window.setTimeout(
+      () => setZoomToast((t) => ({ ...t, visible: false })),
+      900,
+    )
+    bumpOverlay()
   }
 
   // Removed overlay hotkeys for simpler UI
@@ -161,15 +198,20 @@ export default function UnifiedMapDisplay({
   }, [mapId, imageUrl, mapWidth, mapHeight])
 
   const attackDice = useAppSelector((s) => s.uiRoom.dice)
+  const autoAttacking = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
+  const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
+  const reinforcementArmies = useAppSelector((s) => s.game.reinforcementArmies)
   const oddsTooltip = previewMode
     ? null
     : (() => {
         if (!mapData) return null
         if (pendingAction !== 'attack') return null
-        if (!selectedTerritoryId || !hoveredId) return null
-        if (!validTargets.includes(hoveredId)) return null
+        if (!selectedTerritoryId) return null
+        const effectiveTargetId = selectedTargetTerritoryId ?? hoveredId
+        if (!effectiveTargetId) return null
+        if (!validTargets.includes(effectiveTargetId)) return null
         const src = territories.find((t) => t.id === selectedTerritoryId)
-        const dst = territories.find((t) => t.id === hoveredId)
+        const dst = territories.find((t) => t.id === effectiveTargetId)
         if (!src || !dst) return null
         const srcArmies = src.armies ?? 0
         const dstArmies = dst.armies ?? 0
@@ -182,6 +224,49 @@ export default function UnifiedMapDisplay({
         const left = (dst.x / mapData.width) * 100
         const top = (dst.y / mapData.height) * 100
         return { att, def, odds, winChance, left, top }
+      })()
+
+  const conquestPopup = previewMode
+    ? null
+    : (() => {
+        if (!mapData || !conquestTransfer) return null
+        const to = territories.find((t) => t.id === conquestTransfer.toTerritoryId)
+        if (!to) return null
+        const left = (to.x / mapData.width) * 100
+        const top = (to.y / mapData.height) * 100
+        return { left, top, max: Math.max(1, conquestTransfer.availableArmies) }
+      })()
+
+  const reinforcementPopup = previewMode
+    ? null
+    : (() => {
+        if (!mapData) return null
+        if (game?.phase !== 'reinforcement') return null
+        if (!selectedTerritoryId) return null
+        const sel = territories.find((t) => t.id === selectedTerritoryId)
+        if (!sel) return null
+        const left = (sel.x / mapData.width) * 100
+        const top = (sel.y / mapData.height) * 100
+        const max = Math.max(0, reinforcementArmies)
+        if (max <= 0) return null
+        return { left, top, max }
+      })()
+
+  const fortifyPopup = previewMode
+    ? null
+    : (() => {
+        if (!mapData) return null
+        if (game?.phase !== 'fortify') return null
+        if (!selectedTerritoryId || !selectedTargetTerritoryId) return null
+        const src = territories.find((t) => t.id === selectedTerritoryId)
+        const dst = territories.find((t) => t.id === selectedTargetTerritoryId)
+        if (!src || !dst) return null
+        const left = (dst.x / mapData.width) * 100
+        const top = (dst.y / mapData.height) * 100
+        const srcArmies = Math.max(0, src.armies ?? 0)
+        const max = Math.max(0, srcArmies - 1)
+        if (max <= 0) return null
+        return { left, top, max }
       })()
 
   // Arrow-key cycling through owned territories; Esc clears selection
@@ -398,7 +483,7 @@ export default function UnifiedMapDisplay({
           onClick={handleTerritoryActivate}
           onHover={handleHoverChange}
         />
-        {oddsTooltip && (
+        {oddsTooltip && !conquestTransfer && (
           <AttackOddsPopup
             leftPercent={oddsTooltip.left}
             topPercent={oddsTooltip.top}
@@ -406,11 +491,103 @@ export default function UnifiedMapDisplay({
             defenderDice={oddsTooltip.def}
             winChancePercent={oddsTooltip.winChance}
             onAttack={() => {
-              if (hoveredTargetId) {
-                onTerritoryClick?.(hoveredTargetId)
+              const id = selectedTargetTerritoryId ?? hoveredTargetId
+              if (id && selectedTerritoryId) {
+                void dispatch(
+                  executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: id }),
+                )
               }
             }}
-            onCancel={() => dispatch(setHoveredTarget(null))}
+            onCancel={() => {
+              if (selectedTargetTerritoryId) {
+                dispatch(selectTargetTerritory(null))
+              } else {
+                dispatch(setHoveredTarget(null))
+              }
+            }}
+            autoEnabled={autoAttacking}
+            onToggleAuto={() => {
+              const id = selectedTargetTerritoryId ?? hoveredTargetId
+              if (!selectedTerritoryId || !id) return
+              const next = !autoAttacking
+              void dispatch(setAutoAttacking(next))
+              if (next) {
+                void dispatch(
+                  executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: id }),
+                )
+              }
+            }}
+          />
+        )}
+
+        {conquestPopup && conquestTransfer && (
+          <ConquestTransferPopup
+            leftPercent={conquestPopup.left}
+            topPercent={conquestPopup.top}
+            maxArmies={conquestPopup.max}
+            onConfirm={(amount) => {
+              void dispatch(
+                transferConquestArmies({
+                  fromTerritoryId: conquestTransfer.fromTerritoryId,
+                  toTerritoryId: conquestTransfer.toTerritoryId,
+                  armies: amount,
+                }),
+              )
+              dispatch(setConquestTransfer(null))
+              dispatch(selectTerritory(null))
+              dispatch(selectTargetTerritory(null))
+              dispatch(setPendingAction(null))
+            }}
+            onCancel={() => {
+              dispatch(setConquestTransfer(null))
+              dispatch(selectTerritory(null))
+              dispatch(selectTargetTerritory(null))
+              dispatch(setPendingAction(null))
+            }}
+            title="Move armies"
+            confirmLabel="Confirm"
+          />
+        )}
+
+        {reinforcementPopup && (
+          <ConquestTransferPopup
+            leftPercent={reinforcementPopup.left}
+            topPercent={reinforcementPopup.top}
+            maxArmies={reinforcementPopup.max}
+            onConfirm={(amount) => {
+              if (!selectedTerritoryId) return
+              void dispatch(deployArmies({ territoryId: selectedTerritoryId, armies: amount }))
+            }}
+            onCancel={() => {
+              dispatch(selectTerritory(null))
+              dispatch(setPendingAction(null))
+            }}
+            title="Deploy armies"
+            confirmLabel="Place"
+          />
+        )}
+
+        {fortifyPopup && (
+          <ConquestTransferPopup
+            leftPercent={fortifyPopup.left}
+            topPercent={fortifyPopup.top}
+            maxArmies={fortifyPopup.max}
+            onConfirm={(amount) => {
+              if (!selectedTerritoryId || !selectedTargetTerritoryId) return
+              void dispatch(
+                executeFortify({
+                  fromTerritoryId: selectedTerritoryId,
+                  toTerritoryId: selectedTargetTerritoryId,
+                  armies: amount,
+                }),
+              )
+            }}
+            onCancel={() => {
+              // Keep source selected so user can pick another destination
+              dispatch(selectTargetTerritory(null))
+            }}
+            title="Fortify"
+            confirmLabel="Fortify"
           />
         )}
 
@@ -446,6 +623,15 @@ export default function UnifiedMapDisplay({
           title="Zoom in"
         >
           +
+        </button>
+        <button
+          type="button"
+          aria-label="Fit to view"
+          className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-9 lg:h-9 rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-[10px] sm:text-xs md:text-sm font-bold"
+          onClick={fitToView}
+          title="Fit map to view"
+        >
+          ⤢
         </button>
       </fieldset>
       <div

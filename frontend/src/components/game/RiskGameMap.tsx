@@ -62,6 +62,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
         onTerritoryClick={onTerritoryClick}
         onTerritoryHover={onTerritoryHover}
         selectedTerritoryId={selectedTerritory}
+        selectedTargetTerritoryId={selectedTargetTerritory}
         playerColors={playerColors}
         pendingAction={pendingAction}
         validTargets={validTargets}

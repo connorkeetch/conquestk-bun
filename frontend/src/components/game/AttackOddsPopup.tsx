@@ -6,6 +6,8 @@ interface AttackOddsPopupProps {
   winChancePercent: number
   onAttack: () => void
   onCancel: () => void
+  autoEnabled: boolean
+  onToggleAuto: () => void
 }
 
 export default function AttackOddsPopup({
@@ -16,6 +18,8 @@ export default function AttackOddsPopup({
   winChancePercent,
   onAttack,
   onCancel,
+  autoEnabled,
+  onToggleAuto,
 }: AttackOddsPopupProps) {
   return (
     <div
@@ -39,6 +43,14 @@ export default function AttackOddsPopup({
         <div className="mt-2 flex items-center justify-end gap-2">
           <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
             Cancel
+          </button>
+          <button
+            type="button"
+            className={`btn btn-secondary btn-sm ${autoEnabled ? 'ring-1 ring-white' : ''}`}
+            onClick={onToggleAuto}
+            title={autoEnabled ? 'Stop auto-attack' : 'Auto-attack until stop'}
+          >
+            {autoEnabled ? 'Stop' : 'Auto'}
           </button>
           <button type="button" className="btn btn-primary btn-sm" onClick={onAttack}>
             Attack
