@@ -230,6 +230,7 @@ describe('GamePhaseControls', () => {
             battleResult: null,
             reinforcementArmies: 0,
             conquestTransfer: null,
+            needsResync: false,
           },
           auth: {
             user: mockUser,

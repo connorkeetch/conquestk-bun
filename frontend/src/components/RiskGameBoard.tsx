@@ -242,8 +242,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         // When switching selection, only select if it's friendly in attack/fortify.
         if (isFriendly) {
           // Optional: require at least 2 armies to start a move/attack source
-          const needTwo = currentPhase !== 'reinforcement'
-          if (!needTwo || armies > 1) {
+          if (armies > 1) {
             dispatch(selectTerritory(territoryId))
             dispatch(selectTargetTerritory(null))
             dispatch(setPendingAction(currentPhase as 'attack' | 'fortify'))
@@ -329,7 +328,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     )
   }
 
-  const _currentPlayerInfo = players.find((player) => player.id === currentPlayer)
+  // current player info not used here; UI elsewhere displays header
 
   return (
     <div className="flex flex-col w-full h-full panel p-0 overflow-hidden">

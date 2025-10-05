@@ -10,6 +10,7 @@ import type { RootState } from './index'
 const selectGameState = (state: RootState) => state.game.currentGame
 const selectSelectedTerritoryId = (state: RootState) => state.game.selectedTerritory
 const selectCurrentPlayerId = (state: RootState) => state.auth.user?.id
+const selectReinforcementArmies = (state: RootState) => state.game.reinforcementArmies
 
 // Memoized valid targets calculation
 // This was previously recalculated on every territory selection
@@ -182,8 +183,8 @@ export const selectContinentControl = createSelector([selectGameState], (gameSta
 
 // Memoized current player's available actions
 export const selectAvailableActions = createSelector(
-  [selectGameState, selectCurrentPlayerId],
-  (gameState, currentPlayerId) => {
+  [selectGameState, selectCurrentPlayerId, selectReinforcementArmies],
+  (gameState, currentPlayerId, reinforcementArmies) => {
     if (!gameState || !currentPlayerId || gameState.currentPlayer !== currentPlayerId) {
       return {
         canReinforce: false,
@@ -194,12 +195,12 @@ export const selectAvailableActions = createSelector(
     }
 
     const myTerritories = gameState.board.filter((t) => t.ownerId === currentPlayerId)
-    const hasArmiesPlaced = gameState.reinforcementsRemaining === 0
+    const hasArmiesPlaced = reinforcementArmies === 0
     const hasAttackCapability = myTerritories.some((t) => t.armies > 1)
     const hasFortifyCapability = myTerritories.some((t) => t.armies > 1)
 
     return {
-      canReinforce: gameState.phase === 'reinforcement' && gameState.reinforcementsRemaining > 0,
+      canReinforce: gameState.phase === 'reinforcement' && reinforcementArmies > 0,
       canAttack: gameState.phase === 'attack' && hasAttackCapability,
       canFortify: gameState.phase === 'fortify' && hasFortifyCapability,
       canEndPhase:

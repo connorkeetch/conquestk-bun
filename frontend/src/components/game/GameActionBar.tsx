@@ -340,8 +340,8 @@ export function GameActionBar({
                     disabled={fortifyLimitReached || selectedHasMoved}
                   />
                 </div>
-                {/* Undo button - only show if there's history */}
-                {isMyTurn && (game.fortifyHistory?.length ?? 0) > 0 && (
+                {/* Undo button - only show if there's history (use movementTracking presence) */}
+                {isMyTurn && Object.keys(game?.movementTracking ?? {}).length > 0 && (
                   <button
                     type="button"
                     onClick={() => void dispatch(undoFortify())}

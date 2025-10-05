@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
 import type { GameState, PlayerColor } from '../types/game'
+import type { GameDelta } from '@shared/types'
 import gameReducer, {
   applyDelta,
   selectTargetTerritory,
