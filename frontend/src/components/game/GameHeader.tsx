@@ -65,11 +65,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
                   )
                 })}
               </fieldset>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]">
-                {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
-              </span>
-            )}
+            ) : null}
           </div>
           {/* Current turn label removed; show End Phase button when it's my turn */}
           {isMyTurn && (
