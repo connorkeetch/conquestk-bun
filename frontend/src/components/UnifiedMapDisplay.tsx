@@ -398,9 +398,11 @@ export default function UnifiedMapDisplay({
     const selectedId = selectedTerritoryId
     const isValid = validTargets.includes(territoryId)
     if (selectedId && pendingAction === 'attack' && !isValid) {
+      // Shake to indicate invalid target, but still allow selection logic to run
+      // so the user can switch source territory or clear selection.
       dispatch(triggerInvalidShake(territoryId))
       window.setTimeout(() => dispatch(clearInvalidShake()), 250)
-      return
+      // Do not early-return here
     }
     onTerritoryClick?.(territoryId)
   }

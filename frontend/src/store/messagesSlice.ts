@@ -65,6 +65,10 @@ interface MessagesState {
   // When we optimistically mark a conversation read, set a timestamp to suppress
   // stale unread updates racing in from server for a short grace window.
   pendingRead: Record<string, number>
+  // Persistently suppress server unread overrides for a conversation until a
+  // genuinely new message arrives (not from self). This avoids badges reappearing
+  // without new activity when switching UI tabs.
+  suppressServerUnread: Record<string, boolean>
 }
 
 const initialState: MessagesState = {
@@ -80,6 +84,7 @@ const initialState: MessagesState = {
   pendingUnread: {},
   hiddenConversationIds: {},
   pendingRead: {},
+  suppressServerUnread: {},
 }
 
 const adaptConversation = (item: ConversationListItem): ConversationEntity => ({
@@ -224,7 +229,7 @@ const applyConversationEntity = (state: MessagesState, incoming: ConversationEnt
   const current = state.conversations[entity.id]
   // Respect recent optimistic read within a short window
   const ts = state.pendingRead[entity.id]
-  if (ts && Date.now() - ts < 2000) {
+  if ((ts && Date.now() - ts < 2000) || state.suppressServerUnread[entity.id]) {
     entity = { ...entity, unreadCount: 0 }
   }
   if (current) {
@@ -351,6 +356,7 @@ const messagesSlice = createSlice({
         state.conversations[action.payload].unreadCount = 0
         delete state.pendingUnread[action.payload]
         state.pendingRead[action.payload] = Date.now()
+        state.suppressServerUnread[action.payload] = true
       }
     },
     // Optimistically clear unread count and start grace window
@@ -361,6 +367,7 @@ const messagesSlice = createSlice({
       }
       delete state.pendingUnread[id]
       state.pendingRead[id] = Date.now()
+      state.suppressServerUnread[id] = true
     },
     // Remove a conversation and all associated local state (messages, typing, flags)
     removeConversationLocal(state, action: PayloadAction<string>) {
@@ -417,8 +424,19 @@ const messagesSlice = createSlice({
           metadata: normalized.metadata,
         }
         const fromSelf = normalized.senderId && normalized.senderId === action.payload.currentUserId
-        if (!fromSelf && state.activeConversationId !== normalized.conversationId) {
-          conversation.unreadCount = (conversation.unreadCount ?? 0) + 1
+        if (!fromSelf) {
+          if (state.activeConversationId !== normalized.conversationId) {
+            conversation.unreadCount = (conversation.unreadCount ?? 0) + 1
+            state.suppressServerUnread[normalized.conversationId] = false
+          } else {
+            // When viewing the conversation, keep unread at 0 and maintain suppression
+            conversation.unreadCount = 0
+            state.suppressServerUnread[normalized.conversationId] = true
+          }
+        } else {
+          // Self-authored messages should never create unread; maintain suppression
+          conversation.unreadCount = 0
+          state.suppressServerUnread[normalized.conversationId] = true
         }
       } else if (
         !action.payload.currentUserId ||
@@ -426,6 +444,7 @@ const messagesSlice = createSlice({
       ) {
         state.pendingUnread[normalized.conversationId] =
           (state.pendingUnread[normalized.conversationId] ?? 0) + 1
+        state.suppressServerUnread[normalized.conversationId] = false
       }
     },
     conversationCreated(
@@ -508,6 +527,7 @@ const messagesSlice = createSlice({
       delete state.hasMore[conversationId]
       delete state.loadingMessages[conversationId]
       delete state.pendingUnread[conversationId]
+      delete state.suppressServerUnread[conversationId]
       if (state.activeConversationId === conversationId) {
         state.activeConversationId = null
       }
@@ -523,6 +543,7 @@ const messagesSlice = createSlice({
         conversation.unreadCount = 0
         delete state.pendingUnread[action.payload.payload.conversationId]
         delete state.pendingRead[action.payload.payload.conversationId]
+        state.suppressServerUnread[action.payload.payload.conversationId] = true
       }
 
       if (conversation.membership?.lastReadMessageId) {
@@ -548,7 +569,13 @@ const messagesSlice = createSlice({
         if (state.hiddenConversationIds[entry.conversationId]) {
           continue
         }
-        if (state.conversations[entry.conversationId]) {
+        if (state.suppressServerUnread[entry.conversationId]) {
+          if (state.conversations[entry.conversationId]) {
+            state.conversations[entry.conversationId].unreadCount = 0
+          } else {
+            state.pendingUnread[entry.conversationId] = 0
+          }
+        } else if (state.conversations[entry.conversationId]) {
           state.conversations[entry.conversationId].unreadCount = entry.unreadCount
         } else {
           state.pendingUnread[entry.conversationId] = entry.unreadCount
@@ -599,12 +626,13 @@ const messagesSlice = createSlice({
           }
           const ts = state.pendingRead[entry.conversationId]
           const withinGrace = ts && Date.now() - ts < 2000
+          const suppressed = state.suppressServerUnread[entry.conversationId]
           if (state.conversations[entry.conversationId]) {
-            state.conversations[entry.conversationId].unreadCount = withinGrace
-              ? 0
-              : entry.unreadCount
+            state.conversations[entry.conversationId].unreadCount =
+              withinGrace || suppressed ? 0 : entry.unreadCount
           } else {
-            state.pendingUnread[entry.conversationId] = withinGrace ? 0 : entry.unreadCount
+            state.pendingUnread[entry.conversationId] =
+              withinGrace || suppressed ? 0 : entry.unreadCount
           }
         }
         state.unreadSummaryFetched = true
