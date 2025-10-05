@@ -4,7 +4,6 @@ import { toast } from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
-import { ConquestArmyTransferModal } from '@/components/game/ConquestArmyTransferModal'
 import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TurnTimer } from '@/components/game/TurnTimer'
@@ -29,12 +28,7 @@ import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
-import {
-  endTurn,
-  transferConquestArmies,
-  undoFortify,
-  undoLastPlacement,
-} from '../store/gameActions'
+import { endTurn, undoFortify, undoLastPlacement } from '../store/gameActions'
 import {
   clearGame,
   fetchGameState,
@@ -1781,42 +1775,7 @@ export default function GameRoom() {
         onClose={() => setProfileUsername(null)}
       />
 
-      {/* Conquest Army Transfer Modal */}
-      {conquestTransfer && currentGame && (
-        <ConquestArmyTransferModal
-          isOpen={true}
-          fromTerritoryName={
-            currentGame.board.find((t) => t.id === conquestTransfer.fromTerritoryId)?.name ??
-            conquestTransfer.fromTerritoryId
-          }
-          toTerritoryName={
-            currentGame.board.find((t) => t.id === conquestTransfer.toTerritoryId)?.name ??
-            conquestTransfer.toTerritoryId
-          }
-          availableArmies={conquestTransfer.availableArmies}
-          onConfirm={(armies) => {
-            dispatch(
-              transferConquestArmies({
-                fromTerritoryId: conquestTransfer.fromTerritoryId,
-                toTerritoryId: conquestTransfer.toTerritoryId,
-                armies,
-              }),
-            )
-            dispatch(setConquestTransfer(null))
-            // After completing transfer, clear selections and pending actions
-            dispatch(selectTerritory(null))
-            dispatch(selectTargetTerritory(null))
-            dispatch(setPendingAction(null))
-          }}
-          onCancel={() => {
-            dispatch(setConquestTransfer(null))
-            // On cancel, also clear selections to return to neutral state
-            dispatch(selectTerritory(null))
-            dispatch(selectTargetTerritory(null))
-            dispatch(setPendingAction(null))
-          }}
-        />
-      )}
+      {/* Conquest transfer handled inline on map via ConquestTransferPopup */}
 
       {/* Floating, less-obtrusive mute control */}
       <MuteButton offsetBottom={muteOffsetBottom} />
