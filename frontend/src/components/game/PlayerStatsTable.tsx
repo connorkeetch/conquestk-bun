@@ -1,5 +1,6 @@
 import type React from 'react'
 import { memo, useCallback, useMemo, useState } from 'react'
+import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getColorValue } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
@@ -98,6 +99,11 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                         >
                           {player.username}
                         </button>
+                        {player.isCurrentTurn && (
+                          <span className="ml-2 shrink-0">
+                            <TurnTimer showBank={false} />
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-right font-mono text-[color:var(--text)] whitespace-nowrap">

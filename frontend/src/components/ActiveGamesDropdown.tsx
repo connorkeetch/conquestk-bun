@@ -23,12 +23,44 @@ const ActiveGamesDropdown: React.FC = () => {
   const [games, setGames] = useState<GameInfo[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [timers, setTimers] = useState<Record<string, { expiresAt?: number; bank?: number }>>({})
+  const [now, setNow] = useState<number>(() => Date.now())
 
   const fetchGames = useCallback(async () => {
     setLoading(true)
     try {
       const response = await api.get('/game/my-games')
-      setGames(response.data.games || [])
+      const list: GameInfo[] = response.data.games || []
+      setGames(list)
+
+      // Preload timers for games where it's your turn
+      const yours = list.filter((g) => g.isYourTurn)
+      if (yours.length > 0) {
+        const details = await Promise.all(
+          yours.map(async (g) => {
+            try {
+              const res = await api.get(`/game/room/${g.id}`)
+              const room = (res.data?.room ?? {}) as Partial<{
+                turnExpiresAt?: string | null
+                timeBankSecondsRemaining?: number | null
+              }>
+              const expiresAt = room.turnExpiresAt ? Date.parse(room.turnExpiresAt) : undefined
+              const bank =
+                typeof room.timeBankSecondsRemaining === 'number'
+                  ? Math.max(0, Math.trunc(room.timeBankSecondsRemaining))
+                  : undefined
+              return [g.id, { expiresAt, bank }] as const
+            } catch (_err) {
+              return [g.id, { expiresAt: undefined, bank: undefined }] as const
+            }
+          }),
+        )
+        const map: Record<string, { expiresAt?: number; bank?: number }> = {}
+        for (const [id, t] of details) map[id] = t
+        setTimers(map)
+      } else {
+        setTimers({})
+      }
     } catch (error) {
       logger.error('Failed to load active games', error)
       setGames([])
@@ -42,6 +74,25 @@ const ActiveGamesDropdown: React.FC = () => {
       fetchGames()
     }
   }, [user, isOpen, fetchGames])
+
+  // Tick to update countdowns while the menu is open
+  useEffect(() => {
+    if (!isOpen) return
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [isOpen])
+
+  const formatWorded = useCallback((secs: number) => {
+    const s = Math.max(0, Math.trunc(secs))
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const r = s % 60
+    const parts: string[] = []
+    if (h > 0) parts.push(`${h}h`)
+    if (m > 0) parts.push(`${m}m`)
+    if (r > 0 || parts.length === 0) parts.push(`${r}s`)
+    return parts.join(' ')
+  }, [])
 
   if (!user) return null
 
@@ -135,8 +186,28 @@ const ActiveGamesDropdown: React.FC = () => {
                                   {game.playerCount}/{game.maxPlayers}
                                 </span>
                                 {game.isYourTurn && (
-                                  <span className="text-red-500 font-semibold animate-pulse">
-                                    Your Turn!
+                                  <span className="text-red-400 font-semibold animate-pulse flex items-center gap-2">
+                                    Your Turn
+                                    {(() => {
+                                      const t = timers[game.id]
+                                      const remain = t?.expiresAt
+                                        ? Math.ceil((t.expiresAt - now) / 1000)
+                                        : null
+                                      const bank = t?.bank ?? null
+                                      if (remain == null) return null
+                                      const main = formatWorded(Math.max(0, remain))
+                                      // If in overtime and we have bank, show bank as +Xm
+                                      const bankLabel =
+                                        bank && remain <= 0 ? `+${formatWorded(bank)}` : null
+                                      return (
+                                        <span className="inline-flex items-center gap-1 text-xs">
+                                          <span>{main}</span>
+                                          {bankLabel && (
+                                            <span className="chip text-[10px]">{bankLabel}</span>
+                                          )}
+                                        </span>
+                                      )
+                                    })()}
                                   </span>
                                 )}
                               </div>
