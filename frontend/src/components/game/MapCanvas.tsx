@@ -53,7 +53,12 @@ export function MapCanvas({ imageUrl, imageWidth, imageHeight, children }: MapCa
     >
       <div
         className="mapStage absolute left-0 top-0 will-change-transform"
-        style={{ transform, transformOrigin: '0 0' }}
+        style={{
+          transform,
+          transformOrigin: '0 0',
+          width: imageWidth,
+          height: imageHeight,
+        }}
       >
         {/* Base image at intrinsic dimensions so token coords align in image pixel space */}
         <img
@@ -63,6 +68,8 @@ export function MapCanvas({ imageUrl, imageWidth, imageHeight, children }: MapCa
           style={{
             width: imageWidth,
             height: imageHeight,
+            maxWidth: 'none',
+            maxHeight: 'none',
             display: 'block',
             pointerEvents: 'none',
             userSelect: 'none',
