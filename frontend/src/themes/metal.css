@@ -43,6 +43,9 @@
 
   --ck-glow: #ff355e;
 
+  /* Display font: metal-styled headings */
+  --font-family-heading: "Metal Mania", "New Rocker", "Audiowide", var(--font-family-base);
+
   --glass-bg: rgba(17, 9, 27, 0.86);
   --glass-bg-light: rgba(27, 16, 39, 0.72);
   --glass-border: rgba(123, 135, 255, 0.32);
