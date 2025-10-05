@@ -1,4 +1,4 @@
-import EmojiPicker, { type EmojiClickData, Theme, EmojiStyle } from 'emoji-picker-react'
+import EmojiPicker, { type EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react'
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { useAppSelector } from '@/hooks/redux'
 
