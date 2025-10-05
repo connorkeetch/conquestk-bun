@@ -208,10 +208,10 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       }
 
       const territoryOwnerId = territory.owner ?? null
+      const isFriendly = isFriendlyTerritoryOwner(gameState, territoryOwnerId, currentPlayer)
+      const armies = territory.armies ?? 0
 
       if (currentPhase === 'reinforcement') {
-        const isFriendly = isFriendlyTerritoryOwner(gameState, territoryOwnerId, currentPlayer)
-
         if (!isFriendly) {
           const message = gameState.gameConfig?.allowTeamPlay
             ? 'You can only deploy armies to territories owned by your team'
@@ -238,7 +238,29 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         } else if (currentPhase === 'fortify') {
           dispatch(setPendingAction('fortify'))
         }
+      } else if (currentPhase === 'attack' || currentPhase === 'fortify') {
+        // When switching selection, only select if it's friendly in attack/fortify.
+        if (isFriendly) {
+          // Optional: require at least 2 armies to start a move/attack source
+          const needTwo = currentPhase !== 'reinforcement'
+          if (!needTwo || armies > 1) {
+            dispatch(selectTerritory(territoryId))
+            dispatch(selectTargetTerritory(null))
+            dispatch(setPendingAction(currentPhase as 'attack' | 'fortify'))
+          } else {
+            // Insufficient armies; clear selection for clarity
+            dispatch(selectTerritory(null))
+            dispatch(selectTargetTerritory(null))
+            dispatch(setPendingAction(null))
+          }
+        } else {
+          // Clicking non-owned territory clears selection
+          dispatch(selectTerritory(null))
+          dispatch(selectTargetTerritory(null))
+          dispatch(setPendingAction(null))
+        }
       } else {
+        // Other phases: default to selecting the clicked territory
         dispatch(selectTerritory(territoryId))
         dispatch(selectTargetTerritory(null))
       }

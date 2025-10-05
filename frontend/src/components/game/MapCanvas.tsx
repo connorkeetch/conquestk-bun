@@ -9,9 +9,17 @@ interface MapCanvasProps {
   imageWidth: number
   imageHeight: number
   children?: React.ReactNode
+  // Optional background click: fires when clicking map image/stage (not tokens)
+  onBackgroundClick?: (e: React.MouseEvent) => void
 }
 
-export function MapCanvas({ imageUrl, imageWidth, imageHeight, children }: MapCanvasProps) {
+export function MapCanvas({
+  imageUrl,
+  imageWidth,
+  imageHeight,
+  children,
+  onBackgroundClick,
+}: MapCanvasProps) {
   const dispatch = useAppDispatch()
   const containerRef = useRef<HTMLDivElement>(null)
   const view = useAppSelector((s) => s.mapView)
@@ -58,6 +66,16 @@ export function MapCanvas({ imageUrl, imageWidth, imageHeight, children }: MapCa
           transformOrigin: '0 0',
           width: imageWidth,
           height: imageHeight,
+        }}
+        role="application"
+        tabIndex={-1}
+        aria-label="Map stage"
+        onClick={onBackgroundClick}
+        onKeyDown={(e) => {
+          if (!onBackgroundClick) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            onBackgroundClick(e as unknown as React.MouseEvent)
+          }
         }}
       >
         {/* Base image at intrinsic dimensions so token coords align in image pixel space */}

@@ -259,6 +259,18 @@ export default function UnifiedMapDisplay({
     onTerritoryHover?.(territoryId)
   }
 
+  const handleBackgroundClick = () => {
+    if (previewMode) return
+    // Clicking on non-territory clears selection and pending actions
+    dispatch(selectTerritory(null))
+    dispatch(selectTargetTerritory(null))
+    dispatch(setPendingAction(null))
+    setHoveredId(null)
+    if (!previewMode) {
+      dispatch(setHoveredTarget(null))
+    }
+  }
+
   const stepScale = (dir: 'in' | 'out') => {
     const delta = dir === 'in' ? 0.1 : -0.1
     const next = Math.min(2, Math.max(0.5, Math.round((currentScale + delta) * 10) / 10))
@@ -282,6 +294,7 @@ export default function UnifiedMapDisplay({
         imageUrl={mapData.imageUrl}
         imageWidth={mapData.width}
         imageHeight={mapData.height}
+        onBackgroundClick={handleBackgroundClick}
       >
         {pendingAction === 'fortify' &&
           selectedTerritoryId &&

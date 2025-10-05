@@ -58,7 +58,11 @@ export function TokenLayer({
             }}
             title={t.name}
             aria-label={`Territory: ${t.name}`}
-            onClick={() => onClick?.(t.id)}
+            onClick={(e) => {
+              // Prevent background click handlers from firing when clicking a token
+              e.stopPropagation()
+              onClick?.(t.id)
+            }}
             onMouseEnter={() => onHover?.(t.id)}
             onMouseLeave={() => onHover?.(null)}
             onFocus={() => onHover?.(t.id)}
