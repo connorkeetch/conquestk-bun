@@ -66,7 +66,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                     <span className="hidden sm:inline">Territories</span>
                   </th>
                   <th className="px-2 py-2 text-right font-medium text-muted">+/Turn</th>
-                  <th className="px-2 py-2 text-right font-medium text-muted">Cards</th>
+                  <th className="px-2 py-2 text-right font-medium text-muted">Treasures</th>
                 </tr>
               </thead>
               <tbody>
