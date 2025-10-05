@@ -70,7 +70,7 @@ export function TokenLayer({
         // Edge-opaque → center-transparent radial gradient
         const edgeAlpha = dimmed ? 0.85 : 1
         const midAlpha = dimmed ? 0.5 : 0.7
-        const _innerAlpha = dimmed ? 0.25 : 0.35
+        // formerly used for an inner alpha stop; no longer needed
         // Wider opaque edge and smoother ramp to center transparency
         const gradient = `radial-gradient(circle at center,
           ${hexToRgba(innerFill, 0.9)} 0%,

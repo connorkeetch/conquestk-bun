@@ -2,7 +2,7 @@ import type React from 'react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { endTurn, undoFortify, undoLastPlacement } from '@/store/gameActions'
+import { endTurn, goBackToReinforcement, undoFortify, undoLastPlacement } from '@/store/gameActions'
 import { DiceResultsBar } from './DiceResultsBar'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
@@ -29,6 +29,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
     const [showTreasures, setShowTreasures] = useState(false)
     const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
     const phase = game?.phase ?? currentPhase
+    const canGoBackToReinforcement = phase === 'attack' && !game?.hasAttackedThisTurn
     const mustCashIn = Boolean(game?.mustCashInTreasures)
     const me = useAppSelector((s) =>
       s.game.currentGame?.players.find(
@@ -154,6 +155,16 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
                 title={mustCashIn ? 'You must trade a set' : 'View/trade treasures'}
               >
                 🗝️ Treasures
+              </button>
+            )}
+            {isMyTurn && canGoBackToReinforcement && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => void dispatch(goBackToReinforcement())}
+                title="Go back to reinforcement"
+              >
+                ↩ Reinforce
               </button>
             )}
             {isMyTurn && (

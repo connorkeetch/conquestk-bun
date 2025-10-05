@@ -30,6 +30,10 @@ import TerritoryLayer from './game/TerritoryLayer'
 import TokenLayer from './game/TokenLayer'
 import { HillOverlay } from './map/HillOverlay'
 
+// Delay between consecutive auto-attacks (milliseconds)
+const delayForSpeed = (speed: 'normal' | 'fast' | 'instant') =>
+  speed === 'instant' ? 20 : speed === 'fast' ? 80 : 150
+
 interface Territory {
   id: string
   name: string
@@ -199,6 +203,63 @@ export default function UnifiedMapDisplay({
 
   const attackDice = useAppSelector((s) => s.uiRoom.dice)
   const autoAttacking = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
+  const animationSpeed = useAppSelector((s) => s.uiRoom.animationSpeed)
+  const battle = useAppSelector((s) => s.game.battleResult)
+  const autoRef = useRef(autoAttacking)
+  useEffect(() => {
+    autoRef.current = autoAttacking
+  }, [autoAttacking])
+
+  const lastTargetRef = useRef<string | null>(null)
+
+  // Auto-attack chaining: when a battle result arrives and auto is enabled,
+  // schedule the next attack if conditions still allow it.
+  useEffect(() => {
+    if (!autoAttacking) return
+    if (!game) return
+    if (!selectedTerritoryId) return
+    const currentTarget = selectedTargetTerritoryId ?? hoveredId
+    if (!currentTarget) return
+    if (!battle) return
+
+    if (battle.gameEnded) {
+      void dispatch(setAutoAttacking(false))
+      return
+    }
+
+    const fromId =
+      typeof battle.fromTerritory === 'string' ? battle.fromTerritory : battle.fromTerritory.id
+    const toId = typeof battle.toTerritory === 'string' ? battle.toTerritory : battle.toTerritory.id
+    if (fromId !== selectedTerritoryId || toId !== currentTarget) return
+
+    const src = territories.find((t) => t.id === selectedTerritoryId)
+    if (!src) return
+    if (battle.conquered || (src.armies ?? 0) <= 1) {
+      void dispatch(setAutoAttacking(false))
+      return
+    }
+
+    lastTargetRef.current = currentTarget
+    const timeoutId = window.setTimeout(() => {
+      if (!autoRef.current) return
+      const nextTarget = lastTargetRef.current || currentTarget
+      void dispatch(
+        executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: nextTarget }),
+      )
+    }, delayForSpeed(animationSpeed))
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    animationSpeed,
+    autoAttacking,
+    battle,
+    dispatch,
+    game,
+    hoveredId,
+    selectedTargetTerritoryId,
+    selectedTerritoryId,
+    territories,
+  ])
   const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
   const reinforcementArmies = useAppSelector((s) => s.game.reinforcementArmies)
   const oddsTooltip = previewMode
