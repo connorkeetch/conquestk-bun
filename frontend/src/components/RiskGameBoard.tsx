@@ -16,7 +16,6 @@ import {
 } from '../store/gameSlice'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { AssassinationContract } from './game/AssassinationContract'
-import { GameActionBar } from './game/GameActionBar'
 // import { GamePhaseControls } from './GamePhaseControls'
 import { GameHeader } from './game/GameHeader'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
@@ -389,12 +388,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
               onTerritoryHover={handleTerritoryHover}
             />
           </div>
-          {/* Contextual footer below the map (never overlaps) */}
-          {!lobbyMode && (
-            <div className="border-t border-[color:var(--panel-border)] bg-[color:var(--surface-1)] px-2 py-2 sm:px-3 sm:py-3">
-              <GameActionBar mode="inline" hidePhaseChip hideTreasures hideEndPhase />
-            </div>
-          )}
+          {/* Contextual footer removed; all actions now live in-map or header */}
         </div>
         {/* Sidebar removed */}
       </div>

@@ -24,9 +24,11 @@ function Dice({ value, color, glow }: DiceProps) {
 export function DiceResultsBar() {
   const history = useAppSelector((s) => s.uiRoom.battleHistory ?? [])
   const game = useAppSelector((s) => s.game.currentGame)
+  const phase = game?.phase
 
   const last = history.length > 0 ? history[history.length - 1] : null
-  if (!last) return null
+  // Hide dice recap outside of the Attack phase
+  if (!last || phase !== 'attack') return null
 
   const attackerColor = (() => {
     if (!game) return '#ef4444'

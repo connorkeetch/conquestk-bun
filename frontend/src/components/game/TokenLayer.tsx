@@ -1,6 +1,12 @@
 import { useMemo } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
-import { extractFirstHexColor, hexToRgba, lightenColor } from '@/utils/color'
+import {
+  extractFirstHexColor,
+  getRelativeLuminance,
+  hexToRgba,
+  lightenColor,
+  mixColors,
+} from '@/utils/color'
 
 export interface TokenSpec {
   id: string
@@ -51,9 +57,15 @@ export function TokenLayer({
             ? String(colorValue)
             : extractFirstHexColor(String(colorValue))) || '#94A3B8'
         const baseSize = 28 // base size at scale 1 (stage will scale tokens)
-        const border = isValid ? 3 : 0
-        const colorGlow = hexToRgba(String(color), dimmed ? 0.35 : 0.55)
-        const edgeStroke = String(color)
+        // Determine a high-contrast edge color derived from the token color
+        const luminance = getRelativeLuminance(String(color))
+        const edgeStroke =
+          luminance < 0.5
+            ? lightenColor(String(color), 0.25)
+            : mixColors(String(color), '#000000', 0.3)
+        const ringWidth = isSelected ? 4 : 3
+        const border = ringWidth
+        const colorGlow = hexToRgba(String(color), dimmed ? 0.3 : 0.5)
         const innerFill = lightenColor(String(color), 0.15)
         // Edge-opaque → center-transparent radial gradient
         const edgeAlpha = dimmed ? 0.85 : 1
@@ -104,17 +116,17 @@ export function TokenLayer({
                 background: `${halo}, ${gradient}`,
                 opacity: dimmed ? 0.6 : 1,
                 clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                border: `${border}px solid ${isValid ? '#38bdf8' : 'transparent'}`,
-                // Bright, high-contrast token edge similar to reference:
-                // - thin dark ring
-                // - strong owner-colored ring
-                // - thin inner white ring (inset)
-                // - soft drop shadow + color glow
+                // Hex-aligned edge: colored border traces the clip-path, avoiding circular look
+                border: `${border}px solid ${isValid ? '#38bdf8' : edgeStroke}`,
+                // Remove the white inner ring and circular bright edge; use subtle drop-shadows
+                // that respect the hex shape for separation from map
                 boxShadow: isSelected
-                  ? `0 0 0 1px rgba(0,0,0,0.7), 0 0 0 3px ${edgeStroke}, inset 0 0 0 2px #ffffff, 0 2px 8px rgba(0,0,0,0.6), 0 0 12px ${colorGlow}, 0 0 18px rgba(255,255,255,0.7)`
+                  ? `0 2px 8px rgba(0,0,0,0.55), 0 0 8px ${colorGlow}`
                   : isValid
-                    ? `0 0 0 1px rgba(0,0,0,0.7), 0 0 0 3px ${edgeStroke}, inset 0 0 0 2px #ffffff, 0 2px 8px rgba(0,0,0,0.55), 0 0 10px ${hexToRgba('#38bdf8', 0.65)}`
-                    : `0 0 0 1px rgba(0,0,0,0.7), 0 0 0 3px ${edgeStroke}, inset 0 0 0 2px #ffffff, 0 2px 8px rgba(0,0,0,0.5), 0 0 10px ${colorGlow}`,
+                    ? `0 2px 6px rgba(0,0,0,0.45), 0 0 8px ${hexToRgba('#38bdf8', 0.5)}`
+                    : `0 2px 6px rgba(0,0,0,0.4), 0 0 6px ${colorGlow}`,
+                // Drop-shadow filter follows the clipped hexagon shape (non-circular)
+                filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.35))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

@@ -4,7 +4,6 @@ import { toast } from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
-import { GameActionBar } from '@/components/game/GameActionBar'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TurnTimer } from '@/components/game/TurnTimer'
 // audioService toggled via floating MuteButton component
@@ -92,7 +91,7 @@ export default function GameRoom() {
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
   const [showGameOver, setShowGameOver] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-  const [mobileDrawerTab, setMobileDrawerTab] = useState<'actions' | 'chat'>('actions')
+  // Bottom drawer now only shows chat; actions moved to header/map popups
   const [resignDialogOpen, setResignDialogOpen] = useState(false)
   const resignDialogRef = useRef<HTMLDivElement | null>(null)
   const resignDialogTitleId = useId()
@@ -1036,7 +1035,6 @@ export default function GameRoom() {
             type="button"
             onClick={() => {
               setMobileDrawerOpen(true)
-              setMobileDrawerTab('chat')
             }}
             className="flex items-center gap-2 rounded-full border border-border bg-surface-2/80 backdrop-blur px-4 py-2 text-sm shadow min-h-[44px]"
             title="Open sidebar"
@@ -1698,13 +1696,13 @@ export default function GameRoom() {
           type="button"
           className="md:hidden fixed z-50 rounded-full bg-[color:var(--color-primary)] text-white shadow-lg px-4 py-3"
           onClick={() => setMobileDrawerOpen((v) => !v)}
-          title={mobileDrawerOpen ? 'Close drawer' : 'Open actions/chat'}
+          title={mobileDrawerOpen ? 'Close chat' : 'Open chat'}
           style={{
             bottom: 'calc(1rem + env(safe-area-inset-bottom))',
             right: 'calc(1rem + env(safe-area-inset-right))',
           }}
         >
-          {mobileDrawerOpen ? '✕' : mobileDrawerTab === 'actions' ? '⚔️ Actions' : '💬 Chat'}
+          {mobileDrawerOpen ? '✕' : '💬 Chat'}
         </button>
       )}
 
@@ -1718,7 +1716,7 @@ export default function GameRoom() {
             if (e.key === 'Enter' || e.key === ' ') setMobileDrawerOpen(false)
           }}
           type="button"
-          aria-label="Close actions/chat drawer"
+          aria-label="Close chat drawer"
         />
       )}
 
@@ -1741,35 +1739,17 @@ export default function GameRoom() {
             <div className="flex items-center justify-between px-3 pt-2">
               <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30" />
             </div>
-            <div className="flex items-center gap-2 px-3 pb-2">
+            <div className="flex items-center justify-end px-3 pb-2">
               <button
                 type="button"
-                className={`btn btn-ghost btn-sm ${mobileDrawerTab === 'actions' ? 'ring-1 ring-white' : ''}`}
-                onClick={() => setMobileDrawerTab('actions')}
+                className="btn btn-ghost btn-sm"
+                onClick={() => setMobileDrawerOpen(false)}
               >
-                ⚔️ Actions
+                Close
               </button>
-              <button
-                type="button"
-                className={`btn btn-ghost btn-sm ${mobileDrawerTab === 'chat' ? 'ring-1 ring-white' : ''}`}
-                onClick={() => setMobileDrawerTab('chat')}
-              >
-                💬 Chat
-              </button>
-              <div className="ml-auto pr-1">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setMobileDrawerOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
-              {mobileDrawerTab === 'actions' ? (
-                <GameActionBar mode="inline" hidePhaseChip hideTreasures hideEndPhase />
-              ) : roomId && user ? (
+              {roomId && user ? (
                 shouldHydrateChat ? (
                   <Suspense
                     fallback={
