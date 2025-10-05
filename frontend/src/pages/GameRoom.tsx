@@ -1039,8 +1039,8 @@ export default function GameRoom() {
 
   return (
     <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] flex-col gap-6 px-6 pb-20 pt-8 lg:px-10">
-      {/* Mini HUD for mobile */}
-      {currentGame && (
+        {/* Mini HUD for mobile */}
+        {currentGame && (
         <div className="md:hidden fixed top-2 left-1/2 z-40 -translate-x-1/2">
           <button
             type="button"
@@ -1651,9 +1651,14 @@ export default function GameRoom() {
           </div>
         )}
       </div>
+      {/* SR-only live region for announcements */}
       <div className="sr-only" aria-live="polite">
         {liveMessage}
-      </div>isGraceActor && graceExpiresAt && (
+      </div>
+    </div>
+
+    {/* AFK grace action bar for the next player */}
+    {isGraceActor && graceExpiresAt && (
         <div className="fixed inset-x-0 bottom-14 z-40 mx-auto max-w-[1200px] px-2">
           <div className="flex items-center justify-between gap-3 rounded-md bg-[color:var(--surface-2)]/90 px-3 py-2 text-sm shadow">
             <div>
@@ -1694,7 +1699,8 @@ export default function GameRoom() {
             </div>
           </div>
         </div>
-      )isHost && replacementPending && (
+      )}
+      {isHost && replacementPending && (
         <div className="fixed inset-x-0 bottom-24 z-40 mx-auto max-w-[1200px] px-2">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-[color:var(--surface-2)]/90 px-3 py-2 text-sm shadow">
             <div className="flex items-center gap-2">
@@ -1746,7 +1752,8 @@ export default function GameRoom() {
             </div>
           </div>
         </div>
-      )currentGame && (
+      )}
+      {currentGame && (
         <button
           type="button"
           className="md:hidden fixed z-50 rounded-full bg-[color:var(--color-primary)] text-white shadow-lg px-4 py-3"
@@ -1759,7 +1766,8 @@ export default function GameRoom() {
         >
           {mobileDrawerOpen ? '✕' : mobileDrawerTab === 'actions' ? '⚔️ Actions' : '💬 Chat'}
         </button>
-      )currentGame && (
+      )}
+      {currentGame && (
         <button
           className={`md:hidden fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -1770,7 +1778,8 @@ export default function GameRoom() {
           type="button"
           aria-label="Close actions/chat drawer"
         />
-      )currentGame && (
+      )}
+      {currentGame && (
         <div
           id={mobileDrawerId}
           className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
@@ -1845,7 +1854,8 @@ export default function GameRoom() {
             </div>
           </div>
         </div>
-      )showGameOver && currentGame && (
+      )}
+      {showGameOver && currentGame && (
         <GameOverModal
           isOpen={showGameOver}
           winner={(() => {
@@ -1895,7 +1905,7 @@ export default function GameRoom() {
           }}
           newGameLabel="Rematch Same Seats"
         />
-      )
+      )}
 
       <PlayerProfileModal
         open={profileUsername !== null}
