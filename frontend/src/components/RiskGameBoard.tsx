@@ -389,15 +389,13 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
               onTerritoryClick={handleTerritoryClick}
               onTerritoryHover={handleTerritoryHover}
             />
-            {/* In-board action bar overlay (always visible above map) */}
-            {!lobbyMode && (
-              <div className="pointer-events-none absolute left-0 right-0 bottom-0 z-20">
-                <div className="pointer-events-auto p-2 sm:p-3">
-                  <GameActionBar mode="inline" hidePhaseChip hideTreasures hideEndPhase />
-                </div>
-              </div>
-            )}
           </div>
+          {/* Contextual footer below the map (never overlaps) */}
+          {!lobbyMode && (
+            <div className="border-t border-[color:var(--panel-border)] bg-[color:var(--surface-1)] px-2 py-2 sm:px-3 sm:py-3">
+              <GameActionBar mode="inline" hidePhaseChip hideTreasures hideEndPhase />
+            </div>
+          )}
         </div>
         {/* Sidebar removed */}
       </div>
