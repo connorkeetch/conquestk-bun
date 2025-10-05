@@ -31,17 +31,36 @@ export function useZoomPan({ containerRef }: UseZoomPanOpts) {
     return () => ro.disconnect()
   }, [containerRef, dispatch])
 
-  // Block wheel/pinch as per requirements; hint users to use discrete controls
+  // Wheel to zoom (10% steps), anchored to cursor; clamps 50%–200%
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      // Prevent zooming entirely (use toolbar), allow standard scrolling if content scrolled elsewhere
+      // Handle zoom instead of scroll inside the map viewport
       e.preventDefault()
+      // Determine zoom direction: deltaY > 0 => zoom out
+      const dir = e.deltaY > 0 ? -1 : 1
+      const step = 0.1
+      const targetScale = Math.min(
+        2,
+        Math.max(0.5, Math.round((view.scale + dir * step) * 10) / 10),
+      )
+
+      // Anchor zoom at mouse position so the point under cursor remains stable
+      const rect = el.getBoundingClientRect()
+      const cx = e.clientX - rect.left
+      const cy = e.clientY - rect.top
+      const stageX = (cx - view.tx) / Math.max(0.000001, view.scale)
+      const stageY = (cy - view.ty) / Math.max(0.000001, view.scale)
+      const nextTx = Math.round(cx - stageX * targetScale)
+      const nextTy = Math.round(cy - stageY * targetScale)
+
+      dispatch(setScale(targetScale as Parameters<typeof setScale>[0]))
+      dispatch(setPan({ tx: nextTx, ty: nextTy }))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [containerRef])
+  }, [containerRef, dispatch, view.scale, view.tx, view.ty])
 
   // Drag to pan (mouse)
   const dragRef = useRef<{
