@@ -58,6 +58,34 @@ export default function ConquestTransferPopup({
               <span className="font-bold">{armies}</span>
             </div>
           </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs flex-1"
+              onClick={() => setArmies(1)}
+              disabled={maxArmies < 1}
+              title="Move 1"
+            >
+              Min (1)
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs flex-1"
+              onClick={() => setArmies(Math.max(1, Math.floor(maxArmies / 2)))}
+              disabled={maxArmies < 2}
+              title="Move half"
+            >
+              Half
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs flex-1"
+              onClick={() => setArmies(Math.max(1, maxArmies))}
+              title="Move all"
+            >
+              All
+            </button>
+          </div>
           <div className="mt-1 flex items-center justify-end gap-2">
             <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
               Cancel
