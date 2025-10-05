@@ -24,6 +24,10 @@ export function MapCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const view = useAppSelector((s) => s.mapView)
   const { onMouseDown, onTouchStart, onTouchMove, onTouchEnd } = useZoomPan({ containerRef })
+  // Track whether a mouse click originated on the stage itself.
+  // This prevents accidental background clears when mouseup happens on the stage
+  // but mousedown started elsewhere (e.g., dragging a scrollbar or slider).
+  const mouseDownOnStageRef = useRef(false)
 
   // Initialize image size and center when both viewport and image known
   useEffect(() => {
@@ -39,6 +43,15 @@ export function MapCanvas({
       }
     }
   }, [dispatch, view.viewport.w, view.viewport.h, view.image.w, view.image.h, view.tx, view.ty])
+
+  // Always clear the stage mousedown flag on any mouseup to avoid stale state
+  useEffect(() => {
+    const handleWindowMouseUp = () => {
+      mouseDownOnStageRef.current = false
+    }
+    window.addEventListener('mouseup', handleWindowMouseUp)
+    return () => window.removeEventListener('mouseup', handleWindowMouseUp)
+  }, [])
 
   const transform = useMemo(
     () => makeTransform(view.tx, view.ty, view.scale),
@@ -67,7 +80,16 @@ export function MapCanvas({
         role="application"
         tabIndex={-1}
         aria-label="Map stage"
-        onClick={onBackgroundClick}
+        onMouseDown={() => {
+          // Only clicks that originate on the stage should trigger a background click
+          mouseDownOnStageRef.current = true
+        }}
+        onClick={(e) => {
+          // Ignore clicks where the press started outside the stage (e.g., scrollbar)
+          if (!mouseDownOnStageRef.current) return
+          mouseDownOnStageRef.current = false
+          onBackgroundClick?.(e)
+        }}
         onKeyDown={(e) => {
           if (!onBackgroundClick) return
           if (e.key === 'Enter' || e.key === ' ') {
