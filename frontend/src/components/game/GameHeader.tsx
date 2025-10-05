@@ -40,9 +40,36 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
       <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
         <div className="flex justify-between items-center gap-4">
           <div className="flex items-center gap-4 text-sm flex-1">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]">
-              {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
-            </span>
+            {isMyTurn ? (
+              <fieldset
+                aria-label="Turn phases"
+                className="flex items-center gap-2 m-0 p-0 border-0"
+              >
+                <legend className="sr-only">Turn phases</legend>
+                {(['reinforcement', 'attack', 'fortify'] as const).map((p) => {
+                  const active = phase === p
+                  const label =
+                    p === 'reinforcement' ? 'Reinforce' : p.charAt(0).toUpperCase() + p.slice(1)
+                  return (
+                    <span
+                      key={p}
+                      className={
+                        'inline-flex items-center gap-1 px-2 py-1 rounded font-medium ' +
+                        (active
+                          ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
+                          : 'bg-[color:var(--surface-1)] text-muted')
+                      }
+                    >
+                      {label}
+                    </span>
+                  )
+                })}
+              </fieldset>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]">
+                {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
+              </span>
+            )}
           </div>
           {/* Current turn label removed; show End Phase button when it's my turn */}
           {isMyTurn && (
