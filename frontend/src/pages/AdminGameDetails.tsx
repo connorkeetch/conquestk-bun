@@ -221,7 +221,8 @@ export default function AdminGameDetailsPage() {
       if (!gameId || activeTab !== 'turnStats') return
       try {
         const result = await adminService.getGameTurnStats(gameId)
-        setTurnStats(result.turnStats)
+        // Coerce to expected shape; backend returns loosely-typed records
+        setTurnStats(result.turnStats as unknown as TurnStat[])
       } catch {
         // no-op
       }

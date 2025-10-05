@@ -885,8 +885,8 @@ class SocketService {
           recordBattleResult({
             fromId: fromTerritory.id,
             toId: toTerritory.id,
-            attackerId: fromTerritory.ownerId ?? undefined,
-            defenderId: toTerritory.ownerId ?? undefined,
+            attackerId,
+            defenderId,
             attackerDice,
             defenderDice,
             attackerLosses,

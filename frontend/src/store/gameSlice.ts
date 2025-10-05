@@ -404,10 +404,10 @@ const gameSlice = createSlice({
           }
 
           case 'PHASE_CHANGE': {
-            state.currentGame.phase = incoming.phase
-            state.currentGame.currentPlayer = incoming.currentPlayer
+            state.currentGame!.phase = incoming.phase
+            state.currentGame!.currentPlayer = incoming.currentPlayer
             if (incoming.turn !== undefined) {
-              state.currentGame.turn = incoming.turn
+              state.currentGame!.turn = incoming.turn
             }
             if (incoming.reinforcementArmies !== undefined) {
               state.reinforcementArmies = incoming.reinforcementArmies
@@ -431,7 +431,7 @@ const gameSlice = createSlice({
           }
 
           case 'GAME_END': {
-            state.currentGame.phase = 'finished'
+            state.currentGame!.phase = 'finished'
             break
           }
 
@@ -444,7 +444,7 @@ const gameSlice = createSlice({
 
       // Update client version after applying delta
       if (delta.version !== undefined) {
-        state.currentGame.version = delta.version
+        state.currentGame!.version = delta.version
       }
 
       // Recalculate valid targets if territory selection is active

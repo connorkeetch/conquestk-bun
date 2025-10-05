@@ -38,13 +38,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
 
   const territoryEntries = useMemo(() => Object.entries(territories), [territories])
 
-  const _focusCoords = useMemo(() => {
-    const id = selectedTargetTerritory || selectedTerritory
-    if (!id) return null
-    const t = territories[id]
-    if (!t) return null
-    return { x: t.armyPosition.x, y: t.armyPosition.y }
-  }, [selectedTargetTerritory, selectedTerritory, territories])
+  // Focus coordinates handled by higher-level view logic
 
   return (
     <div className="game-board flex-1 min-w-0 bg-surface-2 p-1 sm:p-2">

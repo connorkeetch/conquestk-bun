@@ -2,7 +2,7 @@ import type React from 'react'
 import { useEffect, useMemo, useRef } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import useZoomPan from '@/hooks/useZoomPan'
-import { centerPan, makeTransform, resetView, setImageSize } from '@/store/mapViewSlice'
+import { makeTransform, resetView, setImageSize } from '@/store/mapViewSlice'
 
 interface MapCanvasProps {
   imageUrl: string
@@ -32,13 +32,10 @@ export function MapCanvas({
 
   useEffect(() => {
     if (view.viewport.w > 0 && view.viewport.h > 0 && view.image.w > 0 && view.image.h > 0) {
-      const _centered = centerPan({ viewport: view.viewport, image: view.image, scale: view.scale })
       // Only auto-center first time when tx/ty are both 0 (fresh mount)
       if (view.tx === 0 && view.ty === 0) {
         // Use reset to also set scale to 1
         dispatch(resetView())
-      } else {
-        // no-op; user already panned
       }
     }
   }, [dispatch, view.image, view.scale, view.tx, view.ty, view.viewport])
