@@ -10,6 +10,7 @@ import { TurnTimer } from '@/components/game/TurnTimer'
 // audioService toggled via floating MuteButton component
 import MuteButton from '@/components/MuteButton'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
@@ -105,6 +106,7 @@ export default function GameRoom() {
     }
     return true
   })
+  const layout = useResponsiveLayout()
   const mobileDrawerId = useId()
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
@@ -1407,7 +1409,14 @@ export default function GameRoom() {
         </div>
 
         {/* Player Stats & Chat Row - positioned directly under the board */}
-        <div className="flex flex-col gap-3">
+        <div
+          className={`
+          flex gap-3
+          flex-col
+          lg:flex-row lg:items-start
+          xl:grid xl:grid-cols-[2fr_1fr] xl:gap-4
+        `}
+        >
           {/* Player Stats */}
           {currentGame ? (
             <PlayerStatsTable
@@ -1419,6 +1428,9 @@ export default function GameRoom() {
                   { owner: t.ownerId, armies: t.armies },
                 ]),
               )}
+              variant={
+                layout.isWideOrLarger ? 'full' : layout.isDesktopOrLarger ? 'compact' : 'minimal'
+              }
             />
           ) : (
             <div className="panel space-y-3">
@@ -1454,7 +1466,7 @@ export default function GameRoom() {
           )}
 
           {/* Chat & Log panel */}
-          <div className="panel p-0 overflow-hidden">
+          <div className="panel p-0 overflow-hidden flex-1 lg:min-w-[400px]">
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
               <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
               <button
