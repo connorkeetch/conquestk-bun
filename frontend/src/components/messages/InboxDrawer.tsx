@@ -218,6 +218,16 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     return base.filter((conversation) => conversation.memberIds.includes(currentUserId))
   }, [sortedConversations, filter, currentUserId])
 
+  // Determine the active conversation for the Inbox specifically.
+  // If the globally active conversation is not a DM/group (e.g. a game/team chat),
+  // fall back to the first visible DM/group thread for the drawer context.
+  const drawerActiveConversationId = useMemo(() => {
+    if (activeConversationId && visibleConversations.some((c) => c.id === activeConversationId)) {
+      return activeConversationId
+    }
+    return visibleConversations.length > 0 ? visibleConversations[0].id : null
+  }, [activeConversationId, visibleConversations])
+
   const conversationSections = useMemo<ConversationSection[]>(() => {
     const sections: ConversationSection[] = [
       { key: 'direct', label: 'Direct Messages', conversations: [] },
@@ -235,31 +245,37 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   }, [visibleConversations])
 
   const activeConversation = useAppSelector((s) =>
-    activeConversationId ? selectConversationById(s, activeConversationId) : undefined,
+    drawerActiveConversationId ? selectConversationById(s, drawerActiveConversationId) : undefined,
   )
   const activeMessages = useAppSelector((s) =>
-    activeConversationId ? selectMessagesForConversation(s, activeConversationId) : [],
+    drawerActiveConversationId ? selectMessagesForConversation(s, drawerActiveConversationId) : [],
   )
   const typingUsers = useAppSelector((s) =>
-    activeConversationId ? Object.values(s.messages.typing[activeConversationId] ?? {}) : [],
+    drawerActiveConversationId
+      ? Object.values(s.messages.typing[drawerActiveConversationId] ?? {})
+      : [],
   )
 
-  const hasMore = activeConversationId ? (hasMoreMap[activeConversationId] ?? true) : false
-  const isThreadLoading = activeConversationId
-    ? Boolean(loadingMessagesMap[activeConversationId])
+  const hasMore = drawerActiveConversationId
+    ? (hasMoreMap[drawerActiveConversationId] ?? true)
+    : false
+  const isThreadLoading = drawerActiveConversationId
+    ? Boolean(loadingMessagesMap[drawerActiveConversationId])
     : false
 
   // Mark read when visible and we have messages
   useEffect(() => {
-    if (!isOpen || !activeConversationId) return
-    if ((messagesByConversation[activeConversationId] ?? []).length === 0) return
-    dispatch(messagesActions.markReadOptimistic(activeConversationId))
-    socketService.markConversationReadViaSocket(activeConversationId)
-  }, [dispatch, isOpen, activeConversationId, messagesByConversation])
+    if (!isOpen || !drawerActiveConversationId) return
+    if ((messagesByConversation[drawerActiveConversationId] ?? []).length === 0) return
+    dispatch(messagesActions.markReadOptimistic(drawerActiveConversationId))
+    socketService.markConversationReadViaSocket(drawerActiveConversationId)
+  }, [dispatch, isOpen, drawerActiveConversationId, messagesByConversation])
 
   // Auto-select first conversation on open
   useEffect(() => {
     if (!isOpen) return
+    // If global active is not an allowed DM/group, do not override it globally.
+    // We only auto-select globally when there is no active conversation at all.
     if (!activeConversationId && visibleConversations.length > 0) {
       dispatch(messagesActions.setActiveConversationId(visibleConversations[0].id))
     }
@@ -301,21 +317,21 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   )
 
   const handleLoadOlder = useCallback(() => {
-    if (!activeConversationId) return
-    const existing = messagesByConversation[activeConversationId] ?? []
+    if (!drawerActiveConversationId) return
+    const existing = messagesByConversation[drawerActiveConversationId] ?? []
     if (existing.length === 0) {
-      dispatch(loadConversationMessages({ conversationId: activeConversationId, limit: 50 }))
+      dispatch(loadConversationMessages({ conversationId: drawerActiveConversationId, limit: 50 }))
       return
     }
     const oldest = existing[0]
     dispatch(
       loadConversationMessages({
-        conversationId: activeConversationId,
+        conversationId: drawerActiveConversationId,
         before: oldest.id,
         limit: 50,
       }),
     )
-  }, [activeConversationId, dispatch, messagesByConversation])
+  }, [drawerActiveConversationId, dispatch, messagesByConversation])
 
   const displayMessages: DisplayMessage[] = useMemo(() => {
     return activeMessages.map((m) => ({
@@ -335,25 +351,25 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
   const handleSendMessage = useCallback(
     (text: string) => {
-      if (!activeConversationId) return
+      if (!drawerActiveConversationId) return
       socketService.sendConversationMessage(
-        { conversationId: activeConversationId, body: text },
+        { conversationId: drawerActiveConversationId, body: text },
         (ack) => {
           if (!ack?.ok && ack?.error) setSendError(ack.error)
           else setSendError(null)
         },
       )
     },
-    [activeConversationId],
+    [drawerActiveConversationId],
   )
 
   const handleTyping = useCallback(
     (isTyping: boolean) => {
-      if (!activeConversationId) return
-      if (isTyping) socketService.startConversationTyping(activeConversationId)
-      else socketService.stopConversationTyping(activeConversationId)
+      if (!drawerActiveConversationId) return
+      if (isTyping) socketService.startConversationTyping(drawerActiveConversationId)
+      else socketService.stopConversationTyping(drawerActiveConversationId)
     },
-    [activeConversationId],
+    [drawerActiveConversationId],
   )
 
   const handleAddFriend = useCallback(async (userId: string) => {
@@ -650,7 +666,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                         </div>
                         <ul>
                           {section.conversations.map((conversation) => {
-                            const isActive = conversation.id === activeConversationId
+                            const isActive = conversation.id === drawerActiveConversationId
                             const unread = conversation.unreadCount ?? 0
                             const subtitle = conversation.lastMessage?.body ?? 'No messages yet'
                             const title = getConversationTitle(conversation, currentUserId)
@@ -743,7 +759,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                   <select
                     id={mobileThreadSelectId}
                     className="form-select w-full"
-                    value={activeConversationId ?? ''}
+                    value={drawerActiveConversationId ?? ''}
                     onChange={(event) => {
                       const value = event.target.value
                       if (value) {

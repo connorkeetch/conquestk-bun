@@ -58,6 +58,54 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
 
   const canTrade = selected.length === 3 && isValidTriple(selected)
 
+  // Determine which cards are eligible to pick next given the current selection
+  const eligible = useMemo(() => {
+    const out = new Set<number>()
+    const n = hand.length
+    if (n === 0) return out
+
+    // Always allow deselecting what is already chosen
+    selected.forEach((idx) => {
+      out.add(idx)
+    })
+
+    if (selected.length === 0) {
+      // With nothing selected, everything is a valid starting point
+      for (let i = 0; i < n; i++) out.add(i)
+      return out
+    }
+
+    if (selected.length === 1) {
+      const a = selected[0]
+      for (let j = 0; j < n; j++) {
+        if (j === a) continue
+        // Is there any third k that makes [a, j, k] a valid triple?
+        let ok = false
+        for (let k = 0; k < n; k++) {
+          if (k === a || k === j) continue
+          if (isValidTriple([a, j, k])) {
+            ok = true
+            break
+          }
+        }
+        if (ok) out.add(j)
+      }
+      return out
+    }
+
+    if (selected.length === 2) {
+      const [a, b] = selected
+      for (let k = 0; k < n; k++) {
+        if (k === a || k === b) continue
+        if (isValidTriple([a, b, k])) out.add(k)
+      }
+      return out
+    }
+
+    // When 3 are selected, only allow deselection of the chosen ones
+    return out
+  }, [hand, isValidTriple, selected])
+
   // Compute valid sets: three-of-a-kind or all-different
   const classifyPattern = useCallback(
     (triple: number[]): 'three_of_a_kind' | 'one_of_each' | 'diamond_combo' => {
@@ -88,18 +136,10 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     [classifyPattern],
   )
 
-  const validSets = useMemo(() => {
-    const sets: number[][] = []
-    for (let i = 0; i < hand.length; i++) {
-      for (let j = i + 1; j < hand.length; j++) {
-        for (let k = j + 1; k < hand.length; k++) {
-          const triple = [i, j, k]
-          if (isValidTriple(triple)) sets.push(triple)
-        }
-      }
-    }
-    return sets.map((s) => ({ idx: s, label: labelForSet(s) }))
-  }, [hand, isValidTriple, labelForSet])
+  // Identify current selection label if complete and valid
+  const selectedLabel = useMemo(() => {
+    return selected.length === 3 && canTrade ? labelForSet(selected) : null
+  }, [canTrade, labelForSet, selected])
 
   const projection = useMemo(() => {
     const containsDiamond = selected.some((idx) => String(hand[idx]).toLowerCase() === 'diamond')
@@ -208,26 +248,38 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
             <div className="grid grid-cols-3 gap-2">
               {hand.map((metal, idx) => {
                 const active = selected.includes(idx)
+                const isDisabled = !active && !eligible.has(idx)
                 return (
                   <button
                     // biome-ignore lint/suspicious/noArrayIndexKey: cards don't have stable ids yet; index is stable within session
                     key={`${metal}-${idx}`}
                     type="button"
-                    onClick={() =>
-                      setSelected((prev) =>
-                        prev.includes(idx)
-                          ? prev.filter((i) => i !== idx)
-                          : prev.length < 3
-                            ? [...prev, idx]
-                            : prev,
-                      )
-                    }
+                    onClick={() => {
+                      setSelected((prev) => {
+                        // Toggle off if already selected
+                        if (prev.includes(idx)) return prev.filter((i) => i !== idx)
+                        // Prevent selecting ineligible options
+                        if (!eligible.has(idx)) return prev
+                        // Add if we have fewer than 3
+                        if (prev.length < 3) return [...prev, idx]
+                        return prev
+                      })
+                    }}
                     className={`rounded border px-2 py-3 text-sm text-left ${
                       active
                         ? 'border-[color:var(--color-accent)] ring-1 ring-[color:var(--color-accent)]'
-                        : 'border-border'
+                        : isDisabled
+                          ? 'border-border opacity-40 cursor-not-allowed'
+                          : 'border-border'
                     }`}
-                    title={active ? 'Selected' : 'Click to select'}
+                    title={
+                      active
+                        ? 'Selected'
+                        : isDisabled
+                          ? 'Cannot form a valid set with current selection'
+                          : 'Click to select'
+                    }
+                    disabled={isDisabled}
                   >
                     <div className="font-medium text-white flex items-center gap-2">
                       <span className="w-4 h-4 flex items-center justify-center">
@@ -239,39 +291,6 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                   </button>
                 )
               })}
-            </div>
-          )}
-          {validSets.length > 0 && (
-            <div className="mt-3">
-              <div className="text-xs text-muted mb-1">Valid sets:</div>
-              <div className="flex flex-wrap gap-2">
-                {validSets.map((entry, i) => (
-                  <button
-                    // biome-ignore lint/suspicious/noArrayIndexKey: enumerated combos are ephemeral and index is sufficient
-                    key={`set-${i}`}
-                    type="button"
-                    className={`btn btn-ghost btn-xs ${
-                      selected.length === 3 && entry.idx.every((v) => selected.includes(v))
-                        ? 'ring-1 ring-[color:var(--color-accent)]'
-                        : ''
-                    }`}
-                    onClick={() => setSelected(entry.idx)}
-                    title={entry.label}
-                  >
-                    <span className="flex items-center gap-1">
-                      {entry.idx.map((idx) => (
-                        <span
-                          key={`icon-${i}-${idx}`}
-                          className="w-4 h-4 flex items-center justify-center"
-                        >
-                          {iconFor(hand[idx])}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="ml-1 text-[10px] opacity-80">{entry.label}</span>
-                  </button>
-                ))}
-              </div>
             </div>
           )}
           <div className="text-xs text-muted mt-2">
@@ -295,6 +314,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
             {selected.length === 3 && !canTrade && (
               <span className="text-[color:var(--color-warning)] ml-2">Invalid set</span>
             )}
+            {selectedLabel && <span className="chip text-xs">{selectedLabel}</span>}
           </div>
         </div>
         <div className="p-4 border-t border-border flex items-center justify-end gap-2">
