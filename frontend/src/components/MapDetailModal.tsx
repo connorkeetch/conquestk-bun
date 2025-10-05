@@ -116,7 +116,9 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-2xl font-bold text-[color:var(--heading)]">{mapData?.map.name || 'Map Details'}</h2>
+            <h2 className="text-2xl font-bold text-[color:var(--heading)]">
+              {mapData?.map.name || 'Map Details'}
+            </h2>
             {mapData?.map.description && (
               <p className="mt-1 max-w-3xl text-sm text-muted">{mapData.map.description}</p>
             )}
@@ -166,7 +168,9 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
             {!loading && !error && mapData && territoriesForDisplay.length === 0 && (
               <div className="flex h-[520px] items-center justify-center px-6 text-center text-muted">
                 <div>
-                  <p className="text-lg font-semibold text-[color:var(--heading)]">No territories defined</p>
+                  <p className="text-lg font-semibold text-[color:var(--heading)]">
+                    No territories defined
+                  </p>
                   <p className="mt-2 text-sm">
                     This map doesn’t have any territory coordinates yet, so we can’t render the
                     tokens.
@@ -180,7 +184,9 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
             <div className="space-y-4">
               {mapData && (
                 <div className="rounded-lg border border-border bg-surface-2 p-4">
-                  <h3 className="text-lg font-semibold text-[color:var(--heading)]">Map Overview</h3>
+                  <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+                    Map Overview
+                  </h3>
                   <dl className="mt-3 space-y-2 text-sm text-muted">
                     <div className="flex justify-between">
                       <dt>Creator</dt>
@@ -235,7 +241,9 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
               )}
 
               <div className="rounded-lg border border-border bg-surface-2 p-4">
-                <h3 className="text-lg font-semibold text-[color:var(--heading)]">Sectors & Bonuses</h3>
+                <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+                  Sectors & Bonuses
+                </h3>
                 {sectors.length === 0 && (
                   <p className="mt-3 text-sm text-muted">
                     No sector bonuses have been defined for this map yet.

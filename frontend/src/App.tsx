@@ -664,7 +664,7 @@ function App() {
                 <Suspense
                   fallback={
                     <div className="p-6">
-                      <div className="text-white">Loading...</div>
+                      <div className="text-muted">Loading...</div>
                     </div>
                   }
                 >
@@ -678,7 +678,7 @@ function App() {
                 <Suspense
                   fallback={
                     <div className="p-6">
-                      <div className="text-white">Loading...</div>
+                      <div className="text-muted">Loading...</div>
                     </div>
                   }
                 >
@@ -692,7 +692,7 @@ function App() {
                 <Suspense
                   fallback={
                     <div className="p-6">
-                      <div className="text-white">Loading...</div>
+                      <div className="text-muted">Loading...</div>
                     </div>
                   }
                 >
@@ -706,7 +706,7 @@ function App() {
                 <Suspense
                   fallback={
                     <div className="p-6">
-                      <div className="text-white">Loading...</div>
+                      <div className="text-muted">Loading...</div>
                     </div>
                   }
                 >
@@ -720,7 +720,7 @@ function App() {
                 <Suspense
                   fallback={
                     <div className="p-6">
-                      <div className="text-white">Loading...</div>
+                      <div className="text-muted">Loading...</div>
                     </div>
                   }
                 >
@@ -734,7 +734,7 @@ function App() {
                 <Suspense
                   fallback={
                     <div className="p-6">
-                      <div className="text-white">Loading...</div>
+                      <div className="text-muted">Loading...</div>
                     </div>
                   }
                 >
@@ -748,7 +748,7 @@ function App() {
                 <Suspense
                   fallback={
                     <div className="p-6">
-                      <div className="text-white">Loading...</div>
+                      <div className="text-muted">Loading...</div>
                     </div>
                   }
                 >

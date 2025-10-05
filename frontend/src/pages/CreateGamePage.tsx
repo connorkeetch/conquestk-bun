@@ -733,7 +733,7 @@ const CreateGamePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen text-white p-6">
+    <div className="min-h-screen p-6">
       {/* Header with integrated game name */}
       <div className="max-w-7xl mx-auto mb-6">
         <div className="flex items-start justify-between">
@@ -745,8 +745,8 @@ const CreateGamePage: React.FC = () => {
                 <input
                   type="text"
                   placeholder={useAutoName ? generateSmartName() : 'Game name'}
-                  className={`px-3 py-1.5 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-primary focus:outline-none transition-all duration-200 text-sm w-64 ${
-                    useAutoName ? 'bg-surface-2/50 cursor-not-allowed' : ''
+                  className={`form-input text-sm w-64 ${
+                    useAutoName ? 'cursor-not-allowed opacity-80' : ''
                   }`}
                   value={gameName}
                   onChange={(e) => {
@@ -878,7 +878,7 @@ const CreateGamePage: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Enter invite code (e.g., GAME123)"
-                  className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-primary focus:outline-none transition-all duration-200"
+                  className="form-input"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                 />
@@ -1677,7 +1677,7 @@ const CreateGamePage: React.FC = () => {
               <span className="text-2xl bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
                 {getStepNumber(10)}
               </span>
-              <span className="text-white">Select Map</span>
+              <span className="text-[color:var(--heading)]">Select Map</span>
             </h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1687,13 +1687,13 @@ const CreateGamePage: React.FC = () => {
                   placeholder="Search maps..."
                   value={mapSearch}
                   onChange={(e) => setMapSearch(e.target.value)}
-                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="form-input mb-3"
                 />
                 <div className="flex items-center gap-2 mb-2">
                   <select
                     value={mapSizeFilter}
                     onChange={(e) => setMapSizeFilter(e.target.value as typeof mapSizeFilter)}
-                    className="bg-surface-2 border border-border rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="form-select text-sm"
                   >
                     <option value="">All Sizes</option>
                     <option value="Small">Small (≤35)</option>
@@ -1742,7 +1742,7 @@ const CreateGamePage: React.FC = () => {
                             onClick={() => setSelectedMap(map.id)}
                           >
                             <div className="flex items-center justify-between">
-                              <div className="font-bold text-white">
+                              <div className="font-bold">
                                 {map.id === 'random' && '🎲 '}
                                 {map.is_featured && '⭐ '}
                                 {map.is_vip_only && '👑 '}
@@ -1857,13 +1857,13 @@ const CreateGamePage: React.FC = () => {
                             <dl className="grid grid-cols-2 gap-4 text-sm">
                               <div>
                                 <dt className="text-muted">Territories</dt>
-                                <dd className="text-white">
+                                <dd className="text-[color:var(--heading)]">
                                   {selectedMapData.territory_count || 'Unknown'}
                                 </dd>
                               </div>
                               <div>
                                 <dt className="text-muted">Sectors</dt>
-                                <dd className="text-white">
+                                <dd className="text-[color:var(--heading)]">
                                   {(selectedMapData as unknown as { sector_count?: number })
                                     .sector_count ||
                                     selectedMapData.continent_count ||
@@ -1872,30 +1872,34 @@ const CreateGamePage: React.FC = () => {
                               </div>
                               <div>
                                 <dt className="text-muted">Map Size</dt>
-                                <dd className="text-white">
+                                <dd className="text-[color:var(--heading)]">
                                   {computeMapSizeFromCounts(selectedMapData.territory_count)}
                                 </dd>
                               </div>
                               <div>
                                 <dt className="text-muted">Games Last Month</dt>
-                                <dd className="text-white">
+                                <dd className="text-[color:var(--heading)]">
                                   {monthlyPlays > 0 ? monthlyPlays : '—'}
                                 </dd>
                               </div>
                               <div>
                                 <dt className="text-muted">Games Played</dt>
-                                <dd className="text-white">{totalPlays > 0 ? totalPlays : '—'}</dd>
+                                <dd className="text-[color:var(--heading)]">
+                                  {totalPlays > 0 ? totalPlays : '—'}
+                                </dd>
                               </div>
                               {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
                                 <div className="col-span-2">
                                   <dt className="text-muted">Created by</dt>
-                                  <dd className="text-white">{selectedMapData.creator_name}</dd>
+                                  <dd className="text-[color:var(--heading)]">
+                                    {selectedMapData.creator_name}
+                                  </dd>
                                 </div>
                               )}
                               {selectedMapData.createdAt && (
                                 <div className="col-span-2">
                                   <dt className="text-muted">Created</dt>
-                                  <dd className="text-white">
+                                  <dd className="text-[color:var(--heading)]">
                                     {new Date(selectedMapData.createdAt).toLocaleDateString(
                                       undefined,
                                       {
@@ -1912,7 +1916,7 @@ const CreateGamePage: React.FC = () => {
                                   <dt className="text-muted">Rating</dt>
                                   <dd className="text-yellow-400">
                                     {'⭐'.repeat(Math.floor(ratingAverage))}
-                                    <span className="text-white ml-1">
+                                    <span className="text-[color:var(--heading)] ml-1">
                                       ({ratingAverage.toFixed(1)}/5 from {ratingCount} reviews)
                                     </span>
                                   </dd>

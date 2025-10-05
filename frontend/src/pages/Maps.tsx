@@ -304,7 +304,7 @@ const Maps: React.FC = () => {
               {/* Map Info */}
               <div className="p-4">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold text-white group-hover:text-primary transition-colors">
+                  <h3 className="font-bold text-[color:var(--heading)] group-hover:text-primary transition-colors">
                     {map.name}
                     {!map.isPublic && (
                       <span className="ml-1 text-gray-400 text-xs" title="Private">
@@ -385,7 +385,7 @@ const Maps: React.FC = () => {
         <div className="text-center py-20">
           <div className="max-w-2xl mx-auto">
             <div className="text-8xl mb-8">🗺️</div>
-            <h2 className="text-3xl font-bold text-white mb-4">
+            <h2 className="text-3xl font-bold text-[color:var(--heading)] mb-4">
               {searchTerm || filterTag ? 'No Maps Found' : 'No Maps Available'}
             </h2>
             <p className="text-muted text-lg mb-8 leading-relaxed">

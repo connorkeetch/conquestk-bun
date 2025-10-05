@@ -148,7 +148,7 @@ export const AdminMapReviews: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-surface-1 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-surface-1">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted">Loading review queue...</p>
@@ -158,7 +158,7 @@ export const AdminMapReviews: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-surface-1 text-white p-6">
+    <div className="min-h-screen bg-surface-1 p-6">
       <div className="max-w-screen-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-surface-2 rounded-lg border border-border p-6 shadow-sm">
@@ -167,7 +167,7 @@ export const AdminMapReviews: React.FC = () => {
               <h1 className="text-2xl font-bold">Map Review Queue</h1>
               <p className="text-muted mt-1">Review and approve submitted maps for publication</p>
             </div>
-            <Link to="/admin" className="text-primary-soft hover:text-white font-medium">
+            <Link to="/admin" className="text-primary-soft hover:text-primary font-medium">
               ← Back to Admin Dashboard
             </Link>
           </div>
@@ -227,7 +227,7 @@ export const AdminMapReviews: React.FC = () => {
                   <select
                     value={bulkAction}
                     onChange={(e) => setBulkAction(e.target.value as '' | 'assign' | 'priority')}
-                    className="px-3 py-1 bg-surface-1 border border-border rounded text-sm text-white"
+                    className="form-select text-sm"
                   >
                     <option value="">Bulk Actions</option>
                     <option value="assign">Assign to Me</option>
@@ -241,7 +241,9 @@ export const AdminMapReviews: React.FC = () => {
           {approvalRequests.length === 0 ? (
             <div className="p-12 text-center">
               <div className="text-muted text-6xl mb-4">📋</div>
-              <h3 className="text-lg font-medium text-white mb-2">No Pending Reviews</h3>
+              <h3 className="text-lg font-medium text-[color:var(--heading)] mb-2">
+                No Pending Reviews
+              </h3>
               <p className="text-muted">
                 All maps have been reviewed! Check back later for new submissions.
               </p>
