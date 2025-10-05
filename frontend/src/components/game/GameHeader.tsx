@@ -1,5 +1,5 @@
 import type React from 'react'
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { endTurn } from '@/store/gameActions'
@@ -20,6 +20,9 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
     const dispatch = useAppDispatch()
     const game = useAppSelector((s) => s.game.currentGame)
     const userId = useAppSelector((s) => s.auth.user?.id)
+    const treasureConfig = useAppSelector((s) => s.room.currentRoom?.treasureConfig) as
+      | ({ payoutMode?: string; fixedValue?: number } & Record<string, unknown>)
+      | undefined
     const [profileUsername, setProfileUsername] = useState<string | null>(null)
     const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
     const phase = game?.phase ?? currentPhase
@@ -35,6 +38,36 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
     const handleEndTurn = useCallback(() => {
       void dispatch(endTurn())
     }, [dispatch])
+
+    const treasurePayout = useMemo(() => {
+      const mode = (treasureConfig?.payoutMode || '').toLowerCase()
+      if (!mode || mode === 'none') return null
+      const idx =
+        (game?.treasureState as { nextPayoutIndex?: number } | undefined)?.nextPayoutIndex ?? 0
+      if (mode === 'fixed') {
+        const val = Math.max(
+          1,
+          Math.min(50, (treasureConfig?.fixedValue as number | undefined) ?? 8),
+        )
+        return val
+      }
+      if (mode === 'classic') {
+        const classicSeq = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35]
+        return idx < classicSeq.length
+          ? classicSeq[idx]
+          : classicSeq[classicSeq.length - 1] + (idx - classicSeq.length + 1) * 5
+      }
+      // triangular default
+      const safeIdx = Math.max(0, Math.floor(idx))
+      if (safeIdx === 0) return 4
+      let payout = 4
+      let delta = 2
+      for (let i = 1; i <= safeIdx; i++) {
+        payout += delta
+        delta += 1
+      }
+      return payout
+    }, [game?.treasureState, treasureConfig])
 
     return (
       <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
@@ -68,8 +101,13 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
             ) : null}
           </div>
           {/* Current turn label removed; show End Phase button when it's my turn */}
-          {isMyTurn && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {typeof treasurePayout === 'number' && treasurePayout > 0 && (
+              <span className="chip text-[10px]" title="Next treasure set payout">
+                💰 +{treasurePayout}
+              </span>
+            )}
+            {isMyTurn && (
               <button
                 type="button"
                 className="btn btn-primary"
@@ -78,8 +116,8 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
               >
                 {endPhaseLabel}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         {/* Dice recap bar (last battle) */}
         <DiceResultsBar />
