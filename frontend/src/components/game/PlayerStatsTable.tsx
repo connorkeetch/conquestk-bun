@@ -59,9 +59,6 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
             <table className="w-full text-sm">
               <thead className="bg-[color:var(--surface-2)] sticky top-0">
                 <tr className="border-b border-[color:var(--panel-border)]">
-                  {variant !== 'minimal' && (
-                    <th className="px-2 py-2 text-left font-medium text-muted">#</th>
-                  )}
                   <th className="px-2 py-2 text-left font-medium text-muted">Player</th>
                   <th className="px-2 py-2 text-right font-medium text-muted">Armies</th>
                   <th className="px-2 py-2 text-right font-medium text-muted">
@@ -86,19 +83,8 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                         : 'hover:bg-[color:var(--surface-2)]'
                     }`}
                   >
-                    {variant !== 'minimal' && (
-                      <td className="px-3 py-3 text-muted whitespace-nowrap">
-                        {player.isCurrentTurn && (
-                          <span className="inline-block w-3 h-3 rounded-full bg-[color:var(--color-accent)] mr-2 animate-pulse" />
-                        )}
-                        {index + 1}
-                      </td>
-                    )}
-                    <td className="px-3 py-3 whitespace-nowrap">
+                    <td className="px-2 py-1.5 whitespace-nowrap">
                       <div className="flex items-center gap-2 min-w-0">
-                        {player.isCurrentTurn && variant === 'minimal' && (
-                          <span className="inline-block w-3 h-3 rounded-full bg-[color:var(--color-accent)] shrink-0 animate-pulse" />
-                        )}
                         <div
                           className="w-4 h-4 rounded-full border-2 border-[color:var(--panel-border)] shrink-0"
                           style={{ backgroundColor: getColorValue(player.color) }}
@@ -118,19 +104,19 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                    <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                       {player.totalArmies}
                     </td>
-                    <td className="px-3 py-3 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                    <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                       {player.territoryCount}
                     </td>
                     {variant === 'full' && (
-                      <td className="px-3 py-3 text-right font-mono text-[color:var(--color-success)] whitespace-nowrap">
+                      <td className="px-2 py-1.5 text-right font-mono text-[color:var(--color-success)] whitespace-nowrap">
                         +{player.reinforcements}
                       </td>
                     )}
                     {variant === 'full' && (
-                      <td className="px-3 py-3 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                      <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                         {player.treasureCount}
                       </td>
                     )}
