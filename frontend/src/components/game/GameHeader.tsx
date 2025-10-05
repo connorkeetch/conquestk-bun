@@ -4,7 +4,6 @@ import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { endTurn } from '@/store/gameActions'
 import { DiceResultsBar } from './DiceResultsBar'
-import { TurnTimer } from './TurnTimer'
 
 interface GameHeaderProps {
   currentPhase: string
@@ -44,7 +43,6 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded font-medium bg-[color:var(--surface-1)] text-[color:var(--text)]">
               {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
             </span>
-            <TurnTimer showBank={false} />
           </div>
           {/* Current turn label removed; show End Phase button when it's my turn */}
           {isMyTurn && (
