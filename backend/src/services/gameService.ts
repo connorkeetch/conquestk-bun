@@ -115,6 +115,23 @@ type ReinforceLogEntry = {
   remainingArmies: number
 }
 
+type RatingLogEntry = {
+  type: 'RATING'
+  timestamp: string
+  userId: string
+  change: number
+  oldRating: number
+  newRating: number
+}
+
+type TreasureCashLogEntry = {
+  type: 'TREASURE_CASH'
+  timestamp: string
+  playerId: string
+  troops: number
+  cardCount?: number
+}
+
 type GameLogEntry =
   | BattleLogEntry
   | FortifyLogEntry
@@ -123,6 +140,8 @@ type GameLogEntry =
   | ReinforceLogEntry
   | LifecycleLogEntry
   | ReinforceLogEntry
+  | RatingLogEntry
+  | TreasureCashLogEntry
 
 type PlayerRankingSummary = {
   userId: string
@@ -1996,6 +2015,7 @@ export class GameService {
     const totalTurns = serializedState.turn ?? 0
     const archiveTimestamp = new Date()
 
+    let finalRatingChanges: RatingChange[] = []
     const persisted = await transaction<boolean>(async (client) => {
       const existingResult = await client.query<{ room_id: string }>(
         'SELECT room_id FROM game_results WHERE room_id = $1',
@@ -2212,6 +2232,8 @@ export class GameService {
       }
 
       await eloService.updateLeaderboardCache(client)
+      // Expose rating changes for post-transaction logging
+      finalRatingChanges = ratingChanges
       return true
     })
 
@@ -2220,6 +2242,27 @@ export class GameService {
       logger.info('Archived completed game', {
         gameId,
         winnerId: winner?.userId ?? null,
+      })
+    }
+
+    // Append rating change logs for ranked games where rating changes exist
+    try {
+      if (finalRatingChanges && finalRatingChanges.length > 0) {
+        const ts = new Date().toISOString()
+        const ratingEntries: RatingLogEntry[] = finalRatingChanges.map((rc) => ({
+          type: 'RATING',
+          timestamp: ts,
+          userId: rc.userId,
+          change: rc.change,
+          oldRating: rc.oldRating,
+          newRating: rc.newRating,
+        }))
+        await this.appendLog(gameId, ratingEntries)
+      }
+    } catch (e) {
+      logger.warn('Failed to append rating change logs', {
+        gameId,
+        error: e instanceof Error ? e.message : e,
       })
     }
 

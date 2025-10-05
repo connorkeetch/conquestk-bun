@@ -313,7 +313,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-1 text-white p-6">
+    <div className="min-h-screen bg-surface-1 p-6">
       <div className="max-w-screen-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -404,7 +404,7 @@ export default function AdminDashboard() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium text-white">{tool.label}</div>
+                        <div className="font-medium text-[color:var(--heading)]">{tool.label}</div>
                         <div className="text-sm text-muted">{tool.description}</div>
                       </div>
                       <div className="text-2xl">{tool.icon}</div>
@@ -419,7 +419,9 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium text-white">Clear Server Cache</div>
+                      <div className="font-medium text-[color:var(--heading)]">
+                        Clear Server Cache
+                      </div>
                       <div className="text-sm text-muted">
                         {cacheClearing
                           ? 'Clearing cache...'
@@ -477,7 +479,7 @@ export default function AdminDashboard() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="font-medium text-white">
+                            <div className="font-medium text-[color:var(--heading)]">
                               {adminService.formatActionType(log.actionType)}
                             </div>
                             <div className="text-xs text-muted mt-1">
@@ -494,12 +496,14 @@ export default function AdminDashboard() {
                           <div className="text-xs text-muted mt-3 space-y-1">
                             {log.targetId && (
                               <div>
-                                Target ID: <span className="text-white">{log.targetId}</span>
+                                Target ID:{' '}
+                                <span className="text-[color:var(--heading)]">{log.targetId}</span>
                               </div>
                             )}
                             {detailEntries.map(([key, value]) => (
                               <div key={key}>
-                                {key}: <span className="text-white">{String(value)}</span>
+                                {key}:{' '}
+                                <span className="text-[color:var(--heading)]">{String(value)}</span>
                               </div>
                             ))}
                           </div>
@@ -604,7 +608,9 @@ export default function AdminDashboard() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="font-medium text-white">{role.roleName}</div>
+                          <div className="font-medium text-[color:var(--heading)]">
+                            {role.roleName}
+                          </div>
                           <div className="text-xs text-muted mt-1">
                             {permissions.length > 0
                               ? 'Role capabilities'
@@ -643,7 +649,7 @@ export default function AdminDashboard() {
           <div className="bg-surface-1 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between p-6 border-b border-border/50">
               <div>
-                <h3 className="text-xl font-semibold text-white">
+                <h3 className="text-xl font-semibold text-[color:var(--heading)]">
                   Manage Flag: {formatFlagName(editingFlag.flagName)}
                 </h3>
                 <p className="text-sm text-muted mt-1">
@@ -653,7 +659,7 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 onClick={closeEditModal}
-                className="text-muted hover:text-white text-2xl leading-none"
+                className="text-muted hover:text-[color:var(--color-text)] text-2xl leading-none"
                 aria-label="Close modal"
               >
                 ×
@@ -668,7 +674,7 @@ export default function AdminDashboard() {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={3}
-                    className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    className="bg-surface-2 text-[color:var(--color-text)] rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
                   />
                 </label>
                 <div className="space-y-3">
@@ -679,7 +685,7 @@ export default function AdminDashboard() {
                       onChange={(e) =>
                         setEditAccessLevel(e.target.value as FeatureFlag['accessLevel'])
                       }
-                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      className="bg-surface-2 text-[color:var(--color-text)] rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
                     >
                       <option value="disabled">Disabled</option>
                       <option value="internal">Internal (admins + testers)</option>
@@ -694,7 +700,7 @@ export default function AdminDashboard() {
                       value={editCategory}
                       onChange={(e) => setEditCategory(e.target.value)}
                       placeholder="gameplay, ui, experimental..."
-                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      className="bg-surface-2 text-[color:var(--color-text)] rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
                     />
                   </label>
                 </div>
@@ -707,7 +713,7 @@ export default function AdminDashboard() {
                     value={editConfig}
                     onChange={(e) => setEditConfig(e.target.value)}
                     rows={8}
-                    className="font-mono text-xs bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    className="font-mono text-xs bg-surface-2 text-[color:var(--color-text)] rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
                   />
                 </label>
                 <div className="space-y-4">
@@ -718,7 +724,7 @@ export default function AdminDashboard() {
                       value={editDependencies}
                       onChange={(e) => setEditDependencies(e.target.value)}
                       placeholder="Comma separated flag names"
-                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      className="bg-surface-2 text-[color:var(--color-text)] rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
                     />
                   </label>
                   <label className="flex flex-col text-sm">
@@ -727,7 +733,7 @@ export default function AdminDashboard() {
                       value={editReason}
                       onChange={(e) => setEditReason(e.target.value)}
                       rows={4}
-                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      className="bg-surface-2 text-[color:var(--color-text)] rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
                       placeholder="Document why you're adjusting this flag. Helpful for audit logs."
                     />
                   </label>
@@ -738,7 +744,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="px-4 py-2 rounded bg-surface-2 border border-border text-white hover:bg-surface-2/80 transition-colors"
+                  className="px-4 py-2 rounded bg-surface-2 border border-border text-[color:var(--color-text)] hover:bg-surface-2/80 transition-colors"
                   disabled={savingFlag}
                 >
                   Cancel
