@@ -82,7 +82,7 @@ export default function UnifiedMapDisplay({
   const hoveredTargetId = useAppSelector((s) => s.gameInteraction.hoveredTargetId)
   const invalidShakeId = useAppSelector((s) => s.gameInteraction.invalidShakeId)
   const game = useAppSelector((s) => s.game.currentGame)
-  const _myId = useAppSelector((s) => s.auth.user?.id)
+  // viewerId used for selection cycling
   const players = game?.players ?? []
   const kingOfTheHillState =
     game?.gameConfig?.gameMode === 'king_of_the_hill' ? game.kingOfTheHillState : null

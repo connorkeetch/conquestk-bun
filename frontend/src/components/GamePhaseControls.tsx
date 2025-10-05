@@ -47,12 +47,13 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
   const [fortifyArmies, setFortifyArmies] = useState(1)
   // Default fortify amount to max available (all but 1) when selecting source/entering phase
   useEffect(() => {
+    if (!gameState) return
     if (gameState.phase !== 'fortify') return
     if (!selectedTerritory) return
     const src = gameState.board.find((t) => t.id === selectedTerritory)
     const maxMovable = Math.max(1, Math.max(0, (src?.armies ?? 1) - 1))
     setFortifyArmies(maxMovable)
-  }, [gameState.phase, selectedTerritory, gameState.board])
+  }, [gameState?.phase, selectedTerritory, gameState?.board])
   const deployInputId = useId()
   const fortifyInputId = useId()
 

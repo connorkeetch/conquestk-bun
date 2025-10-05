@@ -10,7 +10,7 @@ import {
 } from '@/store/mapViewSlice'
 
 interface UseZoomPanOpts {
-  containerRef: React.RefObject<HTMLElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
 }
 
 export function useZoomPan({ containerRef }: UseZoomPanOpts) {

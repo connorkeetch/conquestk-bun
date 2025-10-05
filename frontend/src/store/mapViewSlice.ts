@@ -51,7 +51,7 @@ export function clampPan(
     viewport,
     image,
   }: { tx: number; ty: number; scale: number; viewport: ViewportSize; image: ImageSize },
-  minVisibleFraction = 0,
+  minVisibleFraction = 0.25,
 ) {
   const scaledW = image.w * scale
   const scaledH = image.h * scale
