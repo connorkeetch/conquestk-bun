@@ -5,6 +5,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
+import TreasureHud from '@/components/game/TreasureHud'
 import { TurnTimer } from '@/components/game/TurnTimer'
 // audioService toggled via floating MuteButton component
 import MuteButton from '@/components/MuteButton'
@@ -1058,6 +1059,9 @@ export default function GameRoom() {
               )
             })()}
           </button>
+          <div className="mt-2 flex items-center justify-center">
+            <TreasureHud variant="compact" />
+          </div>
         </div>
       )}
       <ConnectionBanner />
@@ -1077,7 +1081,8 @@ export default function GameRoom() {
             {currentRoom.isRanked ? 'Ranked match' : 'Casual lobby'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {currentGame && <TreasureHud variant="header" />}
           {!isMember && (
             <button
               onClick={() => openJoinDialog()}
@@ -1434,7 +1439,7 @@ export default function GameRoom() {
               flex gap-3
               flex-col
               lg:flex-row lg:items-start
-              xl:grid xl:grid-cols-[2fr_1fr] xl:gap-4
+              xl:grid xl:grid-cols-2 xl:gap-4
             `}
             >
               {/* Player Stats */}

@@ -56,7 +56,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
             <h3 className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[500px]">
               <thead className="bg-[color:var(--surface-2)] sticky top-0">
                 <tr className="border-b border-[color:var(--panel-border)]">
                   <th className="px-2 py-2 text-left font-medium text-muted">Player</th>
@@ -74,7 +74,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                 </tr>
               </thead>
               <tbody>
-                {sortedPlayers.map((player, index) => (
+                {sortedPlayers.map((player, _index) => (
                   <tr
                     key={player.id}
                     className={`border-b border-[color:var(--panel-border)] last:border-b-0 ${
