@@ -1,9 +1,10 @@
 import type React from 'react'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { endTurn } from '@/store/gameActions'
+import { endTurn, undoFortify, undoLastPlacement } from '@/store/gameActions'
 import { DiceResultsBar } from './DiceResultsBar'
+import { TreasureTradeModal } from './TreasureTradeModal'
 
 interface GameHeaderProps {
   currentPhase: string
@@ -20,12 +21,21 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
     const dispatch = useAppDispatch()
     const game = useAppSelector((s) => s.game.currentGame)
     const userId = useAppSelector((s) => s.auth.user?.id)
+    const placementHistoryLen = useAppSelector((s) => (s.uiRoom.placementHistory ?? []).length)
     const treasureConfig = useAppSelector((s) => s.room.currentRoom?.treasureConfig) as
       | ({ payoutMode?: string; fixedValue?: number } & Record<string, unknown>)
       | undefined
     const [profileUsername, setProfileUsername] = useState<string | null>(null)
+    const [showTreasures, setShowTreasures] = useState(false)
     const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
     const phase = game?.phase ?? currentPhase
+    const mustCashIn = Boolean(game?.mustCashInTreasures)
+    const me = useAppSelector((s) =>
+      s.game.currentGame?.players.find(
+        (p) => p.userId === s.auth.user?.id || p.id === s.auth.user?.id,
+      ),
+    )
+    const myHandCount = (me?.treasures?.length ?? 0) as number
     const endPhaseLabel =
       phase === 'reinforcement'
         ? 'End Phase → Attack'
@@ -38,6 +48,11 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
     const handleEndTurn = useCallback(() => {
       void dispatch(endTurn())
     }, [dispatch])
+
+    // Auto-open treasures if required
+    useEffect(() => {
+      if (isMyTurn && mustCashIn) setShowTreasures(true)
+    }, [isMyTurn, mustCashIn])
 
     const treasurePayout = useMemo(() => {
       const mode = (treasureConfig?.payoutMode || '').toLowerCase()
@@ -107,6 +122,40 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
                 💰 +{treasurePayout}
               </span>
             )}
+            {/* Undo controls */}
+            {isMyTurn && phase === 'reinforcement' && placementHistoryLen > 0 && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => void dispatch(undoLastPlacement())}
+                title="Undo last placement (Z)"
+              >
+                ↶ Undo
+              </button>
+            )}
+            {isMyTurn &&
+              phase === 'fortify' &&
+              Object.keys(game?.movementTracking ?? {}).length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => void dispatch(undoFortify())}
+                  title="Undo last fortify (Z)"
+                >
+                  ↶ Undo
+                </button>
+              )}
+            {/* Treasures modal trigger */}
+            {isMyTurn && (myHandCount > 0 || mustCashIn) && (
+              <button
+                type="button"
+                className={`btn btn-secondary btn-sm ${mustCashIn ? 'ring-1 ring-yellow-400' : ''}`}
+                onClick={() => setShowTreasures(true)}
+                title={mustCashIn ? 'You must trade a set' : 'View/trade treasures'}
+              >
+                🗝️ Treasures
+              </button>
+            )}
             {isMyTurn && (
               <button
                 type="button"
@@ -121,6 +170,8 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
         </div>
         {/* Dice recap bar (last battle) */}
         <DiceResultsBar />
+        {/* Treasures modal */}
+        <TreasureTradeModal isOpen={showTreasures} onClose={() => setShowTreasures(false)} />
         <PlayerProfileModal
           open={profileUsername !== null}
           username={profileUsername}
