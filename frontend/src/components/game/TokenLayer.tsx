@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
-import { extractFirstHexColor, hexToRgba } from '@/utils/color'
+import { extractFirstHexColor, hexToRgba, lightenColor } from '@/utils/color'
 
 export interface TokenSpec {
   id: string
@@ -51,15 +51,18 @@ export function TokenLayer({
             ? String(colorValue)
             : extractFirstHexColor(String(colorValue))) || '#94A3B8'
         const baseSize = 28 // base size at scale 1 (stage will scale tokens)
-        const border = isValid ? 3 : 2
+        const border = isValid ? 3 : 0
+        const colorGlow = hexToRgba(String(color), dimmed ? 0.35 : 0.55)
+        const edgeStroke = String(color)
+        const innerFill = lightenColor(String(color), 0.15)
         // Edge-opaque → center-transparent radial gradient
         const edgeAlpha = dimmed ? 0.85 : 1
         const midAlpha = dimmed ? 0.5 : 0.7
-        const innerAlpha = dimmed ? 0.25 : 0.35
+        const _innerAlpha = dimmed ? 0.25 : 0.35
         // Wider opaque edge and smoother ramp to center transparency
         const gradient = `radial-gradient(circle at center,
-          ${hexToRgba(String(color), 0)} 0%,
-          ${hexToRgba(String(color), innerAlpha)} 48%,
+          ${hexToRgba(innerFill, 0.9)} 0%,
+          ${hexToRgba(innerFill, 0.85)} 45%,
           ${hexToRgba(String(color), midAlpha)} 65%,
           ${hexToRgba(String(color), edgeAlpha)} 85%,
           ${hexToRgba(String(color), edgeAlpha)} 100%
@@ -101,13 +104,17 @@ export function TokenLayer({
                 background: `${halo}, ${gradient}`,
                 opacity: dimmed ? 0.6 : 1,
                 clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                border: `${border}px solid ${isValid ? '#38bdf8' : String(color)}`,
-                // Add subtle dual-tone outline rings to increase contrast vs map backgrounds
+                border: `${border}px solid ${isValid ? '#38bdf8' : 'transparent'}`,
+                // Bright, high-contrast token edge similar to reference:
+                // - thin dark ring
+                // - strong owner-colored ring
+                // - thin inner white ring (inset)
+                // - soft drop shadow + color glow
                 boxShadow: isSelected
-                  ? '0 0 0 1px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.45), 0 0 18px rgba(255,255,255,0.7), 0 2px 6px rgba(0,0,0,0.35)'
+                  ? `0 0 0 1px rgba(0,0,0,0.7), 0 0 0 3px ${edgeStroke}, inset 0 0 0 2px #ffffff, 0 2px 8px rgba(0,0,0,0.6), 0 0 12px ${colorGlow}, 0 0 18px rgba(255,255,255,0.7)`
                   : isValid
-                    ? '0 0 0 1px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.45), 0 0 14px rgba(56,189,248,0.7), 0 2px 4px rgba(0,0,0,0.3)'
-                    : '0 0 0 1px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.45), 0 2px 4px rgba(0,0,0,0.3)',
+                    ? `0 0 0 1px rgba(0,0,0,0.7), 0 0 0 3px ${edgeStroke}, inset 0 0 0 2px #ffffff, 0 2px 8px rgba(0,0,0,0.55), 0 0 10px ${hexToRgba('#38bdf8', 0.65)}`
+                    : `0 0 0 1px rgba(0,0,0,0.7), 0 0 0 3px ${edgeStroke}, inset 0 0 0 2px #ffffff, 0 2px 8px rgba(0,0,0,0.5), 0 0 10px ${colorGlow}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
