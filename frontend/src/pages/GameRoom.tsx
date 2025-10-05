@@ -1301,7 +1301,7 @@ export default function GameRoom() {
       <div
         className={`
           flex flex-col gap-4
-          ${layout.isUltrawide ? '2xl:grid 2xl:grid-cols-[320px_1fr_320px] 2xl:gap-6 2xl:items-start' : ''}
+          ${layout.isUltrawide ? '2xl:grid 2xl:grid-cols-[480px_1fr_480px] 2xl:gap-6 2xl:items-start' : ''}
         `}
       >
         {/* Left Sidebar - Player Stats (Ultra-wide only) */}
@@ -1324,7 +1324,7 @@ export default function GameRoom() {
         {/* Center Column - Game Board and Action Bar Container */}
         <div className="flex flex-col gap-2 min-w-0">
           {/* Game Board - full width */}
-          <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 min-w-0 flex flex-col max-w-[1400px] mx-auto w-full">
             {currentGame ? (
               <RiskGameBoard
                 mapId={currentRoom?.mapId || 'world'}
