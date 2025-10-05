@@ -534,7 +534,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Unauthorized: You are not a member of this game')
         }
 
-        const armies = typeof data.armies === 'number' ? data.armies : 1
+        // If client doesn't specify armies, let downstream logic use the territory's
+        // available armies to determine dice (max 3/2). Avoid defaulting to 1.
+        const armies: number | undefined = typeof data.armies === 'number' ? data.armies : undefined
 
         const processInline = async () => {
           try {
@@ -743,6 +745,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             payload: {
               fromTerritoryId: data.fromTerritoryId,
               toTerritoryId: data.toTerritoryId,
+              // armies is optional; if undefined, gameActionWorker will use available armies
               armies,
             },
           },

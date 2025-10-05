@@ -305,8 +305,10 @@ export const executeAttack = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      // Always commit 1 army initially; user will decide transfer amount via modal after conquest
-      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId, 1)
+      // Do not send a fixed armies value; backend will use the territory's
+      // available armies to determine dice (up to 3 attack, 2 defend), and
+      // still only auto-commit 1 on conquest via transfer step.
+      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId)
 
       dispatch(
         addTerritoryAction({
