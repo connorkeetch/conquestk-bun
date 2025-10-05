@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
 import type { AppDispatch, RootState } from '../store'
@@ -45,6 +45,14 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
 
   const [reinforcementArmies, setReinforcementArmies] = useState(1)
   const [fortifyArmies, setFortifyArmies] = useState(1)
+  // Default fortify amount to max available (all but 1) when selecting source/entering phase
+  useEffect(() => {
+    if (gameState.phase !== 'fortify') return
+    if (!selectedTerritory) return
+    const src = gameState.board.find((t) => t.id === selectedTerritory)
+    const maxMovable = Math.max(1, Math.max(0, (src?.armies ?? 1) - 1))
+    setFortifyArmies(maxMovable)
+  }, [gameState.phase, selectedTerritory, gameState.board])
   const deployInputId = useId()
   const fortifyInputId = useId()
 

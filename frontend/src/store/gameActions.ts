@@ -191,12 +191,15 @@ export const handleFortifyClick = createAsyncThunk<
       if (!selectedTerritory) {
         return
       }
-      // Execute fortification
+      // Execute fortification with default max (all but 1) when using this path
+      const game = getState().game.currentGame
+      const src = game?.board.find((t) => t.id === selectedTerritory)
+      const maxMovable = Math.max(1, Math.max(0, (src?.armies ?? 1) - 1))
       await typedDispatch(
         executeFortify({
           fromTerritoryId: selectedTerritory,
           toTerritoryId: territoryId,
-          armies: 1,
+          armies: maxMovable,
         }),
       )
       return

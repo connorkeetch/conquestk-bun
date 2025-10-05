@@ -68,6 +68,13 @@ export function GameActionBar({
   }, [remaining, phase])
 
   const [fortify, setFortify] = useState(1)
+  // Default fortify to maximum available from selected source (all but 1)
+  useEffect(() => {
+    if (phase !== 'fortify' || !selected || !game) return
+    const src = game.board.find((t) => t.id === selected)
+    const maxMovable = Math.max(1, Math.max(0, (src?.armies ?? 1) - 1))
+    setFortify(maxMovable)
+  }, [phase, selected, game])
   // Auto-attack is global so it can be toggled from map tooltip
   const auto = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
   const [showTreasures, setShowTreasures] = useState(false)
