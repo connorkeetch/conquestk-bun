@@ -15,6 +15,7 @@ Progress over the summer 2025 cycle that is now in production:
 - **Capitals & sector parity:** backend sector bonuses, capital assignments, and team logic now drive both reinforcement math and UI messaging for custom and classic maps.
 - **Web push notification foundation:** durable subscription storage, turn/game notifications, and service worker handling landed; approvals/DM fan-out remain on the backlog.
 - **Navigation & audio truthfulness:** tournament stubs were removed, and turn notification sound aliases keep legacy keys functioning without regressions.
+- **King of the Hill mode:** players can now create KOTH games with configurable victory points, neutral defenders, and rotating hills. Backend awards points at round-end, handles hill rotation, and UI displays scoreboard with live standings and hill overlay.
 
 ## 🔄 In progress (Fall 2025 focus)
 | Stream | Owner | Key deliverables |
@@ -34,7 +35,7 @@ Progress over the summer 2025 cycle that is now in production:
 - **Clan progression follow-through:** expose the new `clan:progress` socket contract to mobile/minimal clients, surface contribution deltas in the clan activity feed, and review XP multipliers once live telemetry lands.
 
 ## 🔭 Future opportunities (longer-term)
-- **Advanced game modes:** Assassin, Zombie Apocalypse, King of the Hill, Sudden Death, Battle Royale.
+- **Advanced game modes:** Zombie Apocalypse, Sudden Death, Battle Royale, Fog of War enhancements.
 - **AI opponents:** staged rollout from basic random AI to personality-driven strategies with difficulty settings.
 - **Tournament framework:** brackets, swiss/elim formats, rewards, and spectator overlays.
 - **Theme experiments:** additional visual styles, accessibility presets, and a potential community theme creator.

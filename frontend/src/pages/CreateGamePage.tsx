@@ -222,7 +222,13 @@ const CreateGamePage: React.FC = () => {
   const [gameName, setGameName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [selectedMap, setSelectedMap] = useState('')
-  const [gameMode, setGameMode] = useState<'classic' | 'capitals' | 'random'>('classic')
+  const [gameMode, setGameMode] = useState<'classic' | 'capitals' | 'king_of_the_hill' | 'random'>('classic')
+  // King of the Hill configuration
+  const [kothTargetPoints, setKothTargetPoints] = useState(10)
+  const [kothNeutralArmies, setKothNeutralArmies] = useState(8)
+  const [kothRotationEnabled, setKothRotationEnabled] = useState(false)
+  const [kothRotationInterval, setKothRotationInterval] = useState(5)
+  const [kothPreviewTurns, setKothPreviewTurns] = useState(2)
   const [fogOfWar, setFogOfWar] = useState<'off' | 'adjacent' | 'persistent'>('off')
   const [teams, setTeams] = useState<number | 'random'>(0)
   const [fortification, setFortification] = useState<
@@ -597,8 +603,8 @@ const CreateGamePage: React.FC = () => {
       // Resolve random options
       const finalGameMode =
         gameMode === 'random'
-          ? (['classic', 'capitals'][Math.floor(Math.random() * 2)] as 'classic' | 'capitals')
-          : (gameMode as 'classic' | 'capitals')
+          ? (['classic', 'capitals', 'king_of_the_hill'][Math.floor(Math.random() * 3)] as 'classic' | 'capitals' | 'king_of_the_hill')
+          : (gameMode as 'classic' | 'capitals' | 'king_of_the_hill')
 
       const finalPlayers =
         playersOption === 'random'
@@ -652,8 +658,21 @@ const CreateGamePage: React.FC = () => {
         allowTeamPlay: finalTeams > 0,
         teamMode: finalTeams > 0 ? 'teams' : 'none',
         numberOfTeams: finalTeams > 0 ? finalTeams : undefined,
+        gameMode: finalGameMode,
         capitalsEnabled: finalGameMode === 'capitals',
         useTerritoryModifiers: finalModifiers,
+      }
+
+      // Attach King of the Hill configuration
+      if (finalGameMode === 'king_of_the_hill') {
+        gameData.kingOfTheHillConfig = {
+          targetPoints: kothTargetPoints,
+          neutralArmies: kothNeutralArmies,
+          previewTurns: kothPreviewTurns,
+          rotationInterval: kothRotationEnabled ? kothRotationInterval : null,
+          eligibleTerritoryIds: [], // Empty = all territories eligible
+          rotationOrder: [], // Empty = random rotation
+        }
       }
 
       // Attach Hidden Treasures configuration
@@ -887,6 +906,17 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-[color:var(--heading)]">🏰 Capitals</div>
               <p className="text-xs text-muted">Protect your capital territory to stay alive</p>
             </button>
+            <button
+              type="button"
+              onClick={() => setGameMode('king_of_the_hill')}
+              className={choiceClass(
+                gameMode === 'king_of_the_hill',
+                'w-full p-3 text-left flex flex-col gap-1',
+              )}
+            >
+              <div className="font-medium text-[color:var(--heading)]">👑 King of the Hill</div>
+              <p className="text-xs text-muted">Control the hill to earn victory points</p>
+            </button>
             {!isRanked && (
               <button
                 type="button"
@@ -904,6 +934,107 @@ const CreateGamePage: React.FC = () => {
             )}
           </div>
         </OptionCard>
+
+        {/* 2b. King of the Hill Configuration (conditional) */}
+        {gameMode === 'king_of_the_hill' && (
+          <OptionCard number="2b" title="King of the Hill Settings">
+            <div className="space-y-4">
+              {/* Target Points */}
+              <div>
+                <label htmlFor="koth-target-points" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                  Victory Points to Win
+                  <InfoTooltip title="First player/team to reach this many points wins the game" />
+                </label>
+                <input
+                  id="koth-target-points"
+                  type="number"
+                  min={3}
+                  max={30}
+                  value={kothTargetPoints}
+                  onChange={(e) => setKothTargetPoints(Math.max(3, Math.min(30, Number.parseInt(e.target.value) || 10)))}
+                  className="input w-full"
+                />
+                <p className="text-xs text-muted mt-1">Recommended: 10 points (range: 3-30)</p>
+              </div>
+
+              {/* Neutral Defenders */}
+              <div>
+                <label htmlFor="koth-neutral-armies" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                  Neutral Defenders on Hill
+                  <InfoTooltip title="Number of armies defending the hill at game start and after rotations" />
+                </label>
+                <input
+                  id="koth-neutral-armies"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={kothNeutralArmies}
+                  onChange={(e) => setKothNeutralArmies(Math.max(1, Math.min(20, Number.parseInt(e.target.value) || 8)))}
+                  className="input w-full"
+                />
+                <p className="text-xs text-muted mt-1">Recommended: 8 armies (range: 1-20)</p>
+              </div>
+
+              {/* Hill Rotation Toggle */}
+              <div className="panel-muted p-3 rounded">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={kothRotationEnabled}
+                    onChange={(e) => setKothRotationEnabled(e.target.checked)}
+                    className="checkbox"
+                  />
+                  <span className="text-sm font-medium text-[color:var(--heading)]">
+                    Enable Hill Rotation
+                    <InfoTooltip title="The hill location changes periodically. Static hills stay in one place all game." />
+                  </span>
+                </label>
+                <p className="text-xs text-muted mt-1 ml-6">
+                  {kothRotationEnabled ? 'Hill will move to new territories' : 'Hill stays in one location'}
+                </p>
+              </div>
+
+              {/* Rotation Settings (conditional) */}
+              {kothRotationEnabled && (
+                <div className="pl-4 border-l-2 border-[color:var(--panel-border)] space-y-4">
+                  <div>
+                    <label htmlFor="koth-rotation-interval" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                      Rotation Interval (Turns)
+                      <InfoTooltip title="Number of turns before the hill moves to a new location" />
+                    </label>
+                    <input
+                      id="koth-rotation-interval"
+                      type="number"
+                      min={2}
+                      max={20}
+                      value={kothRotationInterval}
+                      onChange={(e) => setKothRotationInterval(Math.max(2, Math.min(20, Number.parseInt(e.target.value) || 5)))}
+                      className="input w-full"
+                    />
+                    <p className="text-xs text-muted mt-1">Recommended: 5 turns (range: 2-20)</p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="koth-preview-turns" className="block text-sm font-medium text-[color:var(--heading)] mb-2">
+                      Preview Notice (Turns)
+                      <InfoTooltip title="How many turns in advance players can see the next hill location" />
+                    </label>
+                    <input
+                      id="koth-preview-turns"
+                      type="number"
+                      min={0}
+                      max={10}
+                      value={kothPreviewTurns}
+                      onChange={(e) => setKothPreviewTurns(Math.max(0, Math.min(10, Number.parseInt(e.target.value) || 2)))}
+                      className="input w-full"
+                    />
+                    <p className="text-xs text-muted mt-1">Recommended: 2 turns advance notice (range: 0-10)</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </OptionCard>
+        )}
 
         {/* 3. Turn Time Limits Card */}
         <OptionCard number="3" title="Turn Time Limits">

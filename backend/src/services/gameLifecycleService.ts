@@ -512,6 +512,19 @@ export class GameLifecycleService {
       // Non-fatal: continue with defaults
     }
 
+    // Inject King of the Hill configuration if game mode is KOTH
+    if (room?.gameMode === 'king_of_the_hill') {
+      try {
+        // biome-ignore lint/suspicious/noExplicitAny: room is a DTO
+        const roomKoth: any = (room as any)?.kingOfTheHillConfig
+        if (roomKoth && typeof roomKoth === 'object') {
+          configOverrides.kingOfTheHill = roomKoth
+        }
+      } catch (_error) {
+        // Non-fatal: continue with defaults
+      }
+    }
+
     // Initialize the game - this is the critical step that can fail
     let gameState: GameState
     try {

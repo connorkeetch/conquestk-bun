@@ -179,6 +179,73 @@ const TutorialPage: React.FC = () => {
                   holding capitals creates strategic pressure.
                 </p>
               </div>
+              <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-warning)]">
+                <h3 className="text-lg font-semibold text-[color:var(--color-warning)]">
+                  👑 King of the Hill
+                </h3>
+                <p className="text-sm text-muted">
+                  Control the designated hill territory to earn victory points each round. First to reach the target wins—or hold the most points when time runs out.
+                </p>
+              </div>
+            </div>
+
+            {/* King of the Hill Details */}
+            <div className="panel-muted space-y-4">
+              <h3 className="text-xl font-semibold text-[color:var(--color-warning)]">
+                King of the Hill deep dive
+              </h3>
+
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">Objective</h4>
+                  <p className="text-sm text-muted">
+                    At the end of each round (after all players have taken their turns), the player controlling the hill territory earns <strong>1 victory point</strong>. The first player or team to reach the target point total (default: 10 points) wins immediately.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">Hill mechanics</h4>
+                  <ul className="text-sm text-muted space-y-2">
+                    <li className="flex items-start gap-2">
+                      <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
+                      <span>The hill starts neutral with elevated defenders (default: 8 armies)—you must conquer it like any other territory.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
+                      <span>Hill locations can be static (one territory all game) or rotating (moving to a new location every N turns).</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
+                      <span>When rotation is enabled, you'll receive advance notice (default: 2 turns) of where the hill will move next.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">Strategy tips</h4>
+                  <ul className="text-sm text-muted space-y-2">
+                    <li className="flex items-start gap-2">
+                      <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                      <span><strong>Strike early:</strong> Securing the hill first can build an insurmountable point lead before others react.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                      <span><strong>Fortify heavily:</strong> Holding the hill means surviving attacks from all directions. Stack defenders and adjacent reinforcements.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                      <span><strong>Watch the scoreboard:</strong> If an opponent is close to victory, prioritize taking the hill rather than expanding elsewhere.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                      <span><strong>Rotation timing:</strong> When rotation is enabled, consider whether to defend the current hill or position armies near the next one.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-info)]">
                 <h3 className="text-lg font-semibold text-[color:var(--color-info)]">
                   Random mode

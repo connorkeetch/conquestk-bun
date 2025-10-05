@@ -73,10 +73,14 @@ export function useZoomPan({ containerRef }: UseZoomPanOpts) {
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      // Only start panning when holding Ctrl (desktop)
+      // Allow primary button only
       if (e.button !== 0) return
+      if (!e.ctrlKey) return
       const el = containerRef.current
       if (!el) return
       e.preventDefault()
+      e.stopPropagation()
       el.focus()
       dragRef.current = {
         startX: e.clientX,
@@ -117,27 +121,76 @@ export function useZoomPan({ containerRef }: UseZoomPanOpts) {
     }
   }, [endMouseDrag, onMouseMove])
 
-  // Touch: one finger drag to pan; ignore pinch
-  const touchRef = useRef<{ x: number; y: number; startTx: number; startTy: number } | null>(null)
+  // Touch: two-finger pinch to zoom + pan anchored to midpoint; ignore one-finger to avoid conflicting with UI
+  const touchRef = useRef<{
+    startDist: number
+    startScale: number
+    startTx: number
+    startTy: number
+    lastCx: number
+    lastCy: number
+  } | null>(null)
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
-      if (e.touches.length !== 1) return
-      const t = e.touches[0]
-      touchRef.current = { x: t.clientX, y: t.clientY, startTx: view.tx, startTy: view.ty }
+      if (e.touches.length !== 2) return
+      const [t1, t2] = [e.touches[0], e.touches[1]]
+      const dx = t2.clientX - t1.clientX
+      const dy = t2.clientY - t1.clientY
+      const dist = Math.hypot(dx, dy)
+      const cx = (t1.clientX + t2.clientX) / 2
+      const cy = (t1.clientY + t2.clientY) / 2
+      e.preventDefault()
+      e.stopPropagation()
+      touchRef.current = {
+        startDist: Math.max(1, dist),
+        startScale: view.scale,
+        startTx: view.tx,
+        startTy: view.ty,
+        lastCx: cx,
+        lastCy: cy,
+      }
     },
-    [view.tx, view.ty],
+    [view.tx, view.ty, view.scale],
   )
   const onTouchMove = useCallback(
     (e: React.TouchEvent) => {
-      if (e.touches.length !== 1) return
-      const t = e.touches[0]
-      const d = touchRef.current
-      if (!d) return
-      const dx = t.clientX - d.x
-      const dy = t.clientY - d.y
-      dispatch(setPan({ tx: d.startTx + dx, ty: d.startTy + dy }))
+      if (e.touches.length !== 2) return
+      const state = touchRef.current
+      if (!state) return
+      const [t1, t2] = [e.touches[0], e.touches[1]]
+      const dx = t2.clientX - t1.clientX
+      const dy = t2.clientY - t1.clientY
+      const dist = Math.hypot(dx, dy)
+      const cx = (t1.clientX + t2.clientX) / 2
+      const cy = (t1.clientY + t2.clientY) / 2
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Compute desired scale relative to gesture start
+      const scaleFactor = dist / state.startDist
+      const targetScale = Math.min(
+        2,
+        Math.max(0.5, Number((state.startScale * scaleFactor).toFixed(3))),
+      )
+
+      // Anchor zoom at current midpoint so the point under fingers remains stable
+      const el = containerRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const lx = cx - rect.left
+      const ly = cy - rect.top
+      const stageX = (lx - view.tx) / Math.max(0.000001, view.scale)
+      const stageY = (ly - view.ty) / Math.max(0.000001, view.scale)
+      const nextTx = Math.round(lx - stageX * targetScale)
+      const nextTy = Math.round(ly - stageY * targetScale)
+
+      dispatch(setScale(targetScale as Parameters<typeof setScale>[0]))
+      dispatch(setPan({ tx: nextTx, ty: nextTy }))
+      // Update last centroid
+      state.lastCx = cx
+      state.lastCy = cy
     },
-    [dispatch],
+    [containerRef, dispatch, view.scale, view.tx, view.ty],
   )
   const onTouchEnd = useCallback(() => {
     touchRef.current = null

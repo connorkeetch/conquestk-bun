@@ -28,6 +28,7 @@ export interface CreateRoomData {
     personalitySeed?: number | null
   }>
   treasureConfig?: unknown
+  kingOfTheHillConfig?: unknown
   movementType?: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   turnTimerSeconds?: number
@@ -61,6 +62,7 @@ interface GameRoomRow {
   card_trade_mode?: string | null
   bonus_type?: string | null
   treasure_config?: unknown | null
+  king_of_the_hill_config?: unknown | null
   movement_type?: string | null
   team_mode?: boolean | string | null
   number_of_teams?: number | null
@@ -496,6 +498,10 @@ export class GameRoomService {
         | import('../types/game').TreasureConfig
         | null
         | undefined,
+      kingOfTheHillConfig: (row.king_of_the_hill_config ?? undefined) as
+        | import('../types/game').KingOfTheHillConfig
+        | null
+        | undefined,
       currentPlayers: aggregatedCurrentPlayers ?? (players ? players.length : undefined),
       hostUsername: (row as Partial<ActiveGameRoomRow>).host_username ?? undefined,
       hostSkillRating: this.parseNullableNumber(
@@ -642,9 +648,10 @@ export class GameRoomService {
           number_of_teams,
           is_ranked,
           treasure_config,
+          king_of_the_hill_config,
           status
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'lobby')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'lobby')
         RETURNING *
       `
 
@@ -667,6 +674,7 @@ export class GameRoomService {
         normalizedNumberOfTeams,
         roomData.isRanked || false,
         roomData.treasureConfig ? JSON.stringify(roomData.treasureConfig) : null,
+        roomData.kingOfTheHillConfig ? JSON.stringify(roomData.kingOfTheHillConfig) : null,
       ])
 
       const createdRoom = insertResult.rows[0]
