@@ -219,6 +219,20 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     [failedIcons],
   )
 
+  // Count remaining valid sets in the current hand (excludes partial selections)
+  const remainingValidSets = useMemo(() => {
+    if (!hand || hand.length < 3) return 0
+    let count = 0
+    for (let i = 0; i < hand.length; i++) {
+      for (let j = i + 1; j < hand.length; j++) {
+        for (let k = j + 1; k < hand.length; k++) {
+          if (isValidTriple([i, j, k])) count += 1
+        }
+      }
+    }
+    return count
+  }, [hand, isValidTriple])
+
   if (!isOpen) return null
 
   return (
@@ -319,7 +333,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
         </div>
         <div className="p-4 border-t border-border flex items-center justify-end gap-2">
           <button type="button" className="btn btn-secondary" onClick={onClose}>
-            Cancel
+            Close
           </button>
           <button
             type="button"
@@ -334,14 +348,21 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
                     number,
                   ]),
                 )
+                // Keep the modal open to allow multi-set cash-ins (e.g., after eliminations)
+                // Clear local selection; the hand will refresh from server state
                 setSelected([])
-                onClose()
               }
             }}
           >
             Trade Selected
           </button>
         </div>
+        {remainingValidSets > 1 && (
+          <div className="px-4 pb-4 text-xs text-muted">
+            You have {remainingValidSets} valid set{remainingValidSets === 1 ? '' : 's'} available.
+            You can trade multiple sets consecutively.
+          </div>
+        )}
       </div>
     </div>
   )
