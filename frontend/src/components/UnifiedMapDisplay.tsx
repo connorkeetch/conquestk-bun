@@ -403,11 +403,12 @@ export default function UnifiedMapDisplay({
         {/* Plain odds tooltip removed in favor of AttackOddsPopup */}
       </MapCanvas>
 
-      {/* Floating zoom controls (top-right) */}
-      <div className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/70 backdrop-blur px-1 py-1 rounded-lg shadow-lg">
+      {/* Floating zoom controls (top-right). Smaller and responsive sizes */}
+      <div className="absolute top-2 right-2 z-30 flex gap-1 bg-surface-2/70 backdrop-blur px-0.5 py-0.5 rounded-md shadow-lg">
         <button
           type="button"
-          className="flex items-center justify-center min-w-[36px] min-h-[36px] rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-base font-bold"
+          aria-label="Zoom out"
+          className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-9 lg:h-9 rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-[10px] sm:text-xs md:text-sm font-bold"
           onClick={() => stepScale('out')}
           title="Zoom out"
         >
@@ -415,7 +416,8 @@ export default function UnifiedMapDisplay({
         </button>
         <button
           type="button"
-          className="flex items-center justify-center min-w-[36px] min-h-[36px] rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-base font-bold"
+          aria-label="Zoom in"
+          className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-9 lg:h-9 rounded bg-surface-1/80 hover:bg-surface-3/80 active:bg-surface-3/80 transition-colors text-[10px] sm:text-xs md:text-sm font-bold"
           onClick={() => stepScale('in')}
           title="Zoom in"
         >
@@ -423,7 +425,7 @@ export default function UnifiedMapDisplay({
         </button>
       </div>
       <div
-        className="absolute top-14 right-2 z-30 px-2 py-1 rounded bg-black/50 text-white text-xs"
+        className="absolute top-10 sm:top-12 md:top-14 right-2 z-30 px-1.5 py-0.5 rounded bg-black/50 text-white text-[10px] sm:text-xs"
         style={{ opacity: zoomToast.visible ? 1 : 0, transition: 'opacity 200ms ease' }}
       >
         {zoomToast.text}
