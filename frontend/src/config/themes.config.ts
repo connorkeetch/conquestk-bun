@@ -95,8 +95,7 @@ const THEME_METADATA: Record<ThemeId, Omit<ThemeDefinition, 'id'>> = {
   retrospace: {
     name: 'RetroSpace',
     displayColor: '#0F4CDA',
-    description:
-      'Premium early-2000s social profile homage with animated starfield, gradient chrome, and blue tabs',
+    description: 'Premium early-2000s social profile homage with blue tabs and white panels',
     isPremium: true,
   },
   frontier: {
