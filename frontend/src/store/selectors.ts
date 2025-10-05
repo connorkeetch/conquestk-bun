@@ -143,14 +143,30 @@ export const selectPlayerStats = createSelector([selectGameState], (gameState) =
 
 // Memoized continent control calculation
 export const selectContinentControl = createSelector([selectGameState], (gameState) => {
-  if (!gameState?.gameConfig?.continents) return []
+  if (!gameState) return []
 
-  const continents = gameState.gameConfig.continents
+  // Resolve continent definitions from config (supports sectorBonuses or continentBonuses)
+  const continentDefs = ((): Array<{
+    id: string
+    name: string
+    territories: string[]
+    bonusArmies: number
+    color?: string
+  }> => {
+    const cfg = gameState.gameConfig as unknown as {
+      sectorBonuses?: Array<{ id: string; name: string; territories: string[]; bonusArmies: number; color?: string }>
+      continentBonuses?: Array<{ id: string; name: string; territories: string[]; bonusArmies: number; color?: string }>
+    } | null
+    return cfg?.sectorBonuses ?? cfg?.continentBonuses ?? []
+  })()
+
+  if (!continentDefs.length) return []
+
   const board = gameState.board
 
-  return continents.map((continent) => {
-    const continentTerritories = board.filter((t) => t.continent === continent.name)
-    const owners = new Set(continentTerritories.map((t) => t.ownerId).filter(Boolean))
+  return continentDefs.map((continent) => {
+    const continentTerritories = board.filter((t) => continent.territories.includes(t.id))
+    const owners = new Set(continentTerritories.map((t) => t.ownerId).filter(Boolean) as string[])
 
     return {
       ...continent,

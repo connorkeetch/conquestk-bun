@@ -2,7 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from 'react-hot-toast'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
 import { socketService } from '../services/socketService'
-import type { GameState, GoBackToReinforcementAction, TradeCardsAction } from '../types/game'
+import type { GameState, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import {
   addTerritoryAction,
@@ -474,11 +474,11 @@ export const goBackToReinforcement = createAsyncThunk(
     if (currentGame.hasAttackedThisTurn) throw new Error('Cannot go back after attacking')
 
     try {
-      const action: GoBackToReinforcementAction = {
+      const action = {
         type: 'go_back_to_reinforcement',
         roomId: currentGame.roomId,
         playerId: state.auth.user?.id || currentGame.currentPlayer,
-      }
+      } as const
       socketService.sendGameAction({ roomId: currentGame.roomId, action })
 
       // Clear all selections when going back
