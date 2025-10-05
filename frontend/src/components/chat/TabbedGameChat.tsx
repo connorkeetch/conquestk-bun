@@ -147,6 +147,7 @@ export default function TabbedGameChat({
       <div className="flex overflow-x-auto bg-surface-1 rounded-t-lg border-b border-border">
         {tabs.map((tab) => {
           const badgeCount = tab.badge ?? 0
+          const showBadge = badgeCount > 0 && activeTab !== tab.id
           return (
             <button
               key={tab.id}
@@ -166,8 +167,8 @@ export default function TabbedGameChat({
             >
               <span>{tab.label}</span>
 
-              {/* Unread badge */}
-              {badgeCount > 0 && (
+              {/* Unread badge: hide on the active tab */}
+              {showBadge && (
                 <span className="px-2 py-0.5 text-xs bg-red-600 text-white rounded-full">
                   {badgeCount > 99 ? '99+' : badgeCount}
                 </span>
