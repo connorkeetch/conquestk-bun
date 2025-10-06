@@ -494,28 +494,38 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     // Deployment phase - migrated to use queue system
     socket.on(
       'deployArmies',
-      withErrorHandler(socket, 'deployArmies', async (data) => {
-        if (!data || !data.roomId || !data.territoryId || typeof data.armies !== 'number') {
-          throw new Error('Invalid deployment data')
-        }
+      withErrorHandler(
+        socket,
+        'deployArmies',
+        async (
+          data,
+          ack?: (response: { ok: boolean; queued?: boolean; version?: number }) => void,
+        ) => {
+          if (!data || !data.roomId || !data.territoryId || typeof data.armies !== 'number') {
+            throw new Error('Invalid deployment data')
+          }
 
-        const userId = requireUserId(socket)
+          const userId = requireUserId(socket)
 
-        // Authorization check: verify player is in the room
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) {
-          throw new Error('Unauthorized: You are not a member of this game')
-        }
+          // Authorization check: verify player is in the room
+          const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+          if (!hasAccess) {
+            throw new Error('Unauthorized: You are not a member of this game')
+          }
 
-        // Process via unified processor (handles queue vs inline internally)
-        await gameActionProcessor.processDeployment(
-          data.roomId,
-          userId,
-          data.territoryId,
-          data.armies,
-          socket.id,
-        )
-      }),
+          // Process via unified processor (handles queue vs inline internally)
+          const outcome = await gameActionProcessor.processDeployment(
+            data.roomId,
+            userId,
+            data.territoryId,
+            data.armies,
+            socket.id,
+          )
+          if (typeof ack === 'function') {
+            ack({ ok: true, queued: outcome.mode === 'queued', version: outcome.result?.version })
+          }
+        },
+      ),
     )
 
     // Attack phase - migrated to use queue system

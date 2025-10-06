@@ -150,6 +150,14 @@ export class GameActionWorker {
           delta = await this.processPlaceArmies(gameId, playerId, action)
           // Record deployment move
           await this.recordMove(gameId, playerId, currentState.turn, 'deploy', action.payload)
+          // Emit actor-only snapshot fallback to guarantee convergence even if a delta was missed
+          try {
+            await this.deltaEmitter.emitRevealTo(gameId, playerId)
+          } catch (_e) {
+            // best-effort only
+          }
+          // Avoid broadcasting the delta again below; DeltaEmitter already emitted deltas
+          shouldBroadcast = false
           break
 
         case 'attack': {

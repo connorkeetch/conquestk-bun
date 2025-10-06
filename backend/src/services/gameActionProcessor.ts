@@ -28,7 +28,7 @@ export class GameActionProcessor {
     territoryId: string,
     armies: number,
     socketId?: string,
-  ): Promise<void> {
+  ): Promise<{ mode: 'queued' | 'inline'; result?: import('./deltaEmitter').ActionResult }> {
     // Try to queue the action
     const job = await queueService.addGameAction({
       gameId,
@@ -52,7 +52,7 @@ export class GameActionProcessor {
           territoryId,
           armies,
         })
-        return
+        return { mode: 'queued' }
       }
 
       // No workers available - remove job and process inline
@@ -67,8 +67,11 @@ export class GameActionProcessor {
       }
     }
 
-    // Process inline and emit deltas
-    await this.processDeploymentInline(gameId, playerId, territoryId, armies)
+    // Process inline and emit deltas + actor snapshot fallback
+    const result = await this.processDeploymentInline(gameId, playerId, territoryId, armies)
+    await this.deltaEmitter.emitDeploymentDeltas(gameId, playerId, territoryId, result)
+    await this.deltaEmitter.emitRevealTo(gameId, playerId)
+    return { mode: 'inline', result }
   }
 
   /**
@@ -79,7 +82,7 @@ export class GameActionProcessor {
     playerId: string,
     territoryId: string,
     armies: number,
-  ): Promise<void> {
+  ): Promise<import('./deltaEmitter').ActionResult> {
     logger.info('Processing deployment inline (no queue)', {
       gameId,
       playerId,
@@ -92,8 +95,7 @@ export class GameActionProcessor {
       armies,
       playerId,
     })
-
-    await this.deltaEmitter.emitDeploymentDeltas(gameId, playerId, territoryId, result)
+    return result
   }
 
   /**

@@ -1,5 +1,6 @@
 import type { Server } from 'socket.io'
 import { DeltaBuilder } from '../types/deltaUpdates'
+import type { GameState } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 
@@ -199,6 +200,23 @@ export class DeltaEmitter {
         gameId,
         fromTerritoryId,
         toTerritoryId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
+  /**
+   * Emit a full-state snapshot to a single viewer as a targeted convergence fallback.
+   * Useful when clients might have missed deltas (e.g., on initial join or slow connections).
+   */
+  async emitRevealTo(gameId: string, viewerId: string, state?: GameState): Promise<void> {
+    try {
+      const { emitRevealSnapshot } = await import('./fogService')
+      await emitRevealSnapshot(this.io as unknown as Server, gameId, viewerId, state)
+    } catch (error) {
+      logger.warn('Failed to emit targeted reveal snapshot', {
+        gameId,
+        viewerId,
         error: error instanceof Error ? error.message : error,
       })
     }

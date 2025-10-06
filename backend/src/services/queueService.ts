@@ -531,7 +531,23 @@ export class QueueService {
       ).getWorkers?.()
 
       if (Array.isArray(workers)) {
-        return workers.length > 0
+        if (workers.length === 0) return false
+        // Heuristic: treat workers as active only if a job finished recently
+        try {
+          const inspectable = queue as unknown as InspectableQueue<unknown>
+          const completed = await inspectable.getCompleted(0, 1, { excludeData: true })
+          const last = Array.isArray(completed) && completed.length > 0 ? completed[0] : null
+          const finishedOn = (last?.finishedOn ?? last?.processedOn ?? 0) as number
+          if (!finishedOn) {
+            // No completion data yet; conservatively assume inactive to prefer inline path
+            return false
+          }
+          const RECENT_MS = 30_000
+          return Date.now() - finishedOn < RECENT_MS
+        } catch (_e) {
+          // If we cannot inspect, fall back to presence of workers
+          return true
+        }
       }
     } catch (error) {
       logger.warn('Failed to inspect queue workers', {
