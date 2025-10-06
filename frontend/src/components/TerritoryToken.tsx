@@ -25,7 +25,7 @@ function TerritoryTokenComponent({
   armies = 1,
   color,
   outlineColor,
-  shape = 'hexagon',
+  shape = 'circle',
   isSelected = false,
   isDragging = false,
   onClick,

@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { endTurn, goBackToReinforcement, undoFortify, undoLastPlacement } from '@/store/gameActions'
+import { resolveAssetPath } from '@/utils/assets'
 import { DiceResultsBar } from './DiceResultsBar'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
@@ -154,7 +155,15 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
                 onClick={() => setShowTreasures(true)}
                 title={mustCashIn ? 'You must trade a set' : 'View/trade treasures'}
               >
-                🗝️ Treasures
+                <img
+                  src={resolveAssetPath('static/icons/treasures/diamond.svg')}
+                  alt=""
+                  width={14}
+                  height={14}
+                  className="inline-block align-middle mr-1"
+                  aria-hidden
+                />
+                Treasures
               </button>
             )}
             {isMyTurn && canGoBackToReinforcement && (
