@@ -189,21 +189,30 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
   }, [game?.treasureState, hand, selected, treasureConfig])
 
   // Icon helper (SVG only; no emoji fallback)
-  const iconFor = useCallback((metal: string) => {
-    const m = metal.toLowerCase()
-    const file =
-      m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
-    const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
-    return (
-      <img
-        src={url}
-        alt={`${file} card`}
-        className="inline-block align-middle"
-        width={14}
-        height={14}
-      />
-    )
-  }, [])
+  const iconFor = useCallback(
+    (metal: string) => {
+      const m = metal.toLowerCase()
+      const file =
+        m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
+      const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
+      const diamondBonus = Math.max(0, treasureConfig?.diamondSetBonus ?? 3)
+      const title =
+        file === 'diamond'
+          ? `Diamond (+${diamondBonus} bonus)`
+          : file.charAt(0).toUpperCase() + file.slice(1)
+      return (
+        <img
+          src={url}
+          alt={`${file} card`}
+          title={title}
+          className="inline-block align-middle"
+          width={14}
+          height={14}
+        />
+      )
+    },
+    [treasureConfig?.diamondSetBonus],
+  )
 
   // Count remaining valid sets in the current hand (excludes partial selections)
   const remainingValidSets = useMemo(() => {
