@@ -1209,7 +1209,8 @@ export class GameLifecycleService {
       const { GameService } = await import('./gameService')
       const gameService = new GameService()
       try {
-        const result = await gameService.endTurn(roomId, targetUserId)
+        // AFK skip can advance even if reinforcements remain
+        const result = await gameService.endTurn(roomId, targetUserId, { allowEarlyEnd: true })
         // Broadcast phase change delta like socketService does
         try {
           const io = tryGetSocketServer()

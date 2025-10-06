@@ -126,6 +126,8 @@ const adaptBattleResult = (
   const toDetails = gameState.board.find((territory) => territory.id === result.toTerritory.id)
 
   return {
+    attackerId: result.attackerId,
+    defenderId: result.defenderId ?? null,
     attackerDice: result.attackerDice,
     defenderDice: result.defenderDice,
     attackerLosses: result.attackerLosses,

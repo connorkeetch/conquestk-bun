@@ -51,6 +51,9 @@ export interface BattleTerritorySnapshot {
 type BattleTerritoryRef = string | BattleTerritorySnapshot
 
 export interface BattleResult extends Omit<SharedBattleResult, 'fromTerritory' | 'toTerritory'> {
+  // Stable identifiers to keep UI colors consistent regardless of conquest timing
+  attackerId?: string
+  defenderId?: string | null
   fromTerritory: BattleTerritoryRef
   toTerritory: BattleTerritoryRef
 }
