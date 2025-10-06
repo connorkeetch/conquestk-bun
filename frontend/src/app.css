@@ -838,10 +838,10 @@ This allows themes to work with any color scheme!
 /* Interaction overlay animations and tokens */
 @keyframes breath {
   0% {
-    transform: scale(0.985);
+    transform: scale(0.97);
   }
   100% {
-    transform: scale(1.015);
+    transform: scale(1.05);
   }
 }
 
@@ -852,7 +852,7 @@ This allows themes to work with any color scheme!
   }
   100% {
     opacity: 0;
-    transform: scale(1.08);
+    transform: scale(1.15);
   }
 }
 
