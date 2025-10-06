@@ -82,7 +82,10 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
     const r = Math.max(12, tokenSize / 2)
 
     return (
-      <div className="absolute left-0 top-0 pointer-events-none" style={{ width, height }}>
+      <div
+        className="absolute left-0 top-0 pointer-events-none"
+        style={{ width, height, zIndex: 5 }}
+      >
         {/* Attack/Fortify arcs */}
         {(phase === 'attack' || phase === 'fortify') &&
           selected &&
