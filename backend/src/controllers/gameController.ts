@@ -628,7 +628,7 @@ export class GameController {
               if (gameState && Array.isArray(gameState.players)) {
                 const players = gameState.players.filter((p) => !p.isEliminated)
                 const curIdx = players.findIndex((p) => p.id === gameState.currentPlayer)
-                const youIdx = players.findIndex((p) => p.userId === userId)
+                const youIdx = players.findIndex((p) => p.id === userId)
                 const cur = players[curIdx]
                 if (cur && typeof cur.username === 'string') {
                   currentTurnUsername = cur.username

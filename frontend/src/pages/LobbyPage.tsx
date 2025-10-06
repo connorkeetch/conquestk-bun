@@ -1,6 +1,6 @@
 import { Clock, Gamepad2, Trophy } from 'lucide-react'
 import type React from 'react'
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { formatTurnTimer as formatTurnTimerWord } from '@/utils/lobby'
 import { logger } from '@/utils/logger'
@@ -249,6 +249,67 @@ const LobbyPage: React.FC = () => {
   const { section } = useParams<{ section?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // Table mode (desktop) state: column toggles and sorting
+  type MyGamesColumn =
+    | 'name'
+    | 'players'
+    | 'mode'
+    | 'ranked'
+    | 'status'
+    | 'phase'
+    | 'queue'
+    | 'timer'
+    | 'host'
+    | 'updated'
+    | 'privacy'
+    | 'actions'
+  const DEFAULT_COLUMNS: Record<MyGamesColumn, boolean> = {
+    name: true,
+    players: true,
+    mode: false,
+    ranked: false,
+    status: true,
+    phase: false,
+    queue: true,
+    timer: true,
+    host: false,
+    updated: true,
+    privacy: false,
+    actions: true,
+  }
+  const [visibleCols, setVisibleCols] = useState<Record<MyGamesColumn, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem('lobbyMyGamesColumns')
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<MyGamesColumn, boolean>
+        return { ...DEFAULT_COLUMNS, ...parsed }
+      }
+    } catch {
+      // ignore
+    }
+    return { ...DEFAULT_COLUMNS }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('lobbyMyGamesColumns', JSON.stringify(visibleCols))
+    } catch {
+      // ignore
+    }
+  }, [visibleCols])
+
+  type SortKey = 'name' | 'players' | 'status' | 'queue' | 'timer' | 'updated'
+  const [sortKey, setSortKey] = useState<SortKey>('updated')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
   const mapFieldId = useId()
   const modeFieldId = useId()
   const teamFieldId = useId()
@@ -474,6 +535,41 @@ const LobbyPage: React.FC = () => {
     const id = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(id)
   }, [activeTab])
+
+  // ARIA live announcements for turns and timer thresholds
+  const [ariaMessages, setAriaMessages] = useState<string[]>([])
+  const lastThresholdsRef = useRef<Record<string, Set<number>>>({})
+  const prevMetaRef = useRef<typeof myGamesMeta>({})
+  useEffect(() => {
+    if (activeTab !== 'my-games') return
+    const prev = prevMetaRef.current
+    for (const game of myGames) {
+      const meta = myGamesMeta[game.id]
+      const prevMeta = prev[game.id]
+      // Announce when it becomes your turn
+      if (meta?.isYourTurn && !prevMeta?.isYourTurn) {
+        setAriaMessages((m) => [`Your turn in ${game.name}`, ...m.slice(0, 3)])
+      }
+    }
+    prevMetaRef.current = myGamesMeta
+  }, [myGamesMeta, myGames, activeTab])
+
+  useEffect(() => {
+    if (activeTab !== 'my-games') return
+    for (const game of myGames) {
+      const meta = myGamesMeta[game.id]
+      if (!meta?.isYourTurn || !meta.turnEndsAt) continue
+      const remain = Math.max(0, Math.ceil((meta.turnEndsAt - now) / 1000))
+      const thresholds = [60, 30, 10]
+      if (!lastThresholdsRef.current[game.id]) lastThresholdsRef.current[game.id] = new Set()
+      for (const t of thresholds) {
+        if (remain === t && !lastThresholdsRef.current[game.id].has(t)) {
+          lastThresholdsRef.current[game.id].add(t)
+          setAriaMessages((m) => [`${t} seconds remaining in ${game.name}`, ...m.slice(0, 3)])
+        }
+      }
+    }
+  }, [now, myGames, myGamesMeta, activeTab])
 
   // Sync tab with URL param
   useEffect(() => {
@@ -1164,6 +1260,11 @@ const LobbyPage: React.FC = () => {
               </button>
             </div>
 
+            {/* Live region for announcements (screen readers) */}
+            <output className="sr-only" aria-live="polite">
+              {ariaMessages[0] ?? ''}
+            </output>
+
             {loading ? (
               <SkeletonGroup count={6} className="grid gap-4">
                 {() => <GameCardSkeleton />}
@@ -1187,137 +1288,408 @@ const LobbyPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-4">
-                {(() => {
-                  const filteredGames = myGames.filter((game) => {
-                    if (myGamesFilter === 'all') return true
-                    return game.status === myGamesFilter
-                  })
+              <>
+                {/* Desktop table (md and up) */}
+                <div className="hidden md:block">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm text-muted">Columns</div>
+                    <div className="flex flex-wrap gap-2">
+                      {(Object.keys(DEFAULT_COLUMNS) as MyGamesColumn[]).map((key) =>
+                        key === 'name' || key === 'actions' ? null : (
+                          <label key={key} className="inline-flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={visibleCols[key]}
+                              onChange={(e) =>
+                                setVisibleCols((prev) => ({ ...prev, [key]: e.target.checked }))
+                              }
+                            />
+                            <span className="capitalize">{key}</span>
+                          </label>
+                        ),
+                      )}
+                    </div>
+                  </div>
 
-                  if (filteredGames.length === 0) {
-                    return (
-                      <div className="panel text-center py-16">
-                        <div className="text-6xl mb-4">
-                          {myGamesFilter === 'active'
-                            ? '🎮'
-                            : myGamesFilter === 'lobby'
-                              ? '⏰'
-                              : '🏆'}
-                        </div>
-                        <p className="text-lg mb-2 text-[color:var(--heading)]">
-                          No {myGamesFilter === 'all' ? '' : myGamesFilter} games
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setMyGamesFilter('all')}
-                          className="btn btn-secondary"
-                        >
-                          Show All Games
-                        </button>
-                      </div>
-                    )
-                  }
-
-                  return filteredGames.map((game) => (
-                    <div key={game.id} className="panel">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-[color:var(--heading)]">
-                            {game.name}
-                            {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
-                          </h3>
-                          <div className="flex items-center space-x-4 text-sm text-muted">
-                            <span>
-                              {game.playerCount}/{game.maxPlayers} players
-                            </span>
-                            <span className={getGameStatusColor(game.status)}>
-                              • {getStatusLabel(game.status)}
-                            </span>
-                            {(() => {
-                              const meta = myGamesMeta[game.id]
-                              const isActive = game.status === 'active'
-                              const queue = isActive ? meta?.queueAhead : null
-                              const displayQueue = typeof queue === 'number' ? queue + 1 : null // 1 means current
-                              const remain = meta?.turnEndsAt
-                                ? Math.ceil((meta.turnEndsAt - now) / 1000)
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-sm text-muted">
+                          <th className="py-2 px-3">Name</th>
+                          <th
+                            className="py-2 px-3 cursor-pointer"
+                            onClick={() => toggleSort('players')}
+                            aria-sort={
+                              sortKey === 'players'
+                                ? sortDir === 'asc'
+                                  ? 'ascending'
+                                  : 'descending'
+                                : 'none'
+                            }
+                          >
+                            Players
+                          </th>
+                          {visibleCols.mode && <th className="py-2 px-3">Mode</th>}
+                          {visibleCols.ranked && <th className="py-2 px-3">Ranked</th>}
+                          <th
+                            className="py-2 px-3 cursor-pointer"
+                            onClick={() => toggleSort('status')}
+                            aria-sort={
+                              sortKey === 'status'
+                                ? sortDir === 'asc'
+                                  ? 'ascending'
+                                  : 'descending'
+                                : 'none'
+                            }
+                          >
+                            Status
+                          </th>
+                          {visibleCols.phase && <th className="py-2 px-3">Phase</th>}
+                          {visibleCols.queue && (
+                            <th
+                              className="py-2 px-3 cursor-pointer"
+                              onClick={() => toggleSort('queue')}
+                              aria-sort={
+                                sortKey === 'queue'
+                                  ? sortDir === 'asc'
+                                    ? 'ascending'
+                                    : 'descending'
+                                  : 'none'
+                              }
+                            >
+                              Queue
+                            </th>
+                          )}
+                          {visibleCols.timer && (
+                            <th
+                              className="py-2 px-3 cursor-pointer"
+                              onClick={() => toggleSort('timer')}
+                              aria-sort={
+                                sortKey === 'timer'
+                                  ? sortDir === 'asc'
+                                    ? 'ascending'
+                                    : 'descending'
+                                  : 'none'
+                              }
+                            >
+                              Timer
+                            </th>
+                          )}
+                          {visibleCols.host && <th className="py-2 px-3">Host</th>}
+                          {visibleCols.updated && (
+                            <th
+                              className="py-2 px-3 cursor-pointer"
+                              onClick={() => toggleSort('updated')}
+                              aria-sort={
+                                sortKey === 'updated'
+                                  ? sortDir === 'asc'
+                                    ? 'ascending'
+                                    : 'descending'
+                                  : 'none'
+                              }
+                            >
+                              Updated
+                            </th>
+                          )}
+                          {visibleCols.privacy && <th className="py-2 px-3">Privacy</th>}
+                          <th className="py-2 px-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const filtered = myGames.filter((game) => {
+                            if (myGamesFilter === 'all') return true
+                            return game.status === myGamesFilter
+                          })
+                          const toNumber = (v: unknown) =>
+                            typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : 0
+                          const statusRank: Record<string, number> = {
+                            active: 0,
+                            lobby: 1,
+                            initializing: 2,
+                            paused: 3,
+                            completed: 4,
+                            abandoned: 5,
+                          }
+                          const sorted = [...filtered].sort((a, b) => {
+                            const ma = myGamesMeta[a.id]
+                            const mb = myGamesMeta[b.id]
+                            const secondsRemain = (m?: { turnEndsAt?: number }) =>
+                              m?.turnEndsAt
+                                ? Math.max(0, Math.ceil((m.turnEndsAt - now) / 1000))
                                 : null
-                              const safeRemain = remain == null ? null : Math.max(0, remain)
-                              const timerClass =
-                                safeRemain == null
-                                  ? ''
-                                  : safeRemain <= 10
-                                    ? 'text-[color:var(--color-danger)]'
-                                    : safeRemain <= 30
-                                      ? 'text-amber-400'
-                                      : safeRemain <= 60
-                                        ? 'text-yellow-300'
-                                        : 'text-muted'
+                            let cmp = 0
+                            switch (sortKey) {
+                              case 'name':
+                                cmp = a.name.localeCompare(b.name)
+                                break
+                              case 'players':
+                                cmp = toNumber(a.playerCount) - toNumber(b.playerCount)
+                                break
+                              case 'status':
+                                cmp = (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9)
+                                break
+                              case 'queue': {
+                                const qa =
+                                  typeof ma?.queueAhead === 'number' ? ma.queueAhead + 1 : Infinity
+                                const qb =
+                                  typeof mb?.queueAhead === 'number' ? mb.queueAhead + 1 : Infinity
+                                cmp = qa - qb
+                                break
+                              }
+                              case 'timer': {
+                                const ra = secondsRemain(ma)
+                                const rb = secondsRemain(mb)
+                                cmp = (ra ?? Infinity) - (rb ?? Infinity)
+                                break
+                              }
+                              default: {
+                                const ua = ((a as unknown as { updatedAt?: string }).updatedAt ||
+                                  a.createdAt) as string
+                                const ub = ((b as unknown as { updatedAt?: string }).updatedAt ||
+                                  b.createdAt) as string
+                                cmp = new Date(ua).getTime() - new Date(ub).getTime()
+                                break
+                              }
+                            }
+                            return sortDir === 'asc' ? cmp : -cmp
+                          })
 
-                              // Show queue/timer only for in-progress games where user is an alive participant
-                              if (!isActive || displayQueue == null) return null
-                              return (
-                                <>
-                                  <span className="inline-flex items-center gap-1">
-                                    • Queue
-                                    <span className="chip text-xs font-semibold">
-                                      {displayQueue}
-                                    </span>
-                                  </span>
-                                  {meta?.currentTurnUsername && (
-                                    <span className="inline-flex items-center gap-1 opacity-80">
-                                      • Current:{' '}
-                                      <span className="font-medium">
-                                        {meta.currentTurnUsername}
+                          return sorted.map((game) => {
+                            const meta = myGamesMeta[game.id]
+                            const displayQueue =
+                              typeof meta?.queueAhead === 'number' ? meta.queueAhead + 1 : null
+                            const remain = meta?.turnEndsAt
+                              ? Math.max(0, Math.ceil((meta.turnEndsAt - now) / 1000))
+                              : null
+                            const timerText = remain == null ? '—' : formatCountdown(remain)
+                            return (
+                              <tr key={game.id} className="border-t border-border">
+                                <td className="py-2 px-3">
+                                  <div className="font-medium text-[color:var(--heading)]">
+                                    {game.name}
+                                  </div>
+                                  {typeof (game as unknown as { mapName?: string }).mapName ===
+                                    'string' && (
+                                    <div className="text-xs text-muted">
+                                      {(game as unknown as { mapName?: string }).mapName}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-2 px-3">
+                                  {game.playerCount}/{game.maxPlayers}
+                                </td>
+                                {visibleCols.mode && (
+                                  <td className="py-2 px-3">
+                                    {(game as unknown as { gameMode?: string }).gameMode || '—'}
+                                  </td>
+                                )}
+                                {visibleCols.ranked && (
+                                  <td className="py-2 px-3">
+                                    {(game as unknown as { isRanked?: boolean }).isRanked
+                                      ? '✓'
+                                      : '—'}
+                                  </td>
+                                )}
+                                <td className="py-2 px-3">{getStatusLabel(game.status)}</td>
+                                {visibleCols.phase && <td className="py-2 px-3">—</td>}
+                                {visibleCols.queue && (
+                                  <td className="py-2 px-3">
+                                    {displayQueue == null ? (
+                                      '—'
+                                    ) : (
+                                      <span className="chip text-xs">{displayQueue}</span>
+                                    )}
+                                  </td>
+                                )}
+                                {visibleCols.timer && <td className="py-2 px-3">{timerText}</td>}
+                                {visibleCols.host && (
+                                  <td className="py-2 px-3">
+                                    {(game as unknown as { hostUsername?: string }).hostUsername ||
+                                      '—'}
+                                  </td>
+                                )}
+                                {visibleCols.updated && (
+                                  <td className="py-2 px-3">
+                                    {formatTimeAgo(
+                                      ((game as unknown as { updatedAt?: string }).updatedAt ||
+                                        game.createdAt) as string,
+                                    )}
+                                  </td>
+                                )}
+                                {visibleCols.privacy && (
+                                  <td className="py-2 px-3">
+                                    {(game as unknown as { isPrivate?: boolean }).isPrivate
+                                      ? '🔒'
+                                      : '—'}
+                                  </td>
+                                )}
+                                <td className="py-2 px-3">
+                                  {game.status === 'lobby' || game.status === 'initializing' ? (
+                                    <Link
+                                      to={`/room/${game.roomCode ?? game.id}`}
+                                      className="btn btn-primary btn-xs"
+                                    >
+                                      View Lobby
+                                    </Link>
+                                  ) : game.status === 'active' ? (
+                                    <Link
+                                      to={`/room/${game.roomCode ?? game.id}`}
+                                      className="btn btn-success btn-xs"
+                                    >
+                                      {meta?.isYourTurn ? 'Play Turn' : 'View Game'}
+                                    </Link>
+                                  ) : (
+                                    <Link
+                                      to={`/room/${game.roomCode ?? game.id}`}
+                                      className="btn btn-secondary btn-xs"
+                                    >
+                                      View Results
+                                    </Link>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Mobile cards (below md) */}
+                <div className="grid gap-4 md:hidden">
+                  {(() => {
+                    const filteredGames = myGames.filter((game) => {
+                      if (myGamesFilter === 'all') return true
+                      return game.status === myGamesFilter
+                    })
+
+                    if (filteredGames.length === 0) {
+                      return (
+                        <div className="panel text-center py-16">
+                          <div className="text-6xl mb-4">
+                            {myGamesFilter === 'active'
+                              ? '🎮'
+                              : myGamesFilter === 'lobby'
+                                ? '⏰'
+                                : '🏆'}
+                          </div>
+                          <p className="text-lg mb-2 text-[color:var(--heading)]">
+                            No {myGamesFilter === 'all' ? '' : myGamesFilter} games
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setMyGamesFilter('all')}
+                            className="btn btn-secondary"
+                          >
+                            Show All Games
+                          </button>
+                        </div>
+                      )
+                    }
+
+                    return filteredGames.map((game) => (
+                      <div key={game.id} className="panel">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+                              {game.name}
+                              {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
+                            </h3>
+                            <div className="flex items-center space-x-4 text-sm text-muted">
+                              <span>
+                                {game.playerCount}/{game.maxPlayers} players
+                              </span>
+                              <span className={getGameStatusColor(game.status)}>
+                                • {getStatusLabel(game.status)}
+                              </span>
+                              {(() => {
+                                const meta = myGamesMeta[game.id]
+                                const isActive = game.status === 'active'
+                                const queue = isActive ? meta?.queueAhead : null
+                                const displayQueue = typeof queue === 'number' ? queue + 1 : null // 1 means current
+                                const remain = meta?.turnEndsAt
+                                  ? Math.ceil((meta.turnEndsAt - now) / 1000)
+                                  : null
+                                const safeRemain = remain == null ? null : Math.max(0, remain)
+                                const timerClass =
+                                  safeRemain == null
+                                    ? ''
+                                    : safeRemain <= 10
+                                      ? 'text-[color:var(--color-danger)]'
+                                      : safeRemain <= 30
+                                        ? 'text-amber-400'
+                                        : safeRemain <= 60
+                                          ? 'text-yellow-300'
+                                          : 'text-muted'
+
+                                // Show queue/timer only for in-progress games where user is an alive participant
+                                if (!isActive || displayQueue == null) return null
+                                return (
+                                  <>
+                                    <span className="inline-flex items-center gap-1">
+                                      • Queue
+                                      <span className="chip text-xs font-semibold">
+                                        {displayQueue}
                                       </span>
                                     </span>
-                                  )}
-                                  {safeRemain != null && (
-                                    <span
-                                      className={`inline-flex items-center gap-1 ${timerClass}`}
-                                    >
-                                      • {formatCountdown(safeRemain)}
-                                    </span>
-                                  )}
-                                </>
-                              )
-                            })()}
-                            {game.winner && (
-                              <span className="text-[color:var(--color-warning)]">
-                                • Winner: {game.winner}
-                              </span>
+                                    {meta?.currentTurnUsername && (
+                                      <span className="inline-flex items-center gap-1 opacity-80">
+                                        • Current:{' '}
+                                        <span className="font-medium">
+                                          {meta.currentTurnUsername}
+                                        </span>
+                                      </span>
+                                    )}
+                                    {safeRemain != null && (
+                                      <span
+                                        className={`inline-flex items-center gap-1 ${timerClass}`}
+                                      >
+                                        • {formatCountdown(safeRemain)}
+                                      </span>
+                                    )}
+                                  </>
+                                )
+                              })()}
+                              {game.winner && (
+                                <span className="text-[color:var(--color-warning)]">
+                                  • Winner: {game.winner}
+                                </span>
+                              )}
+                              <span>• Created {formatTimeAgo(game.createdAt)}</span>
+                            </div>
+                          </div>
+                          <div>
+                            {game.status === 'lobby' || game.status === 'initializing' ? (
+                              <Link
+                                to={`/room/${game.roomCode ?? game.id}`}
+                                className="btn btn-primary btn-sm"
+                              >
+                                📋 View Lobby
+                              </Link>
+                            ) : game.status === 'active' ? (
+                              <Link
+                                to={`/room/${game.roomCode ?? game.id}`}
+                                className="btn btn-success btn-sm"
+                              >
+                                {game.isYourTurn ? '🎯 Play Turn' : '👁️ View Game'}
+                              </Link>
+                            ) : (
+                              <Link
+                                to={`/room/${game.roomCode ?? game.id}`}
+                                className="btn btn-secondary btn-sm"
+                              >
+                                📊 View Results
+                              </Link>
                             )}
-                            <span>• Created {formatTimeAgo(game.createdAt)}</span>
                           </div>
                         </div>
-                        <div>
-                          {game.status === 'lobby' || game.status === 'initializing' ? (
-                            <Link
-                              to={`/room/${game.roomCode ?? game.id}`}
-                              className="btn btn-primary btn-sm"
-                            >
-                              📋 View Lobby
-                            </Link>
-                          ) : game.status === 'active' ? (
-                            <Link
-                              to={`/room/${game.roomCode ?? game.id}`}
-                              className="btn btn-success btn-sm"
-                            >
-                              {game.isYourTurn ? '🎯 Play Turn' : '👁️ View Game'}
-                            </Link>
-                          ) : (
-                            <Link
-                              to={`/room/${game.roomCode ?? game.id}`}
-                              className="btn btn-secondary btn-sm"
-                            >
-                              📊 View Results
-                            </Link>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                  ))
-                })()}
-              </div>
+                    ))
+                  })()}
+                </div>
+              </>
             )}
           </div>
         )}
