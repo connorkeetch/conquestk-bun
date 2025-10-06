@@ -46,7 +46,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const lastTurnRef = useRef<number | null>(null)
   const startedLoggedRef = useRef(false)
   const lastRoundRef = useRef<number | null>(null)
-  const fogOn = (room?.fogOfWar ?? 'off') !== 'off'
+  const fogMode = game?.gameConfig?.fogOfWar ?? room?.fogOfWar ?? 'off'
+  const fogOn = fogMode !== 'off'
   const gameEnded =
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
   const redact = fogOn && !gameEnded
@@ -436,9 +437,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         return
       }
       if (d.type === 'BATTLE_RESULT') {
-        if (redact) return
         const brd = d as BattleResultDelta & { changes?: GameDelta[] }
-        handleBattleResult(brd)
+        if (!redact) {
+          handleBattleResult(brd)
+        }
         // Detect eliminations from nested player updates
         try {
           const nested = (brd as { changes?: GameDelta[] }).changes
@@ -449,8 +451,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 const pu = ch as import('@shared/types').PlayerDelta
                 if (pu.changes?.isEliminated) {
                   const defeatedId = pu.playerId
-                  const defeatedName = playerName.get(defeatedId) || defeatedId
-                  const attackerName = playerName.get(attackerId) || attackerId
+                  const defeatedName = playerName.get(defeatedId) || defeatedId || 'Unknown'
+                  const attackerName = playerName.get(attackerId) || attackerId || 'Unknown'
                   add(`${defeatedName} was defeated by ${attackerName}.`)
                 }
               }
@@ -476,7 +478,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         return
       }
       if (d.type === 'TREASURE_AWARDED') {
-        if (redact) return
         const ta = d as TreasureAwardedDelta
         const name = playerName.get(ta.userId) || ta.userId
         add(`${name} received a card.`)
