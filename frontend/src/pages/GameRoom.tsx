@@ -1453,7 +1453,7 @@ export default function GameRoom() {
                       { owner: t.ownerId, armies: t.armies },
                     ]),
                   )}
-                  variant={layout.isTabletOrLarger ? 'full' : 'minimal'}
+                  variant="full"
                 />
               ) : (
                 <div className="panel space-y-3">
