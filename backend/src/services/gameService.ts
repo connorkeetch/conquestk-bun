@@ -1492,6 +1492,9 @@ export class GameService {
       players: playersAfterBattle,
       lastBattleResult,
       hasAttackedThisTurn: true,
+      // Mark that at least one conquest occurred this turn so engine
+      // can award exactly one treasure at end-of-turn.
+      conqueredDuringTurn: (gameState.conqueredDuringTurn ?? false) || territoryConquered,
       phase: gameEnded ? 'finished' : gameState.phase,
       currentPlayer: gameEnded && winner ? winner.id : gameState.currentPlayer,
     }
