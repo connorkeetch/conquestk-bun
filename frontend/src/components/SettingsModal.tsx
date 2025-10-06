@@ -29,6 +29,7 @@ type SettingsTab = 'audio' | 'display' | 'game' | 'keyboard'
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const dispatch = useAppDispatch()
   const settings = useAppSelector((state) => state.settings)
+  const { user } = useAppSelector((state) => state.auth)
   const [activeTab, setActiveTab] = useState<SettingsTab>('audio')
   const modalRef = useRef<HTMLDivElement>(null)
 
@@ -338,17 +339,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   const displayName = COLOR_DISPLAY_NAMES[color]
                   const isSelected = settings.game.preferredColor === color
                   const premium = isPremiumColor(color)
+                  const isPremiumUser = Boolean(
+                    user?.isVip ||
+                      (user?.premiumTier && user.premiumTier !== 'free') ||
+                      user?.isPremium,
+                  )
+                  const disabled = !isPremiumUser
 
                   return (
                     <button
                       key={color}
                       type="button"
-                      onClick={() => handlePreferredColorChange(color)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all ${
+                      onClick={() => {
+                        if (!disabled) handlePreferredColorChange(color)
+                      }}
+                      disabled={disabled}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all relative ${
                         isSelected
                           ? 'border-amber-400 bg-surface-2 shadow-lg shadow-amber-400/20'
-                          : 'border-border hover:border-amber-400/50'
+                          : disabled
+                            ? 'border-border opacity-60 cursor-not-allowed'
+                            : 'border-border hover:border-amber-400/50'
                       } ${premium ? 'relative' : ''}`}
+                      title={disabled ? `${displayName} (Premium Required)` : displayName}
                     >
                       <div
                         className="w-12 h-12 rounded-full border-2"
@@ -360,6 +373,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                       <span className="text-xs text-center">{displayName}</span>
                       {premium && (
                         <span className="absolute top-1 right-1 text-amber-400 text-xs">⭐</span>
+                      )}
+                      {disabled && (
+                        <span className="absolute inset-0 grid place-items-center text-amber-300 text-xs">
+                          🔒
+                        </span>
                       )}
                     </button>
                   )

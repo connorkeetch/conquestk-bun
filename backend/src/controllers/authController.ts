@@ -361,6 +361,10 @@ export class AuthController {
         expiresIn: this.tokenExpiration,
       })
 
+      // Extract premium flags from user row (not in base User type)
+      const rawIsVip = (user as { is_vip?: boolean }).is_vip
+      const rawPremiumTier = (user as { premium_tier?: string }).premium_tier
+
       return res.json({
         message: 'Login successful',
         token,
@@ -370,6 +374,10 @@ export class AuthController {
           email: user.email,
           emailVerified: user.email_verified || false,
           isAdmin,
+          // Premium flags for frontend gating
+          isVip: Boolean(rawIsVip),
+          premiumTier: (rawPremiumTier as string | undefined) || 'free',
+          isPremium: ((rawPremiumTier as string | undefined) || 'free') !== 'free',
           preferences: preferences,
         },
         requiresVerification: needsVerification,
@@ -471,6 +479,15 @@ export class AuthController {
           email: user.email,
           emailVerified: user.email_verified,
           isAdmin,
+          // Premium flags for frontend gating
+          isVip: Boolean((user as { is_vip?: boolean }).is_vip),
+          premiumTier: ((user as { premium_tier?: string }).premium_tier || 'free') as
+            | 'free'
+            | 'premium'
+            | 'pro'
+            | 'enterprise',
+          isPremium:
+            (((user as { premium_tier?: string }).premium_tier || 'free') as string) !== 'free',
           settings: settings,
           preferences: preferences,
         },

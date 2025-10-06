@@ -1,5 +1,5 @@
 import { ChevronRight, Clock, Gamepad2, Trophy, Users } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { logger } from '@/utils/logger'
 import { useAppSelector } from '../hooks/redux'
@@ -23,7 +23,8 @@ const ActiveGamesDropdown: React.FC = () => {
   const [games, setGames] = useState<GameInfo[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [timers, setTimers] = useState<Record<string, { expiresAt?: number; bank?: number }>>({})
+  const [turnMeta, setTurnMeta] =
+    useState<Record<string, { expiresAt?: number; bank?: number; queueAhead?: number }>>()
   const [now, setNow] = useState<number>(() => Date.now())
 
   const fetchGames = useCallback(async () => {
@@ -33,33 +34,70 @@ const ActiveGamesDropdown: React.FC = () => {
       const list: GameInfo[] = response.data.games || []
       setGames(list)
 
-      // Preload timers for games where it's your turn
-      const yours = list.filter((g) => g.isYourTurn)
-      if (yours.length > 0) {
-        const details = await Promise.all(
-          yours.map(async (g) => {
+      // Compute queue + timers for top active games (limit to what we render)
+      const topActive = list.filter((g) => g.status === 'active').slice(0, 5)
+
+      if (topActive.length === 0) {
+        setTurnMeta({})
+      } else {
+        const metaEntries = await Promise.all(
+          topActive.map(async (g) => {
             try {
-              const res = await api.get(`/game/room/${g.id}`)
-              const room = (res.data?.room ?? {}) as Partial<{
+              // Fetch room details for timers and current turn user id
+              const roomRes = await api.get(`/game/rooms/${g.id}`)
+              const room = (roomRes.data?.room ?? {}) as Partial<{
                 turnExpiresAt?: string | null
                 timeBankSecondsRemaining?: number | null
+                currentTurnUserId?: string | null
               }>
+
               const expiresAt = room.turnExpiresAt ? Date.parse(room.turnExpiresAt) : undefined
               const bank =
                 typeof room.timeBankSecondsRemaining === 'number'
                   ? Math.max(0, Math.trunc(room.timeBankSecondsRemaining))
                   : undefined
-              return [g.id, { expiresAt, bank }] as const
-            } catch (_err) {
-              return [g.id, { expiresAt: undefined, bank: undefined }] as const
+
+              // Fetch game state to compute queue position reliably (skip eliminated players)
+              // Only attempt if not already your turn
+              let queueAhead: number | undefined
+              try {
+                const stateRes = await api.get(`/game/rooms/${g.id}/state`)
+                const game = stateRes.data?.game as
+                  | {
+                      players?: Array<{ id: string; userId?: string; isEliminated?: boolean }>
+                      currentPlayer?: string
+                    }
+                  | undefined
+                if (game && Array.isArray(game.players) && game.players.length > 0) {
+                  const currentPlayerId = game.currentPlayer
+                  const players = game.players.filter((p) => !p.isEliminated)
+                  const you = players.find((p) => p.userId === user?.id)
+                  const curIdx = players.findIndex((p) => p.id === currentPlayerId)
+                  const youIdx = you ? players.findIndex((p) => p.id === you.id) : -1
+                  if (curIdx !== -1 && youIdx !== -1) {
+                    const n = players.length
+                    const dist = (youIdx - curIdx + n) % n
+                    queueAhead = dist === 0 ? 0 : dist // 0 => your turn; 1 => next; >1 => players before you
+                  }
+                }
+              } catch (err) {
+                // If state fetch fails (e.g., race), leave queueAhead undefined
+                logger.debug?.('ActiveGamesDropdown: state fetch failed', err)
+              }
+
+              return [g.id, { expiresAt, bank, queueAhead }] as const
+            } catch (err) {
+              logger.debug?.('ActiveGamesDropdown: room details fetch failed', err)
+              return [
+                g.id,
+                { expiresAt: undefined, bank: undefined, queueAhead: undefined },
+              ] as const
             }
           }),
         )
-        const map: Record<string, { expiresAt?: number; bank?: number }> = {}
-        for (const [id, t] of details) map[id] = t
-        setTimers(map)
-      } else {
-        setTimers({})
+        const map: Record<string, { expiresAt?: number; bank?: number; queueAhead?: number }> = {}
+        for (const [id, t] of metaEntries) map[id] = t
+        setTurnMeta(map)
       }
     } catch (error) {
       logger.error('Failed to load active games', error)
@@ -67,7 +105,7 @@ const ActiveGamesDropdown: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     if (user && isOpen) {
@@ -94,8 +132,6 @@ const ActiveGamesDropdown: React.FC = () => {
     return parts.join(' ')
   }, [])
 
-  if (!user) return null
-
   const activeGames = games.filter((g) => g.status === 'active')
   const waitingGames = games.filter((g) => g.status === 'lobby' || g.status === 'initializing')
   const finishedGames = games.filter((g) => g.status === 'completed').slice(0, 3)
@@ -103,7 +139,9 @@ const ActiveGamesDropdown: React.FC = () => {
   const totalActive = activeGames.length + waitingGames.length
   const yourTurnCount = activeGames.filter((g) => g.isYourTurn).length
 
-  return (
+  const meta = useMemo(() => turnMeta ?? {}, [turnMeta])
+
+  return !user ? null : (
     <div className="relative">
       <button
         type="button"
@@ -185,31 +223,52 @@ const ActiveGamesDropdown: React.FC = () => {
                                   <Users className="w-3 h-3" />
                                   {game.playerCount}/{game.maxPlayers}
                                 </span>
-                                {game.isYourTurn && (
-                                  <span className="text-red-400 font-semibold animate-pulse flex items-center gap-2">
-                                    Your Turn
-                                    {(() => {
-                                      const t = timers[game.id]
-                                      const remain = t?.expiresAt
-                                        ? Math.ceil((t.expiresAt - now) / 1000)
-                                        : null
-                                      const bank = t?.bank ?? null
-                                      if (remain == null) return null
-                                      const main = formatWorded(Math.max(0, remain))
-                                      // If in overtime and we have bank, show bank as +Xm
-                                      const bankLabel =
-                                        bank && remain <= 0 ? `+${formatWorded(bank)}` : null
-                                      return (
+                                {(() => {
+                                  const t = meta[game.id]
+                                  const remain = t?.expiresAt
+                                    ? Math.ceil((t.expiresAt - now) / 1000)
+                                    : null
+
+                                  if (game.isYourTurn) {
+                                    return (
+                                      <span className="text-red-400 font-semibold animate-pulse flex items-center gap-2">
+                                        Your Turn
+                                        {remain != null && (
+                                          <span className="inline-flex items-center gap-1 text-xs">
+                                            <span>{formatWorded(Math.max(0, remain))}</span>
+                                            {t?.bank && remain <= 0 && (
+                                              <span className="chip text-[10px]">
+                                                +{formatWorded(t.bank)}
+                                              </span>
+                                            )}
+                                          </span>
+                                        )}
+                                      </span>
+                                    )
+                                  }
+
+                                  // Not your turn: show queue position + current turn timer
+                                  const queue = t?.queueAhead
+                                  const queueLabel =
+                                    typeof queue === 'number'
+                                      ? queue === 1
+                                        ? 'Your turn next'
+                                        : `${queue} before you`
+                                      : null
+                                  return (
+                                    <>
+                                      {queueLabel && (
+                                        <span className="font-medium">{queueLabel}</span>
+                                      )}
+                                      {remain != null && (
                                         <span className="inline-flex items-center gap-1 text-xs">
-                                          <span>{main}</span>
-                                          {bankLabel && (
-                                            <span className="chip text-[10px]">{bankLabel}</span>
-                                          )}
+                                          <Clock className="w-3 h-3" />
+                                          <span>{formatWorded(Math.max(0, remain))}</span>
                                         </span>
-                                      )
-                                    })()}
-                                  </span>
-                                )}
+                                      )}
+                                    </>
+                                  )
+                                })()}
                               </div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-muted mt-1" />
@@ -279,7 +338,7 @@ const ActiveGamesDropdown: React.FC = () => {
                 {/* Footer */}
                 <div className="p-4 bg-surface-1">
                   <Link
-                    to="/lobby/my-games"
+                    to="/lobby/my-games?filter=active"
                     className="w-full px-4 py-2 bg-surface-2 text-white rounded-lg hover:bg-gray-600 transition-colors text-center block"
                     onClick={() => setIsOpen(false)}
                   >

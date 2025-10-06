@@ -5,4 +5,7 @@ export interface User {
   emailVerified?: boolean
   isAdmin?: boolean
   adminLevel?: number
+  isPremium?: boolean
+  isVip?: boolean
+  premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise'
 }
