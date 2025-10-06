@@ -42,7 +42,8 @@
     "purge:messages:include-blocks": "ts-node src/scripts/purgeMessaging.ts --yes --include-user-blocks",
     "maps:import": "ts-node src/scripts/importMapsPackage.ts",
     "maps:fix-image-urls": "ts-node src/scripts/fixMapImageUrls.ts",
-    "maps:rebuild-adj": "ts-node src/scripts/rebuildAdjacencies.ts"
+    "maps:rebuild-adj": "ts-node src/scripts/rebuildAdjacencies.ts",
+    "assets:upload:treasures": "ts-node src/scripts/uploadTreasureIcons.ts"
   },
   "dependencies": {
     "@risk-game/shared": "file:../shared",
