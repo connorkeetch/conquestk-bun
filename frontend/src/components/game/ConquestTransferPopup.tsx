@@ -160,9 +160,7 @@ export default function ConquestTransferPopup({
         touchAction: 'none',
       }}
       onMouseDown={(e) => e.stopPropagation()}
-      onMouseUp={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
-      onTouchEnd={(e) => e.stopPropagation()}
     >
       <div className="rounded bg-[color:var(--surface-2)]/95 border border-[color:var(--panel-border)] shadow px-3 py-2 text-xs text-[color:var(--text)] whitespace-nowrap min-w-[200px]">
         <button
