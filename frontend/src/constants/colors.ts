@@ -283,8 +283,9 @@ export const getColorValue = (color: PlayerColor): string => {
 }
 
 export const getColorDisplayName = (color: string): string => {
-  const colorMap: Record<string, string> = {
-    // Standard colors (13) - organized by hue
+  // Support both hex values and premium color keys
+  const map: Record<string, string> = {
+    // Standard colors (12)
     '#DC2626': 'Red',
     '#851D2D': 'Crimson',
     '#EC4899': 'Pink',
@@ -297,15 +298,21 @@ export const getColorDisplayName = (color: string): string => {
     '#7C3AED': 'Violet',
     '#918151': 'Tan',
     '#5C4033': 'Brown',
-    // Premium colors (5)
+    // Premium hex fallbacks
     '#000000': 'Midnight Black',
     '#FFFFFF': 'Pure White',
     '#DFAF37': 'Metallic Gold',
     '#39FF14': 'Neon Green',
     '#FB923C': 'Dragonfire',
+    // Premium keys
+    MidnightBlack: 'Midnight Black',
+    PureWhite: 'Pure White',
+    MetallicGold: 'Metallic Gold',
+    NeonGreen: 'Neon Green',
+    Dragonfire: 'Dragonfire',
   }
 
-  return colorMap[color] || color
+  return map[color] || color
 }
 
 export const isPremiumColor = (color: PlayerColor): boolean => {

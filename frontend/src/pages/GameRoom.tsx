@@ -24,7 +24,15 @@ import {
   getBackgroundMotionPreference,
   setBackgroundMotionPreference,
 } from '../config/themes.config'
-import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
+import {
+  COLOR_DISPLAY_NAMES,
+  COLOR_HEX_VALUES,
+  getColorDisplayName,
+  getColorValue,
+  PLAYER_COLORS,
+  PREMIUM_COLORS,
+  STANDARD_COLORS,
+} from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
@@ -1243,34 +1251,103 @@ export default function GameRoom() {
             >
               Choose your color
             </h2>
-            <p className="text-sm text-muted">
-              Each player must pick a unique color for this game.
-            </p>
-            <div className="grid grid-cols-6 gap-2">
-              {PLAYER_COLORS.map((hex) => {
-                const taken = takenColors.has(hex.toUpperCase())
-                const isSelected = selectedJoinColor?.toUpperCase() === hex.toUpperCase()
-                return (
-                  <button
-                    key={hex}
-                    type="button"
-                    className={`h-8 w-8 rounded-full border ${
-                      isSelected ? 'ring-2 ring-white' : ''
-                    } ${taken ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
-                    style={{
-                      background: getColorValue(hex),
-                      borderColor: 'rgba(255,255,255,0.25)',
-                    }}
-                    onClick={() => {
-                      if (!taken) setSelectedJoinColor(hex)
-                    }}
-                    disabled={taken}
-                    aria-label={`Select color ${hex}`}
-                    title={taken ? 'Already taken' : 'Available'}
-                  />
-                )
-              })}
+            <p className="text-sm text-muted">Each player must pick a unique color.</p>
+
+            {/* Standard Colors */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted">Standard Colors</p>
+              <div className="grid grid-cols-6 gap-2">
+                {STANDARD_COLORS.map((hex) => {
+                  const taken = takenColors.has(hex.toUpperCase())
+                  const isSelected = selectedJoinColor?.toUpperCase() === hex.toUpperCase()
+                  return (
+                    <button
+                      key={hex}
+                      type="button"
+                      className={`h-8 w-8 rounded-full border transition-transform ${
+                        isSelected ? 'ring-2 ring-white' : ''
+                      } ${taken ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
+                      style={{
+                        background: getColorValue(hex),
+                        borderColor: 'rgba(255,255,255,0.25)',
+                      }}
+                      onClick={() => {
+                        if (!taken) setSelectedJoinColor(hex)
+                      }}
+                      disabled={taken}
+                      aria-label={`Select color ${hex}`}
+                      title={taken ? 'Already taken' : 'Available'}
+                    />
+                  )
+                })}
+              </div>
             </div>
+
+            {/* Premium Colors */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted flex items-center gap-2">
+                Premium Colors <span className="text-amber-400">⭐</span>
+              </p>
+              <div className="grid grid-cols-6 gap-2">
+                {PREMIUM_COLORS.map((key) => {
+                  const bg = COLOR_HEX_VALUES[key]
+                  const display = COLOR_DISPLAY_NAMES[key] || key
+                  const isSelected = selectedJoinColor === key
+                  // Treat as taken if someone chose the premium key or its solid hex
+                  const solidHex = (() => {
+                    // COLOR_HEX_VALUES may be a gradient or hex; try to extract likely solid
+                    return bg.startsWith('#') ? bg.toUpperCase() : '#FB923C'
+                  })()
+                  const taken = takenColors.has(key.toUpperCase()) || takenColors.has(solidHex)
+
+                  const isPremiumUser = Boolean(
+                    user?.isVip ||
+                      (user?.premiumTier && user.premiumTier !== 'free') ||
+                      user?.isPremium,
+                  )
+                  const disabled = taken || !isPremiumUser
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`relative h-8 w-8 rounded-full border transition-transform ${
+                        isSelected
+                          ? 'ring-2 ring-amber-400 border-amber-400'
+                          : 'border-[rgba(255,255,255,0.25)]'
+                      } ${
+                        disabled
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'cursor-pointer hover:scale-105 hover:border-amber-400'
+                      }`}
+                      style={{ background: bg }}
+                      onClick={() => {
+                        if (!disabled) setSelectedJoinColor(key)
+                      }}
+                      disabled={disabled}
+                      aria-label={`Select color ${display}${taken ? ' (taken)' : ''}`}
+                      title={
+                        taken
+                          ? `${display} (Already taken)`
+                          : isPremiumUser
+                            ? display
+                            : `${display} (Premium Required)`
+                      }
+                    >
+                      {/* Star badge */}
+                      <span className="absolute -top-1 -right-1 text-amber-400 text-xs">⭐</span>
+                      {/* Lock overlay for non-premium */}
+                      {!isPremiumUser && (
+                        <span className="absolute inset-0 grid place-items-center text-[10px] text-amber-300">
+                          🔒
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {selectedJoinColor && (
               <div className="text-xs text-muted">
                 Selected:{' '}

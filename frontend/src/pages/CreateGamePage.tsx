@@ -205,6 +205,7 @@ const reportError = (message: string, error: unknown) => {
 const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
+  const { user } = useAppSelector((state) => state.auth)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   // Removed tournament visibility option; comingSoon UI flag not needed here
   const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
@@ -1628,7 +1629,12 @@ const CreateGamePage: React.FC = () => {
 
             {/* Premium Colors */}
             <div>
-              <p className="text-xs text-muted mb-2">Premium Colors</p>
+              <p className="text-xs text-muted mb-2 flex items-center gap-2">
+                Premium Colors
+                {!(user?.isPremium || user?.isVip) && (
+                  <span className="text-amber-400 text-xs">⭐ Premium Only</span>
+                )}
+              </p>
               <div className="grid grid-cols-6 gap-2">
                 {Object.entries(PREMIUM_PLAYER_COLORS).map(([key, colorData]) => {
                   const hasGradient = 'gradient' in colorData
@@ -1637,22 +1643,27 @@ const CreateGamePage: React.FC = () => {
                   const checkHex = hasGradient
                     ? extractFirstHexColor(colorValue) || '#000000'
                     : colorValue
+                  const isPremiumUser = user?.isPremium || user?.isVip
+                  const isDisabled = !isPremiumUser
 
                   return (
                     <button
                       type="button"
                       key={key}
+                      disabled={isDisabled}
                       className={`group relative h-12 w-12 rounded-lg border-2 transition-all ${
                         selectedColor === key
                           ? 'border-yellow-400 scale-110 shadow-lg ring-2 ring-yellow-400/50'
-                          : 'border-border hover:border-yellow-600 hover:scale-105'
+                          : isDisabled
+                            ? 'border-border opacity-50 cursor-not-allowed'
+                            : 'border-border hover:border-yellow-600 hover:scale-105'
                       } ${key === 'NeonGreen' ? 'shadow-[0_0_6px_rgba(57,255,20,0.3)]' : ''}`}
                       style={{
                         background: hasGradient ? colorValue : undefined,
                         backgroundColor: !hasGradient ? colorValue : undefined,
                       }}
-                      onClick={() => setSelectedColor(key)}
-                      title={colorName}
+                      onClick={() => !isDisabled && setSelectedColor(key)}
+                      title={isDisabled ? `${colorName} (Premium Required)` : colorName}
                     >
                       {selectedColor === key && (
                         <span
@@ -1661,6 +1672,11 @@ const CreateGamePage: React.FC = () => {
                           aria-hidden
                         >
                           ✓
+                        </span>
+                      )}
+                      {isDisabled && (
+                        <span className="absolute top-0 right-0 text-amber-400 text-xs" aria-hidden>
+                          🔒
                         </span>
                       )}
                     </button>
