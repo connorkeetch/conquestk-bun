@@ -1,8 +1,7 @@
-import type { TreasureConfig } from '@shared/types'
 import { useEffect, useMemo, useState } from 'react'
+import InfoTooltip from '@/components/InfoTooltip'
 import { useAppSelector } from '@/hooks/redux'
 import { resolveAssetPath } from '@/utils/assets'
-import { computeNextTreasurePayout } from '@/utils/treasures'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
 type Props = {
@@ -11,7 +10,6 @@ type Props = {
 
 export function TreasureHud({ variant = 'header' }: Props) {
   const game = useAppSelector((s) => s.game.currentGame)
-  const room = useAppSelector((s) => s.room.currentRoom)
   const userId = useAppSelector((s) => s.auth.user?.id)
 
   const me = useMemo(() => game?.players.find((p) => p.id === userId), [game?.players, userId])
@@ -19,10 +17,7 @@ export function TreasureHud({ variant = 'header' }: Props) {
   const mustCashIn = Boolean(game?.mustCashInTreasures)
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
 
-  const { base, diamondBonus } = computeNextTreasurePayout(
-    game?.treasureState,
-    (room?.treasureConfig as unknown as TreasureConfig | undefined) ?? undefined,
-  )
+  // Intentionally remove numeric payout indicators in HUD per UX request
 
   const [open, setOpen] = useState(false)
 
@@ -72,15 +67,9 @@ export function TreasureHud({ variant = 'header' }: Props) {
       <button
         type="button"
         className={`${containerClasses} ${pulse ? 'animate-pulse ring-1 ring-[color:var(--color-warning)]' : ''}`}
-        title="Treasures: view hand and next payout"
+        title="Treasures"
         onClick={() => setOpen(true)}
       >
-        <span className="inline-flex items-center gap-1">
-          <span className="opacity-80">Next</span>
-          <span className="font-semibold text-white">+{base}</span>
-          {diamondBonus > 0 && <span className="opacity-80">(+{diamondBonus}💎)</span>}
-        </span>
-        <span className="mx-1 h-4 w-px bg-white/20" />
         <span className="inline-flex items-center gap-1">
           {shown.map((m, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: cards lack stable ids; index is fine for a static strip
@@ -89,6 +78,9 @@ export function TreasureHud({ variant = 'header' }: Props) {
             </span>
           ))}
           {overflow > 0 && <span className="text-[10px] text-white/80">+{overflow}</span>}
+        </span>
+        <span className="ml-1">
+          <InfoTooltip title="Trade any valid set of 3 cards for reinforcements. Diamonds are wild and add extra when included." />
         </span>
       </button>
       <TreasureTradeModal isOpen={open} onClose={() => setOpen(false)} />
