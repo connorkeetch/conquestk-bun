@@ -56,20 +56,26 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
             <h3 className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[500px]">
+            <table className="w-full text-sm min-w-[420px]">
               <thead className="bg-[color:var(--surface-2)] sticky top-0">
                 <tr className="border-b border-[color:var(--panel-border)]">
-                  <th className="px-2 py-2 text-left font-medium text-muted">Player</th>
-                  <th className="px-2 py-2 text-right font-medium text-muted">Armies</th>
-                  <th className="px-2 py-2 text-right font-medium text-muted">
+                  <th className="px-1 py-2 text-left font-medium text-muted">Player</th>
+                  <th className="px-1 py-2 text-right font-medium text-muted">Armies</th>
+                  <th className="px-1 py-2 text-right font-medium text-muted">
                     <span className="sm:hidden">Terr.</span>
                     <span className="hidden sm:inline">Territories</span>
                   </th>
                   {variant === 'full' && (
-                    <th className="px-2 py-2 text-right font-medium text-muted">+/Turn</th>
+                    <th className="px-1 py-2 text-right font-medium text-muted">
+                      <span className="md:hidden">+/T</span>
+                      <span className="hidden md:inline">+/Turn</span>
+                    </th>
                   )}
                   {variant === 'full' && (
-                    <th className="px-2 py-2 text-right font-medium text-muted">Treasures</th>
+                    <th className="px-1 py-2 text-right font-medium text-muted">
+                      <span className="md:hidden">Cards</span>
+                      <span className="hidden md:inline">Treasures</span>
+                    </th>
                   )}
                 </tr>
               </thead>
@@ -83,10 +89,10 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                         : 'hover:bg-[color:var(--surface-2)]'
                     }`}
                   >
-                    <td className="px-2 py-1.5 whitespace-nowrap">
-                      <div className="flex items-center gap-2 min-w-0">
+                    <td className="px-1 py-1.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <div
-                          className="w-4 h-4 rounded-full border-2 border-[color:var(--panel-border)] shrink-0"
+                          className="w-3.5 h-3.5 rounded-full border-2 border-[color:var(--panel-border)] shrink-0"
                           style={{ backgroundColor: getColorValue(player.color) }}
                         />
                         <button
@@ -104,19 +110,19 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                         )}
                       </div>
                     </td>
-                    <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                    <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                       {player.totalArmies}
                     </td>
-                    <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                    <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                       {player.territoryCount}
                     </td>
                     {variant === 'full' && (
-                      <td className="px-2 py-1.5 text-right font-mono text-[color:var(--color-success)] whitespace-nowrap">
+                      <td className="px-1 py-1.5 text-right font-mono text-[color:var(--color-success)] whitespace-nowrap">
                         +{player.reinforcements}
                       </td>
                     )}
                     {variant === 'full' && (
-                      <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                      <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                         {player.treasureCount}
                       </td>
                     )}

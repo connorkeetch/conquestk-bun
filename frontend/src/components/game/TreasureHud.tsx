@@ -1,7 +1,9 @@
+import type { TreasureConfig } from '@shared/types'
 import { useEffect, useMemo, useState } from 'react'
 import InfoTooltip from '@/components/InfoTooltip'
 import { useAppSelector } from '@/hooks/redux'
 import { resolveAssetPath } from '@/utils/assets'
+import { computeNextTreasurePayout } from '@/utils/treasures'
 import { TreasureTradeModal } from './TreasureTradeModal'
 
 type Props = {
@@ -11,13 +13,18 @@ type Props = {
 export function TreasureHud({ variant = 'header' }: Props) {
   const game = useAppSelector((s) => s.game.currentGame)
   const userId = useAppSelector((s) => s.auth.user?.id)
+  const room = useAppSelector((s) => s.room.currentRoom)
 
   const me = useMemo(() => game?.players.find((p) => p.id === userId), [game?.players, userId])
   const hand = (me?.treasures ?? []) as string[]
   const mustCashIn = Boolean(game?.mustCashInTreasures)
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
 
-  // Intentionally remove numeric payout indicators in HUD per UX request
+  // Compute next payout (used only for compact variant display)
+  const { base } = computeNextTreasurePayout(
+    game?.treasureState,
+    (room?.treasureConfig as unknown as TreasureConfig | undefined) ?? undefined,
+  )
 
   const [open, setOpen] = useState(false)
 
@@ -75,6 +82,13 @@ export function TreasureHud({ variant = 'header' }: Props) {
         disabled={!isMyTurn}
         aria-disabled={!isMyTurn}
       >
+        {variant === 'compact' && (
+          <span className="inline-flex items-center gap-1 mr-1">
+            <span className="opacity-80">Next</span>
+            <span className="font-semibold text-white">+{base}</span>
+          </span>
+        )}
+        {variant === 'compact' && <span className="mx-1 h-4 w-px bg-white/20" />}
         <span className="inline-flex items-center gap-1">
           {shown.map((m, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: cards lack stable ids; index is fine for a static strip
