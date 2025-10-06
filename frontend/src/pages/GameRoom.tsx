@@ -6,6 +6,7 @@ import { GameOverModal } from '@/components/GameOverModal'
 import ChatLogModal from '@/components/game/ChatLogModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import GameRoomFooter from '@/components/game/GameRoomFooter'
+import PlayerStatsModal from '@/components/game/PlayerStatsModal'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import TreasureHud from '@/components/game/TreasureHud'
 import { TurnTimer } from '@/components/game/TurnTimer'
@@ -49,7 +50,7 @@ import {
 } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import { addClientLog, hydrateFromStorage, setDice } from '../store/uiRoomSlice'
-import type { AIDifficulty } from '../types/game'
+import type { AIDifficulty, PlayerColor } from '../types/game'
 // import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
 import { hostDisplay, seatUsage } from '../utils/lobby'
@@ -101,24 +102,17 @@ export default function GameRoom() {
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
   const [showGameOver, setShowGameOver] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-  // Bottom drawer now only shows chat; actions moved to header/map popups
+  // Bottom drawer now only shows chat; stats has its own drawer on mobile
   const [chatLogModalOpen, setChatLogModalOpen] = useState(false)
+  const [statsModalOpen, setStatsModalOpen] = useState(false)
+  const [statsDrawerOpen, setStatsDrawerOpen] = useState(false)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [resignDialogOpen, setResignDialogOpen] = useState(false)
   const resignDialogRef = useRef<HTMLDivElement | null>(null)
   const resignDialogTitleId = useId()
-  const [rightRailOpen, setRightRailOpen] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem('ui.rightRailOpen')
-      if (raw === 'true') return true
-      if (raw === 'false') return false
-    } catch {
-      // ignore storage errors (quota, privacy)
-    }
-    return true
-  })
   const layout = useResponsiveLayout()
   const mobileDrawerId = useId()
+  const statsDrawerId = useId()
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
@@ -1040,9 +1034,12 @@ export default function GameRoom() {
 
   return (
     <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] 2xl:max-w-none flex-col gap-6 px-6 pb-20 pt-8 lg:px-10">
-      {/* Mini HUD for mobile */}
+      {/* Mini HUD for mobile (phase + timer). Ensure it sits below the sticky header. */}
       {currentGame && (
-        <div className="md:hidden fixed top-2 left-1/2 z-40 -translate-x-1/2">
+        <div
+          className="md:hidden fixed left-1/2 z-40 -translate-x-1/2"
+          style={{ top: 'calc(env(safe-area-inset-top) + 56px + 8px)' }}
+        >
           <button
             type="button"
             onClick={() => {
@@ -1070,9 +1067,7 @@ export default function GameRoom() {
               )
             })()}
           </button>
-          <div className="mt-2 flex items-center justify-center">
-            <TreasureHud variant="compact" />
-          </div>
+          {/* Removed floating Treasure HUD (duplicate of header HUD on mobile) */}
         </div>
       )}
       <ConnectionBanner />
@@ -1390,17 +1385,43 @@ export default function GameRoom() {
         `}
       >
         {/* Left Sidebar - Player Stats (Ultra-wide only) */}
-        {layout.isUltrawide && currentGame && (
+        {layout.isUltrawide && (currentGame || currentRoom) && (
           <aside className="sticky top-6 space-y-4">
             <PlayerStatsTable
-              players={currentGame.players || []}
-              currentPlayerId={currentGame.currentPlayer}
-              territories={Object.fromEntries(
-                (currentGame.board || []).map((t) => [
-                  t.id,
-                  { owner: t.ownerId, armies: t.armies },
-                ]),
-              )}
+              players={
+                currentGame?.players ||
+                (currentRoom?.players || []).map((p) => {
+                  const rawColor =
+                    ((p as { selected_color?: string | null }).selected_color as string | null) ||
+                    ((p.preferred_color as string | null) ?? null) ||
+                    '#9CA3AF'
+                  return {
+                    id: p.userId || p.id,
+                    userId: p.userId || p.id,
+                    username: p.username,
+                    color: rawColor as unknown as PlayerColor,
+                    territories: [],
+                    armies: 0,
+                    cards: [],
+                    isEliminated: false,
+                    isAi: p.isAi,
+                    aiDifficulty: p.aiDifficulty ?? null,
+                    teamId: p.teamId ?? undefined,
+                    treasures: [],
+                  }
+                })
+              }
+              currentPlayerId={currentGame?.currentPlayer}
+              territories={
+                currentGame
+                  ? Object.fromEntries(
+                      (currentGame.board || []).map((t) => [
+                        t.id,
+                        { owner: t.ownerId, armies: t.armies },
+                      ]),
+                    )
+                  : {}
+              }
               variant="full"
             />
           </aside>
@@ -1573,157 +1594,55 @@ export default function GameRoom() {
 
           {/* Desktop action bar moved inside the game board as an overlay */}
 
-          {/* Player Stats & Chat Row - positioned directly under the board (hidden on ultra-wide) */}
+          {/* Player Stats under board (hidden on ultra-wide) */}
           {!layout.isUltrawide && (
-            <div
-              className={`
-              flex gap-3
-              flex-col
-              lg:flex-row lg:items-start
-              xl:grid xl:grid-cols-2 xl:gap-4
-            `}
-            >
-              {/* Player Stats */}
-              {currentGame ? (
+            <div className={`flex gap-3 flex-col lg:flex-row lg:items-start`}>
+              {(currentGame || currentRoom) && (
                 <PlayerStatsTable
-                  players={currentGame.players || []}
-                  currentPlayerId={currentGame.currentPlayer}
-                  territories={Object.fromEntries(
-                    (currentGame.board || []).map((t) => [
-                      t.id,
-                      { owner: t.ownerId, armies: t.armies },
-                    ]),
-                  )}
-                  variant="full"
-                />
-              ) : (
-                <div className="panel space-y-3">
-                  <h3 className="text-sm font-semibold text-[color:var(--heading)]">
-                    Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
-                  </h3>
-                  <ul className="space-y-1">
-                    {currentRoom.players?.map((player) => {
+                  players={
+                    currentGame?.players ||
+                    (currentRoom?.players || []).map((p) => {
                       const rawColor =
-                        ((player as { selected_color?: string | null }).selected_color as
+                        ((p as { selected_color?: string | null }).selected_color as
                           | string
                           | null) ||
-                        (player.preferred_color as string | null) ||
-                        null
-                      const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
-                      return (
-                        <li
-                          key={player.id}
-                          className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[color:var(--surface-2)]"
-                        >
-                          <div
-                            className="w-3 h-3 rounded-full border border-[color:var(--panel-border)] shrink-0"
-                            style={{ backgroundColor: colorValue }}
-                          />
-                          <span className="text-sm text-[color:var(--text)] truncate">
-                            {player.username}
-                          </span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              )}
-
-              {/* Chat & Log panel */}
-              <div className="panel p-0 overflow-hidden flex-1 lg:min-w-[400px]">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                  <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs"
-                    onClick={() => {
-                      try {
-                        localStorage.setItem('ui.rightRailOpen', String(!rightRailOpen))
-                      } catch {
-                        // ignore storage errors
+                        ((p.preferred_color as string | null) ?? null) ||
+                        '#9CA3AF'
+                      return {
+                        id: p.userId || p.id,
+                        userId: p.userId || p.id,
+                        username: p.username,
+                        color: rawColor as unknown as PlayerColor,
+                        territories: [],
+                        armies: 0,
+                        cards: [],
+                        isEliminated: false,
+                        isAi: p.isAi,
+                        aiDifficulty: p.aiDifficulty ?? null,
+                        teamId: p.teamId ?? undefined,
+                        treasures: [],
                       }
-                      setRightRailOpen((v) => !v)
-                    }}
-                    title={rightRailOpen ? 'Collapse' : 'Expand'}
-                  >
-                    {rightRailOpen ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                {rightRailOpen && (
-                  <div ref={chatContainerRef} style={{ height: 'min(40vh, 400px)' }}>
-                    {roomId && user ? (
-                      shouldHydrateChat ? (
-                        <Suspense
-                          fallback={
-                            <div className="h-40 flex items-center justify-center p-4">
-                              <Skeleton variant="rectangular" width="100%" height="100%" />
-                            </div>
-                          }
-                        >
-                          <LazyTabbedGameChat
-                            gameId={currentRoom.id}
-                            currentUserId={user.id}
-                            userTeamId={
-                              currentGame?.players?.find((p) => p.userId === user.id)?.teamId
-                            }
-                            className="h-full"
-                            onLogFocus={(territories) => {
-                              const focus = territories[territories.length - 1]
-                              if (focus) dispatch(selectTerritory(focus))
-                            }}
-                          />
-                        </Suspense>
-                      ) : (
-                        <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
-                          Preparing chat…
-                        </div>
-                      )
-                    ) : null}
-                  </div>
-                )}
-              </div>
+                    })
+                  }
+                  currentPlayerId={currentGame?.currentPlayer}
+                  territories={
+                    currentGame
+                      ? Object.fromEntries(
+                          (currentGame.board || []).map((t) => [
+                            t.id,
+                            { owner: t.ownerId, armies: t.armies },
+                          ]),
+                        )
+                      : {}
+                  }
+                  variant="full"
+                />
+              )}
             </div>
           )}
         </div>
 
-        {/* Right Sidebar - Chat & Log (Ultra-wide only) */}
-        {layout.isUltrawide && currentGame && (
-          <aside className="sticky top-6 space-y-4">
-            <div className="panel p-0 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                <h3 className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</h3>
-              </div>
-              <div ref={chatContainerRef} style={{ height: 'min(70vh, 800px)' }}>
-                {roomId && user ? (
-                  shouldHydrateChat ? (
-                    <Suspense
-                      fallback={
-                        <div className="h-40 flex items-center justify-center p-4">
-                          <Skeleton variant="rectangular" width="100%" height="100%" />
-                        </div>
-                      }
-                    >
-                      <LazyTabbedGameChat
-                        gameId={currentRoom.id}
-                        currentUserId={user.id}
-                        userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
-                        className="h-full"
-                        onLogFocus={(territories) => {
-                          const focus = territories[territories.length - 1]
-                          if (focus) dispatch(selectTerritory(focus))
-                        }}
-                      />
-                    </Suspense>
-                  ) : (
-                    <div className="h-40 flex items-center justify-center p-4 text-sm text-muted">
-                      Preparing chat…
-                    </div>
-                  )
-                ) : null}
-              </div>
-            </div>
-          </aside>
-        )}
+        {/* Right Sidebar removed: Chat & Log accessible via footer (modal/drawer) */}
 
         {/* Removed duplicate player list section and AI controls - now only showing once in left rail */}
         {/* SR-only live region for announcements */}
@@ -1906,6 +1825,66 @@ export default function GameRoom() {
         </div>
       )}
 
+      {/* Mobile backdrop (stats) */}
+      {currentGame && (
+        <button
+          className={`md:hidden fixed inset-0 ${statsDrawerOpen ? 'block' : 'hidden'}`}
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setStatsDrawerOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') setStatsDrawerOpen(false)
+          }}
+          type="button"
+          aria-label="Close stats drawer"
+        />
+      )}
+
+      {/* Mobile bottom drawer (stats) */}
+      {currentGame && (
+        <div
+          id={statsDrawerId}
+          className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="rounded-t-xl border border-border bg-surface-1 shadow-2xl"
+            style={{
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
+              paddingLeft: 'calc(env(safe-area-inset-left) + 12px)',
+              paddingRight: 'calc(env(safe-area-inset-right) + 12px)',
+            }}
+          >
+            <div className="flex items-center justify-between px-3 pt-2">
+              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30" />
+            </div>
+            <div className="flex items-center justify-between px-3 pb-2">
+              <div className="font-medium">Player Stats</div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setStatsDrawerOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
+              <PlayerStatsTable
+                players={currentGame.players || []}
+                currentPlayerId={currentGame.currentPlayer}
+                territories={Object.fromEntries(
+                  (currentGame.board || []).map((t) => [
+                    t.id,
+                    { owner: t.ownerId, armies: t.armies },
+                  ]),
+                )}
+                variant="full"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chat/Log Modal (desktop only) */}
       {chatLogModalOpen && currentGame && user && (
         <ChatLogModal
@@ -1918,6 +1897,19 @@ export default function GameRoom() {
             const focus = territories[territories.length - 1]
             if (focus) dispatch(selectTerritory(focus))
           }}
+        />
+      )}
+
+      {/* Player Stats Modal (desktop only) */}
+      {statsModalOpen && currentGame && (
+        <PlayerStatsModal
+          isOpen={statsModalOpen}
+          onClose={() => setStatsModalOpen(false)}
+          players={currentGame.players || []}
+          currentPlayerId={currentGame.currentPlayer}
+          territories={Object.fromEntries(
+            (currentGame.board || []).map((t) => [t.id, { owner: t.ownerId, armies: t.armies }]),
+          )}
         />
       )}
 
@@ -1936,6 +1928,14 @@ export default function GameRoom() {
             }
           }}
           onSettingsClick={() => setSettingsModalOpen(true)}
+          onStatsClick={() => {
+            if (window.innerWidth >= 768) {
+              setStatsModalOpen(true)
+            } else {
+              setStatsDrawerOpen(true)
+              setMobileDrawerOpen(false)
+            }
+          }}
           isMobileDrawerOpen={mobileDrawerOpen}
         />
       )}

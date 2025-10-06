@@ -24,6 +24,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
     const [profileUsername, setProfileUsername] = useState<string | null>(null)
     const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
     const phase = game?.phase ?? currentPhase
+    const isGameActive = phase === 'reinforcement' || phase === 'attack' || phase === 'fortify'
     const canGoBackToReinforcement = phase === 'attack' && !game?.hasAttackedThisTurn
     const endPhaseLabel =
       phase === 'reinforcement'
@@ -44,7 +45,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
       <div className="bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] px-4 py-3">
         <div className="flex justify-between items-center gap-4">
           <div className="flex items-center gap-4 text-sm flex-1">
-            {isMyTurn ? (
+            {isMyTurn && isGameActive ? (
               <fieldset
                 aria-label="Turn phases"
                 className="flex items-center gap-2 m-0 p-0 border-0"
@@ -74,7 +75,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
           {/* Current turn label removed; show End Phase button when it's my turn */}
           <div className="flex items-center gap-2">
             {/* Undo controls */}
-            {isMyTurn && phase === 'reinforcement' && placementHistoryLen > 0 && (
+            {isMyTurn && isGameActive && phase === 'reinforcement' && placementHistoryLen > 0 && (
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -85,6 +86,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
               </button>
             )}
             {isMyTurn &&
+              isGameActive &&
               phase === 'fortify' &&
               Object.keys(game?.movementTracking ?? {}).length > 0 && (
                 <button
@@ -96,7 +98,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
                   ↶ Undo
                 </button>
               )}
-            {isMyTurn && canGoBackToReinforcement && (
+            {isMyTurn && isGameActive && canGoBackToReinforcement && (
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -106,7 +108,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
                 ↩ Reinforce
               </button>
             )}
-            {isMyTurn && (
+            {isMyTurn && isGameActive && (
               <button
                 type="button"
                 className="btn btn-primary"
@@ -118,7 +120,7 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
             )}
           </div>
         </div>
-        {!isMyTurn && (
+        {!isMyTurn && isGameActive && (
           <div className="mt-2 flex items-center justify-between text-sm">
             <div className="inline-flex items-center gap-2 text-muted">
               <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />

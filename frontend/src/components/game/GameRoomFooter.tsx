@@ -170,6 +170,21 @@ export default function GameRoomFooter({
                 ⚙️
               </span>
             </button>
+
+            {/* Stats Button (opens drawer on mobile) */}
+            {onStatsClick && (
+              <button
+                type="button"
+                onClick={onStatsClick}
+                className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
+                title="Player Stats"
+                aria-label="Player Stats"
+              >
+                <span className="text-lg" aria-hidden="true">
+                  📊
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Right side - Mute button */}
