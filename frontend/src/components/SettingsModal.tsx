@@ -3,7 +3,13 @@ import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { applyTheme, storeTheme, THEMES } from '../config/themes.config'
 import type { PlayerColor } from '../constants/colors'
-import { COLOR_DISPLAY_NAMES, COLOR_HEX_VALUES, STANDARD_COLORS } from '../constants/colors'
+import {
+  COLOR_DISPLAY_NAMES,
+  COLOR_HEX_VALUES,
+  isPremiumColor,
+  PREMIUM_COLORS,
+  STANDARD_COLORS,
+} from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import {
@@ -290,7 +296,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold mb-4">Preferred Color</h3>
+              <h3 className="text-lg font-semibold mb-4">Standard Colors</h3>
               <p className="text-sm text-muted mb-4">
                 Choose your default player color for new games
               </p>
@@ -313,9 +319,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     >
                       <div
                         className="w-12 h-12 rounded-full border-2 border-white/20"
-                        style={{ backgroundColor: hexValue }}
+                        style={{ background: hexValue }}
                       />
                       <span className="text-xs text-center">{displayName}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                Premium Colors <span className="text-amber-400">⭐</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {PREMIUM_COLORS.map((color) => {
+                  const hexValue = COLOR_HEX_VALUES[color]
+                  const displayName = COLOR_DISPLAY_NAMES[color]
+                  const isSelected = settings.game.preferredColor === color
+                  const premium = isPremiumColor(color)
+
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => handlePreferredColorChange(color)}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all ${
+                        isSelected
+                          ? 'border-amber-400 bg-surface-2 shadow-lg shadow-amber-400/20'
+                          : 'border-border hover:border-amber-400/50'
+                      } ${premium ? 'relative' : ''}`}
+                    >
+                      <div
+                        className="w-12 h-12 rounded-full border-2"
+                        style={{
+                          background: hexValue,
+                          borderColor: premium ? '#FBBF24' : 'rgba(255, 255, 255, 0.2)',
+                        }}
+                      />
+                      <span className="text-xs text-center">{displayName}</span>
+                      {premium && (
+                        <span className="absolute top-1 right-1 text-amber-400 text-xs">⭐</span>
+                      )}
                     </button>
                   )
                 })}
