@@ -24,7 +24,12 @@ const ActiveGamesDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [turnMeta, setTurnMeta] =
-    useState<Record<string, { expiresAt?: number; bank?: number; queueAhead?: number }>>()
+    useState<
+      Record<
+        string,
+        { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string }
+      >
+    >()
   const [now, setNow] = useState<number>(() => Date.now())
 
   const fetchGames = useCallback(async () => {
@@ -34,70 +39,37 @@ const ActiveGamesDropdown: React.FC = () => {
       const list: GameInfo[] = response.data.games || []
       setGames(list)
 
-      // Compute queue + timers for top active games (limit to what we render)
-      const topActive = list.filter((g) => g.status === 'active').slice(0, 5)
-
-      if (topActive.length === 0) {
-        setTurnMeta({})
-      } else {
-        const metaEntries = await Promise.all(
-          topActive.map(async (g) => {
-            try {
-              // Fetch room details for timers and current turn user id
-              const roomRes = await api.get(`/game/rooms/${g.id}`)
-              const room = (roomRes.data?.room ?? {}) as Partial<{
-                turnExpiresAt?: string | null
-                timeBankSecondsRemaining?: number | null
-                currentTurnUserId?: string | null
-              }>
-
-              const expiresAt = room.turnExpiresAt ? Date.parse(room.turnExpiresAt) : undefined
-              const bank =
-                typeof room.timeBankSecondsRemaining === 'number'
-                  ? Math.max(0, Math.trunc(room.timeBankSecondsRemaining))
-                  : undefined
-
-              // Fetch game state to compute queue position reliably (skip eliminated players)
-              // Only attempt if not already your turn
-              let queueAhead: number | undefined
-              try {
-                const stateRes = await api.get(`/game/rooms/${g.id}/state`)
-                const game = stateRes.data?.game as
-                  | {
-                      players?: Array<{ id: string; userId?: string; isEliminated?: boolean }>
-                      currentPlayer?: string
-                    }
-                  | undefined
-                if (game && Array.isArray(game.players) && game.players.length > 0) {
-                  const currentPlayerId = game.currentPlayer
-                  const players = game.players.filter((p) => !p.isEliminated)
-                  const you = players.find((p) => p.userId === user?.id)
-                  const curIdx = players.findIndex((p) => p.id === currentPlayerId)
-                  const youIdx = you ? players.findIndex((p) => p.id === you.id) : -1
-                  if (curIdx !== -1 && youIdx !== -1) {
-                    const n = players.length
-                    const dist = (youIdx - curIdx + n) % n
-                    queueAhead = dist === 0 ? 0 : dist // 0 => your turn; 1 => next; >1 => players before you
-                  }
-                }
-              } catch (err) {
-                // If state fetch fails (e.g., race), leave queueAhead undefined
-                logger.debug?.('ActiveGamesDropdown: state fetch failed', err)
-              }
-
-              return [g.id, { expiresAt, bank, queueAhead }] as const
-            } catch (err) {
-              logger.debug?.('ActiveGamesDropdown: room details fetch failed', err)
-              return [
-                g.id,
-                { expiresAt: undefined, bank: undefined, queueAhead: undefined },
-              ] as const
-            }
-          }),
-        )
-        const map: Record<string, { expiresAt?: number; bank?: number; queueAhead?: number }> = {}
-        for (const [id, t] of metaEntries) map[id] = t
+      // Fetch meta for all games in a single call
+      try {
+        const metaRes = await api.get('/game/my-games/meta')
+        const metaObj = (metaRes.data?.meta ?? {}) as Record<
+          string,
+          {
+            turnExpiresAt?: string | null
+            timeBankSecondsRemaining?: number | null
+            queueAhead?: number | null
+            currentTurnUsername?: string | null
+          }
+        >
+        const map: Record<
+          string,
+          { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string }
+        > = {}
+        for (const [id, t] of Object.entries(metaObj)) {
+          map[id] = {
+            expiresAt: t.turnExpiresAt ? Date.parse(t.turnExpiresAt) : undefined,
+            bank:
+              typeof t.timeBankSecondsRemaining === 'number'
+                ? Math.max(0, Math.trunc(t.timeBankSecondsRemaining))
+                : undefined,
+            queueAhead: typeof t.queueAhead === 'number' ? t.queueAhead : undefined,
+            currentName: t.currentTurnUsername ?? undefined,
+          }
+        }
         setTurnMeta(map)
+      } catch (err) {
+        logger.debug?.('ActiveGamesDropdown: meta fetch failed', err)
+        setTurnMeta({})
       }
     } catch (error) {
       logger.error('Failed to load active games', error)
@@ -105,7 +77,7 @@ const ActiveGamesDropdown: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [])
 
   useEffect(() => {
     if (user && isOpen) {
@@ -259,6 +231,12 @@ const ActiveGamesDropdown: React.FC = () => {
                                     <>
                                       {queueLabel && (
                                         <span className="font-medium">{queueLabel}</span>
+                                      )}
+                                      {t?.currentName && (
+                                        <span className="inline-flex items-center gap-1 text-xs opacity-80">
+                                          <span>Current:</span>
+                                          <span className="font-medium">{t.currentName}</span>
+                                        </span>
                                       )}
                                       {remain != null && (
                                         <span className="inline-flex items-center gap-1 text-xs">
