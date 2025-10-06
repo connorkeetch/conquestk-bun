@@ -25,6 +25,7 @@ export default function AttackOddsPopup({
 }: AttackOddsPopupProps) {
   // Draggable offset (in pixels) from the default anchored position
   const [offset, setOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 })
+  const elRef = useRef<HTMLDivElement | null>(null)
   const dragRef = useRef<{
     startX: number
     startY: number
@@ -60,13 +61,42 @@ export default function AttackOddsPopup({
     [startDrag],
   )
 
+  // Clamp helper keeps popup within parent bounds accounting for transform
+  const clamp = useCallback(
+    (dx: number, dy: number) => {
+      const el = elRef.current
+      if (!el) return { dx, dy }
+      const parent = (el.offsetParent as HTMLElement | null) ?? el.parentElement
+      if (!parent) return { dx, dy }
+      const parentW = parent.clientWidth || 0
+      const parentH = parent.clientHeight || 0
+      const W = el.offsetWidth || 0
+      const H = el.offsetHeight || 0
+      const anchorX = (leftPercent / 100) * parentW
+      const anchorY = (topPercent / 100) * parentH
+      const margin = 8
+      const fx = 0.5
+      const fy = topPercent > 20 ? -1.4 : 0.4
+
+      const minDx = margin + fx * W - anchorX
+      const maxDx = parentW - margin - (1 - fx) * W - anchorX
+      const minDy = margin - anchorY - fy * H
+      const maxDy = parentH - margin - H - anchorY - fy * H
+
+      const clampedDx = Math.max(minDx, Math.min(maxDx, dx))
+      const clampedDy = Math.max(minDy, Math.min(maxDy, dy))
+      return { dx: clampedDx, dy: clampedDy }
+    },
+    [leftPercent, topPercent],
+  )
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       const d = dragRef.current
       if (!d) return
-      const dx = e.clientX - d.startX
-      const dy = e.clientY - d.startY
-      setOffset({ dx: d.startDx + dx, dy: d.startDy + dy })
+      const dx = d.startDx + (e.clientX - d.startX)
+      const dy = d.startDy + (e.clientY - d.startY)
+      setOffset(clamp(dx, dy))
     }
     const onEnd = () => {
       dragRef.current = null
@@ -78,7 +108,7 @@ export default function AttackOddsPopup({
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onEnd)
     }
-  }, [])
+  }, [clamp])
 
   useEffect(() => {
     const onMove = (e: TouchEvent) => {
@@ -86,9 +116,11 @@ export default function AttackOddsPopup({
       if (!d) return
       if (e.touches.length < 1) return
       const t = e.touches[0]
-      const dx = t.clientX - d.startX
-      const dy = t.clientY - d.startY
-      setOffset({ dx: d.startDx + dx, dy: d.startDy + dy })
+      const dx = d.startDx + (t.clientX - d.startX)
+      const dy = d.startDy + (t.clientY - d.startY)
+      setOffset(clamp(dx, dy))
+      // Prevent page scroll while dragging on mobile
+      e.preventDefault()
     }
     const onEnd = () => {
       dragRef.current = null
@@ -102,10 +134,18 @@ export default function AttackOddsPopup({
       window.removeEventListener('touchend', onEnd)
       window.removeEventListener('touchcancel', onEnd)
     }
-  }, [])
+  }, [clamp])
+
+  // Re-clamp on window resize in case parent size changes
+  useEffect(() => {
+    const onResize = () => setOffset((o) => clamp(o.dx, o.dy))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [clamp])
 
   return (
     <div
+      ref={elRef}
       role="dialog"
       aria-label="Attack odds"
       tabIndex={-1}
