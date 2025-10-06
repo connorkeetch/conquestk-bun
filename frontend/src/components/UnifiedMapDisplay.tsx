@@ -30,10 +30,10 @@ import {
   setTarget as setUITarget,
 } from '@/store/uiSlice'
 import { logger } from '@/utils/logger'
+import AttackOddsPopup from './game/AttackOddsPopup'
 import ConquestTransferPopup from './game/ConquestTransferPopup'
 import InteractionOverlay from './game/InteractionOverlay'
 import MapCanvas from './game/MapCanvas'
-import OddsPreviewCard from './game/OddsPreviewCard'
 import TerritoryLayer from './game/TerritoryLayer'
 import TokenLayer from './game/TokenLayer'
 import { HillOverlay } from './map/HillOverlay'
@@ -534,22 +534,7 @@ export default function UnifiedMapDisplay({
         imageHeight={mapData.height}
         onBackgroundClick={handleBackgroundClick}
       >
-        {/* Interaction overlays (rings, brackets, arcs) */}
-        <InteractionOverlay
-          width={mapData.width}
-          height={mapData.height}
-          points={territories.map((t) => ({ id: t.id, x: t.x, y: t.y }))}
-          selectedId={selectedTerritoryId}
-          targetId={selectedTargetTerritoryId}
-          hoverId={hoveredTargetId}
-          eligibleIds={validTargets}
-          phase={
-            game?.phase === 'reinforcement'
-              ? 'deploy'
-              : ((game?.phase as 'attack' | 'fortify' | 'idle' | undefined) ?? 'idle')
-          }
-          tokenSize={28}
-        />
+        {/* Interaction overlays now render above tokens; see placement below TokenLayer */}
         <TerritoryLayer
           mapWidth={mapData.width}
           mapHeight={mapData.height}
@@ -596,14 +581,57 @@ export default function UnifiedMapDisplay({
           onClick={handleTerritoryActivate}
           onHover={handleHoverChange}
         />
+        {/* Interaction overlays (rings, brackets, arcs) - placed after tokens for visibility */}
+        <InteractionOverlay
+          width={mapData.width}
+          height={mapData.height}
+          points={territories.map((t) => ({ id: t.id, x: t.x, y: t.y }))}
+          selectedId={selectedTerritoryId}
+          targetId={selectedTargetTerritoryId}
+          hoverId={hoveredTargetId}
+          eligibleIds={validTargets}
+          phase={
+            game?.phase === 'reinforcement'
+              ? 'deploy'
+              : ((game?.phase as 'attack' | 'fortify' | 'idle' | undefined) ?? 'idle')
+          }
+          tokenSize={28}
+        />
         {oddsTooltip && !conquestTransfer && (
-          <OddsPreviewCard
-            attacker={oddsTooltip.att}
-            defender={oddsTooltip.def}
-            summary={undefined}
-            anchor={{
-              left: (oddsTooltip.left / 100) * mapData.width,
-              top: (oddsTooltip.top / 100) * mapData.height,
+          <AttackOddsPopup
+            leftPercent={oddsTooltip.left}
+            topPercent={oddsTooltip.top}
+            attackerDice={oddsTooltip.att}
+            defenderDice={oddsTooltip.def}
+            winChancePercent={oddsTooltip.winChance}
+            onAttack={() => {
+              const id = selectedTargetTerritoryId ?? hoveredTargetId
+              if (!isMyTurn) return
+              if (id && selectedTerritoryId) {
+                void dispatch(
+                  executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: id }),
+                )
+              }
+            }}
+            onCancel={() => {
+              if (selectedTargetTerritoryId) {
+                dispatch(selectTargetTerritory(null))
+              } else {
+                dispatch(setHoveredTarget(null))
+              }
+            }}
+            autoEnabled={autoAttacking}
+            onToggleAuto={() => {
+              const id = selectedTargetTerritoryId ?? hoveredTargetId
+              if (!isMyTurn) return
+              if (!selectedTerritoryId || !id) return
+              const next = !autoAttacking
+              void dispatch(setAutoAttacking(next))
+              if (next) {
+                void dispatch(
+                  executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: id }),
+                )
+              }
             }}
           />
         )}
