@@ -63,9 +63,8 @@ export function TokenLayer({
           luminance < 0.5
             ? lightenColor(String(color), 0.25)
             : mixColors(String(color), '#000000', 0.3)
-        // Scale ring width with token size so it looks balanced at different scales
-        const ringWidth = Math.max(2, Math.round((isSelected ? 0.16 : 0.12) * baseSize))
-        const border = ringWidth
+        // Neutral token edge width (selection/eligibility visuals live in overlay)
+        const border = Math.max(2, Math.round(0.12 * baseSize))
         const colorGlow = hexToRgba(String(color), dimmed ? 0.3 : 0.5)
         const innerFill = lightenColor(String(color), 0.15)
         // Edge-opaque → center-transparent radial gradient
@@ -117,12 +116,8 @@ export function TokenLayer({
                 background: `${halo}, ${gradient}`,
                 opacity: dimmed ? 0.6 : 1,
                 borderRadius: '50%',
-                border: `${border}px solid ${isValid ? '#38bdf8' : edgeStroke}`,
-                boxShadow: isSelected
-                  ? `0 2px 8px rgba(0,0,0,0.55), 0 0 8px ${colorGlow}`
-                  : isValid
-                    ? `0 2px 6px rgba(0,0,0,0.45), 0 0 8px ${hexToRgba('#38bdf8', 0.5)}`
-                    : `0 2px 6px rgba(0,0,0,0.4), 0 0 6px ${colorGlow}`,
+                border: `${border}px solid ${edgeStroke}`,
+                boxShadow: `0 2px 6px rgba(0,0,0,0.4), 0 0 6px ${colorGlow}`,
                 filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.35))',
                 display: 'flex',
                 alignItems: 'center',

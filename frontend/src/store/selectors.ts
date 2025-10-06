@@ -222,3 +222,13 @@ export const selectAvailableActions = createSelector(
     }
   },
 )
+
+// UI highlight selector for overlays (selected, target, eligible)
+export const selectHighlights = createSelector(
+  (s: RootState) => s.ui,
+  (ui) => ({
+    selected: ui.selectedId,
+    target: ui.targetId,
+    eligible: new Set(ui.eligibleIds),
+  }),
+)

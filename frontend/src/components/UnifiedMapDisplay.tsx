@@ -22,10 +22,18 @@ import {
 } from '@/store/gameSlice'
 import { centerPan, setPan, setScale } from '@/store/mapViewSlice'
 import { setAutoAttacking } from '@/store/uiRoomSlice'
+import {
+  setEligible,
+  setHover as setUIHover,
+  setPhase as setUIPhase,
+  setSelected as setUISelected,
+  setTarget as setUITarget,
+} from '@/store/uiSlice'
 import { logger } from '@/utils/logger'
-import AttackOddsPopup from './game/AttackOddsPopup'
 import ConquestTransferPopup from './game/ConquestTransferPopup'
+import InteractionOverlay from './game/InteractionOverlay'
 import MapCanvas from './game/MapCanvas'
+import OddsPreviewCard from './game/OddsPreviewCard'
 import TerritoryLayer from './game/TerritoryLayer'
 import TokenLayer from './game/TokenLayer'
 import { HillOverlay } from './map/HillOverlay'
@@ -82,7 +90,7 @@ export default function UnifiedMapDisplay({
   previewMode = false,
 }: UnifiedMapDisplayProps) {
   const dispatch = useAppDispatch()
-  const markerId = useId()
+  const _markerId = useId()
   const hoveredTargetId = useAppSelector((s) => s.gameInteraction.hoveredTargetId)
   const invalidShakeId = useAppSelector((s) => s.gameInteraction.invalidShakeId)
   const game = useAppSelector((s) => s.game.currentGame)
@@ -160,7 +168,7 @@ export default function UnifiedMapDisplay({
     bumpOverlay()
   }
 
-  // Removed overlay hotkeys for simpler UI
+  // Removed overlay hotkeys for simpler UI; add core interaction hotkeys below
 
   useEffect(() => {
     const hydrateFromProps = () => {
@@ -202,6 +210,26 @@ export default function UnifiedMapDisplay({
       if (!hydrateFromProps()) void loadMapData()
     }
   }, [mapId, imageUrl, mapWidth, mapHeight])
+
+  // Mirror core interaction state into lightweight UI slice for overlays
+  useEffect(() => {
+    const phase: 'idle' | 'deploy' | 'attack' | 'fortify' | 'trade' =
+      game?.phase === 'reinforcement'
+        ? 'deploy'
+        : ((game?.phase as 'attack' | 'fortify' | 'idle' | undefined) ?? 'idle')
+    dispatch(setUIPhase(phase))
+    dispatch(setUISelected(selectedTerritoryId ?? undefined))
+    dispatch(setUITarget(selectedTargetTerritoryId ?? undefined))
+    dispatch(setUIHover(hoveredId ?? undefined))
+    dispatch(setEligible(validTargets))
+  }, [
+    dispatch,
+    game?.phase,
+    hoveredId,
+    selectedTerritoryId,
+    selectedTargetTerritoryId,
+    validTargets,
+  ])
 
   const attackDice = useAppSelector((s) => s.uiRoom.dice)
   const autoAttacking = useAppSelector((s) => s.uiRoom.autoAttacking ?? false)
@@ -360,6 +388,41 @@ export default function UnifiedMapDisplay({
         dispatch(setPendingAction(null))
         return
       }
+      if (e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        dispatch(setPendingAction('attack'))
+        return
+      }
+      if (e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        dispatch(setPendingAction('fortify'))
+        return
+      }
+      if (e.key.toLowerCase() === 'e') {
+        e.preventDefault()
+        // End phase: reuse existing endTurn handler at higher-level UI; here we clear pending selection
+        dispatch(selectTargetTerritory(null))
+        dispatch(setPendingAction(null))
+        return
+      }
+      if (e.key === 'Enter') {
+        // Commit if we have a valid target in attack mode
+        if (
+          pendingAction === 'attack' &&
+          selectedTerritoryId &&
+          (selectedTargetTerritoryId || hoveredId) &&
+          validTargets.includes(selectedTargetTerritoryId || hoveredId || '')
+        ) {
+          const toId = selectedTargetTerritoryId || hoveredId
+          if (toId) {
+            void dispatch(
+              executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: toId }),
+            )
+            e.preventDefault()
+            return
+          }
+        }
+      }
       if (!ownedIds.length) return
       const forward = e.key === 'ArrowRight' || e.key === 'ArrowDown'
       const backward = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
@@ -375,7 +438,15 @@ export default function UnifiedMapDisplay({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [dispatch, ownedIds, selectedTerritoryId])
+  }, [
+    dispatch,
+    ownedIds,
+    selectedTerritoryId,
+    hoveredId,
+    selectedTargetTerritoryId,
+    pendingAction,
+    validTargets,
+  ])
 
   if (loading) {
     return (
@@ -463,48 +534,22 @@ export default function UnifiedMapDisplay({
         imageHeight={mapData.height}
         onBackgroundClick={handleBackgroundClick}
       >
-        {pendingAction === 'fortify' &&
-          selectedTerritoryId &&
-          hoveredTargetId &&
-          (() => {
-            const src = territories.find((t) => t.id === selectedTerritoryId)
-            const dst = territories.find((t) => t.id === hoveredTargetId)
-            if (!src || !dst) return null
-            return (
-              <svg
-                className="absolute left-0 top-0 pointer-events-none"
-                width={mapData.width}
-                height={mapData.height}
-                viewBox={`0 0 ${mapData.width} ${mapData.height}`}
-                role="img"
-                aria-label="Fortify preview"
-              >
-                <title>Fortify preview</title>
-                <defs>
-                  <marker
-                    id={`arrowhead-${markerId}`}
-                    markerWidth="6"
-                    markerHeight="6"
-                    refX="5"
-                    refY="3"
-                    orient="auto"
-                  >
-                    <polygon points="0 0, 6 3, 0 6" fill="rgba(56,189,248,0.85)" />
-                  </marker>
-                </defs>
-                <line
-                  x1={src.x}
-                  y1={src.y}
-                  x2={dst.x}
-                  y2={dst.y}
-                  stroke="rgba(56,189,248,0.85)"
-                  strokeWidth="3"
-                  markerEnd={`url(#arrowhead-${markerId})`}
-                  opacity={0.9}
-                />
-              </svg>
-            )
-          })()}
+        {/* Interaction overlays (rings, brackets, arcs) */}
+        <InteractionOverlay
+          width={mapData.width}
+          height={mapData.height}
+          points={territories.map((t) => ({ id: t.id, x: t.x, y: t.y }))}
+          selectedId={selectedTerritoryId}
+          targetId={selectedTargetTerritoryId}
+          hoverId={hoveredTargetId}
+          eligibleIds={validTargets}
+          phase={
+            game?.phase === 'reinforcement'
+              ? 'deploy'
+              : ((game?.phase as 'attack' | 'fortify' | 'idle' | undefined) ?? 'idle')
+          }
+          tokenSize={28}
+        />
         <TerritoryLayer
           mapWidth={mapData.width}
           mapHeight={mapData.height}
@@ -552,40 +597,13 @@ export default function UnifiedMapDisplay({
           onHover={handleHoverChange}
         />
         {oddsTooltip && !conquestTransfer && (
-          <AttackOddsPopup
-            leftPercent={oddsTooltip.left}
-            topPercent={oddsTooltip.top}
-            attackerDice={oddsTooltip.att}
-            defenderDice={oddsTooltip.def}
-            winChancePercent={oddsTooltip.winChance}
-            onAttack={() => {
-              const id = selectedTargetTerritoryId ?? hoveredTargetId
-              if (!isMyTurn) return
-              if (id && selectedTerritoryId) {
-                void dispatch(
-                  executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: id }),
-                )
-              }
-            }}
-            onCancel={() => {
-              if (selectedTargetTerritoryId) {
-                dispatch(selectTargetTerritory(null))
-              } else {
-                dispatch(setHoveredTarget(null))
-              }
-            }}
-            autoEnabled={autoAttacking}
-            onToggleAuto={() => {
-              const id = selectedTargetTerritoryId ?? hoveredTargetId
-              if (!isMyTurn) return
-              if (!selectedTerritoryId || !id) return
-              const next = !autoAttacking
-              void dispatch(setAutoAttacking(next))
-              if (next) {
-                void dispatch(
-                  executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: id }),
-                )
-              }
+          <OddsPreviewCard
+            attacker={oddsTooltip.att}
+            defender={oddsTooltip.def}
+            summary={undefined}
+            anchor={{
+              left: (oddsTooltip.left / 100) * mapData.width,
+              top: (oddsTooltip.top / 100) * mapData.height,
             }}
           />
         )}

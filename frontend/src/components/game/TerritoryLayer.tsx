@@ -1,4 +1,4 @@
-import { getColorValue, type PlayerColor } from '@/constants/colors'
+// Presentational layer only; legacy highlight effects were removed in favor of InteractionOverlay
 
 export interface TerritoryPoint {
   id: string
@@ -22,59 +22,17 @@ interface TerritoryLayerProps {
 export default function TerritoryLayer({
   mapWidth,
   mapHeight,
-  territories,
-  selectedId = null,
-  validTargets = [],
-  hoveredId = null,
-  invalidShakeId = null,
+  territories: _territories,
+  selectedId: _selectedId = null,
+  validTargets: _validTargets = [],
+  hoveredId: _hoveredId = null,
+  invalidShakeId: _invalidShakeId = null,
 }: TerritoryLayerProps) {
-  const valid = new Set(validTargets)
+  // Legacy highlight effects removed; visuals now handled by InteractionOverlay
   return (
     <div
       className="absolute left-0 top-0 pointer-events-none"
       style={{ width: mapWidth, height: mapHeight }}
-    >
-      {territories.map((t) => {
-        const left = (t.x / Math.max(1, mapWidth)) * 100
-        const top = (t.y / Math.max(1, mapHeight)) * 100
-        const isSelected = t.id === selectedId
-        const isValid = valid.has(t.id)
-        const isHovered = t.id === hoveredId
-        const color = getColorValue((t.ownerColor as PlayerColor) ?? 'blue')
-        return (
-          <div
-            key={`tl-${t.id}`}
-            className="absolute"
-            style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
-          >
-            {/* Selected Glow */}
-            {isSelected && (
-              <span
-                aria-hidden
-                className="block rounded-full"
-                style={{
-                  width: 44,
-                  height: 44,
-                  boxShadow: `0 0 0 3px ${color}, 0 0 28px ${color}`,
-                  opacity: 0.9,
-                }}
-              />
-            )}
-            {/* Valid Target Ring */}
-            {isValid && !isSelected && (
-              <span
-                aria-hidden
-                className={`block rounded-full ${invalidShakeId === t.id ? 'ck-shake' : ''}`}
-                style={{
-                  width: isHovered ? 40 : 36,
-                  height: isHovered ? 40 : 36,
-                  boxShadow: `0 0 0 3px rgba(239,68,68,0.9), 0 0 ${isHovered ? 26 : 18}px rgba(239,68,68,0.5)`,
-                }}
-              />
-            )}
-          </div>
-        )
-      })}
-    </div>
+    />
   )
 }
