@@ -19,6 +19,28 @@ export function TreasureHud({ variant = 'header' }: Props) {
   const hand = (me?.treasures ?? []) as string[]
   const mustCashIn = Boolean(game?.mustCashInTreasures)
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
+  const phase = game?.phase
+
+  // Determine if the current hand has any valid redeemable set
+  const hasValidSet = useMemo(() => {
+    const n = hand.length
+    if (n < 3) return false
+    let bronze = 0
+    let silver = 0
+    let gold = 0
+    let diamond = 0
+    for (const m of hand) {
+      const t = String(m).toLowerCase()
+      if (t === 'bronze') bronze += 1
+      else if (t === 'silver') silver += 1
+      else if (t === 'gold') gold += 1
+      else if (t === 'diamond') diamond += 1
+    }
+    if (diamond > 0 && n >= 3) return true // Any triple including a diamond is valid
+    if (bronze >= 3 || silver >= 3 || gold >= 3) return true // Three of a kind
+    if (bronze >= 1 && silver >= 1 && gold >= 1) return true // One of each
+    return false
+  }, [hand])
 
   // Compute next payout (displayed alongside icons)
   const { base } = computeNextTreasurePayout(
@@ -28,10 +50,24 @@ export function TreasureHud({ variant = 'header' }: Props) {
 
   const [open, setOpen] = useState(false)
 
-  // Auto-open if I must cash in and it's my turn
+  // Auto-open at start of my turn when:
+  // - I must cash in (hand cap), or
+  // - I have any valid set during reinforcement
   useEffect(() => {
-    if (isMyTurn && mustCashIn) setOpen(true)
-  }, [isMyTurn, mustCashIn])
+    if (!isMyTurn) return
+    if (mustCashIn) {
+      setOpen(true)
+      return
+    }
+    if (phase === 'reinforcement' && hasValidSet) {
+      setOpen(true)
+    }
+  }, [isMyTurn, mustCashIn, phase, hasValidSet])
+
+  // Close the modal if I no longer have a valid set and I'm not forced to cash in
+  useEffect(() => {
+    if (open && !mustCashIn && !hasValidSet) setOpen(false)
+  }, [open, mustCashIn, hasValidSet])
 
   // Icon helper (SVG only; no emoji fallback)
   const iconFor = (metal: string) => {
