@@ -64,6 +64,7 @@ class SocketService {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
   private lastReadEmitAt: Record<string, number> = {}
   private pendingRoomStateFetches = new Set<string>()
+  private pendingConfirmTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
 
   connect() {
     // Reset any pending fetch tracking on a fresh connection attempt
@@ -135,8 +136,53 @@ class SocketService {
     this.socket?.emit(event as any, data as any)
   }
 
+  private scheduleDeployConfirmFetch(roomId: string) {
+    // Clear any existing timer for this room
+    const existing = this.pendingConfirmTimers.get(roomId)
+    if (existing) {
+      clearTimeout(existing)
+      this.pendingConfirmTimers.delete(roomId)
+    }
+    const timer = setTimeout(() => {
+      try {
+        const state = store.getState()
+        const loaded = state.game.currentGame
+        if (!loaded || loaded.roomId !== roomId) {
+          this.pendingConfirmTimers.delete(roomId)
+          return
+        }
+        // Fetch full state as a convergence fallback
+        store.dispatch(fetchGameState({ roomId }))
+      } catch {
+        /* ignore fetch errors */
+      } finally {
+        this.pendingConfirmTimers.delete(roomId)
+      }
+    }, 1200)
+    this.pendingConfirmTimers.set(roomId, timer)
+  }
+
+  private clearConfirmTimer(roomId: string) {
+    const t = this.pendingConfirmTimers.get(roomId)
+    if (t) {
+      clearTimeout(t)
+      this.pendingConfirmTimers.delete(roomId)
+    }
+  }
+
   deployArmies(roomId: string, territoryId: string, armies: number) {
-    this.socket?.emit('deployArmies', { roomId, territoryId, armies })
+    // Schedule a one-shot convergence fetch if no delta arrives in time
+    this.scheduleDeployConfirmFetch(roomId)
+    this.socket?.emit(
+      'deployArmies',
+      { roomId, territoryId, armies },
+      (ack?: { ok: boolean; queued?: boolean; version?: number }) => {
+        // If we received an applied version in the ack (inline path), clear timer early
+        if (ack && typeof ack.version === 'number') {
+          this.clearConfirmTimer(roomId)
+        }
+      },
+    )
   }
 
   attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
@@ -330,6 +376,11 @@ class SocketService {
       const state = store.getState()
       const viewerId = state.auth.user?.id ?? null
       const currentGame = state.game.currentGame
+
+      // Any delta for this room confirms activity — clear pending convergence timer
+      if (payload?.roomId) {
+        this.clearConfirmTimer(payload.roomId)
+      }
 
       if (!currentGame || currentGame.roomId !== payload.roomId) {
         if (!this.pendingRoomStateFetches.has(payload.roomId)) {
