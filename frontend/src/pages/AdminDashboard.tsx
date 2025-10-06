@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Link } from 'react-router-dom'
 import { type AdminActivityLog, adminService, type FeatureFlag } from '../services/adminService'
 
 interface SystemStatus {
@@ -190,36 +189,6 @@ export default function AdminDashboard() {
     return []
   }, [featureFlags, systemStatus])
 
-  const adminToolLinks = useMemo(
-    () => [
-      {
-        to: '/admin/users',
-        icon: '👥',
-        label: 'User Management',
-        description: 'Manage user accounts, roles, and permissions',
-      },
-      {
-        to: '/admin/content',
-        icon: '🧾',
-        label: 'Content Moderation',
-        description: 'Review and approve user-generated content',
-      },
-      {
-        to: '/admin/maps',
-        icon: '🗺️',
-        label: 'Map Library',
-        description: 'Curate submitted maps and manage map reviews',
-      },
-      {
-        to: '/admin/games',
-        icon: '🎮',
-        label: 'Game Management',
-        description: 'Monitor live games and intervene when needed',
-      },
-    ],
-    [],
-  )
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -396,21 +365,6 @@ export default function AdminDashboard() {
             <div className="glass-box-lg">
               <h2 className="text-xl font-bold mb-4">🛠️ Admin Tools</h2>
               <div className="space-y-3">
-                {adminToolLinks.map((tool) => (
-                  <Link
-                    key={tool.to}
-                    to={tool.to}
-                    className="block glass-box-sm hover:brightness-110 transition-all"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-[color:var(--heading)]">{tool.label}</div>
-                        <div className="text-sm text-muted">{tool.description}</div>
-                      </div>
-                      <div className="text-2xl">{tool.icon}</div>
-                    </div>
-                  </Link>
-                ))}
                 <button
                   type="button"
                   onClick={handleClearCache}
@@ -516,130 +470,132 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Feature Flags */}
-          <div className="glass-box-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">🚩 Feature Flags</h2>
-              <button
-                type="button"
-                onClick={() => void refreshFeatureFlags()}
-                disabled={refreshingFlags}
-                className="px-3 py-1 bg-primary text-white rounded hover:brightness-110 text-sm disabled:opacity-50"
-              >
-                {refreshingFlags ? 'Refreshing...' : '🔄 Refresh'}
-              </button>
-            </div>
-            {sortedFeatureFlags.filter((f) => f.flagName !== 'clans_enabled').length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-2">🚩</div>
-                <p className="text-muted">No feature flags configured</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sortedFeatureFlags
-                  .filter((flag) => flag.flagName !== 'clans_enabled')
-                  .map((flag) => (
-                    <div
-                      key={flag.flagName}
-                      className="flex items-center justify-between bg-surface-2 rounded-lg p-4"
-                    >
-                      <div className="flex-1 pr-4">
-                        <div className="font-medium capitalize">
-                          {formatFlagName(flag.flagName)}
-                        </div>
-                        {flag.description && (
-                          <div className="text-sm text-muted">{flag.description}</div>
-                        )}
-                        <div className="text-xs text-muted mt-1">
-                          Status: {formatFlagStatus(flag.flagName, flag.isEnabled)}
-                        </div>
-                        {'updatedAt' in flag && flag.updatedAt && (
-                          <div className="text-xs text-muted mt-1">
-                            Last updated: {new Date(flag.updatedAt).toLocaleString()}
-                          </div>
-                        )}
-                        {'accessLevel' in flag && (
-                          <div className="text-xs text-muted mt-1">Scope: {flag.accessLevel}</div>
-                        )}
-                      </div>
-                      <label
-                        className={`toggle ${
-                          updatingFlag === flag.flagName ? 'opacity-50 pointer-events-none' : ''
-                        }`}
+          <div className="space-y-8">
+            <div className="glass-box-lg">
+              <h2 className="text-xl font-bold mb-4">🛡️ Admin Access</h2>
+              {adminRoles.length > 0 ? (
+                <div className="space-y-4">
+                  {adminRoles.map((role) => {
+                    const permissions = role.permissions.filter(
+                      (permission) => permission.trim().length > 0,
+                    )
+                    return (
+                      <div
+                        key={role.roleId}
+                        className="rounded-lg bg-surface-1/60 border border-border/40 p-4"
                       >
-                        <input
-                          type="checkbox"
-                          checked={flag.isEnabled}
-                          onChange={(e) => toggleFeatureFlag(flag.flagName, e.target.checked)}
-                          disabled={updatingFlag === flag.flagName}
-                          aria-label={`Toggle ${formatFlagName(flag.flagName)}`}
-                        />
-                        <span className="slider"></span>
-                      </label>
-                      {featureFlags.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(flag as FeatureFlag)}
-                          className="ml-4 px-3 py-2 text-sm bg-surface-1 border border-border rounded hover:bg-surface-1/70 transition-colors"
-                        >
-                          Manage
-                        </button>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="glass-box-lg">
-            <h2 className="text-xl font-bold mb-4">🛡️ Admin Access</h2>
-            {adminRoles.length > 0 ? (
-              <div className="space-y-4">
-                {adminRoles.map((role) => {
-                  const permissions = role.permissions.filter(
-                    (permission) => permission.trim().length > 0,
-                  )
-                  return (
-                    <div
-                      key={role.roleId}
-                      className="rounded-lg bg-surface-1/60 border border-border/40 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-medium text-[color:var(--heading)]">
-                            {role.roleName}
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-medium text-[color:var(--heading)]">
+                              {role.roleName}
+                            </div>
+                            <div className="text-xs text-muted mt-1">
+                              {permissions.length > 0
+                                ? 'Role capabilities'
+                                : 'No explicit permissions assigned'}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted mt-1">
-                            {permissions.length > 0
-                              ? 'Role capabilities'
-                              : 'No explicit permissions assigned'}
-                          </div>
+                          <span className="text-xs text-muted whitespace-nowrap">
+                            #{role.roleId}
+                          </span>
                         </div>
-                        <span className="text-xs text-muted whitespace-nowrap">#{role.roleId}</span>
+                        {permissions.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {permissions.map((permission) => (
+                              <span
+                                key={permission}
+                                className="px-2 py-1 text-xs uppercase tracking-wide rounded bg-surface-2/80 border border-border/40"
+                              >
+                                {permission}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
-                      {permissions.length > 0 ? (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {permissions.map((permission) => (
-                            <span
-                              key={permission}
-                              className="px-2 py-1 text-xs uppercase tracking-wide rounded bg-surface-2/80 border border-border/40"
-                            >
-                              {permission}
-                            </span>
-                          ))}
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-sm text-muted">
+                  You don't have any delegated admin roles yet. Reach out if this looks wrong.
+                </div>
+              )}
+            </div>
+
+            {/* Feature Flags */}
+            <div className="glass-box-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">🚩 Feature Flags</h2>
+                <button
+                  type="button"
+                  onClick={() => void refreshFeatureFlags()}
+                  disabled={refreshingFlags}
+                  className="px-3 py-1 bg-primary text-white rounded hover:brightness-110 text-sm disabled:opacity-50"
+                >
+                  {refreshingFlags ? 'Refreshing...' : '🔄 Refresh'}
+                </button>
+              </div>
+              {sortedFeatureFlags.filter((f) => f.flagName !== 'clans_enabled').length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">🚩</div>
+                  <p className="text-muted">No feature flags configured</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sortedFeatureFlags
+                    .filter((flag) => flag.flagName !== 'clans_enabled')
+                    .map((flag) => (
+                      <div
+                        key={flag.flagName}
+                        className="flex items-center justify-between bg-surface-2 rounded-lg p-4"
+                      >
+                        <div className="flex-1 pr-4">
+                          <div className="font-medium capitalize">
+                            {formatFlagName(flag.flagName)}
+                          </div>
+                          {flag.description && (
+                            <div className="text-sm text-muted">{flag.description}</div>
+                          )}
+                          <div className="text-xs text-muted mt-1">
+                            Status: {formatFlagStatus(flag.flagName, flag.isEnabled)}
+                          </div>
+                          {'updatedAt' in flag && flag.updatedAt && (
+                            <div className="text-xs text-muted mt-1">
+                              Last updated: {new Date(flag.updatedAt).toLocaleString()}
+                            </div>
+                          )}
+                          {'accessLevel' in flag && (
+                            <div className="text-xs text-muted mt-1">Scope: {flag.accessLevel}</div>
+                          )}
                         </div>
-                      ) : null}
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="text-sm text-muted">
-                You don't have any delegated admin roles yet. Reach out if this looks wrong.
-              </div>
-            )}
+                        <label
+                          className={`toggle ${
+                            updatingFlag === flag.flagName ? 'opacity-50 pointer-events-none' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={flag.isEnabled}
+                            onChange={(e) => toggleFeatureFlag(flag.flagName, e.target.checked)}
+                            disabled={updatingFlag === flag.flagName}
+                            aria-label={`Toggle ${formatFlagName(flag.flagName)}`}
+                          />
+                          <span className="slider"></span>
+                        </label>
+                        {featureFlags.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(flag as FeatureFlag)}
+                            className="ml-4 px-3 py-2 text-sm bg-surface-1 border border-border rounded hover:bg-surface-1/70 transition-colors"
+                          >
+                            Manage
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
