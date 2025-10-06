@@ -4,6 +4,7 @@ import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getColorValue } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
+import { resolveAssetPath } from '@/utils/assets'
 
 interface PlayerStatsTableProps {
   players: GamePlayer[]
@@ -58,23 +59,58 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[420px]">
               <thead className="bg-[color:var(--surface-2)] sticky top-0">
-                <tr className="border-b border-[color:var(--panel-border)]">
+                <tr className="border-b border-[color:var(--panel-border)] select-none">
                   <th className="px-1 py-2 text-left font-medium text-muted">Player</th>
-                  <th className="px-1 py-2 text-right font-medium text-muted">Armies</th>
                   <th className="px-1 py-2 text-right font-medium text-muted">
-                    <span className="sm:hidden">Terr.</span>
-                    <span className="hidden sm:inline">Territories</span>
+                    <img
+                      src={resolveAssetPath('static/icons/stats/armies.svg')}
+                      alt=""
+                      title="Total armies on the board"
+                      aria-hidden
+                      width={16}
+                      height={16}
+                      className="inline-block align-middle opacity-90"
+                    />
+                    <span className="sr-only">Armies</span>
+                  </th>
+                  <th className="px-1 py-2 text-right font-medium text-muted">
+                    <img
+                      src={resolveAssetPath('static/icons/stats/territories.svg')}
+                      alt=""
+                      title="Territories owned"
+                      aria-hidden
+                      width={16}
+                      height={16}
+                      className="inline-block align-middle opacity-90"
+                    />
+                    <span className="sr-only">Territories</span>
                   </th>
                   {variant === 'full' && (
                     <th className="px-1 py-2 text-right font-medium text-muted">
-                      <span className="md:hidden">+/T</span>
-                      <span className="hidden md:inline">+/Turn</span>
+                      <img
+                        src={resolveAssetPath('static/icons/stats/reinforcements.svg')}
+                        alt=""
+                        title="Base reinforcements each turn"
+                        aria-hidden
+                        width={16}
+                        height={16}
+                        className="inline-block align-middle opacity-90"
+                      />
+                      <span className="sr-only">Reinforcements per turn</span>
                     </th>
                   )}
                   {variant === 'full' && (
                     <th className="px-1 py-2 text-right font-medium text-muted">
-                      <span className="md:hidden">Cards</span>
-                      <span className="hidden md:inline">Treasures</span>
+                      <img
+                        src={resolveAssetPath('static/icons/stats/treasures.svg')}
+                        alt=""
+                        title="Treasures in hand"
+                        aria-hidden
+                        width={16}
+                        height={16}
+                        className="inline-block align-middle opacity-90"
+                      />
+                      <span className="sr-only">Treasures</span>
                     </th>
                   )}
                 </tr>
