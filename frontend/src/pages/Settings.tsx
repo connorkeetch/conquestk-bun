@@ -870,6 +870,7 @@ export default function Settings() {
                               : ''
                         }`}
                         value={fieldValues[setting.id] || ''}
+                        maxLength={isUsername ? 20 : undefined}
                         onChange={(e) => {
                           const newValue = e.target.value
                           setFieldValues((prev) => ({
