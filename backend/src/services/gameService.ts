@@ -795,6 +795,68 @@ export class GameService {
     }
   }
 
+  /**
+   * Test-friendly, synchronous attack helper.
+   * Production traffic uses Socket.io + applyBattleResult; this method exists
+   * primarily for unit/integration tests that spy on dice rolls and assert
+   * assassination telemetry.
+   */
+  async attack(
+    roomId: string,
+    userId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+  ): Promise<{
+    gameEnded: boolean
+    winner: GamePlayer | null
+    eliminatedPlayers: string[]
+  }> {
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
+    if (!cachedState) throw new Error('Game not found')
+
+    const gameState = this.hydrateGameState(cachedState, roomId)
+
+    if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
+    if (gameState.phase !== 'attack') throw new Error('Not attack phase')
+
+    const action: GameAction = {
+      type: 'attack',
+      roomId,
+      playerId: userId,
+      payload: { fromTerritoryId, toTerritoryId },
+    }
+
+    if (!this.gameEngine.validateAction(gameState, action)) {
+      throw new Error('Invalid attack')
+    }
+
+    const { gameState: updatedState, battleResult } = await this.gameEngine.processAction(
+      gameState,
+      action,
+    )
+
+    // Persist snapshot for consistency with other paths
+    await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
+
+    // Record assassination telemetry when applicable (mirrors neutralize flow)
+    if (updatedState.gameConfig?.gameMode === 'assassination') {
+      const elimination = {
+        gameEnded: Boolean(battleResult?.gameEnded),
+        winner: (battleResult?.winner as GamePlayer | null) ?? null,
+        eliminatedPlayers: (battleResult?.eliminatedPlayers as string[] | undefined) ?? [],
+      }
+      if (elimination.gameEnded) {
+        this.recordAssassinationElimination(roomId, updatedState, elimination, userId, 'battle')
+      }
+    }
+
+    return {
+      gameEnded: Boolean(battleResult?.gameEnded),
+      winner: (battleResult?.winner as GamePlayer | null) ?? null,
+      eliminatedPlayers: (battleResult?.eliminatedPlayers as string[] | undefined) ?? [],
+    }
+  }
+
   // Note: direct HTTP attack entry is intentionally not exposed.
   // Attacks are handled via Socket.io (see socketService.ts), which routes
   // through queued or inline processing and applies results via applyBattleResult.
