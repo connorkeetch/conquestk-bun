@@ -1889,7 +1889,7 @@ export default function GameRoom() {
       {currentGame && (
         <div
           id={mobileDrawerId}
-          className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 sm:left-auto sm:right-4 sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
@@ -1963,7 +1963,7 @@ export default function GameRoom() {
       {currentGame && (
         <div
           id={statsDrawerId}
-          className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 sm:left-auto sm:right-4 sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >

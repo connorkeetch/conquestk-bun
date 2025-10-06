@@ -70,6 +70,7 @@ export interface GamePlayer extends SharedPlayer {
   // Frontend might have additional display properties
   isCurrentPlayer?: boolean
   isLocalPlayer?: boolean
+  skillRating?: number
 }
 
 export interface Territory extends SharedTerritory {

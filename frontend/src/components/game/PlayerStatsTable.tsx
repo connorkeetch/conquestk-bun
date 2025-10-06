@@ -2,6 +2,7 @@ import type React from 'react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import TreasureHud from '@/components/game/TreasureHud'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { getConquestRank } from '@/components/RankInsignia'
 import { getColorValue } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
 import { resolveAssetPath } from '@/utils/assets'
@@ -60,11 +61,14 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[420px]">
+            <table className="w-full text-sm min-w-[520px]">
               <thead className="bg-[color:var(--surface-2)] sticky top-0">
                 <tr className="border-b border-[color:var(--panel-border)] select-none">
-                  <th className="px-1 py-2 text-left font-medium text-muted">Player</th>
-                  <th className="px-1 py-2 text-right font-medium text-muted">
+                  <th className="px-2 py-2 text-left font-medium text-muted">Player</th>
+                  <th className="px-2 py-2 text-left font-medium text-muted" title="Rank & CP">
+                    Rank
+                  </th>
+                  <th className="px-2 py-2 text-right font-medium text-muted">
                     <img
                       src={resolveAssetPath('static/icons/stats/armies.svg')}
                       alt=""
@@ -76,7 +80,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                     />
                     <span className="sr-only">Armies</span>
                   </th>
-                  <th className="px-1 py-2 text-right font-medium text-muted">
+                  <th className="px-2 py-2 text-right font-medium text-muted">
                     <img
                       src={resolveAssetPath('static/icons/stats/territories.svg')}
                       alt=""
@@ -89,7 +93,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                     <span className="sr-only">Territories</span>
                   </th>
                   {variant === 'full' && (
-                    <th className="px-1 py-2 text-right font-medium text-muted">
+                    <th className="px-2 py-2 text-right font-medium text-muted">
                       <img
                         src={resolveAssetPath('static/icons/stats/reinforcements.svg')}
                         alt=""
@@ -103,7 +107,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                     </th>
                   )}
                   {variant === 'full' && (
-                    <th className="px-1 py-2 pr-3 text-right font-medium text-muted">
+                    <th className="px-2 py-2 text-right font-medium text-muted">
                       <img
                         src={resolveAssetPath('static/icons/stats/treasures.svg')}
                         alt=""
@@ -119,50 +123,64 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                 </tr>
               </thead>
               <tbody>
-                {sortedPlayers.map((player, _index) => (
-                  <tr
-                    key={player.id}
-                    className={`border-b border-[color:var(--panel-border)] last:border-b-0 ${
-                      player.isCurrentTurn
-                        ? 'bg-[color:var(--color-accent)]/20 ring-2 ring-[color:var(--color-accent)]/50'
-                        : 'hover:bg-[color:var(--surface-2)]'
-                    }`}
-                  >
-                    <td className="px-1 py-1.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div
-                          className="w-3.5 h-3.5 rounded-full border-2 border-[color:var(--panel-border)] shrink-0"
-                          style={{ backgroundColor: getColorValue(player.color) }}
-                        />
-                        <button
-                          type="button"
-                          className="truncate text-[color:var(--text)] hover:underline text-left font-medium"
-                          onClick={() => handleProfileClick(player.username)}
-                          title={player.username}
-                        >
-                          {player.username}
-                        </button>
-                        {/* Timer removed from player stats; top bar displays the turn timer */}
-                      </div>
-                    </td>
-                    <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
-                      {player.totalArmies}
-                    </td>
-                    <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
-                      {player.territoryCount}
-                    </td>
-                    {variant === 'full' && (
-                      <td className="px-1 py-1.5 text-right font-mono text-[color:var(--color-success)] whitespace-nowrap">
-                        +{player.reinforcements}
+                {sortedPlayers.map((player, _index) => {
+                  const skillRating = player.skillRating ?? 1000
+                  const rank = getConquestRank(skillRating)
+                  return (
+                    <tr
+                      key={player.id}
+                      className={`border-b border-[color:var(--panel-border)] last:border-b-0 ${
+                        player.isCurrentTurn
+                          ? 'bg-[color:var(--color-accent)]/20 ring-2 ring-[color:var(--color-accent)]/50'
+                          : 'hover:bg-[color:var(--surface-2)]'
+                      }`}
+                    >
+                      <td className="px-2 py-1.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div
+                            className="w-3.5 h-3.5 rounded-full border-2 border-[color:var(--panel-border)] shrink-0"
+                            style={{ backgroundColor: getColorValue(player.color) }}
+                          />
+                          <button
+                            type="button"
+                            className="truncate text-[color:var(--text)] hover:underline text-left font-medium"
+                            onClick={() => handleProfileClick(player.username)}
+                            title={`${player.username} (${skillRating} CP)`}
+                          >
+                            {player.username}
+                          </button>
+                        </div>
                       </td>
-                    )}
-                    {variant === 'full' && (
-                      <td className="px-1 py-1.5 pr-3 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
-                        {player.treasureCount}
+                      <td className="px-2 py-1.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-xs">
+                          <span
+                            style={{ color: rank.color }}
+                            title={`${rank.name} (${skillRating} CP)`}
+                          >
+                            {rank.insignia}
+                          </span>
+                          <span className="text-muted">({skillRating})</span>
+                        </div>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                        {player.totalArmies}
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                        {player.territoryCount}
+                      </td>
+                      {variant === 'full' && (
+                        <td className="px-2 py-1.5 text-right font-mono text-[color:var(--color-success)] whitespace-nowrap">
+                          +{player.reinforcements}
+                        </td>
+                      )}
+                      {variant === 'full' && (
+                        <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                          {player.treasureCount}
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
