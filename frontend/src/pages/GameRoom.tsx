@@ -3,13 +3,14 @@ import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } fr
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
+import ChatLogModal from '@/components/game/ChatLogModal'
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
+import GameRoomFooter from '@/components/game/GameRoomFooter'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import TreasureHud from '@/components/game/TreasureHud'
 import { TurnTimer } from '@/components/game/TurnTimer'
-// audioService toggled via floating MuteButton component
-import MuteButton from '@/components/MuteButton'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import SettingsModal from '@/components/SettingsModal'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
@@ -93,6 +94,8 @@ export default function GameRoom() {
   const [showGameOver, setShowGameOver] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   // Bottom drawer now only shows chat; actions moved to header/map popups
+  const [chatLogModalOpen, setChatLogModalOpen] = useState(false)
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [resignDialogOpen, setResignDialogOpen] = useState(false)
   const resignDialogRef = useRef<HTMLDivElement | null>(null)
   const resignDialogTitleId = useId()
@@ -159,7 +162,7 @@ export default function GameRoom() {
   const isMember = Boolean(currentPlayer)
   const isHost = currentRoom?.hostId === user?.id
 
-  const muteOffsetBottom = useMemo(() => {
+  const _muteOffsetBottom = useMemo(() => {
     // Base offset so it clears typical bottom paddings/footers
     let px = 56
     // Raise above AFK grace bar if visible
@@ -1689,21 +1692,7 @@ export default function GameRoom() {
         </div>
       )}
 
-      {/* Mobile FAB */}
-      {currentGame && (
-        <button
-          type="button"
-          className="md:hidden fixed z-50 rounded-full bg-[color:var(--color-primary)] text-white shadow-lg px-4 py-3"
-          onClick={() => setMobileDrawerOpen((v) => !v)}
-          title={mobileDrawerOpen ? 'Close chat' : 'Open chat'}
-          style={{
-            bottom: 'calc(1rem + env(safe-area-inset-bottom))',
-            right: 'calc(1rem + env(safe-area-inset-right))',
-          }}
-        >
-          {mobileDrawerOpen ? '✕' : '💬 Chat'}
-        </button>
-      )}
+      {/* Mobile FAB - REMOVED: Now integrated into footer */}
 
       {/* Mobile backdrop */}
       {currentGame && (
@@ -1779,6 +1768,40 @@ export default function GameRoom() {
         </div>
       )}
 
+      {/* Chat/Log Modal (desktop only) */}
+      {chatLogModalOpen && currentGame && user && (
+        <ChatLogModal
+          isOpen={chatLogModalOpen}
+          onClose={() => setChatLogModalOpen(false)}
+          gameId={currentRoom.id}
+          currentUserId={user.id}
+          userTeamId={currentGame.players?.find((p) => p.userId === user.id)?.teamId}
+          onLogFocus={(territories) => {
+            const focus = territories[territories.length - 1]
+            if (focus) dispatch(selectTerritory(focus))
+          }}
+        />
+      )}
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+
+      {/* Game Room Footer (mobile + desktop) */}
+      {currentGame && (
+        <GameRoomFooter
+          onChatClick={() => {
+            // Desktop: open modal, Mobile: toggle drawer
+            if (window.innerWidth >= 768) {
+              setChatLogModalOpen(true)
+            } else {
+              setMobileDrawerOpen((v) => !v)
+            }
+          }}
+          onSettingsClick={() => setSettingsModalOpen(true)}
+          isMobileDrawerOpen={mobileDrawerOpen}
+        />
+      )}
+
       {/* Post-game results modal */}
       {showGameOver && currentGame && (
         <GameOverModal
@@ -1840,8 +1863,7 @@ export default function GameRoom() {
 
       {/* Conquest transfer handled inline on map via ConquestTransferPopup */}
 
-      {/* Floating, less-obtrusive mute control */}
-      <MuteButton offsetBottom={muteOffsetBottom} />
+      {/* Floating mute control - REMOVED: Now integrated into footer on both mobile and desktop */}
     </div>
   )
 }
