@@ -66,9 +66,14 @@ export function TreasureHud({ variant = 'header' }: Props) {
     <>
       <button
         type="button"
-        className={`${containerClasses} ${pulse ? 'animate-pulse ring-1 ring-[color:var(--color-warning)]' : ''}`}
-        title="Treasures"
-        onClick={() => setOpen(true)}
+        className={`${containerClasses} ${pulse ? 'animate-pulse ring-1 ring-[color:var(--color-warning)]' : ''} ${!isMyTurn ? 'opacity-70 cursor-not-allowed' : ''}`}
+        title={isMyTurn ? 'Treasures' : 'You can trade cards on your turn'}
+        onClick={() => {
+          if (!isMyTurn) return
+          setOpen(true)
+        }}
+        disabled={!isMyTurn}
+        aria-disabled={!isMyTurn}
       >
         <span className="inline-flex items-center gap-1">
           {shown.map((m, i) => (

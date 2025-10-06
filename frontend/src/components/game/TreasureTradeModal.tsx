@@ -23,6 +23,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
       >)
     | undefined
   const [selected, setSelected] = useState<number[]>([])
+  const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
 
   // Helper functions defined with useCallback to stabilize dependencies
   const metalType = useCallback((m: string) => String(m).toLowerCase(), [])
@@ -57,6 +58,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
   )
 
   const canTrade = selected.length === 3 && isValidTriple(selected)
+  const tradeDisabled = !isMyTurn || !canTrade
 
   // Determine which cards are eligible to pick next given the current selection
   const eligible = useMemo(() => {
@@ -255,6 +257,11 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
           </button>
         </div>
         <div className="p-4 space-y-3">
+          {!isMyTurn && (
+            <div className="text-xs text-muted bg-[color:var(--surface-2)]/70 border border-border rounded p-2">
+              You can trade treasures only on your turn.
+            </div>
+          )}
           <p className="text-sm text-muted">Select any 3 cards to trade for reinforcements.</p>
           {hand.length === 0 ? (
             <div className="text-sm text-muted">No treasures in hand.</div>
@@ -338,8 +345,9 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!canTrade}
+            disabled={tradeDisabled}
             onClick={() => {
+              if (tradeDisabled) return
               if (selected.length === 3) {
                 void dispatch(
                   tradeTreasureSet([selected[0], selected[1], selected[2]] as [
