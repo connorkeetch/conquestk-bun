@@ -1,5 +1,5 @@
 import { computeRollOdds } from '@shared/utils/combatOdds'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { mapService } from '@/services/mapService'
@@ -141,14 +141,17 @@ export default function UnifiedMapDisplay({
   const zoomToastTimer = useRef<number | null>(null)
   const [overlayVisible, setOverlayVisible] = useState(true)
   const overlayTimer = useRef<number | null>(null)
+  const initialAutoFitDone = useRef(false)
+  const lastMapIdRef = useRef<string | null>(null)
+  const resizeFitTimer = useRef<number | null>(null)
 
-  const bumpOverlay = () => {
+  const bumpOverlay = useCallback(() => {
     setOverlayVisible(true)
     if (overlayTimer.current) window.clearTimeout(overlayTimer.current)
     overlayTimer.current = window.setTimeout(() => setOverlayVisible(false), 1500)
-  }
+  }, [])
 
-  const fitToView = () => {
+  const fitToView = useCallback(() => {
     const imgW = imageSize?.w || mapData?.width || 0
     const imgH = imageSize?.h || mapData?.height || 0
     const vpW = viewport?.w || 0
@@ -166,7 +169,65 @@ export default function UnifiedMapDisplay({
       900,
     )
     bumpOverlay()
-  }
+  }, [dispatch, viewport, imageSize?.w, imageSize?.h, mapData?.width, mapData?.height, bumpOverlay])
+
+  useEffect(() => {
+    if (previewMode) return
+    // If switching maps, reset sentinel to allow initial fit
+    if (lastMapIdRef.current !== mapId) {
+      initialAutoFitDone.current = false
+      lastMapIdRef.current = mapId
+    }
+    const imgW = imageSize?.w || mapData?.width || 0
+    const imgH = imageSize?.h || mapData?.height || 0
+    const vpW = viewport?.w || 0
+    const vpH = viewport?.h || 0
+    if (!imgW || !imgH || !vpW || !vpH) return
+    if (initialAutoFitDone.current) return
+    // Defer a tick to allow MapCanvas initial resetView to settle
+    const id = window.setTimeout(() => {
+      fitToView()
+      initialAutoFitDone.current = true
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [
+    previewMode,
+    mapId,
+    imageSize?.w,
+    imageSize?.h,
+    mapData?.width,
+    mapData?.height,
+    viewport?.w,
+    viewport?.h,
+    fitToView,
+  ])
+
+  // Re-fit on viewport resize while in game room; debounce to avoid thrash
+  useEffect(() => {
+    if (previewMode) return
+    if (!initialAutoFitDone.current) return
+    const imgW = imageSize?.w || mapData?.width || 0
+    const imgH = imageSize?.h || mapData?.height || 0
+    const vpW = viewport?.w || 0
+    const vpH = viewport?.h || 0
+    if (!imgW || !imgH || !vpW || !vpH) return
+    if (resizeFitTimer.current) window.clearTimeout(resizeFitTimer.current)
+    resizeFitTimer.current = window.setTimeout(() => {
+      fitToView()
+    }, 120)
+    return () => {
+      if (resizeFitTimer.current) window.clearTimeout(resizeFitTimer.current)
+    }
+  }, [
+    previewMode,
+    viewport?.w,
+    viewport?.h,
+    imageSize?.w,
+    imageSize?.h,
+    mapData?.width,
+    mapData?.height,
+    fitToView,
+  ])
 
   // Removed overlay hotkeys for simpler UI; add core interaction hotkeys below
 
