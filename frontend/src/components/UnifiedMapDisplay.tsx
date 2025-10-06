@@ -371,6 +371,7 @@ export default function UnifiedMapDisplay({
   )
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (previewMode || !isMyTurn) return
       const target = e.target as HTMLElement | null
       if (
         target &&
@@ -446,6 +447,8 @@ export default function UnifiedMapDisplay({
     selectedTargetTerritoryId,
     pendingAction,
     validTargets,
+    previewMode,
+    isMyTurn,
   ])
 
   if (loading) {
@@ -470,6 +473,7 @@ export default function UnifiedMapDisplay({
   }
 
   const handleTerritoryActivate = (territoryId: string) => {
+    if (previewMode || !isMyTurn) return
     // If a source is selected and we're in attack mode but this is not a valid target, trigger shake
     const selectedId = selectedTerritoryId
     const isValid = validTargets.includes(territoryId)
@@ -484,6 +488,7 @@ export default function UnifiedMapDisplay({
   }
 
   const handleHoverChange = (territoryId: string | null) => {
+    if (previewMode || !isMyTurn) return
     setHoveredId(territoryId)
     if (!previewMode) {
       dispatch(setHoveredTarget(territoryId))
@@ -492,7 +497,7 @@ export default function UnifiedMapDisplay({
   }
 
   const handleBackgroundClick = () => {
-    if (previewMode) return
+    if (previewMode || !isMyTurn) return
     // Clicking on non-territory clears selection and pending actions
     dispatch(selectTerritory(null))
     dispatch(selectTargetTerritory(null))
@@ -548,7 +553,7 @@ export default function UnifiedMapDisplay({
           }))}
           selectedId={selectedTerritoryId ?? undefined}
           validTargets={validTargets}
-          hoveredId={hoveredTargetId ?? undefined}
+          hoveredId={isMyTurn ? (hoveredTargetId ?? undefined) : undefined}
           invalidShakeId={invalidShakeId ?? undefined}
         />
         {hillOverlayEnabled && (
@@ -577,26 +582,42 @@ export default function UnifiedMapDisplay({
           }))}
           selectedId={selectedTerritoryId ?? undefined}
           validTargets={validTargets}
-          dimNonTargets={pendingAction === 'attack'}
-          onClick={handleTerritoryActivate}
-          onHover={handleHoverChange}
+          dimNonTargets={isMyTurn && pendingAction === 'attack'}
+          onClick={isMyTurn ? handleTerritoryActivate : undefined}
+          onHover={isMyTurn ? handleHoverChange : undefined}
         />
         {/* Interaction overlays (rings, brackets, arcs) - placed after tokens for visibility */}
         <InteractionOverlay
           width={mapData.width}
           height={mapData.height}
           points={territories.map((t) => ({ id: t.id, x: t.x, y: t.y }))}
-          selectedId={selectedTerritoryId}
-          targetId={selectedTargetTerritoryId}
-          hoverId={hoveredTargetId}
-          eligibleIds={validTargets}
+          selectedId={isMyTurn ? selectedTerritoryId : null}
+          targetId={isMyTurn ? selectedTargetTerritoryId : null}
+          hoverId={isMyTurn ? hoveredTargetId : null}
+          eligibleIds={isMyTurn ? validTargets : []}
           phase={
-            game?.phase === 'reinforcement'
-              ? 'deploy'
-              : ((game?.phase as 'attack' | 'fortify' | 'idle' | undefined) ?? 'idle')
+            isMyTurn
+              ? game?.phase === 'reinforcement'
+                ? 'deploy'
+                : ((game?.phase as 'attack' | 'fortify' | 'idle' | undefined) ?? 'idle')
+              : 'idle'
           }
           tokenSize={28}
         />
+        {!previewMode && !isMyTurn && (
+          <div className="absolute inset-0 pointer-events-none z-20" aria-hidden="true">
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'radial-gradient(ellipse at center, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.14) 60%, rgba(0,0,0,0.18) 100%)',
+              }}
+            />
+            <div className="absolute top-2 left-2 bg-black/55 text-white text-xs sm:text-sm px-2 py-1 rounded shadow">
+              View only — waiting for turn
+            </div>
+          </div>
+        )}
         {oddsTooltip && !conquestTransfer && (
           <AttackOddsPopup
             leftPercent={oddsTooltip.left}

@@ -118,6 +118,22 @@ export const GameHeader: React.FC<GameHeaderProps> = memo(
             )}
           </div>
         </div>
+        {!isMyTurn && (
+          <div className="mt-2 flex items-center justify-between text-sm">
+            <div className="inline-flex items-center gap-2 text-muted">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
+              <span>
+                {(() => {
+                  const cp = game?.players?.find((p) => p.id === game?.currentPlayer)
+                  const name = cp?.username || 'Opponent'
+                  const pLabel = phase === 'reinforcement' ? 'reinforcing' : phase
+                  return `Waiting for ${name} — ${pLabel}`
+                })()}
+              </span>
+            </div>
+            {/* reserved space for optional quick help or tips */}
+          </div>
+        )}
         {/* Dice recap bar (last battle) */}
         <DiceResultsBar />
         <PlayerProfileModal

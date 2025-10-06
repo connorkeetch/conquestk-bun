@@ -118,16 +118,14 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
           <div
             aria-label="selected-overlay"
             role="img"
-            className={`${reducedMotion ? '' : 'animate-[breath_1.2s_ease-in-out_infinite]'} rounded-full ring-1 ring-[var(--muted-ring)]`}
-            style={{
-              position: 'absolute',
-              left: selected.x,
-              top: selected.y,
-              width: tokenSize,
-              height: tokenSize,
-              transform: 'translate(-50%, -50%)',
-            }}
-          />
+            className="absolute"
+            style={{ left: selected.x, top: selected.y, transform: 'translate(-50%, -50%)' }}
+          >
+            <div
+              className={`${reducedMotion ? '' : 'animate-[breath_1.2s_ease-in-out_infinite]'} rounded-full ring-1 ring-[var(--muted-ring)]`}
+              style={{ width: tokenSize, height: tokenSize }}
+            />
+          </div>
         )}
 
         {/* Committed target: solid ring */}
@@ -164,16 +162,14 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                   className="text-[color:var(--attack-ring)]"
                 >
                   <div
-                    className={`${animate ? 'animate-[ping-soft_1s_linear_infinite]' : ''} rounded-full outline outline-2 outline-[var(--attack-ring)]`}
-                    style={{
-                      position: 'absolute',
-                      left: p.x,
-                      top: p.y,
-                      width: tokenSize,
-                      height: tokenSize,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                  />
+                    className="absolute"
+                    style={{ left: p.x, top: p.y, transform: 'translate(-50%, -50%)' }}
+                  >
+                    <div
+                      className={`${animate ? 'animate-[ping-soft_1s_linear_infinite]' : ''} rounded-full outline outline-2 outline-[var(--attack-ring)]`}
+                      style={{ width: tokenSize, height: tokenSize }}
+                    />
+                  </div>
                   <div className="text-[color:var(--attack-ring)]">
                     <Crosshair x={p.x} y={p.y} r={r} />
                   </div>
