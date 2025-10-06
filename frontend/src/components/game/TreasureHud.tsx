@@ -20,7 +20,7 @@ export function TreasureHud({ variant = 'header' }: Props) {
   const mustCashIn = Boolean(game?.mustCashInTreasures)
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
 
-  // Compute next payout (used only for compact variant display)
+  // Compute next payout (displayed alongside icons)
   const { base } = computeNextTreasurePayout(
     game?.treasureState,
     (room?.treasureConfig as unknown as TreasureConfig | undefined) ?? undefined,
@@ -82,13 +82,11 @@ export function TreasureHud({ variant = 'header' }: Props) {
         disabled={!isMyTurn}
         aria-disabled={!isMyTurn}
       >
-        {variant === 'compact' && (
-          <span className="inline-flex items-center gap-1 mr-1">
-            <span className="opacity-80">Next</span>
-            <span className="font-semibold text-white">+{base}</span>
-          </span>
-        )}
-        {variant === 'compact' && <span className="mx-1 h-4 w-px bg-white/20" />}
+        <span className="inline-flex items-center gap-1 mr-1">
+          <span className="opacity-80">Next</span>
+          <span className="font-semibold text-white">+{base}</span>
+        </span>
+        <span className="mx-1 h-4 w-px bg-white/20" />
         <span className="inline-flex items-center gap-1">
           {shown.map((m, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: cards lack stable ids; index is fine for a static strip
