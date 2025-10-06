@@ -19,7 +19,8 @@ export default function ConquestTransferPopup({
   title = 'Move armies',
   confirmLabel = 'Confirm',
 }: ConquestTransferPopupProps) {
-  const [armies, setArmies] = useState(Math.min(3, Math.max(1, maxArmies)))
+  // Default to moving all available by default; users can reduce via slider/buttons
+  const [armies, setArmies] = useState(Math.max(1, maxArmies))
   const sliderId = useId()
   // Draggable offset relative to anchored position
   const [offset, setOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 })

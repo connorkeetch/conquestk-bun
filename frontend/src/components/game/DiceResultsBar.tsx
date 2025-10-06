@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
 
@@ -12,7 +13,8 @@ function Dice({ value, color, glow }: DiceProps) {
     <div
       className="w-8 h-8 rounded-md border border-[color:var(--panel-border)] text-white font-bold text-sm flex items-center justify-center shadow-sm"
       style={{
-        backgroundColor: color,
+        // Use background so gradients (premium colors) render correctly
+        background: color,
         boxShadow: glow ? '0 0 0 2px #fde047, 0 0 12px #fde047' : undefined,
       }}
     >
@@ -27,25 +29,36 @@ export function DiceResultsBar() {
   const phase = game?.phase
 
   const last = history.length > 0 ? history[history.length - 1] : null
+  const neutralGrey = 'var(--color-gray-500)'
+
+  const { attackerColor, defenderColor } = useMemo(() => {
+    if (!game || !last) {
+      return { attackerColor: neutralGrey, defenderColor: neutralGrey }
+    }
+
+    const fromOwnerId = (() => {
+      const t = game.board?.find((tt) => tt.id === last.fromId)
+      return t?.ownerId ?? last.attackerId ?? game.currentPlayer ?? null
+    })()
+    const toOwnerId = (() => {
+      const t = game.board?.find((tt) => tt.id === last.toId)
+      return t?.ownerId ?? last.defenderId ?? null
+    })()
+
+    const aPlayer = fromOwnerId ? game.players.find((p) => p.id === fromOwnerId) : undefined
+    const dPlayer = toOwnerId ? game.players.find((p) => p.id === toOwnerId) : undefined
+
+    const aColor = aPlayer ? getColorValue(aPlayer.color) : neutralGrey
+    const dColor = dPlayer ? getColorValue(dPlayer.color) : neutralGrey
+
+    return { attackerColor: aColor, defenderColor: dColor }
+  }, [game, last])
+
   // Hide dice recap outside of the Attack phase
   if (!last || phase !== 'attack') return null
 
-  const attackerColor = (() => {
-    if (!game) return '#ef4444'
-    const pid = last.attackerId ?? game.currentPlayer
-    const player = game.players.find((p) => p.id === pid)
-    return getColorValue(player?.color || '#ef4444')
-  })()
-
-  const defenderColor = (() => {
-    if (!game) return '#3b82f6'
-    const pid = last.defenderId ?? null
-    const player = pid ? game.players.find((p) => p.id === pid) : undefined
-    return getColorValue(player?.color || '#3b82f6')
-  })()
-
-  const att = [...last.attackerDice].sort((a, b) => b - a)
-  const def = [...last.defenderDice].sort((a, b) => b - a)
+  const att = [...(last.attackerDice ?? [])].sort((a, b) => b - a)
+  const def = [...(last.defenderDice ?? [])].sort((a, b) => b - a)
 
   const pairs = Array.from({ length: Math.min(att.length, def.length) }).map((_, i) => {
     const a = att[i] ?? 0

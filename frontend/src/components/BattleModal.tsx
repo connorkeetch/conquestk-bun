@@ -1,5 +1,6 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
 import audioService from '../services/audioService'
 import type { BattleResult, BattleTerritorySnapshot } from '../types/game'
@@ -82,10 +83,29 @@ export const BattleModal: React.FC<BattleModalProps> = ({
     }
   }, [isOpen, battleResult, onClose, onContinueAttack, speed])
 
-  if (!isOpen || !battleResult) return null
+  const game = useAppSelector((s) => s.game.currentGame)
+  const neutralGrey = 'var(--color-gray-500)'
 
-  const fromTerritory = resolveTerritory(battleResult.fromTerritory)
-  const toTerritory = resolveTerritory(battleResult.toTerritory)
+  const fromTerritory = battleResult
+    ? resolveTerritory(battleResult.fromTerritory)
+    : { id: '', name: '', armies: 0, ownerId: null }
+  const toTerritory = battleResult
+    ? resolveTerritory(battleResult.toTerritory)
+    : { id: '', name: '', armies: 0, ownerId: null }
+
+  const { attackerColor, defenderColor } = useMemo(() => {
+    if (!game || !battleResult) return { attackerColor: neutralGrey, defenderColor: neutralGrey }
+    const aOwnerId = fromTerritory.ownerId ?? null
+    const dOwnerId = toTerritory.ownerId ?? null
+    const aPlayer = aOwnerId ? game.players.find((p) => p.id === aOwnerId) : undefined
+    const dPlayer = dOwnerId ? game.players.find((p) => p.id === dOwnerId) : undefined
+    return {
+      attackerColor: aPlayer ? getColorValue(aPlayer.color) : neutralGrey,
+      defenderColor: dPlayer ? getColorValue(dPlayer.color) : neutralGrey,
+    }
+  }, [game, battleResult, fromTerritory.ownerId, toTerritory.ownerId])
+
+  if (!isOpen || !battleResult) return null
 
   const createDiceDescriptors = (dice: number[], role: 'attacker' | 'defender') =>
     dice.map((value, index) => ({
@@ -94,15 +114,16 @@ export const BattleModal: React.FC<BattleModalProps> = ({
       index,
     }))
 
-  const renderDice = (dice: ReturnType<typeof createDiceDescriptors>, color: string) => (
+  const renderDice = (dice: ReturnType<typeof createDiceDescriptors>, bgColor: string) => (
     <div className="flex space-x-2">
       {dice.map((die) => (
         <div
           key={die.id}
-          className={`w-12 h-12 ${color} border-2 border-gray-300 rounded-lg flex items-center justify-center text-white font-bold text-lg ${
+          className={`w-12 h-12 border-2 border-gray-300 rounded-lg flex items-center justify-center text-white font-bold text-lg ${
             showAnimation && speed !== 'instant' ? 'animate-bounce' : ''
           }`}
-          style={{ animationDelay: `${die.index * 0.1}s` }}
+          // Use background so gradients (premium colors) render correctly
+          style={{ background: bgColor, animationDelay: `${die.index * 0.1}s` }}
         >
           {die.value}
         </div>
@@ -128,7 +149,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
               <p className="text-sm text-muted mb-2">{fromTerritory.name}</p>
               {renderDice(
                 createDiceDescriptors(battleResult.attackerDice, 'attacker'),
-                'bg-red-500',
+                attackerColor,
               )}
               <p className="mt-2 text-sm">
                 {battleResult.attackerLosses > 0 ? (
@@ -148,7 +169,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
               <p className="text-sm text-muted mb-2">{toTerritory.name}</p>
               {renderDice(
                 createDiceDescriptors(battleResult.defenderDice, 'defender'),
-                'bg-primary',
+                defenderColor,
               )}
               <p className="mt-2 text-sm">
                 {battleResult.defenderLosses > 0 ? (
