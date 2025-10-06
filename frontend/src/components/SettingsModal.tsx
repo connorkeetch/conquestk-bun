@@ -220,13 +220,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Theme</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {Object.entries(THEMES).map(([id, theme]) => (
+                {THEMES.map((theme) => (
                   <button
-                    key={id}
+                    key={theme.id}
                     type="button"
-                    onClick={() => handleThemeChange(id)}
+                    onClick={() => handleThemeChange(theme.id)}
                     className={`border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors ${
-                      settings.display.theme === id
+                      settings.display.theme === theme.id
                         ? 'border-primary bg-surface-2'
                         : 'border-border'
                     }`}
@@ -234,7 +234,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <div
                       className="w-full h-8 rounded mb-2"
                       style={{
-                        background: theme.colors.surface1 || '#1a1a1a',
+                        background: theme.displayColor,
                       }}
                     />
                     <p className="text-sm text-center">{theme.name}</p>
