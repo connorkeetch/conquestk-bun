@@ -46,7 +46,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const lastTurnRef = useRef<number | null>(null)
   const startedLoggedRef = useRef(false)
   const lastRoundRef = useRef<number | null>(null)
-  const fogMode = game?.gameConfig?.fogOfWar ?? room?.fogOfWar ?? 'off'
+  const fogMode = (game?.gameConfig?.fogOfWar ?? room?.fogOfWar ?? 'off') as
+    | 'off'
+    | 'adjacent'
+    | 'persistent'
   const fogOn = fogMode !== 'off'
   const gameEnded =
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
@@ -331,7 +334,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     const handlePhaseChange = (delta: PhaseChangeDelta) => {
       const prevPlayer = lastPlayerRef.current
       const nextPlayer = delta.currentPlayer
-      const previousPhase = phaseRef.current
+      const _previousPhase = phaseRef.current
       const prevTurn = lastTurnRef.current
       // When a new reinforcement phase begins, previous player just ended turn
       if (phaseRef.current === 'fortify' || (phaseRef.current && delta.phase === 'reinforcement')) {
@@ -340,50 +343,49 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           add(`${prevName} ended the turn.`)
         }
       }
-      if (previousPhase === 'reinforcement' && delta.phase === 'attack') {
-        const name = playerName.get(nextPlayer) || nextPlayer
-        add(`${name} finished deploying troops.`)
-      }
+      // Track phase changes and player order
       phaseRef.current = delta.phase
-      lastPlayerRef.current = nextPlayer
-
-      if (delta.phase === 'reinforcement') {
-        // Round tracking (best-effort): log when a new round number is detected
-        const nextTurn = typeof delta.turn === 'number' ? delta.turn : (prevTurn ?? null)
-        if (typeof nextTurn === 'number') {
-          const activePlayersCount =
-            (game?.players || []).filter((p) => !p.isEliminated).length || 1
-          const roundNumber = Math.max(1, Math.ceil(nextTurn / activePlayersCount))
-          if (lastRoundRef.current === null || roundNumber > lastRoundRef.current) {
-            add(`Round ${roundNumber} started.`)
-            lastRoundRef.current = roundNumber
+      if (delta.turn !== undefined) {
+        lastTurnRef.current = delta.turn
+      }
+      if (delta.round !== undefined) {
+        lastRoundRef.current = delta.round
+      }
+      if (delta.currentPlayer) {
+        // When reinforcement starts for the next player, announce their start
+        if (delta.phase === 'reinforcement') {
+          const turn = delta.turn ?? prevTurn
+          const _round = delta.round ?? lastRoundRef.current
+          const name = playerName.get(delta.currentPlayer) || delta.currentPlayer
+          if (turn !== prevTurn || !startedLoggedRef.current) {
+            startedLoggedRef.current = true
+            add(`${name} started the turn.`)
           }
-          lastTurnRef.current = nextTurn
-        }
-        const name = playerName.get(nextPlayer) || nextPlayer
-        const reinforcementAmount =
-          typeof delta.reinforcementArmies === 'number' ? delta.reinforcementArmies : null
-
-        if (previousPhase === 'attack') {
-          if (!redact && reinforcementAmount && reinforcementAmount > 0) {
-            add(`${name} reclaimed ${reinforcementAmount} troops to redeploy.`)
-          }
-          add(`${name} returned to reinforcement to deploy remaining troops.`)
-        } else {
-          if (!redact && reinforcementAmount && reinforcementAmount > 0) {
-            const territoryCount = (game?.board || []).filter(
-              (t) => t.ownerId === nextPlayer,
-            ).length
-            if (territoryCount > 0) {
-              add(
-                `${name} received ${reinforcementAmount} troops for ${territoryCount} territories.`,
-              )
+          if (typeof delta.reinforcementArmies === 'number' && delta.reinforcementArmies > 0) {
+            const terrs = delta.territoryCount ?? undefined
+            if (terrs && terrs > 0) {
+              add(`${name} received ${delta.reinforcementArmies} troops for ${terrs} territories.`)
             } else {
-              add(`${name} received ${reinforcementAmount} troops.`)
+              add(`${name} received ${delta.reinforcementArmies} troops.`)
             }
           }
-          add(`${name} started the turn.`)
         }
+        lastPlayerRef.current = delta.currentPlayer
+      }
+    }
+
+    const logEliminations = (
+      attackerId: string | undefined,
+      eliminated: string[] | undefined,
+      ts?: Date,
+    ) => {
+      if (!eliminated || eliminated.length === 0) {
+        return
+      }
+      const attackerName = attackerId ? playerName.get(attackerId) || attackerId : 'Unknown'
+      for (const eliminatedId of eliminated) {
+        const defeatedName = playerName.get(eliminatedId) || eliminatedId
+        add(`${defeatedName} was defeated by ${attackerName}.`, ts)
       }
     }
 
@@ -414,6 +416,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             br.toTerritory.id,
           ])
         }
+        logEliminations(attackerId, br.eliminatedPlayers, new Date(delta.timestamp))
       } else {
         add(
           `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
@@ -438,28 +441,39 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       }
       if (d.type === 'BATTLE_RESULT') {
         const brd = d as BattleResultDelta & { changes?: GameDelta[] }
+        const hasEliminationList =
+          Array.isArray(brd.battleResult.eliminatedPlayers) &&
+          brd.battleResult.eliminatedPlayers.length > 0
         if (!redact) {
           handleBattleResult(brd)
+        } else {
+          logEliminations(
+            brd.battleResult.attackerId,
+            brd.battleResult.eliminatedPlayers,
+            new Date(brd.timestamp),
+          )
         }
-        // Detect eliminations from nested player updates
-        try {
-          const nested = (brd as { changes?: GameDelta[] }).changes
-          const attackerId = brd.battleResult.attackerId || lastPlayerRef.current || ''
-          if (Array.isArray(nested)) {
-            for (const ch of nested) {
-              if ((ch as { type?: string }).type === 'PLAYER_UPDATE') {
-                const pu = ch as import('@shared/types').PlayerDelta
-                if (pu.changes?.isEliminated) {
-                  const defeatedId = pu.playerId
-                  const defeatedName = playerName.get(defeatedId) || defeatedId || 'Unknown'
-                  const attackerName = playerName.get(attackerId) || attackerId || 'Unknown'
-                  add(`${defeatedName} was defeated by ${attackerName}.`)
+        // Detect eliminations from nested player updates when not already provided
+        if (!hasEliminationList) {
+          try {
+            const nested = (brd as { changes?: GameDelta[] }).changes
+            const attackerId = brd.battleResult.attackerId || lastPlayerRef.current || ''
+            if (Array.isArray(nested)) {
+              for (const ch of nested) {
+                if ((ch as { type?: string }).type === 'PLAYER_UPDATE') {
+                  const pu = ch as import('@shared/types').PlayerDelta
+                  if (pu.changes?.isEliminated) {
+                    const defeatedId = pu.playerId
+                    const defeatedName = playerName.get(defeatedId) || defeatedId
+                    const attackerName = playerName.get(attackerId) || attackerId
+                    add(`${defeatedName} was defeated by ${attackerName}.`)
+                  }
                 }
               }
             }
+          } catch {
+            /* ignore */
           }
-        } catch {
-          /* ignore */
         }
         return
       }
@@ -544,16 +558,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       socketService.off('game-delta', onDelta)
       socketService.off('ratingUpdate', onRating)
     }
-  }, [
-    gameId,
-    playerName,
-    territoryName,
-    game?.board,
-    game?.currentPlayer,
-    redact,
-    toSafeInt,
-    game?.players,
-  ])
+  }, [gameId, playerName, territoryName, game?.currentPlayer, redact, toSafeInt])
 
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
