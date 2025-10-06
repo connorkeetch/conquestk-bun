@@ -1,5 +1,5 @@
 import type React from 'react'
-import { memo, useMemo } from 'react'
+import { memo, useId, useMemo } from 'react'
 import useReducedMotion from '@/hooks/useReducedMotion'
 
 type Point = { id: string; x: number; y: number }
@@ -79,44 +79,108 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
     const hover = hoverId ? posById.get(hoverId) || null : null
     const animateEligible = !reducedMotion ? eligibleIds.slice(0, 10) : []
     const r = Math.max(12, tokenSize / 2)
+    const uid = useId()
+    const markerColoredAttack = `${uid}-arrow-colored-attack`
+    const markerColoredFortify = `${uid}-arrow-colored-fortify`
+    const markerWhite = `${uid}-arrow-white`
 
     return (
       <div
         className="absolute left-0 top-0 pointer-events-none"
         style={{ width, height, zIndex: 5 }}
       >
-        {/* Attack/Fortify arcs */}
+        {/* Attack/Fortify arrows */}
         {(phase === 'attack' || phase === 'fortify') &&
           selected &&
           (hover || target) &&
           (() => {
             const dest = target || hover
             if (!dest) return null
+            const color = phase === 'attack' ? 'var(--attack)' : 'var(--fortify)'
+            const colorRing = phase === 'attack' ? 'var(--attack-ring)' : 'var(--fortify-ring)'
+            // Path thickness: colored glow underlay and white dashed top layer
+            const underW = 5
+            const topW = 3
+            const pathD = arcPath(selected, dest)
             return (
               <svg
                 className="absolute left-0 top-0"
                 width={width}
                 height={height}
                 role="img"
-                aria-label="Interaction arc"
+                aria-label="Interaction arrow"
               >
-                {/* Straight line for clearer source → target direction */}
+                <defs>
+                  {/* Colored arrowhead (soft glow underlay) */}
+                  <marker
+                    id={markerColoredAttack}
+                    viewBox="0 0 12 12"
+                    refX="11"
+                    refY="6"
+                    markerWidth="10"
+                    markerHeight="10"
+                    orient="auto"
+                  >
+                    <path d="M0,0 L12,6 L0,12 Z" fill="var(--attack)" opacity="0.35" />
+                  </marker>
+                  <marker
+                    id={markerColoredFortify}
+                    viewBox="0 0 12 12"
+                    refX="11"
+                    refY="6"
+                    markerWidth="10"
+                    markerHeight="10"
+                    orient="auto"
+                  >
+                    <path d="M0,0 L12,6 L0,12 Z" fill="var(--fortify)" opacity="0.35" />
+                  </marker>
+                  {/* Crisp white arrowhead */}
+                  <marker
+                    id={markerWhite}
+                    viewBox="0 0 12 12"
+                    refX="11"
+                    refY="6"
+                    markerWidth="8"
+                    markerHeight="8"
+                    orient="auto"
+                  >
+                    <path d="M0,0 L12,6 L0,12 Z" fill="#ffffff" />
+                  </marker>
+                </defs>
+                {/* Subtle straight line for direction cue in phase color */}
                 <line
                   x1={selected.x}
                   y1={selected.y}
                   x2={dest.x}
                   y2={dest.y}
-                  stroke={phase === 'attack' ? 'var(--attack-ring)' : 'var(--fortify-ring)'}
+                  stroke={colorRing}
                   strokeWidth={2}
-                  opacity={0.8}
+                  strokeLinecap="round"
+                  opacity={0.6}
                 />
-                <title>Interaction arc</title>
+                <title>Interaction arrow</title>
+                {/* Colored underlay (glow) */}
                 <path
-                  d={arcPath(selected, dest)}
+                  d={pathD}
                   fill="none"
-                  stroke={phase === 'attack' ? 'var(--attack)' : 'var(--fortify)'}
-                  strokeWidth={3}
-                  opacity={target ? 1 : 0.85}
+                  stroke={color}
+                  strokeWidth={underW}
+                  opacity={0.35}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  markerEnd={`url(#${phase === 'attack' ? markerColoredAttack : markerColoredFortify})`}
+                />
+                {/* White dashed top layer with crisp arrowhead */}
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth={topW}
+                  opacity={target ? 1 : 0.95}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="10 6"
+                  markerEnd={`url(#${markerWhite})`}
                 />
               </svg>
             )

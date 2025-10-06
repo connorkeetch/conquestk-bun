@@ -45,7 +45,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const lastPlayerRef = useRef<string | null>(null)
   const lastTurnRef = useRef<number | null>(null)
   const startedLoggedRef = useRef(false)
-  const lastRoundRef = useRef<number | null>(null)
   const fogMode = (game?.gameConfig?.fogOfWar ?? room?.fogOfWar ?? 'off') as
     | 'off'
     | 'adjacent'
@@ -334,7 +333,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     const handlePhaseChange = (delta: PhaseChangeDelta) => {
       const prevPlayer = lastPlayerRef.current
       const nextPlayer = delta.currentPlayer
-      const _previousPhase = phaseRef.current
       const prevTurn = lastTurnRef.current
       // When a new reinforcement phase begins, previous player just ended turn
       if (phaseRef.current === 'fortify' || (phaseRef.current && delta.phase === 'reinforcement')) {
@@ -348,26 +346,17 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       if (delta.turn !== undefined) {
         lastTurnRef.current = delta.turn
       }
-      if (delta.round !== undefined) {
-        lastRoundRef.current = delta.round
-      }
       if (delta.currentPlayer) {
         // When reinforcement starts for the next player, announce their start
         if (delta.phase === 'reinforcement') {
           const turn = delta.turn ?? prevTurn
-          const _round = delta.round ?? lastRoundRef.current
           const name = playerName.get(delta.currentPlayer) || delta.currentPlayer
           if (turn !== prevTurn || !startedLoggedRef.current) {
             startedLoggedRef.current = true
             add(`${name} started the turn.`)
           }
           if (typeof delta.reinforcementArmies === 'number' && delta.reinforcementArmies > 0) {
-            const terrs = delta.territoryCount ?? undefined
-            if (terrs && terrs > 0) {
-              add(`${name} received ${delta.reinforcementArmies} troops for ${terrs} territories.`)
-            } else {
-              add(`${name} received ${delta.reinforcementArmies} troops.`)
-            }
+            add(`${name} received ${delta.reinforcementArmies} troops.`)
           }
         }
         lastPlayerRef.current = delta.currentPlayer
