@@ -86,6 +86,8 @@ export default function UnifiedMapDisplay({
   const hoveredTargetId = useAppSelector((s) => s.gameInteraction.hoveredTargetId)
   const invalidShakeId = useAppSelector((s) => s.gameInteraction.invalidShakeId)
   const game = useAppSelector((s) => s.game.currentGame)
+  const viewerId = useAppSelector((s) => s.auth.user?.id)
+  const isMyTurn = Boolean(viewerId && game?.currentPlayer === viewerId)
   // viewerId used for selection cycling
   const players = game?.players ?? []
   const kingOfTheHillState =
@@ -262,76 +264,79 @@ export default function UnifiedMapDisplay({
   ])
   const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
   const reinforcementArmies = useAppSelector((s) => s.game.reinforcementArmies)
-  const oddsTooltip = previewMode
-    ? null
-    : (() => {
-        if (!mapData) return null
-        if (pendingAction !== 'attack') return null
-        if (!selectedTerritoryId) return null
-        const effectiveTargetId = selectedTargetTerritoryId ?? hoveredId
-        if (!effectiveTargetId) return null
-        if (!validTargets.includes(effectiveTargetId)) return null
-        const src = territories.find((t) => t.id === selectedTerritoryId)
-        const dst = territories.find((t) => t.id === effectiveTargetId)
-        if (!src || !dst) return null
-        const srcArmies = src.armies ?? 0
-        const dstArmies = dst.armies ?? 0
-        if (srcArmies <= 1) return null
-        const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
-        const def = Math.min(2, Math.max(1, dstArmies)) as 1 | 2
-        const odds = computeRollOdds(att, def)
-        const winChance =
-          (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
-        const left = (dst.x / mapData.width) * 100
-        const top = (dst.y / mapData.height) * 100
-        return { att, def, odds, winChance, left, top }
-      })()
+  const oddsTooltip =
+    previewMode || !isMyTurn
+      ? null
+      : (() => {
+          if (!mapData) return null
+          if (pendingAction !== 'attack') return null
+          if (!selectedTerritoryId) return null
+          const effectiveTargetId = selectedTargetTerritoryId ?? hoveredId
+          if (!effectiveTargetId) return null
+          if (!validTargets.includes(effectiveTargetId)) return null
+          const src = territories.find((t) => t.id === selectedTerritoryId)
+          const dst = territories.find((t) => t.id === effectiveTargetId)
+          if (!src || !dst) return null
+          const srcArmies = src.armies ?? 0
+          const dstArmies = dst.armies ?? 0
+          if (srcArmies <= 1) return null
+          const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
+          const def = Math.min(2, Math.max(1, dstArmies)) as 1 | 2
+          const odds = computeRollOdds(att, def)
+          const winChance =
+            (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
+          const left = (dst.x / mapData.width) * 100
+          const top = (dst.y / mapData.height) * 100
+          return { att, def, odds, winChance, left, top }
+        })()
 
-  const conquestPopup = previewMode
-    ? null
-    : (() => {
-        if (!mapData || !conquestTransfer) return null
-        const to = territories.find((t) => t.id === conquestTransfer.toTerritoryId)
-        if (!to) return null
-        const left = (to.x / mapData.width) * 100
-        const top = (to.y / mapData.height) * 100
-        return { left, top, max: Math.max(1, conquestTransfer.availableArmies) }
-      })()
+  const conquestPopup =
+    previewMode || !isMyTurn
+      ? null
+      : (() => {
+          if (!mapData || !conquestTransfer) return null
+          const to = territories.find((t) => t.id === conquestTransfer.toTerritoryId)
+          if (!to) return null
+          const left = (to.x / mapData.width) * 100
+          const top = (to.y / mapData.height) * 100
+          return { left, top, max: Math.max(1, conquestTransfer.availableArmies) }
+        })()
 
-  const reinforcementPopup = previewMode
-    ? null
-    : (() => {
-        if (!mapData) return null
-        if (game?.phase !== 'reinforcement') return null
-        if (!selectedTerritoryId) return null
-        const sel = territories.find((t) => t.id === selectedTerritoryId)
-        if (!sel) return null
-        const left = (sel.x / mapData.width) * 100
-        const top = (sel.y / mapData.height) * 100
-        const max = Math.max(0, reinforcementArmies)
-        if (max <= 0) return null
-        return { left, top, max }
-      })()
+  const reinforcementPopup =
+    previewMode || !isMyTurn
+      ? null
+      : (() => {
+          if (!mapData) return null
+          if (game?.phase !== 'reinforcement') return null
+          if (!selectedTerritoryId) return null
+          const sel = territories.find((t) => t.id === selectedTerritoryId)
+          if (!sel) return null
+          const left = (sel.x / mapData.width) * 100
+          const top = (sel.y / mapData.height) * 100
+          const max = Math.max(0, reinforcementArmies)
+          if (max <= 0) return null
+          return { left, top, max }
+        })()
 
-  const fortifyPopup = previewMode
-    ? null
-    : (() => {
-        if (!mapData) return null
-        if (game?.phase !== 'fortify') return null
-        if (!selectedTerritoryId || !selectedTargetTerritoryId) return null
-        const src = territories.find((t) => t.id === selectedTerritoryId)
-        const dst = territories.find((t) => t.id === selectedTargetTerritoryId)
-        if (!src || !dst) return null
-        const left = (dst.x / mapData.width) * 100
-        const top = (dst.y / mapData.height) * 100
-        const srcArmies = Math.max(0, src.armies ?? 0)
-        const max = Math.max(0, srcArmies - 1)
-        if (max <= 0) return null
-        return { left, top, max }
-      })()
+  const fortifyPopup =
+    previewMode || !isMyTurn
+      ? null
+      : (() => {
+          if (!mapData) return null
+          if (game?.phase !== 'fortify') return null
+          if (!selectedTerritoryId || !selectedTargetTerritoryId) return null
+          const src = territories.find((t) => t.id === selectedTerritoryId)
+          const dst = territories.find((t) => t.id === selectedTargetTerritoryId)
+          if (!src || !dst) return null
+          const left = (dst.x / mapData.width) * 100
+          const top = (dst.y / mapData.height) * 100
+          const srcArmies = Math.max(0, src.armies ?? 0)
+          const max = Math.max(0, srcArmies - 1)
+          if (max <= 0) return null
+          return { left, top, max }
+        })()
 
   // Arrow-key cycling through owned territories; Esc clears selection
-  const viewerId = useAppSelector((s) => s.auth.user?.id)
   const ownedIds = useMemo(
     () => territories.filter((t) => t.owner === viewerId).map((t) => t.id),
     [territories, viewerId],
@@ -555,6 +560,7 @@ export default function UnifiedMapDisplay({
             winChancePercent={oddsTooltip.winChance}
             onAttack={() => {
               const id = selectedTargetTerritoryId ?? hoveredTargetId
+              if (!isMyTurn) return
               if (id && selectedTerritoryId) {
                 void dispatch(
                   executeAttack({ fromTerritoryId: selectedTerritoryId, toTerritoryId: id }),
@@ -571,6 +577,7 @@ export default function UnifiedMapDisplay({
             autoEnabled={autoAttacking}
             onToggleAuto={() => {
               const id = selectedTargetTerritoryId ?? hoveredTargetId
+              if (!isMyTurn) return
               if (!selectedTerritoryId || !id) return
               const next = !autoAttacking
               void dispatch(setAutoAttacking(next))

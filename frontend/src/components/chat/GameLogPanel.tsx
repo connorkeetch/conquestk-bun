@@ -117,9 +117,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
   }, [room])
 
-  // Backfill full history after game ends
+  // Backfill full history only after game ends (avoids 403 during active games)
   useEffect(() => {
-    if (!gameId || redact || backfillLoadedRef.current) {
+    const isFinished =
+      game?.phase === 'finished' ||
+      (room?.status as string | undefined) === 'completed' ||
+      (room?.status as string | undefined) === 'abandoned'
+
+    if (!gameId || redact || backfillLoadedRef.current || !isFinished) {
       return
     }
     let cancelled = false
@@ -282,7 +287,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status])
 
   useEffect(() => {
     function add(text: string, ts?: Date, focusTerritories?: string[]) {
