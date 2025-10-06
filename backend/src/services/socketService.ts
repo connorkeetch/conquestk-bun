@@ -1170,7 +1170,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               `UPDATE game_rooms SET turn_expires_at = NOW() + ($2 * INTERVAL '1 second') WHERE id = $1`,
               [data.roomId, seconds],
             )
-            const idKey = `afk:${data.roomId}:turn:${result.gameState.turn}:start:${Date.now()}`
+            // Use deterministic job id per room+turn, and cancel any existing AFK-start for this turn
+            const idKey = `afk:${data.roomId}:turn:${result.gameState.turn}:start`
+            try {
+              await queueService.removeGameActionJob(idKey)
+            } catch (_e) {
+              // best-effort
+            }
             await queueService.addDelayedGameAction(
               {
                 gameId: data.roomId,

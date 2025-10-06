@@ -733,25 +733,29 @@ export class GameLifecycleService {
       const snapshot = await this.getLifecycleSnapshot(roomId)
       await this.broadcastLifecycle(snapshot)
 
-      // Reschedule auto end-turn for chunk
+      // Reschedule AFK grace start for the extended chunk
       try {
-        const idKey = `auto-end:${roomId}:bank:${Date.now()}`
+        const turn = snapshot.room?.turnNumber ?? 0
+        const idKey = `afk:${roomId}:turn:${turn}:start`
+        // Cancel prior AFK-start for this turn, then schedule at new extended expiry
+        try {
+          await queueService.removeGameActionJob(idKey)
+        } catch (_c) {
+          // best-effort
+        }
         await queueService.addDelayedGameAction(
           {
             gameId: roomId,
             playerId: snapshot.room?.currentTurnUserId ?? '',
-            action: {
-              type: 'end_turn',
-              playerId: snapshot.room?.currentTurnUserId ?? '',
-              roomId,
-            },
+            action: { type: 'end_turn', playerId: snapshot.room?.currentTurnUserId ?? '', roomId },
             idempotencyKey: idKey,
+            afkStage: 'start',
           },
           extendBy * 1000,
           { idempotencyKey: idKey, priority: 10 },
         )
       } catch (e) {
-        logger.warn('Failed to reschedule end-turn after time bank extension', {
+        logger.warn('Failed to reschedule AFK grace after time bank extension', {
           roomId,
           error: e instanceof Error ? e.message : e,
         })
@@ -952,11 +956,12 @@ export class GameLifecycleService {
         id: string
         current_turn_user_id: string | null
         turn_number: number | null
+        turn_expires_at: Date | null
         grace_window_seconds: number | null
         grace_actor_user_id: string | null
         grace_expires_at: Date | null
       }>(
-        `SELECT id, current_turn_user_id, turn_number, grace_window_seconds, grace_actor_user_id, grace_expires_at
+        `SELECT id, current_turn_user_id, turn_number, turn_expires_at, grace_window_seconds, grace_actor_user_id, grace_expires_at
          FROM game_rooms
          WHERE id = $1
          FOR UPDATE`,
@@ -964,6 +969,11 @@ export class GameLifecycleService {
       )
       const room = roomRes.rows[0]
       if (!room || !room.current_turn_user_id) {
+        await client.query('ROLLBACK')
+        return
+      }
+      // If the turn has been extended (e.g., via time bank) and not yet expired, do not start grace.
+      if (room.turn_expires_at && room.turn_expires_at > new Date()) {
         await client.query('ROLLBACK')
         return
       }
@@ -1185,7 +1195,14 @@ export class GameLifecycleService {
           error: e instanceof Error ? e.message : e,
         })
       }
-      const idKey = `afk:${roomId}:turn:${room?.turnNumber ?? 0}:start:${Date.now()}`
+      // Use deterministic job id per room+turn to allow rescheduling/cancellation
+      const idKey = `afk:${roomId}:turn:${room?.turnNumber ?? 0}:start`
+      // Cancel any existing AFK-start for this turn before scheduling a new one
+      try {
+        await queueService.removeGameActionJob(idKey)
+      } catch (_e) {
+        // best-effort
+      }
       await queueService.addDelayedGameAction(
         {
           gameId: roomId,

@@ -313,6 +313,30 @@ export class QueueService {
     })
   }
 
+  // Remove a scheduled or waiting game action by its jobId (idempotencyKey)
+  async removeGameActionJob(jobId: string): Promise<boolean> {
+    if (!this.redis || !this.isInitialized) {
+      return false
+    }
+
+    const queue = this.resolveQueue('gameActions')
+    if (!queue) return false
+
+    try {
+      const job = await (queue as Bull.Queue).getJob(jobId)
+      if (job) {
+        await job.remove()
+        return true
+      }
+    } catch (error) {
+      logger.warn('Failed to remove game action job', {
+        jobId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+    return false
+  }
+
   // Schedule a delayed game action (e.g., auto end-turn). Attempts set to 1 by default.
   async addDelayedGameAction(
     job: GameActionJob,

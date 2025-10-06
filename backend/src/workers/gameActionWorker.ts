@@ -470,7 +470,13 @@ export class GameActionWorker {
       const room = await roomService.getRoomById(gameId)
       const seconds = room?.turnTimerSeconds ?? 0
       if (seconds && seconds > 0) {
-        const idKey = `afk:${gameId}:turn:next:${Date.now()}`
+        // Use deterministic job id per room+turn and cancel any existing AFK-start for this turn
+        const idKey = `afk:${gameId}:turn:${room?.turnNumber ?? 0}:start`
+        try {
+          await queueService.removeGameActionJob(idKey)
+        } catch (_e) {
+          // best-effort
+        }
         await queueService.addDelayedGameAction(
           {
             gameId,
