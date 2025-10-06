@@ -795,70 +795,9 @@ export class GameService {
     }
   }
 
-  async attack(roomId: string, userId: string, fromTerritoryId: string, toTerritoryId: string) {
-    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
-    if (!cachedState) throw new Error('Game not found')
-    const gameState = this.hydrateGameState(cachedState, roomId)
-    if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
-    if (gameState.phase !== 'attack') throw new Error('Not attack phase')
-
-    const action: GameAction = {
-      type: 'attack',
-      roomId,
-      playerId: userId,
-      payload: { fromTerritoryId, toTerritoryId },
-    }
-
-    if (!this.gameEngine.validateAction(gameState, action)) {
-      throw new Error('Invalid attack')
-    }
-
-    const { gameState: updatedState, battleResult } = await this.gameEngine.processAction(
-      gameState,
-      action,
-    )
-
-    if (!battleResult) {
-      throw new Error('Attack did not produce a battle result')
-    }
-
-    await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
-
-    if (battleResult.gameEnded) {
-      // Clean up GameEngine cache when game ends
-      this.gameEngine.clearModifiersCache(roomId)
-
-      if (notificationService.isEnabled()) {
-        const participantIds = updatedState.players.map((player) => player.id)
-        const winnerId = battleResult.winner?.id ?? updatedState.currentPlayer
-        notificationService.notifyGameEnd(roomId, winnerId, participantIds).catch((error) => {
-          logger.warn('Failed to send game end push notifications after battle', {
-            roomId,
-            error: error instanceof Error ? error.message : error,
-          })
-        })
-      }
-    }
-
-    if (battleResult.gameEnded && updatedState.gameConfig?.gameMode === 'assassination') {
-      this.recordAssassinationElimination(
-        roomId,
-        updatedState,
-        {
-          gameEnded: true,
-          winner: battleResult.winner ?? null,
-          eliminatedPlayers: battleResult.eliminatedPlayers ?? [],
-        },
-        userId,
-        'battle',
-      )
-    }
-
-    return {
-      ...battleResult,
-      gameState: this.serializeGameState(updatedState),
-    }
-  }
+  // Note: direct HTTP attack entry is intentionally not exposed.
+  // Attacks are handled via Socket.io (see socketService.ts), which routes
+  // through queued or inline processing and applies results via applyBattleResult.
 
   async transferConquestArmies(
     roomId: string,
