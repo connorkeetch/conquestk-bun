@@ -39,10 +39,20 @@ export function TreasureHud({ variant = 'header' }: Props) {
     const file =
       m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
     const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
+    const diamondBonus = Math.max(
+      0,
+      ((room?.treasureConfig as unknown as TreasureConfig | undefined)?.diamondSetBonus ??
+        3) as number,
+    )
+    const title =
+      file === 'diamond'
+        ? `Diamond (+${diamondBonus} bonus)`
+        : file.charAt(0).toUpperCase() + file.slice(1)
     return (
       <img
         src={url}
         alt={`${file} card`}
+        title={title}
         className="inline-block align-middle"
         width={12}
         height={12}
