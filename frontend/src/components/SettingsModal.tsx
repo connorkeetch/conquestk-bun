@@ -1,66 +1,44 @@
+import { normalizeThemeId } from '@shared/types/themes'
 import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
-import { FEATURE_FLAGS } from '../constants/featureFlags'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import { useEffect, useId, useRef, useState } from 'react'
+import { applyTheme, storeTheme, THEMES } from '../config/themes.config'
+import type { PlayerColor } from '../constants/colors'
+import { COLOR_DISPLAY_NAMES, COLOR_HEX_VALUES, STANDARD_COLORS } from '../constants/colors'
+import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import audioService from '../services/audioService'
+import {
+  setColorblindMode,
+  setColorTheme,
+  setPerformanceMode,
+  setPreferredColor,
+} from '../store/settingsSlice'
 
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-type SettingsTab =
-  | 'account'
-  | 'game'
-  | 'audio'
-  | 'display'
-  | 'notifications'
-  | 'privacy'
-  | 'advanced'
+type SettingsTab = 'audio' | 'display' | 'game' | 'keyboard'
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+  const dispatch = useAppDispatch()
+  const settings = useAppSelector((state) => state.settings)
+  const [activeTab, setActiveTab] = useState<SettingsTab>('audio')
   const modalRef = useRef<HTMLDivElement>(null)
-  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
-  const controlIds = {
-    username: 'settings-username',
-    email: 'settings-email',
-    defaultTurnTime: 'settings-default-turn-time',
-    preferredMapStyle: 'settings-preferred-map-style',
-    masterVolume: 'settings-master-volume',
-    soundEffects: 'settings-sound-effects',
-    backgroundMusic: 'settings-background-music',
-    voiceChatVolume: 'settings-voice-chat-volume',
-    autoEndTurn: 'settings-auto-end-turn',
-    showAttackAnimations: 'settings-show-attack-animations',
-    fastBattleMode: 'settings-fast-battle-mode',
-    muteWhenMinimized: 'settings-mute-when-minimized',
-    battleSoundEffects: 'settings-battle-sound-effects',
-    fullscreenMode: 'settings-fullscreen-mode',
-    highContrastMode: 'settings-high-contrast-mode',
-    reduceMotion: 'settings-reduce-motion',
-    territoryDisplayStyle: 'settings-territory-display-style',
-    showTerritoryNames: 'settings-show-territory-names',
-    turnNotifications: 'settings-turn-notifications',
-    gameInvitations: 'settings-game-invitations',
-    gameEnded: 'settings-game-ended',
-    friendRequests: 'settings-friend-requests',
-    messages: 'settings-messages',
-    weeklySummary: 'settings-weekly-summary',
-    tournamentUpdates: 'settings-tournament-updates',
-    privacyProfileVisibility: 'settings-privacy-profile-visibility',
-    messagePrivacy: 'settings-message-privacy',
-    gameInvitePrivacy: 'settings-game-invite-privacy',
-    showGameStatistics: 'settings-show-game-statistics',
-    showOnlineStatus: 'settings-show-online-status',
-    dataUsageLevel: 'settings-data-usage-level',
-    analyticsOptIn: 'settings-analytics-opt-in',
-    performanceMetrics: 'settings-performance-metrics',
-    renderingQuality: 'settings-rendering-quality',
-    hardwareAcceleration: 'settings-hardware-acceleration',
-    vSync: 'settings-vsync',
-    debugMode: 'settings-debug-mode',
-    consoleLogging: 'settings-console-logging',
-  } as const
+
+  // Generate unique IDs for form elements
+  const masterVolumeId = useId()
+  const sfxVolumeId = useId()
+  const musicVolumeId = useId()
+  const muteAllId = useId()
+  const colorblindModeId = useId()
+  const performanceModeId = useId()
+
+  // Audio state (managed by audioService)
+  const [masterVolume, setMasterVolume] = useState(() => audioService.getMasterVolume())
+  const [sfxVolume, setSfxVolume] = useState(() => audioService.getSFXVolume())
+  const [musicVolume, setMusicVolume] = useState(() => audioService.getMusicVolume())
+  const [isMuted, setIsMuted] = useState(() => audioService.isMutedState())
 
   // Handle keyboard shortcuts and escape key
   useEffect(() => {
@@ -101,200 +79,56 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null
 
   const settingsTabs = [
-    { id: 'account' as SettingsTab, label: 'Account', icon: '👤' },
-    { id: 'game' as SettingsTab, label: 'Game', icon: '🎮' },
     { id: 'audio' as SettingsTab, label: 'Audio', icon: '🔊' },
     { id: 'display' as SettingsTab, label: 'Display', icon: '🖥️' },
-    { id: 'notifications' as SettingsTab, label: 'Notifications', icon: '🔔' },
-    { id: 'privacy' as SettingsTab, label: 'Privacy', icon: '🛡️' },
-    { id: 'advanced' as SettingsTab, label: 'Advanced', icon: '⚙️' },
+    { id: 'game' as SettingsTab, label: 'Game', icon: '🎮' },
+    { id: 'keyboard' as SettingsTab, label: 'Keyboard', icon: '⌨️' },
   ]
+
+  // Audio handlers
+  const handleMasterVolumeChange = (value: number) => {
+    setMasterVolume(value)
+    audioService.setMasterVolume(value)
+  }
+
+  const handleSFXVolumeChange = (value: number) => {
+    setSfxVolume(value)
+    audioService.setSFXVolume(value)
+  }
+
+  const handleMusicVolumeChange = (value: number) => {
+    setMusicVolume(value)
+    audioService.setMusicVolume(value)
+  }
+
+  const handleToggleMute = () => {
+    audioService.toggleMute()
+    setIsMuted(audioService.isMutedState())
+  }
+
+  // Display handlers
+  const handleThemeChange = (themeId: string) => {
+    const normalized = normalizeThemeId(themeId)
+    applyTheme(normalized)
+    storeTheme(normalized)
+    dispatch(setColorTheme(normalized))
+  }
+
+  const handleColorblindToggle = (enabled: boolean) => {
+    dispatch(setColorblindMode(enabled))
+  }
+
+  const handlePerformanceToggle = (enabled: boolean) => {
+    dispatch(setPerformanceMode(enabled))
+  }
+
+  // Game handlers
+  const handlePreferredColorChange = (color: PlayerColor) => {
+    dispatch(setPreferredColor(color))
+  }
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'account':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Account Information</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <label
-                    htmlFor={controlIds.username}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Username
-                  </label>
-                  <input
-                    id={controlIds.username}
-                    type="text"
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="Enter username"
-                    defaultValue="Player123"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor={controlIds.email}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Email
-                  </label>
-                  <input
-                    id={controlIds.email}
-                    type="email"
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="Enter email"
-                    defaultValue="player@example.com"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Avatar</h3>
-              <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-2xl font-bold">
-                  P
-                </div>
-                <div>
-                  <button type="button" className="btn btn-secondary btn-sm">
-                    📁 Upload New Avatar
-                  </button>
-                  <p className="text-xs text-muted">Recommended: 256x256px, JPG or PNG</p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Security</h3>
-              <div className="space-y-3">
-                <button type="button" className="btn btn-secondary w-full justify-start">
-                  🔑 Change Password
-                </button>
-                <button type="button" className="btn btn-secondary w-full justify-start">
-                  📱 Two-Factor Authentication
-                </button>
-                <button type="button" className="btn btn-danger w-full justify-start">
-                  🗑️ Delete Account
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-
-      case 'game':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Gameplay Preferences</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.autoEndTurn}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Auto-end Turn
-                    </label>
-                    <p className="text-xs text-muted">
-                      Automatically end turn when no moves available
-                    </p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.autoEndTurn} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.showAttackAnimations}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Show Attack Animations
-                    </label>
-                    <p className="text-xs text-muted">Display dice rolling and battle animations</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.showAttackAnimations} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.fastBattleMode}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Fast Battle Mode
-                    </label>
-                    <p className="text-xs text-muted">
-                      Skip individual dice animations for faster gameplay
-                    </p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.fastBattleMode} type="checkbox" />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Turn Timer</h3>
-              <div className="space-y-3">
-                <div>
-                  <label
-                    htmlFor={controlIds.defaultTurnTime}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Default Turn Time (seconds)
-                  </label>
-                  <select
-                    id={controlIds.defaultTurnTime}
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  >
-                    <option value="60">60 seconds</option>
-                    <option value="120" selected>
-                      120 seconds
-                    </option>
-                    <option value="180">180 seconds</option>
-                    <option value="300">300 seconds</option>
-                    <option value="0">No limit</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Map Preferences</h3>
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor={controlIds.preferredMapStyle}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Preferred Map Style
-                  </label>
-                  <select
-                    id={controlIds.preferredMapStyle}
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  >
-                    <option value="classic">Classic Risk</option>
-                    <option value="custom" selected>
-                      Custom Maps
-                    </option>
-                    <option value="both">Both</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-
       case 'audio':
         return (
           <div className="space-y-6">
@@ -302,70 +136,56 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Volume Controls</h3>
               <div className="space-y-4">
                 <div>
-                  <label
-                    htmlFor={controlIds.masterVolume}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Master Volume
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label htmlFor={masterVolumeId} className="text-sm font-medium text-muted">
+                      Master Volume
+                    </label>
+                    <span className="text-sm text-muted">{masterVolume}%</span>
+                  </div>
                   <input
-                    id={controlIds.masterVolume}
+                    id={masterVolumeId}
                     type="range"
                     className="w-full"
                     min="0"
                     max="100"
-                    defaultValue="75"
+                    value={masterVolume}
+                    onChange={(e) => handleMasterVolumeChange(Number(e.target.value))}
                   />
                 </div>
 
                 <div>
-                  <label
-                    htmlFor={controlIds.soundEffects}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Sound Effects
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label htmlFor={sfxVolumeId} className="text-sm font-medium text-muted">
+                      Sound Effects
+                    </label>
+                    <span className="text-sm text-muted">{sfxVolume}%</span>
+                  </div>
                   <input
-                    id={controlIds.soundEffects}
+                    id={sfxVolumeId}
                     type="range"
                     className="w-full"
                     min="0"
                     max="100"
-                    defaultValue="60"
+                    value={sfxVolume}
+                    onChange={(e) => handleSFXVolumeChange(Number(e.target.value))}
                   />
                 </div>
 
                 <div>
-                  <label
-                    htmlFor={controlIds.backgroundMusic}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Background Music
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label htmlFor={musicVolumeId} className="text-sm font-medium text-muted">
+                      Background Music
+                    </label>
+                    <span className="text-sm text-muted">{musicVolume}%</span>
+                  </div>
                   <input
-                    id={controlIds.backgroundMusic}
+                    id={musicVolumeId}
                     type="range"
                     className="w-full"
                     min="0"
                     max="100"
-                    defaultValue="40"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor={controlIds.voiceChatVolume}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Voice Chat
-                  </label>
-                  <input
-                    id={controlIds.voiceChatVolume}
-                    type="range"
-                    className="w-full"
-                    min="0"
-                    max="100"
-                    defaultValue="80"
+                    value={musicVolume}
+                    onChange={(e) => handleMusicVolumeChange(Number(e.target.value))}
                   />
                 </div>
               </div>
@@ -376,34 +196,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <label
-                      htmlFor={controlIds.muteWhenMinimized}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Mute When Minimized
+                    <label htmlFor={muteAllId} className="text-sm font-medium text-muted">
+                      Mute All Audio
                     </label>
-                    <p className="text-xs text-muted">
-                      Automatically mute when game window is not active
-                    </p>
+                    <p className="text-xs text-muted">Quickly silence all game sounds</p>
                   </div>
                   <label className="toggle">
-                    <input id={controlIds.muteWhenMinimized} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.battleSoundEffects}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Battle Sound Effects
-                    </label>
-                    <p className="text-xs text-muted">Play sounds during dice battles</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.battleSoundEffects} type="checkbox" defaultChecked />
+                    <input
+                      id={muteAllId}
+                      type="checkbox"
+                      checked={isMuted}
+                      onChange={handleToggleMute}
+                    />
                     <span className="slider"></span>
                   </label>
                 </div>
@@ -418,18 +222,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Theme</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors bg-surface-1">
-                  <div className="w-full h-8 bg-gradient-to-r from-gray-800 to-gray-900 rounded mb-2"></div>
-                  <p className="text-sm text-center">Dark (Current)</p>
-                </div>
-                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors">
-                  <div className="w-full h-8 bg-gradient-to-r from-gray-100 to-gray-200 rounded mb-2"></div>
-                  <p className="text-sm text-center">Light</p>
-                </div>
-                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors">
-                  <div className="w-full h-8 bg-gradient-to-r from-blue-800 to-purple-800 rounded mb-2"></div>
-                  <p className="text-sm text-center">Gaming</p>
-                </div>
+                {Object.entries(THEMES).map(([id, theme]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleThemeChange(id)}
+                    className={`border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors ${
+                      settings.display.theme === id
+                        ? 'border-primary bg-surface-2'
+                        : 'border-border'
+                    }`}
+                  >
+                    <div
+                      className="w-full h-8 rounded mb-2"
+                      style={{
+                        background: theme.colors.surface1 || '#1a1a1a',
+                      }}
+                    />
+                    <p className="text-sm text-center">{theme.name}</p>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -438,479 +250,118 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <label
-                      htmlFor={controlIds.fullscreenMode}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Fullscreen Mode
+                    <label htmlFor={colorblindModeId} className="text-sm font-medium text-muted">
+                      Colorblind Mode
                     </label>
-                    <p className="text-xs text-muted">Use fullscreen for immersive gaming</p>
+                    <p className="text-xs text-muted">Use patterns in addition to colors</p>
                   </div>
                   <label className="toggle">
-                    <input id={controlIds.fullscreenMode} type="checkbox" />
+                    <input
+                      id={colorblindModeId}
+                      type="checkbox"
+                      checked={settings.display.colorblindMode || false}
+                      onChange={(e) => handleColorblindToggle(e.target.checked)}
+                    />
                     <span className="slider"></span>
                   </label>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <label
-                      htmlFor={controlIds.highContrastMode}
-                      className="text-sm font-medium text-muted"
-                    >
-                      High Contrast Mode
+                    <label htmlFor={performanceModeId} className="text-sm font-medium text-muted">
+                      Performance Mode
                     </label>
-                    <p className="text-xs text-muted">Increase contrast for better visibility</p>
+                    <p className="text-xs text-muted">Reduce animations for better performance</p>
                   </div>
                   <label className="toggle">
-                    <input id={controlIds.highContrastMode} type="checkbox" />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.reduceMotion}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Reduce Motion
-                    </label>
-                    <p className="text-xs text-muted">Minimize animations and transitions</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.reduceMotion} type="checkbox" />
+                    <input
+                      id={performanceModeId}
+                      type="checkbox"
+                      checked={settings.performance.mode || false}
+                      onChange={(e) => handlePerformanceToggle(e.target.checked)}
+                    />
                     <span className="slider"></span>
                   </label>
                 </div>
               </div>
             </div>
+          </div>
+        )
 
+      case 'game':
+        return (
+          <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold mb-4">Map Display</h3>
+              <h3 className="text-lg font-semibold mb-4">Preferred Color</h3>
+              <p className="text-sm text-muted mb-4">
+                Choose your default player color for new games
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {STANDARD_COLORS.map((color) => {
+                  const hexValue = COLOR_HEX_VALUES[color]
+                  const displayName = COLOR_DISPLAY_NAMES[color]
+                  const isSelected = settings.game.preferredColor === color
+
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => handlePreferredColorChange(color)}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all ${
+                        isSelected
+                          ? 'border-primary bg-surface-2 shadow-lg'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div
+                        className="w-12 h-12 rounded-full border-2 border-white/20"
+                        style={{ backgroundColor: hexValue }}
+                      />
+                      <span className="text-xs text-center">{displayName}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'keyboard':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Keyboard Shortcuts</h3>
               <div className="space-y-3">
-                <div>
-                  <label
-                    htmlFor={controlIds.territoryDisplayStyle}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Territory Label Size
-                  </label>
-                  <select
-                    id={controlIds.territoryDisplayStyle}
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  >
-                    <option value="small">Small</option>
-                    <option value="medium" selected>
-                      Medium
-                    </option>
-                    <option value="large">Large</option>
-                  </select>
+                <div className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
+                  <span className="text-sm">Open Chat</span>
+                  <kbd className="px-3 py-1 bg-surface-1 border border-border rounded text-sm">
+                    C
+                  </kbd>
                 </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.showTerritoryNames}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Show Territory Names
-                    </label>
-                    <p className="text-xs text-muted">Display territory names on map</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.showTerritoryNames} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
+                <div className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
+                  <span className="text-sm">Open Settings</span>
+                  <kbd className="px-3 py-1 bg-surface-1 border border-border rounded text-sm">
+                    S
+                  </kbd>
                 </div>
-              </div>
-            </div>
-          </div>
-        )
-
-      case 'notifications':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Game Notifications</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.turnNotifications}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Turn Notifications
-                    </label>
-                    <p className="text-xs text-muted">Get notified when it's your turn</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.turnNotifications} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
+                <div className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
+                  <span className="text-sm">Toggle Mute</span>
+                  <kbd className="px-3 py-1 bg-surface-1 border border-border rounded text-sm">
+                    M
+                  </kbd>
                 </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.gameInvitations}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Game Invitations
-                    </label>
-                    <p className="text-xs text-muted">Receive notifications for game invites</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.gameInvitations} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
+                <div className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
+                  <span className="text-sm">End Turn</span>
+                  <kbd className="px-3 py-1 bg-surface-1 border border-border rounded text-sm">
+                    E
+                  </kbd>
                 </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.gameEnded}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Game Ended
-                    </label>
-                    <p className="text-xs text-muted">Notification when games you're in end</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.gameEnded} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
+                <div className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
+                  <span className="text-sm">Close Modal</span>
+                  <kbd className="px-3 py-1 bg-surface-1 border border-border rounded text-sm">
+                    Esc
+                  </kbd>
                 </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Social Notifications</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.friendRequests}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Friend Requests
-                    </label>
-                    <p className="text-xs text-muted">Notifications for new friend requests</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.friendRequests} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label htmlFor={controlIds.messages} className="text-sm font-medium text-muted">
-                      Messages
-                    </label>
-                    <p className="text-xs text-muted">Private message notifications</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.messages} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Email Notifications</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.weeklySummary}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Weekly Summary
-                    </label>
-                    <p className="text-xs text-muted">Receive weekly gameplay statistics</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.weeklySummary} type="checkbox" />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                {comingSoonUiEnabled && (
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <label
-                        htmlFor={controlIds.tournamentUpdates}
-                        className="text-sm font-medium text-muted"
-                      >
-                        Tournament Updates
-                      </label>
-                      <p className="text-xs text-muted">Get notified about tournaments</p>
-                    </div>
-                    <label className="toggle">
-                      <input id={controlIds.tournamentUpdates} type="checkbox" defaultChecked />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-
-      case 'privacy':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Profile Visibility</h3>
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor={controlIds.privacyProfileVisibility}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Profile Visibility
-                  </label>
-                  <select
-                    id={controlIds.privacyProfileVisibility}
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  >
-                    <option value="public" selected>
-                      Public - Anyone can view
-                    </option>
-                    <option value="friends">Friends Only</option>
-                    <option value="private">Private - Hidden</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.showGameStatistics}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Show Game Statistics
-                    </label>
-                    <p className="text-xs text-muted">Allow others to see your win/loss record</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.showGameStatistics} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.showOnlineStatus}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Show Online Status
-                    </label>
-                    <p className="text-xs text-muted">Let friends see when you're online</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.showOnlineStatus} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Communication</h3>
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor={controlIds.messagePrivacy}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Who can message you
-                  </label>
-                  <select
-                    id={controlIds.messagePrivacy}
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  >
-                    <option value="everyone">Everyone</option>
-                    <option value="friends" selected>
-                      Friends Only
-                    </option>
-                    <option value="nobody">Nobody</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor={controlIds.gameInvitePrivacy}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Who can invite you to games
-                  </label>
-                  <select
-                    id={controlIds.gameInvitePrivacy}
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  >
-                    <option value="everyone" selected>
-                      Everyone
-                    </option>
-                    <option value="friends">Friends Only</option>
-                    <option value="nobody">Nobody</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Data & Analytics</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.analyticsOptIn}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Gameplay Analytics
-                    </label>
-                    <p className="text-xs text-muted">Help improve the game with usage data</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.analyticsOptIn} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.performanceMetrics}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Performance Metrics
-                    </label>
-                    <p className="text-xs text-muted">
-                      Share performance data to help optimize the game
-                    </p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.performanceMetrics} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-
-      case 'advanced':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Performance</h3>
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor={controlIds.renderingQuality}
-                    className="block text-sm font-medium text-muted mb-2"
-                  >
-                    Graphics Quality
-                  </label>
-                  <select
-                    id={controlIds.renderingQuality}
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium" selected>
-                      Medium
-                    </option>
-                    <option value="high">High</option>
-                    <option value="ultra">Ultra</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.hardwareAcceleration}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Hardware Acceleration
-                    </label>
-                    <p className="text-xs text-muted">Use GPU for rendering (requires restart)</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.hardwareAcceleration} type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label htmlFor={controlIds.vSync} className="text-sm font-medium text-muted">
-                      Enable V-Sync
-                    </label>
-                    <p className="text-xs text-muted">Synchronize frame rate with display</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.vSync} type="checkbox" />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Developer Options</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.debugMode}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Debug Mode
-                    </label>
-                    <p className="text-xs text-muted">Show additional debug information</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.debugMode} type="checkbox" />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label
-                      htmlFor={controlIds.consoleLogging}
-                      className="text-sm font-medium text-muted"
-                    >
-                      Console Logging
-                    </label>
-                    <p className="text-xs text-muted">Enable detailed console logs</p>
-                  </div>
-                  <label className="toggle">
-                    <input id={controlIds.consoleLogging} type="checkbox" />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Data Management</h3>
-              <div className="space-y-3">
-                <button type="button" className="btn btn-secondary w-full justify-start">
-                  📊 Export Game Data
-                </button>
-                <button type="button" className="btn btn-secondary w-full justify-start">
-                  💾 Backup Settings
-                </button>
-                <button type="button" className="btn btn-danger w-full justify-start">
-                  🗑️ Clear Cache
-                </button>
-                <button type="button" className="btn btn-danger w-full justify-start">
-                  ⚠️ Reset All Settings
-                </button>
               </div>
             </div>
           </div>
@@ -964,7 +415,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
                       activeTab === tab.id
                         ? 'bg-primary text-white'
-                        : 'text-muted hover:bg-surface-1 hover:text-white'
+                        : 'text-muted hover:bg-surface-2 hover:text-white'
                     }`}
                   >
                     <span className="text-lg">{tab.icon}</span>
@@ -984,18 +435,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-border bg-surface-1">
           <div className="text-sm text-muted">Changes are saved automatically</div>
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary">
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors"
-            >
-              Save & Close
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-all"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
