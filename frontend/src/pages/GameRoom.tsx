@@ -202,11 +202,7 @@ export default function GameRoom() {
     currentRoom && (currentRoom.players?.length ?? 0) >= currentRoom.maxPlayers,
   )
 
-  const _hostIsAloneInLobby = useMemo(() => {
-    if (!currentRoom || !isHost) return false
-    const count = currentRoom.players?.length ?? 0
-    return (currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && count <= 1
-  }, [currentRoom, isHost])
+  // Host-alone detection unused after simplifying close/leave logic
 
   // Team assignment UI not used here
 
