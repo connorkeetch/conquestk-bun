@@ -63,7 +63,8 @@ export function TokenLayer({
           luminance < 0.5
             ? lightenColor(String(color), 0.25)
             : mixColors(String(color), '#000000', 0.3)
-        const ringWidth = isSelected ? 4 : 3
+        // Scale ring width with token size so it looks balanced at different scales
+        const ringWidth = Math.max(2, Math.round((isSelected ? 0.16 : 0.12) * baseSize))
         const border = ringWidth
         const colorGlow = hexToRgba(String(color), dimmed ? 0.3 : 0.5)
         const innerFill = lightenColor(String(color), 0.15)
@@ -132,7 +133,7 @@ export function TokenLayer({
                 <span
                   style={{
                     color: 'white',
-                    fontSize: 14,
+                    fontSize: Math.max(10, Math.round(baseSize * 0.45)),
                     fontWeight: 700,
                     textShadow: '0 1px 2px rgba(0,0,0,0.85)',
                     lineHeight: 1,

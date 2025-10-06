@@ -34,7 +34,11 @@ function TerritoryTokenComponent({
   opacity = 0.6,
   showArmies = true,
 }: TerritoryTokenProps) {
+  const labelSize = Math.max(10, Math.round(size * 0.44))
   const style = useMemo<React.CSSProperties>(() => {
+    // Scale ring thickness and label size with token size for better readability
+    const baseRing = Math.max(1, Math.round(size * 0.08))
+    const selectedRing = Math.max(baseRing + 1, Math.round(size * 0.12))
     const baseStyle: React.CSSProperties = {
       width: `${size}px`,
       height: `${size}px`,
@@ -51,7 +55,7 @@ function TerritoryTokenComponent({
       padding: 0,
       boxSizing: 'border-box',
       boxShadow: isSelected
-        ? `0 0 0 3px ${color}, 0 0 25px ${color}, 0 0 40px ${color}, 0 4px 8px rgba(0,0,0,0.4)`
+        ? `0 2px 8px rgba(0,0,0,0.5), 0 0 10px ${color}`
         : '0 2px 4px rgba(0,0,0,0.3)',
       zIndex: isDragging ? 1000 : isSelected ? 100 : 10,
       display: 'flex',
@@ -59,10 +63,10 @@ function TerritoryTokenComponent({
       justifyContent: 'center',
       userSelect: 'none',
       border: isSelected
-        ? `3px solid ${color}`
+        ? `${selectedRing}px solid ${color}`
         : outlineColor
-          ? `2px solid ${outlineColor}`
-          : `1px solid rgba(255,255,255,0.2)`,
+          ? `${baseRing}px solid ${outlineColor}`
+          : `${Math.max(1, Math.round(size * 0.06))}px solid rgba(255,255,255,0.25)`,
       animation: isSelected ? 'tokenPulse 2s ease-in-out infinite' : 'none',
     }
 
@@ -99,10 +103,11 @@ function TerritoryTokenComponent({
         <span
           style={{
             color: 'white',
-            fontSize: `${size * 0.4}px`,
+            fontSize: `${labelSize}px`,
             fontWeight: 'bold',
             textShadow: '0 1px 2px rgba(0,0,0,0.8)',
             pointerEvents: 'none',
+            lineHeight: 1,
           }}
         >
           {armies}
