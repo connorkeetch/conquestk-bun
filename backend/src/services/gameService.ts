@@ -1784,8 +1784,8 @@ export class GameService {
       ) as (typeof snapshot)[]
       const updated = [...current, snapshot].slice(-500)
       await client.query(
-        `INSERT INTO game_states (room_id, turn_stats, last_activity)
-         VALUES ($1, $2, NOW())
+        `INSERT INTO game_states (room_id, turn_stats, last_activity, game_phase, turn_number)
+         VALUES ($1, $2, NOW(), 'lobby', 1)
          ON CONFLICT (room_id) DO UPDATE SET turn_stats = EXCLUDED.turn_stats, last_activity = NOW()`,
         [roomId, JSON.stringify(updated)],
       )
@@ -2371,8 +2371,8 @@ export class GameService {
         : []
       const updated = [...current, ...entries].slice(-500)
       await client.query(
-        `INSERT INTO game_states (room_id, game_log, last_activity)
-         VALUES ($1, $2, NOW())
+        `INSERT INTO game_states (room_id, game_log, last_activity, game_phase, turn_number)
+         VALUES ($1, $2, NOW(), 'lobby', 1)
          ON CONFLICT (room_id) DO UPDATE SET game_log = EXCLUDED.game_log, last_activity = NOW()`,
         [roomId, JSON.stringify(updated)],
       )
