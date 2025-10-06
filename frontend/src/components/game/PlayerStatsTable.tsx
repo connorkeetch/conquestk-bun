@@ -1,5 +1,6 @@
 import type React from 'react'
 import { memo, useCallback, useMemo, useState } from 'react'
+import TreasureHud from '@/components/game/TreasureHud'
 import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getColorValue } from '@/constants/colors'
@@ -53,8 +54,11 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
     return (
       <>
         <div className="panel p-0 overflow-hidden">
-          <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+          <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)] flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</h3>
+            <div className="shrink-0">
+              <TreasureHud variant="compact" />
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[420px]">

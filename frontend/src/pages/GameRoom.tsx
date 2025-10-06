@@ -8,7 +8,6 @@ import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import GameRoomFooter from '@/components/game/GameRoomFooter'
 // Player stats modal removed; drawers are used on all devices
 import { ResyncBanner } from '@/components/game/ResyncBanner'
-import TreasureHud from '@/components/game/TreasureHud'
 import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import SettingsModal from '@/components/SettingsModal'
@@ -225,6 +224,12 @@ export default function GameRoom() {
     const minutes = Math.floor(ms / (60 * 1000))
     return `Expires in ${minutes}m`
   }, [])
+
+  // Show phase/timer only after game has started
+  const showPhaseBar = useMemo(
+    () => Boolean(currentGame && currentRoom?.status === 'active'),
+    [currentGame, currentRoom?.status],
+  )
 
   // Lobby team details omitted in this view
 
@@ -1011,23 +1016,71 @@ export default function GameRoom() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] 2xl:max-w-none flex-col gap-6 px-6 pb-20 pt-8 lg:px-10">
-      {/* Mini HUD for mobile (phase + timer). Ensure it sits below the sticky header. */}
-      {currentGame && (
-        <div
-          className="md:hidden fixed left-1/2 z-40 -translate-x-1/2"
-          style={{ top: 'calc(env(safe-area-inset-top) + 56px + 8px)' }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setMobileDrawerOpen(true)
-            }}
-            className="flex items-center gap-2 rounded-full border border-border bg-surface-2/80 backdrop-blur px-4 py-2 text-sm shadow min-h-[44px]"
-            title="Open sidebar"
-            aria-controls={mobileDrawerId}
-            aria-expanded={!!mobileDrawerOpen}
+    <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] 2xl:max-w-none flex-col gap-6 px-6 pb-20 pt-2 lg:px-10">
+      {/* Sticky title banner below main header */}
+      <div
+        className="sticky z-40 -mx-6 px-6 bg-[color:color-mix(in srgb, var(--surface-1) 92%, transparent)] backdrop-blur border-b border-border"
+        style={{ top: 'calc(env(safe-area-inset-top) + 56px)' }}
+      >
+        {/* One-line top banner with room info + actions */}
+        <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]">
+          <div
+            className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
+            title={`${currentRoom.name}${
+              typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''
+            } • Hosted by ${hostDisplay(currentRoom)} • ${seatUsage(currentRoom).label}`}
           >
+            <span className="truncate">
+              {currentRoom.name}
+              {typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}
+              <span className="mx-2 opacity-60">•</span>
+              Hosted by <span className="font-semibold">{hostDisplay(currentRoom)}</span>
+              <span className="mx-2 opacity-60">•</span>
+              {seatUsage(currentRoom).label}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {!isMember && (
+              <button
+                onClick={() => openJoinDialog()}
+                disabled={joinActionDisabled}
+                type="button"
+                title={joinButtonTitle}
+                className="btn btn-primary btn-sm"
+              >
+                {joinButtonLabel}
+              </button>
+            )}
+            {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
+              <>
+                <button
+                  onClick={() => void handleCopyInviteLink()}
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  title="Copy invite link"
+                  aria-live="polite"
+                >
+                  {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
+                </button>
+                {isHost ? (
+                  <button
+                    onClick={() => void handleCancelRoom()}
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                  >
+                    Close Room
+                  </button>
+                ) : (
+                  <button onClick={handleLeaveRoom} type="button" className="btn btn-danger btn-sm">
+                    Leave Room
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+        {showPhaseBar && currentGame && (
+          <div className="flex items-center gap-3 py-2">
             <span className="chip text-[10px]">
               {currentGame.phase.charAt(0).toUpperCase() + currentGame.phase.slice(1)}
             </span>
@@ -1040,74 +1093,17 @@ export default function GameRoom() {
                     className="inline-block w-2.5 h-2.5 rounded-full border border-white/50"
                     style={{ background: p?.color ? getColorValue(p.color) : '#9CA3AF' }}
                   />
-                  <span className="max-w-[120px] truncate">{p?.username || 'Player'}</span>
+                  <span className="max-w-[160px] truncate">{p?.username || 'Player'}</span>
                 </span>
               )
             })()}
-          </button>
-          {/* Removed floating Treasure HUD (duplicate of header HUD on mobile) */}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
+
+      {/* Banners appear below the sticky title */}
       <ConnectionBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
-      {/* One-line top banner with room info + actions */}
-      <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]">
-        <div
-          className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
-          title={`${currentRoom.name}${
-            typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''
-          } • Hosted by ${hostDisplay(currentRoom)} • ${seatUsage(currentRoom).label}`}
-        >
-          <span className="truncate">
-            {currentRoom.name}
-            {typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}
-            <span className="mx-2 opacity-60">•</span>
-            Hosted by <span className="font-semibold">{hostDisplay(currentRoom)}</span>
-            <span className="mx-2 opacity-60">•</span>
-            {seatUsage(currentRoom).label}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {currentGame && <TreasureHud variant="header" />}
-          {!isMember && (
-            <button
-              onClick={() => openJoinDialog()}
-              disabled={joinActionDisabled}
-              type="button"
-              title={joinButtonTitle}
-              className="btn btn-primary btn-sm"
-            >
-              {joinButtonLabel}
-            </button>
-          )}
-          {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
-            <>
-              <button
-                onClick={() => void handleCopyInviteLink()}
-                type="button"
-                className="btn btn-secondary btn-sm"
-                title="Copy invite link"
-                aria-live="polite"
-              >
-                {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
-              </button>
-              {isHost ? (
-                <button
-                  onClick={() => void handleCancelRoom()}
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                >
-                  Close Room
-                </button>
-              ) : (
-                <button onClick={handleLeaveRoom} type="button" className="btn btn-danger btn-sm">
-                  Leave Room
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
 
       {joinError && (
         <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-sm text-[color:var(--color-danger)]">
