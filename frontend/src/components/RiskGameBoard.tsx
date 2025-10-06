@@ -134,6 +134,10 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   }, [gameState?.players, lobbyMode, lobbyPlayers])
   const currentPlayer = lobbyMode ? '' : (gameState?.currentPlayer ?? '')
   const currentPhase = lobbyMode ? 'lobby' : (gameState?.phase ?? 'reinforcement')
+  const isMyTurn = useMemo(
+    () => Boolean(!lobbyMode && viewerId && currentPlayer === viewerId),
+    [lobbyMode, viewerId, currentPlayer],
+  )
 
   const isSpectator = useMemo(() => {
     if (!viewerId) return true
@@ -198,6 +202,11 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const handleTerritoryClick = useCallback(
     (territoryId: string) => {
       if (!gameState) {
+        return
+      }
+
+      // Disable map interactions when it's not the viewer's turn or viewer is a spectator
+      if (lobbyMode || isSpectator || !isMyTurn) {
         return
       }
 
@@ -284,6 +293,9 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       gameState,
       onTerritoryClick,
       roomId,
+      isMyTurn,
+      isSpectator,
+      lobbyMode,
       selectedTerritory,
       territories,
       validTargets,
