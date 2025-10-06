@@ -635,6 +635,16 @@ class SocketService {
           (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
             .timeBankSecondsRemaining,
         readyCheckStartedAt: payload.readyCheckStartedAt,
+        statusMessage:
+          typeof (payload as Record<string, unknown>).statusMessage === 'string'
+            ? ((payload as Record<string, unknown>).statusMessage as string)
+            : undefined,
+        statusMessageLevel:
+          (payload as Record<string, unknown>).statusMessageLevel === 'error' ||
+          (payload as Record<string, unknown>).statusMessageLevel === 'warn' ||
+          (payload as Record<string, unknown>).statusMessageLevel === 'info'
+            ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
+            : undefined,
         // Grace/replacement fields may be included by backend depending on lifecycle
         graceActorUserId:
           typeof (payload as Record<string, unknown>).graceActorUserId === 'string'
@@ -731,6 +741,16 @@ class SocketService {
           .timeBankSecondsRemaining,
         readyCheckStartedAt:
           typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
+        statusMessage:
+          typeof (payload as Record<string, unknown>).statusMessage === 'string'
+            ? ((payload as Record<string, unknown>).statusMessage as string)
+            : undefined,
+        statusMessageLevel:
+          (payload as Record<string, unknown>).statusMessageLevel === 'error' ||
+          (payload as Record<string, unknown>).statusMessageLevel === 'warn' ||
+          (payload as Record<string, unknown>).statusMessageLevel === 'info'
+            ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
+            : undefined,
         // Grace/replacement fields may be included by backend depending on lifecycle
         graceActorUserId:
           typeof (payload as Record<string, unknown>).graceActorUserId === 'string'
@@ -771,6 +791,12 @@ class SocketService {
         currentTurnUserId: lifecyclePayload.currentTurnUserId ?? undefined,
         turnExpiresAt: lifecyclePayload.turnExpiresAt ?? undefined,
         readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt ?? undefined,
+        ...(lifecyclePayload.statusMessage !== undefined
+          ? {
+              statusMessage: lifecyclePayload.statusMessage ?? null,
+              statusMessageLevel: lifecyclePayload.statusMessageLevel ?? 'info',
+            }
+          : {}),
         ...(lifecyclePayload.graceActorUserId !== undefined
           ? { graceActorUserId: lifecyclePayload.graceActorUserId }
           : {}),

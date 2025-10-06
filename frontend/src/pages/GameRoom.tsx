@@ -1494,6 +1494,67 @@ export default function GameRoom() {
                         : `All players present • ${joined}/${total}`
                     })()}
                   </p>
+                  {(() => {
+                    const msg = (currentRoom as { statusMessage?: string | null } | null)
+                      ?.statusMessage
+                    const lvl = (
+                      currentRoom as {
+                        statusMessageLevel?: 'error' | 'info' | 'warn' | null
+                      } | null
+                    )?.statusMessageLevel
+                    if (!msg) return null
+                    const isError = lvl === 'error'
+                    const isWarn = lvl === 'warn'
+                    const base = 'panel text-xs'
+                    const cls = isError
+                      ? `${base} border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-[color:var(--color-danger)]`
+                      : isWarn
+                        ? `${base} border-[color:var(--color-warning)] bg-[color:color-mix(in srgb, var(--color-warning) 12%, transparent)] text-[color:var(--color-warning)]`
+                        : `${base} border-[color:var(--color-accent)] bg-[color:color-mix(in srgb, var(--color-accent) 12%, transparent)] text-[color:var(--color-accent)]`
+                    return (
+                      <div className={cls} role={isError ? 'alert' : 'status'}>
+                        {msg}
+                      </div>
+                    )
+                  })()}
+                  {(() => {
+                    // Show a host-only manual start button as a resilient fallback.
+                    // Useful when lobby is full (e.g., AI-only games) but auto-start didn’t trigger.
+                    const cr = currentRoom as {
+                      id?: string
+                      maxPlayers?: number
+                      players?: unknown[]
+                      status?: string
+                    } | null
+                    const joined = (cr?.players as unknown[] | undefined)?.length ?? 0
+                    const total = cr?.maxPlayers ?? 0
+                    const lobbyPhase = cr?.status === 'lobby'
+                    const canManuallyStart = isHost && lobbyPhase && joined >= Math.max(2, total)
+                    if (!canManuallyStart || !cr?.id) return null
+                    return (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={async () => {
+                          try {
+                            await gameService.setReadyState(cr.id, true)
+                            toast.success('Start requested')
+                          } catch (err) {
+                            const message =
+                              (err &&
+                                typeof err === 'object' &&
+                                'response' in err &&
+                                (err as { response?: { data?: { message?: string } } }).response
+                                  ?.data?.message) ||
+                              'Failed to start game'
+                            toast.error(message)
+                          }
+                        }}
+                      >
+                        Start Now
+                      </button>
+                    )
+                  })()}
                   {((currentRoom as { status?: string } | null)?.status === 'lobby' ||
                     (currentRoom as { status?: string } | null)?.status === 'initializing') && (
                     <p

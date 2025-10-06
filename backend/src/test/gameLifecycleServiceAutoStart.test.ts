@@ -52,6 +52,13 @@ jest.mock('../services/socketRegistry', () => ({
   tryGetSocketServer: jest.fn(() => null),
 }))
 
+// Ensure map validation passes during auto-start
+jest.mock('../services/mapService', () => ({
+  mapService: {
+    validateMapPlayable: jest.fn(async () => ({ isValid: true })),
+  },
+}))
+
 describe('GameLifecycleService.maybeAutoStart', () => {
   const service = new GameLifecycleService()
 
@@ -147,6 +154,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
               status: 'lobby',
               turn_timer: 45,
               max_players: 3,
+              map_id: 'map-123',
             },
           ],
           rowCount: 1,
@@ -252,6 +260,7 @@ describe('GameLifecycleService.maybeAutoStart', () => {
               status: 'lobby',
               turn_timer: 60,
               max_players: 4,
+              map_id: 'map-123',
             },
           ],
           rowCount: 1,

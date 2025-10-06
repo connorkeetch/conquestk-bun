@@ -28,6 +28,8 @@ export interface LifecycleUpdatePayload {
   graceActorUserId?: string | null
   graceExpiresAt?: string | null
   replacementPendingUserId?: string | null
+  statusMessage?: string
+  statusMessageLevel?: 'error' | 'info' | 'warn'
   readyStates?: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
   players?: RoomPlayer[]
 }
@@ -183,6 +185,12 @@ const roomSlice = createSlice({
               readyAt: readyEntry.readyAt,
             }
           })
+        }
+
+        // Apply status message if provided
+        if (action.payload.statusMessage !== undefined) {
+          room.statusMessage = action.payload.statusMessage ?? null
+          room.statusMessageLevel = action.payload.statusMessageLevel ?? 'info'
         }
       }
 

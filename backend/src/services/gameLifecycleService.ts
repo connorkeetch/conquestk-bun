@@ -6,6 +6,7 @@ import { logger } from '../utils/logger'
 import capitalGameService from './capitalGameService'
 import { GameRoomService } from './gameRoomService'
 import { GameService } from './gameService'
+import { mapService } from './mapService'
 import { queueService } from './queueService'
 import { tryGetSocketServer } from './socketRegistry'
 
@@ -31,6 +32,8 @@ export interface LifecycleSnapshot {
     readyAt: string | null
   }>
   triggeredStart: boolean
+  statusMessage?: string
+  statusMessageLevel?: 'error' | 'info' | 'warn'
 }
 
 export class GameLifecycleService {
@@ -52,6 +55,7 @@ export class GameLifecycleService {
     let players: ReadyPlayerRow[] = []
     let turnTimer = 60
     let lifecycleStatus: GameLifecycleStatus = 'lobby'
+    let statusMessage: string | undefined
 
     try {
       await client.query('BEGIN')
@@ -61,8 +65,9 @@ export class GameLifecycleService {
         turn_timer: number | null
         max_players: number | null
         host_id: string
+        map_id: string | null
       }>(
-        'SELECT status, turn_timer, max_players, host_id FROM game_rooms WHERE id = $1 FOR UPDATE',
+        'SELECT status, turn_timer, max_players, host_id, map_id FROM game_rooms WHERE id = $1 FOR UPDATE',
         [roomId],
       )
 
@@ -132,10 +137,28 @@ export class GameLifecycleService {
         (isHost && ready === true && playerCount >= minPlayers) || (lobbyIsFull && ready === true)
 
       if (canStart && lifecycleStatus === 'lobby') {
-        shouldStart = true
-        lifecycleStatus = 'initializing'
-        await client.query(
-          `
+        // Guard: ensure map exists and is playable before transitioning to initializing
+        const mapId = roomResult.rows[0].map_id
+        if (!mapId) {
+          statusMessage = 'No map selected for this game'
+        } else {
+          try {
+            const validation = await mapService.validateMapPlayable(mapId)
+            if (!validation.isValid) {
+              statusMessage = `Selected map failed validation: ${validation.errors.join('; ')}`
+            }
+          } catch (_e) {
+            statusMessage = 'Map validation failed'
+          }
+        }
+
+        if (statusMessage) {
+          shouldStart = false
+        } else {
+          shouldStart = true
+          lifecycleStatus = 'initializing'
+          await client.query(
+            `
           UPDATE game_rooms
           SET status = 'initializing',
               ready_check_started_at = NOW(),
@@ -143,8 +166,9 @@ export class GameLifecycleService {
               turn_expires_at = NULL
           WHERE id = $1
         `,
-          [roomId],
-        )
+            [roomId],
+          )
+        }
       }
 
       if (!canStart && lifecycleStatus === 'initializing') {
@@ -194,12 +218,29 @@ export class GameLifecycleService {
           [roomId],
         )
 
+        // Broadcast lifecycle error to lobby participants
+        try {
+          const snap = await this.getLifecycleSnapshot(roomId)
+          snap.triggeredStart = false
+          snap.statusMessage = `Failed to start game: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+          snap.statusMessageLevel = 'error'
+          await this.broadcastLifecycle(snap)
+        } catch {
+          // best-effort
+        }
+
         throw error
       }
     }
 
     const snapshot = await this.getLifecycleSnapshot(roomId)
     snapshot.triggeredStart = shouldStart
+    if (statusMessage) {
+      snapshot.statusMessage = statusMessage
+      snapshot.statusMessageLevel = 'error'
+    }
     await this.broadcastLifecycle(snapshot)
 
     return snapshot
@@ -219,6 +260,7 @@ export class GameLifecycleService {
     let shouldStart = false
     let players: ReadyPlayerRow[] = []
     let turnTimer = 60
+    let statusMessage: string | undefined
 
     try {
       await client.query('BEGIN')
@@ -227,9 +269,11 @@ export class GameLifecycleService {
         status: string
         turn_timer: number | null
         max_players: number | null
-      }>('SELECT status, turn_timer, max_players FROM game_rooms WHERE id = $1 FOR UPDATE', [
-        roomId,
-      ])
+        map_id: string | null
+      }>(
+        'SELECT status, turn_timer, max_players, map_id FROM game_rooms WHERE id = $1 FOR UPDATE',
+        [roomId],
+      )
 
       if (roomResult.rowCount === 0) {
         throw new Error('Room not found')
@@ -267,9 +311,25 @@ export class GameLifecycleService {
         const minPlayers = Math.max(2, Math.min(targetCount, playerCount))
 
         if (playerCount >= targetCount && playerCount >= minPlayers) {
-          shouldStart = true
-          await client.query(
-            `
+          // Guard: ensure map exists and is playable before transitioning to initializing
+          const mapId = roomResult.rows[0].map_id
+          if (!mapId) {
+            statusMessage = 'No map selected for this game'
+          } else {
+            try {
+              const validation = await mapService.validateMapPlayable(mapId)
+              if (!validation.isValid) {
+                statusMessage = `Selected map failed validation: ${validation.errors.join('; ')}`
+              }
+            } catch (_e) {
+              statusMessage = 'Map validation failed'
+            }
+          }
+
+          if (!statusMessage) {
+            shouldStart = true
+            await client.query(
+              `
             UPDATE game_rooms
             SET status = 'initializing',
                 ready_check_started_at = NOW(),
@@ -277,8 +337,9 @@ export class GameLifecycleService {
                 turn_expires_at = NULL
             WHERE id = $1
           `,
-            [roomId],
-          )
+              [roomId],
+            )
+          }
         }
       }
 
@@ -296,6 +357,17 @@ export class GameLifecycleService {
     }
 
     if (!shouldStart) {
+      if (statusMessage) {
+        try {
+          const snap = await this.getLifecycleSnapshot(roomId)
+          snap.triggeredStart = false
+          snap.statusMessage = statusMessage
+          snap.statusMessageLevel = 'error'
+          await this.broadcastLifecycle(snap)
+        } catch {
+          // best-effort
+        }
+      }
       return false
     }
 
@@ -333,6 +405,19 @@ export class GameLifecycleService {
           roomId,
           error: cleanupError instanceof Error ? cleanupError.message : cleanupError,
         })
+      }
+
+      // Broadcast lifecycle error to lobby participants
+      try {
+        const snap = await this.getLifecycleSnapshot(roomId)
+        snap.triggeredStart = false
+        snap.statusMessage = `Failed to auto-start game: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+        snap.statusMessageLevel = 'error'
+        await this.broadcastLifecycle(snap)
+      } catch {
+        // best-effort
       }
 
       return false
@@ -830,6 +915,12 @@ export class GameLifecycleService {
       replacementPendingUserId: snapshot.room.replacementPendingUserId ?? null,
       readyStates: snapshot.readyStates,
       players,
+      ...(snapshot.statusMessage
+        ? {
+            statusMessage: snapshot.statusMessage,
+            statusMessageLevel: snapshot.statusMessageLevel ?? 'info',
+          }
+        : {}),
     }
 
     io.to(snapshot.room.id).emit('lifecycle:update', payload)
@@ -850,6 +941,12 @@ export class GameLifecycleService {
         : null,
       replacementPendingUserId: snapshot.room.replacementPendingUserId ?? null,
       players,
+      ...(snapshot.statusMessage
+        ? {
+            statusMessage: snapshot.statusMessage,
+            statusMessageLevel: snapshot.statusMessageLevel ?? 'info',
+          }
+        : {}),
     })
   }
 
