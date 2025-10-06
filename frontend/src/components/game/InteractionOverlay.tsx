@@ -3,6 +3,7 @@ import { memo, useId, useMemo } from 'react'
 import useReducedMotion from '@/hooks/useReducedMotion'
 
 type Point = { id: string; x: number; y: number }
+type XY = { x: number; y: number }
 
 export interface InteractionOverlayProps {
   width: number
@@ -16,13 +17,13 @@ export interface InteractionOverlayProps {
   tokenSize?: number // diameter in px at scale 1
 }
 
-function dist(a: Point, b: Point) {
+function dist(a: XY, b: XY) {
   const dx = a.x - b.x
   const dy = a.y - b.y
   return Math.hypot(dx, dy)
 }
 
-function arcPath(a: Point, b: Point) {
+function arcPath(a: XY, b: XY) {
   const d = dist(a, b)
   const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
   // perpendicular offset for gentle arc; scale with distance
@@ -34,6 +35,21 @@ function arcPath(a: Point, b: Point) {
   const cx = mid.x + ox
   const cy = mid.y + oy
   return `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`
+}
+
+function trimSegment(a: XY, b: XY, startOffset: number, endOffset: number): { a: XY; b: XY } {
+  const vx = b.x - a.x
+  const vy = b.y - a.y
+  const len = Math.hypot(vx, vy) || 1
+  // Avoid over-trimming when points are very close
+  const s = Math.min(startOffset, Math.max(0, len * 0.45))
+  const e = Math.min(endOffset, Math.max(0, len * 0.45))
+  const nx = vx / len
+  const ny = vy / len
+  return {
+    a: { x: a.x + nx * s, y: a.y + ny * s },
+    b: { x: b.x - nx * e, y: b.y - ny * e },
+  }
 }
 
 const Crosshair = ({ x, y, r }: { x: number; y: number; r: number }) => (
@@ -98,10 +114,12 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
             if (!dest) return null
             const color = phase === 'attack' ? 'var(--attack)' : 'var(--fortify)'
             const colorRing = phase === 'attack' ? 'var(--attack-ring)' : 'var(--fortify-ring)'
-            // Path thickness: colored glow underlay and white dashed top layer
-            const underW = 5
-            const topW = 3
-            const pathD = arcPath(selected, dest)
+            // Path thickness: colored glow underlay and white dashed top layer (smaller)
+            const underW = 3.5
+            const topW = 2
+            // Shorten the segment so arrows start/end outside token circles
+            const { a: from, b: to } = trimSegment(selected, dest, r + 4, r + 8)
+            const pathD = arcPath(from, to)
             return (
               <svg
                 className="absolute left-0 top-0"
@@ -117,22 +135,22 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                     viewBox="0 0 12 12"
                     refX="11"
                     refY="6"
-                    markerWidth="10"
-                    markerHeight="10"
+                    markerWidth="9"
+                    markerHeight="9"
                     orient="auto"
                   >
-                    <path d="M0,0 L12,6 L0,12 Z" fill="var(--attack)" opacity="0.35" />
+                    <path d="M0,0 L12,6 L0,12 Z" fill="var(--attack)" opacity="0.28" />
                   </marker>
                   <marker
                     id={markerColoredFortify}
                     viewBox="0 0 12 12"
                     refX="11"
                     refY="6"
-                    markerWidth="10"
-                    markerHeight="10"
+                    markerWidth="9"
+                    markerHeight="9"
                     orient="auto"
                   >
-                    <path d="M0,0 L12,6 L0,12 Z" fill="var(--fortify)" opacity="0.35" />
+                    <path d="M0,0 L12,6 L0,12 Z" fill="var(--fortify)" opacity="0.28" />
                   </marker>
                   {/* Crisp white arrowhead */}
                   <marker
@@ -140,8 +158,8 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                     viewBox="0 0 12 12"
                     refX="11"
                     refY="6"
-                    markerWidth="8"
-                    markerHeight="8"
+                    markerWidth="7"
+                    markerHeight="7"
                     orient="auto"
                   >
                     <path d="M0,0 L12,6 L0,12 Z" fill="#ffffff" />
@@ -149,14 +167,14 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                 </defs>
                 {/* Subtle straight line for direction cue in phase color */}
                 <line
-                  x1={selected.x}
-                  y1={selected.y}
-                  x2={dest.x}
-                  y2={dest.y}
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
                   stroke={colorRing}
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   strokeLinecap="round"
-                  opacity={0.6}
+                  opacity={0.35}
                 />
                 <title>Interaction arrow</title>
                 {/* Colored underlay (glow) */}
@@ -165,7 +183,7 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                   fill="none"
                   stroke={color}
                   strokeWidth={underW}
-                  opacity={0.35}
+                  opacity={0.22}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   markerEnd={`url(#${phase === 'attack' ? markerColoredAttack : markerColoredFortify})`}
@@ -176,10 +194,10 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                   fill="none"
                   stroke="#ffffff"
                   strokeWidth={topW}
-                  opacity={target ? 1 : 0.95}
+                  opacity={0.85}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeDasharray="10 6"
+                  strokeDasharray="8 6"
                   markerEnd={`url(#${markerWhite})`}
                 />
               </svg>
