@@ -1132,29 +1132,31 @@ export default function GameRoom() {
                 <TurnTimer className="text-xs sm:text-sm" showBank={false} />
               </div>
               <div className="flex w-full flex-wrap items-center gap-2">
-                <fieldset aria-label="Turn phases" className="flex flex-wrap items-center gap-2">
-                  <legend className="sr-only">Turn phases</legend>
-                  {(['reinforcement', 'attack', 'fortify'] as const).map((phaseKey) => {
-                    const active = gamePhase === phaseKey
-                    const label =
-                      phaseKey === 'reinforcement'
-                        ? 'Reinforce'
-                        : phaseKey.charAt(0).toUpperCase() + phaseKey.slice(1)
-                    return (
-                      <span
-                        key={phaseKey}
-                        className={
-                          'inline-flex items-center gap-1 rounded px-2 py-1 font-medium ' +
-                          (active
-                            ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
-                            : 'bg-[color:var(--surface-1)] text-muted')
-                        }
-                      >
-                        {label}
-                      </span>
-                    )
-                  })}
-                </fieldset>
+                {isMyTurn && (
+                  <fieldset aria-label="Turn phases" className="flex flex-wrap items-center gap-2">
+                    <legend className="sr-only">Turn phases</legend>
+                    {(['reinforcement', 'attack', 'fortify'] as const).map((phaseKey) => {
+                      const active = gamePhase === phaseKey
+                      const label =
+                        phaseKey === 'reinforcement'
+                          ? 'Reinforce'
+                          : phaseKey.charAt(0).toUpperCase() + phaseKey.slice(1)
+                      return (
+                        <span
+                          key={phaseKey}
+                          className={
+                            'inline-flex items-center gap-1 rounded px-2 py-1 font-medium ' +
+                            (active
+                              ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
+                              : 'bg-[color:var(--surface-1)] text-muted')
+                          }
+                        >
+                          {label}
+                        </span>
+                      )
+                    })}
+                  </fieldset>
+                )}
                 <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                   {isMyTurn &&
                     isGameActive &&
