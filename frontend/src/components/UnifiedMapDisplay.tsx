@@ -1,5 +1,5 @@
 import { computeRollOdds } from '@shared/utils/combatOdds'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { mapService } from '@/services/mapService'
@@ -90,7 +90,6 @@ export default function UnifiedMapDisplay({
   previewMode = false,
 }: UnifiedMapDisplayProps) {
   const dispatch = useAppDispatch()
-  const _markerId = useId()
   const hoveredTargetId = useAppSelector((s) => s.gameInteraction.hoveredTargetId)
   const invalidShakeId = useAppSelector((s) => s.gameInteraction.invalidShakeId)
   const game = useAppSelector((s) => s.game.currentGame)

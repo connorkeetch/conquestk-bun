@@ -34,12 +34,22 @@ describe('InteractionOverlay', () => {
     const orig = global.window.matchMedia
     beforeAll(() => {
       // mock prefers-reduced-motion
-      // @ts-expect-error
-      global.window.matchMedia = vi.fn().mockImplementation((q: string) => ({
-        matches: q.includes('prefers-reduced-motion'),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-      }))
+      type MockMQL = {
+        matches: boolean
+        addEventListener: (type: string, listener: () => void) => void
+        removeEventListener: (type: string, listener: () => void) => void
+      }
+      ;(
+        global.window as unknown as {
+          matchMedia: (q: string) => MockMQL
+        }
+      ).matchMedia = vi.fn().mockImplementation(
+        (q: string): MockMQL => ({
+          matches: q.includes('prefers-reduced-motion'),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        }),
+      )
     })
     afterAll(() => {
       global.window.matchMedia = orig

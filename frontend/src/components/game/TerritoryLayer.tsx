@@ -1,4 +1,5 @@
 // Presentational layer only; legacy highlight effects were removed in favor of InteractionOverlay
+import type { PlayerColor } from '@/constants/colors'
 
 export interface TerritoryPoint {
   id: string

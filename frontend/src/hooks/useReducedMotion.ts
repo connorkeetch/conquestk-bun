@@ -15,10 +15,14 @@ export default function useReducedMotion(): boolean {
       return () => mq.removeEventListener('change', onChange)
     } catch {
       // Fallback for older browsers
-      // @ts-expect-error
-      mq.addListener?.(onChange)
-      // @ts-expect-error
-      return () => mq.removeListener?.(onChange)
+      type LegacyMQL = MediaQueryList & {
+        addListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void
+        removeListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void
+      }
+      const legacy = mq as LegacyMQL
+      legacy.addListener?.(onChange as (this: MediaQueryList, ev: MediaQueryListEvent) => void)
+      return () =>
+        legacy.removeListener?.(onChange as (this: MediaQueryList, ev: MediaQueryListEvent) => void)
     }
   }, [])
 

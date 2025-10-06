@@ -77,7 +77,6 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
     const selected = selectedId ? posById.get(selectedId) || null : null
     const target = targetId ? posById.get(targetId) || null : null
     const hover = hoverId ? posById.get(hoverId) || null : null
-    const _eligibleSet = useMemo(() => new Set(eligibleIds), [eligibleIds])
     const animateEligible = !reducedMotion ? eligibleIds.slice(0, 10) : []
     const r = Math.max(12, tokenSize / 2)
 
