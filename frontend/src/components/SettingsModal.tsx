@@ -35,9 +35,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const performanceModeId = useId()
 
   // Audio state (managed by audioService)
-  const [masterVolume, setMasterVolume] = useState(() => audioService.getMasterVolume())
-  const [sfxVolume, setSfxVolume] = useState(() => audioService.getSFXVolume())
-  const [musicVolume, setMusicVolume] = useState(() => audioService.getMusicVolume())
+  const [audioPrefs, setAudioPrefs] = useState(() => audioService.getPreferences())
   const [isMuted, setIsMuted] = useState(() => audioService.isMutedState())
 
   // Handle keyboard shortcuts and escape key
@@ -87,18 +85,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   // Audio handlers
   const handleMasterVolumeChange = (value: number) => {
-    setMasterVolume(value)
-    audioService.setMasterVolume(value)
+    audioService.setVolume('master', value)
+    setAudioPrefs(audioService.getPreferences())
   }
 
   const handleSFXVolumeChange = (value: number) => {
-    setSfxVolume(value)
-    audioService.setSFXVolume(value)
+    audioService.setVolume('effects', value)
+    setAudioPrefs(audioService.getPreferences())
   }
 
   const handleMusicVolumeChange = (value: number) => {
-    setMusicVolume(value)
-    audioService.setMusicVolume(value)
+    audioService.setVolume('music', value)
+    setAudioPrefs(audioService.getPreferences())
   }
 
   const handleToggleMute = () => {
@@ -140,7 +138,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <label htmlFor={masterVolumeId} className="text-sm font-medium text-muted">
                       Master Volume
                     </label>
-                    <span className="text-sm text-muted">{masterVolume}%</span>
+                    <span className="text-sm text-muted">{audioPrefs.masterVolume}%</span>
                   </div>
                   <input
                     id={masterVolumeId}
@@ -148,7 +146,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     className="w-full"
                     min="0"
                     max="100"
-                    value={masterVolume}
+                    value={audioPrefs.masterVolume}
                     onChange={(e) => handleMasterVolumeChange(Number(e.target.value))}
                   />
                 </div>
@@ -158,7 +156,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <label htmlFor={sfxVolumeId} className="text-sm font-medium text-muted">
                       Sound Effects
                     </label>
-                    <span className="text-sm text-muted">{sfxVolume}%</span>
+                    <span className="text-sm text-muted">{audioPrefs.effectsVolume}%</span>
                   </div>
                   <input
                     id={sfxVolumeId}
@@ -166,7 +164,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     className="w-full"
                     min="0"
                     max="100"
-                    value={sfxVolume}
+                    value={audioPrefs.effectsVolume}
                     onChange={(e) => handleSFXVolumeChange(Number(e.target.value))}
                   />
                 </div>
@@ -176,7 +174,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <label htmlFor={musicVolumeId} className="text-sm font-medium text-muted">
                       Background Music
                     </label>
-                    <span className="text-sm text-muted">{musicVolume}%</span>
+                    <span className="text-sm text-muted">{audioPrefs.musicVolume}%</span>
                   </div>
                   <input
                     id={musicVolumeId}
@@ -184,7 +182,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     className="w-full"
                     min="0"
                     max="100"
-                    value={musicVolume}
+                    value={audioPrefs.musicVolume}
                     onChange={(e) => handleMusicVolumeChange(Number(e.target.value))}
                   />
                 </div>
