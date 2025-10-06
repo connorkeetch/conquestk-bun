@@ -49,7 +49,7 @@ Notes / TODO
 - Store shape for transient UI
   - Added `frontend/src/store/uiRoomSlice.ts` for dice, overlays, animation speed, hover/selection mirror, and connection status. Existing selection in `gameSlice` remains; we’ll migrate gradually.
 - Header
-  - `GameHeader` shows a phase chip, turn number, a compact timer, and a live connection dot. Map remains the hero.
+  - Turn summary chip below the banner shows round, active player, timer, and phase controls so the map stays the hero.
 
 Notes
 

@@ -53,7 +53,7 @@ This note captures quick wins for keeping the live game responsive on both the c
 - [x] [PlayerStatsTable.tsx](frontend/src/components/game/PlayerStatsTable.tsx) - Memoized stats computation with useCallback handlers
 - [x] [ContinentControlPanel.tsx](frontend/src/components/game/ContinentControlPanel.tsx) - Memoized player lookup map and partial control rendering
 - [x] [TerritoryInfoPanel.tsx](frontend/src/components/game/TerritoryInfoPanel.tsx) - Memoized territory data lookup to prevent hover spam
-- [x] [GameHeader.tsx](frontend/src/components/game/GameHeader.tsx) - Memoized with phase-based re-render control
+- [x] Turn summary chip in [GameRoom.tsx](frontend/src/pages/GameRoom.tsx#L1100) - Memoized derived state keeps phase updates lightweight
 
 **Memoized Redux Selectors** ([frontend/src/store/selectors.ts](frontend/src/store/selectors.ts))
 - [x] `selectValidTargets` - Cached BFS pathfinding for fortify movement (was recalculated every selection)

@@ -5,6 +5,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
 // Chat modal removed; drawers are used on all devices
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
+import { DiceResultsBar } from '@/components/game/DiceResultsBar'
 import GameRoomFooter from '@/components/game/GameRoomFooter'
 // Player stats modal removed; drawers are used on all devices
 import { ResyncBanner } from '@/components/game/ResyncBanner'
@@ -38,7 +39,12 @@ import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { store } from '../store'
-import { endTurn, undoFortify, undoLastPlacement } from '../store/gameActions'
+import {
+  endTurn,
+  goBackToReinforcement,
+  undoFortify,
+  undoLastPlacement,
+} from '../store/gameActions'
 import {
   clearGame,
   fetchGameState,
@@ -74,6 +80,9 @@ export default function GameRoom() {
   } = useAppSelector((state) => state.game)
   const activeGameRoomId = currentGame?.roomId ?? null
   const { user } = useAppSelector((state) => state.auth)
+  const placementHistoryLen = useAppSelector(
+    (state) => (state.uiRoom.placementHistory ?? []).length,
+  )
   const [searchParams] = useSearchParams()
   const isSpectator = searchParams.get('spectate') === 'true'
   const [isRoomLoading, setIsRoomLoading] = useState(false)
@@ -230,6 +239,30 @@ export default function GameRoom() {
     () => Boolean(currentGame && currentRoom?.status === 'active'),
     [currentGame, currentRoom?.status],
   )
+
+  const gamePhase = currentGame?.phase ?? 'reinforcement'
+  const isMyTurn = Boolean(user?.id && currentGame?.currentPlayer === user.id)
+  const isGameActive =
+    gamePhase === 'reinforcement' || gamePhase === 'attack' || gamePhase === 'fortify'
+  const canGoBackToReinforcement =
+    isMyTurn && isGameActive && gamePhase === 'attack' && !currentGame?.hasAttackedThisTurn
+  const hasFortifyUndo = Boolean(
+    currentGame && Object.keys(currentGame.movementTracking ?? {}).length > 0,
+  )
+  const endPhaseLabel =
+    gamePhase === 'reinforcement'
+      ? 'End Phase → Attack'
+      : gamePhase === 'attack'
+        ? 'End Phase → Fortify'
+        : gamePhase === 'fortify'
+          ? 'End Phase → End Turn'
+          : 'End Phase'
+  const activePlayer = useMemo(
+    () => currentGame?.players?.find((player) => player.id === currentGame.currentPlayer),
+    [currentGame?.currentPlayer, currentGame?.players],
+  )
+  const activePlayerColor = activePlayer?.color ? getColorValue(activePlayer.color) : '#9CA3AF'
+  const roundNumber = Math.max(1, currentGame?.turn ?? 1)
 
   // Lobby team details omitted in this view
 
@@ -1080,24 +1113,112 @@ export default function GameRoom() {
           </div>
         </div>
         {showPhaseBar && currentGame && (
-          <div className="flex items-center gap-3 py-2">
-            <span className="chip text-[10px]">
-              {currentGame.phase.charAt(0).toUpperCase() + currentGame.phase.slice(1)}
-            </span>
-            <TurnTimer />
-            {(() => {
-              const p = currentGame.players.find((pl) => pl.id === currentGame.currentPlayer)
-              return (
-                <span className="inline-flex items-center gap-1">
-                  <span
-                    className="inline-block w-2.5 h-2.5 rounded-full border border-white/50"
-                    style={{ background: p?.color ? getColorValue(p.color) : '#9CA3AF' }}
-                  />
-                  <span className="max-w-[160px] truncate">{p?.username || 'Player'}</span>
+          <>
+            <div className="chip w-full flex flex-col gap-2 text-xs sm:text-sm">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
+                  Round {roundNumber}
                 </span>
-              )
-            })()}
-          </div>
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="inline-block h-2.5 w-2.5 rounded-full border border-white/50"
+                    style={{ background: activePlayerColor }}
+                  />
+                  <span className="max-w-[160px] truncate font-medium">
+                    {activePlayer?.username ?? 'Player'}
+                  </span>
+                </span>
+                <TurnTimer className="text-xs sm:text-sm" showBank={false} />
+              </div>
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <fieldset aria-label="Turn phases" className="flex flex-wrap items-center gap-2">
+                  <legend className="sr-only">Turn phases</legend>
+                  {(['reinforcement', 'attack', 'fortify'] as const).map((phaseKey) => {
+                    const active = gamePhase === phaseKey
+                    const label =
+                      phaseKey === 'reinforcement'
+                        ? 'Reinforce'
+                        : phaseKey.charAt(0).toUpperCase() + phaseKey.slice(1)
+                    return (
+                      <span
+                        key={phaseKey}
+                        className={
+                          'inline-flex items-center gap-1 rounded px-2 py-1 font-medium ' +
+                          (active
+                            ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
+                            : 'bg-[color:var(--surface-1)] text-muted')
+                        }
+                      >
+                        {label}
+                      </span>
+                    )
+                  })}
+                </fieldset>
+                <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                  {isMyTurn &&
+                    isGameActive &&
+                    gamePhase === 'reinforcement' &&
+                    placementHistoryLen > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => void dispatch(undoLastPlacement())}
+                        title="Undo last placement (Z)"
+                      >
+                        ↶ Undo
+                      </button>
+                    )}
+                  {isMyTurn && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => void dispatch(undoFortify())}
+                      title="Undo last fortify (Z)"
+                    >
+                      ↶ Undo
+                    </button>
+                  )}
+                  {isMyTurn && canGoBackToReinforcement && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => void dispatch(goBackToReinforcement())}
+                      title="Go back to reinforcement"
+                    >
+                      ↩ Reinforce
+                    </button>
+                  )}
+                  {isMyTurn && isGameActive && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => void dispatch(endTurn())}
+                      title={endPhaseLabel}
+                    >
+                      {endPhaseLabel}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {!isMyTurn && isGameActive && (
+                <div className="flex items-center gap-2 text-[11px] text-muted">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
+                  <span>
+                    Waiting for {activePlayer?.username || 'Opponent'} —{' '}
+                    {gamePhase === 'reinforcement'
+                      ? 'reinforcing'
+                      : gamePhase === 'attack'
+                        ? 'attacking'
+                        : gamePhase === 'fortify'
+                          ? 'fortifying'
+                          : gamePhase}
+                  </span>
+                </div>
+              )}
+            </div>
+            <DiceResultsBar />
+          </>
         )}
       </div>
 
