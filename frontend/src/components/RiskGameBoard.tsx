@@ -17,7 +17,6 @@ import {
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { AssassinationContract } from './game/AssassinationContract'
 // import { GamePhaseControls } from './GamePhaseControls'
-import { GameHeader } from './game/GameHeader'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
 // MapHeaderBar removed; floating zoom now in-map
 // MapSidebar removed; all zoom controls moved to header
@@ -357,7 +356,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         </div>
       ) : (
         <>
-          <GameHeader currentPhase={currentPhase} />
           {assassinationMode && (
             <AssassinationContract
               target={targetPlayer}
