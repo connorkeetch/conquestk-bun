@@ -207,6 +207,16 @@ const formatTreasureMode = (
   return `Treasures: ${labelMap[mode] || mode}`
 }
 
+// Format seconds as mm:ss for compact countdown display
+const formatCountdown = (secs: number) => {
+  const s = Math.max(0, Math.trunc(secs))
+  const m = Math.floor(s / 60)
+  const r = s % 60
+  const mm = m.toString().padStart(2, '0')
+  const ss = r.toString().padStart(2, '0')
+  return `${mm}:${ss}`
+}
+
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAppSelector((state) => state.auth)
@@ -216,6 +226,19 @@ const LobbyPage: React.FC = () => {
   const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'active' | 'lobby' | 'completed'>(
     'all',
   )
+  const [myGamesMeta, setMyGamesMeta] = useState<
+    Record<
+      string,
+      {
+        turnEndsAt?: number
+        timeBankSecondsRemaining?: number | null
+        queueAhead?: number | null
+        currentTurnUsername?: string | null
+        isYourTurn?: boolean
+      }
+    >
+  >({})
+  const [now, setNow] = useState<number>(() => Date.now())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [privateGameCode, setPrivateGameCode] = useState('')
@@ -392,13 +415,65 @@ const LobbyPage: React.FC = () => {
     }
   }, [user])
 
+  // Load meta for user's games (queue position, timer, current player)
+  const loadMyGamesMeta = useCallback(async () => {
+    if (!user) return
+    try {
+      const response = await api.get('/game/my-games/meta')
+      const meta = (response.data?.meta ?? {}) as Record<
+        string,
+        {
+          turnExpiresAt?: string | null
+          timeBankSecondsRemaining?: number | null
+          queueAhead?: number | null
+          currentTurnUsername?: string | null
+          isYourTurn?: boolean
+        }
+      >
+      const map: Record<
+        string,
+        {
+          turnEndsAt?: number
+          timeBankSecondsRemaining?: number | null
+          queueAhead?: number | null
+          currentTurnUsername?: string | null
+          isYourTurn?: boolean
+        }
+      > = {}
+      for (const [id, m] of Object.entries(meta)) {
+        map[id] = {
+          turnEndsAt: m.turnExpiresAt ? Date.parse(m.turnExpiresAt) : undefined,
+          timeBankSecondsRemaining:
+            typeof m.timeBankSecondsRemaining === 'number'
+              ? Math.max(0, Math.trunc(m.timeBankSecondsRemaining))
+              : null,
+          queueAhead: m.queueAhead ?? null,
+          currentTurnUsername: m.currentTurnUsername ?? null,
+          isYourTurn: m.isYourTurn ?? undefined,
+        }
+      }
+      setMyGamesMeta(map)
+    } catch (err) {
+      logger.debug?.('LobbyPage: my-games meta fetch failed', err)
+      setMyGamesMeta({})
+    }
+  }, [user])
+
   useEffect(() => {
     if (activeTab === 'browse') {
       loadPublicGames()
     } else if (activeTab === 'my-games') {
       loadMyGames()
+      loadMyGamesMeta()
     }
-  }, [activeTab, loadPublicGames, loadMyGames])
+  }, [activeTab, loadPublicGames, loadMyGames, loadMyGamesMeta])
+
+  // Tick countdowns while viewing My Games
+  useEffect(() => {
+    if (activeTab !== 'my-games') return
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [activeTab])
 
   // Sync tab with URL param
   useEffect(() => {
@@ -1158,11 +1233,54 @@ const LobbyPage: React.FC = () => {
                             <span className={getGameStatusColor(game.status)}>
                               • {getStatusLabel(game.status)}
                             </span>
-                            {game.isYourTurn && (
-                              <span className="text-[color:var(--color-danger)] font-semibold animate-pulse">
-                                • Your Turn!
-                              </span>
-                            )}
+                            {(() => {
+                              const meta = myGamesMeta[game.id]
+                              const isActive = game.status === 'active'
+                              const queue = isActive ? meta?.queueAhead : null
+                              const displayQueue = typeof queue === 'number' ? queue + 1 : null // 1 means current
+                              const remain = meta?.turnEndsAt
+                                ? Math.ceil((meta.turnEndsAt - now) / 1000)
+                                : null
+                              const safeRemain = remain == null ? null : Math.max(0, remain)
+                              const timerClass =
+                                safeRemain == null
+                                  ? ''
+                                  : safeRemain <= 10
+                                    ? 'text-[color:var(--color-danger)]'
+                                    : safeRemain <= 30
+                                      ? 'text-amber-400'
+                                      : safeRemain <= 60
+                                        ? 'text-yellow-300'
+                                        : 'text-muted'
+
+                              // Show queue/timer only for in-progress games where user is an alive participant
+                              if (!isActive || displayQueue == null) return null
+                              return (
+                                <>
+                                  <span className="inline-flex items-center gap-1">
+                                    • Queue
+                                    <span className="chip text-xs font-semibold">
+                                      {displayQueue}
+                                    </span>
+                                  </span>
+                                  {meta?.currentTurnUsername && (
+                                    <span className="inline-flex items-center gap-1 opacity-80">
+                                      • Current:{' '}
+                                      <span className="font-medium">
+                                        {meta.currentTurnUsername}
+                                      </span>
+                                    </span>
+                                  )}
+                                  {safeRemain != null && (
+                                    <span
+                                      className={`inline-flex items-center gap-1 ${timerClass}`}
+                                    >
+                                      • {formatCountdown(safeRemain)}
+                                    </span>
+                                  )}
+                                </>
+                              )
+                            })()}
                             {game.winner && (
                               <span className="text-[color:var(--color-warning)]">
                                 • Winner: {game.winner}
