@@ -1,6 +1,7 @@
 import { query, transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
-import { drawTreasure, ensureTreasureState, normalizeTreasureConfig } from '../game/hiddenTreasures'
+// Treasure awarding is handled by the GameEngine at end-of-turn
+// import { drawTreasure, ensureTreasureState, normalizeTreasureConfig } from '../game/hiddenTreasures'
 import { loadMapForEngine } from '../game/mapLoader'
 import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans'
 import type {
@@ -1592,33 +1593,8 @@ export class GameService {
     battleMetrics.recordApply(gameId, status, persistenceOutcome.divergence)
 
     if (persistenceOutcome.applied) {
-      // If conquest and treasures enabled, award treasure immediately and log it
-      try {
-        if (territoryConquered) {
-          const cfg = normalizeTreasureConfig(updatedGameState.gameConfig.treasureConfig)
-          if (cfg.enabled) {
-            updatedGameState.treasureState = ensureTreasureState(updatedGameState.treasureState)
-            const metal = drawTreasure(cfg)
-            const attacker = updatedGameState.players.find((p) => p.id === attackerId)
-            if (attacker) {
-              if (!Array.isArray(attacker.treasures)) attacker.treasures = []
-              attacker.treasures.push(metal)
-              // Do not set global mustCashIn mid-turn to avoid blocking actions
-              attacker.mustCashInTreasures = (attacker.treasures?.length ?? 0) >= cfg.handCap
-            }
-            // Persist treasure award entry in game log
-            await this.appendLog(gameId, [
-              { type: 'TREASURE', timestamp: new Date().toISOString(), userId: attackerId, metal },
-            ])
-          }
-        }
-      } catch (e) {
-        logger.warn('Failed to award or log treasure on conquest', {
-          gameId,
-          error: e instanceof Error ? e.message : e,
-        })
-      }
-
+      // Do not award treasures here. The GameEngine awards exactly one treasure
+      // at end-of-turn if any conquest occurred. This avoids mid-turn multiple awards.
       serializedState = this.serializeGameState(updatedGameState)
       await this.persistGameStateSnapshot(gameId, serializedState)
     }
