@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Diamond jewel - vibrant gem colors with transparency -->
+<svg height="800px" width="800px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 512 512" xml:space="preserve">
+<g>
+	<polygon style="fill:#BBDEFB;" points="199.111,142.222 113.778,199.111 255.857,199.111 255.857,142.222 	"/>
+	<polygon style="fill:#BBDEFB;" points="312.889,142.222 255.857,142.222 255.857,199.111 398.222,199.111 	"/>
+</g>
+<polygon style="fill:#4FC3F7;" points="398.222,199.111 255.857,199.111 255.857,369.605 256,369.778 "/>
+<g>
+	<polygon style="fill:#29B6F6;" points="113.778,199.111 255.857,369.605 255.857,199.111 	"/>
+	<polygon style="fill:#29B6F6;" points="312.889,199.111 256,142.222 199.111,199.111 	"/>
+</g>
+<polygon style="fill:#4FC3F7;" points="256,142.222 255.857,142.365 255.857,199.111 312.889,199.111 "/>
+<polygon style="fill:#03A9F4;" points="199.111,199.111 256,369.778 312.889,199.111 "/>
+<polygon style="fill:#0288D1;" points="312.889,199.111 255.857,199.111 255.857,369.349 256,369.778 "/>
+<polygon style="fill:#03A9F4;" points="199.111,142.222 199.111,199.111 113.778,199.111 "/>
+<polygon style="fill:#0288D1;" points="312.889,142.222 312.889,199.111 398.222,199.111 "/>
+</svg>
+

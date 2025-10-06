@@ -1127,7 +1127,7 @@ export default function MapEditorTokens() {
   }
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
-  const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
+  const [tokenShape, setTokenShape] = useState<TokenShape>('circle')
   const [tokenSize, setTokenSize] = useState<number>(20)
   const territorySpatialIndex = useMemo(
     () => buildTerritorySpatialIndex(state.territories, tokenSize),
@@ -3563,9 +3563,8 @@ export default function MapEditorTokens() {
                   value={tokenShape}
                   onChange={(e) => setTokenShape(e.target.value as TokenShape)}
                   className="w-full rounded border border-border bg-surface-1 px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  disabled
                 >
-                  <option value="hexagon">⬡ Hexagon</option>
-                  <option value="square">◼ Square</option>
                   <option value="circle">● Circle</option>
                 </select>
               </div>
@@ -4923,7 +4922,7 @@ export default function MapEditorTokens() {
                     armies={territory.armies}
                     color={continent?.color || '#808080'} // Gray for unassigned
                     outlineColor={continent?.color} // Continent color for outline
-                    shape={tokenShape}
+                    shape="circle"
                     isSelected={state.selectedTerritoryId === territory.id}
                     isDragging={state.draggedTerritoryId === territory.id}
                     size={tokenSize}

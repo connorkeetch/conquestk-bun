@@ -188,38 +188,22 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     return { base, bonus: diamondBonus, total: base + diamondBonus, mode: 'triangular' }
   }, [game?.treasureState, hand, selected, treasureConfig])
 
-  // Track which metal icons have failed to load
-  const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set())
-
-  const iconFor = useCallback(
-    (metal: string) => {
-      const m = metal.toLowerCase()
-      const file =
-        m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
-      const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
-      const emoji = m === 'diamond' ? '💎' : m === 'gold' ? '🥇' : m === 'silver' ? '🥈' : '🥉'
-
-      const handleError = () => {
-        setFailedIcons((prev) => new Set(prev).add(file))
-      }
-
-      return failedIcons.has(file) ? (
-        <span className="inline-block align-middle text-sm" title={`${file} card`}>
-          {emoji}
-        </span>
-      ) : (
-        <img
-          src={url}
-          alt={`${file} card`}
-          className="inline-block align-middle"
-          width={14}
-          height={14}
-          onError={handleError}
-        />
-      )
-    },
-    [failedIcons],
-  )
+  // Icon helper (SVG only; no emoji fallback)
+  const iconFor = useCallback((metal: string) => {
+    const m = metal.toLowerCase()
+    const file =
+      m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
+    const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
+    return (
+      <img
+        src={url}
+        alt={`${file} card`}
+        className="inline-block align-middle"
+        width={14}
+        height={14}
+      />
+    )
+  }, [])
 
   // Count remaining valid sets in the current hand (excludes partial selections)
   const remainingValidSets = useMemo(() => {

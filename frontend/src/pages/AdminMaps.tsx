@@ -1529,7 +1529,7 @@ export const AdminMaps: React.FC = () => {
                                   showArmies={false}
                                   color="#6b7280"
                                   outlineColor={undefined}
-                                  shape="hexagon"
+                                  shape="circle"
                                   isSelected={false}
                                   isDragging={false}
                                   size={16}

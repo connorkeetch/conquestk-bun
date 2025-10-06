@@ -33,21 +33,12 @@ export function TreasureHud({ variant = 'header' }: Props) {
     if (isMyTurn && mustCashIn) setOpen(true)
   }, [isMyTurn, mustCashIn])
 
-  // Icon helper with emoji fallback
-  const [failed, setFailed] = useState<Set<string>>(new Set())
+  // Icon helper (SVG only; no emoji fallback)
   const iconFor = (metal: string) => {
     const m = String(metal).toLowerCase()
     const file =
       m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
     const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
-    const emoji = m === 'diamond' ? '💎' : m === 'gold' ? '🥇' : m === 'silver' ? '🥈' : '🥉'
-    if (failed.has(file)) {
-      return (
-        <span className="inline-block align-middle text-[10px]" title={`${file} card`}>
-          {emoji}
-        </span>
-      )
-    }
     return (
       <img
         src={url}
@@ -55,7 +46,6 @@ export function TreasureHud({ variant = 'header' }: Props) {
         className="inline-block align-middle"
         width={12}
         height={12}
-        onError={() => setFailed((prev) => new Set(prev).add(file))}
       />
     )
   }
