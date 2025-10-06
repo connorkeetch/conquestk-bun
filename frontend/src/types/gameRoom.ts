@@ -24,6 +24,9 @@ export interface GameRoom {
   createdAt: string
   expiresAt?: string
   updatedAt?: string
+  // Optional lifecycle/status message from server (e.g., start errors)
+  statusMessage?: string | null
+  statusMessageLevel?: 'error' | 'info' | 'warn' | null
   mapId?: string | null
   gameMode?: string | null
   movementType?: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'

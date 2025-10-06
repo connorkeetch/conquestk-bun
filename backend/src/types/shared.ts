@@ -296,6 +296,8 @@ export interface ServerToClientEvents {
     graceActorUserId?: string | null
     graceExpiresAt?: string | null
     replacementPendingUserId?: string | null
+    statusMessage?: string
+    statusMessageLevel?: 'error' | 'info' | 'warn'
     readyStates: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
     players?: Array<{
       userId: string
@@ -317,6 +319,8 @@ export interface ServerToClientEvents {
     graceActorUserId?: string | null
     graceExpiresAt?: string | null
     replacementPendingUserId?: string | null
+    statusMessage?: string
+    statusMessageLevel?: 'error' | 'info' | 'warn'
     players?: Array<{
       userId: string
       username: string
