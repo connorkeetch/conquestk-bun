@@ -101,20 +101,30 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                 role="img"
                 aria-label="Interaction arc"
               >
+                {/* Straight line for clearer source → target direction */}
+                <line
+                  x1={selected.x}
+                  y1={selected.y}
+                  x2={dest.x}
+                  y2={dest.y}
+                  stroke={phase === 'attack' ? 'var(--attack-ring)' : 'var(--fortify-ring)'}
+                  strokeWidth={2}
+                  opacity={0.8}
+                />
                 <title>Interaction arc</title>
                 <path
                   d={arcPath(selected, dest)}
                   fill="none"
                   stroke={phase === 'attack' ? 'var(--attack)' : 'var(--fortify)'}
-                  strokeWidth={2}
-                  opacity={target ? 1 : 0.75}
+                  strokeWidth={3}
+                  opacity={target ? 1 : 0.85}
                 />
               </svg>
             )
           })()}
 
         {/* Selected ring (breathing) */}
-        {selected && !target && (
+        {selected && (
           <div
             aria-label="selected-overlay"
             role="img"
@@ -122,7 +132,7 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
             style={{ left: selected.x, top: selected.y, transform: 'translate(-50%, -50%)' }}
           >
             <div
-              className={`${reducedMotion ? '' : 'animate-[breath_1.2s_ease-in-out_infinite]'} rounded-full ring-1 ring-[var(--muted-ring)]`}
+              className={`${reducedMotion ? '' : 'animate-[breath_1.2s_ease-in-out_infinite]'} rounded-full ring-2 ring-[var(--muted-ring)]`}
               style={{ width: tokenSize, height: tokenSize }}
             />
           </div>
@@ -166,7 +176,7 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                     style={{ left: p.x, top: p.y, transform: 'translate(-50%, -50%)' }}
                   >
                     <div
-                      className={`${animate ? 'animate-[ping-soft_1s_linear_infinite]' : ''} rounded-full outline outline-2 outline-[var(--attack-ring)]`}
+                      className={`${animate ? 'animate-[ping-soft_1s_linear_infinite]' : ''} rounded-full outline outline-[3px] outline-[var(--attack-ring)]`}
                       style={{ width: tokenSize, height: tokenSize }}
                     />
                   </div>
