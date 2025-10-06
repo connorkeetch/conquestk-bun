@@ -130,11 +130,14 @@ export default function Register() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                maxLength={50}
+                maxLength={20}
                 autoComplete="username"
                 className="form-input"
                 placeholder="Enter your username (e.g., CommanderKeetch)"
               />
+              <p className="mt-1 text-xs text-muted">
+                3–20 characters; letters, numbers, underscores, and hyphens.
+              </p>
             </div>
 
             {/* Email Field */}

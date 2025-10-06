@@ -5,6 +5,7 @@ import InfoTooltip from '@/components/InfoTooltip'
 import MapDetailModal from '@/components/MapDetailModal'
 import { extractFirstHexColor, pickTextOnColor } from '@/utils/color'
 import { logger } from '@/utils/logger'
+import { sanitizeGameName } from '@/utils/sanitizer'
 import { getTreasureDescription } from '@/utils/tooltips'
 import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
@@ -652,8 +653,9 @@ const CreateGamePage: React.FC = () => {
         return
       }
 
+      const resolvedName = sanitizeGameName(gameName || generateSmartName(true))
       const gameData: CreateGameData = {
-        name: gameName || generateSmartName(true), // Resolve random options when creating
+        name: resolvedName, // Resolve random options when creating and enforce limit
         maxPlayers: finalPlayers,
         isPrivate: gameVisibility === 'private',
         isRanked,
@@ -742,21 +744,27 @@ const CreateGamePage: React.FC = () => {
             <div className="flex items-center gap-4 mb-2">
               <h1 className="text-3xl font-bold text-primary-soft">Create New Game</h1>
               {/* Small game name box next to header */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder={useAutoName ? generateSmartName() : 'Game name'}
-                  className={`form-input text-sm w-64 ${
-                    useAutoName ? 'cursor-not-allowed opacity-80' : ''
-                  }`}
-                  value={gameName}
-                  onChange={(e) => {
-                    if (!useAutoName) {
-                      setGameName(e.target.value)
-                    }
-                  }}
-                  disabled={useAutoName}
-                />
+              <div className="flex items-start gap-2">
+                <div className="flex flex-col w-64">
+                  <input
+                    type="text"
+                    placeholder={useAutoName ? generateSmartName() : 'Game name'}
+                    className={`form-input text-sm ${
+                      useAutoName ? 'cursor-not-allowed opacity-80' : ''
+                    }`}
+                    value={gameName}
+                    onChange={(e) => {
+                      if (!useAutoName) {
+                        setGameName(sanitizeGameName(e.target.value))
+                      }
+                    }}
+                    maxLength={50}
+                    disabled={useAutoName}
+                  />
+                  <div className="mt-1 text-right text-xs text-muted">
+                    {Math.max(0, 50 - (gameName?.length ?? 0))} left
+                  </div>
+                </div>
                 <label className="flex items-center cursor-pointer" title="Auto-generate game name">
                   <input
                     type="checkbox"
