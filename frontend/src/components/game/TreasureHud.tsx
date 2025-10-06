@@ -1,16 +1,17 @@
 import type { TreasureConfig } from '@shared/types'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import InfoTooltip from '@/components/InfoTooltip'
-import { useAppSelector } from '@/hooks/redux'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 import { resolveAssetPath } from '@/utils/assets'
 import { computeNextTreasurePayout } from '@/utils/treasures'
-import { TreasureTradeModal } from './TreasureTradeModal'
 
 type Props = {
   variant?: 'header' | 'compact'
 }
 
 export function TreasureHud({ variant = 'header' }: Props) {
+  const dispatch = useAppDispatch()
   const game = useAppSelector((s) => s.game.currentGame)
   const userId = useAppSelector((s) => s.auth.user?.id)
   const room = useAppSelector((s) => s.room.currentRoom)
@@ -48,26 +49,28 @@ export function TreasureHud({ variant = 'header' }: Props) {
     (room?.treasureConfig as unknown as TreasureConfig | undefined) ?? undefined,
   )
 
-  const [open, setOpen] = useState(false)
-
   // Auto-open at start of my turn when:
   // - I must cash in (hand cap), or
   // - I have any valid set during reinforcement
   useEffect(() => {
     if (!isMyTurn) return
     if (mustCashIn) {
-      setOpen(true)
+      window.requestAnimationFrame(() => {
+        dispatch(setTreasureModalOpen(true))
+      })
       return
     }
     if (phase === 'reinforcement' && hasValidSet) {
-      setOpen(true)
+      window.requestAnimationFrame(() => {
+        dispatch(setTreasureModalOpen(true))
+      })
     }
-  }, [isMyTurn, mustCashIn, phase, hasValidSet])
+  }, [isMyTurn, mustCashIn, phase, hasValidSet, dispatch])
 
   // Close the modal if I no longer have a valid set and I'm not forced to cash in
   useEffect(() => {
-    if (open && !mustCashIn && !hasValidSet) setOpen(false)
-  }, [open, mustCashIn, hasValidSet])
+    if (!mustCashIn && !hasValidSet) dispatch(setTreasureModalOpen(false))
+  }, [mustCashIn, hasValidSet, dispatch])
 
   // Icon helper (SVG only; no emoji fallback)
   const iconFor = (metal: string) => {
@@ -106,38 +109,35 @@ export function TreasureHud({ variant = 'header' }: Props) {
       : 'inline-flex items-center gap-2 rounded-full border border-border bg-[color:var(--surface-2)]/80 px-3 py-1.5 text-sm'
 
   return (
-    <>
-      <button
-        type="button"
-        className={`${containerClasses} ${pulse ? 'animate-pulse ring-1 ring-[color:var(--color-warning)]' : ''} ${!isMyTurn ? 'opacity-70 cursor-not-allowed' : ''}`}
-        title={isMyTurn ? 'Treasures' : 'You can trade cards on your turn'}
-        onClick={() => {
-          if (!isMyTurn) return
-          setOpen(true)
-        }}
-        disabled={!isMyTurn}
-        aria-disabled={!isMyTurn}
-      >
-        <span className="inline-flex items-center gap-1 mr-1">
-          <span className="opacity-80">Next</span>
-          <span className="font-semibold text-white">+{base}</span>
-        </span>
-        <span className="mx-1 h-4 w-px bg-white/20" />
-        <span className="inline-flex items-center gap-1">
-          {shown.map((m, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: cards lack stable ids; index is fine for a static strip
-            <span key={`${m}-${i}`} className="w-3 h-3 flex items-center justify-center">
-              {iconFor(m)}
-            </span>
-          ))}
-          {overflow > 0 && <span className="text-[10px] text-white/80">+{overflow}</span>}
-        </span>
-        <span className="ml-1">
-          <InfoTooltip title="Trade any valid set of 3 cards for reinforcements. Diamonds are wild and add extra when included." />
-        </span>
-      </button>
-      <TreasureTradeModal isOpen={open} onClose={() => setOpen(false)} />
-    </>
+    <button
+      type="button"
+      className={`${containerClasses} ${pulse ? 'animate-pulse ring-1 ring-[color:var(--color-warning)]' : ''} ${!isMyTurn ? 'opacity-70 cursor-not-allowed' : ''}`}
+      title={isMyTurn ? 'Treasures' : 'You can trade cards on your turn'}
+      onClick={() => {
+        if (!isMyTurn) return
+        dispatch(setTreasureModalOpen(true))
+      }}
+      disabled={!isMyTurn}
+      aria-disabled={!isMyTurn}
+    >
+      <span className="inline-flex items-center gap-1 mr-1">
+        <span className="opacity-80">Next</span>
+        <span className="font-semibold text-white">+{base}</span>
+      </span>
+      <span className="mx-1 h-4 w-px bg-white/20" />
+      <span className="inline-flex items-center gap-1">
+        {shown.map((m, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: cards lack stable ids; index is fine for a static strip
+          <span key={`${m}-${i}`} className="w-3 h-3 flex items-center justify-center">
+            {iconFor(m)}
+          </span>
+        ))}
+        {overflow > 0 && <span className="text-[10px] text-white/80">+{overflow}</span>}
+      </span>
+      <span className="ml-1">
+        <InfoTooltip title="Trade any valid set of 3 cards for reinforcements. Diamonds are wild and add extra when included." />
+      </span>
+    </button>
   )
 }
 

@@ -275,18 +275,28 @@ describe('GameService', () => {
       )
       const currentPlayer = initialState.currentPlayer
 
+      // Place all available reinforcements before ending phase
+      const owned = initialState.board.find((t) => t.ownerId === currentPlayer)
+      const current = initialState.players.find((p) => p.id === currentPlayer)
+      expect(owned).toBeTruthy()
+      expect(current).toBeTruthy()
+      if (!owned || !current) throw new Error('Setup failed: no owned territory or player')
+      if ((current.armies ?? 0) > 0) {
+        await gameService.deployArmies(roomId, currentPlayer, owned.id, current.armies)
+      }
+
+      // After placing all reinforcements, phase should already be 'attack'
+      const afterPlacement = await gameService.getGameState(roomId)
+      expect(afterPlacement?.phase).toBe('attack')
+
       const firstAdvance = await gameService.endTurn(roomId, currentPlayer)
-      expect(firstAdvance.gameState.phase).toBe('attack')
+      expect(firstAdvance.gameState.phase).toBe('fortify')
       expect(firstAdvance.gameState.currentPlayer).toBe(currentPlayer)
 
       const secondAdvance = await gameService.endTurn(roomId, currentPlayer)
-      expect(secondAdvance.gameState.phase).toBe('fortify')
-      expect(secondAdvance.gameState.currentPlayer).toBe(currentPlayer)
-
-      const thirdAdvance = await gameService.endTurn(roomId, currentPlayer)
-      expect(thirdAdvance.gameState.phase).toBe('reinforcement')
-      expect(thirdAdvance.gameState.currentPlayer).not.toBe(currentPlayer)
-      expect(players).toContain(thirdAdvance.gameState.currentPlayer)
+      expect(secondAdvance.gameState.phase).toBe('reinforcement')
+      expect(secondAdvance.gameState.currentPlayer).not.toBe(currentPlayer)
+      expect(players).toContain(secondAdvance.gameState.currentPlayer)
     })
 
     it('should reject turn end from wrong player', async () => {
@@ -349,6 +359,12 @@ describe('GameService', () => {
 
       if (!territory) {
         throw new Error(`No territory found for ${currentPlayer}`)
+      }
+
+      // Ensure reinforcement phase can be ended
+      const current = initialState.players.find((p) => p.id === currentPlayer)
+      if (current && (current.armies ?? 0) > 0) {
+        await gameService.deployArmies(roomId, currentPlayer, territory.id, current.armies)
       }
 
       await gameService.endTurn(roomId, currentPlayer)

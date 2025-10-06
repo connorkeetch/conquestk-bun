@@ -47,6 +47,8 @@ export interface UIRoomState {
     defenderLosses: number
     conquered: boolean
   }>
+  // Centralized treasure trade modal visibility
+  treasureModalOpen?: boolean
 }
 
 const initialState: UIRoomState = {
@@ -69,6 +71,7 @@ const initialState: UIRoomState = {
   placementHistory: [],
   placementServerSpent: 0,
   battleHistory: [],
+  treasureModalOpen: false,
 }
 
 const uiRoomSlice = createSlice({
@@ -238,6 +241,9 @@ const uiRoomSlice = createSlice({
     clearBattleHistory(state) {
       state.battleHistory = []
     },
+    setTreasureModalOpen(state, action: PayloadAction<boolean>) {
+      state.treasureModalOpen = Boolean(action.payload)
+    },
     toggleMuteUser(state, action: PayloadAction<string>) {
       const id = action.payload
       const list = new Set(state.mutedUserIds ?? [])
@@ -326,6 +332,7 @@ export const {
   setPlacementServerSpent,
   recordBattleResult,
   clearBattleHistory,
+  setTreasureModalOpen,
 } = uiRoomSlice.actions
 
 export default uiRoomSlice.reducer

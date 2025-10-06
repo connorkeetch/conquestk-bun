@@ -425,9 +425,20 @@ export const undoFortify = createAsyncThunk(
 // End turn action
 export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, dispatch }) => {
   const state = getState() as RootState
-  const { currentGame } = state.game
+  const { currentGame, reinforcementArmies } = state.game
 
   if (!currentGame) throw new Error('No active game')
+
+  // Prevent accidental progression during reinforcement
+  if (currentGame.phase === 'reinforcement' && reinforcementArmies > 0) {
+    const remaining = reinforcementArmies
+    try {
+      toast.error(`You still have ${remaining} reinforcements to place`)
+    } catch {
+      // ignore toast errors
+    }
+    return
+  }
 
   try {
     socketService.endTurn(currentGame.roomId)

@@ -941,11 +941,20 @@ export class GameService {
     }
   }
 
-  async endTurn(roomId: string, userId: string) {
+  async endTurn(roomId: string, userId: string, options?: { allowEarlyEnd?: boolean }) {
     const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
     const gameState = this.hydrateGameState(cachedState)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
+
+    // Prevent advancing out of reinforcement phase while reinforcements remain (manual only)
+    if (gameState.phase === 'reinforcement' && !(options?.allowEarlyEnd === true)) {
+      const current = gameState.players.find((p) => p.id === userId)
+      const remaining = Math.max(0, Math.trunc(current?.armies ?? 0))
+      if (remaining > 0) {
+        throw new Error(`You still have ${remaining} reinforcements to place`)
+      }
+    }
 
     const previousPlayerId = gameState.currentPlayer
     const previousPhase = gameState.phase

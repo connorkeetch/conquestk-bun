@@ -9,10 +9,12 @@ import { DiceResultsBar } from '@/components/game/DiceResultsBar'
 import GameRoomFooter from '@/components/game/GameRoomFooter'
 // Player stats modal removed; drawers are used on all devices
 import { ResyncBanner } from '@/components/game/ResyncBanner'
+import { TreasureTradeModal } from '@/components/game/TreasureTradeModal'
 import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import SettingsModal from '@/components/SettingsModal'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
+import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
@@ -182,6 +184,8 @@ export default function GameRoom() {
   // Auto-disable background animations during active gameplay for better performance
   // Respects user's performance mode preference
   const settings = useAppSelector((state) => state.settings)
+  // Centralized Treasure modal state
+  const treasureModalOpen = useAppSelector((s) => s.uiRoom.treasureModalOpen === true)
   const userBackgroundMotionRef = useRef<boolean | null>(null)
 
   useEffect(() => {
@@ -241,6 +245,7 @@ export default function GameRoom() {
   )
 
   const gamePhase = currentGame?.phase ?? 'reinforcement'
+  const reinforcementArmies = useAppSelector((state) => state.game.reinforcementArmies)
   const isMyTurn = Boolean(user?.id && currentGame?.currentPlayer === user.id)
   const isGameActive =
     gamePhase === 'reinforcement' || gamePhase === 'attack' || gamePhase === 'fortify'
@@ -257,6 +262,10 @@ export default function GameRoom() {
         : gamePhase === 'fortify'
           ? 'End Phase → End Turn'
           : 'End Phase'
+  const endPhaseTitle =
+    gamePhase === 'reinforcement' && reinforcementArmies > 0
+      ? `Place ${reinforcementArmies} reinforcements to continue`
+      : endPhaseLabel
   const activePlayer = useMemo(
     () => currentGame?.players?.find((player) => player.id === currentGame.currentPlayer),
     [currentGame?.currentPlayer, currentGame?.players],
@@ -1113,9 +1122,11 @@ export default function GameRoom() {
           </div>
         </div>
         {showPhaseBar && currentGame && (
-          <>
-            <div className="chip w-full flex flex-col gap-2 text-xs sm:text-sm">
-              <div className="flex flex-wrap items-center gap-3">
+          <div className="chip w-full flex flex-col gap-2 text-xs sm:text-sm">
+            {/* Unified, wrapping row: info + phases + actions */}
+            <div className="flex w-full flex-wrap items-center gap-2">
+              {/* Turn info (left) */}
+              <div className="flex min-w-0 items-center gap-3">
                 <span className="font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
                   Round {roundNumber}
                 </span>
@@ -1131,96 +1142,101 @@ export default function GameRoom() {
                 </span>
                 <TurnTimer className="text-xs sm:text-sm" showBank={false} />
               </div>
-              <div className="flex w-full flex-wrap items-center gap-2">
-                {isMyTurn && (
-                  <fieldset aria-label="Turn phases" className="flex flex-wrap items-center gap-2">
-                    <legend className="sr-only">Turn phases</legend>
-                    {(['reinforcement', 'attack', 'fortify'] as const).map((phaseKey) => {
-                      const active = gamePhase === phaseKey
-                      const label =
-                        phaseKey === 'reinforcement'
-                          ? 'Reinforce'
-                          : phaseKey.charAt(0).toUpperCase() + phaseKey.slice(1)
-                      return (
-                        <span
-                          key={phaseKey}
-                          className={
-                            'inline-flex items-center gap-1 rounded px-2 py-1 font-medium ' +
-                            (active
-                              ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
-                              : 'bg-[color:var(--surface-1)] text-muted')
-                          }
-                        >
-                          {label}
-                        </span>
-                      )
-                    })}
-                  </fieldset>
-                )}
-                <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-                  {isMyTurn &&
-                    isGameActive &&
-                    gamePhase === 'reinforcement' &&
-                    placementHistoryLen > 0 && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => void dispatch(undoLastPlacement())}
-                        title="Undo last placement (Z)"
+
+              {/* Phases (center on wrap) */}
+              {isMyTurn && (
+                <fieldset
+                  aria-label="Turn phases"
+                  className="order-3 flex w-full items-center justify-center gap-2 sm:order-none sm:w-auto sm:mx-auto"
+                >
+                  <legend className="sr-only">Turn phases</legend>
+                  {(['reinforcement', 'attack', 'fortify'] as const).map((phaseKey) => {
+                    const active = gamePhase === phaseKey
+                    const label =
+                      phaseKey === 'reinforcement'
+                        ? 'Reinforce'
+                        : phaseKey.charAt(0).toUpperCase() + phaseKey.slice(1)
+                    return (
+                      <span
+                        key={phaseKey}
+                        className={
+                          'inline-flex items-center gap-1 rounded px-2 py-1 font-medium ' +
+                          (active
+                            ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
+                            : 'bg-[color:var(--surface-1)] text-muted')
+                        }
                       >
-                        ↶ Undo
-                      </button>
-                    )}
-                  {isMyTurn && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
+                        {label}
+                      </span>
+                    )
+                  })}
+                </fieldset>
+              )}
+
+              {/* Actions (right on wide, centered below on wrap) */}
+              <div className="order-2 flex w-full flex-wrap items-center justify-center gap-2 sm:order-none sm:w-auto sm:ml-auto">
+                {isMyTurn &&
+                  isGameActive &&
+                  gamePhase === 'reinforcement' &&
+                  placementHistoryLen > 0 && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
-                      onClick={() => void dispatch(undoFortify())}
-                      title="Undo last fortify (Z)"
+                      onClick={() => void dispatch(undoLastPlacement())}
+                      title="Undo last placement (Z)"
                     >
                       ↶ Undo
                     </button>
                   )}
-                  {isMyTurn && canGoBackToReinforcement && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => void dispatch(goBackToReinforcement())}
-                      title="Go back to reinforcement"
-                    >
-                      ↩ Reinforce
-                    </button>
-                  )}
-                  {isMyTurn && isGameActive && (
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => void dispatch(endTurn())}
-                      title={endPhaseLabel}
-                    >
-                      {endPhaseLabel}
-                    </button>
-                  )}
-                </div>
+                {isMyTurn && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => void dispatch(undoFortify())}
+                    title="Undo last fortify (Z)"
+                  >
+                    ↶ Undo
+                  </button>
+                )}
+                {isMyTurn && canGoBackToReinforcement && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => void dispatch(goBackToReinforcement())}
+                    title="Go back to reinforcement"
+                  >
+                    ↩ Reinforce
+                  </button>
+                )}
+                {isMyTurn && isGameActive && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => void dispatch(endTurn())}
+                    title={endPhaseTitle}
+                  >
+                    {endPhaseLabel}
+                  </button>
+                )}
               </div>
-              {!isMyTurn && isGameActive && (
-                <div className="flex items-center gap-2 text-[11px] text-muted">
-                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
-                  <span>
-                    Waiting for {activePlayer?.username || 'Opponent'} —{' '}
-                    {gamePhase === 'reinforcement'
-                      ? 'reinforcing'
-                      : gamePhase === 'attack'
-                        ? 'attacking'
-                        : gamePhase === 'fortify'
-                          ? 'fortifying'
-                          : gamePhase}
-                  </span>
-                </div>
-              )}
             </div>
-            <DiceResultsBar />
-          </>
+
+            {!isMyTurn && isGameActive && (
+              <div className="flex items-center gap-2 text-[11px] text-muted">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
+                <span>
+                  Waiting for {activePlayer?.username || 'Opponent'} —{' '}
+                  {gamePhase === 'reinforcement'
+                    ? 'reinforcing'
+                    : gamePhase === 'attack'
+                      ? 'attacking'
+                      : gamePhase === 'fortify'
+                        ? 'fortifying'
+                        : gamePhase}
+                </span>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -1693,6 +1709,9 @@ export default function GameRoom() {
             )}
           </div>
 
+          {/* Dice results below the map so it doesn't shift the board */}
+          <DiceResultsBar />
+
           {/* Desktop action bar moved inside the game board as an overlay */}
 
           {/* Player Stats under board (hidden on ultra-wide) */}
@@ -1987,6 +2006,12 @@ export default function GameRoom() {
       )}
 
       {/* Modals removed: drawers are the only UI for chat and stats */}
+
+      {/* Centralized Treasure Trade Modal */}
+      <TreasureTradeModal
+        isOpen={treasureModalOpen}
+        onClose={() => dispatch(setTreasureModalOpen(false))}
+      />
 
       {/* Settings Modal */}
       <SettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
