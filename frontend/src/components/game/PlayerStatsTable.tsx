@@ -100,7 +100,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                     </th>
                   )}
                   {variant === 'full' && (
-                    <th className="px-1 py-2 text-right font-medium text-muted">
+                    <th className="px-1 py-2 pr-3 text-right font-medium text-muted">
                       <img
                         src={resolveAssetPath('static/icons/stats/treasures.svg')}
                         alt=""
@@ -158,7 +158,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                       </td>
                     )}
                     {variant === 'full' && (
-                      <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                      <td className="px-1 py-1.5 pr-3 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                         {player.treasureCount}
                       </td>
                     )}
