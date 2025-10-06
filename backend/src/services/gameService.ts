@@ -1,7 +1,6 @@
 import { query, transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
-// Treasure awarding is handled by the GameEngine at end-of-turn
-// import { drawTreasure, ensureTreasureState, normalizeTreasureConfig } from '../game/hiddenTreasures'
+import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures'
 import { loadMapForEngine } from '../game/mapLoader'
 import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans'
 import type {
@@ -1597,6 +1596,50 @@ export class GameService {
     battleMetrics.recordApply(gameId, status, persistenceOutcome.divergence)
 
     if (persistenceOutcome.applied) {
+      // If players were eliminated, transfer their treasures to the attacker now
+      try {
+        if (lastBattleResult.eliminatedPlayers && lastBattleResult.eliminatedPlayers.length > 0) {
+          const cfg = normalizeTreasureConfig(updatedGameState.gameConfig.treasureConfig)
+          if (cfg.enabled) {
+            const eliminator = updatedGameState.players.find((p) => p.id === attackerId)
+            if (eliminator) {
+              let eliminatorHand: string[]
+              if (Array.isArray(eliminator.treasures)) {
+                eliminatorHand = eliminator.treasures as string[]
+              } else {
+                eliminator.treasures = []
+                eliminatorHand = eliminator.treasures as string[]
+              }
+              let transferred = 0
+              for (const elimId of lastBattleResult.eliminatedPlayers) {
+                const eliminated = updatedGameState.players.find((p) => p.id === elimId)
+                const has =
+                  Array.isArray(eliminated?.treasures) && (eliminated?.treasures?.length ?? 0) > 0
+                if (!eliminated || !has) continue
+                eliminatorHand.push(...(eliminated.treasures as string[]))
+                transferred += (eliminated.treasures as string[]).length
+                eliminated.treasures = []
+                eliminated.mustCashInTreasures = false
+              }
+              if (transferred > 0 && eliminatorHand.length >= cfg.handCap) {
+                const hasValidSet =
+                  findRedeemableSets(eliminatorHand as unknown as import('../types/game').Metal[])
+                    .length > 0
+                eliminator.mustCashInTreasures = hasValidSet
+                if (hasValidSet && eliminator.id === updatedGameState.currentPlayer) {
+                  updatedGameState.mustCashInTreasures = true
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        logger.warn('Failed to transfer eliminated treasures in applyBattleResult', {
+          gameId,
+          error: e instanceof Error ? e.message : e,
+        })
+      }
+
       // Do not award treasures here. The GameEngine awards exactly one treasure
       // at end-of-turn if any conquest occurred. This avoids mid-turn multiple awards.
       serializedState = this.serializeGameState(updatedGameState)
