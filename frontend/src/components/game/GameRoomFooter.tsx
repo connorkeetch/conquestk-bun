@@ -38,6 +38,22 @@ export default function GameRoomFooter({
         <div className="flex items-center justify-between gap-2">
           {/* Desktop Layout - Left aligned buttons */}
           <div className="hidden md:flex items-center gap-2">
+            {/* Player Stats Button (desktop, with label) */}
+            {onStatsClick && (
+              <button
+                type="button"
+                onClick={onStatsClick}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
+                title="Player Stats"
+                aria-label="Player Stats"
+              >
+                <span className="text-lg" aria-hidden="true">
+                  📊
+                </span>
+                <span className="text-sm font-medium">Player Stats</span>
+              </button>
+            )}
+
             {/* Chat/Log Button */}
             <button
               type="button"
@@ -50,20 +66,6 @@ export default function GameRoomFooter({
                 💬
               </span>
               <span className="text-sm font-medium">Chat & Log</span>
-            </button>
-
-            {/* Settings Button */}
-            <button
-              type="button"
-              onClick={onSettingsClick}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
-              title="Settings"
-              aria-label="Settings"
-            >
-              <span className="text-lg" aria-hidden="true">
-                ⚙️
-              </span>
-              <span className="text-sm font-medium">Settings</span>
             </button>
 
             {/* Mute Button */}
@@ -121,26 +123,40 @@ export default function GameRoomFooter({
               </button>
             )}
 
-            {/* Stats Button */}
-            {onStatsClick && (
-              <button
-                type="button"
-                onClick={onStatsClick}
-                className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all"
-                title="Quick Stats"
-                aria-label="Quick Stats"
-              >
-                <span className="text-lg" aria-hidden="true">
-                  📊
-                </span>
-              </button>
-            )}
+            {/* Settings Button */}
+            <button
+              type="button"
+              onClick={onSettingsClick}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
+              title="Settings"
+              aria-label="Settings"
+            >
+              <span className="text-lg" aria-hidden="true">
+                ⚙️
+              </span>
+              <span className="text-sm font-medium">Settings</span>
+            </button>
           </div>
 
-          {/* Mobile Layout - Compact buttons spread across footer */}
+          {/* Mobile Layout - Left: Stats, Chat, Mute; Right: Settings */}
           <div className="md:hidden flex items-center justify-between w-full gap-2">
-            {/* Left side - Chat and Settings */}
+            {/* Left side - Stats, Chat, Mute */}
             <div className="flex items-center gap-2">
+              {/* Stats Button (opens drawer on mobile) */}
+              {onStatsClick && (
+                <button
+                  type="button"
+                  onClick={onStatsClick}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
+                  title="Player Stats"
+                  aria-label="Player Stats"
+                >
+                  <span className="text-lg" aria-hidden="true">
+                    📊
+                  </span>
+                </button>
+              )}
+
               {/* Chat Button (opens drawer on mobile) */}
               <button
                 type="button"
@@ -157,8 +173,58 @@ export default function GameRoomFooter({
                   {isMobileDrawerOpen ? '✕' : '💬'}
                 </span>
               </button>
+              {/* Mute Button */}
+              <button
+                type="button"
+                onClick={handleToggleMute}
+                className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
+                title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+                aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`transition-colors ${isMuted ? 'text-[color:var(--color-danger)]' : 'text-[color:var(--color-success)]'}`}
+                  aria-hidden="true"
+                >
+                  {isMuted ? (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <line x1="23" y1="9" x2="17" y2="15" />
+                      <line x1="17" y1="9" x2="23" y2="15" />
+                    </>
+                  ) : (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            </div>
 
-              {/* Settings Button */}
+            {/* Right side - Settings (and optional Help) */}
+            <div className="flex items-center gap-2">
+              {onHelpClick && (
+                <button
+                  type="button"
+                  onClick={onHelpClick}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
+                  title="Help & Shortcuts"
+                  aria-label="Help & Shortcuts"
+                >
+                  <span className="text-lg" aria-hidden="true">
+                    ❓
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onSettingsClick}
@@ -170,58 +236,7 @@ export default function GameRoomFooter({
                   ⚙️
                 </span>
               </button>
-
-              {/* Stats Button (opens drawer on mobile) */}
-              {onStatsClick && (
-                <button
-                  type="button"
-                  onClick={onStatsClick}
-                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
-                  title="Player Stats"
-                  aria-label="Player Stats"
-                >
-                  <span className="text-lg" aria-hidden="true">
-                    📊
-                  </span>
-                </button>
-              )}
             </div>
-
-            {/* Right side - Mute button */}
-            <button
-              type="button"
-              onClick={handleToggleMute}
-              className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
-              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-              aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`transition-colors ${isMuted ? 'text-[color:var(--color-danger)]' : 'text-[color:var(--color-success)]'}`}
-                aria-hidden="true"
-              >
-                {isMuted ? (
-                  <>
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                    <line x1="23" y1="9" x2="17" y2="15" />
-                    <line x1="17" y1="9" x2="23" y2="15" />
-                  </>
-                ) : (
-                  <>
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  </>
-                )}
-              </svg>
-            </button>
           </div>
         </div>
       </div>

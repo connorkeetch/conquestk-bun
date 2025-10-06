@@ -1016,7 +1016,7 @@ export default function GameRoom() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] 2xl:max-w-none flex-col gap-6 px-6 pb-20 pt-2 lg:px-10">
+    <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] 2xl:max-w-none flex-col gap-6 px-6 pb-20 pt-0 lg:px-10">
       {/* Sticky title banner below main header */}
       <div
         className="sticky z-40 -mx-6 px-6 bg-[color:color-mix(in srgb, var(--surface-1) 92%, transparent)] backdrop-blur border-b border-border"
