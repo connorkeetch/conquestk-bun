@@ -1,7 +1,6 @@
 import type React from 'react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import TreasureHud from '@/components/game/TreasureHud'
-import { TurnTimer } from '@/components/game/TurnTimer'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getColorValue } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
@@ -143,11 +142,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                         >
                           {player.username}
                         </button>
-                        {player.isCurrentTurn && variant !== 'minimal' && (
-                          <span className="ml-2 shrink-0">
-                            <TurnTimer showBank={false} />
-                          </span>
-                        )}
+                        {/* Timer removed from player stats; top bar displays the turn timer */}
                       </div>
                     </td>
                     <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
