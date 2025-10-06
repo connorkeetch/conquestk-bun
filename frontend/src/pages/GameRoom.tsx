@@ -162,23 +162,7 @@ export default function GameRoom() {
   const isMember = Boolean(currentPlayer)
   const isHost = currentRoom?.hostId === user?.id
 
-  const _muteOffsetBottom = useMemo(() => {
-    // Base offset so it clears typical bottom paddings/footers
-    let px = 56
-    // Raise above AFK grace bar if visible
-    if (isGraceActor && graceExpiresAt) {
-      px = Math.max(px, 120)
-    }
-    // Raise further if host replacement bar is visible
-    if (isHost && replacementPending) {
-      px = Math.max(px, 160)
-    }
-    // If bottom drawer is open on mobile, push higher
-    if (mobileDrawerOpen) {
-      px = Math.max(px, 240)
-    }
-    return px
-  }, [isGraceActor, graceExpiresAt, isHost, replacementPending, mobileDrawerOpen])
+  // Removed legacy mute offset calculation (mute integrated in footer)
 
   // Open Game Over modal when game finishes
   useEffect(() => {
@@ -218,7 +202,7 @@ export default function GameRoom() {
     currentRoom && (currentRoom.players?.length ?? 0) >= currentRoom.maxPlayers,
   )
 
-  const hostIsAloneInLobby = useMemo(() => {
+  const _hostIsAloneInLobby = useMemo(() => {
     if (!currentRoom || !isHost) return false
     const count = currentRoom.players?.length ?? 0
     return (currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && count <= 1
@@ -1071,9 +1055,7 @@ export default function GameRoom() {
       <ConnectionBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
       {/* One-line top banner with room info + actions */}
-      <div
-        className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]"
-      >
+      <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]">
         <div
           className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
           title={`${currentRoom.name}${
@@ -1113,7 +1095,7 @@ export default function GameRoom() {
               >
                 {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
               </button>
-              {hostIsAloneInLobby ? (
+              {isHost ? (
                 <button
                   onClick={() => void handleCancelRoom()}
                   type="button"
@@ -1553,23 +1535,26 @@ export default function GameRoom() {
                     const lobbyPhase = cr?.status === 'lobby'
                     const canManuallyStart = isHost && lobbyPhase && joined >= Math.max(2, total)
                     if (!canManuallyStart || !cr?.id) return null
+                    const readyId: string = cr.id as string
                     return (
                       <button
                         type="button"
                         className="btn btn-primary"
                         onClick={async () => {
                           try {
-                            await gameService.setReadyState(cr.id, true)
+                            await gameService.setReadyState(readyId, true)
                             toast.success('Start requested')
                           } catch (err) {
-                            const message =
-                              (err &&
-                                typeof err === 'object' &&
-                                'response' in err &&
-                                (err as { response?: { data?: { message?: string } } }).response
-                                  ?.data?.message) ||
-                              'Failed to start game'
-                            toast.error(message)
+                            let message: string = 'Failed to start game'
+                            if (err && typeof err === 'object' && 'response' in err) {
+                              const apiErr = err as { response?: { data?: { message?: string } } }
+                              if (typeof apiErr.response?.data?.message === 'string') {
+                                message = apiErr.response.data.message
+                              }
+                            } else if (err instanceof Error && typeof err.message === 'string') {
+                              message = err.message
+                            }
+                            toast.error(message as string)
                           }
                         }}
                       >
