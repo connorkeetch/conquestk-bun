@@ -3,10 +3,10 @@ import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } fr
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { GameOverModal } from '@/components/GameOverModal'
-import ChatLogModal from '@/components/game/ChatLogModal'
+// Chat modal removed; drawers are used on all devices
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import GameRoomFooter from '@/components/game/GameRoomFooter'
-import PlayerStatsModal from '@/components/game/PlayerStatsModal'
+// Player stats modal removed; drawers are used on all devices
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import TreasureHud from '@/components/game/TreasureHud'
 import { TurnTimer } from '@/components/game/TurnTimer'
@@ -102,9 +102,7 @@ export default function GameRoom() {
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
   const [showGameOver, setShowGameOver] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-  // Bottom drawer now only shows chat; stats has its own drawer on mobile
-  const [chatLogModalOpen, setChatLogModalOpen] = useState(false)
-  const [statsModalOpen, setStatsModalOpen] = useState(false)
+  // Drawers only (chat + stats) across desktop and mobile
   const [statsDrawerOpen, setStatsDrawerOpen] = useState(false)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [resignDialogOpen, setResignDialogOpen] = useState(false)
@@ -118,15 +116,15 @@ export default function GameRoom() {
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
 
-  // Prevent background scroll when the bottom drawer is open
+  // Prevent background scroll when any drawer is open
   useEffect(() => {
-    if (!mobileDrawerOpen) return
+    if (!mobileDrawerOpen && !statsDrawerOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [mobileDrawerOpen])
+  }, [mobileDrawerOpen, statsDrawerOpen])
   // AFK grace prompt state
   const graceActorUserId = useMemo(
     () =>
@@ -1072,22 +1070,26 @@ export default function GameRoom() {
       )}
       <ConnectionBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-[color:var(--heading)]">
+      {/* One-line top banner with room info + actions */}
+      <div
+        className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]"
+      >
+        <div
+          className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
+          title={`${currentRoom.name}${
+            typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''
+          } • Hosted by ${hostDisplay(currentRoom)} • ${seatUsage(currentRoom).label}`}
+        >
+          <span className="truncate">
             {currentRoom.name}
             {typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}
-          </h1>
-          <p className="text-sm text-muted">
-            Hosted by{' '}
-            <span className="text-[color:var(--heading)]">{hostDisplay(currentRoom)}</span>
-            <span className="mx-2 text-xs text-muted">•</span>
+            <span className="mx-2 opacity-60">•</span>
+            Hosted by <span className="font-semibold">{hostDisplay(currentRoom)}</span>
+            <span className="mx-2 opacity-60">•</span>
             {seatUsage(currentRoom).label}
-            <span className="mx-2 text-xs text-muted">•</span>
-            {currentRoom.isRanked ? 'Ranked match' : 'Casual lobby'}
-          </p>
+          </span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {currentGame && <TreasureHud variant="header" />}
           {!isMember && (
             <button
@@ -1095,18 +1097,17 @@ export default function GameRoom() {
               disabled={joinActionDisabled}
               type="button"
               title={joinButtonTitle}
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
             >
               {joinButtonLabel}
             </button>
           )}
-          {/* Ready control removed; joining implies ready */}
           {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
             <>
               <button
                 onClick={() => void handleCopyInviteLink()}
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-sm"
                 title="Copy invite link"
                 aria-live="polite"
               >
@@ -1116,12 +1117,12 @@ export default function GameRoom() {
                 <button
                   onClick={() => void handleCancelRoom()}
                   type="button"
-                  className="btn btn-danger"
+                  className="btn btn-danger btn-sm"
                 >
                   Close Room
                 </button>
               ) : (
-                <button onClick={handleLeaveRoom} type="button" className="btn btn-danger">
+                <button onClick={handleLeaveRoom} type="button" className="btn btn-danger btn-sm">
                   Leave Room
                 </button>
               )}
@@ -1751,10 +1752,10 @@ export default function GameRoom() {
 
       {/* Mobile FAB - REMOVED: Now integrated into footer */}
 
-      {/* Mobile backdrop */}
+      {/* Drawer backdrop (chat) */}
       {currentGame && (
         <button
-          className={`md:hidden fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
+          className={`fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
           onClick={() => setMobileDrawerOpen(false)}
           onKeyDown={(e) => {
@@ -1765,11 +1766,11 @@ export default function GameRoom() {
         />
       )}
 
-      {/* Mobile bottom drawer */}
+      {/* Bottom drawer (chat) */}
       {currentGame && (
         <div
           id={mobileDrawerId}
-          className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
@@ -1825,10 +1826,10 @@ export default function GameRoom() {
         </div>
       )}
 
-      {/* Mobile backdrop (stats) */}
+      {/* Drawer backdrop (stats) */}
       {currentGame && (
         <button
-          className={`md:hidden fixed inset-0 ${statsDrawerOpen ? 'block' : 'hidden'}`}
+          className={`fixed inset-0 ${statsDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
           onClick={() => setStatsDrawerOpen(false)}
           onKeyDown={(e) => {
@@ -1839,11 +1840,11 @@ export default function GameRoom() {
         />
       )}
 
-      {/* Mobile bottom drawer (stats) */}
+      {/* Bottom drawer (stats) */}
       {currentGame && (
         <div
           id={statsDrawerId}
-          className={`md:hidden fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
@@ -1885,33 +1886,7 @@ export default function GameRoom() {
         </div>
       )}
 
-      {/* Chat/Log Modal (desktop only) */}
-      {chatLogModalOpen && currentGame && user && (
-        <ChatLogModal
-          isOpen={chatLogModalOpen}
-          onClose={() => setChatLogModalOpen(false)}
-          gameId={currentRoom.id}
-          currentUserId={user.id}
-          userTeamId={currentGame.players?.find((p) => p.userId === user.id)?.teamId}
-          onLogFocus={(territories) => {
-            const focus = territories[territories.length - 1]
-            if (focus) dispatch(selectTerritory(focus))
-          }}
-        />
-      )}
-
-      {/* Player Stats Modal (desktop only) */}
-      {statsModalOpen && currentGame && (
-        <PlayerStatsModal
-          isOpen={statsModalOpen}
-          onClose={() => setStatsModalOpen(false)}
-          players={currentGame.players || []}
-          currentPlayerId={currentGame.currentPlayer}
-          territories={Object.fromEntries(
-            (currentGame.board || []).map((t) => [t.id, { owner: t.ownerId, armies: t.armies }]),
-          )}
-        />
-      )}
+      {/* Modals removed: drawers are the only UI for chat and stats */}
 
       {/* Settings Modal */}
       <SettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
@@ -1919,22 +1894,11 @@ export default function GameRoom() {
       {/* Game Room Footer (mobile + desktop) */}
       {currentGame && (
         <GameRoomFooter
-          onChatClick={() => {
-            // Desktop: open modal, Mobile: toggle drawer
-            if (window.innerWidth >= 768) {
-              setChatLogModalOpen(true)
-            } else {
-              setMobileDrawerOpen((v) => !v)
-            }
-          }}
+          onChatClick={() => setMobileDrawerOpen((v) => !v)}
           onSettingsClick={() => setSettingsModalOpen(true)}
           onStatsClick={() => {
-            if (window.innerWidth >= 768) {
-              setStatsModalOpen(true)
-            } else {
-              setStatsDrawerOpen(true)
-              setMobileDrawerOpen(false)
-            }
+            setStatsDrawerOpen(true)
+            setMobileDrawerOpen(false)
           }}
           isMobileDrawerOpen={mobileDrawerOpen}
         />
