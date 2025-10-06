@@ -18,5 +18,6 @@ router.get('/rooms/:roomId', gameController.getRoomDetails)
 router.get('/rooms/:roomId/state', gameController.getRoomState)
 router.get('/rooms/:roomId/log', gameController.getRoomLog)
 router.get('/my-games', gameController.getMyGames)
+router.get('/my-games/meta', gameController.getMyGamesMeta)
 
 export { router as gameRoutes }

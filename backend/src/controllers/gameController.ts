@@ -584,6 +584,113 @@ export class GameController {
     }
   }
 
+  // Aggregate queue/timer metadata for all of the current user's games
+  getMyGamesMeta = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
+
+      const games = await this.gameRoomService.getUserGames(userId)
+
+      const metaEntries = await Promise.all(
+        games.map(async (game) => {
+          try {
+            // Only compute rich turn metadata for active games
+            if (game.status !== 'active') {
+              return [
+                game.id,
+                {
+                  isYourTurn: false,
+                  currentTurnUserId: null,
+                  currentTurnUsername: null,
+                  turnExpiresAt: null,
+                  timeBankSecondsRemaining: null,
+                  queueAhead: null,
+                },
+              ] as const
+            }
+
+            const room = await this.gameRoomService.getRoomById(game.id)
+            const currentTurnUserId = room?.currentTurnUserId ?? null
+            const turnExpiresAt = room?.turnExpiresAt ? room.turnExpiresAt.toISOString() : null
+            const timeBankSecondsRemaining =
+              typeof room?.timeBankSecondsRemaining === 'number'
+                ? Math.max(0, Math.trunc(room.timeBankSecondsRemaining))
+                : null
+
+            let queueAhead: number | null = null
+            let currentTurnUsername: string | null = null
+            try {
+              const gameState = await this.gameService.getGameState(game.id)
+              if (gameState && Array.isArray(gameState.players)) {
+                const players = gameState.players.filter((p) => !p.isEliminated)
+                const curIdx = players.findIndex((p) => p.id === gameState.currentPlayer)
+                const youIdx = players.findIndex((p) => p.userId === userId)
+                const cur = players[curIdx]
+                if (cur && typeof cur.username === 'string') {
+                  currentTurnUsername = cur.username
+                }
+                if (curIdx !== -1 && youIdx !== -1) {
+                  const n = players.length
+                  const dist = (((youIdx - curIdx) % n) + n) % n
+                  queueAhead = dist
+                }
+              }
+            } catch (_err) {
+              // Non-fatal; leave queueAhead/username as null
+            }
+
+            return [
+              game.id,
+              {
+                isYourTurn: currentTurnUserId === userId,
+                currentTurnUserId,
+                currentTurnUsername,
+                turnExpiresAt,
+                timeBankSecondsRemaining,
+                queueAhead,
+              },
+            ] as const
+          } catch (_err) {
+            return [
+              game.id,
+              {
+                isYourTurn: false,
+                currentTurnUserId: null,
+                currentTurnUsername: null,
+                turnExpiresAt: null,
+                timeBankSecondsRemaining: null,
+                queueAhead: null,
+              },
+            ] as const
+          }
+        }),
+      )
+
+      const meta: Record<
+        string,
+        {
+          isYourTurn: boolean
+          currentTurnUserId: string | null
+          currentTurnUsername: string | null
+          turnExpiresAt: string | null
+          timeBankSecondsRemaining: number | null
+          queueAhead: number | null
+        }
+      > = {}
+
+      for (const [id, m] of metaEntries) meta[id] = m
+
+      return res.json({ meta })
+    } catch (error) {
+      logger.error('Get my games meta error:', error)
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
+
   getRoomLog = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
