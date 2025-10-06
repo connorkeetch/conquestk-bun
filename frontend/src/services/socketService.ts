@@ -941,6 +941,8 @@ class SocketService {
       }
 
       const battleResult: BattleResult = {
+        attackerId,
+        defenderId,
         attackerDice,
         defenderDice,
         attackerLosses,

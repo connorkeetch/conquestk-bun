@@ -95,10 +95,16 @@ export const BattleModal: React.FC<BattleModalProps> = ({
 
   const { attackerColor, defenderColor } = useMemo(() => {
     if (!game || !battleResult) return { attackerColor: neutralGrey, defenderColor: neutralGrey }
-    const aOwnerId = fromTerritory.ownerId ?? null
-    const dOwnerId = toTerritory.ownerId ?? null
-    const aPlayer = aOwnerId ? game.players.find((p) => p.id === aOwnerId) : undefined
-    const dPlayer = dOwnerId ? game.players.find((p) => p.id === dOwnerId) : undefined
+
+    // Prefer stable attacker/defender ids from the battle payload so colors don't
+    // flip when territory ownership changes due to conquest.
+    const attackerId =
+      battleResult.attackerId ?? fromTerritory.ownerId ?? game.currentPlayer ?? null
+    const defenderId = battleResult.defenderId ?? toTerritory.ownerId ?? null
+
+    const aPlayer = attackerId ? game.players.find((p) => p.id === attackerId) : undefined
+    const dPlayer = defenderId ? game.players.find((p) => p.id === defenderId) : undefined
+
     return {
       attackerColor: aPlayer ? getColorValue(aPlayer.color) : neutralGrey,
       defenderColor: dPlayer ? getColorValue(dPlayer.color) : neutralGrey,

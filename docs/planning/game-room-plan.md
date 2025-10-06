@@ -16,6 +16,7 @@
   - Custom maps: Sector dots, Attackable rings, and Threat heat rings implemented (adjacency passed from board). Legend included.
   - Mobile swipes: Swipe left/right over the map cycles filters (None → Sectors → Attackable → Threat) on both classic and custom maps.
   - Haptics: subtle vibration on filter change via swipe or overlay button taps (when supported).
+  - Attack/Fortify arrows: When a source and target are selected (or hovered), a white dashed arrow is drawn from source → target with a subtle colored glow (red for attack, blue for fortify) and a crisp white arrowhead to make direction unambiguous.
 - Connection/resync UX
   - Added `frontend/src/components/game/ConnectionBanner.tsx` and socket connection status in `uiRoomSlice`. Header shows a (green/yellow/red) dot; a top banner appears while disconnected/connecting. “Resync” button not required yet since a fresh `game-update` arrives on reconnect; add if desync incidents appear.
 - Clickable log → map focus
