@@ -544,20 +544,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       }
     }
 
-    const onPhaseChangedLegacy: Parameters<typeof socketService.on<'phaseChanged'>>[1] = (data) => {
-      // Map legacy shape to PhaseChangeDelta-like handling
-      const phase = data.phase
-      const currentPlayer = data.currentPlayer
-      const reinforcementArmies = data.reinforcementArmies
-      handlePhaseChange({
-        type: 'PHASE_CHANGE',
-        roomId: gameId,
-        timestamp: Date.now(),
-        phase,
-        currentPlayer,
-        reinforcementArmies,
-      })
-    }
+    // Note: We intentionally ignore legacy 'phaseChanged' here to avoid duplicate log lines.
 
     const handlePhaseChange = (delta: PhaseChangeDelta) => {
       const prevPlayer = lastPlayerRef.current
@@ -885,7 +872,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
 
     socketService.on('player-joined', onPlayerJoined)
     socketService.on('lifecycle:update', onLifecycle)
-    socketService.on('phaseChanged', onPhaseChangedLegacy)
     socketService.on('game-delta', onDelta)
     // Live rating updates (ranked games)
     const onRating: Parameters<typeof socketService.on<'ratingUpdate'>>[1] = (payload) => {
@@ -924,7 +910,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       socketService.off('player-joined', onPlayerJoined)
       socketService.off('lifecycle:update', onLifecycle)
-      socketService.off('phaseChanged', onPhaseChangedLegacy)
       socketService.off('game-delta', onDelta)
       socketService.off('ratingUpdate', onRating)
     }

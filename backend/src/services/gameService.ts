@@ -1054,12 +1054,21 @@ export class GameService {
       )
     }
 
-    // Append TURN logs (END for previous, START for next when applicable)
+    // Append TURN logs (END for previous, TREASURE if any, then START for next)
     try {
       const now = new Date().toISOString()
       const entries: GameLogEntry[] = [
         { type: 'TURN', timestamp: now, playerId: previousPlayerId, event: 'END' },
       ]
+      // Log treasure award immediately after END to keep ordering intuitive
+      if (treasureAwarded) {
+        entries.push({
+          type: 'TREASURE',
+          timestamp: now,
+          userId: previousPlayerId,
+          metal: treasureAwarded,
+        })
+      }
       if (updatedState.phase === 'reinforcement') {
         const territoryCount = updatedState.board.filter(
           (t) => t.ownerId === updatedState.currentPlayer,
@@ -1071,15 +1080,6 @@ export class GameService {
           event: 'START',
           reinforcementArmies,
           territoryCount,
-        })
-      }
-      // Include treasure award entry if applicable
-      if (treasureAwarded) {
-        entries.push({
-          type: 'TREASURE',
-          timestamp: now,
-          userId: previousPlayerId,
-          metal: treasureAwarded,
         })
       }
       await this.appendLog(roomId, entries)

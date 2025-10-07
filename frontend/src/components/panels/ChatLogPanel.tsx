@@ -32,10 +32,10 @@ export default function ChatLogPanel({
       canResize={true}
       canMinimize={true}
       canClose={false}
-      className="max-h-[70vh]"
+      className="max-h-[56vh] md:max-h-[48vh] lg:max-h-[38vh] xl:max-h-[32vh] 2xl:max-h-[28vh]"
       isEditingLayout={isEditingLayout}
     >
-      <div className="h-full max-h-[70vh] min-h-0 overflow-hidden flex flex-col">
+      <div className="h-full max-h-[56vh] md:max-h-[48vh] lg:max-h-[38vh] xl:max-h-[32vh] 2xl:max-h-[28vh] min-h-0 overflow-hidden flex flex-col">
         <Suspense
           fallback={
             <div className="flex-1 min-h-0 flex items-center justify-center p-4">
