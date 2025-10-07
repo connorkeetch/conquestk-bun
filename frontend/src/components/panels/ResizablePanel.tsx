@@ -45,14 +45,13 @@ export default function ResizablePanel({
   )
 
   const zone = panelConfig?.zone
-  const isSidebar = zone === 'sidebar-left' || zone === 'sidebar-right'
   const side = zone === 'sidebar-right' ? 'right' : 'left'
 
   const { width, isDragging, resizeHandleProps } = usePanelResize({
     initialWidth: panelConfig?.width ?? 360,
     side,
     onResize: handleResize,
-    disabled: !canResize || !isSidebar,
+    disabled: !canResize,
   })
 
   if (!panelConfig) {
@@ -70,7 +69,7 @@ export default function ResizablePanel({
       }}
     >
       {/* Resize Handle - Left side for right panels, right side for left panels */}
-      {canResize && isSidebar && !isMinimized && (
+      {canResize && !isMinimized && (
         <div
           {...resizeHandleProps}
           className={`absolute top-0 bottom-0 w-1 cursor-ew-resize hover:bg-[color:var(--color-accent)] transition-colors z-10 ${

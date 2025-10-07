@@ -2,7 +2,6 @@ import type { TreasureConfig } from '@shared/types'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'
-import GameLogPanel from '@/components/chat/GameLogPanel'
 import { GameOverModal } from '@/components/GameOverModal'
 // Chat modal removed; drawers are used on all devices
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
@@ -12,8 +11,11 @@ import GameRoomFooter from '@/components/game/GameRoomFooter'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TreasureTradeModal } from '@/components/game/TreasureTradeModal'
 import { TurnTimer } from '@/components/game/TurnTimer'
+import { YourTurnBanner } from '@/components/game/YourTurnBanner'
+import { YourTurnModal } from '@/components/game/YourTurnModal'
 import { ChatLogPanel, PlayerStatsPanel } from '@/components/panels'
 import DropZone from '@/components/panels/DropZone'
+import GameLogPanelWrapper from '@/components/panels/GameLogPanelWrapper'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import SettingsModal from '@/components/SettingsModal'
 import { useQueryParam } from '@/hooks/useQueryParam'
@@ -118,27 +120,27 @@ export default function GameRoom() {
     const DEFAULT_SIDEBAR_WIDTH = 340
     const hasLeft = leftZonePanels.length > 0
     const hasRight = rightZonePanels.length > 0
-    const leftWidth = hasLeft
+    let leftWidth = hasLeft
       ? Math.max(...leftZonePanels.map((p) => p.width || 0))
       : isDraggingPanel || isEditingLayout
         ? DEFAULT_SIDEBAR_WIDTH
         : 0
-    const rightWidth = hasRight
+    let rightWidth = hasRight
       ? Math.max(...rightZonePanels.map((p) => p.width || 0))
       : isDraggingPanel || isEditingLayout
         ? DEFAULT_SIDEBAR_WIDTH
         : 0
-    if (
-      (hasLeft || isDraggingPanel || isEditingLayout) &&
-      (hasRight || isDraggingPanel || isEditingLayout)
-    ) {
+
+    // Keep the center column visually centered on wide screens:
+    // if exactly one sidebar is present, mirror its width on the opposite side
+    if (leftWidth > 0 !== rightWidth > 0) {
+      const present = Math.max(leftWidth, rightWidth, DEFAULT_SIDEBAR_WIDTH)
+      if (leftWidth === 0) leftWidth = present
+      if (rightWidth === 0) rightWidth = present
+    }
+
+    if (leftWidth > 0 || rightWidth > 0) {
       return { gridTemplateColumns: `${leftWidth}px 1fr ${rightWidth}px` }
-    }
-    if (hasLeft || isDraggingPanel || isEditingLayout) {
-      return { gridTemplateColumns: `${leftWidth}px 1fr` }
-    }
-    if (hasRight || isDraggingPanel || isEditingLayout) {
-      return { gridTemplateColumns: `1fr ${rightWidth}px` }
     }
     return undefined
   }, [layout.isDesktopOrLarger, leftZonePanels, rightZonePanels, isDraggingPanel, isEditingLayout])
@@ -1495,6 +1497,8 @@ export default function GameRoom() {
       {/* Banners appear below the sticky title */}
       <ConnectionBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
+      <YourTurnBanner />
+      <YourTurnModal />
 
       {joinError && (
         <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-sm text-[color:var(--color-danger)]">
@@ -2078,7 +2082,7 @@ export default function GameRoom() {
                 )}
 
                 {belowZonePanels.map((p) => (
-                  <div key={p.id} className={belowMapLayout === 'horizontal-row' ? 'flex-1' : ''}>
+                  <div key={p.id}>
                     {p.id === 'player-stats' && (
                       <PlayerStatsPanel
                         players={
@@ -2135,18 +2139,14 @@ export default function GameRoom() {
                       />
                     )}
                     {p.id === 'game-log' && currentGame && (
-                      <div className="panel p-0 overflow-hidden">
-                        <div className="h-[260px] overflow-auto">
-                          <GameLogPanel
-                            gameId={currentRoom?.id ?? roomId ?? ''}
-                            className="h-full"
-                            onFocus={(territories) => {
-                              const focus = territories[territories.length - 1]
-                              if (focus) dispatch(selectTerritory(focus))
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <GameLogPanelWrapper
+                        gameId={currentRoom?.id ?? roomId ?? ''}
+                        onLogFocus={(territories) => {
+                          const focus = territories[territories.length - 1]
+                          if (focus) dispatch(selectTerritory(focus))
+                        }}
+                        isEditingLayout={isEditingLayout}
+                      />
                     )}
                   </div>
                 ))}
