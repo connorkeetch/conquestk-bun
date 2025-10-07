@@ -25,7 +25,14 @@ export function YourTurnModal({ className = '' }: Props) {
     userId && isRoomActive && isActivePhase && game?.currentPlayer === userId,
   )
   const [visible, setVisible] = useState(false)
+  const [closing, setClosing] = useState(false)
   const seenTurnRef = useRef<number | null>(null)
+  const closingRef = useRef(false)
+  closingRef.current = closing
+  const activeKey = useMemo(() => {
+    const rid = game?.roomId ?? null
+    return rid && userId ? `ui.turnModal.active:${rid}:${userId}` : null
+  }, [game?.roomId, userId])
 
   const myColor = useMemo(() => {
     if (!userId || !game) return '#DC2626'
@@ -69,6 +76,42 @@ export function YourTurnModal({ className = '' }: Props) {
     }
   }, [isMyTurn, game?.turn, game?.roomId, userId])
 
+  // Broadcast active flag for gating other modals (e.g., treasure trade)
+  useEffect(() => {
+    if (!activeKey) return
+    if (visible) {
+      try {
+        sessionStorage.setItem(activeKey, '1')
+      } catch {
+        /* no-op */
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('turn-intro-active', { detail: { active: true } }))
+      } catch {
+        /* no-op */
+      }
+    } else if (!closingRef.current) {
+      // If closed due to state change (not user fade-out), deactivate immediately
+      try {
+        sessionStorage.removeItem(activeKey)
+      } catch {
+        /* no-op */
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('turn-intro-active', { detail: { active: false } }))
+      } catch {
+        /* no-op */
+      }
+    }
+    return () => {
+      try {
+        sessionStorage.removeItem(activeKey)
+      } catch {
+        /* no-op */
+      }
+    }
+  }, [activeKey, visible])
+
   const handleClose = () => {
     const currentTurn = game?.turn ?? null
     const roomId = game?.roomId ?? null
@@ -79,7 +122,22 @@ export function YourTurnModal({ className = '' }: Props) {
         // ignore
       }
     }
-    setVisible(false)
+    setClosing(true)
+    window.setTimeout(() => {
+      // After fade-out, deactivate and hide
+      try {
+        if (activeKey) sessionStorage.removeItem(activeKey)
+      } catch {
+        /* no-op */
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('turn-intro-active', { detail: { active: false } }))
+      } catch {
+        /* no-op */
+      }
+      setVisible(false)
+      setClosing(false)
+    }, 180)
   }
 
   if (!visible || !isMyTurn) return null
@@ -93,9 +151,11 @@ export function YourTurnModal({ className = '' }: Props) {
       aria-modal="true"
       aria-label="Your turn"
     >
-      <div className="absolute inset-0 bg-black/50" />
       <div
-        className="relative w-[min(92vw,520px)] rounded-xl overflow-hidden shadow-2xl border"
+        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] ${closing ? 'opacity-0' : 'opacity-100'}`}
+      />
+      <div
+        className={`relative w-[min(92vw,520px)] rounded-xl overflow-hidden shadow-2xl border transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] ${closing ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}
         style={{ borderColor: myColor }}
       >
         <div

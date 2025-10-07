@@ -29,7 +29,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 }) => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
-  const isCurrentUserLoser = winner && winner.id !== currentUserId
+  const isCurrentUserWinner = Boolean(winner && winner.id === currentUserId)
+  const isCurrentUserLoser = Boolean(winner && winner.id !== currentUserId)
   const previousThemeRef = useRef<string | null>(null)
   const aggressionLabel = useMemo(() => {
     if (!winner) return null
@@ -84,8 +85,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           >
             {/* Header */}
             <div
-              className={`sticky top-0 z-10 -mx-6 -mt-6 px-6 pb-8 pt-10 text-center shadow-[0_6px_12px_rgba(0,0,0,0.25)] ${
-                winner
+              className={`-mx-6 -mt-6 px-6 pb-8 pt-10 text-center ${
+                isCurrentUserWinner
                   ? 'bg-gradient-to-r from-gold to-violet/90 text-white'
                   : 'bg-gradient-to-r from-surface-2/80 to-surface-1/60'
               }`}
@@ -99,13 +100,15 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               >
                 ×
               </button>
-              <div className="mb-4 text-6xl drop-shadow-sm">{winner ? '🏆' : '🏳️'}</div>
+              <div className="mb-4 text-6xl drop-shadow-sm">{isCurrentUserWinner ? '🏆' : winner ? '💀' : '🏳️'}</div>
               <h2 className="mb-2 text-3xl font-extrabold text-white">
-                {winner ? 'Victory!' : 'Game Over'}
+                {winner ? (isCurrentUserWinner ? 'Victory!' : 'Defeat') : 'Game Over'}
               </h2>
               <p className="mx-auto max-w-xl text-base text-white/90">
                 {winner
-                  ? `${winner.username} conquers the world!`
+                  ? isCurrentUserWinner
+                    ? `${winner.username} conquers the world!`
+                    : `${winner.username} conquers the world.`
                   : 'All players have been eliminated'}
               </p>
             </div>
@@ -163,21 +166,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               </div>
             )}
 
-            {eliminatedPlayers.length > 0 && (
-              <div className="rounded-xl border border-border/60 bg-danger-soft/40 p-4 text-center shadow-inner">
-                <h4 className="mb-3 font-semibold text-muted">Players Eliminated This Turn</h4>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {eliminatedPlayers.map((playerId) => (
-                    <div
-                      key={playerId}
-                      className="rounded-full bg-red-900/60 px-3 py-1 text-xs font-medium text-red-200"
-                    >
-                      Player eliminated
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Removed the per-turn elimination chip section (not helpful per feedback) */}
 
             {/* Gunt's Prescription - Loss Message */}
             {guntsPrescriptions && isCurrentUserLoser && (
@@ -207,12 +196,18 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               </div>
             )}
 
+            {/* Player Debrief + Final Standings */}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <FinalStandings className="h-full" />
+              <FinalStandings className="h-full" roomId={roomId} />
               {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
             </div>
 
-            {roomId && <PostGameCharts roomId={roomId} className="shadow-inner" />}
+            {roomId && (
+              <>
+                <PlayerDebrief roomId={roomId} currentUserId={currentUserId || undefined} />
+                <PostGameCharts roomId={roomId} className="shadow-inner" />
+              </>
+            )}
 
             {/* Action Buttons */}
             <div
@@ -252,12 +247,45 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   )
 }
 
-const FinalStandings: React.FC<{ className?: string }> = ({ className }) => {
+const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ className, roomId }) => {
   const game = useAppSelector((s) => s.game.currentGame)
   if (!game) return null
   const players = game.players
   const territoriesByPlayer = new Map<string, number>()
   const armiesByPlayer = new Map<string, number>()
+  const [elimTurn, setElimTurn] = React.useState<Record<string, number | null>>({})
+
+  React.useEffect(() => {
+    let active = true
+    const run = async () => {
+      if (!roomId) return
+      try {
+        const resp = await gameService.getGameLog(roomId)
+        const stats = Array.isArray(resp.stats) ? resp.stats : []
+        const turns: Record<string, number | null> = {}
+        // Initialize with nulls
+        for (const p of players) turns[p.id] = null
+        stats.forEach((snap, idx) => {
+          const turnIndex = (typeof (snap as { turn?: number }).turn === 'number' && (snap as { turn: number }).turn > 0)
+            ? (snap as { turn: number }).turn
+            : idx + 1
+          const ps = (snap as { players?: Array<{ id: string; eliminated?: boolean }> }).players || []
+          for (const entry of ps) {
+            if (entry.eliminated && (turns[entry.id] ?? null) === null) {
+              turns[entry.id] = turnIndex
+            }
+          }
+        })
+        if (active) setElimTurn(turns)
+      } catch {
+        /* ignore errors; elimination turn info is optional */
+      }
+    }
+    void run()
+    return () => {
+      active = false
+    }
+  }, [roomId, players])
   for (const t of game.board) {
     if (!t.ownerId) continue
     territoriesByPlayer.set(t.ownerId, (territoriesByPlayer.get(t.ownerId) ?? 0) + 1)
@@ -270,6 +298,7 @@ const FinalStandings: React.FC<{ className?: string }> = ({ className }) => {
     territories: territoriesByPlayer.get(p.id) ?? 0,
     armies: armiesByPlayer.get(p.id) ?? 0,
     eliminated: p.isEliminated,
+    eliminatedTurn: elimTurn[p.id] ?? null,
   }))
   const maxTerr = Math.max(1, ...entries.map((e) => e.territories))
   const maxArmy = Math.max(1, ...entries.map((e) => e.armies))
@@ -286,8 +315,11 @@ const FinalStandings: React.FC<{ className?: string }> = ({ className }) => {
                 className="w-3 h-3 rounded-full border border-white"
                 style={{ backgroundColor: e.color }}
               />
-              <div className={`font-medium ${e.eliminated ? 'line-through opacity-75' : ''}`}>
-                {idx + 1}. {e.name}
+              <div className={`font-medium ${e.eliminated ? 'opacity-80' : ''}`}>
+                {idx + 1}. {e.name} {e.eliminated ? <span title="Eliminated">💀</span> : null}
+                {e.eliminated && e.eliminatedTurn ? (
+                  <div className="text-[10px] text-muted">Eliminated on T{e.eliminatedTurn}</div>
+                ) : null}
               </div>
             </div>
             <div className="col-span-5">
@@ -311,6 +343,86 @@ const FinalStandings: React.FC<{ className?: string }> = ({ className }) => {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ roomId, currentUserId }) => {
+  const game = useAppSelector((s) => s.game.currentGame)
+  const [stats, setStats] = React.useState<Array<Record<string, unknown>> | null>(null)
+  const [error, setError] = React.useState<string | null>(null)
+  const me = React.useMemo(() => {
+    if (!game || !currentUserId) return null
+    return game.players.find((p) => p.userId === currentUserId) || null
+  }, [game, currentUserId])
+
+  React.useEffect(() => {
+    let active = true
+    const run = async () => {
+      try {
+        const res = await gameService.getGameLog(roomId)
+        if (!active) return
+        setStats(Array.isArray(res.stats) ? res.stats : [])
+      } catch {
+        if (!active) return
+        setError('Unable to load debrief stats')
+        setStats([])
+      }
+    }
+    void run()
+    return () => {
+      active = false
+    }
+  }, [roomId])
+
+  if (!game || !me) return null
+
+  // Compute final counts from board
+  const territoriesByPlayer = new Map<string, number>()
+  const armiesByPlayer = new Map<string, number>()
+  for (const t of game.board) {
+    if (!t.ownerId) continue
+    territoriesByPlayer.set(t.ownerId, (territoriesByPlayer.get(t.ownerId) ?? 0) + 1)
+    armiesByPlayer.set(t.ownerId, (armiesByPlayer.get(t.ownerId) ?? 0) + t.armies)
+  }
+  const finalTerritories = territoriesByPlayer.get(me.id) ?? 0
+  const finalArmies = armiesByPlayer.get(me.id) ?? 0
+
+  // Derive largest army and most territories over time from stats
+  let maxArmies = finalArmies
+  let maxTerritories = finalTerritories
+  let eliminatedTurn: number | null = null
+  if (Array.isArray(stats)) {
+    stats.forEach((snap, idx) => {
+      const players = (snap as { players?: Array<{ id: string; territories?: number; armies?: number; eliminated?: boolean }>} ).players || []
+      const entry = players.find((p) => p.id === me.id)
+      if (entry) {
+        if (typeof entry.armies === 'number') maxArmies = Math.max(maxArmies, Math.trunc(entry.armies))
+        if (typeof entry.territories === 'number') maxTerritories = Math.max(maxTerritories, Math.trunc(entry.territories))
+        if (entry.eliminated && eliminatedTurn === null) {
+          const turnFromSnap = (snap as { turn?: number }).turn
+          eliminatedTurn = typeof turnFromSnap === 'number' && turnFromSnap > 0 ? turnFromSnap : idx + 1
+        }
+      }
+    })
+  }
+
+  const iWon = !me.isEliminated && game.players.filter((p) => !p.isEliminated).some((p) => p.id === me.id)
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-surface-2/50 p-4">
+      <h4 className="mb-3 text-center font-semibold text-muted">Your Battle Debrief</h4>
+      {error && <div className="mb-2 text-xs text-[color:var(--color-warning)]">{error}</div>}
+      <ul className="grid gap-2 sm:grid-cols-2 text-sm">
+        <li><span className="font-semibold text-heading">Result:</span> {iWon ? 'Victory' : me.isEliminated ? 'Defeat' : 'Completed'}</li>
+        <li><span className="font-semibold text-heading">Final Territories:</span> {finalTerritories}</li>
+        <li><span className="font-semibold text-heading">Final Armies:</span> {finalArmies}</li>
+        <li><span className="font-semibold text-heading">Most Territories:</span> {maxTerritories}</li>
+        <li><span className="font-semibold text-heading">Largest Army:</span> {maxArmies}</li>
+        {me.isEliminated && (
+          <li><span className="font-semibold text-heading">Eliminated:</span> {eliminatedTurn ? `Turn T${eliminatedTurn}` : 'Yes'}</li>
+        )}
+      </ul>
     </div>
   )
 }
