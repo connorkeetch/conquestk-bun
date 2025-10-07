@@ -142,7 +142,9 @@ export default function TabbedGameChat({
   }
 
   return (
-    <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+    <div
+      className={`flex flex-col h-full min-h-0 overflow-hidden bg-surface-1 rounded-lg ${className}`}
+    >
       {/* Tab Headers */}
       <div className="flex overflow-x-auto bg-surface-1 rounded-t-lg border-b border-border">
         {tabs.map((tab) => {

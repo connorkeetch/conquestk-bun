@@ -42,6 +42,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const room = useAppSelector((s) => s.room.currentRoom)
   const game = useAppSelector((s) => s.game.currentGame)
   const clientLogs = useAppSelector((s) => s.uiRoom.clientLogs ?? [])
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? null)
   const [entries, setEntries] = useState<LogEntry[]>([])
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
@@ -57,6 +58,21 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
   const redact = fogOn && !gameEnded
   const backfillLoadedRef = useRef(false)
+
+  const isParticipant = useMemo(() => {
+    if (!room || !currentUserId) {
+      return false
+    }
+    if (room.hostId && room.hostId === currentUserId) {
+      return true
+    }
+    const players = Array.isArray(room.players) ? room.players : []
+    return players.some((player) => {
+      const candidate = (player.userId ?? player.id) as unknown
+      const participantId = typeof candidate === 'string' ? candidate : null
+      return participantId === currentUserId
+    })
+  }, [room, currentUserId])
 
   const toSafeInt = useMemo(
     () =>
@@ -145,10 +161,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       (room?.status as string | undefined) === 'completed' ||
       (room?.status as string | undefined) === 'abandoned'
 
-    if (!gameId || redact || backfillLoadedRef.current || !isFinished) {
+    if (!gameId || redact || backfillLoadedRef.current) {
+      return
+    }
+    if (!isFinished && !isParticipant) {
       return
     }
     let cancelled = false
+    backfillLoadedRef.current = true
     ;(async () => {
       try {
         const resp = await gameService.getGameLog(gameId)
@@ -485,12 +505,25 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         backfillLoadedRef.current = true
       } catch (_err) {
         // ignore; keep live log only
+        if (!isFinished) {
+          backfillLoadedRef.current = false
+        }
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
+  }, [
+    gameId,
+    redact,
+    isParticipant,
+    playerName,
+    territoryName,
+    toSafeInt,
+    game?.phase,
+    room?.status,
+    playerColor,
+  ])
 
   useEffect(() => {
     function add(text: string, ts?: Date, focusTerritories?: string[]) {
@@ -925,7 +958,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   }, [gameId, playerName, territoryName, game?.currentPlayer, redact, toSafeInt, playerColor])
 
   return (
-    <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+    <div className={`flex flex-col h-full min-h-0 bg-surface-1 rounded-lg ${className}`}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {entries.length === 0 && clientLogs.length === 0 ? (
           <div className="text-center text-muted py-6 text-sm">No log entries yet.</div>

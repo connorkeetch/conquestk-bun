@@ -765,8 +765,18 @@ export class GameController {
         return res.status(404).json({ message: 'Room not found' })
       }
 
-      // Only allow backfill after game is completed or abandoned
-      if (room.status !== 'completed' && room.status !== 'abandoned') {
+      const players = Array.isArray(room.players) ? room.players : []
+      const isParticipant = Boolean(
+        (room.hostId && room.hostId === userId) ||
+          players.some((player) => {
+            const candidate = (player.userId ?? player.id) as unknown
+            const participantId = typeof candidate === 'string' ? candidate : null
+            return participantId === userId
+          }),
+      )
+
+      // Only allow active-game access for participants; everyone else waits until it ends
+      if (!isParticipant && room.status !== 'completed' && room.status !== 'abandoned') {
         return res.status(403).json({ message: 'Game log available after game ends' })
       }
 

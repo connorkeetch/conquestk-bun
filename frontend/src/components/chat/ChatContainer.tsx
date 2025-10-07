@@ -236,7 +236,9 @@ export default function ChatContainer({
 
   if (initializing) {
     return (
-      <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+      <div
+        className={`flex flex-col h-full min-h-0 overflow-hidden bg-surface-1 rounded-lg ${className}`}
+      >
         <div className="flex-1 flex items-center justify-center text-sm text-muted">
           Connecting…
         </div>
@@ -246,14 +248,18 @@ export default function ChatContainer({
 
   if (error) {
     return (
-      <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+      <div
+        className={`flex flex-col h-full min-h-0 overflow-hidden bg-surface-1 rounded-lg ${className}`}
+      >
         <div className="flex-1 flex items-center justify-center text-sm text-red-400">{error}</div>
       </div>
     )
   }
 
   return (
-    <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+    <div
+      className={`flex flex-col h-full min-h-0 overflow-hidden bg-surface-1 rounded-lg ${className}`}
+    >
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {hasMore && (
           <div className="text-center">

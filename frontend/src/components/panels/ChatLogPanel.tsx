@@ -30,11 +30,12 @@ export default function ChatLogPanel({
       canResize={true}
       canMinimize={true}
       canClose={false}
+      className="max-h-[70vh]"
     >
-      <div className="h-full overflow-hidden flex flex-col">
+      <div className="h-full max-h-[70vh] min-h-0 overflow-hidden flex flex-col">
         <Suspense
           fallback={
-            <div className="h-full flex items-center justify-center p-4">
+            <div className="flex-1 min-h-0 flex items-center justify-center p-4">
               <Skeleton variant="rectangular" width="100%" height="100%" />
             </div>
           }
@@ -43,7 +44,7 @@ export default function ChatLogPanel({
             gameId={gameId}
             currentUserId={currentUserId}
             userTeamId={userTeamId}
-            className="h-full"
+            className="flex-1 h-full max-h-[70vh]"
             onLogFocus={onLogFocus}
           />
         </Suspense>
