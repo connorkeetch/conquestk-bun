@@ -179,32 +179,11 @@ export default function GameRoom() {
   const resignDialogTitleId = useId()
   const mobileDrawerId = useId()
   const statsDrawerId = useId()
-  // Track whether the turn-intro modal is currently active to gate other modals
-  const [turnIntroActive, setTurnIntroActive] = useState<boolean>(() => {
-    try {
-      const rid = store.getState().game.currentGame?.roomId
-      const uid = store.getState().auth.user?.id
-      return rid && uid
-        ? Boolean(sessionStorage.getItem(`ui.turnModal.active:${rid}:${uid}`))
-        : false
-    } catch {
-      return false
-    }
-  })
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
   const forcedPanelZonesRef = useRef<Partial<Record<PanelId, PanelZone>>>({})
-
-  useEffect(() => {
-    const onIntro = (e: Event) => {
-      const ce = e as CustomEvent
-      if (typeof ce.detail?.active === 'boolean') setTurnIntroActive(ce.detail.active)
-    }
-    window.addEventListener('turn-intro-active', onIntro as EventListener)
-    return () => window.removeEventListener('turn-intro-active', onIntro as EventListener)
-  }, [])
 
   // Drag-and-drop helpers
   const parseDraggedPanelId = useCallback(
@@ -2546,7 +2525,7 @@ export default function GameRoom() {
 
       {/* Centralized Treasure Trade Modal */}
       <TreasureTradeModal
-        isOpen={treasureModalOpen && !turnIntroActive}
+        isOpen={treasureModalOpen}
         onClose={() => dispatch(setTreasureModalOpen(false))}
       />
 
