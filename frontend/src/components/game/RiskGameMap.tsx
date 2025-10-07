@@ -41,7 +41,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
   // Focus coordinates handled by higher-level view logic
 
   return (
-    <div className="game-board flex-1 min-w-0 bg-surface-2 p-1 sm:p-2">
+    <div className="game-board flex-1 min-w-0 bg-surface-2 p-0 sm:p-2">
       <UnifiedMapDisplay
         mapId={mapId}
         territories={territoryEntries.map(([, territory]) => ({

@@ -121,7 +121,9 @@ export function useZoomPan({ containerRef }: UseZoomPanOpts) {
     }
   }, [endMouseDrag, onMouseMove])
 
-  // Touch: two-finger pinch to zoom + pan anchored to midpoint; ignore one-finger to avoid conflicting with UI
+  // Touch gesture state
+  // - Two-finger pinch to zoom + pan anchored to midpoint
+  // - One-finger drag to pan (mobile convenience)
   const touchRef = useRef<{
     startDist: number
     startScale: number
@@ -130,70 +132,109 @@ export function useZoomPan({ containerRef }: UseZoomPanOpts) {
     lastCx: number
     lastCy: number
   } | null>(null)
+  const singleRef = useRef<{
+    startX: number
+    startY: number
+    startTx: number
+    startTy: number
+    moved: boolean
+  } | null>(null)
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
-      if (e.touches.length !== 2) return
-      const [t1, t2] = [e.touches[0], e.touches[1]]
-      const dx = t2.clientX - t1.clientX
-      const dy = t2.clientY - t1.clientY
-      const dist = Math.hypot(dx, dy)
-      const cx = (t1.clientX + t2.clientX) / 2
-      const cy = (t1.clientY + t2.clientY) / 2
-      e.preventDefault()
-      e.stopPropagation()
-      touchRef.current = {
-        startDist: Math.max(1, dist),
-        startScale: view.scale,
-        startTx: view.tx,
-        startTy: view.ty,
-        lastCx: cx,
-        lastCy: cy,
+      if (e.touches.length === 2) {
+        const [t1, t2] = [e.touches[0], e.touches[1]]
+        const dx = t2.clientX - t1.clientX
+        const dy = t2.clientY - t1.clientY
+        const dist = Math.hypot(dx, dy)
+        const cx = (t1.clientX + t2.clientX) / 2
+        const cy = (t1.clientY + t2.clientY) / 2
+        e.preventDefault()
+        e.stopPropagation()
+        touchRef.current = {
+          startDist: Math.max(1, dist),
+          startScale: view.scale,
+          startTx: view.tx,
+          startTy: view.ty,
+          lastCx: cx,
+          lastCy: cy,
+        }
+        // Reset single finger gesture when pinch begins
+        singleRef.current = null
+        return
+      }
+      if (e.touches.length === 1) {
+        const t = e.touches[0]
+        singleRef.current = {
+          startX: t.clientX,
+          startY: t.clientY,
+          startTx: view.tx,
+          startTy: view.ty,
+          moved: false,
+        }
+        // Do not preventDefault here; allow taps to generate clicks if no move occurs
       }
     },
     [view.tx, view.ty, view.scale],
   )
   const onTouchMove = useCallback(
     (e: React.TouchEvent) => {
-      if (e.touches.length !== 2) return
-      const state = touchRef.current
-      if (!state) return
-      const [t1, t2] = [e.touches[0], e.touches[1]]
-      const dx = t2.clientX - t1.clientX
-      const dy = t2.clientY - t1.clientY
-      const dist = Math.hypot(dx, dy)
-      const cx = (t1.clientX + t2.clientX) / 2
-      const cy = (t1.clientY + t2.clientY) / 2
-      e.preventDefault()
-      e.stopPropagation()
+      if (e.touches.length === 2) {
+        const state = touchRef.current
+        if (!state) return
+        const [t1, t2] = [e.touches[0], e.touches[1]]
+        const dx = t2.clientX - t1.clientX
+        const dy = t2.clientY - t1.clientY
+        const dist = Math.hypot(dx, dy)
+        const cx = (t1.clientX + t2.clientX) / 2
+        const cy = (t1.clientY + t2.clientY) / 2
+        e.preventDefault()
+        e.stopPropagation()
 
-      // Compute desired scale relative to gesture start
-      const scaleFactor = dist / state.startDist
-      const targetScale = Math.min(
-        2,
-        Math.max(0.5, Number((state.startScale * scaleFactor).toFixed(3))),
-      )
+        // Compute desired scale relative to gesture start
+        const scaleFactor = dist / state.startDist
+        const targetScale = Math.min(
+          2,
+          Math.max(0.5, Number((state.startScale * scaleFactor).toFixed(3))),
+        )
 
-      // Anchor zoom at current midpoint so the point under fingers remains stable
-      const el = containerRef.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const lx = cx - rect.left
-      const ly = cy - rect.top
-      const stageX = (lx - view.tx) / Math.max(0.000001, view.scale)
-      const stageY = (ly - view.ty) / Math.max(0.000001, view.scale)
-      const nextTx = Math.round(lx - stageX * targetScale)
-      const nextTy = Math.round(ly - stageY * targetScale)
+        // Anchor zoom at current midpoint so the point under fingers remains stable
+        const el = containerRef.current
+        if (!el) return
+        const rect = el.getBoundingClientRect()
+        const lx = cx - rect.left
+        const ly = cy - rect.top
+        const stageX = (lx - view.tx) / Math.max(0.000001, view.scale)
+        const stageY = (ly - view.ty) / Math.max(0.000001, view.scale)
+        const nextTx = Math.round(lx - stageX * targetScale)
+        const nextTy = Math.round(ly - stageY * targetScale)
 
-      dispatch(setScale(targetScale as Parameters<typeof setScale>[0]))
-      dispatch(setPan({ tx: nextTx, ty: nextTy }))
-      // Update last centroid
-      state.lastCx = cx
-      state.lastCy = cy
+        dispatch(setScale(targetScale as Parameters<typeof setScale>[0]))
+        dispatch(setPan({ tx: nextTx, ty: nextTy }))
+        // Update last centroid
+        state.lastCx = cx
+        state.lastCy = cy
+        return
+      }
+      if (e.touches.length === 1) {
+        const s = singleRef.current
+        if (!s) return
+        const t = e.touches[0]
+        const dx = t.clientX - s.startX
+        const dy = t.clientY - s.startY
+        // If significant movement, treat as pan and suppress taps
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          e.preventDefault()
+          e.stopPropagation()
+          s.moved = true
+          dispatch(setPan({ tx: s.startTx + dx, ty: s.startTy + dy }))
+        }
+      }
     },
     [containerRef, dispatch, view.scale, view.tx, view.ty],
   )
   const onTouchEnd = useCallback(() => {
     touchRef.current = null
+    singleRef.current = null
   }, [])
 
   // Keyboard panning + zoom presets
