@@ -856,6 +856,17 @@ This allows themes to work with any color scheme!
   }
 }
 
+/* Subtle dash flow for SVG dashed strokes */
+@keyframes ck-dash-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+.ck-dash-flow {
+  animation: ck-dash-flow 1.1s linear infinite;
+}
+
 :root {
   /* Overlay color tokens derive from theme variables */
   --attack: var(--color-danger-500);
