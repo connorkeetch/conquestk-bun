@@ -20,6 +20,7 @@ import { useQueryParam } from '@/hooks/useQueryParam'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 import {
   type PanelZone,
+  resetLayout,
   selectBelowMapLayout,
   selectPanels,
   selectPanelsByZone,
@@ -27,7 +28,6 @@ import {
   setPanelZone,
   togglePin,
   unpinAll,
-  resetLayout,
 } from '@/store/panelsSlice'
 import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 /* Unused after merge cleanup

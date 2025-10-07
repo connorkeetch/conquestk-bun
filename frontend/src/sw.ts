@@ -6,6 +6,7 @@ declare let self: ServiceWorkerGlobalScope & typeof globalThis
 
 import { clientsClaim } from 'workbox-core'
 import { ExpirationPlugin } from 'workbox-expiration'
+import { enable } from 'workbox-navigation-preload'
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
@@ -69,7 +70,7 @@ registerRoute(
 )
 
 // Offline catch handler: return offline page for navigation requests
-setCatchHandler(async ({ event }) => {
+setCatchHandler(async ({ event }: { event: FetchEvent }) => {
   if (event.request.destination === 'document') {
     const offline = await matchPrecache('/offline.html')
     if (offline) return offline
@@ -82,9 +83,21 @@ setCatchHandler(async ({ event }) => {
 self.addEventListener('push', (event: PushEvent) => {
   if (!event.data) return
 
-  let notificationData: any
+  type PushPayload = {
+    title?: string
+    body?: string
+    url?: string
+    data?: Record<string, unknown>
+    gameId?: string
+    icon?: string
+    badge?: string
+    actions?: Array<{ action: string; title: string }>
+    tag?: string
+    renotify?: boolean
+  }
+  let notificationData: Partial<PushPayload> = {}
   try {
-    notificationData = event.data.json()
+    notificationData = event.data.json() as Partial<PushPayload>
   } catch {
     notificationData = { title: 'Risk Game', body: event.data.text() }
   }
@@ -105,7 +118,6 @@ self.addEventListener('push', (event: PushEvent) => {
     body: notificationData.body || 'You have a new notification',
     icon: notificationData.icon || '/icon-192.png',
     badge: notificationData.badge || '/icon-192.png',
-    vibrate: notificationData.vibrate || [100, 50, 100],
     data: mergedData,
     actions:
       notificationData.actions ||
@@ -125,10 +137,10 @@ self.addEventListener('push', (event: PushEvent) => {
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close()
 
-  const data = (event.notification as any).data || {}
+  const data = (event.notification.data || {}) as Record<string, unknown>
   let destination = '/'
   if (event.action === 'view' && data.gameId) {
-    destination = `/game/${data.gameId}`
+    destination = `/game/${String(data.gameId)}`
   } else if (typeof data.url === 'string' && data.url.length > 0) {
     destination = data.url
   }
@@ -148,11 +160,11 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
         try {
           const clientOrigin = new URL(client.url).origin
           if (clientOrigin === targetOrigin) {
-            await client.focus()
-            if ('navigate' in client && client.url !== targetHref) {
+            const win = client as WindowClient
+            await win.focus()
+            if (win.url !== targetHref) {
               try {
-                // @ts-expect-error navigate not typed on Client
-                await (client as any).navigate(targetHref)
+                await win.navigate(targetHref)
               } catch {
                 // ignore navigate errors and fall back to openWindow
               }
@@ -166,4 +178,8 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
       await self.clients.openWindow(targetHref)
     })(),
   )
+})
+// Speed up navigations with navigation preload when supported
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(enable())
 })

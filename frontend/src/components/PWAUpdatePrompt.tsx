@@ -9,7 +9,9 @@ export default function PWAUpdatePrompt() {
   // Detect if this navigation was a reload; skip toasts on pure reloads
   const isReload = useMemo(() => {
     try {
-      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+      const nav = performance.getEntriesByType('navigation')[0] as
+        | PerformanceNavigationTiming
+        | undefined
       if (nav && 'type' in nav) return nav.type === 'reload'
       // Fallback for older browsers
       // @ts-expect-error legacy
