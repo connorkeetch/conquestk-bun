@@ -743,8 +743,8 @@ export class GameService {
           )
           const raw = res.rows[0]?.game_log
           if (Array.isArray(raw)) {
-            battleLog = (raw as unknown[]).filter((e) =>
-              e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
+            battleLog = (raw as unknown[]).filter(
+              (e) => e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
             ) as BattleLogEntry[]
           }
         } catch (e) {
@@ -1191,8 +1191,8 @@ export class GameService {
           )
           const raw = res.rows[0]?.game_log
           if (Array.isArray(raw)) {
-            battleLog = (raw as unknown[]).filter((e) =>
-              e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
+            battleLog = (raw as unknown[]).filter(
+              (e) => e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
             ) as BattleLogEntry[]
           }
         } catch (e) {
@@ -1703,13 +1703,13 @@ export class GameService {
     }
 
     let persistenceOutcome: { applied: boolean; divergence: number }
-    let latestBattleLog: BattleLogEntry[] = []
+    let latestBattleLog: GameLogEntry[] = []
 
     try {
       persistenceOutcome = await transaction(async (client) => {
         const existingStateResult = await client.query<{
           territories: Territory[] | null
-          game_log: BattleLogEntry[] | null
+          game_log: GameLogEntry[] | null
           winner_id: string | null
         }>(
           'SELECT territories, game_log, winner_id FROM game_states WHERE room_id = $1 FOR UPDATE',
@@ -1717,9 +1717,13 @@ export class GameService {
         )
 
         const existingRow = existingStateResult.rows[0]
-        const existingLog = Array.isArray(existingRow?.game_log) ? existingRow?.game_log : []
+        const existingLog: GameLogEntry[] = Array.isArray(existingRow?.game_log)
+          ? (existingRow?.game_log as GameLogEntry[])
+          : []
         latestBattleLog = existingLog
-        const alreadyApplied = existingLog.some((entry) => entry?.jobId === jobId)
+        const alreadyApplied = existingLog.some(
+          (entry) => (entry as BattleLogEntry)?.jobId === jobId,
+        )
         const divergence = this.calculateTerritoryDivergence(
           existingRow?.territories ?? null,
           updatedBoard,
@@ -1733,9 +1737,11 @@ export class GameService {
         let extra: EngagementSummaryLogEntry[] = []
         if (logEntry.conquered) {
           // Compute engagement totals from existing log + this entry
-          const engagementEntries = [...existingLog, logEntry].filter(
-            (e): e is BattleLogEntry => (e?.type ?? 'BATTLE') === 'BATTLE' && e.engagementId === engagementId,
-          )
+          const engagementEntries = [...existingLog, logEntry].filter((e): e is BattleLogEntry => {
+            if ((e?.type ?? 'BATTLE') !== 'BATTLE') return false
+            const be = e as BattleLogEntry
+            return be.engagementId === engagementId
+          })
           const first = engagementEntries[0]
           const totals = engagementEntries.reduce(
             (acc, cur) => {
@@ -1761,7 +1767,7 @@ export class GameService {
           extra = [summary]
         }
 
-        const updatedLog = [...existingLog, logEntry, ...extra].slice(-500)
+        const updatedLog: GameLogEntry[] = [...existingLog, logEntry, ...extra].slice(-500)
         latestBattleLog = updatedLog
         const roundNumber = this.calculateRoundNumber(updatedGameState)
 
@@ -1869,7 +1875,9 @@ export class GameService {
         serializedState,
         playersAfterBattle,
         playerStats,
-        latestBattleLog,
+        latestBattleLog.filter(
+          (e) => (e as { type?: string }).type === 'BATTLE',
+        ) as BattleLogEntry[],
       )
       battleMetrics.clearGame(gameId)
       if (finalization.archived) {

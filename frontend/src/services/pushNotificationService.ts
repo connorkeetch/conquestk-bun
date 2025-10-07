@@ -73,10 +73,10 @@ class PushNotificationService {
       }
 
       if (Notification.permission !== 'granted') {
-        const permissionResult = await Notification.requestPermission()
-        const currentPermission = Notification.permission
-        if (permissionResult !== 'granted' && currentPermission !== 'granted') {
-          const blocked = permissionResult === 'denied' || currentPermission === 'denied'
+        await Notification.requestPermission()
+        const currentPermission: NotificationPermission = Notification.permission
+        if (currentPermission === 'denied' || currentPermission === 'default') {
+          const blocked = currentPermission === 'denied'
           const message = blocked
             ? 'Notifications are blocked. Enable them in your browser or device settings and try again.'
             : 'Notification permission was not granted'

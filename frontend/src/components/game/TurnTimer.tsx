@@ -14,7 +14,7 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   const [now, setNow] = useState<number>(() => Date.now())
   const warnedRef = useRef(false)
   const isPaused = useAppSelector((s) => s.room.currentRoom?.status === 'paused')
-  const isFinished = (game?.phase === 'finished') || (room?.status === 'completed')
+  const isFinished = game?.phase === 'finished' || room?.status === 'completed'
 
   const isCurrentTurn = Boolean(userId && game?.currentPlayer === userId)
 
@@ -90,7 +90,11 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   // After hooks are defined, early-return if no timer expiry provided
   if (isFinished) {
     // Game complete: stop and replace the ticking timer with a static label
-    return <div className={`text-xs text-green-300 ${className}`} title="Game complete">Completed</div>
+    return (
+      <div className={`text-xs text-green-300 ${className}`} title="Game complete">
+        Completed
+      </div>
+    )
   }
 
   if (!expiresAt) return null

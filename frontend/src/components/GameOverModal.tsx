@@ -32,7 +32,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 }) => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
-  const winners = React.useMemo(() => (winnersProp && winnersProp.length ? winnersProp : winner ? [winner] : []), [winnersProp, winner])
+  const winners = React.useMemo(
+    () => (winnersProp?.length ? winnersProp : winner ? [winner] : []),
+    [winnersProp, winner],
+  )
   const isCurrentUserWinner = winners.some((w) => w.id === currentUserId)
   const isCurrentUserLoser = winners.length > 0 && !isCurrentUserWinner
   const previousThemeRef = useRef<string | null>(null)
@@ -105,19 +108,21 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               >
                 ×
               </button>
-              <div className="mb-4 text-6xl drop-shadow-sm">{isCurrentUserWinner ? '🏆' : winners.length > 0 ? '💀' : '🏳️'}</div>
+              <div className="mb-4 text-6xl drop-shadow-sm">
+                {isCurrentUserWinner ? '🏆' : winners.length > 0 ? '💀' : '🏳️'}
+              </div>
               <h2 className="mb-2 text-3xl font-extrabold text-white">
                 {winners.length > 0 ? (isCurrentUserWinner ? 'Victory!' : 'Defeat') : 'Game Over'}
               </h2>
               <p className="mx-auto max-w-xl text-base text-white/90">
                 {winners.length > 0
                   ? isCurrentUserWinner
-                    ? (winners.length === 1
-                        ? `${winners[0].username} conquers the world!`
-                        : `${winners.map((w) => w.username).join(', ')} triumph!`)
-                    : (winners.length === 1
-                        ? `${winners[0].username} conquers the world.`
-                        : `${winners.map((w) => w.username).join(', ')} triumph.`)
+                    ? winners.length === 1
+                      ? `${winners[0].username} conquers the world!`
+                      : `${winners.map((w) => w.username).join(', ')} triumph!`
+                    : winners.length === 1
+                      ? `${winners[0].username} conquers the world.`
+                      : `${winners.map((w) => w.username).join(', ')} triumph.`
                   : 'All players have been eliminated'}
               </p>
             </div>
@@ -135,15 +140,17 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                     Champion: {winners[0].username}
                   </h3>
                   <p className="mx-auto mb-5 max-w-sm text-sm text-muted">
-                    {winners[0].username} outmaneuvered every rival to claim the board. Here’s how their
-                    empire finished the match.
+                    {winners[0].username} outmaneuvered every rival to claim the board. Here’s how
+                    their empire finished the match.
                   </p>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="rounded-lg bg-surface-1/70 p-3">
                       <div className="text-xs uppercase tracking-wide text-muted">
                         Final Territories
                       </div>
-                      <div className="text-2xl font-semibold text-success">{winners[0].territories.length}</div>
+                      <div className="text-2xl font-semibold text-success">
+                        {winners[0].territories.length}
+                      </div>
                     </div>
                     <div className="rounded-lg bg-surface-1/70 p-3">
                       <div className="text-xs uppercase tracking-wide text-muted">Total Armies</div>
@@ -178,7 +185,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 <h3 className="mb-4 text-center text-xl font-bold text-heading">Champions</h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {winners.map((w) => (
-                    <div key={w.id} className="flex items-center gap-3 rounded-lg bg-surface-1/70 p-3">
+                    <div
+                      key={w.id}
+                      className="flex items-center gap-3 rounded-lg bg-surface-1/70 p-3"
+                    >
                       <div
                         className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
                         style={{ backgroundColor: w.color }}
@@ -188,7 +198,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                       </div>
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-heading">{w.username}</div>
-                        <div className="text-xs text-muted">Territories: {w.territories.length} • Armies: {w.armies}</div>
+                        <div className="text-xs text-muted">
+                          Territories: {w.territories.length} • Armies: {w.armies}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -277,7 +289,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   )
 }
 
-const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ className, roomId }) => {
+const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
+  className,
+  roomId,
+}) => {
   const game = useAppSelector((s) => s.game.currentGame)
   if (!game) return null
   const players = game.players
@@ -297,10 +312,13 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
         // Initialize with nulls
         for (const p of players) turns[p.id] = null
         stats.forEach((snap, idx) => {
-          const turnIndex = (typeof (snap as { turn?: number }).turn === 'number' && (snap as { turn: number }).turn > 0)
-            ? (snap as { turn: number }).turn
-            : idx + 1
-          const ps = (snap as { players?: Array<{ id: string; eliminated?: boolean }> }).players || []
+          const turnIndex =
+            typeof (snap as { turn?: number }).turn === 'number' &&
+            (snap as { turn: number }).turn > 0
+              ? (snap as { turn: number }).turn
+              : idx + 1
+          const ps =
+            (snap as { players?: Array<{ id: string; eliminated?: boolean }> }).players || []
           for (const entry of ps) {
             if (entry.eliminated && (turns[entry.id] ?? null) === null) {
               turns[entry.id] = turnIndex
@@ -316,7 +334,7 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
         if (maybe && typeof maybe === 'object') {
           // Common shapes to try: summary.ratingChanges, ratingChanges, cpDeltaByPlayer, skillRatingDeltas
           const candidates = [
-            (maybe.summary as unknown) as Record<string, unknown>,
+            maybe.summary as unknown as Record<string, unknown>,
             (maybe as Record<string, unknown>).ratingChanges as unknown,
             (maybe as Record<string, unknown>).cpDeltaByPlayer as unknown,
             (maybe as Record<string, unknown>).skillRatingDeltas as unknown,
@@ -353,11 +371,12 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
     armies: armiesByPlayer.get(p.id) ?? 0,
     eliminated: p.isEliminated,
     eliminatedTurn: elimTurn[p.id] ?? null,
-    cp: typeof cpDelta[p.id] === 'number'
-      ? cpDelta[p.id]
-      : typeof cpDelta[(p as unknown as { userId?: string }).userId || ''] === 'number'
-        ? cpDelta[(p as unknown as { userId?: string }).userId as string]
-        : null,
+    cp:
+      typeof cpDelta[p.id] === 'number'
+        ? cpDelta[p.id]
+        : typeof cpDelta[(p as unknown as { userId?: string }).userId || ''] === 'number'
+          ? cpDelta[(p as unknown as { userId?: string }).userId as string]
+          : null,
   }))
   const maxTerr = Math.max(1, ...entries.map((e) => e.territories))
   const maxArmy = Math.max(1, ...entries.map((e) => e.armies))
@@ -377,7 +396,10 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
               <div className={`font-medium ${e.eliminated ? 'opacity-80' : ''}`}>
                 {idx + 1}. {e.name} {e.eliminated ? <span title="Eliminated">💀</span> : null}
                 {typeof e.cp === 'number' ? (
-                  <span className={`ml-2 text-[10px] ${e.cp >= 0 ? 'text-green-400' : 'text-red-400'}`} title="CP change">
+                  <span
+                    className={`ml-2 text-[10px] ${e.cp >= 0 ? 'text-green-400' : 'text-red-400'}`}
+                    title="CP change"
+                  >
                     {e.cp >= 0 ? `+${e.cp}` : e.cp} CP
                   </span>
                 ) : null}
@@ -411,7 +433,10 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
   )
 }
 
-const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ roomId, currentUserId }) => {
+const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({
+  roomId,
+  currentUserId,
+}) => {
   const game = useAppSelector((s) => s.game.currentGame)
   const [stats, setStats] = React.useState<Array<Record<string, unknown>> | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -437,9 +462,11 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ r
           const ratingChanges = maybe.ratingChanges as Record<string, unknown> | undefined
           if (ratingChanges && typeof ratingChanges === 'object') candidates.push(ratingChanges)
           const cpDeltaByPlayer = maybe.cpDeltaByPlayer as Record<string, unknown> | undefined
-          if (cpDeltaByPlayer && typeof cpDeltaByPlayer === 'object') candidates.push(cpDeltaByPlayer)
+          if (cpDeltaByPlayer && typeof cpDeltaByPlayer === 'object')
+            candidates.push(cpDeltaByPlayer)
           const skillRatingDeltas = maybe.skillRatingDeltas as Record<string, unknown> | undefined
-          if (skillRatingDeltas && typeof skillRatingDeltas === 'object') candidates.push(skillRatingDeltas)
+          if (skillRatingDeltas && typeof skillRatingDeltas === 'object')
+            candidates.push(skillRatingDeltas)
         }
         let delta: number | null = null
         if (me) {
@@ -485,31 +512,56 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ r
   let eliminatedTurn: number | null = null
   if (Array.isArray(stats)) {
     stats.forEach((snap, idx) => {
-      const players = (snap as { players?: Array<{ id: string; territories?: number; armies?: number; eliminated?: boolean }>} ).players || []
+      const players =
+        (
+          snap as {
+            players?: Array<{
+              id: string
+              territories?: number
+              armies?: number
+              eliminated?: boolean
+            }>
+          }
+        ).players || []
       const entry = players.find((p) => p.id === me.id)
       if (entry) {
-        if (typeof entry.armies === 'number') maxArmies = Math.max(maxArmies, Math.trunc(entry.armies))
-        if (typeof entry.territories === 'number') maxTerritories = Math.max(maxTerritories, Math.trunc(entry.territories))
+        if (typeof entry.armies === 'number')
+          maxArmies = Math.max(maxArmies, Math.trunc(entry.armies))
+        if (typeof entry.territories === 'number')
+          maxTerritories = Math.max(maxTerritories, Math.trunc(entry.territories))
         if (entry.eliminated && eliminatedTurn === null) {
           const turnFromSnap = (snap as { turn?: number }).turn
-          eliminatedTurn = typeof turnFromSnap === 'number' && turnFromSnap > 0 ? turnFromSnap : idx + 1
+          eliminatedTurn =
+            typeof turnFromSnap === 'number' && turnFromSnap > 0 ? turnFromSnap : idx + 1
         }
       }
     })
   }
 
-  const iWon = !me.isEliminated && game.players.filter((p) => !p.isEliminated).some((p) => p.id === me.id)
+  const iWon =
+    !me.isEliminated && game.players.filter((p) => !p.isEliminated).some((p) => p.id === me.id)
 
   return (
     <div className="rounded-lg border border-border/60 bg-surface-2/50 p-4">
       <h4 className="mb-3 text-center font-semibold text-muted">Your Battle Debrief</h4>
       {error && <div className="mb-2 text-xs text-[color:var(--color-warning)]">{error}</div>}
       <ul className="grid gap-2 sm:grid-cols-2 text-sm">
-        <li><span className="font-semibold text-heading">Result:</span> {iWon ? 'Victory' : me.isEliminated ? 'Defeat' : 'Completed'}</li>
-        <li><span className="font-semibold text-heading">Final Territories:</span> {finalTerritories}</li>
-        <li><span className="font-semibold text-heading">Final Armies:</span> {finalArmies}</li>
-        <li><span className="font-semibold text-heading">Most Territories:</span> {maxTerritories}</li>
-        <li><span className="font-semibold text-heading">Largest Army:</span> {maxArmies}</li>
+        <li>
+          <span className="font-semibold text-heading">Result:</span>{' '}
+          {iWon ? 'Victory' : me.isEliminated ? 'Defeat' : 'Completed'}
+        </li>
+        <li>
+          <span className="font-semibold text-heading">Final Territories:</span> {finalTerritories}
+        </li>
+        <li>
+          <span className="font-semibold text-heading">Final Armies:</span> {finalArmies}
+        </li>
+        <li>
+          <span className="font-semibold text-heading">Most Territories:</span> {maxTerritories}
+        </li>
+        <li>
+          <span className="font-semibold text-heading">Largest Army:</span> {maxArmies}
+        </li>
         {typeof cpChange === 'number' && (
           <li>
             <span className="font-semibold text-heading">CP Change:</span>{' '}
@@ -519,7 +571,10 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ r
           </li>
         )}
         {me.isEliminated && (
-          <li><span className="font-semibold text-heading">Eliminated:</span> {eliminatedTurn ? `Turn T${eliminatedTurn}` : 'Yes'}</li>
+          <li>
+            <span className="font-semibold text-heading">Eliminated:</span>{' '}
+            {eliminatedTurn ? `Turn T${eliminatedTurn}` : 'Yes'}
+          </li>
         )}
       </ul>
     </div>
@@ -656,6 +711,10 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
           lastTs: b.timestamp,
         }
       } else {
+        if (!current) {
+          // Should not happen due to the guard above
+          continue
+        }
         // Keep the earliest initial stacks if present; update outcome and lastTs
         if (typeof current.initFrom !== 'number' && typeof b.initialFromArmies === 'number') {
           current.initFrom = b.initialFromArmies
@@ -784,7 +843,7 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
                 Unlikely rolls spotted
               </div>
               <p className="text-xs text-muted">
-                Odds assume both sides rolled the maximum dice available for that skirmish.
+                Odds reflect chance to conquer from the initial stacks.
               </p>
             </div>
           </div>
@@ -795,7 +854,6 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
                 <div className="text-xs text-muted">{moment.detail}</div>
                 <div className="mt-1 text-xs font-semibold text-[color:var(--color-warning)]">
                   ≈{formatProbability(moment.probability)}% chance
-                  {moment.rangeText ? ` • ${moment.rangeText}` : ''}
                 </div>
               </li>
             ))}

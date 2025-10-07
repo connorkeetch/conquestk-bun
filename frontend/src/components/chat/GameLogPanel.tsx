@@ -6,13 +6,13 @@ import type {
   SystemMessageDelta,
   TreasureAwardedDelta,
 } from '@shared/types'
+import { computeConquestProbability } from '@shared/utils/battleOdds'
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '../../hooks/redux'
 import { gameService } from '../../services/gameService'
 import { socketService } from '../../services/socketService'
-import { computeConquestProbability } from '@shared/utils/battleOdds'
 
 type Props = {
   gameId: string
@@ -82,86 +82,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   } | null
   const aggRef = useRef<BattleAggregate>(null)
 
-  const flushAggregate = (
-    append: (rich: ReactNode, text: string, ts?: Date, focusTerritories?: string[]) => void,
-  ) => {
-    const agg = aggRef.current
-    if (!agg) return
-    const attackerColor = playerColor.get(agg.attackerId)
-    const defenderColor = agg.defenderId ? playerColor.get(agg.defenderId) : undefined
-    const fromWithCount =
-      agg.initFrom != null ? `${agg.fromName} - ${agg.initFrom}` : agg.fromName
-    const toWithCount = agg.initTo != null ? `${agg.toName} - ${agg.initTo}` : agg.toName
-    const leading = `${fromWithCount} (${agg.attackerName}) attacked ${toWithCount}${
-      agg.defenderName ? ` (${agg.defenderName})` : ''
-    }`
-    const middle = agg.conquered ? ' conquering it,' : ''
-    const oddsText =
-      typeof agg.initFrom === 'number' && typeof agg.initTo === 'number'
-        ? ` • ≈${Math.round(
-            computeConquestProbability(Math.max(0, agg.initFrom), Math.max(0, agg.initTo)) * 100,
-          )}% win`
-        : ''
-    const tail = ` killing ${agg.totalKilled}, losing ${agg.totalLost}.`
-    const text = `${leading}${middle}${tail}${oddsText}`
-    const rich = (
-      <>
-        {fromWithCount} (
-        <span className="font-semibold" style={{ color: attackerColor }}>
-          {agg.attackerName}
-        </span>
-        ) attacked {toWithCount}
-        {agg.defenderName ? (
-          <>
-            {' '}
-            (
-            <span className="font-semibold" style={{ color: defenderColor }}>
-              {agg.defenderName}
-            </span>
-            )
-          </>
-        ) : null}
-        {agg.conquered ? ' conquering it,' : ''} killing {agg.totalKilled}, losing {agg.totalLost}
-        {oddsText ? <>{oddsText}</> : null}.
-      </>
-    )
-    append(rich, text, agg.lastTs, [agg.fromId, agg.toId])
-    if (agg.conquered && (agg.movedArmies ?? 0) > 0) {
-      const moved = agg.movedArmies as number
-      const occupyRich = (
-        <>
-          {agg.fromName} (
-          <span className="font-semibold" style={{ color: attackerColor }}>
-            {agg.attackerName}
-          </span>
-          ) occupied {agg.toName} with {moved} troops.
-        </>
-      )
-      const occupyText = `${agg.fromName} (${agg.attackerName}) occupied ${agg.toName} with ${moved} troops.`
-      append(occupyRich, occupyText, agg.lastTs, [agg.fromId, agg.toId])
-    }
-    if (agg.conquered && Array.isArray(agg.eliminated) && agg.eliminated.length > 0) {
-      for (const eliminatedId of agg.eliminated) {
-        const defeatedName = playerName.get(eliminatedId) || eliminatedId
-        const elimRich = (
-          <>
-            <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
-              {defeatedName}
-            </span>{' '}
-            was defeated by{' '}
-            <span className="font-semibold" style={{ color: attackerColor }}>
-              {agg.attackerName}
-            </span>
-            .
-          </>
-        )
-        const elimText = `${defeatedName} was defeated by ${agg.attackerName}.`
-        append(elimRich, elimText, agg.lastTs)
-      }
-    }
-    aggRef.current = null
-  }
-
   const toSafeInt = useMemo(
     () =>
       (value: unknown, fallback = 0) => {
@@ -216,6 +136,87 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
     return map
   }, [game?.board])
+
+  const flushAggregate = useCallback(
+    (append: (rich: ReactNode, text: string, ts?: Date, focusTerritories?: string[]) => void) => {
+      const agg = aggRef.current
+      if (!agg) return
+      const attackerColor = playerColor.get(agg.attackerId)
+      const defenderColor = agg.defenderId ? playerColor.get(agg.defenderId) : undefined
+      const fromWithCount =
+        agg.initFrom != null ? `${agg.fromName} - ${agg.initFrom}` : agg.fromName
+      const toWithCount = agg.initTo != null ? `${agg.toName} - ${agg.initTo}` : agg.toName
+      const leading = `${fromWithCount} (${agg.attackerName}) attacked ${toWithCount}${
+        agg.defenderName ? ` (${agg.defenderName})` : ''
+      }`
+      const middle = agg.conquered ? ' conquering it,' : ''
+      const oddsText =
+        typeof agg.initFrom === 'number' && typeof agg.initTo === 'number'
+          ? ` • ≈${Math.round(
+              computeConquestProbability(Math.max(0, agg.initFrom), Math.max(0, agg.initTo)) * 100,
+            )}% win`
+          : ''
+      const tail = ` killing ${agg.totalKilled}, losing ${agg.totalLost}.`
+      const text = `${leading}${middle}${tail}${oddsText}`
+      const rich = (
+        <>
+          {fromWithCount} (
+          <span className="font-semibold" style={{ color: attackerColor }}>
+            {agg.attackerName}
+          </span>
+          ) attacked {toWithCount}
+          {agg.defenderName ? (
+            <>
+              {' '}
+              (
+              <span className="font-semibold" style={{ color: defenderColor }}>
+                {agg.defenderName}
+              </span>
+              )
+            </>
+          ) : null}
+          {agg.conquered ? ' conquering it,' : ''} killing {agg.totalKilled}, losing {agg.totalLost}
+          {oddsText ? oddsText : null}.
+        </>
+      )
+      append(rich, text, agg.lastTs, [agg.fromId, agg.toId])
+      if (agg.conquered && (agg.movedArmies ?? 0) > 0) {
+        const moved = agg.movedArmies as number
+        const occupyRich = (
+          <>
+            {agg.fromName} (
+            <span className="font-semibold" style={{ color: attackerColor }}>
+              {agg.attackerName}
+            </span>
+            ) occupied {agg.toName} with {moved} troops.
+          </>
+        )
+        const occupyText = `${agg.fromName} (${agg.attackerName}) occupied ${agg.toName} with ${moved} troops.`
+        append(occupyRich, occupyText, agg.lastTs, [agg.fromId, agg.toId])
+      }
+      if (agg.conquered && Array.isArray(agg.eliminated) && agg.eliminated.length > 0) {
+        for (const eliminatedId of agg.eliminated) {
+          const defeatedName = playerName.get(eliminatedId) || eliminatedId
+          const elimRich = (
+            <>
+              <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
+                {defeatedName}
+              </span>{' '}
+              was defeated by{' '}
+              <span className="font-semibold" style={{ color: attackerColor }}>
+                {agg.attackerName}
+              </span>
+              .
+            </>
+          )
+          const elimText = `${defeatedName} was defeated by ${agg.attackerName}.`
+          append(elimRich, elimText, agg.lastTs)
+        }
+      }
+      aggRef.current = null
+    },
+    [playerColor, playerName],
+  )
 
   // Initialize lastArmies snapshot and seed with Game created
   useEffect(() => {
@@ -302,8 +303,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           if (!bfAgg) return
           const attackerColor = playerColor.get(bfAgg.attackerId)
           const defenderColor = bfAgg.defenderId ? playerColor.get(bfAgg.defenderId) : undefined
-          const fromWith = typeof bfAgg.initFrom === 'number' ? `${bfAgg.from} - ${bfAgg.initFrom}` : bfAgg.from
-          const toWith = typeof bfAgg.initTo === 'number' ? `${bfAgg.to} - ${bfAgg.initTo}` : bfAgg.to
+          const fromWith =
+            typeof bfAgg.initFrom === 'number' ? `${bfAgg.from} - ${bfAgg.initFrom}` : bfAgg.from
+          const toWith =
+            typeof bfAgg.initTo === 'number' ? `${bfAgg.to} - ${bfAgg.initTo}` : bfAgg.to
           const leading = `${fromWith} (${bfAgg.attackerName}) attacked ${toWith}${
             bfAgg.defenderName ? ` (${bfAgg.defenderName})` : ''
           }`
@@ -339,8 +342,9 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                     )
                   </>
                 ) : null}
-                {bfAgg.conquered ? ' conquering it,' : ''} killing {bfAgg.killed}, losing {bfAgg.lost}
-                {oddsText ? <>{oddsText}</> : null}.
+                {bfAgg.conquered ? ' conquering it,' : ''} killing {bfAgg.killed}, losing{' '}
+                {bfAgg.lost}
+                {oddsText ? oddsText : null}.
               </>
             ),
           })
@@ -368,7 +372,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 text: `${defeatedName} was defeated by ${bfAgg.attackerName}.`,
                 rich: (
                   <>
-                    <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
+                    <span
+                      className="font-semibold"
+                      style={{ color: playerColor.get(eliminatedId) }}
+                    >
                       {defeatedName}
                     </span>{' '}
                     was defeated by{' '}
@@ -425,12 +432,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 eliminated: [],
                 tsStart: ts,
                 tsLast: ts,
-                initFrom: typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number'
-                  ? Math.trunc((er as { initialFromArmies?: number }).initialFromArmies as number)
-                  : undefined,
-                initTo: typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number'
-                  ? Math.trunc((er as { initialToArmies?: number }).initialToArmies as number)
-                  : undefined,
+                initFrom:
+                  typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number'
+                    ? Math.trunc((er as { initialFromArmies?: number }).initialFromArmies as number)
+                    : undefined,
+                initTo:
+                  typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number'
+                    ? Math.trunc((er as { initialToArmies?: number }).initialToArmies as number)
+                    : undefined,
               }
             }
             // Update aggregate
@@ -449,13 +458,21 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                   : []
                 bfAgg.eliminated = [...bfAgg.eliminated, ...eliminated]
                 // If not set yet, attempt to set from this entry
-                if (typeof bfAgg.initFrom !== 'number' &&
-                  typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number') {
-                  bfAgg.initFrom = Math.trunc((er as { initialFromArmies?: number }).initialFromArmies as number)
+                if (
+                  typeof bfAgg.initFrom !== 'number' &&
+                  typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number'
+                ) {
+                  bfAgg.initFrom = Math.trunc(
+                    (er as { initialFromArmies?: number }).initialFromArmies as number,
+                  )
                 }
-                if (typeof bfAgg.initTo !== 'number' &&
-                  typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number') {
-                  bfAgg.initTo = Math.trunc((er as { initialToArmies?: number }).initialToArmies as number)
+                if (
+                  typeof bfAgg.initTo !== 'number' &&
+                  typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number'
+                ) {
+                  bfAgg.initTo = Math.trunc(
+                    (er as { initialToArmies?: number }).initialToArmies as number,
+                  )
                 }
               }
             }
@@ -471,9 +488,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const to = toName(String(er.defendingTerritoryId))
             const attackerName = nameOf(attackerId) || 'Unknown'
             const defenderName = nameOf(defenderId) || undefined
-            const initFrom = toSafeInt((er as { initialFromArmies?: number }).initialFromArmies, NaN)
+            const initFrom = toSafeInt(
+              (er as { initialFromArmies?: number }).initialFromArmies,
+              NaN,
+            )
             const initTo = toSafeInt((er as { initialToArmies?: number }).initialToArmies, NaN)
-            const tot = (er as { totalLosses?: { attacker?: number; defender?: number } }).totalLosses || {}
+            const tot =
+              (er as { totalLosses?: { attacker?: number; defender?: number } }).totalLosses || {}
             const killed = toSafeInt(tot.defender, 0)
             const lost = toSafeInt(tot.attacker, 0)
             const conquered = Boolean(er.conquered)
@@ -511,7 +532,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                     </>
                   ) : null}
                   {conquered ? ' conquering it,' : ''} killing {killed}, losing {lost}
-                  {oddsText ? <>{oddsText}</> : null}.
+                  {oddsText ? oddsText : null}.
                 </>
               ),
             })
@@ -1139,7 +1160,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       socketService.off('game-delta', onDelta)
       socketService.off('ratingUpdate', onRating)
     }
-  }, [gameId, playerName, territoryName, game?.currentPlayer, redact, toSafeInt, playerColor])
+  }, [
+    gameId,
+    playerName,
+    territoryName,
+    game?.currentPlayer,
+    redact,
+    toSafeInt,
+    playerColor,
+    flushAggregate,
+  ])
 
   return (
     <div className={`flex flex-col h-full min-h-0 bg-surface-1 rounded-lg ${className}`}>
