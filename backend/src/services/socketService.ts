@@ -1138,18 +1138,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const userId = requireUserId(socket)
         const result = await gameService.endTurn(data.roomId, userId)
 
-        // Send phase change as delta update
-        const phaseDelta = DeltaBuilder.phaseChange(
-          data.roomId,
-          result.gameState.phase,
-          result.gameState.currentPlayer,
-          result.gameState.turn,
-          result.reinforcementArmies,
-        )
         const channel = getGameChannel(data.roomId)
-        io.to(channel).emit('game-delta', phaseDelta)
-
-        // If a treasure card was awarded to the previous player, emit explicit delta
+        // If a treasure card was awarded to the previous player, emit it FIRST
+        // so UIs see the prior turn fully completed before the next starts.
         if (result.treasureAwarded) {
           io.to(channel).emit('game-delta', {
             type: 'TREASURE_AWARDED',
@@ -1159,6 +1150,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             metal: result.treasureAwarded,
           })
         }
+
+        // Send phase change as delta update (after treasure award)
+        const phaseDelta = DeltaBuilder.phaseChange(
+          data.roomId,
+          result.gameState.phase,
+          result.gameState.currentPlayer,
+          result.gameState.turn,
+          result.reinforcementArmies,
+        )
+        io.to(channel).emit('game-delta', phaseDelta)
 
         // Keep legacy event for backward compatibility
         io.to(channel).emit('phaseChanged', {

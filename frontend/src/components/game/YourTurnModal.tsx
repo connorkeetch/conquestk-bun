@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
-import audioService from '@/services/audioService'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 import { TurnTimer } from './TurnTimer'
 
@@ -41,12 +40,7 @@ export function YourTurnModal({ className = '' }: Props) {
     if (currentTurn !== null && seenTurnRef.current !== currentTurn) {
       seenTurnRef.current = currentTurn
       setVisible(true)
-      // Play a soft chime if not already handled by socket handler
-      try {
-        audioService.playEffect('turn')
-      } catch {
-        // ignore
-      }
+      // Audio cue already handled in socketService on turn start
     }
   }, [isMyTurn, game?.turn])
 

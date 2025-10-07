@@ -1211,11 +1211,21 @@ export class GameLifecycleService {
       try {
         // AFK skip can advance even if reinforcements remain
         const result = await gameService.endTurn(roomId, targetUserId, { allowEarlyEnd: true })
-        // Broadcast phase change delta like socketService does
+        // Broadcast deltas like socketService does, ensuring treasure first
         try {
           const io = tryGetSocketServer()
           if (io) {
             const { DeltaBuilder } = await import('../types/deltaUpdates')
+            const channel = `game:${roomId}`
+            if (result.treasureAwarded) {
+              io.to(channel).emit('game-delta', {
+                type: 'TREASURE_AWARDED',
+                roomId,
+                timestamp: Date.now(),
+                userId: targetUserId,
+                metal: result.treasureAwarded,
+              })
+            }
             const phaseDelta = DeltaBuilder.phaseChange(
               roomId,
               result.gameState.phase,
@@ -1223,11 +1233,10 @@ export class GameLifecycleService {
               result.gameState.turn,
               result.reinforcementArmies,
             )
-            const channel = `game:${roomId}`
             io.to(channel).emit('game-delta', phaseDelta)
           }
         } catch (ee) {
-          logger.warn('Failed to emit phase change delta after AFK skip', {
+          logger.warn('Failed to emit deltas after AFK skip', {
             roomId,
             error: ee instanceof Error ? ee.message : ee,
           })
