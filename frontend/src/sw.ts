@@ -5,15 +5,15 @@
 declare let self: ServiceWorkerGlobalScope & typeof globalThis
 
 import { clientsClaim } from 'workbox-core'
-import { registerRoute, NavigationRoute, setCatchHandler } from 'workbox-routing'
+import { ExpirationPlugin } from 'workbox-expiration'
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
+  matchPrecache,
   precacheAndRoute,
 } from 'workbox-precaching'
-import { StaleWhileRevalidate, NetworkFirst, CacheFirst } from 'workbox-strategies'
-import { matchPrecache } from 'workbox-precaching'
-import { ExpirationPlugin } from 'workbox-expiration'
+import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
+import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies'
 
 // Immediately activate the new SW and control uncontrolled clients
 self.skipWaiting()
@@ -112,17 +112,18 @@ self.addEventListener('push', (event: PushEvent) => {
     vibrate: notificationData.vibrate || [100, 50, 100],
     data: mergedData,
     actions:
-      notificationData.actions || (
-        [
-          { action: 'view', title: 'View Game' },
-          { action: 'close', title: 'Dismiss' },
-        ] as const
-      ),
+      notificationData.actions ||
+      ([
+        { action: 'view', title: 'View Game' },
+        { action: 'close', title: 'Dismiss' },
+      ] as const),
     tag: notificationData.tag || 'risk-game-notification',
     renotify: notificationData.renotify ?? true,
   }
 
-  event.waitUntil(self.registration.showNotification(notificationData.title || 'Risk Game Notification', options))
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title || 'Risk Game Notification', options),
+  )
 })
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {

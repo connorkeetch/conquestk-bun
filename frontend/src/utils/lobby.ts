@@ -6,7 +6,7 @@ export const statusLabel: Record<GameLifecycleStatus, string> = {
   active: 'In progress',
   completed: 'Finished',
   paused: 'Paused',
-  abandoned: 'Abandoned',
+  abandoned: 'Closed',
 }
 
 export const formatStatus = (status?: GameRoom['status']) => {

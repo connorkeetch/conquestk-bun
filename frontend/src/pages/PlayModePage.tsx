@@ -96,7 +96,7 @@ const statusLabel: Record<NonNullable<GameRoom['status']>, string> = {
   active: 'In progress',
   completed: 'Finished',
   paused: 'Paused',
-  abandoned: 'Abandoned',
+  abandoned: 'Closed',
 }
 
 const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {

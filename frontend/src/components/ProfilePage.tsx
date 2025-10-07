@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { useQueryParam } from '@/hooks/useQueryParam'
 
 import friendsService, {
   type RelationshipInfo,
@@ -240,9 +241,7 @@ const buildRankVisuals = (profile: ProfileSummary) => {
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
-  const [searchParams] = useSearchParams()
-  // Avoid depending on the unstable URLSearchParams object; derive a stable param
-  const tabParam = (searchParams.get('tab') || '').toLowerCase()
+  const tabParam = useQueryParam('tab')
   const settings = useAppSelector((state) => state.settings)
   const [profile, setProfile] = useState<ProfileSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -1372,7 +1371,9 @@ const ProfilePage: React.FC = () => {
                                 <span>{startedLabel}</span>
                                 <span className="hidden sm:inline text-white/20">•</span>
                                 <span>
-                                  {match.gameMode ? match.gameMode.replace(/_/g, ' ') : 'Mode unknown'}
+                                  {match.gameMode
+                                    ? match.gameMode.replace(/_/g, ' ')
+                                    : 'Mode unknown'}
                                 </span>
                                 {endedAt && (
                                   <>

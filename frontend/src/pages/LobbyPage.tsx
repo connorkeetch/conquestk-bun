@@ -2,6 +2,7 @@ import { Clock, Gamepad2, Trophy } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useQueryParam } from '@/hooks/useQueryParam'
 import { formatTurnTimer as formatTurnTimerWord } from '@/utils/lobby'
 import { logger } from '@/utils/logger'
 import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
@@ -248,9 +249,7 @@ const LobbyPage: React.FC = () => {
   const [filters, setFilters] = useState<LobbyFilters>({ ...DEFAULT_LOBBY_FILTERS })
   const { section } = useParams<{ section?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-  // Stable derivation of the current filter param to avoid depending on the
-  // unstable URLSearchParams object identity in effects
-  const filterParam = (searchParams.get('filter') || 'all').toLowerCase()
+  const filterParam = useQueryParam('filter')
 
   // Table mode (desktop) state: column toggles and sorting
   type MyGamesColumn =
@@ -600,7 +599,8 @@ const LobbyPage: React.FC = () => {
     if (activeTab !== 'my-games') return
     const current = filterParam
     if (current !== myGamesFilter) {
-      const nextParams = new URLSearchParams(searchParams)
+      // Avoid depending on captured URLSearchParams identity
+      const nextParams = new URLSearchParams(window.location.search)
       nextParams.set('filter', myGamesFilter)
       // Use replace to avoid spamming history when toggling quickly
       setSearchParams(nextParams, { replace: true })
@@ -705,7 +705,7 @@ const LobbyPage: React.FC = () => {
       case 'paused':
         return 'Paused'
       case 'abandoned':
-        return 'Abandoned'
+        return 'Closed'
       default:
         return status
     }

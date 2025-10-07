@@ -11,7 +11,9 @@ export async function preloadBattleOdds(): Promise<void> {
       logger.info('[BOOT] Loaded precomputed battle odds table')
     }
   } catch (err) {
-    logger.warn('[BOOT] Precomputed battle odds not available; falling back to on-the-fly compute', err)
+    logger.warn(
+      '[BOOT] Precomputed battle odds not available; falling back to on-the-fly compute',
+      err,
+    )
   }
 }
-
