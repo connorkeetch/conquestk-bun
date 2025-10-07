@@ -272,6 +272,73 @@ export class ProfileService {
         [userId],
       )
 
+      // Compute win streaks from historical results (ordered by creation time)
+      const streakRows = await client.query<{ is_winner: boolean }>(
+        `
+        SELECT pgr.is_winner
+        FROM player_game_results pgr
+        JOIN game_results gres ON pgr.room_id = gres.room_id
+        WHERE pgr.user_id = $1
+        ORDER BY gres.created_at ASC
+      `,
+        [userId],
+      )
+
+      let longestWinStreak = 0
+      let rolling = 0
+      for (const row of streakRows.rows) {
+        if (row.is_winner) {
+          rolling += 1
+          if (rolling > longestWinStreak) longestWinStreak = rolling
+        } else {
+          rolling = 0
+        }
+      }
+      // current streak: count wins from most recent going backwards until first loss
+      let currentWinStreak = 0
+      for (let i = streakRows.rows.length - 1; i >= 0; i--) {
+        const r = streakRows.rows[i]
+        if (r.is_winner) currentWinStreak += 1
+        else break
+      }
+
+      // Battle impact metrics from battle_log JSON: eliminations and conquests
+      // Count total players eliminated by this user across all games
+      const elimQuery = await client.query<{ eliminations: number }>(
+        `
+        SELECT COALESCE(SUM(jsonb_array_length(entry->'eliminatedPlayers')), 0)::int AS eliminations
+        FROM game_results gres
+        JOIN player_game_results pgr ON pgr.room_id = gres.room_id
+        CROSS JOIN LATERAL jsonb_array_elements(COALESCE(gres.battle_log, '[]'::jsonb)) AS entry
+        WHERE pgr.user_id = $1 AND (entry->>'attackerId') = $1
+      `,
+        [userId],
+      )
+
+      // Also include capital eliminations table (if populated)
+      const capitalElims = await client.query<{ cnt: number }>(
+        `
+        SELECT COUNT(*)::int AS cnt
+        FROM capital_eliminations ce
+        WHERE ce.conqueror_player_id = $1
+      `,
+        [userId],
+      )
+
+      const totalEliminations = (elimQuery.rows[0]?.eliminations ?? 0) + (capitalElims.rows[0]?.cnt ?? 0)
+
+      // Territories conquered = number of battle_log entries by this user where conquered=true
+      const conqueredQuery = await client.query<{ conquests: number }>(
+        `
+        SELECT COALESCE(COUNT(*), 0)::int AS conquests
+        FROM game_results gres
+        JOIN player_game_results pgr ON pgr.room_id = gres.room_id
+        CROSS JOIN LATERAL jsonb_array_elements(COALESCE(gres.battle_log, '[]'::jsonb)) AS entry
+        WHERE pgr.user_id = $1 AND (entry->>'attackerId') = $1 AND (entry->>'conquered')::boolean = TRUE
+      `,
+        [userId],
+      )
+
       // Timeline data (last 90 days) using completed results
       const timelineResult = await client.query(
         `
@@ -316,6 +383,23 @@ export class ProfileService {
       return {
         overall: {
           ...overallStats,
+          // Ensure streaks and battle impact are present even if player_stats is sparse
+          longest_win_streak:
+            typeof (overallStats as Record<string, unknown>)?.longest_win_streak === 'number'
+              ? (overallStats as Record<string, unknown>).longest_win_streak
+              : longestWinStreak,
+          current_win_streak:
+            typeof (overallStats as Record<string, unknown>)?.current_win_streak === 'number'
+              ? (overallStats as Record<string, unknown>).current_win_streak
+              : currentWinStreak,
+          total_eliminations:
+            typeof (overallStats as Record<string, unknown>)?.total_eliminations === 'number'
+              ? (overallStats as Record<string, unknown>).total_eliminations
+              : totalEliminations,
+          total_territories_conquered:
+            typeof (overallStats as Record<string, unknown>)?.total_territories_conquered === 'number'
+              ? (overallStats as Record<string, unknown>).total_territories_conquered
+              : (conqueredQuery.rows[0]?.conquests ?? 0),
           best_territories: Number(bestStats.best_territories ?? 0),
           best_armies: Number(bestStats.best_armies ?? 0),
           card_trades: Number(cardStats.trade_count ?? 0),
