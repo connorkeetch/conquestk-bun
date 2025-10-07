@@ -17,6 +17,12 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@fontsource/audiowide": "^5.2.7",
+    "@fontsource/chewy": "^5.2.7",
+    "@fontsource/creepster": "^5.2.7",
+    "@fontsource/metal-mania": "^5.2.7",
+    "@fontsource/new-rocker": "^5.2.7",
+    "@fontsource/rye": "^5.2.7",
     "@hookform/resolvers": "5.2.2",
     "@reduxjs/toolkit": "^2.9.0",
     "@risk-game/shared": "file:../shared",

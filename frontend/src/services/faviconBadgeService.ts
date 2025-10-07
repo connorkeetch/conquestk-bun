@@ -58,18 +58,22 @@ class FaviconBadgeService {
       this.favico.reset()
       // Clear app badge if supported
       try {
-        // @ts-expect-error experimental
+        // experimental API on supported platforms
         if (navigator.clearAppBadge) navigator.clearAppBadge()
-      } catch {}
+      } catch {
+        // best-effort API; ignore unsupported environments
+      }
     } else {
       // Show badge with count (max 99)
       const displayCount = count > 99 ? '99+' : count
       this.favico.badge(displayCount)
       // Set app badge if supported
       try {
-        // @ts-expect-error experimental
+        // experimental API on supported platforms
         if (navigator.setAppBadge) navigator.setAppBadge(Math.min(99, Math.max(0, count)))
-      } catch {}
+      } catch {
+        // best-effort API; ignore unsupported environments
+      }
     }
   }
 
