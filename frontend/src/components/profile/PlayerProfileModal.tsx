@@ -1,19 +1,40 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import blockService from '@/services/blockService'
+import friendsService, { type RelationshipStatus } from '@/services/friendsService'
 import { type ProfileSummary, profileService } from '@/services/profileService'
+import { ensureDirectConversation, messagesActions } from '@/store/messagesSlice'
+import { toggleMuteUser } from '@/store/uiRoomSlice'
+import { openInbox } from '@/store/uiSlice'
 import RankInsignia, { getConquestRank, getRankTierInfo } from '../RankInsignia'
+import ReportUserModal from './ReportUserModal'
 
 interface PlayerProfileModalProps {
   open: boolean
   username: string | null
   onClose: () => void
+  // Optional rendering context to tailor actions (e.g., show mute in game)
+  context?: 'game' | 'global'
 }
 
-export default function PlayerProfileModal({ open, username, onClose }: PlayerProfileModalProps) {
+export default function PlayerProfileModal({
+  open,
+  username,
+  onClose,
+  context = 'global',
+}: PlayerProfileModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<ProfileSummary | null>(null)
+  const dispatch = useAppDispatch()
+  const currentUser = useAppSelector((s) => s.auth.user)
+  const mutedSet = useAppSelector((s) => new Set(s.uiRoom.mutedUserIds ?? []))
+  const [relationship, setRelationship] = useState<RelationshipStatus>('none')
+  const [actionBusy, setActionBusy] = useState<string>('')
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   useEffect(() => {
     if (!open || !username) {
@@ -52,6 +73,27 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
     }
   }, [open, username])
 
+  // Load relationship status once profile is available
+  useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+    const loadRel = async () => {
+      if (!profile?.id) return
+      try {
+        const info = await friendsService.status(profile.id)
+        if (!active) return
+        setRelationship(info.status)
+      } catch {
+        // ignore
+      }
+    }
+    if (open && profile?.id) void loadRel()
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [open, profile?.id])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -76,8 +118,6 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [open, onClose])
 
-  if (!open) return null
-
   const rank = profile ? getConquestRank(profile.elo) : null
   const rankTierInfo = profile
     ? getRankTierInfo({ minRating: profile.rank?.minRating, rating: profile.elo })
@@ -85,6 +125,117 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
   const rankSegmentsFilled = rankTierInfo ? Math.min(rankTierInfo.index + 1, rankTierInfo.total) : 0
   const rankBarColor = profile?.rank?.color ?? rank?.color ?? 'var(--color-primary)'
   // Range text removed per design request
+
+  const isOwnProfile = Boolean(currentUser?.username && profile?.username === currentUser.username)
+  const isMuted = Boolean(profile?.id && mutedSet.has(profile.id))
+
+  const closeDropdown = useCallback(() => setMoreOpen(false), [])
+
+  // Primary actions
+  const handleStartDM = useCallback(async () => {
+    if (!profile) return
+    setActionBusy('dm')
+    try {
+      const detail = await dispatch(ensureDirectConversation(profile.id)).unwrap()
+      dispatch(messagesActions.setActiveConversationId(detail.conversation.id))
+      dispatch(openInbox())
+      setMoreOpen(false)
+    } catch {
+      // ignore
+    } finally {
+      setActionBusy('')
+    }
+  }, [dispatch, profile])
+
+  const handleSendFriendRequest = useCallback(async () => {
+    if (!profile) return
+    setActionBusy('add')
+    try {
+      await friendsService.sendRequest(profile.id)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setMoreOpen(false)
+    } finally {
+      setActionBusy('')
+    }
+  }, [profile])
+
+  const handleCancelRequest = useCallback(async () => {
+    if (!profile) return
+    setActionBusy('cancel')
+    try {
+      await friendsService.cancel(profile.id)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setMoreOpen(false)
+    } finally {
+      setActionBusy('')
+    }
+  }, [profile])
+
+  const handleAccept = useCallback(async () => {
+    if (!profile) return
+    setActionBusy('accept')
+    try {
+      await friendsService.accept(profile.id)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setMoreOpen(false)
+    } finally {
+      setActionBusy('')
+    }
+  }, [profile])
+
+  const handleDecline = useCallback(async () => {
+    if (!profile) return
+    setActionBusy('decline')
+    try {
+      await friendsService.decline(profile.id)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setMoreOpen(false)
+    } finally {
+      setActionBusy('')
+    }
+  }, [profile])
+
+  const handleUnfriend = useCallback(async () => {
+    if (!profile) return
+    setActionBusy('unfriend')
+    try {
+      await friendsService.unfriend(profile.id)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setMoreOpen(false)
+    } finally {
+      setActionBusy('')
+    }
+  }, [profile])
+
+  const handleBlockToggle = useCallback(async () => {
+    if (!profile) return
+    setActionBusy('block')
+    try {
+      if (relationship === 'blocked_by_you') {
+        await blockService.unblock(profile.id)
+      } else {
+        await blockService.block(profile.id)
+      }
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setMoreOpen(false)
+    } finally {
+      setActionBusy('')
+    }
+  }, [profile, relationship])
+
+  const handleToggleMute = useCallback(() => {
+    if (!profile?.id) return
+    dispatch(toggleMuteUser(profile.id))
+    setMoreOpen(false)
+  }, [dispatch, profile?.id])
+
+  if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -183,17 +334,170 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2">
-                <Link
-                  to={`/profile/${encodeURIComponent(profile.username)}`}
-                  className="btn btn-secondary btn-sm"
-                  onClick={onClose}
-                >
-                  View Full Profile
-                </Link>
-                <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>
-                  Close
-                </button>
+              {/* Action Bar */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/profile/${encodeURIComponent(profile.username)}`}
+                    className="btn btn-secondary btn-sm"
+                    onClick={onClose}
+                  >
+                    View Full Profile
+                  </Link>
+                  {isOwnProfile && (
+                    <Link to="/settings" className="btn btn-tertiary btn-sm" onClick={onClose}>
+                      Settings
+                    </Link>
+                  )}
+                </div>
+
+                {!isOwnProfile && (
+                  <div className="flex items-center gap-2 relative">
+                    {/* Primary contextual CTA */}
+                    {relationship === 'pending_incoming' ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => void handleAccept()}
+                        disabled={actionBusy === 'accept'}
+                      >
+                        {actionBusy === 'accept' ? 'Accepting…' : 'Accept Request'}
+                      </button>
+                    ) : relationship === 'friends' ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => void handleStartDM()}
+                        disabled={actionBusy === 'dm'}
+                      >
+                        {actionBusy === 'dm' ? 'Opening…' : 'Message'}
+                      </button>
+                    ) : relationship === 'pending_outgoing' ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => void handleCancelRequest()}
+                        disabled={actionBusy === 'cancel'}
+                      >
+                        {actionBusy === 'cancel' ? 'Canceling…' : 'Cancel Request'}
+                      </button>
+                    ) : relationship === 'blocked_you' ? (
+                      <button type="button" className="btn btn-tertiary btn-sm" disabled>
+                        Interaction restricted
+                      </button>
+                    ) : relationship === 'blocked_by_you' ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => void handleBlockToggle()}
+                        disabled={actionBusy === 'block'}
+                      >
+                        {actionBusy === 'block' ? 'Updating…' : 'Unblock'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => void handleSendFriendRequest()}
+                        disabled={actionBusy === 'add'}
+                      >
+                        {actionBusy === 'add' ? 'Sending…' : 'Add Friend'}
+                      </button>
+                    )}
+
+                    {/* More dropdown */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-expanded={moreOpen}
+                        className="btn btn-tertiary btn-sm"
+                        onClick={() => setMoreOpen((v) => !v)}
+                      >
+                        More ▾
+                      </button>
+                      {moreOpen && (
+                        <div className="dropdown-menu right-0" role="menu">
+                          {relationship === 'pending_incoming' && (
+                            <button
+                              type="button"
+                              className="dropdown-item"
+                              onClick={() => void handleDecline()}
+                              disabled={actionBusy === 'decline'}
+                            >
+                              {actionBusy === 'decline' ? 'Declining…' : 'Decline request'}
+                            </button>
+                          )}
+                          {relationship === 'friends' && (
+                            <button
+                              type="button"
+                              className="dropdown-item"
+                              onClick={() => void handleUnfriend()}
+                              disabled={actionBusy === 'unfriend'}
+                            >
+                              {actionBusy === 'unfriend' ? 'Removing…' : 'Unfriend'}
+                            </button>
+                          )}
+                          {(relationship === 'none' ||
+                            relationship === 'pending_outgoing' ||
+                            relationship === 'friends') && (
+                            <button
+                              type="button"
+                              className="dropdown-item"
+                              onClick={() => void handleStartDM()}
+                              disabled={actionBusy === 'dm'}
+                            >
+                              {actionBusy === 'dm' ? 'Opening…' : 'Message'}
+                            </button>
+                          )}
+                          {context === 'game' && (
+                            <button
+                              type="button"
+                              className="dropdown-item"
+                              onClick={handleToggleMute}
+                            >
+                              {isMuted ? 'Unmute in this game' : 'Mute in this game'}
+                            </button>
+                          )}
+                          <hr className="dropdown-separator" />
+                          <button
+                            type="button"
+                            className="dropdown-item"
+                            onClick={() => {
+                              setReportOpen(true)
+                              setMoreOpen(false)
+                            }}
+                          >
+                            Report user…
+                          </button>
+                          <hr className="dropdown-separator" />
+                          <button
+                            type="button"
+                            className="dropdown-item"
+                            onClick={() => void handleBlockToggle()}
+                            disabled={actionBusy === 'block'}
+                          >
+                            {relationship === 'blocked_by_you'
+                              ? actionBusy === 'block'
+                                ? 'Updating…'
+                                : 'Unblock user'
+                              : actionBusy === 'block'
+                                ? 'Updating…'
+                                : 'Block user'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {/* Close dropdown on outside click within modal area */}
+                    {moreOpen && (
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={closeDropdown}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -201,6 +505,14 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
           )}
         </div>
       </div>
+      {!isOwnProfile && profile && (
+        <ReportUserModal
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          reportedUserId={profile.id}
+          reportedUsername={profile.username}
+        />
+      )}
     </div>
   )
 }

@@ -519,3 +519,53 @@ router.get('/search', authenticateToken, async (req: Request, res: Response) => 
     return res.status(500).json({ error: 'Failed to search users' })
   }
 })
+
+// Report a user (create a moderation report)
+router.post('/:reportedUserId/report', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const reporterId = req.userId
+    const { reportedUserId } = req.params
+    const { reason, description } = req.body ?? {}
+
+    if (!reportedUserId || typeof reportedUserId !== 'string') {
+      return res.status(400).json({ error: 'reportedUserId is required' })
+    }
+
+    if (reportedUserId === reporterId) {
+      return res.status(400).json({ error: 'You cannot report yourself' })
+    }
+
+    const trimmedReason = typeof reason === 'string' ? reason.trim() : ''
+    if (trimmedReason.length < 2 || trimmedReason.length > 100) {
+      return res.status(400).json({ error: 'Reason must be between 2 and 100 characters' })
+    }
+
+    const desc = typeof description === 'string' ? description.trim() : null
+    const safeDescription = desc && desc.length > 0 ? desc.slice(0, 4000) : null
+
+    // Ensure target user exists
+    const target = await query('SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL', [
+      reportedUserId,
+    ])
+    if ((target.rowCount ?? 0) === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Insert report
+    const result = await query(
+      `
+      INSERT INTO user_reports (reporter_id, reported_user_id, reason, description, evidence, status)
+      VALUES ($1, $2, $3, $4, '{}', 'pending')
+      RETURNING id, reporter_id, reported_user_id, reason, description, status, created_at
+    `,
+      [reporterId, reportedUserId, trimmedReason, safeDescription],
+    )
+
+    return res.status(201).json({ report: result.rows[0] })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to submit user report', 500, {
+      reportedUserId: req.params?.reportedUserId,
+    })
+    return res.status(500).json({ error: 'Failed to submit report' })
+  }
+})
