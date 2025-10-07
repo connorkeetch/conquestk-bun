@@ -26,6 +26,10 @@ export function YourTurnModal({ className = '' }: Props) {
   )
   const [visible, setVisible] = useState(false)
   const seenTurnRef = useRef<number | null>(null)
+  const activeKey = useMemo(() => {
+    const rid = game?.roomId ?? null
+    return rid && userId ? `ui.turnModal.active:${rid}:${userId}` : null
+  }, [game?.roomId, userId])
 
   const myColor = useMemo(() => {
     if (!userId || !game) return '#DC2626'
@@ -68,6 +72,41 @@ export function YourTurnModal({ className = '' }: Props) {
       }
     }
   }, [isMyTurn, game?.turn, game?.roomId, userId])
+
+  // When modal is visible, set an in-session active flag and broadcast an app event
+  useEffect(() => {
+    if (!activeKey) return
+    if (visible) {
+      try {
+        sessionStorage.setItem(activeKey, '1')
+      } catch {
+        /* no-op */
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('turn-intro-active', { detail: { active: true } }))
+      } catch {
+        /* no-op */
+      }
+    } else {
+      try {
+        sessionStorage.removeItem(activeKey)
+      } catch {
+        /* no-op */
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('turn-intro-active', { detail: { active: false } }))
+      } catch {
+        /* no-op */
+      }
+    }
+    return () => {
+      try {
+        sessionStorage.removeItem(activeKey)
+      } catch {
+        /* no-op */
+      }
+    }
+  }, [activeKey, visible])
 
   const handleClose = () => {
     const currentTurn = game?.turn ?? null

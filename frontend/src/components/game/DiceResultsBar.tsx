@@ -136,12 +136,16 @@ export function DiceResultsBar() {
       <div className="mt-2 bg-[color:var(--surface-1)] border border-[color:var(--panel-border)] rounded p-2">
         <div className="flex items-center justify-center gap-3 lg:gap-6 xl:gap-8 text-xs text-muted flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="uppercase tracking-wide text-[10px]">Fortify</span>
+            <span className="uppercase tracking-wide text-[10px]">Fortifications</span>
             <span className="font-semibold text-[color:var(--heading)]">{movedCount}</span>
             <span
               className={`text-[10px] ${reachedLimit ? 'text-[color:var(--color-danger)]' : ''}`}
             >
               {reachedLimit ? 'Limit reached' : limitLabel}
+            </span>
+            <span className="inline-flex items-center cursor-help text-muted" title={limitLabel}>
+              <Info className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+              <span className="sr-only">{limitLabel}</span>
             </span>
           </div>
         </div>
