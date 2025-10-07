@@ -1526,6 +1526,65 @@ export class GameService {
       throw new Error('Not your turn')
     }
 
+    // Before switching away from attack phase, flush any open engagement summary (non-conquest)
+    try {
+      if (gameState.phase === 'attack' && phase !== 'attack') {
+        const res = await query<{ game_log: unknown }>(
+          'SELECT game_log FROM game_states WHERE room_id = $1',
+          [gameId],
+        )
+        const raw = res.rows[0]?.game_log
+        const log: GameLogEntry[] = Array.isArray(raw) ? (raw as GameLogEntry[]) : []
+        const lastBattle = [...log].reverse().find((e) => (e?.type ?? 'BATTLE') === 'BATTLE') as
+          | BattleLogEntry
+          | undefined
+        if (lastBattle && !lastBattle.conquered) {
+          const engagementId = lastBattle.engagementId || lastBattle.jobId
+          const engagementEntries = log.filter((e): e is BattleLogEntry => {
+            if ((e?.type ?? 'BATTLE') !== 'BATTLE') return false
+            const be = e as BattleLogEntry
+            return (be.engagementId || be.jobId) === engagementId
+          })
+          const hasSummary = log.some(
+            (e) =>
+              e.type === 'ENGAGEMENT_SUMMARY' &&
+              (e as EngagementSummaryLogEntry).engagementId === engagementId,
+          )
+          if (!hasSummary && engagementEntries.length > 0) {
+            const first = engagementEntries[0]
+            const totals = engagementEntries.reduce(
+              (acc, cur) => {
+                acc.attacker += cur.losses.attacker
+                acc.defender += cur.losses.defender
+                return acc
+              },
+              { attacker: 0, defender: 0 },
+            )
+            const summary: EngagementSummaryLogEntry = {
+              type: 'ENGAGEMENT_SUMMARY',
+              timestamp: new Date().toISOString(),
+              engagementId,
+              attackingTerritoryId: first.attackingTerritoryId,
+              defendingTerritoryId: first.defendingTerritoryId,
+              attackerId: first.attackerId,
+              defenderId: first.defenderId,
+              initialFromArmies: Math.max(0, first.initialFromArmies ?? 0),
+              initialToArmies: Math.max(0, first.initialToArmies ?? 0),
+              totalLosses: totals,
+              conquered: false,
+            }
+            await this.appendLog(gameId, [summary])
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('Failed to flush engagement summary on phase change', {
+        gameId,
+        phase,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
+
     gameState.phase = phase
     await this.persistGameStateSnapshot(gameId, this.serializeGameState(gameState))
   }
@@ -1733,7 +1792,57 @@ export class GameService {
           return { applied: false, divergence }
         }
 
-        // If conquest ends the engagement, append a summary entry
+        // If last engagement was unfinished and this roll starts a new engagement,
+        // append a summary entry for the previous engagement (conquered: false)
+        const lastBattle = [...existingLog]
+          .reverse()
+          .find((e) => (e?.type ?? 'BATTLE') === 'BATTLE') as BattleLogEntry | undefined
+        const lastEngagementId = lastBattle
+          ? lastBattle.engagementId || lastBattle.jobId
+          : undefined
+        const startsNewEngagement =
+          !lastBattle ||
+          lastBattle.attackingTerritoryId !== attackingTerritoryId ||
+          lastBattle.defendingTerritoryId !== defendingTerritoryId ||
+          lastBattle.attackerId !== attackerId ||
+          (lastBattle.defenderId || null) !== (defenderId || null)
+
+        let preExtra: EngagementSummaryLogEntry[] = []
+        if (startsNewEngagement && lastBattle && !lastBattle.conquered && lastEngagementId) {
+          const engagementEntries = existingLog.filter((e): e is BattleLogEntry => {
+            if ((e?.type ?? 'BATTLE') !== 'BATTLE') return false
+            const be = e as BattleLogEntry
+            return (be.engagementId || be.jobId) === lastEngagementId
+          })
+          if (engagementEntries.length > 0) {
+            const first = engagementEntries[0]
+            const totals = engagementEntries.reduce(
+              (acc, cur) => {
+                acc.attacker += cur.losses.attacker
+                acc.defender += cur.losses.defender
+                return acc
+              },
+              { attacker: 0, defender: 0 },
+            )
+            preExtra = [
+              {
+                type: 'ENGAGEMENT_SUMMARY',
+                timestamp: new Date().toISOString(),
+                engagementId: lastEngagementId,
+                attackingTerritoryId: first.attackingTerritoryId,
+                defendingTerritoryId: first.defendingTerritoryId,
+                attackerId: first.attackerId,
+                defenderId: first.defenderId,
+                initialFromArmies: Math.max(0, first.initialFromArmies ?? 0),
+                initialToArmies: Math.max(0, first.initialToArmies ?? 0),
+                totalLosses: totals,
+                conquered: false,
+              },
+            ]
+          }
+        }
+
+        // If conquest ends the current engagement, append a summary entry
         let extra: EngagementSummaryLogEntry[] = []
         if (logEntry.conquered) {
           // Compute engagement totals from existing log + this entry
@@ -1767,7 +1876,9 @@ export class GameService {
           extra = [summary]
         }
 
-        const updatedLog: GameLogEntry[] = [...existingLog, logEntry, ...extra].slice(-500)
+        const updatedLog: GameLogEntry[] = [...existingLog, ...preExtra, logEntry, ...extra].slice(
+          -500,
+        )
         latestBattleLog = updatedLog
         const roundNumber = this.calculateRoundNumber(updatedGameState)
 
