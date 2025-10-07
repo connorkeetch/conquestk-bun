@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
@@ -22,8 +22,44 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
   const [iosVisible, setIosVisible] = useState(false)
-  // Track first render to delay iOS coachmark if needed
-  // (not currently used; kept for future tweaks)
+
+  // Persistence keys for reminders
+  const DONT_ASK_KEY = 'pwa:install:dont-ask'
+  const SNOOZE_KEY = 'pwa:install:snooze-until'
+  const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+
+  const shouldSuppress = useCallback(() => {
+    try {
+      if (localStorage.getItem(DONT_ASK_KEY) === '1') return true
+      const snooze = Number(localStorage.getItem(SNOOZE_KEY) || 0)
+      if (Number.isFinite(snooze) && snooze > Date.now()) return true
+    } catch {
+      // ignore storage errors (private mode / disabled storage)
+    }
+    return false
+  }, [])
+
+  const remindLater = () => {
+    try {
+      localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS))
+    } catch {
+      // ignore storage errors
+    }
+    setVisible(false)
+    setIosVisible(false)
+    setDeferredPrompt(null)
+  }
+
+  const dontAskAgain = () => {
+    try {
+      localStorage.setItem(DONT_ASK_KEY, '1')
+    } catch {
+      // ignore storage errors
+    }
+    setVisible(false)
+    setIosVisible(false)
+    setDeferredPrompt(null)
+  }
 
   const installed = useMemo(() => isStandalone(), [])
 
@@ -38,7 +74,7 @@ export default function InstallPrompt() {
     const onBIP = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setVisible(true)
+      if (!shouldSuppress()) setVisible(true)
     }
 
     window.addEventListener('beforeinstallprompt', onBIP as EventListener)
@@ -48,7 +84,7 @@ export default function InstallPrompt() {
     if (isIOS() && isSafari()) {
       // Avoid showing immediately on first render to prevent flicker
       const t = window.setTimeout(() => {
-        setIosVisible(true)
+        if (!shouldSuppress()) setIosVisible(true)
       }, 1500)
       return () => {
         window.clearTimeout(t)
@@ -61,7 +97,7 @@ export default function InstallPrompt() {
       window.removeEventListener('beforeinstallprompt', onBIP as EventListener)
       window.removeEventListener('appinstalled', hide)
     }
-  }, [installed])
+  }, [installed, shouldSuppress])
 
   if (installed) return null
 
@@ -73,12 +109,28 @@ export default function InstallPrompt() {
           <div className="font-semibold mb-0.5">Install Conquest K</div>
           <div className="text-muted">Tap Share → "Add to Home Screen"</div>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-md bg-[color:var(--surface-2)] hover:bg-[color:var(--surface-3)]"
+            onClick={remindLater}
+          >
+            Remind me later
+          </button>
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-md bg-[color:var(--color-primary)] text-white"
+            onClick={() => setIosVisible(false)}
+          >
+            Okay
+          </button>
+        </div>
         <button
           type="button"
-          className="px-3 py-1.5 rounded-md bg-[color:var(--color-primary)] text-white"
-          onClick={() => setIosVisible(false)}
+          className="ml-2 text-xs text-muted hover:text-[color:var(--text)]"
+          onClick={dontAskAgain}
         >
-          Got it
+          Don’t ask again
         </button>
       </div>
     )
@@ -92,20 +144,36 @@ export default function InstallPrompt() {
           <div className="font-semibold mb-0.5">Install Conquest K</div>
           <div className="text-muted">Use the app fullscreen and get faster launch</div>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-md bg-[color:var(--surface-2)] hover:bg-[color:var(--surface-3)]"
+            onClick={remindLater}
+          >
+            Remind me later
+          </button>
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-md bg-[color:var(--color-primary)] text-white"
+            onClick={async () => {
+              try {
+                await deferredPrompt.prompt()
+                await deferredPrompt.userChoice
+              } finally {
+                setDeferredPrompt(null)
+                setVisible(false)
+              }
+            }}
+          >
+            Install
+          </button>
+        </div>
         <button
           type="button"
-          className="px-3 py-1.5 rounded-md bg-[color:var(--color-primary)] text-white"
-          onClick={async () => {
-            try {
-              await deferredPrompt.prompt()
-              await deferredPrompt.userChoice
-            } finally {
-              setDeferredPrompt(null)
-              setVisible(false)
-            }
-          }}
+          className="ml-2 text-xs text-muted hover:text-[color:var(--text)]"
+          onClick={dontAskAgain}
         >
-          Install
+          Don’t ask again
         </button>
       </div>
     )
