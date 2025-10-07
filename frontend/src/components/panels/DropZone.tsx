@@ -21,7 +21,7 @@ export default function DropZone({
   label,
 }: DropZoneProps) {
   const base =
-    'relative overflow-hidden rounded border-2 border-dashed border-[color:var(--panel-border)]/60 bg-[color:var(--surface-1)]/40 transition-all duration-200 ease-out hover:bg-[color:var(--surface-2)]/50 hover:border-[color:var(--panel-border)]/80'
+    'relative block w-full overflow-hidden rounded border-2 border-dashed border-[color:var(--panel-border)]/60 bg-[color:var(--surface-1)]/40 transition-all duration-200 ease-out hover:bg-[color:var(--surface-2)]/50 hover:border-[color:var(--panel-border)]/80'
   const styles = useMemo(() => {
     if (orientation === 'horizontal') {
       return active
