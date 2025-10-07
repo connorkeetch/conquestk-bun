@@ -119,7 +119,9 @@ export default function GameRoomFooter({
                 title="Edit Panel Layout"
                 aria-label="Edit Panel Layout"
               >
-                <span className="text-lg" aria-hidden="true">🧩</span>
+                <span className="text-lg" aria-hidden="true">
+                  🧩
+                </span>
                 <span className="text-sm font-medium">Edit Layout</span>
               </button>
             )}

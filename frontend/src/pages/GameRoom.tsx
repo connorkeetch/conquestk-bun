@@ -1767,93 +1767,92 @@ export default function GameRoom() {
         style={gridStyle}
       >
         {/* Left Sidebar Zone (Desktop+) */}
-        {layout.isDesktopOrLarger &&
-          (leftZonePanels.length > 0 || isEditingLayout) && (
-            <aside className="sticky top-6 space-y-3">
-              {/* Top drop zone for reordering */}
-              {isEditingLayout && (
-                <DropZone
-                  onDrop={handleDropToZone('sidebar-left', 0)}
-                  active={true}
-                  orientation="vertical"
-                  className="my-1"
-                />
-              )}
-              {leftZonePanels.map((p, idx) => (
-                <div key={p.id} className="space-y-3">
-                  {/* Between-panels drop zone */}
-                  {isEditingLayout && idx > 0 && (
-                    <DropZone
-                      onDrop={handleDropToZone('sidebar-left', idx)}
-                      active={true}
-                      orientation="vertical"
-                      className="my-1"
-                    />
-                  )}
-                  {p.id === 'player-stats' && (
-                    <PlayerStatsPanel
-                      players={
-                        currentGame?.players ||
-                        (currentRoom?.players || []).map((pl) => {
-                          const rawColor =
-                            ((pl as { selected_color?: string | null }).selected_color as
-                              | string
-                              | null) ||
-                            ((pl.preferred_color as string | null) ?? null) ||
-                            '#9CA3AF'
-                          return {
-                            id: pl.userId || pl.id,
-                            userId: pl.userId || pl.id,
-                            username: pl.username,
-                            color: rawColor as unknown as PlayerColor,
-                            territories: [],
-                            armies: 0,
-                            cards: [],
-                            isEliminated: false,
-                            isAi: pl.isAi,
-                            aiDifficulty: pl.aiDifficulty ?? null,
-                            teamId: pl.teamId ?? undefined,
-                            treasures: [],
-                          }
-                        })
-                      }
-                      currentPlayerId={currentGame?.currentPlayer}
-                      territories={
-                        currentGame
-                          ? Object.fromEntries(
-                              (currentGame.board || []).map((t) => [
-                                t.id,
-                                { owner: t.ownerId, armies: t.armies },
-                              ]),
-                            )
-                          : {}
-                      }
-                    />
-                  )}
-                  {p.id === 'chat' && currentGame && user && (
-                    <ChatLogPanel
-                      gameId={currentRoom?.id ?? roomId ?? ''}
-                      currentUserId={user.id}
-                      userTeamId={currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId}
-                      onLogFocus={(territories) => {
-                        const focus = territories[territories.length - 1]
-                        if (focus) dispatch(selectTerritory(focus))
-                      }}
-                    />
-                  )}
-                </div>
-              ))}
-              {/* End drop zone */}
-              {isEditingLayout && (
-                <DropZone
-                  onDrop={handleDropToZone('sidebar-left', leftZonePanels.length)}
-                  active={true}
-                  orientation="vertical"
-                  className="my-1"
-                />
-              )}
-            </aside>
-          )}
+        {layout.isDesktopOrLarger && (leftZonePanels.length > 0 || isEditingLayout) && (
+          <aside className="sticky top-6 space-y-3">
+            {/* Top drop zone for reordering */}
+            {isEditingLayout && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-left', 0)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
+              />
+            )}
+            {leftZonePanels.map((p, idx) => (
+              <div key={p.id} className="space-y-3">
+                {/* Between-panels drop zone */}
+                {isEditingLayout && idx > 0 && (
+                  <DropZone
+                    onDrop={handleDropToZone('sidebar-left', idx)}
+                    active={true}
+                    orientation="vertical"
+                    className="my-1"
+                  />
+                )}
+                {p.id === 'player-stats' && (
+                  <PlayerStatsPanel
+                    players={
+                      currentGame?.players ||
+                      (currentRoom?.players || []).map((pl) => {
+                        const rawColor =
+                          ((pl as { selected_color?: string | null }).selected_color as
+                            | string
+                            | null) ||
+                          ((pl.preferred_color as string | null) ?? null) ||
+                          '#9CA3AF'
+                        return {
+                          id: pl.userId || pl.id,
+                          userId: pl.userId || pl.id,
+                          username: pl.username,
+                          color: rawColor as unknown as PlayerColor,
+                          territories: [],
+                          armies: 0,
+                          cards: [],
+                          isEliminated: false,
+                          isAi: pl.isAi,
+                          aiDifficulty: pl.aiDifficulty ?? null,
+                          teamId: pl.teamId ?? undefined,
+                          treasures: [],
+                        }
+                      })
+                    }
+                    currentPlayerId={currentGame?.currentPlayer}
+                    territories={
+                      currentGame
+                        ? Object.fromEntries(
+                            (currentGame.board || []).map((t) => [
+                              t.id,
+                              { owner: t.ownerId, armies: t.armies },
+                            ]),
+                          )
+                        : {}
+                    }
+                  />
+                )}
+                {p.id === 'chat' && currentGame && user && (
+                  <ChatLogPanel
+                    gameId={currentRoom?.id ?? roomId ?? ''}
+                    currentUserId={user.id}
+                    userTeamId={currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId}
+                    onLogFocus={(territories) => {
+                      const focus = territories[territories.length - 1]
+                      if (focus) dispatch(selectTerritory(focus))
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+            {/* End drop zone */}
+            {isEditingLayout && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-left', leftZonePanels.length)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
+              />
+            )}
+          </aside>
+        )}
 
         {/* Center Column - Game Board and Action Bar Container */}
         <div className="flex flex-col gap-2 min-w-0">
@@ -2030,82 +2029,81 @@ export default function GameRoom() {
         </div>
 
         {/* Right Sidebar Zone (Desktop+) */}
-        {layout.isDesktopOrLarger &&
-          (rightZonePanels.length > 0 || isEditingLayout) && (
-            <aside className="sticky top-6 space-y-3">
-              {/* Top drop zone for reordering */}
-              {isEditingLayout && (
-                <DropZone
-                  onDrop={handleDropToZone('sidebar-right', 0)}
-                  active={true}
-                  orientation="vertical"
-                  className="my-1"
-                />
-              )}
-              {rightZonePanels.map((p, idx) => (
-                <div key={p.id} className="space-y-3">
-                  {isEditingLayout && idx > 0 && (
-                    <DropZone
-                      onDrop={handleDropToZone('sidebar-right', idx)}
-                      active={true}
-                      orientation="vertical"
-                      className="my-1"
-                    />
-                  )}
-                  {p.id === 'chat' && roomId && user && (
-                    <ChatLogPanel
-                      gameId={currentRoom?.id || roomId}
-                      currentUserId={user.id}
-                      userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
-                      onLogFocus={(territories) => {
-                        const focus = territories[territories.length - 1]
-                        if (focus) dispatch(selectTerritory(focus))
-                      }}
-                    />
-                  )}
-                  {p.id === 'player-stats' && (
-                    <PlayerStatsPanel
-                      players={
-                        currentGame?.players ||
-                        (currentRoom?.players || []).map((pl) => {
-                          const rawColor =
-                            ((pl as { selected_color?: string | null }).selected_color as
-                              | string
-                              | null) ||
-                            ((pl.preferred_color as string | null) ?? null) ||
-                            '#9CA3AF'
-                          return {
-                            id: pl.userId || pl.id,
-                            userId: pl.userId || pl.id,
-                            username: pl.username,
-                            color: rawColor as unknown as PlayerColor,
-                            territories: [],
-                            armies: 0,
-                            cards: [],
-                            isEliminated: false,
-                            isAi: pl.isAi,
-                            aiDifficulty: pl.aiDifficulty ?? null,
-                            teamId: pl.teamId ?? undefined,
-                            treasures: [],
-                          }
-                        })
-                      }
-                      currentPlayerId={currentGame?.currentPlayer}
-                      territories={
-                        currentGame
-                          ? Object.fromEntries(
-                              (currentGame.board || []).map((t) => [
-                                t.id,
-                                { owner: t.ownerId, armies: t.armies },
-                              ]),
-                            )
-                          : {}
-                      }
-                    />
-                  )}
-                </div>
-              ))}
-              {isEditingLayout && (
+        {layout.isDesktopOrLarger && (rightZonePanels.length > 0 || isEditingLayout) && (
+          <aside className="sticky top-6 space-y-3">
+            {/* Top drop zone for reordering */}
+            {isEditingLayout && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-right', 0)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
+              />
+            )}
+            {rightZonePanels.map((p, idx) => (
+              <div key={p.id} className="space-y-3">
+                {isEditingLayout && idx > 0 && (
+                  <DropZone
+                    onDrop={handleDropToZone('sidebar-right', idx)}
+                    active={true}
+                    orientation="vertical"
+                    className="my-1"
+                  />
+                )}
+                {p.id === 'chat' && roomId && user && (
+                  <ChatLogPanel
+                    gameId={currentRoom?.id || roomId}
+                    currentUserId={user.id}
+                    userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
+                    onLogFocus={(territories) => {
+                      const focus = territories[territories.length - 1]
+                      if (focus) dispatch(selectTerritory(focus))
+                    }}
+                  />
+                )}
+                {p.id === 'player-stats' && (
+                  <PlayerStatsPanel
+                    players={
+                      currentGame?.players ||
+                      (currentRoom?.players || []).map((pl) => {
+                        const rawColor =
+                          ((pl as { selected_color?: string | null }).selected_color as
+                            | string
+                            | null) ||
+                          ((pl.preferred_color as string | null) ?? null) ||
+                          '#9CA3AF'
+                        return {
+                          id: pl.userId || pl.id,
+                          userId: pl.userId || pl.id,
+                          username: pl.username,
+                          color: rawColor as unknown as PlayerColor,
+                          territories: [],
+                          armies: 0,
+                          cards: [],
+                          isEliminated: false,
+                          isAi: pl.isAi,
+                          aiDifficulty: pl.aiDifficulty ?? null,
+                          teamId: pl.teamId ?? undefined,
+                          treasures: [],
+                        }
+                      })
+                    }
+                    currentPlayerId={currentGame?.currentPlayer}
+                    territories={
+                      currentGame
+                        ? Object.fromEntries(
+                            (currentGame.board || []).map((t) => [
+                              t.id,
+                              { owner: t.ownerId, armies: t.armies },
+                            ]),
+                          )
+                        : {}
+                    }
+                  />
+                )}
+              </div>
+            ))}
+            {isEditingLayout && (
               <DropZone
                 onDrop={handleDropToZone('sidebar-right', rightZonePanels.length)}
                 active={true}
@@ -2113,8 +2111,8 @@ export default function GameRoom() {
                 className="my-1"
               />
             )}
-            </aside>
-          )}
+          </aside>
+        )}
 
         {/* Removed duplicate player list section and AI controls - now only showing once in left rail */}
         {/* SR-only live region for announcements */}
