@@ -44,12 +44,12 @@ export function usePanelResize({
       // Calculate delta based on panel position
       // Left panels: drag right to increase width (positive delta)
       // Right panels: drag left to increase width (negative delta)
-      const deltaX = side === 'left' ? e.clientX - startXRef.current : startXRef.current - e.clientX
+      const deltaX = e.clientX - startXRef.current
 
-      const newWidth = Math.max(
-        MIN_PANEL_WIDTH,
-        Math.min(MAX_PANEL_WIDTH, startWidthRef.current + deltaX),
-      )
+      const rawWidth =
+        side === 'left' ? startWidthRef.current + deltaX : startWidthRef.current - deltaX
+
+      const newWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, rawWidth))
 
       setWidth(newWidth)
     },
@@ -67,15 +67,12 @@ export function usePanelResize({
     (e: TouchEvent) => {
       if (!isDragging || !e.touches[0]) return
 
-      const deltaX =
-        side === 'left'
-          ? e.touches[0].clientX - startXRef.current
-          : startXRef.current - e.touches[0].clientX
+      const deltaX = e.touches[0].clientX - startXRef.current
 
-      const newWidth = Math.max(
-        MIN_PANEL_WIDTH,
-        Math.min(MAX_PANEL_WIDTH, startWidthRef.current + deltaX),
-      )
+      const rawWidth =
+        side === 'left' ? startWidthRef.current + deltaX : startWidthRef.current - deltaX
+
+      const newWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, rawWidth))
 
       setWidth(newWidth)
     },

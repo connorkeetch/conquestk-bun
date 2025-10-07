@@ -19,6 +19,9 @@ import SettingsModal from '@/components/SettingsModal'
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 import {
+  DEFAULT_PANEL_WIDTH,
+  type PanelConfig,
+  type PanelId,
   type PanelZone,
   resetLayout,
   selectBelowMapLayout,
@@ -27,7 +30,6 @@ import {
   setBelowMapLayout,
   setPanelZone,
   togglePin,
-  unpinAll,
 } from '@/store/panelsSlice'
 import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 /* Unused after merge cleanup
@@ -178,6 +180,7 @@ export default function GameRoom() {
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
+  const forcedPanelZonesRef = useRef<Record<PanelId, PanelZone>>({})
 
   // Drag-and-drop helpers
   const parseDraggedPanelId = useCallback(
@@ -213,12 +216,142 @@ export default function GameRoom() {
     [dispatch, parseDraggedPanelId, isEditingLayout],
   )
 
-  // Force all panels unpinned on mobile/tablet
+  const boardMaxWidth = useMemo(() => {
+    if (!layout.isDesktopOrLarger) return undefined
+    if (layout.isUltrawide) return 1600
+    if (layout.isWide) return 1400
+    return 1180
+  }, [layout.isDesktopOrLarger, layout.isUltrawide, layout.isWide])
+
+  const boardMaxHeight = useMemo(() => {
+    if (!layout.isDesktopOrLarger) return undefined
+    const viewportHeight = layout.height ?? 0
+    if (!viewportHeight) return undefined
+    const reserved = 280
+    return Math.max(640, viewportHeight - reserved)
+  }, [layout.height, layout.isDesktopOrLarger])
+
   useEffect(() => {
-    if (!layout.isDesktopOrLarger) {
-      dispatch(unpinAll())
+    const panelById = panels.reduce<Record<PanelId, PanelConfig>>((acc, panel) => {
+      acc[panel.id] = panel
+      return acc
+    }, {})
+
+    const rememberZone = (panel: PanelConfig) => {
+      if (!forcedPanelZonesRef.current[panel.id]) {
+        forcedPanelZonesRef.current[panel.id] = panel.zone
+      }
     }
-  }, [layout.isDesktopOrLarger, dispatch])
+
+    const releaseZone = (panelId: PanelId, zone: PanelZone) => {
+      if (forcedPanelZonesRef.current[panelId] === zone) {
+        delete forcedPanelZonesRef.current[panelId]
+      }
+    }
+
+    const actions: Array<() => void> = []
+
+    if (!layout.isDesktopOrLarger) {
+      panels.forEach((panel) => {
+        if (panel.zone !== 'drawer') {
+          rememberZone(panel)
+          actions.push(() => dispatch(setPanelZone({ panelId: panel.id, zone: 'drawer' })))
+        }
+      })
+      actions.forEach((fn) => {
+        fn()
+      })
+      return
+    }
+
+    const allowedSidebars: PanelZone[] = []
+    if (layout.isUltrawide) {
+      allowedSidebars.push('sidebar-left', 'sidebar-right')
+    } else if (layout.isWide) {
+      const leftWeight = leftZonePanels.reduce(
+        (total, panel) => total + (panel.width || DEFAULT_PANEL_WIDTH),
+        0,
+      )
+      const rightWeight = rightZonePanels.reduce(
+        (total, panel) => total + (panel.width || DEFAULT_PANEL_WIDTH),
+        0,
+      )
+
+      let keepZone: PanelZone = 'sidebar-left'
+      if (rightWeight > leftWeight) {
+        keepZone = 'sidebar-right'
+      } else if (rightWeight === leftWeight) {
+        if (rightZonePanels.length > leftZonePanels.length) {
+          keepZone = 'sidebar-right'
+        } else if (rightZonePanels.length === leftZonePanels.length && rightZonePanels.length > 0) {
+          keepZone = 'sidebar-right'
+        } else if (rightZonePanels.length === 0 && leftZonePanels.length === 0) {
+          keepZone = 'sidebar-left'
+        }
+      }
+      if (rightZonePanels.length === 0 && leftZonePanels.length > 0) {
+        keepZone = 'sidebar-left'
+      }
+      if (leftZonePanels.length === 0 && rightZonePanels.length > 0) {
+        keepZone = 'sidebar-right'
+      }
+      allowedSidebars.push(keepZone)
+    }
+
+    const allowedZones = new Set<PanelZone>(['below-map', ...allowedSidebars])
+    let nextBelowOrder = belowZonePanels.length
+
+    const queueMove = (panel: PanelConfig, zone: PanelZone, order?: number) => {
+      if (panel.zone === zone) return
+      rememberZone(panel)
+      actions.push(() => dispatch(setPanelZone({ panelId: panel.id, zone, order })))
+    }
+
+    ;(['sidebar-left', 'sidebar-right'] as PanelZone[]).forEach((zone) => {
+      const zonePanels = zone === 'sidebar-left' ? leftZonePanels : rightZonePanels
+      if (allowedZones.has(zone)) {
+        zonePanels.forEach((panel) => {
+          releaseZone(panel.id, zone)
+        })
+        return
+      }
+      zonePanels.forEach((panel) => {
+        queueMove(panel, 'below-map', nextBelowOrder)
+        nextBelowOrder += 1
+      })
+    })
+
+    Object.entries(forcedPanelZonesRef.current).forEach(([id, storedZone]) => {
+      const panelId = id as PanelId
+      if (!allowedZones.has(storedZone)) {
+        return
+      }
+      const panel = panelById[panelId]
+      if (!panel) {
+        delete forcedPanelZonesRef.current[panelId]
+        return
+      }
+      if (panel.zone === storedZone) {
+        delete forcedPanelZonesRef.current[panelId]
+        return
+      }
+      actions.push(() => dispatch(setPanelZone({ panelId, zone: storedZone })))
+      delete forcedPanelZonesRef.current[panelId]
+    })
+
+    actions.forEach((fn) => {
+      fn()
+    })
+  }, [
+    layout.isDesktopOrLarger,
+    layout.isWide,
+    layout.isUltrawide,
+    panels,
+    belowZonePanels,
+    leftZonePanels,
+    rightZonePanels,
+    dispatch,
+  ])
 
   // Prevent background scroll when any drawer is open
   useEffect(() => {
@@ -1849,171 +1982,184 @@ export default function GameRoom() {
         )}
 
         {/* Center Column - Game Board and Action Bar Container */}
-        <div className="flex flex-col gap-2 min-w-0">
+        <div
+          className="flex flex-col gap-2 min-w-0 w-full"
+          style={{
+            maxWidth: boardMaxWidth ? `${boardMaxWidth}px` : undefined,
+            marginInline: layout.isDesktopOrLarger ? 'auto' : undefined,
+          }}
+        >
           {/* Game Board - full width */}
-          <div className="flex-1 min-w-0 flex flex-col w-full max-w-none">
-            {currentGame ? (
-              <RiskGameBoard
-                mapId={currentRoom?.mapId || 'world'}
-                onTerritoryClick={(_territoryId) => {
-                  // TODO: Handle territory interactions based on game phase
-                }}
-              />
-            ) : currentRoom ? (
-              <RiskGameBoard
-                mapId={currentRoom.mapId || 'world'}
-                lobbyMode={true}
-                lobbyPlayers={
-                  currentRoom.players?.map((p) => ({
-                    id: p.id,
-                    username: p.username,
-                    // biome-ignore lint/suspicious/noExplicitAny: Lobby snapshot still exposes legacy snake_case color field
-                    color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
-                  })) || []
-                }
-                onTerritoryClick={(_territoryId) => {
-                  // No interaction in lobby mode
-                }}
-              />
-            ) : (
-              <div className="flex h-full flex-col">
-                <div
-                  className="relative flex flex-1 items-center justify-center overflow-hidden bg-[color:var(--surface-2)] p-0 sm:p-6"
-                  style={mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined}
-                >
-                  {mapPreviewLoading ? (
-                    <div className="flex flex-col items-center gap-2 text-center">
-                      <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent"></div>
-                      <p className="text-sm text-muted">Loading map preview...</p>
-                    </div>
-                  ) : mapPreview?.imageUrl ? (
-                    <img
-                      src={mapPreview.imageUrl}
-                      alt={
-                        mapDisplayName
-                          ? `Map preview for ${mapDisplayName}`
-                          : 'Selected map preview'
-                      }
-                      className="max-h-full max-w-full object-contain"
-                      style={
-                        mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined
-                      }
-                    />
-                  ) : (
-                    <div className="px-6 text-center text-muted">
-                      <p>{mapPreviewError ?? 'Map preview will appear once it is ready.'}</p>
-                    </div>
-                  )}
-                  {mapDisplayName && (
-                    <div className="pointer-events-none absolute left-6 top-6 rounded-full bg-black/65 px-4 py-1 text-sm font-medium text-white backdrop-blur">
-                      {mapDisplayName}
-                      {typeof mapPreview?.territoryCount === 'number' &&
-                        mapPreview.territoryCount > 0 && (
-                          <span className="ml-2 text-xs text-white/80">
-                            · {mapPreview.territoryCount}{' '}
-                            {mapPreview.territoryCount === 1 ? 'territory' : 'territories'}
-                          </span>
-                        )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-center justify-center gap-3 px-6 pb-6 pt-4 text-center">
-                  <h2 className="text-xl font-semibold text-[color:var(--heading)]">
-                    Waiting for game to start...
-                  </h2>
-                  <p className="text-sm text-muted">
+          <div
+            className="flex-1 min-w-0 flex flex-col w-full max-w-none"
+            style={{
+              maxHeight: boardMaxHeight ? `${boardMaxHeight}px` : undefined,
+            }}
+          >
+            <div className="flex-1 min-h-0">
+              {currentGame ? (
+                <RiskGameBoard
+                  mapId={currentRoom?.mapId || 'world'}
+                  onTerritoryClick={(_territoryId) => {
+                    // TODO: Handle territory interactions based on game phase
+                  }}
+                />
+              ) : currentRoom ? (
+                <RiskGameBoard
+                  mapId={currentRoom.mapId || 'world'}
+                  lobbyMode={true}
+                  lobbyPlayers={
+                    currentRoom.players?.map((p) => ({
+                      id: p.id,
+                      username: p.username,
+                      // biome-ignore lint/suspicious/noExplicitAny: Lobby snapshot still exposes legacy snake_case color field
+                      color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
+                    })) || []
+                  }
+                  onTerritoryClick={(_territoryId) => {
+                    // No interaction in lobby mode
+                  }}
+                />
+              ) : (
+                <div className="flex h-full flex-col">
+                  <div
+                    className="relative flex flex-1 items-center justify-center overflow-hidden bg-[color:var(--surface-2)] p-0 sm:p-6"
+                    style={
+                      mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined
+                    }
+                  >
+                    {mapPreviewLoading ? (
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent"></div>
+                        <p className="text-sm text-muted">Loading map preview...</p>
+                      </div>
+                    ) : mapPreview?.imageUrl ? (
+                      <img
+                        src={mapPreview.imageUrl}
+                        alt={
+                          mapDisplayName
+                            ? `Map preview for ${mapDisplayName}`
+                            : 'Selected map preview'
+                        }
+                        className="max-h-full max-w-full object-contain"
+                        style={
+                          mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined
+                        }
+                      />
+                    ) : (
+                      <div className="px-6 text-center text-muted">
+                        <p>{mapPreviewError ?? 'Map preview will appear once it is ready.'}</p>
+                      </div>
+                    )}
+                    {mapDisplayName && (
+                      <div className="pointer-events-none absolute left-6 top-6 rounded-full bg-black/65 px-4 py-1 text-sm font-medium text-white backdrop-blur">
+                        {mapDisplayName}
+                        {typeof mapPreview?.territoryCount === 'number' &&
+                          mapPreview.territoryCount > 0 && (
+                            <span className="ml-2 text-xs text-white/80">
+                              · {mapPreview.territoryCount}{' '}
+                              {mapPreview.territoryCount === 1 ? 'territory' : 'territories'}
+                            </span>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-3 px-6 pb-6 pt-4 text-center">
+                    <h2 className="text-xl font-semibold text-[color:var(--heading)]">
+                      Waiting for game to start...
+                    </h2>
+                    <p className="text-sm text-muted">
+                      {(() => {
+                        const cr = currentRoom as {
+                          maxPlayers?: number
+                          players?: unknown[]
+                          status?: string
+                        } | null
+                        const total = cr?.maxPlayers ?? 0
+                        const joined = (cr?.players as unknown[] | undefined)?.length ?? 0
+                        const needed = Math.max(0, total - joined)
+                        return needed > 0
+                          ? `Need ${needed} more ${needed === 1 ? 'player' : 'players'} to begin`
+                          : `All players present • ${joined}/${total}`
+                      })()}
+                    </p>
+                    {(() => {
+                      const msg = (currentRoom as { statusMessage?: string | null } | null)
+                        ?.statusMessage
+                      const lvl = (
+                        currentRoom as {
+                          statusMessageLevel?: 'error' | 'info' | 'warn' | null
+                        } | null
+                      )?.statusMessageLevel
+                      if (!msg) return null
+                      const isError = lvl === 'error'
+                      const isWarn = lvl === 'warn'
+                      const base = 'panel text-xs'
+                      const cls = isError
+                        ? `${base} border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-[color:var(--color-danger)]`
+                        : isWarn
+                          ? `${base} border-[color:var(--color-warning)] bg-[color:color-mix(in srgb, var(--color-warning) 12%, transparent)] text-[color:var(--color-warning)]`
+                          : `${base} border-[color:var(--color-accent)] bg-[color:color-mix(in srgb, var(--color-accent) 12%, transparent)] text-[color:var(--color-accent)]`
+                      return (
+                        <div className={cls} role={isError ? 'alert' : 'status'}>
+                          {msg}
+                        </div>
+                      )
+                    })()}
                     {(() => {
                       const cr = currentRoom as {
+                        id?: string
                         maxPlayers?: number
                         players?: unknown[]
                         status?: string
                       } | null
-                      const total = cr?.maxPlayers ?? 0
                       const joined = (cr?.players as unknown[] | undefined)?.length ?? 0
-                      const needed = Math.max(0, total - joined)
-                      return needed > 0
-                        ? `Need ${needed} more ${needed === 1 ? 'player' : 'players'} to begin`
-                        : `All players present • ${joined}/${total}`
-                    })()}
-                  </p>
-                  {(() => {
-                    const msg = (currentRoom as { statusMessage?: string | null } | null)
-                      ?.statusMessage
-                    const lvl = (
-                      currentRoom as {
-                        statusMessageLevel?: 'error' | 'info' | 'warn' | null
-                      } | null
-                    )?.statusMessageLevel
-                    if (!msg) return null
-                    const isError = lvl === 'error'
-                    const isWarn = lvl === 'warn'
-                    const base = 'panel text-xs'
-                    const cls = isError
-                      ? `${base} border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-[color:var(--color-danger)]`
-                      : isWarn
-                        ? `${base} border-[color:var(--color-warning)] bg-[color:color-mix(in srgb, var(--color-warning) 12%, transparent)] text-[color:var(--color-warning)]`
-                        : `${base} border-[color:var(--color-accent)] bg-[color:color-mix(in srgb, var(--color-accent) 12%, transparent)] text-[color:var(--color-accent)]`
-                    return (
-                      <div className={cls} role={isError ? 'alert' : 'status'}>
-                        {msg}
-                      </div>
-                    )
-                  })()}
-                  {(() => {
-                    // Show a host-only manual start button as a resilient fallback.
-                    // Useful when lobby is full (e.g., AI-only games) but auto-start didn’t trigger.
-                    const cr = currentRoom as {
-                      id?: string
-                      maxPlayers?: number
-                      players?: unknown[]
-                      status?: string
-                    } | null
-                    const joined = (cr?.players as unknown[] | undefined)?.length ?? 0
-                    const total = cr?.maxPlayers ?? 0
-                    const lobbyPhase = cr?.status === 'lobby'
-                    const canManuallyStart = isHost && lobbyPhase && joined >= Math.max(2, total)
-                    if (!canManuallyStart || !cr?.id) return null
-                    const readyId: string = cr.id as string
-                    return (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={async () => {
-                          try {
-                            await gameService.setReadyState(readyId, true)
-                            toast.success('Start requested')
-                          } catch (err) {
-                            let message: string = 'Failed to start game'
-                            if (err && typeof err === 'object' && 'response' in err) {
-                              const apiErr = err as { response?: { data?: { message?: string } } }
-                              if (typeof apiErr.response?.data?.message === 'string') {
-                                message = apiErr.response.data.message
+                      const total = cr?.maxPlayers ?? 0
+                      const lobbyPhase = cr?.status === 'lobby'
+                      const canManuallyStart = isHost && lobbyPhase && joined >= Math.max(2, total)
+                      if (!canManuallyStart || !cr?.id) return null
+                      const readyId: string = cr.id as string
+                      return (
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={async () => {
+                            try {
+                              await gameService.setReadyState(readyId, true)
+                              toast.success('Start requested')
+                            } catch (err) {
+                              let message: string = 'Failed to start game'
+                              if (err && typeof err === 'object' && 'response' in err) {
+                                const apiErr = err as { response?: { data?: { message?: string } } }
+                                if (typeof apiErr.response?.data?.message === 'string') {
+                                  message = apiErr.response.data.message
+                                }
+                              } else if (err instanceof Error && typeof err.message === 'string') {
+                                message = err.message
                               }
-                            } else if (err instanceof Error && typeof err.message === 'string') {
-                              message = err.message
+                              toast.error(message as string)
                             }
-                            toast.error(message as string)
-                          }
-                        }}
+                          }}
+                        >
+                          Start Now
+                        </button>
+                      )
+                    })()}
+                    {((currentRoom as { status?: string } | null)?.status === 'lobby' ||
+                      (currentRoom as { status?: string } | null)?.status === 'initializing') && (
+                      <p
+                        className="text-xs text-muted"
+                        title={
+                          expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined
+                        }
                       >
-                        Start Now
-                      </button>
-                    )
-                  })()}
-                  {((currentRoom as { status?: string } | null)?.status === 'lobby' ||
-                    (currentRoom as { status?: string } | null)?.status === 'initializing') && (
-                    <p
-                      className="text-xs text-muted"
-                      title={
-                        expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined
-                      }
-                    >
-                      {formatTimeUntil(expiresAtDate)}
-                    </p>
-                  )}
+                        {formatTimeUntil(expiresAtDate)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Dice results below the map so it doesn't shift the board */}
