@@ -27,6 +27,7 @@ import {
   setPanelZone,
   togglePin,
   unpinAll,
+  resetLayout,
 } from '@/store/panelsSlice'
 import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 /* Unused after merge cleanup
@@ -1339,8 +1340,16 @@ export default function GameRoom() {
           {/* Below Map Zone (Desktop+ and larger screens) */}
           {layout.isDesktopOrLarger && (belowZonePanels.length > 0 || isDraggingPanel) && (
             <>
-              {/* Layout Toggle */}
-              <div className="mt-3 mb-1 flex items-center justify-end gap-2 text-[11px] text-muted">
+              {/* Layout Toggle + Reset */}
+              <div className="mt-3 mb-1 flex items-center justify-between gap-2 text-[11px] text-muted">
+                <button
+                  type="button"
+                  onClick={() => dispatch(resetLayout())}
+                  className="btn btn-ghost btn-xs"
+                  title="Reset panel layout"
+                >
+                  Reset layout
+                </button>
                 <span>Layout:</span>
                 <div className="inline-flex overflow-hidden rounded border border-[color:var(--panel-border)]">
                   <button
@@ -2004,53 +2013,6 @@ export default function GameRoom() {
           <DiceResultsBar />
 
           {/* Desktop action bar moved inside the game board as an overlay */}
-
-          {/* Player Stats under board (hidden on ultra-wide) */}
-          {!layout.isUltrawide && (
-            <div className={`flex gap-3 flex-col lg:flex-row lg:items-start`}>
-              {(currentGame || currentRoom) && (
-                <PlayerStatsTable
-                  players={
-                    currentGame?.players ||
-                    (currentRoom?.players || []).map((p) => {
-                      const rawColor =
-                        ((p as { selected_color?: string | null }).selected_color as
-                          | string
-                          | null) ||
-                        ((p.preferred_color as string | null) ?? null) ||
-                        '#9CA3AF'
-                      return {
-                        id: p.userId || p.id,
-                        userId: p.userId || p.id,
-                        username: p.username,
-                        color: rawColor as unknown as PlayerColor,
-                        territories: [],
-                        armies: 0,
-                        cards: [],
-                        isEliminated: false,
-                        isAi: p.isAi,
-                        aiDifficulty: p.aiDifficulty ?? null,
-                        teamId: p.teamId ?? undefined,
-                        treasures: [],
-                      }
-                    })
-                  }
-                  currentPlayerId={currentGame?.currentPlayer}
-                  territories={
-                    currentGame
-                      ? Object.fromEntries(
-                          (currentGame.board || []).map((t) => [
-                            t.id,
-                            { owner: t.ownerId, armies: t.armies },
-                          ]),
-                        )
-                      : {}
-                  }
-                  variant="full"
-                />
-              )}
-            </div>
-          )}
         </div>
 
         {/* Right Sidebar Zone (Desktop+) */}
