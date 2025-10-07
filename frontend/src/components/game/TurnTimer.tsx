@@ -13,6 +13,7 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   const userId = useAppSelector((s) => s.auth.user?.id)
   const [now, setNow] = useState<number>(() => Date.now())
   const warnedRef = useRef(false)
+  const isPaused = useAppSelector((s) => s.room.currentRoom?.status === 'paused')
 
   const isCurrentTurn = Boolean(userId && game?.currentPlayer === userId)
 
@@ -28,11 +29,11 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   }, [expiresAt, now])
 
   useEffect(() => {
-    if (!expiresAt) return
+    if (!expiresAt || isPaused) return
     warnedRef.current = false
     const id = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(id)
-  }, [expiresAt])
+  }, [expiresAt, isPaused])
 
   useEffect(() => {
     if (!remainingMs) return
@@ -59,7 +60,13 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
     return parts.join(' ')
   }
 
-  const color = ratio > 0.5 ? 'text-green-400' : ratio > 0.2 ? 'text-yellow-300' : 'text-red-400'
+  const color = isPaused
+    ? 'text-amber-300'
+    : ratio > 0.5
+      ? 'text-green-400'
+      : ratio > 0.2
+        ? 'text-yellow-300'
+        : 'text-red-400'
 
   // Optional: time bank display if the backend provides it
   const bankSeconds =
@@ -85,11 +92,17 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   return (
     <div className={`flex items-center gap-2 min-w-[80px] ${className}`} title="Turn timer">
       {/* Display only time text (no progress bar) */}
-      <div className={`text-xs tabular-nums ${color}`}>{formatWorded(totalSeconds)}</div>
-      {showBank && typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
-        <span className="chip text-[10px]" title="Time bank remaining">
-          +{formatWorded(effectiveBankSeconds)}
-        </span>
+      {isPaused ? (
+        <div className={`text-xs ${color}`}>Paused</div>
+      ) : (
+        <>
+          <div className={`text-xs tabular-nums ${color}`}>{formatWorded(totalSeconds)}</div>
+          {showBank && typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
+            <span className="chip text-[10px]" title="Time bank remaining">
+              +{formatWorded(effectiveBankSeconds)}
+            </span>
+          )}
+        </>
       )}
     </div>
   )

@@ -8,6 +8,7 @@ import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { DiceResultsBar } from '@/components/game/DiceResultsBar'
 import GameRoomFooter from '@/components/game/GameRoomFooter'
 // Player stats modal removed; drawers are used on all devices
+import { PausedBanner } from '@/components/game/PausedBanner'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TreasureTradeModal } from '@/components/game/TreasureTradeModal'
 import { TurnTimer } from '@/components/game/TurnTimer'
@@ -39,7 +40,7 @@ import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
 */
 import { logger } from '@/utils/logger'
-import { PlayerStatsTable } from '../components/game/PlayerStatsTable'
+// PlayerStatsTable is used via PlayerStatsPanel tabs
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import { Skeleton } from '../components/ui/Skeleton'
 import {
@@ -1502,6 +1503,7 @@ export default function GameRoom() {
 
       {/* Banners appear below the sticky title */}
       <ConnectionBanner />
+      <PausedBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
       <YourTurnModal />
 
@@ -1813,6 +1815,7 @@ export default function GameRoom() {
                         : {}
                     }
                     isEditingLayout={isEditingLayout}
+                    onResignRequest={() => setResignDialogOpen(true)}
                   />
                 )}
                 {p.id === 'chat' && currentGame && user && (
@@ -2127,6 +2130,7 @@ export default function GameRoom() {
                             : {}
                         }
                         isEditingLayout={isEditingLayout}
+                        onResignRequest={() => setResignDialogOpen(true)}
                       />
                     )}
                     {p.id === 'chat' && roomId && user && (
@@ -2237,6 +2241,7 @@ export default function GameRoom() {
                         : {}
                     }
                     isEditingLayout={isEditingLayout}
+                    onResignRequest={() => setResignDialogOpen(true)}
                   />
                 )}
               </div>
@@ -2499,7 +2504,7 @@ export default function GameRoom() {
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
-              <PlayerStatsTable
+              <PlayerStatsPanel
                 players={currentGame.players || []}
                 currentPlayerId={currentGame.currentPlayer}
                 territories={Object.fromEntries(
@@ -2509,6 +2514,7 @@ export default function GameRoom() {
                   ]),
                 )}
                 variant="full"
+                onResignRequest={() => setResignDialogOpen(true)}
               />
             </div>
           </div>

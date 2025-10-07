@@ -77,7 +77,7 @@ const TutorialPage: React.FC = () => {
           className={`tab ${activeTab === 'options' ? 'tab-active' : ''}`}
         >
           <Settings className="w-4 h-4" />
-          Game Options
+          Game Settings
         </button>
       </div>
 
