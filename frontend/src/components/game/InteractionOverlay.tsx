@@ -216,6 +216,8 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeDasharray="8 6"
+                  className={reducedMotion ? undefined : 'ck-dash-flow'}
+                  style={reducedMotion ? undefined : { strokeDashoffset: 0 }}
                   markerEnd={`url(#${markerWhite})`}
                 />
               </svg>
