@@ -7,6 +7,7 @@ import type {
   TreasureAwardedDelta,
 } from '@shared/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '../../hooks/redux'
 import { gameService } from '../../services/gameService'
@@ -22,7 +23,7 @@ type LogEntry = {
   ts: Date
   text: string
   focusTerritories?: string[]
-  rich?: React.ReactNode
+  rich?: ReactNode
 }
 
 function formatTimestamp(d: Date): string {
@@ -461,7 +462,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
 
   useEffect(() => {
     function add(text: string, ts?: Date, focusTerritories?: string[]) {
@@ -471,7 +472,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
 
     function addRich(
-      rich: React.ReactNode,
+      rich: ReactNode,
       textFallback: string,
       ts?: Date,
       focusTerritories?: string[],
@@ -917,7 +918,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       socketService.off('game-delta', onDelta)
       socketService.off('ratingUpdate', onRating)
     }
-  }, [gameId, playerName, territoryName, game?.currentPlayer, redact, toSafeInt])
+  }, [gameId, playerName, territoryName, game?.currentPlayer, redact, toSafeInt, playerColor])
 
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
