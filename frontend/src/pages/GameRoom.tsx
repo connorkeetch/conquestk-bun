@@ -1414,17 +1414,21 @@ export default function GameRoom() {
                         Game Complete
                       </span>
                       {(() => {
-                        const winner = currentGame.players.find((p) => !p.isEliminated)
-                        return winner ? (
+                        const winners = currentGame.players.filter((p) => !p.isEliminated)
+                        if (!winners.length) return null
+                        const names = winners.map((w) => w.username)
+                        const label = names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} +${names.length - 3}`
+                        return (
                           <span className="inline-flex min-w-0 items-center gap-2">
                             <span
                               aria-hidden
                               className="inline-block h-2.5 w-2.5 rounded-full border border-white/50"
-                              style={{ background: getColorValue(winner.color) }}
+                              style={{ background: getColorValue(winners[0].color) }}
+                              title={label}
                             />
-                            <span className="max-w-[160px] truncate font-medium">Winner: {winner.username}</span>
+                            <span className="max-w-[200px] truncate font-medium">Winner{winners.length > 1 ? 's' : ''}: {label}</span>
                           </span>
-                        ) : null
+                        )
                       })()}
                     </>
                   ) : (
@@ -2594,10 +2598,7 @@ export default function GameRoom() {
       {showGameOver && currentGame && (
         <GameOverModal
           isOpen={showGameOver}
-          winner={(() => {
-            const alive = currentGame.players.find((p) => !p.isEliminated)
-            return alive ?? null
-          })()}
+          winners={currentGame.players.filter((p) => !p.isEliminated)}
           eliminatedPlayers={currentGame.players.filter((p) => p.isEliminated).map((p) => p.id)}
           onClose={() => setShowGameOver(false)}
           onBackToMenu={() => navigate('/lobby')}
