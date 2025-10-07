@@ -2,6 +2,7 @@ import type { TreasureConfig } from '@shared/types'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import GameLogPanel from '@/components/chat/GameLogPanel'
 import { GameOverModal } from '@/components/GameOverModal'
 // Chat modal removed; drawers are used on all devices
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
@@ -12,10 +13,19 @@ import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TreasureTradeModal } from '@/components/game/TreasureTradeModal'
 import { TurnTimer } from '@/components/game/TurnTimer'
 import { ChatLogPanel, PlayerStatsPanel } from '@/components/panels'
+import DropZone from '@/components/panels/DropZone'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import SettingsModal from '@/components/SettingsModal'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
-import { selectPanels, togglePin, unpinAll } from '@/store/panelsSlice'
+import {
+  type PanelZone,
+  selectBelowMapLayout,
+  selectPanels,
+  selectPanelsByZone,
+  setPanelZone,
+  togglePin,
+  unpinAll,
+} from '@/store/panelsSlice'
 import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
@@ -76,6 +86,7 @@ export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const layout = useResponsiveLayout()
   const { currentRoom } = useAppSelector((state) => state.room)
   const {
     currentGame,
@@ -90,6 +101,31 @@ export default function GameRoom() {
   const panels = useAppSelector(selectPanels)
   const statsPanel = panels.find((p) => p.id === 'player-stats')
   const chatPanel = panels.find((p) => p.id === 'chat')
+  const leftZonePanels = useAppSelector((s) => selectPanelsByZone(s, 'sidebar-left'))
+  const rightZonePanels = useAppSelector((s) => selectPanelsByZone(s, 'sidebar-right'))
+  const belowZonePanels = useAppSelector((s) => selectPanelsByZone(s, 'below-map'))
+  const belowMapLayout = useAppSelector(selectBelowMapLayout)
+  const [isDraggingPanel, setIsDraggingPanel] = useState(false)
+
+  const gridStyle = useMemo(() => {
+    if (!layout.isDesktopOrLarger) return undefined
+    const leftWidth = leftZonePanels.length
+      ? Math.max(...leftZonePanels.map((p) => p.width || 0))
+      : 0
+    const rightWidth = rightZonePanels.length
+      ? Math.max(...rightZonePanels.map((p) => p.width || 0))
+      : 0
+    if (leftZonePanels.length > 0 && rightZonePanels.length > 0) {
+      return { gridTemplateColumns: `${leftWidth}px 1fr ${rightWidth}px` }
+    }
+    if (leftZonePanels.length > 0) {
+      return { gridTemplateColumns: `${leftWidth}px 1fr` }
+    }
+    if (rightZonePanels.length > 0) {
+      return { gridTemplateColumns: `1fr ${rightWidth}px` }
+    }
+    return undefined
+  }, [layout.isDesktopOrLarger, leftZonePanels, rightZonePanels])
   const [searchParams] = useSearchParams()
   const isSpectator = searchParams.get('spectate') === 'true'
   const [isRoomLoading, setIsRoomLoading] = useState(false)
@@ -123,13 +159,45 @@ export default function GameRoom() {
   const [resignDialogOpen, setResignDialogOpen] = useState(false)
   const resignDialogRef = useRef<HTMLDivElement | null>(null)
   const resignDialogTitleId = useId()
-  const layout = useResponsiveLayout()
   const mobileDrawerId = useId()
   const statsDrawerId = useId()
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
+
+  // Drag-and-drop helpers
+  const parseDraggedPanelId = useCallback(
+    (e: React.DragEvent): ('player-stats' | 'chat' | 'game-log') | null => {
+      try {
+        const id = e.dataTransfer.getData('application/x-conquestk-panel')
+        if (id === 'player-stats' || id === 'chat' || id === 'game-log') return id
+      } catch {
+        // ignore
+      }
+      try {
+        const txt = e.dataTransfer.getData('text/plain') || ''
+        if (txt.startsWith('panel:')) {
+          const id = txt.slice('panel:'.length)
+          if (id === 'player-stats' || id === 'chat' || id === 'game-log') return id
+        }
+      } catch {
+        // ignore
+      }
+      return null
+    },
+    [],
+  )
+
+  const handleDropToZone = useCallback(
+    (zone: PanelZone, order?: number) => (e: React.DragEvent) => {
+      const panelId = parseDraggedPanelId(e)
+      if (!panelId) return
+      dispatch(setPanelZone({ panelId, zone, order }))
+      setIsDraggingPanel(false)
+    },
+    [dispatch, parseDraggedPanelId],
+  )
 
   // Force all panels unpinned on mobile/tablet
   useEffect(() => {
@@ -359,6 +427,18 @@ export default function GameRoom() {
     const t = window.setTimeout(() => setInviteLinkCopied(false), 2000)
     return () => window.clearTimeout(t)
   }, [inviteLinkCopied])
+
+  // Track whether a panel is being dragged to toggle zone highlights
+  useEffect(() => {
+    const onStart = () => setIsDraggingPanel(true)
+    const onEnd = () => setIsDraggingPanel(false)
+    window.addEventListener('panel-drag-start', onStart as EventListener)
+    window.addEventListener('panel-drag-end', onEnd as EventListener)
+    return () => {
+      window.removeEventListener('panel-drag-start', onStart as EventListener)
+      window.removeEventListener('panel-drag-end', onEnd as EventListener)
+    }
+  }, [])
 
   const handleCopyInviteLink = useCallback(async () => {
     try {
@@ -1254,6 +1334,117 @@ export default function GameRoom() {
               </div>
             </div>
           )}
+
+          {/* Below Map Zone (Desktop+ and larger screens) */}
+          {layout.isDesktopOrLarger && (belowZonePanels.length > 0 || isDraggingPanel) && (
+            <div
+              className={
+                'mt-3 ' +
+                (belowMapLayout === 'horizontal-row'
+                  ? 'flex flex-row gap-3'
+                  : 'flex flex-col space-y-3')
+              }
+            >
+              {/* Leading drop zone */}
+              {isDraggingPanel && (
+                <DropZone
+                  onDrop={handleDropToZone('below-map', 0)}
+                  active={true}
+                  orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
+                  className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
+                />
+              )}
+
+              {belowZonePanels.map((p, idx) => (
+                <div key={p.id} className={belowMapLayout === 'horizontal-row' ? 'flex-1' : ''}>
+                  {/* Between-panels drop zone */}
+                  {isDraggingPanel && idx > 0 && (
+                    <DropZone
+                      onDrop={handleDropToZone('below-map', idx)}
+                      active={true}
+                      orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
+                      className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
+                    />
+                  )}
+                  {p.id === 'player-stats' && (
+                    <PlayerStatsPanel
+                      players={
+                        currentGame?.players ||
+                        (currentRoom?.players || []).map((pl) => {
+                          const rawColor =
+                            ((pl as { selected_color?: string | null }).selected_color as
+                              | string
+                              | null) ||
+                            ((pl.preferred_color as string | null) ?? null) ||
+                            '#9CA3AF'
+                          return {
+                            id: pl.userId || pl.id,
+                            userId: pl.userId || pl.id,
+                            username: pl.username,
+                            color: rawColor as unknown as PlayerColor,
+                            territories: [],
+                            armies: 0,
+                            cards: [],
+                            isEliminated: false,
+                            isAi: pl.isAi,
+                            aiDifficulty: pl.aiDifficulty ?? null,
+                            teamId: pl.teamId ?? undefined,
+                            treasures: [],
+                          }
+                        })
+                      }
+                      currentPlayerId={currentGame?.currentPlayer}
+                      territories={
+                        currentGame
+                          ? Object.fromEntries(
+                              (currentGame.board || []).map((t) => [
+                                t.id,
+                                { owner: t.ownerId, armies: t.armies },
+                              ]),
+                            )
+                          : {}
+                      }
+                    />
+                  )}
+                  {p.id === 'chat' && roomId && user && (
+                    <ChatLogPanel
+                      gameId={currentRoom?.id || roomId}
+                      currentUserId={user.id}
+                      userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
+                      onLogFocus={(territories) => {
+                        const focus = territories[territories.length - 1]
+                        if (focus) dispatch(selectTerritory(focus))
+                      }}
+                    />
+                  )}
+                  {p.id === 'game-log' && currentGame && (
+                    <div className="panel p-0 overflow-hidden">
+                      <div className="h-[260px] overflow-auto">
+                        <GameLogPanel
+                          gameId={currentRoom?.id ?? roomId ?? ''}
+                          className="h-full"
+                          onFocus={(territories) => {
+                            const focus = territories[territories.length - 1]
+                            if (focus) dispatch(selectTerritory(focus))
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Trailing drop zone */}
+              {isDraggingPanel && (
+                <DropZone
+                  onDrop={handleDropToZone('below-map', belowZonePanels.length)}
+                  active={true}
+                  orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
+                  className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1512,58 +1703,95 @@ export default function GameRoom() {
       <div
         className={`
           flex flex-col gap-4
-          ${layout.isDesktopOrLarger && (statsPanel?.isPinned || chatPanel?.isPinned) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
+          ${layout.isDesktopOrLarger && (leftZonePanels.length > 0 || rightZonePanels.length > 0) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
         `}
-        style={{
-          gridTemplateColumns:
-            layout.isDesktopOrLarger && statsPanel?.isPinned && chatPanel?.isPinned
-              ? `${statsPanel.width}px 1fr ${chatPanel.width}px`
-              : layout.isDesktopOrLarger && statsPanel?.isPinned
-                ? `${statsPanel.width}px 1fr`
-                : layout.isDesktopOrLarger && chatPanel?.isPinned
-                  ? `1fr ${chatPanel.width}px`
-                  : undefined,
-        }}
+        style={gridStyle}
       >
-        {/* Left Sidebar - Pinned Panels (Desktop+) */}
-        {layout.isDesktopOrLarger && statsPanel?.isPinned && statsPanel.position === 'left' && (
-          <aside className="sticky top-6 space-y-4">
-            <PlayerStatsPanel
-              players={
-                currentGame?.players ||
-                (currentRoom?.players || []).map((p) => {
-                  const rawColor =
-                    ((p as { selected_color?: string | null }).selected_color as string | null) ||
-                    ((p.preferred_color as string | null) ?? null) ||
-                    '#9CA3AF'
-                  return {
-                    id: p.userId || p.id,
-                    userId: p.userId || p.id,
-                    username: p.username,
-                    color: rawColor as unknown as PlayerColor,
-                    territories: [],
-                    armies: 0,
-                    cards: [],
-                    isEliminated: false,
-                    isAi: p.isAi,
-                    aiDifficulty: p.aiDifficulty ?? null,
-                    teamId: p.teamId ?? undefined,
-                    treasures: [],
-                  }
-                })
-              }
-              currentPlayerId={currentGame?.currentPlayer}
-              territories={
-                currentGame
-                  ? Object.fromEntries(
-                      (currentGame.board || []).map((t) => [
-                        t.id,
-                        { owner: t.ownerId, armies: t.armies },
-                      ]),
-                    )
-                  : {}
-              }
-            />
+        {/* Left Sidebar Zone (Desktop+) */}
+        {layout.isDesktopOrLarger && (leftZonePanels.length > 0 || isDraggingPanel) && (
+          <aside className="sticky top-6 space-y-3">
+            {/* Top drop zone for reordering */}
+            {isDraggingPanel && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-left', 0)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
+              />
+            )}
+            {leftZonePanels.map((p, idx) => (
+              <div key={p.id} className="space-y-3">
+                {/* Between-panels drop zone */}
+                {isDraggingPanel && idx > 0 && (
+                  <DropZone
+                    onDrop={handleDropToZone('sidebar-left', idx)}
+                    active={true}
+                    orientation="vertical"
+                    className="my-1"
+                  />
+                )}
+                {p.id === 'player-stats' && (
+                  <PlayerStatsPanel
+                    players={
+                      currentGame?.players ||
+                      (currentRoom?.players || []).map((pl) => {
+                        const rawColor =
+                          ((pl as { selected_color?: string | null }).selected_color as
+                            | string
+                            | null) ||
+                          ((pl.preferred_color as string | null) ?? null) ||
+                          '#9CA3AF'
+                        return {
+                          id: pl.userId || pl.id,
+                          userId: pl.userId || pl.id,
+                          username: pl.username,
+                          color: rawColor as unknown as PlayerColor,
+                          territories: [],
+                          armies: 0,
+                          cards: [],
+                          isEliminated: false,
+                          isAi: pl.isAi,
+                          aiDifficulty: pl.aiDifficulty ?? null,
+                          teamId: pl.teamId ?? undefined,
+                          treasures: [],
+                        }
+                      })
+                    }
+                    currentPlayerId={currentGame?.currentPlayer}
+                    territories={
+                      currentGame
+                        ? Object.fromEntries(
+                            (currentGame.board || []).map((t) => [
+                              t.id,
+                              { owner: t.ownerId, armies: t.armies },
+                            ]),
+                          )
+                        : {}
+                    }
+                  />
+                )}
+                {p.id === 'chat' && currentGame && user && (
+                  <ChatLogPanel
+                    gameId={currentRoom?.id ?? roomId ?? ''}
+                    currentUserId={user.id}
+                    userTeamId={currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId}
+                    onLogFocus={(territories) => {
+                      const focus = territories[territories.length - 1]
+                      if (focus) dispatch(selectTerritory(focus))
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+            {/* End drop zone */}
+            {isDraggingPanel && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-left', leftZonePanels.length)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
+              />
+            )}
           </aside>
         )}
 
@@ -1788,24 +2016,91 @@ export default function GameRoom() {
           )}
         </div>
 
-        {/* Right Sidebar - Pinned Chat/Log Panel (Desktop+) */}
-        {layout.isDesktopOrLarger &&
-          chatPanel?.isPinned &&
-          chatPanel.position === 'right' &&
-          roomId &&
-          user && (
-            <aside className="sticky top-6 space-y-4">
-              <ChatLogPanel
-                gameId={currentRoom?.id || roomId}
-                currentUserId={user.id}
-                userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
-                onLogFocus={(territories) => {
-                  const focus = territories[territories.length - 1]
-                  if (focus) dispatch(selectTerritory(focus))
-                }}
+        {/* Right Sidebar Zone (Desktop+) */}
+        {layout.isDesktopOrLarger && (rightZonePanels.length > 0 || isDraggingPanel) && (
+          <aside className="sticky top-6 space-y-3">
+            {/* Top drop zone for reordering */}
+            {isDraggingPanel && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-right', 0)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
               />
-            </aside>
-          )}
+            )}
+            {rightZonePanels.map((p, idx) => (
+              <div key={p.id} className="space-y-3">
+                {isDraggingPanel && idx > 0 && (
+                  <DropZone
+                    onDrop={handleDropToZone('sidebar-right', idx)}
+                    active={true}
+                    orientation="vertical"
+                    className="my-1"
+                  />
+                )}
+                {p.id === 'chat' && roomId && user && (
+                  <ChatLogPanel
+                    gameId={currentRoom?.id || roomId}
+                    currentUserId={user.id}
+                    userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
+                    onLogFocus={(territories) => {
+                      const focus = territories[territories.length - 1]
+                      if (focus) dispatch(selectTerritory(focus))
+                    }}
+                  />
+                )}
+                {p.id === 'player-stats' && (
+                  <PlayerStatsPanel
+                    players={
+                      currentGame?.players ||
+                      (currentRoom?.players || []).map((pl) => {
+                        const rawColor =
+                          ((pl as { selected_color?: string | null }).selected_color as
+                            | string
+                            | null) ||
+                          ((pl.preferred_color as string | null) ?? null) ||
+                          '#9CA3AF'
+                        return {
+                          id: pl.userId || pl.id,
+                          userId: pl.userId || pl.id,
+                          username: pl.username,
+                          color: rawColor as unknown as PlayerColor,
+                          territories: [],
+                          armies: 0,
+                          cards: [],
+                          isEliminated: false,
+                          isAi: pl.isAi,
+                          aiDifficulty: pl.aiDifficulty ?? null,
+                          teamId: pl.teamId ?? undefined,
+                          treasures: [],
+                        }
+                      })
+                    }
+                    currentPlayerId={currentGame?.currentPlayer}
+                    territories={
+                      currentGame
+                        ? Object.fromEntries(
+                            (currentGame.board || []).map((t) => [
+                              t.id,
+                              { owner: t.ownerId, armies: t.armies },
+                            ]),
+                          )
+                        : {}
+                    }
+                  />
+                )}
+              </div>
+            ))}
+            {isDraggingPanel && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-right', rightZonePanels.length)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
+              />
+            )}
+          </aside>
+        )}
 
         {/* Removed duplicate player list section and AI controls - now only showing once in left rail */}
         {/* SR-only live region for announcements */}
@@ -1915,7 +2210,7 @@ export default function GameRoom() {
       {/* Mobile FAB - REMOVED: Now integrated into footer */}
 
       {/* Drawer backdrop (chat) */}
-      {currentGame && !chatPanel?.isPinned && (
+      {currentGame && chatPanel?.zone === 'drawer' && (
         <button
           className={`fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -1929,7 +2224,7 @@ export default function GameRoom() {
       )}
 
       {/* Bottom drawer (chat) */}
-      {currentGame && !chatPanel?.isPinned && (
+      {currentGame && chatPanel?.zone === 'drawer' && (
         <div
           id={mobileDrawerId}
           className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
@@ -1999,7 +2294,7 @@ export default function GameRoom() {
       )}
 
       {/* Drawer backdrop (stats) */}
-      {currentGame && !statsPanel?.isPinned && (
+      {currentGame && statsPanel?.zone === 'drawer' && (
         <button
           className={`fixed inset-0 ${statsDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -2013,7 +2308,7 @@ export default function GameRoom() {
       )}
 
       {/* Bottom drawer (stats) */}
-      {currentGame && !statsPanel?.isPinned && (
+      {currentGame && statsPanel?.zone === 'drawer' && (
         <div
           id={statsDrawerId}
           className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}

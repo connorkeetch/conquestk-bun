@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MAX_PANEL_WIDTH, MIN_PANEL_WIDTH, type PanelPosition } from '@/store/panelsSlice'
+import { MAX_PANEL_WIDTH, MIN_PANEL_WIDTH, type PanelSide } from '@/store/panelsSlice'
 
 interface UsePanelResizeOptions {
   initialWidth: number
-  position: PanelPosition
+  side: PanelSide
   onResize: (width: number) => void
   disabled?: boolean
 }
@@ -23,7 +23,7 @@ interface UsePanelResizeResult {
  */
 export function usePanelResize({
   initialWidth,
-  position,
+  side,
   onResize,
   disabled = false,
 }: UsePanelResizeOptions): UsePanelResizeResult {
@@ -44,8 +44,7 @@ export function usePanelResize({
       // Calculate delta based on panel position
       // Left panels: drag right to increase width (positive delta)
       // Right panels: drag left to increase width (negative delta)
-      const deltaX =
-        position === 'left' ? e.clientX - startXRef.current : startXRef.current - e.clientX
+      const deltaX = side === 'left' ? e.clientX - startXRef.current : startXRef.current - e.clientX
 
       const newWidth = Math.max(
         MIN_PANEL_WIDTH,
@@ -54,7 +53,7 @@ export function usePanelResize({
 
       setWidth(newWidth)
     },
-    [isDragging, position],
+    [isDragging, side],
   )
 
   const handleMouseUp = useCallback(() => {
@@ -69,7 +68,7 @@ export function usePanelResize({
       if (!isDragging || !e.touches[0]) return
 
       const deltaX =
-        position === 'left'
+        side === 'left'
           ? e.touches[0].clientX - startXRef.current
           : startXRef.current - e.touches[0].clientX
 
@@ -80,7 +79,7 @@ export function usePanelResize({
 
       setWidth(newWidth)
     },
-    [isDragging, position],
+    [isDragging, side],
   )
 
   const handleTouchEnd = useCallback(() => {

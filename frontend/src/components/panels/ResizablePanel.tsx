@@ -42,18 +42,22 @@ export default function ResizablePanel({
     [dispatch, panelId],
   )
 
+  const zone = panelConfig?.zone
+  const isSidebar = zone === 'sidebar-left' || zone === 'sidebar-right'
+  const side = zone === 'sidebar-right' ? 'right' : 'left'
+
   const { width, isDragging, resizeHandleProps } = usePanelResize({
     initialWidth: panelConfig?.width ?? 360,
-    position: panelConfig?.position ?? 'left',
+    side,
     onResize: handleResize,
-    disabled: !canResize || !panelConfig?.isPinned,
+    disabled: !canResize || !isSidebar,
   })
 
   if (!panelConfig) {
     return null
   }
 
-  const { position, isMinimized } = panelConfig
+  const { zone: panelZone, isMinimized } = panelConfig
 
   return (
     <div
@@ -64,17 +68,17 @@ export default function ResizablePanel({
       }}
     >
       {/* Resize Handle - Left side for right panels, right side for left panels */}
-      {canResize && panelConfig.isPinned && !isMinimized && (
+      {canResize && isSidebar && !isMinimized && (
         <div
           {...resizeHandleProps}
           className={`absolute top-0 bottom-0 w-1 cursor-ew-resize hover:bg-[color:var(--color-accent)] transition-colors z-10 ${
-            position === 'left' ? 'right-0' : 'left-0'
+            panelZone === 'sidebar-left' ? 'right-0' : 'left-0'
           } ${isDragging ? 'bg-[color:var(--color-accent)]' : 'bg-transparent'}`}
           style={{
             // Add a wider invisible hit area for easier grabbing
             width: '4px',
-            marginLeft: position === 'right' ? '-2px' : 0,
-            marginRight: position === 'left' ? '-2px' : 0,
+            marginLeft: panelZone === 'sidebar-right' ? '-2px' : 0,
+            marginRight: panelZone === 'sidebar-left' ? '-2px' : 0,
           }}
         />
       )}

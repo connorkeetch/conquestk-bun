@@ -144,7 +144,7 @@ const ActiveGamesDropdown: React.FC = () => {
           >
             <span className="sr-only">Close active games menu</span>
           </button>
-          <div className="absolute right-0 mt-2 w-80 bg-surface-1 border border-border rounded-lg shadow-xl z-50 max-h-[600px] overflow-y-auto">
+          <div className="absolute right-0 mt-2 w-96 bg-surface-1 border border-border rounded-lg shadow-xl z-50 max-h-[600px] overflow-y-auto">
             {/* Header */}
             <div className="p-4 border-b border-border">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -234,7 +234,6 @@ const ActiveGamesDropdown: React.FC = () => {
                                       )}
                                       {t?.currentName && (
                                         <span className="inline-flex items-center gap-1 text-xs opacity-80">
-                                          <span>Current:</span>
                                           <span className="font-medium">{t.currentName}</span>
                                         </span>
                                       )}
