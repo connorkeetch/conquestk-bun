@@ -1,5 +1,6 @@
 import { computeRollOdds } from '@shared/utils/combatOdds'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { gameService } from '@/services/gameService'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
@@ -365,6 +366,19 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     (id?: string | null) => game?.players.find((p) => p.id === id)?.username ?? id ?? 'Unknown',
     [game?.players],
   )
+  const playerColor = React.useMemo(() => {
+    const map = new Map<string, string>()
+    if (game?.players) {
+      for (const p of game.players) {
+        try {
+          map.set(p.id, getColorValue(p.color as unknown as PlayerColor))
+        } catch {
+          // ignore mapping issues
+        }
+      }
+    }
+    return map
+  }, [game?.players])
   const territoryName = React.useCallback(
     (id?: string) => game?.board.find((t) => t.id === id)?.name ?? id ?? 'Unknown',
     [game?.board],
@@ -491,18 +505,47 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     (e): e is Extract<LogEntry, { type: 'BATTLE' }> => e.type === 'BATTLE' && e.conquered,
   )
 
-  const timelineItems: Array<{ when: string; label: string; detail?: string }> = []
+  const timelineItems: Array<{
+    when: string
+    label: string
+    labelRich?: React.ReactNode
+    detail?: string
+  }> = []
   for (const t of turnStarts) {
     const who = playerName(t.playerId)
     const r = typeof t.reinforcementArmies === 'number' ? `${t.reinforcementArmies} troops` : '—'
     const terr = typeof t.territoryCount === 'number' ? `${t.territoryCount} terr.` : '—'
-    timelineItems.push({ when: t.timestamp, label: `Turn start — ${who}`, detail: `${r}, ${terr}` })
+    timelineItems.push({
+      when: t.timestamp,
+      label: `Turn start — ${who}`,
+      labelRich: (
+        <>
+          Turn start —{' '}
+          <span className="font-semibold" style={{ color: playerColor.get(t.playerId) }}>
+            {who}
+          </span>
+        </>
+      ),
+      detail: `${r}, ${terr}`,
+    })
   }
   for (const b of conquests) {
     const from = territoryName(b.attackingTerritoryId)
     const to = territoryName(b.defendingTerritoryId)
     const who = playerName(b.attackerId)
-    timelineItems.push({ when: b.timestamp, label: `Conquest — ${who}`, detail: `${from} → ${to}` })
+    timelineItems.push({
+      when: b.timestamp,
+      label: `Conquest — ${who}`,
+      labelRich: (
+        <>
+          Conquest —{' '}
+          <span className="font-semibold" style={{ color: playerColor.get(b.attackerId) }}>
+            {who}
+          </span>
+        </>
+      ),
+      detail: `${from} → ${to}`,
+    })
   }
 
   // Show up to the last 15 items, newest last
@@ -553,7 +596,7 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
             <li key={`${e.when}-${idx}`} className="flex items-start gap-2">
               <span className="mt-1 inline-block h-2 w-2 rounded-full bg-primary" />
               <div>
-                <div className="text-white">{e.label}</div>
+                <div className="text-white">{e.labelRich ?? e.label}</div>
                 {e.detail && <div className="text-xs text-muted">{e.detail}</div>}
               </div>
             </li>

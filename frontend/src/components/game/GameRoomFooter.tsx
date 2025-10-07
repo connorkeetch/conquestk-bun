@@ -39,11 +39,11 @@ export default function GameRoomFooter({
       <div className="mx-auto max-w-[1200px] px-4 py-2 flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           {/* Desktop Layout - Left aligned buttons */}
-        <div className="hidden md:flex items-center gap-2">
-          {/* Player Stats Button (desktop, with label) */}
-          {onStatsClick && (
-            <button
-              type="button"
+          <div className="hidden md:flex items-center gap-2">
+            {/* Player Stats Button (desktop, with label) */}
+            {onStatsClick && (
+              <button
+                type="button"
                 onClick={onStatsClick}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
                 title="Player Stats"
@@ -53,22 +53,24 @@ export default function GameRoomFooter({
                   📊
                 </span>
                 <span className="text-sm font-medium">Player Stats</span>
-            </button>
-          )}
+              </button>
+            )}
 
-          {/* Edit Layout Button */}
-          {onLayoutClick && (
-            <button
-              type="button"
-              onClick={onLayoutClick}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
-              title="Edit Panel Layout"
-              aria-label="Edit Panel Layout"
-            >
-              <span className="text-lg" aria-hidden="true">🧩</span>
-              <span className="text-sm font-medium">Edit Layout</span>
-            </button>
-          )}
+            {/* Edit Layout Button */}
+            {onLayoutClick && (
+              <button
+                type="button"
+                onClick={onLayoutClick}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
+                title="Edit Panel Layout"
+                aria-label="Edit Panel Layout"
+              >
+                <span className="text-lg" aria-hidden="true">
+                  🧩
+                </span>
+                <span className="text-sm font-medium">Edit Layout</span>
+              </button>
+            )}
 
             {/* Chat/Log Button */}
             <button

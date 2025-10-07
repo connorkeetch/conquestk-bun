@@ -1,6 +1,7 @@
 import type { ChatConversationType } from '@shared/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
+import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
 import {
@@ -56,6 +57,20 @@ export default function ChatContainer({
       : [],
   )
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
+
+  // Map game player userId -> resolved hex color for quick lookup
+  const playerColorByUserId = useAppSelector((state) => {
+    const map = new Map<string, string>()
+    const players = state.game.currentGame?.players ?? []
+    for (const p of players) {
+      try {
+        map.set(p.userId, getColorValue(p.color as unknown as PlayerColor))
+      } catch {
+        // ignore
+      }
+    }
+    return map
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -259,6 +274,9 @@ export default function ChatContainer({
           <MessageList
             messages={displayMessages}
             currentUserId={currentUserId}
+            getSenderColor={(message, isOwn) =>
+              isOwn || !message.senderId ? undefined : playerColorByUserId.get(message.senderId)
+            }
             onUserClick={(name) => setProfileUsername(name)}
           />
         )}
