@@ -10,7 +10,7 @@ const out180 = path.join(root, 'frontend/public/apple-touch-icon-180.png')
 
 async function run() {
   if (!fs.existsSync(svgPath)) {
-    console.error('icon.svg not found at', svgPath)
+    process.stderr.write(`icon.svg not found at ${svgPath}\n`)
     process.exit(1)
   }
   const svg = fs.readFileSync(svgPath)
@@ -22,10 +22,10 @@ async function run() {
     .resize(180, 180, { fit: 'contain', background: { r: 17, g: 24, b: 39, alpha: 1 } })
     .png()
     .toFile(out180)
-  console.log('Generated', out512, 'and', out180)
+  process.stdout.write(`Generated ${out512} and ${out180}\n`)
 }
 
 run().catch((e) => {
-  console.error(e)
+  process.stderr.write(`${String(e)}\n`)
   process.exit(1)
 })

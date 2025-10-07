@@ -32,28 +32,39 @@ export default function PanelHeader({
     <div
       className={`flex items-center justify-between gap-2 px-3 py-2 bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] ${className}`}
       role="toolbar"
-      aria-label="Panel header – drag to move"
-      draggable
-      onDragStart={(e) => {
-        try {
-          e.dataTransfer.setData('application/x-conquestk-panel', panelId)
-        } catch {
-          // ignore
-        }
-        // fallback: also set plain text
-        try {
-          e.dataTransfer.setData('text/plain', `panel:${panelId}`)
-        } catch {
-          // ignore
-        }
-        window.dispatchEvent(new CustomEvent('panel-drag-start'))
-      }}
-      onDragEnd={() => {
-        window.dispatchEvent(new CustomEvent('panel-drag-end'))
-      }}
+      aria-label="Panel header"
     >
       {/* Title with Icon */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
+        {/* Drag handle */}
+        <button
+          type="button"
+          className="cursor-grab active:cursor-grabbing select-none p-1 rounded hover:bg-[color:var(--surface-3)] focus:outline-none bg-transparent"
+          title="Drag to move"
+          aria-label="Drag panel"
+          draggable
+          onDragStart={(e) => {
+            try {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.dropEffect = 'move'
+              e.dataTransfer.setData('application/x-conquestk-panel', panelId)
+            } catch {
+              // ignore
+            }
+            try {
+              e.dataTransfer.setData('text/plain', `panel:${panelId}`)
+            } catch {
+              // ignore
+            }
+            window.dispatchEvent(new CustomEvent('panel-drag-start'))
+          }}
+          onDragEnd={() => {
+            window.dispatchEvent(new CustomEvent('panel-drag-end'))
+          }}
+          aria-grabbed={false}
+        >
+          <span aria-hidden className="text-sm">≡</span>
+        </button>
         {icon && <span className="shrink-0 text-base">{icon}</span>}
         <h3 className="text-sm font-semibold text-[color:var(--heading)] truncate">{title}</h3>
       </div>
