@@ -44,7 +44,8 @@ export default function PanelContainer({
     return null
   }
 
-  const { isPinned, isMinimized } = panelConfig
+  const isPinned = panelConfig.zone !== 'drawer'
+  const { isMinimized } = panelConfig
 
   return (
     <div

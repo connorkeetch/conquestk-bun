@@ -16,6 +16,7 @@ interface PanelHeaderProps {
 }
 
 export default function PanelHeader({
+  panelId,
   title,
   icon,
   isPinned,
@@ -30,6 +31,26 @@ export default function PanelHeader({
   return (
     <div
       className={`flex items-center justify-between gap-2 px-3 py-2 bg-[color:var(--surface-2)] border-b border-[color:var(--panel-border)] ${className}`}
+      role="toolbar"
+      aria-label="Panel header – drag to move"
+      draggable
+      onDragStart={(e) => {
+        try {
+          e.dataTransfer.setData('application/x-conquestk-panel', panelId)
+        } catch {
+          // ignore
+        }
+        // fallback: also set plain text
+        try {
+          e.dataTransfer.setData('text/plain', `panel:${panelId}`)
+        } catch {
+          // ignore
+        }
+        window.dispatchEvent(new CustomEvent('panel-drag-start'))
+      }}
+      onDragEnd={() => {
+        window.dispatchEvent(new CustomEvent('panel-drag-end'))
+      }}
     >
       {/* Title with Icon */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
