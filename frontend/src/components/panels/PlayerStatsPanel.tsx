@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import GameOptionsPanel from '@/components/chat/GameOptionsPanel'
 import { PlayerStatsTable } from '@/components/game/PlayerStatsTable'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { socketService } from '@/services/socketService'
@@ -35,12 +34,21 @@ export default function PlayerStatsPanel({
   const [activeTab, setActiveTab] = useState<'stats' | 'settings'>('stats')
 
   const canResign = useMemo(() => {
-    if (!user || !currentRoom || !currentGame) return false
-    const isMember = (currentGame.players || []).some((p) => p.userId === user.id)
-    const player = (currentGame.players || []).find((p) => p.userId === user.id)
+    if (!user || !currentRoom) return false
+    const roomStatus = currentRoom.status
+    const isActive = roomStatus === 'active'
+    const gameOver =
+      (currentGame?.phase ?? 'reinforcement') === 'finished' ||
+      roomStatus === 'completed' ||
+      roomStatus === 'abandoned'
+    // Check membership from live game or room roster (pre-hydration)
+    const isMemberInGame = (currentGame?.players || []).some((p) => (p.userId ?? p.id) === user.id)
+    const isMemberInRoom = (currentRoom.players || []).some((p) => (p.userId ?? p.id) === user.id)
+    const isMember = isMemberInGame || isMemberInRoom
+    // Use game state to determine elimination when available
+    const player = (currentGame?.players || []).find((p) => (p.userId ?? p.id) === user.id)
     const isEliminated = Boolean(player?.isEliminated)
-    const gameOver = currentGame.phase === 'finished'
-    return isMember && !isEliminated && !gameOver
+    return isActive && isMember && !isEliminated && !gameOver
   }, [user, currentRoom, currentGame])
 
   const handleResign = () => {
@@ -76,7 +84,7 @@ export default function PlayerStatsPanel({
         <div className="flex overflow-x-auto bg-[color:var(--surface-1)] border-b border-[color:var(--panel-border)]">
           {[
             { id: 'stats', label: 'Stats' },
-            { id: 'settings', label: 'Game Settings' },
+            { id: 'settings', label: 'Game Options' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -107,25 +115,22 @@ export default function PlayerStatsPanel({
             </div>
           ) : (
             <div className="p-3 space-y-3">
-              <GameOptionsPanel />
-              <div className="border-t border-[color:var(--panel-border)] pt-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-[color:var(--heading)]">Resign</div>
-                    <div className="text-xs text-[color:var(--text-muted)]">
-                      Leave the match; your territories become neutral.
-                    </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-[color:var(--heading)]">Resign</div>
+                  <div className="text-xs text-[color:var(--text-muted)]">
+                    Leave the match; your territories become neutral.
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-danger btn-sm"
-                    disabled={!canResign}
-                    onClick={handleResign}
-                    title={canResign ? 'Resign from this game' : 'You cannot resign right now'}
-                  >
-                    Resign
-                  </button>
                 </div>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  disabled={!canResign}
+                  onClick={handleResign}
+                  title={canResign ? 'Resign from this game' : 'You cannot resign right now'}
+                >
+                  Resign
+                </button>
               </div>
             </div>
           )}

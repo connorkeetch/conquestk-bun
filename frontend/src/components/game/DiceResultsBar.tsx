@@ -1,3 +1,4 @@
+import { Info } from 'lucide-react'
 import { useMemo } from 'react'
 import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
@@ -89,6 +90,17 @@ export function DiceResultsBar() {
               {spent}/{total}
             </span>
             <span className="text-[10px]">Remaining {remaining}</span>
+            <span
+              className="inline-flex items-center cursor-help text-muted"
+              title="Deployed/Total. Deployed = armies placed this phase. Total = deployed + remaining. Remaining = armies left to place."
+            >
+              <Info className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+              <span className="sr-only">
+                Reinforcement info: Deployed over Total. Deployed equals armies placed this phase.
+                Total equals deployed plus remaining. Remaining equals armies left to place this
+                phase.
+              </span>
+            </span>
           </div>
         </div>
       </div>
