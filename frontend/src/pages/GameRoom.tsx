@@ -1003,15 +1003,9 @@ export default function GameRoom() {
   const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
 
   useEffect(() => {
-    if (
-      !battleResult ||
-      !battleResult.conquered ||
-      !currentGame ||
-      !user ||
-      battleResult.pendingConquestFor !== user.id
-    ) {
-      return
-    }
+    if (!battleResult || !battleResult.conquered || !currentGame || !user) return
+    // pendingConquestFor contains a player ID, not a user ID
+    if (battleResult.pendingConquestFor !== currentGame.currentPlayer) return
 
     const actingPlayer = currentGame.players.find(
       (player) => player.id === currentGame.currentPlayer,
