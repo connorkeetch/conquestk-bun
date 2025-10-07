@@ -1150,10 +1150,10 @@ export default function GameRoom() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[min(1600px,100vw-2rem)] 2xl:max-w-none flex-col gap-6 px-6 pb-20 pt-0 lg:px-10">
+    <div className="mx-auto flex w-full max-w-none lg:max-w-[min(1600px,100vw-2rem)] 2xl:max-w-none flex-col gap-6 px-0 pb-20 pt-0 lg:px-10">
       {/* Sticky title banner below main header */}
       <div
-        className="sticky z-40 -mx-6 px-6 bg-[color:color-mix(in srgb, var(--surface-1) 92%, transparent)] backdrop-blur border-b border-border"
+        className="sticky z-40 sm:-mx-6 sm:px-6 bg-[color:color-mix(in srgb, var(--surface-1) 92%, transparent)] backdrop-blur border-b border-border"
         style={{ top: 'calc(env(safe-area-inset-top) + 56px)' }}
       >
         <div className="mx-auto w-full max-w-[clamp(960px,60vw,1400px)]">
@@ -1798,7 +1798,7 @@ export default function GameRoom() {
         {/* Center Column - Game Board and Action Bar Container */}
         <div className="flex flex-col gap-2 min-w-0">
           {/* Game Board - full width */}
-          <div className="flex-1 min-w-0 flex flex-col max-w-[1400px] mx-auto w-full">
+          <div className="flex-1 min-w-0 flex flex-col w-full max-w-none">
             {currentGame ? (
               <RiskGameBoard
                 mapId={currentRoom?.mapId || 'world'}
@@ -1825,7 +1825,7 @@ export default function GameRoom() {
             ) : (
               <div className="flex h-full flex-col">
                 <div
-                  className="relative flex flex-1 items-center justify-center overflow-hidden bg-[color:var(--surface-2)] p-6"
+                  className="relative flex flex-1 items-center justify-center overflow-hidden bg-[color:var(--surface-2)] p-0 sm:p-6"
                   style={mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined}
                 >
                   {mapPreviewLoading ? (
