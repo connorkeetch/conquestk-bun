@@ -241,6 +241,8 @@ const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
   const [searchParams] = useSearchParams()
+  // Avoid depending on the unstable URLSearchParams object; derive a stable param
+  const tabParam = (searchParams.get('tab') || '').toLowerCase()
   const settings = useAppSelector((state) => state.settings)
   const [profile, setProfile] = useState<ProfileSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -420,11 +422,11 @@ const ProfilePage: React.FC = () => {
 
   // Pick initial tab from query string if provided
   useEffect(() => {
-    const t = searchParams.get('tab')
+    const t = tabParam
     if (t === 'overview' || t === 'stats' || t === 'friends') {
       setActiveTab(t)
     }
-  }, [searchParams])
+  }, [tabParam])
 
   useEffect(() => {
     if (!comingSoonUiEnabled && activeTab === 'achievements') {
@@ -562,6 +564,19 @@ const ProfilePage: React.FC = () => {
       matchHistoryRequestRef.current?.abort()
     }
   }, [activeTab, profile, matchHistoryInitialized, fetchMatchHistory])
+
+  // Prefetch a page of matches for the Overview tab so Recent Games can populate
+  useEffect(() => {
+    if (activeTab === 'overview' && profile && !matchHistoryInitialized && !matchHistoryLoading) {
+      void fetchMatchHistory({ reset: true })
+    }
+    // Abort on unmount or tab change
+    return () => {
+      if (activeTab !== 'overview') {
+        matchHistoryRequestRef.current?.abort()
+      }
+    }
+  }, [activeTab, profile, matchHistoryInitialized, matchHistoryLoading, fetchMatchHistory])
 
   const sendFriendRequest = async () => {
     if (!profile) return
@@ -1272,29 +1287,121 @@ const ProfilePage: React.FC = () => {
               {/* Recent Games Section with enhanced styling */}
               <div className="relative glass-box-lg shadow-xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-                <h2 className="text-xl font-bold text-primary-soft mb-4 flex items-center gap-2">
-                  <span>📊</span> Recent Games
-                </h2>
-                <div className="relative text-center py-12">
-                  <div className="inline-block p-4 bg-surface-2/50 rounded-full mb-4">
-                    <div className="text-4xl">🎲</div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-primary-soft flex items-center gap-2">
+                    <span>📊</span> Recent Games
+                  </h2>
+                  <button
+                    type="button"
+                    className="btn btn-tertiary btn-sm"
+                    onClick={() => setActiveTab('matches')}
+                  >
+                    View all
+                  </button>
+                </div>
+                {matchHistoryLoading && matchHistory.length === 0 ? (
+                  <div className="relative text-center py-12 text-muted">
+                    <div className="inline-block p-4 bg-surface-2/50 rounded-full mb-4">
+                      <div className="text-4xl animate-pulse">🔄</div>
+                    </div>
+                    <p>Loading recent games…</p>
                   </div>
-                  <p className="text-white text-lg mb-2 font-medium">No recent games found</p>
-                  <p className="text-muted text-sm">
-                    {isOwnProfile
-                      ? 'Start playing to see your game history!'
-                      : `${profile.username} hasn't played any games recently.`}
-                  </p>
-                  {isOwnProfile && (
+                ) : matchHistoryError ? (
+                  <div className="p-5 border border-red-500/30 bg-red-500/10 rounded-xl text-red-200 text-sm">
+                    <div className="font-semibold mb-2">Could not load recent games</div>
+                    <p className="mb-3">{matchHistoryError}</p>
                     <button
                       type="button"
-                      className="mt-4 px-6 py-2 text-white rounded-lg font-medium transition-all hover:scale-105 shadow-lg"
-                      style={signatureCallToActionStyle}
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => void fetchMatchHistory({ reset: true })}
+                      disabled={matchHistoryLoading}
                     >
-                      Start Playing
+                      Try again
                     </button>
-                  )}
-                </div>
+                  </div>
+                ) : matchHistory.length === 0 ? (
+                  <div className="relative text-center py-12">
+                    <div className="inline-block p-4 bg-surface-2/50 rounded-full mb-4">
+                      <div className="text-4xl">🎲</div>
+                    </div>
+                    <p className="text-white text-lg mb-2 font-medium">No recent games found</p>
+                    <p className="text-muted text-sm">
+                      {isOwnProfile
+                        ? 'Start playing to see your game history!'
+                        : `${profile.username} hasn't played any games recently.`}
+                    </p>
+                    {isOwnProfile && (
+                      <button
+                        type="button"
+                        className="mt-4 px-6 py-2 text-white rounded-lg font-medium transition-all hover:scale-105 shadow-lg"
+                        style={signatureCallToActionStyle}
+                      >
+                        Start Playing
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {matchHistory.slice(0, 3).map((match) => {
+                      const startedAt = match.startedAt ? new Date(match.startedAt) : null
+                      const endedAt = match.endedAt ? new Date(match.endedAt) : null
+                      const startedLabel = startedAt
+                        ? startedAt.toLocaleString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })
+                        : 'Unknown start'
+                      const statusLabel = match.status
+                        ? match.status.replace(/_/g, ' ').toUpperCase()
+                        : 'UNKNOWN'
+
+                      return (
+                        <div
+                          key={`${match.gameId}-${match.startedAt ?? 'unknown'}`}
+                          className="glass-box-sm border border-white/10 bg-surface-2/70 p-4"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <span>{match.result === 'won' ? '🏆' : '⚔️'}</span>
+                                {match.gameName ?? 'Unnamed Battle'}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted mt-2">
+                                <span>{startedLabel}</span>
+                                <span className="hidden sm:inline text-white/20">•</span>
+                                <span>
+                                  {match.gameMode ? match.gameMode.replace(/_/g, ' ') : 'Mode unknown'}
+                                </span>
+                                {endedAt && (
+                                  <>
+                                    <span className="hidden sm:inline text-white/20">•</span>
+                                    <span>{formatMatchDuration(match.durationMinutes)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                                  match.result === 'won'
+                                    ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/40'
+                                    : 'bg-rose-500/15 text-rose-200 border-rose-400/40'
+                                }`}
+                              >
+                                {match.result === 'won' ? 'Victory' : 'Defeat'}
+                              </span>
+                              <span className="text-xs uppercase tracking-[0.35em] text-muted">
+                                {statusLabel}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
