@@ -294,12 +294,11 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
   roomId,
 }) => {
   const game = useAppSelector((s) => s.game.currentGame)
-  if (!game) return null
-  const players = game.players
-  const territoriesByPlayer = new Map<string, number>()
-  const armiesByPlayer = new Map<string, number>()
+  const players = game?.players ?? []
   const [elimTurn, setElimTurn] = React.useState<Record<string, number | null>>({})
   const [cpDelta, setCpDelta] = React.useState<Record<string, number>>({})
+  const territoriesByPlayer = new Map<string, number>()
+  const armiesByPlayer = new Map<string, number>()
 
   React.useEffect(() => {
     let active = true
@@ -358,6 +357,9 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
       active = false
     }
   }, [roomId, players])
+
+  if (!game) return null
+
   for (const t of game.board) {
     if (!t.ownerId) continue
     territoriesByPlayer.set(t.ownerId, (territoriesByPlayer.get(t.ownerId) ?? 0) + 1)
@@ -491,7 +493,7 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({
     return () => {
       active = false
     }
-  }, [roomId])
+  }, [roomId, me])
 
   if (!game || !me) return null
 
