@@ -1,44 +1,46 @@
 # Architecture & Technical Details
 
-_Last updated: September 30, 2025_
+_Last updated: March 7, 2026_
 
 ## Stack Overview
 - **Frontend:** React 19 + Vite 7 + Redux Toolkit + Tailwind CSS v4, written in TypeScript (`frontend/`).
 - **Backend:** Node.js 22.12 on Express 5 with Socket.io, Bull, and PostgreSQL, also TypeScript-first (`backend/`).
-- **Shared package:** Common types and helpers published from `shared/` and consumed by both runtime targets.
-- **Data stores:** PostgreSQL (authoritative persistence), Redis (caching, socket fan-out, Bull queues), and S3-compatible object storage for map art.
-- **Tooling:** npm workspaces, Biome for lint/format, Vitest (frontend) + Jest (backend) + Playwright harness for smoke tests.
+- **Shared package:** Common types and helpers are built from `shared/` and consumed by both runtime targets.
+- **Data stores:** PostgreSQL (authoritative persistence), Redis (session cache, socket fan-out, Bull queues), and Cloudflare R2/S3-compatible object storage for map and media assets.
+- **Tooling:** npm workspaces, Biome for lint/format, Vitest (frontend) + Jest (backend) + Playwright smoke tests.
 
 ## Runtime Architecture
 ### Backend (Express + Socket.io)
-- Routes live under `backend/src/routes`. Each route composes request validation, middleware (`backend/src/middleware`), and concrete services.
-- Core game orchestration resides in `backend/src/services/gameService.ts` and `backend/src/game/gameEngine.ts`, which persist lifecycle transitions, enforce phase rules, and emit Socket.io deltas.
-  - Hidden Treasures is implemented in `backend/src/game/hiddenTreasures.ts`. The engine handles conquest draws, forced cash-in gating, elimination transfers, and trade redemption. Configuration is applied at game start via room-level cache; see `docs/guides/hidden-treasures.md`.
-- Completed matches flow through `gameService.finalizeCompletedGame`, which archives results, adjusts ELO, and calls the clan progression service (`clanProgressionService.awardContribution`). Clans are generally available (no feature flag). XP grants follow the live formula: 400 base + placement bonus (150/100/50 for 1st/2nd/3rd) + 5 × territories held (capped at +150) + a 250 win bonus, then clamped to at least 400 before emitting activity logs for analytics.
-- Map workflows span `mapService.ts`, `mapWorkflowService.ts`, and `mapApprovalService.ts`, with permission checks centralized in `mapPermissionService.ts` so creator, collaborator, and admin roles stay consistent.
+- Routes live under `backend/src/routes`. HTTP handlers call controllers in `backend/src/controllers` (e.g. `gameController.ts`) that wrap validation, middleware (`backend/src/middleware`), and domain services.
+- Core game orchestration resides in `backend/src/services/gameService.ts` together with the deterministic engine in `backend/src/game/gameEngine.ts`. They persist lifecycle transitions, enforce phase rules, and emit Socket.io deltas.
+  - Hidden Treasures rules live in `backend/src/game/hiddenTreasures.ts`. Configuration attaches at room creation and is pulled from cache before each action.
+- Completed matches flow through `GameService.finalizeCompletedGame`, which archives results, updates ratings, and awards clan XP via `clanProgressionService.awardContribution`. XP uses the constants defined near the top of `gameService.ts` (base 400 + placement bonuses 150/100/50 + up to 150 from territories + 250 win bonus) and never drops below the base grant.
+- Map workflows span `mapService.ts`, `mapWorkflowService.ts`, and `mapApprovalService.ts`, with permission checks centralized in `mapPermissionService.ts` so creator, collaborator, and admin roles stay aligned.
 - Authentication combines session cookies and JWT validation in `backend/src/middleware/auth.ts`; request-scoped user context is required for any mutating route.
-- Socket.io authentication and event wiring live in `backend/src/services/socketService.ts`. `setupSocketHandlers` registers auth guards, delegates chat events via `setupChatHandlers`, and queues gameplay actions through `queueService`.
-- Realtime rooms follow the `game:{roomId}` convention by way of helpers in `socketService.ts` (`getGameChannel`) and the shared registry in `backend/src/services/socketRegistry.ts`, so workers, lifecycle services, and reconnect logic target the same channel identifiers.
+- Socket.io authentication and event wiring live in `backend/src/services/socketService.ts`. Authenticated sockets join `user:{id}` and `clan:{clanId}` rooms, register chat handlers via `backend/src/socket/chatHandlers.ts`, and enqueue gameplay actions through the shared `queueService` with inline fallbacks handled by `GameActionProcessor`.
+- Realtime rooms follow the `game:{roomId}` convention via helpers in `socketService.ts` (`getGameChannel`) and `backend/src/services/socketRegistry.ts`, so workers, lifecycle services, and reconnect logic target the same identifiers.
 
 ### Workers & Queues
 - Bull queues (`queueService.ts`) drive asynchronous work. Key workers live in `backend/src/workers/`:
-  - `battleWorker.ts` applies battle resolution deltas and persists authoritative territory ownership.
-  - `gameActionWorker.ts` processes turn-based commands and emits consolidated deltas.
-  - `cleanupWorker.ts` retires completed games, cache entries, and stale modifiers.
-  - `mapAssetWorker.ts` runs periodic purges of soft-deleted map art via `mapStagingService` to keep CDN storage tidy.
-- `workerManager.ts` bootstraps the queue service, initializes all workers, and surfaces queue health stats for diagnostics.
-- Job idempotency helpers (`jobIdempotencyService.ts`) and metrics instrumentation (`metricsService.ts`) keep retries safe and observable.
-- Queue enablement is staged; gameplay jobs run end-to-end, modifier cleanup is live, and DM/map review push notifications continue to be validated before fan-out is enabled (see Launch Caveats).
+  - `gameActionWorker.ts` processes turn-based commands and emits deltas via `DeltaEmitter`.
+  - `battleWorker.ts` resolves combat jobs.
+  - `cleanupWorker.ts` retires completed games, prunes stale lobbies, and clears cache/modifier state.
+  - `mapAssetWorker.ts` runs periodic purges of soft-deleted map art through `mapStagingService`.
+  - `maintenanceWorker.ts` removes expired notifications and password reset tokens via `maintenanceService`.
+- `workerManager.ts` bootstraps the queue service, initializes every worker in parallel, and exposes health/stats APIs consumed by `/api/queue` routes and the `/health` probe.
+- `queueService` gracefully degrades when Redis is unavailable and can fall back to inline execution through `GameActionProcessor`, so gameplay remains responsive even without background workers.
+- Job idempotency helpers (`jobIdempotencyService.ts`) and metrics instrumentation (`metricsService.ts`) keep retries observable and safe.
 
 ### Real‑Time Game Deltas
-- Contract is defined once in the shared package at `shared/types/delta.ts` and re‑exported via `@shared/types` as `GameDelta`. All runtimes (backend + frontend) use this single contract.
-- Emission on the backend is centralized through the `DeltaBuilder` factory in `backend/src/types/deltaUpdates.ts`. It returns shared types (no local interfaces) and normalizes fields:
-  - `armies`, `turn`, `reinforcementArmies` are clamped to non‑negative integers
-  - `ownerId` is only included when a non‑empty string is provided
+- Contract is defined once in the shared package at `shared/types/delta.ts` and re-exported via `@risk-game/shared/types`. All runtimes (backend + frontend) use this single contract.
+- Emission on the backend is centralized through the `DeltaBuilder` factory in `backend/src/types/deltaUpdates.ts` together with the runtime `DeltaEmitter` service. Fields are normalized before broadcasting:
+  - `armies`, `turn`, `reinforcementArmies` are clamped to non-negative integers
+  - `ownerId` is only included when a non-empty string is provided
 - Where deltas are produced:
-  - Turn actions in `backend/src/workers/gameActionWorker.ts` (deploy/end turn/phase transitions, plus queued fortify updates)
+  - Turn actions in `backend/src/workers/gameActionWorker.ts`
+  - Inline fallbacks in `backend/src/services/gameActionProcessor.ts`
   - Battle resolution in `backend/src/workers/battleWorker.ts`
-  - Fog filtering and socket fan-out in `backend/src/services/fogService.ts`, which calls `io.to(...).emit('game-delta', delta)` per visible viewer
+  - Fog filtering and socket fan-out in `backend/src/services/fogService.ts`, which emits per-visible viewer
 - Fortify operations stream paired `TERRITORY_UPDATE` deltas and a summarized `FORTIFY_RESULT` payload (`gameActionWorker.processFortify`) so UI logs and history stay consistent.
 - Full-state syncs still emit `game-update` events from `socketService.ts` for reconnects, AFK kicks, and legacy flows.
 - Frontend consumption:
@@ -50,34 +52,33 @@ _Last updated: September 30, 2025_
 
 ### Frontend (React + Redux Toolkit)
 - Entry point `frontend/src/main.tsx` mounts the app shell defined in `App.tsx`. Routing is handled by React Router with pages under `frontend/src/pages`.
-- Global state lives in `frontend/src/store`, with slices for auth, gameplay, chat, map editing, and notifications.
-- API access is centralized in `frontend/src/services/api.ts` and specialized wrappers (e.g., `mapWorkflowService.ts`) that respect the shared types and handle optimistic updates.
+- Global state lives in `frontend/src/store`, with slices for auth, gameplay, chat, map editing, notifications, and room UX overlays.
+- API access is centralized in `frontend/src/services/api.ts` and specialized helpers such as `mapWorkflowService.ts` that align with the shared types and optimistic update helpers.
 - Real-time updates arrive through the typed socket wrapper in `frontend/src/services/socketService.ts`, which dispatches to Redux slices for gameplay (`gameSlice`), rooms, chat, notifications, and lifecycle timers.
-- The map editor is token-based (`MapEditorTokens.tsx`), supporting territory tokens, sectors, adjacency management, and capital assignment backed by autosave and approval submission flows.
-- The canonical in-game view is `GameRoom` at `/room/:roomId`. Spectating is supported by appending `?spectate=true` to the room URL. Admins using `?spectate=true` can bypass fog-of-war for diagnostics. The legacy `/game/:gameId` route has been removed.
-- A progressive web app shell registers `public/sw.js` for gameplay turn notifications; map approval + DM push payload fan-out is tracked as an outstanding task.
+- The map editor token workflow (`MapEditorTokens.tsx`) powers autosave, approval submission, and sector/capital editing. Polygon tooling still proxies through the same workflow endpoints.
+- The canonical in-game view is `GameRoom` at `/room/:roomId`. Spectating is supported by appending `?spectate=true`; admins bypass fog via the same query flag for diagnostics.
+- The progressive web app shell registers `public/sw.js` to power turn reminders. Map approval and DM push payloads reuse the same notification dispatcher.
 
 ### Shared Types & Utilities
 - The `shared/` workspace contains TypeScript contracts (`gameState.ts`, `map.ts`, etc.), validation helpers, and enums consumed by both the frontend and backend.
-- Shared constants help keep gameplay logic (turn phases, territory metadata, map schema) aligned across runtimes.
+- Shared constants keep gameplay logic (turn phases, territory metadata, map schema) aligned across runtimes.
 
 ## Data & Persistence
-- PostgreSQL migrations live in `backend/migrations` following the `NNN_description.sql` convention. `npm run migrate` applies them through the in-repo migration runner (`backend/src/utils/migrationRunner.ts`).
-- Primary tables include `game_rooms`, `room_players`, `game_states`, `game_results`, `player_game_results`, `player_stats`, `game_moves`, map catalog tables (`maps`, `map_versions`, `map_territories`, `territory_adjacencies`), messaging tables (`conversations`, `conversation_messages`, `message_read_receipts`), and notification delivery (`notifications`, `web_push_subscriptions`).
-- Redis powers `gameStateCache`, territory modifier caching, socket presence, session storage, and Bull job queues.
-- Map assets store in object storage via `mapStagingService.ts`; soft-deleted assets are reclaimed by the staging purge workflow (tracked in `map_asset_purge_runs`) once retention windows expire.
+- PostgreSQL migrations live in `backend/migrations` following the `NNN_description.sql` convention. `npm run migrate` applies them through the runner in `backend/src/scripts/runMigration.ts` / `backend/src/utils/migrationRunner.ts`.
+- Primary tables include `game_rooms`, `room_players`, `game_states`, `game_results`, `player_game_results`, `player_stats`, `game_moves`, map catalog tables (`maps`, `map_versions`, `map_territories`, `map_sectors`, `territory_adjacencies`), messaging tables (`conversations`, `conversation_messages`, `message_read_receipts`), and notification delivery (`notifications`, `web_push_subscriptions`).
+- Redis powers `gameStateCache`, modifier caching, socket presence, session storage, and Bull job queues.
+- Map assets store in R2/S3 via `mapStagingService.ts`; soft-deleted assets are reclaimed by the staging purge workflow (tracked in `map_asset_purge_runs`) once retention windows expire.
 
 ## Notifications & Messaging
-- Chat and notifications share identity derived from the authenticated Redux store; Socket.io channels broadcast edits, deletes, and system events through `notificationService.ts`, `realtimeNotificationService.ts`, and the chat hooks installed by `setupChatHandlers` in `socketService.ts`.
-- Push subscriptions persist via `web_push_subscriptions`; the service worker relays gameplay turn reminders today.
-- Clan progression updates broadcast over the shared Socket.io layer as `clan:progress` events, fanning out to `clan:{clanId}` rooms. Payloads include XP deltas, placement metadata, and objective progress so web and upcoming mobile clients can refresh contribution/goal UI without refetching the entire clan profile.
-- Remaining work: complete creator/moderator map approval push fan-out and DM push roll-out (tracked as Go-Live item B2).
+- Chat and notifications share identity derived from the authenticated Redux store; Socket.io channels broadcast edits, deletes, and system events through `notificationService.ts`, `realtimeNotificationService.ts`, and the chat hooks installed by `setupChatHandlers`.
+- Push subscriptions persist via `web_push_subscriptions`; the service worker relays gameplay turn reminders today. Map workflow and DM payloads run through `NotificationDispatcher` so channel enablement is controlled via environment variables.
+- Clan progression updates broadcast over the shared Socket.io layer as `clan:progress` events, fanning out to `clan:{clanId}` rooms. Payloads include XP deltas, placement metadata, and objective progress so web (and future mobile) clients can refresh contribution UI without refetching the entire profile.
+- Remaining work: finish validating creator/moderator map approval push fan-out and DM push roll-out (tracked in the go-live plan).
 
 ## Deployment & Operations
 - Production (https://conquestk.com) and staging (Railway dev branch) deploy from the monorepo via npm scripts. `npm run build` produces frontend + backend bundles; `npm start` runs migrations then boots Express.
-- Logging centralizes through `backend/src/utils/logger.ts`, emitting structured JSON with request IDs. Health probes cover `/healthz` and `/readyz` endpoints.
-- Observability currently includes metrics for battle application, queue health, and cleanup runs (`metricsService.ts`). Frontend errors ship to the log pipeline via REST until telemetry dashboards arrive.
-  - Hidden Treasures emits counters for draw, cash, and selected payout mode.
+- Logging centralizes through `backend/src/utils/logger.ts`, emitting structured JSON with request IDs. `/health` surfaces database, Redis, and queue status plus configuration hints for Sentry/connection strings.
+- Observability includes battle application metrics, queue health, cleanup summaries, and Hidden Treasures counters exposed via `metricsService.ts`. Frontend errors post to the backend log pipeline until dashboards land.
 
 ## Launch Readiness Caveats
 - **B2 – Creator & reviewer notifications:** Web push storage and gameplay turn pushes are live; map approval + DM push fan-out is under active development and must be validated end-to-end.
@@ -98,7 +99,7 @@ _Last updated: September 30, 2025_
   - `game_rooms.current_turn_user_id` and `game_rooms.turn_number` are updated in `GameService.endTurn`.
   - `game_rooms.turn_expires_at` is updated when turn timers are scheduled (lifecycle/socket flows), not during every action.
 
-Data migration notes
+### Data migration notes
 - Legacy `status = 'finished'` is migrated to `status = 'completed'`, and the DB constraint now disallows `finished`.
 - Unused columns dropped from `game_rooms`: `spectators_allowed`, `replay_available`.
 - The historical `games` shim table (compat for older migrations) is no longer created and is removed by migration in current environments.

@@ -1,31 +1,33 @@
 # Deployment & Operations Guide
 
+_Last updated: March 7, 2026_
+
 ## 🚀 Quick Deploy
 
 ### Production Deploy (conquestk.com)
 ```bash
 git checkout main
 git merge dev
-git push origin main  # Auto-deploys via Railway
+git push origin main  # GitHub Actions builds, tests, then triggers Railway via webhook
 ```
 
 ### Staging Deploy (risk-game-production-9935.up.railway.app)
 ```bash
 git checkout dev
-git push origin dev  # Auto-deploys via Railway
+git push origin dev  # GitHub Actions builds, tests, then triggers Railway via webhook
 ```
 
 > Configuration notes
 >
-> - (September 2025) The repo no longer ships a legacy `railway.json`. Manage services and environment variables directly in the Railway dashboard to avoid the deployment regression that file triggered. Document any changes in the GUI so the team can keep this guide current.
-> - (October 2025) We currently do not ship a `railpack.json`. Railway’s default Node builder (Nixpacks) detects the workspace, installs dependencies, builds, and starts via `npm start`. If we later decide to adopt Railpack for a stricter install/build/prune flow, document it here and test in staging first.
+> - The repo no longer ships a legacy `railway.json`. Manage services and environment variables directly in the Railway dashboard. Document changes in the dashboard when you update them.
+> - We do not ship a `railpack.json`. Railway’s default Node builder (Nixpacks) detects the workspace, installs dependencies, builds, and starts via `npm start`. Revisit this section if we adopt a custom builder.
 
 ## 🧰 Build & Install Strategy
 
 Railway uses its default Node builder (Nixpacks) with automatic detection:
-- Installs dependencies per npm config
-- Builds with our workspace scripts (`npm run build`)
-- Starts with `npm start` (root), which runs the backend server
+- Installs dependencies per npm workspaces
+- Builds with the root scripts (`npm run build`)
+- Starts with `npm start` (runs migrations then boots Express)
 
 Notes:
 - The frontend emits static assets into `backend/public` (via Vite config). The backend serves them in production/staging.
@@ -35,21 +37,18 @@ Notes:
 
 ## 🔐 Environment Variables
 
-### Current Production Setup (September 2025)
-**Verified working configuration in Railway:**
-
+### Current Production Setup (verified March 2026)
 ```bash
 # Core (Railway auto-provides DATABASE_URL and PORT)
 NODE_ENV=production
-JWT_SECRET=[32+ char secret - rotate every 90 days]
-SESSION_SECRET=[32+ char secret - rotate every 90 days]
+JWT_SECRET=[32+ char secret]
+SESSION_SECRET=[32+ char secret]
 
 # URLs & CORS
 CORS_ORIGIN=https://conquestk.com
 FRONTEND_URL=https://conquestk.com
 CANONICAL_HOST=conquestk.com
 VITE_CANONICAL_HOST=conquestk.com
-# Optional: comma separated aliases that should redirect to the canonical host
 VITE_CANONICAL_REDIRECT_HOSTS=www.conquestk.com
 
 # Email Service (Resend or SMTP)
@@ -60,7 +59,7 @@ EMAIL_VERIFICATION_EXPIRE_HOURS=24
 REQUIRE_EMAIL_VERIFICATION=true
 RESEND_API_KEY=[Resend API key]  # or provide SMTP_* credentials instead
 
-# Redis & caching (strongly recommended in prod)
+# Redis & caching
 REDIS_URL=[Railway Redis addon URL]
 
 # Logging & telemetry
@@ -83,18 +82,16 @@ DISCORD_WEBHOOK_URL=[Discord webhook]
 
 ### Staging Environment Differences
 ```bash
-NODE_ENV=staging  # Important: staging mode, not production
+NODE_ENV=staging
 CORS_ORIGIN=https://risk-game-production-9935.up.railway.app
 FRONTEND_URL=https://risk-game-production-9935.up.railway.app
-
-> Note: If `FRONTEND_URL` is not set, the backend derives the base URL from the incoming request's protocol and host (trusting proxies). This makes links in verification and password reset emails work by default in most environments, but you should still set `FRONTEND_URL` explicitly in production and staging to avoid surprises.
-SENTRY_ENVIRONMENT=staging
 ```
+
+> If `FRONTEND_URL` is unset, the backend falls back to the incoming request origin. Always set it explicitly for production and staging so verification/password reset emails generate correct links.
 
 ### Generate Secure Secrets
 ```bash
-# JWT and Session secrets
-openssl rand -base64 32
+openssl rand -base64 32  # JWT and session secrets
 ```
 
 ## 📊 Monitoring
@@ -103,7 +100,7 @@ openssl rand -base64 32
 - Production: https://conquestk.com/health
 - Staging: https://risk-game-production-9935.up.railway.app/health
 
-Response includes:
+Response shape:
 ```json
 {
   "status": "OK",
@@ -115,14 +112,18 @@ Response includes:
   "databaseUrl": "configured",
   "redisUrl": "configured",
   "sentry": "configured",
-  "timestamp": "2025-09-30T23:00:00.000Z"
+  "timestamp": "2026-03-07T00:00:00.000Z",
+  "queueError": null,
+  "databaseError": null,
+  "redisError": null
 }
 ```
+Errors are included only when a subsystem is degraded.
 
 ### Error Tracking (Sentry)
 - Captures all unhandled errors
-- Environment separation (dev/staging/prod)
-- Performance monitoring (10% sample rate in prod)
+- Environment separation (dev/staging/prod) mirrors `NODE_ENV`
+- Performance monitoring uses the Sentry sampling defaults; adjust via env vars if needed.
 - Test endpoint: `/debug-sentry` (non-production only)
 
 ### Uptime Monitoring
@@ -153,11 +154,13 @@ npm run notify -- \
 
 ## 🔄 CI/CD Pipeline
 
-GitHub Actions (`.github/workflows/deploy.yml`) automatically:
-1. Run tests on push to dev/main
-2. Build and verify code
-3. Deploy to staging (dev branch)
-4. Deploy to production (main branch, manual approval)
+GitHub Actions (`.github/workflows/deploy.yml`) runs on pushes and pull requests targeting `dev` or `main`:
+1. `typecheck` job (Node 22.12) runs `npm ci` + `npm run typecheck`.
+2. `lint` job runs Biome once typecheck passes.
+3. `unit-tests` job spins up PostgreSQL 17 and runs Jest + Vitest.
+4. `build` job compiles all workspaces.
+5. `e2e-smoke` job executes Playwright smoke tests (installs browsers).
+6. `deploy-staging` or `deploy-production` posts to the appropriate Railway webhook after the preceding jobs succeed and performs a health check before finishing.
 
 ### Branch Strategy
 ```
@@ -166,7 +169,7 @@ main (production) ← dev (staging) ← feature branches
 
 ## 🚨 Emergency Procedures
 
-### Quick Rollback (September 2025)
+### Quick Rollback
 ```bash
 # Railway CLI method (recommended)
 railway rollback --environment production
@@ -193,195 +196,19 @@ SELECT * FROM schema_migrations ORDER BY executed_at DESC;
 # Create and deploy a new rollback migration or restore a Railway snapshot.
 ```
 
-### Database Backups (January 2026 update)
+### Database Backups (2026 refresh)
 - Prefer Railway's built-in PostgreSQL snapshots for automated retention and point-in-time recovery.
-- For ad-hoc exports, run `pg_dump` to a directory **outside** the repository so we never commit SQL dumps again:
+- For ad-hoc exports, run `pg_dump` to a directory **outside** the repository so we never commit SQL dumps again.
 
 ```bash
-mkdir -p ~/conquestk-backups
-railway run --environment production \
-  pg_dump "$DATABASE_URL" --format=custom --no-owner \
-  > ~/conquestk-backups/conquestk-prod-$(date +%Y%m%d%H%M).dump
+pg_dump "$DATABASE_URL" > ~/backups/conquestk-$(date +%Y%m%d-%H%M%S).sql
 ```
 
-- Document the backup location in the incident ticket and rotate the dump after verification. Upload to secure object storage if the dump must persist beyond the incident response window.
+### Incident Response Checklist
+- Notify the Discord ops channel with a short summary and current mitigation status.
+- Create a GitHub issue tagged `incident` with timelines, impact, and remediation steps.
+- Capture logs/metrics snapshots before restarting services so we can analyze root cause post-mortem.
 
-### Common Issues & Fixes
-
-**Deployment Not Triggering**
-```bash
-# Force rebuild
-git commit --allow-empty -m "Force rebuild"
-git push origin main
-```
-
-**Memory Issues**
-- Check Railway metrics dashboard
-- Review Socket.io connection count
-- Look for memory leaks in logs
-
-**Database Connection Issues**
-```sql
--- Check active connections
-SELECT count(*) FROM pg_stat_activity;
-
--- Kill stuck queries
-SELECT pg_terminate_backend(pid) 
-FROM pg_stat_activity 
-WHERE state = 'idle' 
-AND query_start < NOW() - INTERVAL '10 minutes';
-```
-
-## 🏠 Local Development (Current Setup)
-
-### Railway PostgreSQL (Recommended)
-```bash
-# Current working setup (September 2025)
-npm install                    # Install all dependencies
-npm run setup                  # Configure environment
-npm run dev                    # Start both frontend (5173) and backend (5001)
-```
-
-**Default Configuration:**
-- **Frontend**: http://localhost:5173
-- **Backend**: http://localhost:5001  
-- **Database**: Railway PostgreSQL (shared dev instance)
-- **No Docker required** - Railway handles database hosting
-
-### Alternative: Docker (If needed)
-```bash
-# Only if Railway connection issues
-docker-compose up -d postgres redis
-cp backend/.env.example backend/.env
-# Update DATABASE_URL to localhost
-npm run dev
-```
-
-## 📋 Deployment Checklist
-
-Before production deploy:
-- [ ] All tests pass: `npm test`
-- [ ] No lint errors: `npm run lint`
-- [ ] Build succeeds: `npm run build`
-- [ ] Database migrations ready
-- [ ] Environment variables set in Railway
-- [ ] Recent database backup exists
-- [ ] Sentry configured
-- [ ] Health checks passing
-
-## 🗄️ Database Migrations
-
-### Automatic Migrations (Sept 2025+)
-Migrations now run automatically on deployment via the backend start script:
-```json
-// backend/package.json
-"start": "node dist/scripts/runMigration.js && node dist/index.js"
-```
-
-### Manual Migration Commands
-```bash
-# Run migrations locally
-cd backend && npm run migrate
-
-# Check migration status
-cd backend && npm run migrate:status
-
-# Check database schema
-cd backend && npm run check:schema
-
-# Direct database inspection (requires ts-node)
-cd backend && npm run check:schema
-```
-
-### Migration Files
-- Location: `backend/migrations/`
-- Format: `XXX_description.sql` (e.g., `014_add_map_status_column.sql`)
-- Migrations run in numeric order
-- Use `IF NOT EXISTS` clauses for safety
-- Always test locally before production
-
-### Common Migration Issues
-1. **"column does not exist"** - Migration hasn't run
-2. **"relation does not exist"** - Table hasn't been created
-3. **Duplicate migrations** - Check migration_history table
-4. **Failed migrations** - Check logs, may need manual intervention
-
-## 🔍 Verification Steps
-
-After deployment:
-1. Check health endpoint
-2. Test user registration/login
-3. Create and join a game
-4. Verify Socket.io connections
-5. Check Sentry for errors
-6. Monitor memory usage (first 30 min)
-7. Test file uploads
-
-## 🚀 Performance Optimization
-
-### Database
-- Indexes on foreign keys and frequently queried columns
-- Connection pooling (20 connections max)
-- Query timeout (30 seconds)
-
-### Application
-- Compression enabled
-- Static asset caching (1 day)
-- Rate limiting configured
-- Memory limits monitored
-
-## 🔗 Important URLs
-
-- **Production**: https://conquestk.com
-- **Staging**: https://risk-game-production-9935.up.railway.app
-- **Railway Dashboard**: https://railway.app/dashboard
-- **GitHub Actions**: https://github.com/connorkeetch/risk-game/actions
-- **Sentry Dashboard**: https://sentry.io
-
-## 📝 Logs & Debugging
-
-### View Logs
-```bash
-# Railway CLI
-railway logs --environment production
-
-# Or use Railway dashboard for real-time logs
-```
-
-### Debug Endpoints (non-production)
-- `/debug/env` - Environment variables (redacted)
-- `/debug/tables` - Database tables and counts
-- `/debug/migrations` - Migration status
-- `/debug-sentry` - Test Sentry error
-
-## 🔒 Security Notes
-
-- Never commit `.env` files
-- Rotate secrets every 90 days
-- Use different secrets per environment
-- Enable 2FA on Railway account
-- Audit Railway team access monthly
-## 🔁 Post‑Deploy Migration Notes (September 2025)
-
-Terminology update: continents → sectors
-- Apply DB migration 022 on all environments.
-
-Local
-```bash
-cd backend && npm run migrate
-```
-
-Production/Staging
-- Migrations run on app start via `npm start`. Confirm applied:
-```sql
-SELECT * FROM schema_migrations ORDER BY executed_at DESC;
-```
-
-API compatibility
-- New: `POST /api/maps/:mapId/sectors`
-- Alias: `POST /api/maps/:mapId/continents` (kept for backward compatibility)
-- Territory payload accepts `sectorId` (preferred) or `continentId` (deprecated)
-- Map metadata uses `sectors` (preferred); `continents` still read and mapped
-
-UI
-- Visible labels now say “Sectors.” Internally, the editor still uses `continents` state; the service layer maps responses.
+## 🧭 Operational Dashboards
+- `/api/performance/dashboard` surfaces live queue, Redis, and worker metrics (requires admin auth).
+- `/api/queue/health` exposes per-queue stats for manual verification during incidents.
