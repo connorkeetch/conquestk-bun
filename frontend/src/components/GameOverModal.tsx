@@ -1,4 +1,4 @@
-import { computeRollOdds } from '@shared/utils/combatOdds'
+import { computeConquestProbability } from '@shared/utils/battleOdds'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { gameService } from '@/services/gameService'
@@ -353,7 +353,11 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
     armies: armiesByPlayer.get(p.id) ?? 0,
     eliminated: p.isEliminated,
     eliminatedTurn: elimTurn[p.id] ?? null,
-    cp: typeof cpDelta[p.id] === 'number' ? cpDelta[p.id] : null,
+    cp: typeof cpDelta[p.id] === 'number'
+      ? cpDelta[p.id]
+      : typeof cpDelta[(p as unknown as { userId?: string }).userId || ''] === 'number'
+        ? cpDelta[(p as unknown as { userId?: string }).userId as string]
+        : null,
   }))
   const maxTerr = Math.max(1, ...entries.map((e) => e.territories))
   const maxArmy = Math.max(1, ...entries.map((e) => e.armies))
@@ -540,39 +544,13 @@ type LogEntry =
       defenderId: string | null
       losses?: { attacker: number; defender: number }
       conquered: boolean
+      initialFromArmies?: number
+      initialToArmies?: number
     }
   | { type: 'TREASURE'; timestamp: string; userId: string; metal: string }
   | { type: 'LIFECYCLE'; timestamp: string; event: string }
 
-const DICE_COMBOS = [
-  { attDice: 1 as const, defDice: 1 as const, odds: computeRollOdds(1, 1) },
-  { attDice: 1 as const, defDice: 2 as const, odds: computeRollOdds(1, 2) },
-  { attDice: 2 as const, defDice: 1 as const, odds: computeRollOdds(2, 1) },
-  { attDice: 2 as const, defDice: 2 as const, odds: computeRollOdds(2, 2) },
-  { attDice: 3 as const, defDice: 1 as const, odds: computeRollOdds(3, 1) },
-  { attDice: 3 as const, defDice: 2 as const, odds: computeRollOdds(3, 2) },
-] as const
-
-type DiceProbability = {
-  attDice: (typeof DICE_COMBOS)[number]['attDice']
-  defDice: (typeof DICE_COMBOS)[number]['defDice']
-  probability: number
-}
-
-const UNLIKELY_THRESHOLD = 0.33
-
-const outcomeProbability = (
-  odds: ReturnType<typeof computeRollOdds>,
-  attackerLosses: number,
-  defenderLosses: number,
-) => {
-  if (attackerLosses === 2 && defenderLosses === 0) return odds.probabilities.attackerLoses2
-  if (attackerLosses === 0 && defenderLosses === 2) return odds.probabilities.defenderLoses2
-  if (attackerLosses === 1 && defenderLosses === 1) return odds.probabilities.trade11
-  if (attackerLosses === 1 && defenderLosses === 0) return odds.probabilities.attackerLoses1
-  if (attackerLosses === 0 && defenderLosses === 1) return odds.probabilities.defenderLoses1
-  return 0
-}
+const UNLIKELY_ENGAGEMENT_THRESHOLD = 0.25
 
 const formatProbability = (value: number) => {
   if (!Number.isFinite(value)) return '0.0'
@@ -638,77 +616,86 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
         label: string
         detail: string
         probability: number
-        rangeText?: string
       }>
 
-    const battles = log.filter(
-      (entry): entry is Extract<LogEntry, { type: 'BATTLE' }> => entry.type === 'BATTLE',
-    )
-    const moments: Array<{
-      key: string
-      label: string
-      detail: string
-      probability: number
-      rangeText?: string
-    }> = []
+    // Group consecutive BATTLE entries into engagements
+    type Engagement = {
+      attackerId: string
+      defenderId?: string | null
+      fromId: string
+      toId: string
+      initFrom?: number
+      initTo?: number
+      conquered: boolean
+      firstTs: string
+      lastTs: string
+    }
+    const battles = log
+      .filter((e): e is Extract<LogEntry, { type: 'BATTLE' }> => e.type === 'BATTLE')
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    const engagements: Engagement[] = []
+    let current: Engagement | null = null
+    for (const b of battles) {
+      const same =
+        current &&
+        current.fromId === b.attackingTerritoryId &&
+        current.toId === b.defendingTerritoryId &&
+        current.attackerId === b.attackerId &&
+        (current.defenderId || null) === (b.defenderId || null)
+      if (!same) {
+        if (current) engagements.push(current)
+        current = {
+          attackerId: b.attackerId,
+          defenderId: b.defenderId,
+          fromId: b.attackingTerritoryId,
+          toId: b.defendingTerritoryId,
+          initFrom: typeof b.initialFromArmies === 'number' ? b.initialFromArmies : undefined,
+          initTo: typeof b.initialToArmies === 'number' ? b.initialToArmies : undefined,
+          conquered: Boolean(b.conquered),
+          firstTs: b.timestamp,
+          lastTs: b.timestamp,
+        }
+      } else {
+        // Keep the earliest initial stacks if present; update outcome and lastTs
+        if (typeof current.initFrom !== 'number' && typeof b.initialFromArmies === 'number') {
+          current.initFrom = b.initialFromArmies
+        }
+        if (typeof current.initTo !== 'number' && typeof b.initialToArmies === 'number') {
+          current.initTo = b.initialToArmies
+        }
+        current.conquered = current.conquered || Boolean(b.conquered)
+        current.lastTs = b.timestamp
+      }
+    }
+    if (current) engagements.push(current)
 
-    battles.forEach((battle, idx) => {
-      const losses = battle.losses
-      if (!losses) return
+    const moments: Array<{ key: string; label: string; detail: string; probability: number }> = []
+    for (const e of engagements) {
+      const a0 = typeof e.initFrom === 'number' ? Math.max(0, Math.trunc(e.initFrom)) : null
+      const d0 = typeof e.initTo === 'number' ? Math.max(0, Math.trunc(e.initTo)) : null
+      if (a0 == null || d0 == null || a0 <= 0 || d0 <= 0) continue
+      const P = computeConquestProbability(a0, d0)
+      // Unlikely conquest (attacker wins despite low odds), or unlikely hold (defender holds despite attacker having strong odds)
+      const unlikelyConquest = e.conquered && P <= UNLIKELY_ENGAGEMENT_THRESHOLD
+      const unlikelyHold = !e.conquered && P >= 1 - UNLIKELY_ENGAGEMENT_THRESHOLD
+      if (!unlikelyConquest && !unlikelyHold) continue
 
-      const combos = DICE_COMBOS.map((combo) => {
-        const probability = outcomeProbability(combo.odds, losses.attacker, losses.defender)
-        return probability > 0
-          ? ({
-              attDice: combo.attDice,
-              defDice: combo.defDice,
-              probability,
-            } satisfies DiceProbability)
-          : null
-      }).filter((combo): combo is DiceProbability => combo !== null)
-
-      if (combos.length === 0) return
-
-      const assumedCombo =
-        combos.find((combo) => combo.attDice === 3 && combo.defDice === 2) ??
-        combos.find((combo) => combo.attDice === 3 && combo.defDice === 1) ??
-        combos.find((combo) => combo.attDice === 2 && combo.defDice === 2) ??
-        combos[0]
-
-      if (assumedCombo.probability > UNLIKELY_THRESHOLD) return
-
-      const minProbability = Math.min(...combos.map((combo) => combo.probability))
-      const maxProbability = Math.max(...combos.map((combo) => combo.probability))
-
-      const attacker = playerName(battle.attackerId)
-      const defender = battle.defenderId ? playerName(battle.defenderId) : 'Neutral forces'
-      const from = territoryName(battle.attackingTerritoryId)
-      const to = territoryName(battle.defendingTerritoryId)
-
-      const label =
-        losses.attacker >= losses.defender ? `Defensive stand at ${to}` : `Blitz at ${to}`
-      const detail =
-        losses.attacker >= losses.defender
-          ? `${defender} held ${to} while ${attacker} lost ${losses.attacker} ${
-              losses.attacker === 1 ? 'army' : 'armies'
-            } in a single roll.`
-          : `${attacker} overran ${defender} from ${from}, costing the defender ${losses.defender} ${
-              losses.defender === 1 ? 'army' : 'armies'
-            } instantly.`
-
-      const rangeText =
-        maxProbability - minProbability > 0.05
-          ? `range ${formatProbability(minProbability)}–${formatProbability(maxProbability)}% depending on dice`
-          : undefined
-
+      const attacker = playerName(e.attackerId)
+      const defender = e.defenderId ? playerName(e.defenderId) : 'Neutral forces'
+      const from = territoryName(e.fromId)
+      const to = territoryName(e.toId)
+      const probText = formatProbability(unlikelyConquest ? P : 1 - P)
+      const label = unlikelyConquest
+        ? `Unlikely conquest — ${attacker}`
+        : `Unlikely hold — ${defender}`
+      const detail = `${from} ${a0} → ${to} ${d0} • ${attacker} vs ${defender} • ≈${probText}% chance`
       moments.push({
-        key: `${battle.timestamp}-${idx}`,
+        key: `${e.firstTs}-${e.lastTs}-${e.fromId}-${e.toId}`,
         label,
         detail,
-        probability: assumedCombo.probability,
-        rangeText,
+        probability: unlikelyConquest ? P : 1 - P,
       })
-    })
+    }
 
     return moments.sort((a, b) => a.probability - b.probability).slice(0, 5)
   }, [log, playerName, territoryName])

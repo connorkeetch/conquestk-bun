@@ -251,6 +251,9 @@ export class BattleWorker {
         defendingPlayerId: defenderOwnerId,
         // Default commit 1 army on conquest; player can transfer more via subsequent action
         attackingArmiesCommitted: 1,
+        // Provide pre-roll stacks so downstream can log engagement initial counts
+        attackerArmiesBeforeRoll: attackingArmies,
+        defenderArmiesBeforeRoll: defendingArmies,
       })
 
       // If visibility changed (on conquest), send filtered snapshots to affected players

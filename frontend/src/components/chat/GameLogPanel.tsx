@@ -12,6 +12,7 @@ import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '../../hooks/redux'
 import { gameService } from '../../services/gameService'
 import { socketService } from '../../services/socketService'
+import { computeConquestProbability } from '@shared/utils/battleOdds'
 
 type Props = {
   gameId: string
@@ -95,8 +96,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       agg.defenderName ? ` (${agg.defenderName})` : ''
     }`
     const middle = agg.conquered ? ' conquering it,' : ''
+    const oddsText =
+      typeof agg.initFrom === 'number' && typeof agg.initTo === 'number'
+        ? ` • ≈${Math.round(
+            computeConquestProbability(Math.max(0, agg.initFrom), Math.max(0, agg.initTo)) * 100,
+          )}% win`
+        : ''
     const tail = ` killing ${agg.totalKilled}, losing ${agg.totalLost}.`
-    const text = `${leading}${middle}${tail}`
+    const text = `${leading}${middle}${tail}${oddsText}`
     const rich = (
       <>
         {fromWithCount} (
@@ -114,7 +121,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             )
           </>
         ) : null}
-        {agg.conquered ? ' conquering it,' : ''} killing {agg.totalKilled}, losing {agg.totalLost}.
+        {agg.conquered ? ' conquering it,' : ''} killing {agg.totalKilled}, losing {agg.totalLost}
+        {oddsText ? <>{oddsText}</> : null}.
       </>
     )
     append(rich, text, agg.lastTs, [agg.fromId, agg.toId])
@@ -285,6 +293,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           eliminated: string[]
           tsStart: Date
           tsLast: Date
+          initFrom?: number
+          initTo?: number
         } | null
         let bfAgg: BfAgg = null
 
@@ -292,22 +302,33 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           if (!bfAgg) return
           const attackerColor = playerColor.get(bfAgg.attackerId)
           const defenderColor = bfAgg.defenderId ? playerColor.get(bfAgg.defenderId) : undefined
-          const leading = `${bfAgg.from} (${bfAgg.attackerName}) attacked ${bfAgg.to}${
+          const fromWith = typeof bfAgg.initFrom === 'number' ? `${bfAgg.from} - ${bfAgg.initFrom}` : bfAgg.from
+          const toWith = typeof bfAgg.initTo === 'number' ? `${bfAgg.to} - ${bfAgg.initTo}` : bfAgg.to
+          const leading = `${fromWith} (${bfAgg.attackerName}) attacked ${toWith}${
             bfAgg.defenderName ? ` (${bfAgg.defenderName})` : ''
           }`
           const middle = bfAgg.conquered ? ' conquering it,' : ''
+          const oddsText =
+            typeof bfAgg.initFrom === 'number' && typeof bfAgg.initTo === 'number'
+              ? ` • ≈${Math.round(
+                  computeConquestProbability(
+                    Math.max(0, bfAgg.initFrom),
+                    Math.max(0, bfAgg.initTo),
+                  ) * 100,
+                )}% win`
+              : ''
           const tail = ` killing ${bfAgg.killed}, losing ${bfAgg.lost}.`
-          const text = `${leading}${middle}${tail}`
+          const text = `${leading}${middle}${tail}${oddsText}`
           formatted.push({
             ts: bfAgg.tsLast,
             text,
             rich: (
               <>
-                {bfAgg.from} (
+                {fromWith} (
                 <span className="font-semibold" style={{ color: attackerColor }}>
                   {bfAgg.attackerName}
                 </span>
-                ) attacked {bfAgg.to}
+                ) attacked {toWith}
                 {bfAgg.defenderName ? (
                   <>
                     {' '}
@@ -318,7 +339,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                     )
                   </>
                 ) : null}
-                {bfAgg.conquered ? ' conquering it,' : ''} killing {bfAgg.killed}, losing {bfAgg.lost}.
+                {bfAgg.conquered ? ' conquering it,' : ''} killing {bfAgg.killed}, losing {bfAgg.lost}
+                {oddsText ? <>{oddsText}</> : null}.
               </>
             ),
           })
@@ -403,6 +425,12 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 eliminated: [],
                 tsStart: ts,
                 tsLast: ts,
+                initFrom: typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number'
+                  ? Math.trunc((er as { initialFromArmies?: number }).initialFromArmies as number)
+                  : undefined,
+                initTo: typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number'
+                  ? Math.trunc((er as { initialToArmies?: number }).initialToArmies as number)
+                  : undefined,
               }
             }
             // Update aggregate
@@ -420,12 +448,75 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                   ? ((er as { eliminatedPlayers?: string[] }).eliminatedPlayers ?? [])
                   : []
                 bfAgg.eliminated = [...bfAgg.eliminated, ...eliminated]
+                // If not set yet, attempt to set from this entry
+                if (typeof bfAgg.initFrom !== 'number' &&
+                  typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number') {
+                  bfAgg.initFrom = Math.trunc((er as { initialFromArmies?: number }).initialFromArmies as number)
+                }
+                if (typeof bfAgg.initTo !== 'number' &&
+                  typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number') {
+                  bfAgg.initTo = Math.trunc((er as { initialToArmies?: number }).initialToArmies as number)
+                }
               }
             }
             continue
           }
           // Flush any pending battle aggregation before handling non-battle entries
           flushBf()
+          if (type === 'ENGAGEMENT_SUMMARY') {
+            // Server-provided summary: render a concise recap with odds if initial stacks present
+            const attackerId = String((er.attackerId as string) || '')
+            const defenderId = (er.defenderId as string | undefined) || undefined
+            const from = toName(String(er.attackingTerritoryId))
+            const to = toName(String(er.defendingTerritoryId))
+            const attackerName = nameOf(attackerId) || 'Unknown'
+            const defenderName = nameOf(defenderId) || undefined
+            const initFrom = toSafeInt((er as { initialFromArmies?: number }).initialFromArmies, NaN)
+            const initTo = toSafeInt((er as { initialToArmies?: number }).initialToArmies, NaN)
+            const tot = (er as { totalLosses?: { attacker?: number; defender?: number } }).totalLosses || {}
+            const killed = toSafeInt(tot.defender, 0)
+            const lost = toSafeInt(tot.attacker, 0)
+            const conquered = Boolean(er.conquered)
+            const withCounts =
+              Number.isFinite(initFrom) && Number.isFinite(initTo)
+                ? { from: `${from} - ${initFrom}`, to: `${to} - ${initTo}` }
+                : { from, to }
+            const oddsText =
+              Number.isFinite(initFrom) && Number.isFinite(initTo)
+                ? ` • ≈${Math.round(
+                    computeConquestProbability(Math.max(0, initFrom), Math.max(0, initTo)) * 100,
+                  )}% win`
+                : ''
+            formatted.push({
+              ts,
+              text: `${withCounts.from} (${attackerName}) attacked ${withCounts.to}${defenderName ? ` (${defenderName})` : ''}${conquered ? ' conquering it,' : ''} killing ${killed}, losing ${lost}.${oddsText}`,
+              rich: (
+                <>
+                  {withCounts.from} (
+                  <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                    {attackerName}
+                  </span>
+                  ) attacked {withCounts.to}
+                  {defenderName ? (
+                    <>
+                      {' '}
+                      (
+                      <span
+                        className="font-semibold"
+                        style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
+                      >
+                        {defenderName}
+                      </span>
+                      )
+                    </>
+                  ) : null}
+                  {conquered ? ' conquering it,' : ''} killing {killed}, losing {lost}
+                  {oddsText ? <>{oddsText}</> : null}.
+                </>
+              ),
+            })
+            continue
+          }
           if (type === 'TREASURE') {
             const name = nameOf(er.userId as string) || 'Unknown'
             const id = String((er.userId as string) || '')

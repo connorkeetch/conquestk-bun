@@ -781,6 +781,25 @@ export class GameController {
         })(),
       ])
 
+      // Rating changes (CP delta) map keyed by playerId (user_id)
+      let ratingChanges: Record<string, number> = {}
+      try {
+        const rc = await query<{ user_id: string; rating_change: number }>(
+          'SELECT user_id, rating_change FROM player_game_results WHERE room_id = $1',
+          [roomId],
+        )
+        const map: Record<string, number> = {}
+        for (const row of rc.rows) {
+          const pid = row.user_id
+          const delta = typeof row.rating_change === 'number' ? Math.trunc(row.rating_change) : 0
+          if (pid) map[pid] = delta
+        }
+        ratingChanges = map
+      } catch (_err) {
+        // Non-fatal: if table unavailable or query fails, omit ratingChanges
+        ratingChanges = {}
+      }
+
       // Server-side fog-of-war redaction for non-participants during active games
       const players = Array.isArray(room.players) ? room.players : []
       const isParticipant = Boolean(
@@ -815,10 +834,10 @@ export class GameController {
         })
 
         // Do not expose per-turn stats during active fog-of-war games to spectators
-        return res.json({ log: redactedLog, stats: [] })
+        return res.json({ log: redactedLog, stats: [], ratingChanges: {} })
       }
 
-      return res.json({ log, stats })
+      return res.json({ log, stats, ratingChanges })
     } catch (error) {
       logger.error('Get room log error:', error)
       return res.status(500).json({ message: 'Internal server error' })
