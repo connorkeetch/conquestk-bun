@@ -8,6 +8,8 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { store } from './store'
 import './index.css'
+import PWAUpdatePrompt from './components/PWAUpdatePrompt'
+import { preloadBattleOdds } from './bootstrap/preloadBattleOdds'
 
 // Add comprehensive error logging
 logger.info('[MAIN] Starting React app initialization...')
@@ -33,6 +35,9 @@ try {
   logger.debug('[MAIN] Root element found, creating React root...')
   const root = ReactDOM.createRoot(rootElement)
 
+  // Preload optional data (non-blocking)
+  preloadBattleOdds().catch(() => {})
+
   logger.info('[MAIN] Rendering React app without StrictMode...')
   // Restore full app
   root.render(
@@ -40,6 +45,7 @@ try {
       <Provider store={store}>
         <BrowserRouter>
           <App />
+          <PWAUpdatePrompt />
           <Toaster position="top-right" />
         </BrowserRouter>
       </Provider>

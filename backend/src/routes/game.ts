@@ -13,6 +13,8 @@ router.post('/rooms/:roomId/team-assignments', gameController.updateTeamAssignme
 router.put('/rooms/:roomId/ai-opponents', gameController.updateAiOpponents)
 router.post('/rooms/:roomId/join', gameController.joinRoom)
 router.delete('/rooms/:roomId/leave', gameController.leaveRoom)
+// Host-only: close a lobby before it starts
+router.post('/rooms/:roomId/close', gameController.closeRoom)
 router.post('/rooms/:roomId/ready-state', gameController.setReadyState)
 router.get('/rooms/:roomId', gameController.getRoomDetails)
 router.get('/rooms/:roomId/state', gameController.getRoomState)

@@ -134,7 +134,8 @@ export default function Header() {
     setIsMenuOpen(!isMenuOpen)
   }
 
-  const navTabClass = (active: boolean) => `nav-tab${active ? ' is-active' : ''}`
+  const navTabClass = (active: boolean) =>
+    `nav-tab${active ? ' is-active' : ''} text-sm md:text-base px-3 md:px-4`
 
   interface PrimaryNavLink {
     to: string

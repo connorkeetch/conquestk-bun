@@ -86,6 +86,11 @@ export const gameService = {
     return response.data
   },
 
+  async closeRoom(roomId: string) {
+    const response = await api.post(`/game/rooms/${roomId}/close`)
+    return response.data
+  },
+
   async assignPlayerTeam(roomId: string, playerSlotId: string, teamId: number | null) {
     const response = await api.post(`/game/rooms/${roomId}/team-assignments`, {
       playerSlotId,

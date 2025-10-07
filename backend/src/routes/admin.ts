@@ -1,6 +1,7 @@
 import { type NextFunction, type Request, type Response, Router } from 'express'
 import { body, param, query as queryParam, validationResult } from 'express-validator'
 import { query as dbQuery } from '../config/database'
+import { GameLifecycleService } from '../services/gameLifecycleService'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { adminService } from '../services/adminService'
@@ -1092,6 +1093,14 @@ router.post(
         'UPDATE game_rooms SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         ['abandoned', gameId],
       )
+
+      // Broadcast lifecycle update so connected clients exit gracefully
+      try {
+        const lifecycle = new GameLifecycleService()
+        await lifecycle.refreshLifecycle(gameId)
+      } catch (_e) {
+        // best-effort; admin action still succeeds
+      }
 
       // Log the action
       await dbQuery(

@@ -139,6 +139,24 @@ export default function AdminGames() {
     }
   }
 
+  const getGameStatusLabel = (status: string) => {
+    switch (status) {
+      case 'waiting':
+        return 'Waiting'
+      case 'active':
+        return 'Active'
+      case 'paused':
+        return 'Paused'
+      case 'completed':
+        return 'Completed'
+      case 'abandoned':
+        // For admin-forced closures and host-closed lobbies, show a clearer label
+        return 'Force Ended'
+      default:
+        return status
+    }
+  }
+
   const getTimeSinceLastActivity = (lastActivity: string) => {
     const now = new Date()
     const last = new Date(lastActivity)
@@ -252,7 +270,7 @@ export default function AdminGames() {
               <option value="active">Active</option>
               <option value="paused">Paused</option>
               <option value="completed">Completed</option>
-              <option value="abandoned">Abandoned</option>
+              <option value="abandoned">Force Ended</option>
             </select>
 
             {(searchTerm || statusFilter !== 'all') && (
@@ -367,10 +385,8 @@ export default function AdminGames() {
                       <td className="py-3 px-4">{game.mapName}</td>
                       <td className="py-3 px-4">{game.createdByUsername}</td>
                       <td className="py-3 px-4">
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs ${getGameStatusColor(game.status)}`}
-                        >
-                          {game.status}
+                        <span className={`inline-block px-2 py-1 rounded text-xs ${getGameStatusColor(game.status)}`}>
+                          {getGameStatusLabel(game.status)}
                         </span>
                       </td>
                       <td className="py-3 px-4">{game.phase}</td>

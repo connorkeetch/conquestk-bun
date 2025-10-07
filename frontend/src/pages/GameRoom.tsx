@@ -879,7 +879,7 @@ export default function GameRoom() {
     const ok = window.confirm('Close this room? This will cancel the lobby for everyone.')
     if (!ok) return
     try {
-      await gameService.leaveRoom(currentRoom.id)
+      await gameService.closeRoom(currentRoom.id)
       toast.success('Room closed')
       navigate('/lobby')
     } catch (error) {
