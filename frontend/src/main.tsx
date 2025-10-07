@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { logger } from '@/utils/logger'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
+import InstallPrompt from './components/InstallPrompt'
 import { store } from './store'
 import './index.css'
 import { preloadBattleOdds } from './bootstrap/preloadBattleOdds'
@@ -47,6 +48,7 @@ try {
       <Provider store={store}>
         <BrowserRouter>
           <App />
+          <InstallPrompt />
           <PWAUpdatePrompt />
           <Toaster position="top-right" />
         </BrowserRouter>

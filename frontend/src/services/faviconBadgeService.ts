@@ -56,10 +56,20 @@ class FaviconBadgeService {
     if (count === 0) {
       // Reset to normal favicon
       this.favico.reset()
+      // Clear app badge if supported
+      try {
+        // @ts-expect-error experimental
+        if (navigator.clearAppBadge) navigator.clearAppBadge()
+      } catch {}
     } else {
       // Show badge with count (max 99)
       const displayCount = count > 99 ? '99+' : count
       this.favico.badge(displayCount)
+      // Set app badge if supported
+      try {
+        // @ts-expect-error experimental
+        if (navigator.setAppBadge) navigator.setAppBadge(Math.min(99, Math.max(0, count)))
+      } catch {}
     }
   }
 
