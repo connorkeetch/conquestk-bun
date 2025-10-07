@@ -2086,6 +2086,7 @@ export default function GameRoom() {
         open={profileUsername !== null}
         username={profileUsername}
         onClose={() => setProfileUsername(null)}
+        context="game"
       />
 
       {/* Conquest transfer handled inline on map via ConquestTransferPopup */}

@@ -289,6 +289,7 @@ const CommunityPage: React.FC = () => {
             open={profileUsername !== null}
             username={profileUsername}
             onClose={() => setProfileUsername(null)}
+            context="global"
           />
         </>
       )}
