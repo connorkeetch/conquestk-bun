@@ -442,7 +442,7 @@ class NotificationService {
       },
       actions: [
         { action: 'view', title: 'Join Game' },
-        { action: 'close', title: 'Later' },
+        { action: 'close', title: 'Close' },
       ],
     }
 
@@ -460,7 +460,7 @@ class NotificationService {
       },
       actions: [
         { action: 'view', title: 'Play Now' },
-        { action: 'close', title: 'Later' },
+        { action: 'close', title: 'Close' },
       ],
     }
 

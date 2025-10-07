@@ -581,8 +581,18 @@ export default function GameRoom() {
 
   // Track whether a panel is being dragged to toggle zone highlights
   useEffect(() => {
-    const onStart = () => setIsDraggingPanel(true)
-    const onEnd = () => setIsDraggingPanel(false)
+    const onStart = (e: Event) => {
+      setIsDraggingPanel(true)
+      // Try to get the panel ID from the event detail if available
+      const customEvent = e as CustomEvent
+      if (customEvent.detail?.panelId) {
+        // Panel ID tracked for potential future use
+      }
+    }
+    const onEnd = () => {
+      setIsDraggingPanel(false)
+      // Clear panel ID
+    }
     window.addEventListener('panel-drag-start', onStart as EventListener)
     window.addEventListener('panel-drag-end', onEnd as EventListener)
     return () => {
@@ -1479,166 +1489,6 @@ export default function GameRoom() {
               </div>
             </div>
           )}
-
-          {/* Below Map Zone (Desktop+ and larger screens) */}
-          {layout.isDesktopOrLarger &&
-            (belowZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
-              <>
-                {/* Layout Toggle + Reset - Only show when editing */}
-                {isEditingLayout && (
-                  <div className="mt-3 mb-1 flex items-center justify-between gap-2 text-[11px] text-muted">
-                    <button
-                      type="button"
-                      onClick={() => dispatch(resetLayout())}
-                      className="btn btn-ghost btn-xs"
-                      title="Reset panel layout"
-                    >
-                      Reset layout
-                    </button>
-                    <span>Layout:</span>
-                    <div className="inline-flex overflow-hidden rounded border border-[color:var(--panel-border)]">
-                      <button
-                        type="button"
-                        onClick={() => dispatch(setBelowMapLayout('vertical-stack'))}
-                        className={`px-2 py-1 transition-colors ${
-                          belowMapLayout === 'vertical-stack'
-                            ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
-                            : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
-                        }`}
-                        aria-pressed={belowMapLayout === 'vertical-stack'}
-                      >
-                        Stack
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => dispatch(setBelowMapLayout('horizontal-row'))}
-                        className={`px-2 py-1 transition-colors border-l border-[color:var(--panel-border)] ${
-                          belowMapLayout === 'horizontal-row'
-                            ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
-                            : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
-                        }`}
-                        aria-pressed={belowMapLayout === 'horizontal-row'}
-                      >
-                        Row
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  className={`${
-                    belowMapLayout === 'horizontal-row'
-                      ? 'flex flex-row gap-3'
-                      : 'flex flex-col space-y-3'
-                  } mt-1`}
-                >
-                  {/* Leading drop zone */}
-                  {(isDraggingPanel || isEditingLayout) && (
-                    <DropZone
-                      onDrop={handleDropToZone('below-map', 0)}
-                      active={true}
-                      orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
-                      className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
-                    />
-                  )}
-
-                  {belowZonePanels.map((p, idx) => (
-                    <div key={p.id} className={belowMapLayout === 'horizontal-row' ? 'flex-1' : ''}>
-                      {/* Between-panels drop zone */}
-                      {(isDraggingPanel || isEditingLayout) && idx > 0 && (
-                        <DropZone
-                          onDrop={handleDropToZone('below-map', idx)}
-                          active={true}
-                          orientation={
-                            belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'
-                          }
-                          className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
-                        />
-                      )}
-                      {p.id === 'player-stats' && (
-                        <PlayerStatsPanel
-                          players={
-                            currentGame?.players ||
-                            (currentRoom?.players || []).map((pl) => {
-                              const rawColor =
-                                ((pl as { selected_color?: string | null }).selected_color as
-                                  | string
-                                  | null) ||
-                                ((pl.preferred_color as string | null) ?? null) ||
-                                '#9CA3AF'
-                              return {
-                                id: pl.userId || pl.id,
-                                userId: pl.userId || pl.id,
-                                username: pl.username,
-                                color: rawColor as unknown as PlayerColor,
-                                territories: [],
-                                armies: 0,
-                                cards: [],
-                                isEliminated: false,
-                                isAi: pl.isAi,
-                                aiDifficulty: pl.aiDifficulty ?? null,
-                                teamId: pl.teamId ?? undefined,
-                                treasures: [],
-                              }
-                            })
-                          }
-                          currentPlayerId={currentGame?.currentPlayer}
-                          territories={
-                            currentGame
-                              ? Object.fromEntries(
-                                  (currentGame.board || []).map((t) => [
-                                    t.id,
-                                    { owner: t.ownerId, armies: t.armies },
-                                  ]),
-                                )
-                              : {}
-                          }
-                          isEditingLayout={isEditingLayout}
-                        />
-                      )}
-                      {p.id === 'chat' && roomId && user && (
-                        <ChatLogPanel
-                          gameId={currentRoom?.id || roomId}
-                          currentUserId={user.id}
-                          userTeamId={
-                            currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
-                          }
-                          onLogFocus={(territories) => {
-                            const focus = territories[territories.length - 1]
-                            if (focus) dispatch(selectTerritory(focus))
-                          }}
-                          isEditingLayout={isEditingLayout}
-                        />
-                      )}
-                      {p.id === 'game-log' && currentGame && (
-                        <div className="panel p-0 overflow-hidden">
-                          <div className="h-[260px] overflow-auto">
-                            <GameLogPanel
-                              gameId={currentRoom?.id ?? roomId ?? ''}
-                              className="h-full"
-                              onFocus={(territories) => {
-                                const focus = territories[territories.length - 1]
-                                if (focus) dispatch(selectTerritory(focus))
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Trailing drop zone */}
-                  {(isDraggingPanel || isEditingLayout) && (
-                    <DropZone
-                      onDrop={handleDropToZone('below-map', belowZonePanels.length)}
-                      active={true}
-                      orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
-                      className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
-                    />
-                  )}
-                </div>
-              </>
-            )}
         </div>
       </div>
 
@@ -1897,14 +1747,14 @@ export default function GameRoom() {
       <div
         className={`
           flex flex-col gap-4
-          ${layout.isDesktopOrLarger && (leftZonePanels.length > 0 || rightZonePanels.length > 0 || isEditingLayout) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
+          ${layout.isDesktopOrLarger && (leftZonePanels.length > 0 || rightZonePanels.length > 0 || isEditingLayout) ? 'lg:grid lg:gap-3 xl:gap-2 2xl:gap-1 lg:items-start' : ''}
         `}
         style={gridStyle}
       >
         {/* Left Sidebar Zone (Desktop+) */}
         {layout.isDesktopOrLarger && (leftZonePanels.length > 0 || isEditingLayout) && (
           <aside className="sticky top-6 space-y-3">
-            {/* Top drop zone for reordering */}
+            {/* Top drop zone - always show when editing */}
             {isEditingLayout && (
               <DropZone
                 onDrop={handleDropToZone('sidebar-left', 0)}
@@ -1913,17 +1763,8 @@ export default function GameRoom() {
                 className="my-1"
               />
             )}
-            {leftZonePanels.map((p, idx) => (
+            {leftZonePanels.map((p) => (
               <div key={p.id} className="space-y-3">
-                {/* Between-panels drop zone */}
-                {isEditingLayout && idx > 0 && (
-                  <DropZone
-                    onDrop={handleDropToZone('sidebar-left', idx)}
-                    active={true}
-                    orientation="vertical"
-                    className="my-1"
-                  />
-                )}
                 {p.id === 'player-stats' && (
                   <PlayerStatsPanel
                     players={
@@ -2175,6 +2016,154 @@ export default function GameRoom() {
           {/* Dice results below the map so it doesn't shift the board */}
           <DiceResultsBar />
 
+          {/* Below Map Zone (Desktop+ and larger screens) */}
+          {(belowZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
+            <>
+              {/* Layout Toggle + Reset - Only show when editing */}
+              {isEditingLayout && (
+                <div className="mt-3 mb-1 flex items-center justify-between gap-2 text-[11px] text-muted">
+                  <button
+                    type="button"
+                    onClick={() => dispatch(resetLayout())}
+                    className="btn btn-ghost btn-xs"
+                    title="Reset panel layout"
+                  >
+                    Reset layout
+                  </button>
+                  <span>Layout:</span>
+                  <div className="inline-flex overflow-hidden rounded border border-[color:var(--panel-border)]">
+                    <button
+                      type="button"
+                      onClick={() => dispatch(setBelowMapLayout('vertical-stack'))}
+                      className={`px-2 py-1 transition-colors ${
+                        belowMapLayout === 'vertical-stack'
+                          ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
+                          : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
+                      }`}
+                      aria-pressed={belowMapLayout === 'vertical-stack'}
+                    >
+                      Stack
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dispatch(setBelowMapLayout('horizontal-row'))}
+                      className={`px-2 py-1 transition-colors border-l border-[color:var(--panel-border)] ${
+                        belowMapLayout === 'horizontal-row'
+                          ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
+                          : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
+                      }`}
+                      aria-pressed={belowMapLayout === 'horizontal-row'}
+                    >
+                      Row
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div
+                className={`${
+                  belowMapLayout === 'horizontal-row'
+                    ? 'flex flex-row gap-3'
+                    : 'flex flex-col space-y-3'
+                } mt-1`}
+              >
+                {/* Leading drop zone */}
+                {(isDraggingPanel || isEditingLayout) && (
+                  <DropZone
+                    onDrop={handleDropToZone('below-map', 0)}
+                    active={true}
+                    orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
+                    className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
+                  />
+                )}
+
+                {belowZonePanels.map((p) => (
+                  <div key={p.id} className={belowMapLayout === 'horizontal-row' ? 'flex-1' : ''}>
+                    {p.id === 'player-stats' && (
+                      <PlayerStatsPanel
+                        players={
+                          currentGame?.players ||
+                          (currentRoom?.players || []).map((pl) => {
+                            const rawColor =
+                              ((pl as { selected_color?: string | null }).selected_color as
+                                | string
+                                | null) ||
+                              ((pl.preferred_color as string | null) ?? null) ||
+                              '#9CA3AF'
+                            return {
+                              id: pl.userId || pl.id,
+                              userId: pl.userId || pl.id,
+                              username: pl.username,
+                              color: rawColor as unknown as PlayerColor,
+                              territories: [],
+                              armies: 0,
+                              cards: [],
+                              isEliminated: false,
+                              isAi: pl.isAi,
+                              aiDifficulty: pl.aiDifficulty ?? null,
+                              teamId: pl.teamId ?? undefined,
+                              treasures: [],
+                            }
+                          })
+                        }
+                        currentPlayerId={currentGame?.currentPlayer}
+                        territories={
+                          currentGame
+                            ? Object.fromEntries(
+                                (currentGame.board || []).map((t) => [
+                                  t.id,
+                                  { owner: t.ownerId, armies: t.armies },
+                                ]),
+                              )
+                            : {}
+                        }
+                        isEditingLayout={isEditingLayout}
+                      />
+                    )}
+                    {p.id === 'chat' && roomId && user && (
+                      <ChatLogPanel
+                        gameId={currentRoom?.id || roomId}
+                        currentUserId={user.id}
+                        userTeamId={
+                          currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
+                        }
+                        onLogFocus={(territories) => {
+                          const focus = territories[territories.length - 1]
+                          if (focus) dispatch(selectTerritory(focus))
+                        }}
+                        isEditingLayout={isEditingLayout}
+                      />
+                    )}
+                    {p.id === 'game-log' && currentGame && (
+                      <div className="panel p-0 overflow-hidden">
+                        <div className="h-[260px] overflow-auto">
+                          <GameLogPanel
+                            gameId={currentRoom?.id ?? roomId ?? ''}
+                            className="h-full"
+                            onFocus={(territories) => {
+                              const focus = territories[territories.length - 1]
+                              if (focus) dispatch(selectTerritory(focus))
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Trailing drop zone */}
+                {(isDraggingPanel || isEditingLayout) && (
+                  <DropZone
+                    onDrop={handleDropToZone('below-map', belowZonePanels.length)}
+                    active={true}
+                    orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
+                    className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
+                  />
+                )}
+              </div>
+            </>
+          )}
+
           {/* Desktop action bar moved inside the game board as an overlay */}
         </div>
 
@@ -2190,16 +2179,8 @@ export default function GameRoom() {
                 className="my-1"
               />
             )}
-            {rightZonePanels.map((p, idx) => (
+            {rightZonePanels.map((p) => (
               <div key={p.id} className="space-y-3">
-                {isEditingLayout && idx > 0 && (
-                  <DropZone
-                    onDrop={handleDropToZone('sidebar-right', idx)}
-                    active={true}
-                    orientation="vertical"
-                    className="my-1"
-                  />
-                )}
                 {p.id === 'chat' && roomId && user && (
                   <ChatLogPanel
                     gameId={currentRoom?.id || roomId}

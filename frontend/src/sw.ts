@@ -4,6 +4,10 @@
 
 declare let self: ServiceWorkerGlobalScope & typeof globalThis
 
+// Extend NotificationOptions with service-worker actions for better TS support
+type SWNotificationAction = { action: string; title: string }
+type SWNotificationOptions = NotificationOptions & { actions?: SWNotificationAction[] }
+
 import { clientsClaim } from 'workbox-core'
 import { ExpirationPlugin } from 'workbox-expiration'
 import {
@@ -120,12 +124,23 @@ self.addEventListener('push', (event: PushEvent) => {
     timestamp: new Date().toISOString(),
   }
 
-  const options: NotificationOptions = {
+  const options: SWNotificationOptions = {
     body: notificationData.body || 'You have a new notification',
     icon: notificationData.icon || '/icon-192.png',
     badge: notificationData.badge || '/icon-192.png',
     data: mergedData,
     tag: notificationData.tag || 'risk-game-notification',
+  }
+
+  // Pass through action buttons if provided by payload
+  if (Array.isArray(notificationData.actions)) {
+    const actions = notificationData.actions
+      .filter(
+        (a): a is SWNotificationAction =>
+          a && typeof a.action === 'string' && typeof a.title === 'string',
+      )
+      .slice(0, 2)
+    if (actions.length > 0) options.actions = actions
   }
 
   event.waitUntil(
@@ -135,6 +150,11 @@ self.addEventListener('push', (event: PushEvent) => {
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close()
+
+  // If the user pressed an explicit close/decline action, do nothing further
+  if (event.action === 'close') {
+    return
+  }
 
   const data = (event.notification.data || {}) as Record<string, unknown>
   let destination = '/'

@@ -76,7 +76,7 @@ export function DiceResultsBar() {
 
   return (
     <div className="mt-2 bg-[color:var(--surface-1)] border border-[color:var(--panel-border)] rounded p-2">
-      <div className="flex items-center justify-between gap-3 text-xs text-muted">
+      <div className="flex items-center justify-center gap-3 lg:gap-6 xl:gap-8 text-xs text-muted flex-wrap">
         <div className="flex items-center gap-2">
           <span className="uppercase tracking-wide text-[10px]">Attacker</span>
           <div className="flex gap-1">
@@ -91,7 +91,9 @@ export function DiceResultsBar() {
           </div>
           <span className="text-[10px]">−{last.attackerLosses}</span>
         </div>
-        <div className="text-[10px]">{last.conquered ? 'Conquered' : 'Defended'}</div>
+        <div className="text-[10px] font-semibold px-2">
+          {last.conquered ? 'Conquered' : 'Defended'}
+        </div>
         <div className="flex items-center gap-2">
           <span className="uppercase tracking-wide text-[10px]">Defender</span>
           <div className="flex gap-1">
