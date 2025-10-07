@@ -204,12 +204,13 @@ export default function GameRoom() {
 
   const handleDropToZone = useCallback(
     (zone: PanelZone, order?: number) => (e: React.DragEvent) => {
+      if (!isEditingLayout) return
       const panelId = parseDraggedPanelId(e)
       if (!panelId) return
       dispatch(setPanelZone({ panelId, zone, order }))
       setIsDraggingPanel(false)
     },
-    [dispatch, parseDraggedPanelId],
+    [dispatch, parseDraggedPanelId, isEditingLayout],
   )
 
   // Force all panels unpinned on mobile/tablet
@@ -1761,16 +1762,16 @@ export default function GameRoom() {
       <div
         className={`
           flex flex-col gap-4
-          ${layout.isDesktopOrLarger && (leftZonePanels.length > 0 || rightZonePanels.length > 0 || isDraggingPanel || isEditingLayout) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
+          ${layout.isDesktopOrLarger && (leftZonePanels.length > 0 || rightZonePanels.length > 0 || isEditingLayout) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
         `}
         style={gridStyle}
       >
         {/* Left Sidebar Zone (Desktop+) */}
         {layout.isDesktopOrLarger &&
-          (leftZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
+          (leftZonePanels.length > 0 || isEditingLayout) && (
             <aside className="sticky top-6 space-y-3">
               {/* Top drop zone for reordering */}
-              {(isDraggingPanel || isEditingLayout) && (
+              {isEditingLayout && (
                 <DropZone
                   onDrop={handleDropToZone('sidebar-left', 0)}
                   active={true}
@@ -1781,7 +1782,7 @@ export default function GameRoom() {
               {leftZonePanels.map((p, idx) => (
                 <div key={p.id} className="space-y-3">
                   {/* Between-panels drop zone */}
-                  {(isDraggingPanel || isEditingLayout) && idx > 0 && (
+                  {isEditingLayout && idx > 0 && (
                     <DropZone
                       onDrop={handleDropToZone('sidebar-left', idx)}
                       active={true}
@@ -1843,7 +1844,7 @@ export default function GameRoom() {
                 </div>
               ))}
               {/* End drop zone */}
-              {(isDraggingPanel || isEditingLayout) && (
+              {isEditingLayout && (
                 <DropZone
                   onDrop={handleDropToZone('sidebar-left', leftZonePanels.length)}
                   active={true}
@@ -2030,10 +2031,10 @@ export default function GameRoom() {
 
         {/* Right Sidebar Zone (Desktop+) */}
         {layout.isDesktopOrLarger &&
-          (rightZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
+          (rightZonePanels.length > 0 || isEditingLayout) && (
             <aside className="sticky top-6 space-y-3">
               {/* Top drop zone for reordering */}
-              {(isDraggingPanel || isEditingLayout) && (
+              {isEditingLayout && (
                 <DropZone
                   onDrop={handleDropToZone('sidebar-right', 0)}
                   active={true}
@@ -2043,7 +2044,7 @@ export default function GameRoom() {
               )}
               {rightZonePanels.map((p, idx) => (
                 <div key={p.id} className="space-y-3">
-                  {(isDraggingPanel || isEditingLayout) && idx > 0 && (
+                  {isEditingLayout && idx > 0 && (
                     <DropZone
                       onDrop={handleDropToZone('sidebar-right', idx)}
                       active={true}
@@ -2104,14 +2105,14 @@ export default function GameRoom() {
                   )}
                 </div>
               ))}
-              {(isDraggingPanel || isEditingLayout) && (
-                <DropZone
-                  onDrop={handleDropToZone('sidebar-right', rightZonePanels.length)}
-                  active={true}
-                  orientation="vertical"
-                  className="my-1"
-                />
-              )}
+              {isEditingLayout && (
+              <DropZone
+                onDrop={handleDropToZone('sidebar-right', rightZonePanels.length)}
+                active={true}
+                orientation="vertical"
+                className="my-1"
+              />
+            )}
             </aside>
           )}
 
