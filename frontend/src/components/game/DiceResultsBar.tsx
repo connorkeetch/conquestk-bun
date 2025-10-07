@@ -27,6 +27,11 @@ export function DiceResultsBar() {
   const history = useAppSelector((s) => s.uiRoom.battleHistory ?? [])
   const game = useAppSelector((s) => s.game.currentGame)
   const phase = game?.phase
+  const remainingReinforcements = useAppSelector((s) => s.game.reinforcementArmies)
+  const placementServerSpent = useAppSelector((s) => s.uiRoom.placementServerSpent ?? 0)
+  const placementHistory = useAppSelector((s) => s.uiRoom.placementHistory ?? [])
+  const userId = useAppSelector((s) => s.auth.user?.id)
+  const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
 
   const last = history.length > 0 ? history[history.length - 1] : null
   const neutralGrey = 'var(--color-gray-500)'
@@ -61,7 +66,36 @@ export function DiceResultsBar() {
     return { attackerColor: aColor, defenderColor: dColor }
   }, [game, last])
 
-  // Hide dice recap outside of the Attack phase
+  // Reinforcement phase: show deployed/total summary for the active player (focus on UX for your turn)
+  if (phase === 'reinforcement') {
+    // Prefer server-reconciled spent; fallback to client placement history within this session
+    const spentFromHistory = placementHistory.reduce(
+      (sum, p) => sum + Math.max(0, p.armies || 0),
+      0,
+    )
+    const spent = placementServerSpent > 0 ? placementServerSpent : spentFromHistory
+    const remaining = Math.max(0, Math.trunc(remainingReinforcements || 0))
+    const total = Math.max(0, spent + remaining)
+
+    // Hide when not your turn and no meaningful info to show
+    if (!isMyTurn && total === 0) return null
+
+    return (
+      <div className="mt-2 bg-[color:var(--surface-1)] border border-[color:var(--panel-border)] rounded p-2">
+        <div className="flex items-center justify-center gap-3 lg:gap-6 xl:gap-8 text-xs text-muted flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="uppercase tracking-wide text-[10px]">Reinforcements</span>
+            <span className="font-semibold text-[color:var(--heading)]">
+              {spent}/{total}
+            </span>
+            <span className="text-[10px]">Remaining {remaining}</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Hide dice recap outside of the Attack phase or if no battle yet
   if (!last || phase !== 'attack') return null
 
   const att = [...(last.attackerDice ?? [])].sort((a, b) => b - a)
