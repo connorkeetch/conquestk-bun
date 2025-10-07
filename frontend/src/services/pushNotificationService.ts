@@ -60,6 +60,31 @@ class PushNotificationService {
 
   async subscribe(): Promise<SubscriptionChangeResult> {
     try {
+      this.lastError = null
+
+      if (
+        !('Notification' in window) ||
+        !('serviceWorker' in navigator) ||
+        !('PushManager' in window)
+      ) {
+        const message = 'Push notifications are not supported on this device'
+        this.lastError = message
+        return { success: false, message }
+      }
+
+      if (Notification.permission !== 'granted') {
+        const permissionResult = await Notification.requestPermission()
+        const currentPermission = Notification.permission
+        if (permissionResult !== 'granted' && currentPermission !== 'granted') {
+          const blocked = permissionResult === 'denied' || currentPermission === 'denied'
+          const message = blocked
+            ? 'Notifications are blocked. Enable them in your browser or device settings and try again.'
+            : 'Notification permission was not granted'
+          this.lastError = message
+          return { success: false, message }
+        }
+      }
+
       if (!this.registration) {
         const supported = await this.initialize()
         if (!supported) {
@@ -85,15 +110,6 @@ class PushNotificationService {
         const message = 'Service worker registration is not ready yet'
         this.lastError = message
         return { success: false, message }
-      }
-
-      if (Notification.permission !== 'granted') {
-        const permission = await Notification.requestPermission()
-        if (permission !== 'granted') {
-          const message = 'Notification permission was not granted'
-          this.lastError = message
-          return { success: false, message }
-        }
       }
 
       const existingSubscription = await this.registration.pushManager.getSubscription()
