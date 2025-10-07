@@ -15,6 +15,7 @@ interface ResizablePanelProps {
   canResize?: boolean
   onClose?: () => void
   className?: string
+  isEditingLayout?: boolean
 }
 
 /**
@@ -31,6 +32,7 @@ export default function ResizablePanel({
   canResize = true,
   onClose,
   className = '',
+  isEditingLayout = false,
 }: ResizablePanelProps) {
   const dispatch = useAppDispatch()
   const panelConfig = useAppSelector((state) => selectPanelConfig(state, panelId))
@@ -92,6 +94,7 @@ export default function ResizablePanel({
         canClose={canClose}
         onClose={onClose}
         className="flex-1"
+        isEditingLayout={isEditingLayout}
       >
         {children}
       </PanelContainer>

@@ -13,6 +13,7 @@ interface PanelContainerProps {
   canClose?: boolean
   onClose?: () => void
   className?: string
+  isEditingLayout?: boolean
 }
 
 /**
@@ -28,6 +29,7 @@ export default function PanelContainer({
   canClose = false,
   onClose,
   className = '',
+  isEditingLayout = false,
 }: PanelContainerProps) {
   const dispatch = useAppDispatch()
   const panelConfig = useAppSelector((state) => selectPanelConfig(state, panelId))
@@ -62,6 +64,7 @@ export default function PanelContainer({
         onTogglePin={handleTogglePin}
         onToggleMinimize={handleToggleMinimize}
         onClose={onClose}
+        isEditingLayout={isEditingLayout}
       />
 
       {/* Panel Body - Hidden when minimized */}

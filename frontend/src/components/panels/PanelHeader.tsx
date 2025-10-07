@@ -13,6 +13,7 @@ interface PanelHeaderProps {
   onToggleMinimize?: () => void
   onClose?: () => void
   className?: string
+  isEditingLayout?: boolean
 }
 
 export default function PanelHeader({
@@ -27,6 +28,7 @@ export default function PanelHeader({
   onToggleMinimize,
   onClose,
   className = '',
+  isEditingLayout = false,
 }: PanelHeaderProps) {
   return (
     <div
@@ -36,45 +38,47 @@ export default function PanelHeader({
     >
       {/* Title with Icon */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        {/* Drag handle */}
-        <button
-          type="button"
-          className="cursor-grab active:cursor-grabbing select-none p-1 rounded hover:bg-[color:var(--surface-3)] focus:outline-none bg-transparent"
-          title="Drag to move"
-          aria-label="Drag panel"
-          draggable
-          onDragStart={(e) => {
-            try {
-              e.dataTransfer.effectAllowed = 'move'
-              e.dataTransfer.dropEffect = 'move'
-              e.dataTransfer.setData('application/x-conquestk-panel', panelId)
-              // Ensure consistent drag start across Chromium by setting a tiny drag image
-              const img = new Image()
-              img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+        {/* Drag handle - only show when editing layout */}
+        {isEditingLayout && (
+          <button
+            type="button"
+            className="cursor-grab active:cursor-grabbing select-none p-1 rounded hover:bg-[color:var(--surface-3)] focus:outline-none bg-transparent"
+            title="Drag to move"
+            aria-label="Drag panel"
+            draggable
+            onDragStart={(e) => {
               try {
-                e.dataTransfer.setDragImage(img, 0, 0)
+                e.dataTransfer.effectAllowed = 'move'
+                e.dataTransfer.dropEffect = 'move'
+                e.dataTransfer.setData('application/x-conquestk-panel', panelId)
+                // Ensure consistent drag start across Chromium by setting a tiny drag image
+                const img = new Image()
+                img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+                try {
+                  e.dataTransfer.setDragImage(img, 0, 0)
+                } catch {
+                  // ignore drag image errors
+                }
               } catch {
-                // ignore drag image errors
+                // ignore
               }
-            } catch {
-              // ignore
-            }
-            try {
-              e.dataTransfer.setData('text/plain', `panel:${panelId}`)
-            } catch {
-              // ignore
-            }
-            window.dispatchEvent(new CustomEvent('panel-drag-start'))
-          }}
-          onDragEnd={() => {
-            window.dispatchEvent(new CustomEvent('panel-drag-end'))
-          }}
-          aria-grabbed={false}
-        >
-          <span aria-hidden className="text-sm">
-            ≡
-          </span>
-        </button>
+              try {
+                e.dataTransfer.setData('text/plain', `panel:${panelId}`)
+              } catch {
+                // ignore
+              }
+              window.dispatchEvent(new CustomEvent('panel-drag-start'))
+            }}
+            onDragEnd={() => {
+              window.dispatchEvent(new CustomEvent('panel-drag-end'))
+            }}
+            aria-grabbed={false}
+          >
+            <span aria-hidden className="text-sm">
+              ≡
+            </span>
+          </button>
+        )}
         {icon && <span className="shrink-0 text-base">{icon}</span>}
         <h3 className="text-sm font-semibold text-[color:var(--heading)] truncate">{title}</h3>
       </div>

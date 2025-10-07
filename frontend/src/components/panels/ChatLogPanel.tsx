@@ -10,6 +10,7 @@ interface ChatLogPanelProps {
   currentUserId: string
   userTeamId?: number | null
   onLogFocus?: (territoryIds: string[]) => void
+  isEditingLayout?: boolean
 }
 
 /**
@@ -21,6 +22,7 @@ export default function ChatLogPanel({
   currentUserId,
   userTeamId,
   onLogFocus,
+  isEditingLayout = false,
 }: ChatLogPanelProps) {
   return (
     <ResizablePanel
@@ -31,6 +33,7 @@ export default function ChatLogPanel({
       canMinimize={true}
       canClose={false}
       className="max-h-[70vh]"
+      isEditingLayout={isEditingLayout}
     >
       <div className="h-full max-h-[70vh] min-h-0 overflow-hidden flex flex-col">
         <Suspense

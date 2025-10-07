@@ -180,7 +180,7 @@ export default function GameRoom() {
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
-  const forcedPanelZonesRef = useRef<Record<PanelId, PanelZone>>({})
+  const forcedPanelZonesRef = useRef<Partial<Record<PanelId, PanelZone>>>({})
 
   // Drag-and-drop helpers
   const parseDraggedPanelId = useCallback(
@@ -232,10 +232,13 @@ export default function GameRoom() {
   }, [layout.height, layout.isDesktopOrLarger])
 
   useEffect(() => {
-    const panelById = panels.reduce<Record<PanelId, PanelConfig>>((acc, panel) => {
-      acc[panel.id] = panel
-      return acc
-    }, {})
+    const panelById = panels.reduce<Record<PanelId, PanelConfig>>(
+      (acc, panel) => {
+        acc[panel.id] = panel
+        return acc
+      },
+      {} as Record<PanelId, PanelConfig>,
+    )
 
     const rememberZone = (panel: PanelConfig) => {
       if (!forcedPanelZonesRef.current[panel.id]) {
@@ -323,6 +326,7 @@ export default function GameRoom() {
 
     Object.entries(forcedPanelZonesRef.current).forEach(([id, storedZone]) => {
       const panelId = id as PanelId
+      if (!storedZone) return
       if (!allowedZones.has(storedZone)) {
         return
       }
@@ -1480,44 +1484,46 @@ export default function GameRoom() {
           {layout.isDesktopOrLarger &&
             (belowZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
               <>
-                {/* Layout Toggle + Reset */}
-                <div className="mt-3 mb-1 flex items-center justify-between gap-2 text-[11px] text-muted">
-                  <button
-                    type="button"
-                    onClick={() => dispatch(resetLayout())}
-                    className="btn btn-ghost btn-xs"
-                    title="Reset panel layout"
-                  >
-                    Reset layout
-                  </button>
-                  <span>Layout:</span>
-                  <div className="inline-flex overflow-hidden rounded border border-[color:var(--panel-border)]">
+                {/* Layout Toggle + Reset - Only show when editing */}
+                {isEditingLayout && (
+                  <div className="mt-3 mb-1 flex items-center justify-between gap-2 text-[11px] text-muted">
                     <button
                       type="button"
-                      onClick={() => dispatch(setBelowMapLayout('vertical-stack'))}
-                      className={`px-2 py-1 transition-colors ${
-                        belowMapLayout === 'vertical-stack'
-                          ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
-                          : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
-                      }`}
-                      aria-pressed={belowMapLayout === 'vertical-stack'}
+                      onClick={() => dispatch(resetLayout())}
+                      className="btn btn-ghost btn-xs"
+                      title="Reset panel layout"
                     >
-                      Stack
+                      Reset layout
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => dispatch(setBelowMapLayout('horizontal-row'))}
-                      className={`px-2 py-1 transition-colors border-l border-[color:var(--panel-border)] ${
-                        belowMapLayout === 'horizontal-row'
-                          ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
-                          : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
-                      }`}
-                      aria-pressed={belowMapLayout === 'horizontal-row'}
-                    >
-                      Row
-                    </button>
+                    <span>Layout:</span>
+                    <div className="inline-flex overflow-hidden rounded border border-[color:var(--panel-border)]">
+                      <button
+                        type="button"
+                        onClick={() => dispatch(setBelowMapLayout('vertical-stack'))}
+                        className={`px-2 py-1 transition-colors ${
+                          belowMapLayout === 'vertical-stack'
+                            ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
+                            : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
+                        }`}
+                        aria-pressed={belowMapLayout === 'vertical-stack'}
+                      >
+                        Stack
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => dispatch(setBelowMapLayout('horizontal-row'))}
+                        className={`px-2 py-1 transition-colors border-l border-[color:var(--panel-border)] ${
+                          belowMapLayout === 'horizontal-row'
+                            ? 'bg-[color:var(--color-accent)]/20 text-[color:var(--heading)]'
+                            : 'bg-[color:var(--surface-1)] text-muted hover:bg-[color:var(--surface-2)]'
+                        }`}
+                        aria-pressed={belowMapLayout === 'horizontal-row'}
+                      >
+                        Row
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div
                   className={`${
@@ -1587,6 +1593,7 @@ export default function GameRoom() {
                                 )
                               : {}
                           }
+                          isEditingLayout={isEditingLayout}
                         />
                       )}
                       {p.id === 'chat' && roomId && user && (
@@ -1600,6 +1607,7 @@ export default function GameRoom() {
                             const focus = territories[territories.length - 1]
                             if (focus) dispatch(selectTerritory(focus))
                           }}
+                          isEditingLayout={isEditingLayout}
                         />
                       )}
                       {p.id === 'game-log' && currentGame && (
@@ -1954,6 +1962,7 @@ export default function GameRoom() {
                           )
                         : {}
                     }
+                    isEditingLayout={isEditingLayout}
                   />
                 )}
                 {p.id === 'chat' && currentGame && user && (
@@ -1965,6 +1974,7 @@ export default function GameRoom() {
                       const focus = territories[territories.length - 1]
                       if (focus) dispatch(selectTerritory(focus))
                     }}
+                    isEditingLayout={isEditingLayout}
                   />
                 )}
               </div>
@@ -2199,6 +2209,7 @@ export default function GameRoom() {
                       const focus = territories[territories.length - 1]
                       if (focus) dispatch(selectTerritory(focus))
                     }}
+                    isEditingLayout={isEditingLayout}
                   />
                 )}
                 {p.id === 'player-stats' && (
@@ -2239,6 +2250,7 @@ export default function GameRoom() {
                           )
                         : {}
                     }
+                    isEditingLayout={isEditingLayout}
                   />
                 )}
               </div>
@@ -2539,6 +2551,7 @@ export default function GameRoom() {
           }}
           onLayoutClick={() => setIsEditingLayout((v) => !v)}
           isMobileDrawerOpen={mobileDrawerOpen}
+          isEditingLayout={isEditingLayout}
         />
       )}
 
