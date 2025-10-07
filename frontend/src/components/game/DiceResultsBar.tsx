@@ -36,17 +36,24 @@ export function DiceResultsBar() {
       return { attackerColor: neutralGrey, defenderColor: neutralGrey }
     }
 
-    const fromOwnerId = (() => {
+    // Prefer stable ids captured at roll time so colors don't flip post-conquest
+    const attackerId = (() => {
+      if (last.attackerId) return last.attackerId
       const t = game.board?.find((tt) => tt.id === last.fromId)
-      return t?.ownerId ?? last.attackerId ?? game.currentPlayer ?? null
-    })()
-    const toOwnerId = (() => {
-      const t = game.board?.find((tt) => tt.id === last.toId)
-      return t?.ownerId ?? last.defenderId ?? null
+      return t?.ownerId ?? game.currentPlayer ?? null
     })()
 
-    const aPlayer = fromOwnerId ? game.players.find((p) => p.id === fromOwnerId) : undefined
-    const dPlayer = toOwnerId ? game.players.find((p) => p.id === toOwnerId) : undefined
+    const defenderId = (() => {
+      if (last.defenderId) return last.defenderId
+      const t = game.board?.find((tt) => tt.id === last.toId)
+      const owner = t?.ownerId ?? null
+      // If owner matches attacker (e.g., after conquest or hidden defender), avoid attacker color
+      if (owner && owner === attackerId) return null
+      return owner
+    })()
+
+    const aPlayer = attackerId ? game.players.find((p) => p.id === attackerId) : undefined
+    const dPlayer = defenderId ? game.players.find((p) => p.id === defenderId) : undefined
 
     const aColor = aPlayer ? getColorValue(aPlayer.color) : neutralGrey
     const dColor = dPlayer ? getColorValue(dPlayer.color) : neutralGrey

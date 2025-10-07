@@ -115,6 +115,7 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
     const markerColoredAttack = `${uid}-arrow-colored-attack`
     const markerColoredFortify = `${uid}-arrow-colored-fortify`
     const markerWhite = `${uid}-arrow-white`
+    const eligibleSet = useMemo(() => new Set(eligibleIds), [eligibleIds])
 
     return (
       <div
@@ -124,9 +125,10 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
         {/* Attack/Fortify arrows */}
         {(phase === 'attack' || phase === 'fortify') &&
           selected &&
-          (hover || target) &&
           (() => {
-            const dest = target || hover
+            const hoverEligible = Boolean(hover && eligibleSet.has(hover.id))
+            const targetEligible = Boolean(target && eligibleSet.has(target.id))
+            const dest = targetEligible ? target : hoverEligible ? hover : null
             if (!dest) return null
             const color = phase === 'attack' ? 'var(--attack)' : 'var(--fortify)'
             const colorRing = phase === 'attack' ? 'var(--attack-ring)' : 'var(--fortify-ring)'

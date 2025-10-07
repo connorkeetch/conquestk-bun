@@ -98,9 +98,20 @@ export const BattleModal: React.FC<BattleModalProps> = ({
 
     // Prefer stable attacker/defender ids from the battle payload so colors don't
     // flip when territory ownership changes due to conquest.
-    const attackerId =
-      battleResult.attackerId ?? fromTerritory.ownerId ?? game.currentPlayer ?? null
-    const defenderId = battleResult.defenderId ?? toTerritory.ownerId ?? null
+    const attackerId = (() => {
+      if (battleResult.attackerId) return battleResult.attackerId
+      return fromTerritory.ownerId ?? game.currentPlayer ?? null
+    })()
+
+    const defenderId = (() => {
+      if (battleResult.defenderId !== undefined && battleResult.defenderId !== null) {
+        return battleResult.defenderId
+      }
+      const owner = toTerritory.ownerId ?? null
+      // Avoid falling back to attacker color when defender is hidden or post-conquest
+      if (owner && owner === attackerId) return null
+      return owner
+    })()
 
     const aPlayer = attackerId ? game.players.find((p) => p.id === attackerId) : undefined
     const dPlayer = defenderId ? game.players.find((p) => p.id === defenderId) : undefined

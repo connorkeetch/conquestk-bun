@@ -7,6 +7,7 @@ interface PlayerStatsPanelProps {
   currentPlayerId?: string
   territories: Record<string, { owner?: string | null; armies?: number }>
   variant?: 'full' | 'compact' | 'minimal'
+  isEditingLayout?: boolean
 }
 
 /**
@@ -17,6 +18,7 @@ export default function PlayerStatsPanel({
   currentPlayerId,
   territories,
   variant = 'full',
+  isEditingLayout = false,
 }: PlayerStatsPanelProps) {
   return (
     <ResizablePanel
@@ -26,6 +28,7 @@ export default function PlayerStatsPanel({
       canResize={true}
       canMinimize={true}
       canClose={false}
+      isEditingLayout={isEditingLayout}
     >
       <div className="h-full overflow-auto">
         <PlayerStatsTable

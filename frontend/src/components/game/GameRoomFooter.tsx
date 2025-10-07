@@ -8,6 +8,7 @@ interface GameRoomFooterProps {
   onStatsClick?: () => void
   onLayoutClick?: () => void
   isMobileDrawerOpen?: boolean
+  isEditingLayout?: boolean
   className?: string
 }
 
@@ -18,6 +19,7 @@ export default function GameRoomFooter({
   onStatsClick,
   onLayoutClick,
   isMobileDrawerOpen = false,
+  isEditingLayout = false,
   className = '',
 }: GameRoomFooterProps) {
   const [isMuted, setIsMuted] = useState(() => audioService.isMutedState())
@@ -115,14 +117,21 @@ export default function GameRoomFooter({
               <button
                 type="button"
                 onClick={onLayoutClick}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
-                title="Edit Panel Layout"
-                aria-label="Edit Panel Layout"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all group ${
+                  isEditingLayout
+                    ? 'bg-[color:var(--color-accent)]/20 border-[color:var(--color-accent)] text-[color:var(--color-accent)]'
+                    : 'bg-surface-2 hover:bg-surface-2/80 border-border'
+                }`}
+                title={isEditingLayout ? 'Exit Edit Mode' : 'Edit Panel Layout'}
+                aria-label={isEditingLayout ? 'Exit Edit Mode' : 'Edit Panel Layout'}
+                aria-pressed={isEditingLayout}
               >
                 <span className="text-lg" aria-hidden="true">
-                  🧩
+                  {isEditingLayout ? '✓' : '🧩'}
                 </span>
-                <span className="text-sm font-medium">Edit Layout</span>
+                <span className="text-sm font-medium">
+                  {isEditingLayout ? 'Done' : 'Edit Layout'}
+                </span>
               </button>
             )}
             {/* Help Button */}
