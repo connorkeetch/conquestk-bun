@@ -292,8 +292,6 @@ addUniqueSources(connectSources, cloudflareConnectOrigins)
 // Allow Google Fonts for theme heading fonts (Audiowide/Rye)
 addUniqueSources(styleSources, ['https://fonts.googleapis.com'])
 addUniqueSources(fontSources, ['https://fonts.gstatic.com'])
-// Allow Perplexity CDN for fonts
-addUniqueSources(fontSources, ['https://r2cdn.perplexity.ai'])
 
 // Security middleware
 app.use(
