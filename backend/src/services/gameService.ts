@@ -709,6 +709,60 @@ export class GameService {
     if (gameState.phase === 'finished' || elimination.gameEnded) {
       await gameStateCache.setInactiveGameState(roomId, serializedState)
       this.gameEngine.clearModifiersCache(roomId)
+      // Also finalize archives/results and ratings when neutralize ends the game
+      try {
+        const playerStats = this.buildPlayerStats(gameState.players, gameState.board)
+        // Load battle log for elimination order if present
+        let battleLog: BattleLogEntry[] = []
+        try {
+          const res = await query<{ game_log: unknown }>(
+            'SELECT game_log FROM game_states WHERE room_id = $1',
+            [roomId],
+          )
+          const raw = res.rows[0]?.game_log
+          if (Array.isArray(raw)) {
+            battleLog = (raw as unknown[]).filter((e) =>
+              e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
+            ) as BattleLogEntry[]
+          }
+        } catch (e) {
+          logger.warn('Failed to load battle log before neutralize finalization', {
+            roomId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
+
+        const finalization = await this.finalizeCompletedGame(
+          roomId,
+          serializedState,
+          gameState.players,
+          playerStats,
+          battleLog,
+        )
+
+        if (finalization.archived) {
+          await this.awardClanContributions(roomId, finalization.playerRankings)
+          try {
+            const { achievementService } = await import('./achievementService')
+            const minimal = finalization.playerRankings.map((r) => ({
+              userId: r.userId,
+              isWinner: r.isWinner,
+              eliminated: r.eliminated,
+            }))
+            await achievementService.handleGameCompleted(roomId, minimal)
+          } catch (e) {
+            logger.warn('Failed to process achievements after neutralize completion', {
+              roomId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
+        }
+      } catch (e) {
+        logger.error('Failed to finalize game after neutralize', {
+          roomId,
+          error: e instanceof Error ? e.message : e,
+        })
+      }
     } else {
       await this.persistGameStateSnapshot(roomId, serializedState)
     }
@@ -1096,6 +1150,65 @@ export class GameService {
       await this.appendTurnStats(roomId, stats)
     } catch (e) {
       logger.warn('Failed to append turn stats snapshot', {
+        roomId,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
+
+    // Finalize game if this transition ended it outside of battle flow
+    try {
+      if (updatedState.phase === 'finished' && previousPhase !== 'finished') {
+        const finalSerialized = this.serializeGameState(updatedState)
+        const playerStats = this.buildPlayerStats(updatedState.players, updatedState.board)
+        // Load latest battle log; filter to battle entries for elimination order
+        let battleLog: BattleLogEntry[] = []
+        try {
+          const res = await query<{ game_log: unknown }>(
+            'SELECT game_log FROM game_states WHERE room_id = $1',
+            [roomId],
+          )
+          const raw = res.rows[0]?.game_log
+          if (Array.isArray(raw)) {
+            battleLog = (raw as unknown[]).filter((e) =>
+              e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
+            ) as BattleLogEntry[]
+          }
+        } catch (e) {
+          logger.warn('Failed to load battle log before finalization', {
+            roomId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
+
+        const finalization = await this.finalizeCompletedGame(
+          roomId,
+          finalSerialized,
+          updatedState.players,
+          playerStats,
+          battleLog,
+        )
+
+        // Post-archive follow-ups (achievements, clan XP) mirror battle path
+        if (finalization.archived) {
+          await this.awardClanContributions(roomId, finalization.playerRankings)
+          try {
+            const { achievementService } = await import('./achievementService')
+            const minimal = finalization.playerRankings.map((r) => ({
+              userId: r.userId,
+              isWinner: r.isWinner,
+              eliminated: r.eliminated,
+            }))
+            await achievementService.handleGameCompleted(roomId, minimal)
+          } catch (e) {
+            logger.warn('Failed to process achievements after game completion', {
+              roomId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
+        }
+      }
+    } catch (e) {
+      logger.error('Failed to finalize game on endTurn', {
         roomId,
         error: e instanceof Error ? e.message : e,
       })

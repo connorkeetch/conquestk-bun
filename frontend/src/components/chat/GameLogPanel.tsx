@@ -24,6 +24,7 @@ type LogEntry = {
   text: string
   focusTerritories?: string[]
   rich?: ReactNode
+  id?: string
 }
 
 function formatTimestamp(d: Date): string {
@@ -57,6 +58,101 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
   const redact = fogOn && !gameEnded
   const backfillLoadedRef = useRef(false)
+
+  // Aggregate consecutive battle rolls from the same source → target
+  type BattleAggregate = {
+    attackerId: string
+    defenderId?: string
+    fromId: string
+    toId: string
+    fromName: string
+    toName: string
+    attackerName: string
+    defenderName?: string
+    initFrom: number | null
+    initTo: number | null
+    totalKilled: number
+    totalLost: number
+    conquered: boolean
+    movedArmies?: number
+    eliminated?: string[]
+    startTs: Date
+    lastTs: Date
+  } | null
+  const aggRef = useRef<BattleAggregate>(null)
+
+  const flushAggregate = (
+    append: (rich: ReactNode, text: string, ts?: Date, focusTerritories?: string[]) => void,
+  ) => {
+    const agg = aggRef.current
+    if (!agg) return
+    const attackerColor = playerColor.get(agg.attackerId)
+    const defenderColor = agg.defenderId ? playerColor.get(agg.defenderId) : undefined
+    const fromWithCount =
+      agg.initFrom != null ? `${agg.fromName} - ${agg.initFrom}` : agg.fromName
+    const toWithCount = agg.initTo != null ? `${agg.toName} - ${agg.initTo}` : agg.toName
+    const leading = `${fromWithCount} (${agg.attackerName}) attacked ${toWithCount}${
+      agg.defenderName ? ` (${agg.defenderName})` : ''
+    }`
+    const middle = agg.conquered ? ' conquering it,' : ''
+    const tail = ` killing ${agg.totalKilled}, losing ${agg.totalLost}.`
+    const text = `${leading}${middle}${tail}`
+    const rich = (
+      <>
+        {fromWithCount} (
+        <span className="font-semibold" style={{ color: attackerColor }}>
+          {agg.attackerName}
+        </span>
+        ) attacked {toWithCount}
+        {agg.defenderName ? (
+          <>
+            {' '}
+            (
+            <span className="font-semibold" style={{ color: defenderColor }}>
+              {agg.defenderName}
+            </span>
+            )
+          </>
+        ) : null}
+        {agg.conquered ? ' conquering it,' : ''} killing {agg.totalKilled}, losing {agg.totalLost}.
+      </>
+    )
+    append(rich, text, agg.lastTs, [agg.fromId, agg.toId])
+    if (agg.conquered && (agg.movedArmies ?? 0) > 0) {
+      const moved = agg.movedArmies as number
+      const occupyRich = (
+        <>
+          {agg.fromName} (
+          <span className="font-semibold" style={{ color: attackerColor }}>
+            {agg.attackerName}
+          </span>
+          ) occupied {agg.toName} with {moved} troops.
+        </>
+      )
+      const occupyText = `${agg.fromName} (${agg.attackerName}) occupied ${agg.toName} with ${moved} troops.`
+      append(occupyRich, occupyText, agg.lastTs, [agg.fromId, agg.toId])
+    }
+    if (agg.conquered && Array.isArray(agg.eliminated) && agg.eliminated.length > 0) {
+      for (const eliminatedId of agg.eliminated) {
+        const defeatedName = playerName.get(eliminatedId) || eliminatedId
+        const elimRich = (
+          <>
+            <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
+              {defeatedName}
+            </span>{' '}
+            was defeated by{' '}
+            <span className="font-semibold" style={{ color: attackerColor }}>
+              {agg.attackerName}
+            </span>
+            .
+          </>
+        )
+        const elimText = `${defeatedName} was defeated by ${agg.attackerName}.`
+        append(elimRich, elimText, agg.lastTs)
+      }
+    }
+    aggRef.current = null
+  }
 
   const toSafeInt = useMemo(
     () =>
@@ -172,132 +268,164 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           const br = b as Record<string, unknown>
           return new Date(String(ar.timestamp)).getTime() - new Date(String(br.timestamp)).getTime()
         })
+        // Backfill aggregation over BATTLE entries
+        type BfAgg = {
+          attackerId: string
+          defenderId?: string
+          fromId: string
+          toId: string
+          from: string
+          to: string
+          attackerName: string
+          defenderName?: string
+          killed: number
+          lost: number
+          conquered: boolean
+          movedArmies?: number
+          eliminated: string[]
+          tsStart: Date
+          tsLast: Date
+        } | null
+        let bfAgg: BfAgg = null
+
+        const flushBf = () => {
+          if (!bfAgg) return
+          const attackerColor = playerColor.get(bfAgg.attackerId)
+          const defenderColor = bfAgg.defenderId ? playerColor.get(bfAgg.defenderId) : undefined
+          const leading = `${bfAgg.from} (${bfAgg.attackerName}) attacked ${bfAgg.to}${
+            bfAgg.defenderName ? ` (${bfAgg.defenderName})` : ''
+          }`
+          const middle = bfAgg.conquered ? ' conquering it,' : ''
+          const tail = ` killing ${bfAgg.killed}, losing ${bfAgg.lost}.`
+          const text = `${leading}${middle}${tail}`
+          formatted.push({
+            ts: bfAgg.tsLast,
+            text,
+            rich: (
+              <>
+                {bfAgg.from} (
+                <span className="font-semibold" style={{ color: attackerColor }}>
+                  {bfAgg.attackerName}
+                </span>
+                ) attacked {bfAgg.to}
+                {bfAgg.defenderName ? (
+                  <>
+                    {' '}
+                    (
+                    <span className="font-semibold" style={{ color: defenderColor }}>
+                      {bfAgg.defenderName}
+                    </span>
+                    )
+                  </>
+                ) : null}
+                {bfAgg.conquered ? ' conquering it,' : ''} killing {bfAgg.killed}, losing {bfAgg.lost}.
+              </>
+            ),
+          })
+          if (bfAgg.conquered && (bfAgg.movedArmies ?? 0) > 0) {
+            const moved = bfAgg.movedArmies as number
+            formatted.push({
+              ts: bfAgg.tsLast,
+              text: `${bfAgg.from} (${bfAgg.attackerName}) occupied ${bfAgg.to} with ${moved} troops.`,
+              rich: (
+                <>
+                  {bfAgg.from} (
+                  <span className="font-semibold" style={{ color: attackerColor }}>
+                    {bfAgg.attackerName}
+                  </span>
+                  ) occupied {bfAgg.to} with {moved} troops.
+                </>
+              ),
+            })
+          }
+          if (bfAgg.conquered) {
+            for (const eliminatedId of bfAgg.eliminated) {
+              const defeatedName = nameOf(eliminatedId) || eliminatedId
+              formatted.push({
+                ts: bfAgg.tsLast,
+                text: `${defeatedName} was defeated by ${bfAgg.attackerName}.`,
+                rich: (
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
+                      {defeatedName}
+                    </span>{' '}
+                    was defeated by{' '}
+                    <span className="font-semibold" style={{ color: attackerColor }}>
+                      {bfAgg.attackerName}
+                    </span>
+                    .
+                  </>
+                ),
+              })
+            }
+          }
+          bfAgg = null
+        }
+
         for (const e of sorted) {
           const er = e as Record<string, unknown>
           const ts = new Date(String(er.timestamp))
           const type = er.type as string | undefined
           if (!type || type === 'BATTLE') {
+            const attackerId = String((er.attackerId as string) || '')
+            const defenderId = (er.defenderId as string | undefined) || undefined
             const attackerName = nameOf(er.attackerId as string) || 'Unknown'
             const defenderName = nameOf(er.defenderId as string | null | undefined)
-            const from = toName(String(er.attackingTerritoryId))
-            const to = toName(String(er.defendingTerritoryId))
+            const fromId = String(er.attackingTerritoryId)
+            const toId = String(er.defendingTerritoryId)
+            const from = toName(fromId)
+            const to = toName(toId)
             const losses = (er.losses as Record<string, unknown> | undefined) ?? undefined
             const killed = toSafeInt(losses?.defender, 0)
             const lost = toSafeInt(losses?.attacker, 0)
             const conquered = Boolean(er.conquered)
-            if (conquered) {
-              const attackerId = String((er.attackerId as string) || '')
-              const defenderId = (er.defenderId as string | undefined) || undefined
-              formatted.push({
-                ts,
-                text: `${from} (${attackerName}) attacked ${to}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
-                rich: (
-                  <>
-                    {from} (
-                    <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
-                      {attackerName}
-                    </span>
-                    ) attacked {to}
-                    {defenderName ? (
-                      <>
-                        {' '}
-                        (
-                        <span
-                          className="font-semibold"
-                          style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
-                        >
-                          {defenderName}
-                        </span>
-                        )
-                      </>
-                    ) : null}{' '}
-                    conquering it, killing {killed}, losing {lost}.
-                  </>
-                ),
-              })
-              const moved = toSafeInt(er.movedArmies, 0)
-              if (moved > 0) {
-                formatted.push({
-                  ts,
-                  text: `${from} (${attackerName}) occupied ${to} with ${moved} troops.`,
-                  rich: (
-                    <>
-                      {from} (
-                      <span
-                        className="font-semibold"
-                        style={{ color: playerColor.get(attackerId) }}
-                      >
-                        {attackerName}
-                      </span>
-                      ) occupied {to} with {moved} troops.
-                    </>
-                  ),
-                })
+            const same =
+              bfAgg &&
+              bfAgg.fromId === fromId &&
+              bfAgg.toId === toId &&
+              bfAgg.attackerId === attackerId &&
+              (bfAgg.defenderId || undefined) === (defenderId || undefined)
+            if (!same) {
+              flushBf()
+              bfAgg = {
+                attackerId,
+                defenderId,
+                fromId,
+                toId,
+                from,
+                to,
+                attackerName,
+                defenderName,
+                killed: 0,
+                lost: 0,
+                conquered: false,
+                movedArmies: undefined,
+                eliminated: [],
+                tsStart: ts,
+                tsLast: ts,
               }
-              // Log any eliminations associated with this conquest
-              const eliminated = Array.isArray(
-                (er as { eliminatedPlayers?: unknown[] }).eliminatedPlayers,
-              )
-                ? ((er as { eliminatedPlayers?: string[] }).eliminatedPlayers ?? [])
-                : []
-              for (const eliminatedId of eliminated) {
-                const defeatedName = nameOf(eliminatedId) || eliminatedId
-                formatted.push({
-                  ts,
-                  text: `${defeatedName} was defeated by ${attackerName}.`,
-                  rich: (
-                    <>
-                      <span
-                        className="font-semibold"
-                        style={{ color: playerColor.get(eliminatedId) }}
-                      >
-                        {defeatedName}
-                      </span>{' '}
-                      was defeated by{' '}
-                      <span
-                        className="font-semibold"
-                        style={{ color: playerColor.get(attackerId) }}
-                      >
-                        {attackerName}
-                      </span>
-                      .
-                    </>
-                  ),
-                })
+            }
+            // Update aggregate
+            if (bfAgg) {
+              bfAgg.killed += killed
+              bfAgg.lost += lost
+              bfAgg.tsLast = ts
+              if (conquered) {
+                bfAgg.conquered = true
+                const moved = toSafeInt(er.movedArmies, 0)
+                bfAgg.movedArmies = moved > 0 ? moved : undefined
+                const eliminated = Array.isArray(
+                  (er as { eliminatedPlayers?: unknown[] }).eliminatedPlayers,
+                )
+                  ? ((er as { eliminatedPlayers?: string[] }).eliminatedPlayers ?? [])
+                  : []
+                bfAgg.eliminated = [...bfAgg.eliminated, ...eliminated]
               }
-            } else {
-              const attackerId = String((er.attackerId as string) || '')
-              const defenderId = (er.defenderId as string | undefined) || undefined
-              formatted.push({
-                ts,
-                text: `${from} (${attackerName}) attacked ${to}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
-                rich: (
-                  <>
-                    {from} (
-                    <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
-                      {attackerName}
-                    </span>
-                    ) attacked {to}
-                    {defenderName ? (
-                      <>
-                        {' '}
-                        (
-                        <span
-                          className="font-semibold"
-                          style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
-                        >
-                          {defenderName}
-                        </span>
-                        )
-                      </>
-                    ) : null}{' '}
-                    killing {killed}, losing {lost}.
-                  </>
-                ),
-              })
             }
             continue
           }
+          // Flush any pending battle aggregation before handling non-battle entries
+          flushBf()
           if (type === 'TREASURE') {
             const name = nameOf(er.userId as string) || 'Unknown'
             const id = String((er.userId as string) || '')
@@ -482,6 +610,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             }
           }
         }
+        // Flush if last entries were a battle sequence
+        if (bfAgg) flushBf()
         // Newest first
         formatted.sort((a, b) => b.ts.getTime() - a.ts.getTime())
         setEntries(formatted)
@@ -536,6 +666,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
 
     const onLifecycle: Parameters<typeof socketService.on<'lifecycle:update'>>[1] = (payload) => {
       if (!payload || payload.roomId !== gameId) return
+      if (aggRef.current) flushAggregate(addRich)
       if (payload.status === 'active') {
         startedLoggedRef.current = true
         add('Game started.')
@@ -550,6 +681,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       const prevPlayer = lastPlayerRef.current
       const nextPlayer = delta.currentPlayer
       const prevTurn = lastTurnRef.current
+      if (aggRef.current) flushAggregate(addRich)
       // When a new reinforcement phase begins, previous player just ended turn
       if (phaseRef.current === 'fortify' || (phaseRef.current && delta.phase === 'reinforcement')) {
         if (prevPlayer && prevPlayer !== nextPlayer) {
@@ -640,8 +772,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     const handleBattleResult = (delta: BattleResultDelta) => {
       if (redact) return
       const br = delta.battleResult
-      const fromName = territoryName.get(br.fromTerritory.id) || br.fromTerritory.id
-      const toName = territoryName.get(br.toTerritory.id) || br.toTerritory.id
+      const fromId = br.fromTerritory.id
+      const toId = br.toTerritory.id
+      const fromName = territoryName.get(fromId) || fromId
+      const toName = territoryName.get(toId) || toId
       const attackerId = br.attackerId || lastPlayerRef.current || game?.currentPlayer || ''
       const defenderId = br.defenderId || undefined
       const attackerName = playerName.get(attackerId) || attackerId || 'Unknown'
@@ -650,77 +784,78 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       const killed = br.defenderLosses
       const lost = br.attackerLosses
 
-      if (br.conquered) {
-        addRich(
-          <>
-            {fromName} (
-            <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
-              {attackerName}
-            </span>
-            ) attacked {toName}
-            {defenderName ? (
-              <>
-                {' '}
-                (
-                <span
-                  className="font-semibold"
-                  style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
-                >
-                  {defenderName}
-                </span>
-                )
-              </>
-            ) : null}{' '}
-            conquering it, killing {killed}, losing {lost}.
-          </>,
-          `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
-          undefined,
-          [br.fromTerritory.id, br.toTerritory.id],
+      // Check if this roll continues an existing engagement
+      const continues = (() => {
+        const agg = aggRef.current
+        if (!agg) return false
+        return (
+          agg.fromId === fromId &&
+          agg.toId === toId &&
+          agg.attackerId === attackerId &&
+          (agg.defenderId || undefined) === (defenderId || undefined)
         )
-        // Moved troops equals final armies on conquered territory
-        const moved = br.toTerritory.armies
-        if (moved && moved > 0) {
-          addRich(
-            <>
-              {fromName} (
-              <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
-                {attackerName}
-              </span>
-              ) occupied {toName} with {moved} troops.
-            </>,
-            `${fromName} (${attackerName}) occupied ${toName} with ${moved} troops.`,
-            undefined,
-            [br.fromTerritory.id, br.toTerritory.id],
-          )
+      })()
+
+      if (!continues && aggRef.current) {
+        // Flush previous engagement first
+        flushAggregate(addRich)
+      }
+
+      if (!continues) {
+        // Start new engagement; best-effort initial stacks from snapshot
+        const initFrom = (() => {
+          const s = lastArmiesRef.current[fromId]
+          return typeof s === 'number' ? s : Math.max(0, (br.fromTerritory.armies ?? 0) + lost)
+        })()
+        const initTo = (() => {
+          const s = lastArmiesRef.current[toId]
+          return typeof s === 'number' ? s : Math.max(0, (br.toTerritory.armies ?? 0) + killed)
+        })()
+        aggRef.current = {
+          attackerId,
+          defenderId,
+          fromId,
+          toId,
+          fromName,
+          toName,
+          attackerName,
+          defenderName,
+          initFrom,
+          initTo,
+          totalKilled: 0,
+          totalLost: 0,
+          conquered: false,
+          movedArmies: undefined,
+          eliminated: [],
+          startTs: new Date(delta.timestamp),
+          lastTs: new Date(delta.timestamp),
         }
-        logEliminations(attackerId, br.eliminatedPlayers, new Date(delta.timestamp))
-      } else {
-        addRich(
-          <>
-            {fromName} (
-            <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
-              {attackerName}
-            </span>
-            ) attacked {toName}
-            {defenderName ? (
-              <>
-                {' '}
-                (
-                <span
-                  className="font-semibold"
-                  style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
-                >
-                  {defenderName}
-                </span>
-                )
-              </>
-            ) : null}{' '}
-            killing {killed}, losing {lost}.
-          </>,
-          `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
-          undefined,
-          [br.fromTerritory.id, br.toTerritory.id],
-        )
+      }
+
+      // Update aggregate with this roll
+      if (aggRef.current) {
+        aggRef.current.totalKilled += killed
+        aggRef.current.totalLost += lost
+        aggRef.current.lastTs = new Date(delta.timestamp)
+        if (br.conquered) {
+          aggRef.current.conquered = true
+          aggRef.current.movedArmies = br.toTerritory.armies
+          if (Array.isArray(br.eliminatedPlayers)) {
+            aggRef.current.eliminated = [
+              ...(aggRef.current.eliminated ?? []),
+              ...br.eliminatedPlayers,
+            ]
+          }
+        }
+      }
+
+      // Keep snapshot of current armies to seed future init counts
+      lastArmiesRef.current[fromId] = br.fromTerritory.armies
+      lastArmiesRef.current[toId] = br.toTerritory.armies
+
+      // If engagement ended with conquest, flush now
+      if (br.conquered) {
+        flushAggregate(addRich)
       }
     }
 

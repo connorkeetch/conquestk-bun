@@ -179,6 +179,25 @@ export default function GameRoom() {
   const resignDialogTitleId = useId()
   const mobileDrawerId = useId()
   const statsDrawerId = useId()
+  // Gate treasure trade modal until turn-intro is dismissed
+  const [turnIntroActive, setTurnIntroActive] = useState(false)
+  useEffect(() => {
+    const rid = currentGame?.roomId
+    const uid = user?.id
+    if (rid && uid) {
+      try {
+        setTurnIntroActive(Boolean(sessionStorage.getItem(`ui.turnModal.active:${rid}:${uid}`)))
+      } catch {
+        setTurnIntroActive(false)
+      }
+    }
+    const onIntro = (e: Event) => {
+      const ce = e as CustomEvent
+      if (typeof ce.detail?.active === 'boolean') setTurnIntroActive(ce.detail.active)
+    }
+    window.addEventListener('turn-intro-active', onIntro as EventListener)
+    return () => window.removeEventListener('turn-intro-active', onIntro as EventListener)
+  }, [currentGame?.roomId, user?.id])
   const lifecycleAutoFetchTimeoutRef = useRef<number | null>(null)
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
@@ -479,6 +498,7 @@ export default function GameRoom() {
   )
 
   const gamePhase = currentGame?.phase ?? 'reinforcement'
+  const isFinishedPhase = gamePhase === 'finished' || currentRoom?.status === 'completed'
   const reinforcementArmies = useAppSelector((state) => state.game.reinforcementArmies)
   const isMyTurn = Boolean(user?.id && currentGame?.currentPlayer === user.id)
   const isGameActive =
@@ -1379,7 +1399,7 @@ export default function GameRoom() {
           {showPhaseBar && currentGame && (
             <div
               className={`chip w-full flex flex-col gap-2 text-xs sm:text-sm ${
-                isMyTurn
+                isMyTurn && !isFinishedPhase
                   ? 'ring-1 ring-[color:var(--color-accent)] bg-[color:var(--color-accent)]/12 animate-pulse'
                   : 'bg-[color:var(--surface-2)]'
               }`}
@@ -1388,39 +1408,62 @@ export default function GameRoom() {
               <div className="flex w-full flex-wrap items-center gap-2">
                 {/* Turn info (left) */}
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
-                    Round {roundNumber}
-                  </span>
-                  <span className="inline-flex min-w-0 items-center gap-2">
-                    <span
-                      aria-hidden
-                      className="inline-block h-2.5 w-2.5 rounded-full border border-white/50"
-                      style={{ background: activePlayerColor }}
-                    />
-                    <span className="max-w-[160px] truncate font-medium">
-                      {activePlayer?.username ?? 'Player'}
-                    </span>
-                  </span>
-                  <TurnTimer className="text-xs sm:text-sm" showBank={false} />
-                  {!isMyTurn && isGameActive && (
-                    <span className="flex items-center gap-2 text-[11px] text-muted">
-                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
-                      <span>
-                        Waiting for {activePlayer?.username || 'Opponent'} —{' '}
-                        {gamePhase === 'reinforcement'
-                          ? 'reinforcing'
-                          : gamePhase === 'attack'
-                            ? 'attacking'
-                            : gamePhase === 'fortify'
-                              ? 'fortifying'
-                              : gamePhase}
+                  {isFinishedPhase ? (
+                    <>
+                      <span className="font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
+                        Game Complete
                       </span>
-                    </span>
+                      {(() => {
+                        const winner = currentGame.players.find((p) => !p.isEliminated)
+                        return winner ? (
+                          <span className="inline-flex min-w-0 items-center gap-2">
+                            <span
+                              aria-hidden
+                              className="inline-block h-2.5 w-2.5 rounded-full border border-white/50"
+                              style={{ background: getColorValue(winner.color) }}
+                            />
+                            <span className="max-w-[160px] truncate font-medium">Winner: {winner.username}</span>
+                          </span>
+                        ) : null
+                      })()}
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
+                        Round {roundNumber}
+                      </span>
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <span
+                          aria-hidden
+                          className="inline-block h-2.5 w-2.5 rounded-full border border-white/50"
+                          style={{ background: activePlayerColor }}
+                        />
+                        <span className="max-w-[160px] truncate font-medium">
+                          {activePlayer?.username ?? 'Player'}
+                        </span>
+                      </span>
+                      <TurnTimer className="text-xs sm:text-sm" showBank={false} />
+                      {!isMyTurn && isGameActive && (
+                        <span className="flex items-center gap-2 text-[11px] text-muted">
+                          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
+                          <span>
+                            Waiting for {activePlayer?.username || 'Opponent'} —{' '}
+                            {gamePhase === 'reinforcement'
+                              ? 'reinforcing'
+                              : gamePhase === 'attack'
+                                ? 'attacking'
+                                : gamePhase === 'fortify'
+                                  ? 'fortifying'
+                                  : gamePhase}
+                          </span>
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
 
                 {/* Phases (center on wrap) */}
-                {isMyTurn && (
+                {isMyTurn && !isFinishedPhase && (
                   <fieldset
                     aria-label="Turn phases"
                     className="order-3 flex w-full items-center justify-center gap-2 sm:order-none sm:w-auto sm:mx-auto"
@@ -1451,7 +1494,7 @@ export default function GameRoom() {
 
                 {/* Actions (right on wide, centered below on wrap) */}
                 <div className="order-2 flex w-full flex-wrap items-center justify-center gap-2 sm:order-none sm:w-auto sm:ml-auto">
-                  {isMyTurn &&
+                  {isMyTurn && !isFinishedPhase &&
                     isGameActive &&
                     gamePhase === 'reinforcement' &&
                     placementHistoryLen > 0 && (
@@ -1464,7 +1507,7 @@ export default function GameRoom() {
                         ↶ Undo
                       </button>
                     )}
-                  {isMyTurn && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
+                  {isMyTurn && !isFinishedPhase && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -1474,7 +1517,7 @@ export default function GameRoom() {
                       ↶ Undo
                     </button>
                   )}
-                  {isMyTurn && canGoBackToReinforcement && (
+                  {isMyTurn && !isFinishedPhase && canGoBackToReinforcement && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -1484,7 +1527,7 @@ export default function GameRoom() {
                       ↩ Reinforce
                     </button>
                   )}
-                  {isMyTurn && isGameActive && (
+                  {isMyTurn && !isFinishedPhase && isGameActive && (
                     <button
                       type="button"
                       className="btn btn-primary"
@@ -2525,7 +2568,7 @@ export default function GameRoom() {
 
       {/* Centralized Treasure Trade Modal */}
       <TreasureTradeModal
-        isOpen={treasureModalOpen}
+        isOpen={treasureModalOpen && !turnIntroActive}
         onClose={() => dispatch(setTreasureModalOpen(false))}
       />
 
