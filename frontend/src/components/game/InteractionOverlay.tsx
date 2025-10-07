@@ -17,25 +17,22 @@ export interface InteractionOverlayProps {
   tokenSize?: number // diameter in px at scale 1
 }
 
-function dist(a: XY, b: XY) {
-  const dx = a.x - b.x
-  const dy = a.y - b.y
-  return Math.hypot(dx, dy)
-}
+// distance helper was inlined; keep minimal helpers local to functions
 
-function arcPath(a: XY, b: XY) {
-  const d = dist(a, b)
-  const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
-  // perpendicular offset for gentle arc; scale with distance
-  const nx = b.y - a.y
-  const ny = -(b.x - a.x)
-  const len = Math.hypot(nx, ny) || 1
-  const ox = (nx / len) * Math.min(60, Math.max(12, d * 0.12))
-  const oy = (ny / len) * Math.min(60, Math.max(12, d * 0.12))
-  const cx = mid.x + ox
-  const cy = mid.y + oy
-  return `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`
-}
+// Deprecated quadratic arc kept for reference; use cubicArcPath for correct arrowhead tangent
+// function arcPath(a: XY, b: XY) {
+//   const d = dist(a, b)
+//   const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+//   // perpendicular offset for gentle arc; scale with distance
+//   const nx = b.y - a.y
+//   const ny = -(b.x - a.x)
+//   const len = Math.hypot(nx, ny) || 1
+//   const ox = (nx / len) * Math.min(60, Math.max(12, d * 0.12))
+//   const oy = (ny / len) * Math.min(60, Math.max(12, d * 0.12))
+//   const cx = mid.x + ox
+//   const cy = mid.y + oy
+//   return `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`
+// }
 
 function trimSegment(a: XY, b: XY, startOffset: number, endOffset: number): { a: XY; b: XY } {
   const vx = b.x - a.x
@@ -50,6 +47,25 @@ function trimSegment(a: XY, b: XY, startOffset: number, endOffset: number): { a:
     a: { x: a.x + nx * s, y: a.y + ny * s },
     b: { x: b.x - nx * e, y: b.y - ny * e },
   }
+}
+
+function cubicArcPath(a: XY, b: XY): string {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const d = Math.hypot(dx, dy) || 1
+  const ux = dx / d
+  const uy = dy / d
+  const px = -uy
+  const py = ux
+  // Gentle curvature scaled by distance
+  const offset = Math.min(50, Math.max(10, d * 0.1))
+  const handle = Math.min(60, Math.max(14, d * 0.25))
+  const c1x = a.x + ux * handle + px * offset
+  const c1y = a.y + uy * handle + py * offset
+  // Ensure arrowhead points to center: end tangent aligned with (b - a)
+  const c2x = b.x - ux * handle
+  const c2y = b.y - uy * handle
+  return `M ${a.x} ${a.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${b.x} ${b.y}`
 }
 
 const Crosshair = ({ x, y, r }: { x: number; y: number; r: number }) => (
@@ -119,7 +135,7 @@ export const InteractionOverlay: React.FC<InteractionOverlayProps> = memo(
             const topW = 2
             // Shorten the segment so arrows start/end outside token circles
             const { a: from, b: to } = trimSegment(selected, dest, r + 4, r + 8)
-            const pathD = arcPath(from, to)
+            const pathD = cubicArcPath(from, to)
             return (
               <svg
                 className="absolute left-0 top-0"
