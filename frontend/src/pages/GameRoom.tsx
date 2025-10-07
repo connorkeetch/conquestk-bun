@@ -118,25 +118,28 @@ export default function GameRoom() {
     const hasRight = rightZonePanels.length > 0
     const leftWidth = hasLeft
       ? Math.max(...leftZonePanels.map((p) => p.width || 0))
-      : isEditingLayout
+      : isDraggingPanel || isEditingLayout
         ? DEFAULT_SIDEBAR_WIDTH
         : 0
     const rightWidth = hasRight
       ? Math.max(...rightZonePanels.map((p) => p.width || 0))
-      : isEditingLayout
+      : isDraggingPanel || isEditingLayout
         ? DEFAULT_SIDEBAR_WIDTH
         : 0
-    if ((hasLeft || isEditingLayout) && (hasRight || isEditingLayout)) {
+    if (
+      (hasLeft || isDraggingPanel || isEditingLayout) &&
+      (hasRight || isDraggingPanel || isEditingLayout)
+    ) {
       return { gridTemplateColumns: `${leftWidth}px 1fr ${rightWidth}px` }
     }
-    if (hasLeft || isEditingLayout) {
+    if (hasLeft || isDraggingPanel || isEditingLayout) {
       return { gridTemplateColumns: `${leftWidth}px 1fr` }
     }
-    if (hasRight || isEditingLayout) {
+    if (hasRight || isDraggingPanel || isEditingLayout) {
       return { gridTemplateColumns: `1fr ${rightWidth}px` }
     }
     return undefined
-  }, [layout.isDesktopOrLarger, leftZonePanels, rightZonePanels, isEditingLayout])
+  }, [layout.isDesktopOrLarger, leftZonePanels, rightZonePanels, isDraggingPanel, isEditingLayout])
   const isSpectator = useQueryParam('spectate') === 'true'
   const [isRoomLoading, setIsRoomLoading] = useState(false)
   const [roomError, setRoomError] = useState<string | null>(null)
@@ -201,13 +204,12 @@ export default function GameRoom() {
 
   const handleDropToZone = useCallback(
     (zone: PanelZone, order?: number) => (e: React.DragEvent) => {
-      if (!isEditingLayout) return
       const panelId = parseDraggedPanelId(e)
       if (!panelId) return
       dispatch(setPanelZone({ panelId, zone, order }))
       setIsDraggingPanel(false)
     },
-    [dispatch, parseDraggedPanelId, isEditingLayout],
+    [dispatch, parseDraggedPanelId],
   )
 
   // Force all panels unpinned on mobile/tablet
@@ -2238,7 +2240,7 @@ export default function GameRoom() {
       {currentGame && chatPanel?.zone === 'drawer' && (
         <div
           id={mobileDrawerId}
-          className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
@@ -2322,7 +2324,7 @@ export default function GameRoom() {
       {currentGame && statsPanel?.zone === 'drawer' && (
         <div
           id={statsDrawerId}
-          className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
