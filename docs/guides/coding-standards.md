@@ -238,6 +238,14 @@ When Claude Code works on this project, it should:
 3. **Write tests** for new features
 4. **Document complex logic** with comments
 5. **Follow SOLID principles** in design
+
+## 🔀 Routing & URL State
+
+- Avoid placing `URLSearchParams` objects in React effect dependency arrays. They are not stable and can cause unnecessary renders or navigation loops.
+- Prefer derived string values from query parameters, or use the shared hook `useQueryParam(name)`, which returns a lowercased string.
+- Separate read-from-URL and write-to-URL logic. Only update the URL when a value actually changed.
+- When mirroring state to the URL frequently, use `setSearchParams(next, { replace: true })` to avoid flooding browser history.
+- Be cautious with timers/intervals; ensure they do not cascade into `navigate`/`setSearchParams` calls that can trigger throttling warnings.
 6. **Use TypeScript types** (never `any`)
 7. **Create migrations** for database changes
 8. **Validate security** implications

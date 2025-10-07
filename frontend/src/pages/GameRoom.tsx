@@ -705,8 +705,8 @@ export default function GameRoom() {
         // Normalize route param to canonical UUID id, preserving query params
         const canonicalId = response.room.id
         if (roomId !== canonicalId) {
-          const qs = searchParams.toString()
-          navigate(`/room/${canonicalId}${qs ? `?${qs}` : ''}`, { replace: true })
+          const qs = typeof window !== 'undefined' ? window.location.search : ''
+          navigate(`/room/${canonicalId}${qs || ''}`, { replace: true })
         }
       } catch (error: unknown) {
         if (!isMounted) {
@@ -732,7 +732,7 @@ export default function GameRoom() {
     return () => {
       isMounted = false
     }
-  }, [currentRoom, dispatch, roomId, navigate, searchParams])
+  }, [currentRoom, dispatch, roomId, navigate])
 
   useEffect(() => {
     if (isMember) {
