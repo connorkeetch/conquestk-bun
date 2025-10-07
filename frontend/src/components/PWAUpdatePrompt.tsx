@@ -21,7 +21,7 @@ export default function PWAUpdatePrompt() {
   }, [])
 
   const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
-    onRegistered(_reg) {
+    onRegistered(_reg: ServiceWorkerRegistration | undefined) {
       // Optional: reg?.update?.()
       // console.info('SW registered', reg)
     },

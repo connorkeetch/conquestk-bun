@@ -7,6 +7,7 @@ import type {
   TreasureAwardedDelta,
 } from '@shared/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '../../hooks/redux'
 import { gameService } from '../../services/gameService'
 import { socketService } from '../../services/socketService'
@@ -21,6 +22,7 @@ type LogEntry = {
   ts: Date
   text: string
   focusTerritories?: string[]
+  rich?: React.ReactNode
 }
 
 function formatTimestamp(d: Date): string {
@@ -86,6 +88,21 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
     return map
   }, [game?.players, room?.players])
+
+  const playerColor = useMemo(() => {
+    const map = new Map<string, string>()
+    if (game?.players) {
+      for (const p of game.players) {
+        try {
+          const hex = getColorValue((p.color as unknown) as PlayerColor)
+          map.set(p.id, hex)
+        } catch {
+          // ignore mapping issues; fallback handled during render
+        }
+      }
+    }
+    return map
+  }, [game?.players])
 
   const territoryName = useMemo(() => {
     const map = new Map<string, string>()
