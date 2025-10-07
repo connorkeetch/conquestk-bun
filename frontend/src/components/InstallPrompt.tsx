@@ -5,17 +5,25 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
-const isStandalone = () =>
-  window.matchMedia?.('(display-mode: standalone)').matches || (navigator as any).standalone === true
+interface NavigatorStandalone extends Navigator {
+  standalone?: boolean
+}
 
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !/android/i.test(navigator.userAgent)
-const isSafari = () => /safari/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent)
+const isStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)').matches ||
+  (navigator as NavigatorStandalone).standalone === true
+
+const isIOS = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) && !/android/i.test(navigator.userAgent)
+const isSafari = () =>
+  /safari/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent)
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
   const [iosVisible, setIosVisible] = useState(false)
-  const firstRender = useRef(true)
+  // Track first render to delay iOS coachmark if needed
+  const _firstRender = useRef(true)
 
   const installed = useMemo(() => isStandalone(), [])
 
@@ -105,4 +113,3 @@ export default function InstallPrompt() {
 
   return null
 }
-

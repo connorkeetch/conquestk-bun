@@ -14,7 +14,6 @@ export default function PWAUpdatePrompt() {
         | undefined
       if (nav && 'type' in nav) return nav.type === 'reload'
       // Fallback for older browsers
-      // @ts-expect-error legacy
       return (performance.navigation && performance.navigation.type === 1) || false
     } catch {
       return false

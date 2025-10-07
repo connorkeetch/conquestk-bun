@@ -13,7 +13,7 @@ import {
   matchPrecache,
   precacheAndRoute,
 } from 'workbox-precaching'
-import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
+import { NavigationRoute, registerRoute, setCatchHandler, type RouteHandlerCallbackOptions } from 'workbox-routing'
 import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies'
 
 // Immediately activate the new SW and control uncontrolled clients
@@ -70,7 +70,8 @@ registerRoute(
 )
 
 // Offline catch handler: return offline page for navigation requests
-setCatchHandler(async ({ event }: { event: FetchEvent }) => {
+setCatchHandler(async (options: RouteHandlerCallbackOptions) => {
+  const event = options.event as FetchEvent
   if (event.request.destination === 'document') {
     const offline = await matchPrecache('/offline.html')
     if (offline) return offline
@@ -106,7 +107,13 @@ self.addEventListener('push', (event: PushEvent) => {
     typeof notificationData.data === 'object' && notificationData.data !== null
       ? notificationData.data
       : {}
-  const targetUrl: string = notificationData.url || payloadData.url || '/'
+  const purl = (payloadData as { url?: unknown }).url
+  const targetUrl: string =
+    typeof notificationData.url === 'string'
+      ? notificationData.url
+      : typeof purl === 'string'
+        ? purl
+        : '/'
   const mergedData = {
     ...payloadData,
     gameId: notificationData.gameId ?? payloadData.gameId,
@@ -119,12 +126,6 @@ self.addEventListener('push', (event: PushEvent) => {
     icon: notificationData.icon || '/icon-192.png',
     badge: notificationData.badge || '/icon-192.png',
     data: mergedData,
-    actions:
-      notificationData.actions ||
-      ([
-        { action: 'view', title: 'View Game' },
-        { action: 'close', title: 'Dismiss' },
-      ] as const),
     tag: notificationData.tag || 'risk-game-notification',
     renotify: notificationData.renotify ?? true,
   }
@@ -178,8 +179,4 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
       await self.clients.openWindow(targetHref)
     })(),
   )
-})
-// Speed up navigations with navigation preload when supported
-self.addEventListener('activate', (event: ExtendableEvent) => {
-  event.waitUntil(enable())
 })

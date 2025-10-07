@@ -63,7 +63,9 @@ export default function PanelHeader({
           }}
           aria-grabbed={false}
         >
-          <span aria-hidden className="text-sm">≡</span>
+          <span aria-hidden className="text-sm">
+            ≡
+          </span>
         </button>
         {icon && <span className="shrink-0 text-base">{icon}</span>}
         <h3 className="text-sm font-semibold text-[color:var(--heading)] truncate">{title}</h3>
