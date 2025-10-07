@@ -16,6 +16,8 @@ interface MessageListProps {
   messages: DisplayMessage[]
   currentUserId?: string | null
   getDisplayName?: (message: DisplayMessage, isOwn: boolean) => string | undefined
+  // Optional: provide a color for the sender label (e.g., player color)
+  getSenderColor?: (message: DisplayMessage, isOwn: boolean) => string | undefined
   onUserClick?: (username: string) => void
 }
 
@@ -79,6 +81,7 @@ export default function MessageList({
   messages,
   currentUserId,
   getDisplayName,
+  getSenderColor,
   onUserClick,
 }: MessageListProps) {
   const isOwn = useMemo(
@@ -94,6 +97,7 @@ export default function MessageList({
         const isDeleted = Boolean(message.deletedAt)
         const linkPreviews = parseLinkPreviews(message.metadata)
         const displayName = senderLabel || (isOwnMessage ? 'You' : 'System')
+        const senderColor = getSenderColor?.(message, isOwnMessage)
         const timestampLabel = formatTime(message.createdAt)
 
         return (
@@ -121,13 +125,17 @@ export default function MessageList({
                     <button
                       type="button"
                       className="text-xs font-semibold uppercase tracking-wide opacity-80 hover:underline"
+                      style={senderColor ? { color: senderColor } : undefined}
                       onClick={() => onUserClick(displayName)}
                       title={`View ${displayName}'s profile`}
                     >
                       {displayName}
                     </button>
                   ) : (
-                    <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wide opacity-80"
+                      style={senderColor ? { color: senderColor } : undefined}
+                    >
                       {displayName}
                     </span>
                   )
