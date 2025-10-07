@@ -11,9 +11,11 @@ import GameRoomFooter from '@/components/game/GameRoomFooter'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TreasureTradeModal } from '@/components/game/TreasureTradeModal'
 import { TurnTimer } from '@/components/game/TurnTimer'
+import { ChatLogPanel, PlayerStatsPanel } from '@/components/panels'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import SettingsModal from '@/components/SettingsModal'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
+import { selectPanels, togglePin, unpinAll } from '@/store/panelsSlice'
 import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
@@ -85,6 +87,9 @@ export default function GameRoom() {
   const placementHistoryLen = useAppSelector(
     (state) => (state.uiRoom.placementHistory ?? []).length,
   )
+  const panels = useAppSelector(selectPanels)
+  const statsPanel = panels.find((p) => p.id === 'player-stats')
+  const chatPanel = panels.find((p) => p.id === 'chat')
   const [searchParams] = useSearchParams()
   const isSpectator = searchParams.get('spectate') === 'true'
   const [isRoomLoading, setIsRoomLoading] = useState(false)
@@ -125,6 +130,13 @@ export default function GameRoom() {
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
+
+  // Force all panels unpinned on mobile/tablet
+  useEffect(() => {
+    if (!layout.isDesktopOrLarger) {
+      dispatch(unpinAll())
+    }
+  }, [layout.isDesktopOrLarger, dispatch])
 
   // Prevent background scroll when any drawer is open
   useEffect(() => {
@@ -1495,13 +1507,14 @@ export default function GameRoom() {
       <div
         className={`
           flex flex-col gap-4
-          ${layout.isUltrawide ? '2xl:grid 2xl:grid-cols-[480px_1fr_480px] 2xl:gap-6 2xl:items-start' : ''}
+          ${layout.isDesktopOrLarger && (statsPanel?.isPinned || chatPanel?.isPinned) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
+          ${statsPanel?.isPinned && chatPanel?.isPinned ? 'lg:grid-cols-[minmax(280px,auto)_1fr_minmax(280px,auto)]' : statsPanel?.isPinned || chatPanel?.isPinned ? 'lg:grid-cols-[minmax(280px,auto)_1fr]' : ''}
         `}
       >
-        {/* Left Sidebar - Player Stats (Ultra-wide only) */}
-        {layout.isUltrawide && (currentGame || currentRoom) && (
+        {/* Left Sidebar - Pinned Panels (Desktop+) */}
+        {layout.isDesktopOrLarger && statsPanel?.isPinned && statsPanel.position === 'left' && (
           <aside className="sticky top-6 space-y-4">
-            <PlayerStatsTable
+            <PlayerStatsPanel
               players={
                 currentGame?.players ||
                 (currentRoom?.players || []).map((p) => {
@@ -1536,7 +1549,6 @@ export default function GameRoom() {
                     )
                   : {}
               }
-              variant="full"
             />
           </aside>
         )}
@@ -1762,7 +1774,24 @@ export default function GameRoom() {
           )}
         </div>
 
-        {/* Right Sidebar removed: Chat & Log accessible via footer (modal/drawer) */}
+        {/* Right Sidebar - Pinned Chat/Log Panel (Desktop+) */}
+        {layout.isDesktopOrLarger &&
+          chatPanel?.isPinned &&
+          chatPanel.position === 'right' &&
+          roomId &&
+          user && (
+            <aside className="sticky top-6 space-y-4">
+              <ChatLogPanel
+                gameId={currentRoom?.id || roomId}
+                currentUserId={user.id}
+                userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
+                onLogFocus={(territories) => {
+                  const focus = territories[territories.length - 1]
+                  if (focus) dispatch(selectTerritory(focus))
+                }}
+              />
+            </aside>
+          )}
 
         {/* Removed duplicate player list section and AI controls - now only showing once in left rail */}
         {/* SR-only live region for announcements */}
@@ -1872,7 +1901,7 @@ export default function GameRoom() {
       {/* Mobile FAB - REMOVED: Now integrated into footer */}
 
       {/* Drawer backdrop (chat) */}
-      {currentGame && (
+      {currentGame && !chatPanel?.isPinned && (
         <button
           className={`fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -1886,7 +1915,7 @@ export default function GameRoom() {
       )}
 
       {/* Bottom drawer (chat) */}
-      {currentGame && (
+      {currentGame && !chatPanel?.isPinned && (
         <div
           id={mobileDrawerId}
           className={`fixed bottom-0 left-0 right-0 sm:left-auto sm:right-4 sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
@@ -1904,10 +1933,20 @@ export default function GameRoom() {
             <div className="flex items-center justify-between px-3 pt-2">
               <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30" />
             </div>
-            <div className="flex items-center justify-end px-3 pb-2">
+            <div className="flex items-center justify-between px-3 pb-2">
+              {layout.isDesktopOrLarger && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => dispatch(togglePin('chat'))}
+                  title="Pin to room"
+                >
+                  📌 Pin
+                </button>
+              )}
               <button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                className="btn btn-ghost btn-sm ml-auto"
                 onClick={() => setMobileDrawerOpen(false)}
               >
                 Close
@@ -1946,7 +1985,7 @@ export default function GameRoom() {
       )}
 
       {/* Drawer backdrop (stats) */}
-      {currentGame && (
+      {currentGame && !statsPanel?.isPinned && (
         <button
           className={`fixed inset-0 ${statsDrawerOpen ? 'block' : 'hidden'}`}
           style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -1960,7 +1999,7 @@ export default function GameRoom() {
       )}
 
       {/* Bottom drawer (stats) */}
-      {currentGame && (
+      {currentGame && !statsPanel?.isPinned && (
         <div
           id={statsDrawerId}
           className={`fixed bottom-0 left-0 right-0 sm:left-auto sm:right-4 sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
@@ -1980,13 +2019,25 @@ export default function GameRoom() {
             </div>
             <div className="flex items-center justify-between px-3 pb-2">
               <div className="font-medium">Player Stats</div>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setStatsDrawerOpen(false)}
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                {layout.isDesktopOrLarger && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => dispatch(togglePin('player-stats'))}
+                    title="Pin to room"
+                  >
+                    📌 Pin
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setStatsDrawerOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
               <PlayerStatsTable
