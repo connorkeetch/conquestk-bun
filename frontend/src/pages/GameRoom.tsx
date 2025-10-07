@@ -1076,6 +1076,7 @@ export default function GameRoom() {
         className="sticky z-40 -mx-6 px-6 bg-[color:color-mix(in srgb, var(--surface-1) 92%, transparent)] backdrop-blur border-b border-border"
         style={{ top: 'calc(env(safe-area-inset-top) + 56px)' }}
       >
+        <div className="mx-auto w-full max-w-[clamp(960px,60vw,1400px)]">
         {/* One-line top banner with room info + actions */}
         <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]">
           <div
@@ -1153,6 +1154,21 @@ export default function GameRoom() {
                   </span>
                 </span>
                 <TurnTimer className="text-xs sm:text-sm" showBank={false} />
+                {!isMyTurn && isGameActive && (
+                  <span className="flex items-center gap-2 text-[11px] text-muted">
+                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
+                    <span>
+                      Waiting for {activePlayer?.username || 'Opponent'} —{' '}
+                      {gamePhase === 'reinforcement'
+                        ? 'reinforcing'
+                        : gamePhase === 'attack'
+                          ? 'attacking'
+                          : gamePhase === 'fortify'
+                            ? 'fortifying'
+                            : gamePhase}
+                    </span>
+                  </span>
+                )}
               </div>
 
               {/* Phases (center on wrap) */}
@@ -1233,23 +1249,10 @@ export default function GameRoom() {
               </div>
             </div>
 
-            {!isMyTurn && isGameActive && (
-              <div className="flex items-center gap-2 text-[11px] text-muted">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
-                <span>
-                  Waiting for {activePlayer?.username || 'Opponent'} —{' '}
-                  {gamePhase === 'reinforcement'
-                    ? 'reinforcing'
-                    : gamePhase === 'attack'
-                      ? 'attacking'
-                      : gamePhase === 'fortify'
-                        ? 'fortifying'
-                        : gamePhase}
-                </span>
-              </div>
-            )}
+            
           </div>
         )}
+        </div>
       </div>
 
       {/* Banners appear below the sticky title */}
