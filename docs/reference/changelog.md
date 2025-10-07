@@ -4,20 +4,12 @@
 
 Summary
 - Replaced the term “continent(s)” with “sector(s)” across frontend, backend, shared types, and docs.
-- Data model/DB now uses `map_sectors` and `map_territories.sector`.
+- Schema snapshot now exposes `map_sectors` and `map_territories.sector` in `backend/migrations/001_baseline_schema.sql`.
 - Client/server remain backward-compatible for a transition period.
 
 Database migration
-- New migration: `022_rename_continents_to_sectors.sql`
-- Actions:
-  - `map_territories.continent` → `sector`
-  - `map_continents` → `map_sectors`
-  - `map_drafts.continents` → `sectors`
-  - `map_versions.continents` → `sectors`
-- How to apply locally:
-  - `cd backend && npm run migrate`
-- Production/Staging:
-  - Migrations run on startup via `npm start`. Verify with `SELECT * FROM schema_migrations ORDER BY executed_at DESC;`.
+- `backend/migrations/001_baseline_schema.sql` (re-exported snapshot) defines `map_sectors`, updates `map_versions.sectors`, and maps territory rows to the new `sector` column.
+- Existing environments created before this date should apply the archived migration from the release branch or run the provided SQL one-off. Verify with `\d+ map_sectors`.
 
 API compatibility
 - New endpoints:
@@ -26,7 +18,7 @@ API compatibility
   - `POST /api/maps/:mapId/continents` → handled as sectors.
 - Payload compatibility:
   - Territory accepts `sectorId` (preferred) or `continentId` (deprecated).
-  - Map metadata uses `sectors` array (preferred). `continents` is still read and mapped to sectors.
+  - Map metadata uses `sectors` array (preferred). `continents` is still read and mapped to sectors via `mapWorkflowService`.
 
 Game config compatibility
 - Preferred config key: `sectorBonuses`.

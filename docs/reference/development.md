@@ -1,42 +1,64 @@
 # Development Guide
 
+_Last updated: March 7, 2026_
+
 ## 📋 Available Commands
 
 ### 🔧 Setup & Development
 ```bash
-npm run setup              # Check and configure development environment
-npm run dev                # Start both frontend and backend (PowerShell)
-npm run dev:frontend       # Start frontend only
-npm run dev:backend        # Start backend only
-npm run dev:frontend-only  # Start frontend only (PowerShell)
-npm run dev:backend-only   # Start backend only (PowerShell)
-npm run dev:quick          # Start without setup check
-npm run dev:manual         # Start with concurrently (no new windows)
+npm install               # Install root + workspace dependencies
+npm run setup             # Environment guard (verifies Node, PostgreSQL, Redis, and env files)
+npm run dev               # Windows PowerShell launcher (spawns frontend + backend)
+npm run dev:manual        # Cross-platform launcher using concurrently
+npm run dev:frontend      # Start frontend only
+npm run dev:backend       # Start backend only
+npm run dev:frontend-only # PowerShell-only helper (frontend)
+npm run dev:backend-only  # PowerShell-only helper (backend)
+npm run dev:quick         # Skip setup guard (useful after environment is warm)
 ```
 
 ### 🏗️ Build & Production
 ```bash
-npm run build              # Build both frontend and backend
-npm run build:frontend     # Build frontend only
-npm run build:backend      # Build backend only
-npm start                  # Start production backend
+npm run build             # Build shared package, frontend, then backend
+npm run build:frontend    # Build frontend only
+npm run build:backend     # Build backend only
+npm run build:shared      # Compile shared workspace
+npm start                 # Run migrations then launch backend in production mode
 ```
 
-### 🧪 Testing & Quality
+### ✅ Type Safety & Quality
 ```bash
-npm test                   # Run all tests
-npm run test:frontend      # Run frontend tests
-npm run test:backend       # Run backend tests
-npm run lint               # Run Biome linting across every workspace
-cd frontend && npm run lint  # Run frontend-only linting
-cd backend && npm run lint   # Run backend-only linting
+npm run typecheck         # Run typecheck across shared, backend, and frontend
+npm run typecheck:backend # Backend only
+npm run typecheck:frontend
+npm run typecheck:shared
+npm run lint              # Biome check across every workspace
+npm run lint:fix          # Biome auto-fix
+npm run format            # Biome formatter
+```
+
+### 🧪 Testing
+```bash
+npm test                  # Run backend (Jest) then frontend (Vitest)
+npm run test:backend      # Backend Jest suite
+npm run test:frontend     # Frontend Vitest suite
+npx playwright test       # Playwright smoke tests (see config for auto dev server)
+```
+
+### 🗃️ Tooling & Utilities
+```bash
+npm run check:services        # Verify PostgreSQL/Redis availability (optional --start)
+npm run docs:schema           # Export live database schema docs
+npm run generate:odds         # Rebuild combat odds reference tables
+cd backend && npm run migrate # Apply latest migrations
+cd backend && npm run seed:users
+cd backend && npm run make-admin
 ```
 
 ### 🎭 Playwright smoke tests
 - Source files live in [`tests/`](../../tests) with the current smoke check at [`tests/smoke.spec.ts`](../../tests/smoke.spec.ts).
-- Configuration lives at [`playwright.config.ts`](../../playwright.config.ts) and automatically starts the frontend dev server via `npm run dev:frontend`.
-- Run the suite locally with `npx playwright test` (or `npx playwright test --ui` to inspect runs). The backend is not auto-started—launch it separately when a test needs API data.
-- CI retries failed specs twice and records traces/screenshots on the first retry to aid debugging.
+- Configuration lives at [`playwright.config.ts`](../../playwright.config.ts). It starts the frontend dev server via `npm run dev:frontend`; start the backend separately if a spec needs API data.
+- CI retries failed specs twice and records traces/screenshots on the first retry.
 
 ## 🚀 Backend Performance Practices
 

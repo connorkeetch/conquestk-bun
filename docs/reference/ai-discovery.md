@@ -1,18 +1,18 @@
 # AI Opponents Discovery Notes
 
-_Updated: 2025-03-12_
+_Last updated: March 7, 2026_
 
 ## Turn pipeline entry points
 
-1. **HTTP & socket layer** – player actions enter the backend through `GameController` and the lifecycle services. HTTP routes under `backend/src/routes/game.ts` authenticate requests and delegate to `GameController`, which orchestrates room management and turn control via `GameRoomService`, `GameLifecycleService`, and `GameService`.
-2. **Action validation** – `GameService.processGameAction` loads the cached state, enforces that the acting user matches `currentPlayer`, and passes validated actions to `GameEngine.processAction`. All phases (reinforcement → attack → fortify → next turn) are advanced inside `GameEngine` so AI decisions must still flow through these methods.
-3. **State persistence + fan-out** – `GameService` serializes the updated `GameState` back through `gameStateCache` while `GameLifecycleService` and `socketService` broadcast lifecycle deltas. Any AI module should therefore submit actions through the same service to ensure caches, triggers, and sockets stay consistent.
+1. **HTTP & socket layer** – player actions enter the backend through the game routes in `backend/src/routes/game.ts` and the socket handlers in `backend/src/services/socketService.ts`. The HTTP route delegates to `backend/src/controllers/gameController.ts`, which orchestrates room management and turn control via `GameRoomService`, `GameLifecycleService`, and `GameService`.
+2. **Action validation** – `GameService.processGameAction` (and its typed helpers) load the cached state, enforce that the acting user matches `currentPlayer`, and pass validated actions to `GameEngine.processAction`. All phases (reinforcement → attack → fortify → next turn) advance inside `GameEngine`, so AI decisions must still flow through these methods.
+3. **State persistence + fan-out** – `GameService` serializes the updated `GameState` back through `gameStateCache` while `GameLifecycleService`, `DeltaEmitter`, and `socketService` broadcast lifecycle deltas. Any AI module should therefore submit actions through the same service to ensure caches, triggers, and sockets stay consistent.
 
-This path keeps AI decisions aligned with human input—inject the AI after `GameService.initializeGame` assigns turns but before `processGameAction` persists the result, likely via a new `executeAiTurn` helper (added in this change) that wraps `processAction` with validation.
+This path keeps AI decisions aligned with human input—inject the AI after `GameService.initializeGame` assigns turns but before `processGameAction` persists the result. The existing `executeAiTurn` helper wraps `processAction` with validation and fallback handling.
 
 ## Telemetry and safeguards
 
-Initial instrumentation should live close to `GameService.executeAiTurn` so every AI turn reports:
+Instrumentation lives close to `GameService.executeAiTurn` so every AI turn reports:
 
 - **Think time** (milliseconds spent inside the decision service)
 - **Fallback reason** (timeout, invalid plan, cancellation)
@@ -23,7 +23,7 @@ Emit counters/latency histograms via the existing `metricsService` once the budg
 
 ## Decision interface contract
 
-The stubbed `aiDecisionService` introduces a canonical request/response shape:
+The `aiDecisionService` introduces a canonical request/response shape:
 
 ```ts
 chooseAction({
