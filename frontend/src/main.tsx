@@ -36,7 +36,9 @@ try {
   const root = ReactDOM.createRoot(rootElement)
 
   // Preload optional data (non-blocking)
-  preloadBattleOdds().catch(() => {})
+  preloadBattleOdds().catch(() => {
+    // Non-fatal: battle odds preloading can fail in dev without impacting app
+  })
 
   logger.info('[MAIN] Rendering React app without StrictMode...')
   // Restore full app
