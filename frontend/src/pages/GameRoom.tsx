@@ -1077,181 +1077,183 @@ export default function GameRoom() {
         style={{ top: 'calc(env(safe-area-inset-top) + 56px)' }}
       >
         <div className="mx-auto w-full max-w-[clamp(960px,60vw,1400px)]">
-        {/* One-line top banner with room info + actions */}
-        <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]">
-          <div
-            className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
-            title={`${currentRoom.name}${
-              typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''
-            } • Hosted by ${hostDisplay(currentRoom)} • ${seatUsage(currentRoom).label}`}
-          >
-            <span className="truncate">
-              {currentRoom.name}
-              {typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}
-              <span className="mx-2 opacity-60">•</span>
-              Hosted by <span className="font-semibold">{hostDisplay(currentRoom)}</span>
-              <span className="mx-2 opacity-60">•</span>
-              {seatUsage(currentRoom).label}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {!isMember && (
-              <button
-                onClick={() => openJoinDialog()}
-                disabled={joinActionDisabled}
-                type="button"
-                title={joinButtonTitle}
-                className="btn btn-primary btn-sm"
-              >
-                {joinButtonLabel}
-              </button>
-            )}
-            {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
-              <>
+          {/* One-line top banner with room info + actions */}
+          <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]">
+            <div
+              className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
+              title={`${currentRoom.name}${
+                typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''
+              } • Hosted by ${hostDisplay(currentRoom)} • ${seatUsage(currentRoom).label}`}
+            >
+              <span className="truncate">
+                {currentRoom.name}
+                {typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}
+                <span className="mx-2 opacity-60">•</span>
+                Hosted by <span className="font-semibold">{hostDisplay(currentRoom)}</span>
+                <span className="mx-2 opacity-60">•</span>
+                {seatUsage(currentRoom).label}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {!isMember && (
                 <button
-                  onClick={() => void handleCopyInviteLink()}
+                  onClick={() => openJoinDialog()}
+                  disabled={joinActionDisabled}
                   type="button"
-                  className="btn btn-secondary btn-sm"
-                  title="Copy invite link"
-                  aria-live="polite"
+                  title={joinButtonTitle}
+                  className="btn btn-primary btn-sm"
                 >
-                  {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
+                  {joinButtonLabel}
                 </button>
-                {isHost ? (
+              )}
+              {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
+                <>
                   <button
-                    onClick={() => void handleCancelRoom()}
+                    onClick={() => void handleCopyInviteLink()}
                     type="button"
-                    className="btn btn-danger btn-sm"
+                    className="btn btn-secondary btn-sm"
+                    title="Copy invite link"
+                    aria-live="polite"
                   >
-                    Close Room
+                    {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
                   </button>
-                ) : (
-                  <button onClick={handleLeaveRoom} type="button" className="btn btn-danger btn-sm">
-                    Leave Room
-                  </button>
-                )}
-              </>
-            )}
+                  {isHost ? (
+                    <button
+                      onClick={() => void handleCancelRoom()}
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                    >
+                      Close Room
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleLeaveRoom}
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                    >
+                      Leave Room
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
-        {showPhaseBar && currentGame && (
-          <div className="chip w-full flex flex-col gap-2 text-xs sm:text-sm">
-            {/* Unified, wrapping row: info + phases + actions */}
-            <div className="flex w-full flex-wrap items-center gap-2">
-              {/* Turn info (left) */}
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
-                  Round {roundNumber}
-                </span>
-                <span className="inline-flex min-w-0 items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="inline-block h-2.5 w-2.5 rounded-full border border-white/50"
-                    style={{ background: activePlayerColor }}
-                  />
-                  <span className="max-w-[160px] truncate font-medium">
-                    {activePlayer?.username ?? 'Player'}
+          {showPhaseBar && currentGame && (
+            <div className="chip w-full flex flex-col gap-2 text-xs sm:text-sm">
+              {/* Unified, wrapping row: info + phases + actions */}
+              <div className="flex w-full flex-wrap items-center gap-2">
+                {/* Turn info (left) */}
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
+                    Round {roundNumber}
                   </span>
-                </span>
-                <TurnTimer className="text-xs sm:text-sm" showBank={false} />
-                {!isMyTurn && isGameActive && (
-                  <span className="flex items-center gap-2 text-[11px] text-muted">
-                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
-                    <span>
-                      Waiting for {activePlayer?.username || 'Opponent'} —{' '}
-                      {gamePhase === 'reinforcement'
-                        ? 'reinforcing'
-                        : gamePhase === 'attack'
-                          ? 'attacking'
-                          : gamePhase === 'fortify'
-                            ? 'fortifying'
-                            : gamePhase}
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="inline-block h-2.5 w-2.5 rounded-full border border-white/50"
+                      style={{ background: activePlayerColor }}
+                    />
+                    <span className="max-w-[160px] truncate font-medium">
+                      {activePlayer?.username ?? 'Player'}
                     </span>
                   </span>
-                )}
-              </div>
-
-              {/* Phases (center on wrap) */}
-              {isMyTurn && (
-                <fieldset
-                  aria-label="Turn phases"
-                  className="order-3 flex w-full items-center justify-center gap-2 sm:order-none sm:w-auto sm:mx-auto"
-                >
-                  <legend className="sr-only">Turn phases</legend>
-                  {(['reinforcement', 'attack', 'fortify'] as const).map((phaseKey) => {
-                    const active = gamePhase === phaseKey
-                    const label =
-                      phaseKey === 'reinforcement'
-                        ? 'Reinforce'
-                        : phaseKey.charAt(0).toUpperCase() + phaseKey.slice(1)
-                    return (
-                      <span
-                        key={phaseKey}
-                        className={
-                          'inline-flex items-center gap-1 rounded px-2 py-1 font-medium ' +
-                          (active
-                            ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
-                            : 'bg-[color:var(--surface-1)] text-muted')
-                        }
-                      >
-                        {label}
+                  <TurnTimer className="text-xs sm:text-sm" showBank={false} />
+                  {!isMyTurn && isGameActive && (
+                    <span className="flex items-center gap-2 text-[11px] text-muted">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
+                      <span>
+                        Waiting for {activePlayer?.username || 'Opponent'} —{' '}
+                        {gamePhase === 'reinforcement'
+                          ? 'reinforcing'
+                          : gamePhase === 'attack'
+                            ? 'attacking'
+                            : gamePhase === 'fortify'
+                              ? 'fortifying'
+                              : gamePhase}
                       </span>
-                    )
-                  })}
-                </fieldset>
-              )}
+                    </span>
+                  )}
+                </div>
 
-              {/* Actions (right on wide, centered below on wrap) */}
-              <div className="order-2 flex w-full flex-wrap items-center justify-center gap-2 sm:order-none sm:w-auto sm:ml-auto">
-                {isMyTurn &&
-                  isGameActive &&
-                  gamePhase === 'reinforcement' &&
-                  placementHistoryLen > 0 && (
+                {/* Phases (center on wrap) */}
+                {isMyTurn && (
+                  <fieldset
+                    aria-label="Turn phases"
+                    className="order-3 flex w-full items-center justify-center gap-2 sm:order-none sm:w-auto sm:mx-auto"
+                  >
+                    <legend className="sr-only">Turn phases</legend>
+                    {(['reinforcement', 'attack', 'fortify'] as const).map((phaseKey) => {
+                      const active = gamePhase === phaseKey
+                      const label =
+                        phaseKey === 'reinforcement'
+                          ? 'Reinforce'
+                          : phaseKey.charAt(0).toUpperCase() + phaseKey.slice(1)
+                      return (
+                        <span
+                          key={phaseKey}
+                          className={
+                            'inline-flex items-center gap-1 rounded px-2 py-1 font-medium ' +
+                            (active
+                              ? 'bg-[color:var(--color-accent)]/20 ring-1 ring-[color:var(--color-accent)] text-[color:var(--heading)]'
+                              : 'bg-[color:var(--surface-1)] text-muted')
+                          }
+                        >
+                          {label}
+                        </span>
+                      )
+                    })}
+                  </fieldset>
+                )}
+
+                {/* Actions (right on wide, centered below on wrap) */}
+                <div className="order-2 flex w-full flex-wrap items-center justify-center gap-2 sm:order-none sm:w-auto sm:ml-auto">
+                  {isMyTurn &&
+                    isGameActive &&
+                    gamePhase === 'reinforcement' &&
+                    placementHistoryLen > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => void dispatch(undoLastPlacement())}
+                        title="Undo last placement (Z)"
+                      >
+                        ↶ Undo
+                      </button>
+                    )}
+                  {isMyTurn && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
-                      onClick={() => void dispatch(undoLastPlacement())}
-                      title="Undo last placement (Z)"
+                      onClick={() => void dispatch(undoFortify())}
+                      title="Undo last fortify (Z)"
                     >
                       ↶ Undo
                     </button>
                   )}
-                {isMyTurn && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => void dispatch(undoFortify())}
-                    title="Undo last fortify (Z)"
-                  >
-                    ↶ Undo
-                  </button>
-                )}
-                {isMyTurn && canGoBackToReinforcement && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => void dispatch(goBackToReinforcement())}
-                    title="Go back to reinforcement"
-                  >
-                    ↩ Reinforce
-                  </button>
-                )}
-                {isMyTurn && isGameActive && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => void dispatch(endTurn())}
-                    title={endPhaseTitle}
-                  >
-                    {endPhaseLabel}
-                  </button>
-                )}
+                  {isMyTurn && canGoBackToReinforcement && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => void dispatch(goBackToReinforcement())}
+                      title="Go back to reinforcement"
+                    >
+                      ↩ Reinforce
+                    </button>
+                  )}
+                  {isMyTurn && isGameActive && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => void dispatch(endTurn())}
+                      title={endPhaseTitle}
+                    >
+                      {endPhaseLabel}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-
-            
-          </div>
-        )}
+          )}
         </div>
       </div>
 
@@ -1511,8 +1513,17 @@ export default function GameRoom() {
         className={`
           flex flex-col gap-4
           ${layout.isDesktopOrLarger && (statsPanel?.isPinned || chatPanel?.isPinned) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
-          ${statsPanel?.isPinned && chatPanel?.isPinned ? 'lg:grid-cols-[minmax(280px,auto)_1fr_minmax(280px,auto)]' : statsPanel?.isPinned || chatPanel?.isPinned ? 'lg:grid-cols-[minmax(280px,auto)_1fr]' : ''}
         `}
+        style={{
+          gridTemplateColumns:
+            layout.isDesktopOrLarger && statsPanel?.isPinned && chatPanel?.isPinned
+              ? `${statsPanel.width}px 1fr ${chatPanel.width}px`
+              : layout.isDesktopOrLarger && statsPanel?.isPinned
+                ? `${statsPanel.width}px 1fr`
+                : layout.isDesktopOrLarger && chatPanel?.isPinned
+                  ? `1fr ${chatPanel.width}px`
+                  : undefined,
+        }}
       >
         {/* Left Sidebar - Pinned Panels (Desktop+) */}
         {layout.isDesktopOrLarger && statsPanel?.isPinned && statsPanel.position === 'left' && (
@@ -1921,7 +1932,7 @@ export default function GameRoom() {
       {currentGame && !chatPanel?.isPinned && (
         <div
           id={mobileDrawerId}
-          className={`fixed bottom-0 left-0 right-0 sm:left-auto sm:right-4 sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
@@ -2005,7 +2016,7 @@ export default function GameRoom() {
       {currentGame && !statsPanel?.isPinned && (
         <div
           id={statsDrawerId}
-          className={`fixed bottom-0 left-0 right-0 sm:left-auto sm:right-4 sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
