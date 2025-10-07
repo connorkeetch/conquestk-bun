@@ -71,162 +71,180 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-8">
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-surface-1 shadow-2xl">
-        {/* Header */}
-        <div
-          className={`relative px-6 pb-8 pt-10 text-center ${
-            winner
-              ? 'bg-gradient-to-r from-gold to-violet/90 text-white'
-              : 'bg-gradient-to-r from-surface-2/80 to-surface-1/60'
-          }`}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white transition hover:scale-105 hover:bg-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            aria-label="Close game report"
+      <div className="relative w-full max-w-5xl">
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-surface-1 shadow-2xl">
+          <div
+            className="space-y-6 p-6 lg:p-8"
+            style={{
+              maxHeight: 'min(90vh, calc(100vh - 2rem))',
+              WebkitOverflowScrolling: 'touch',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+            }}
           >
-            ×
-          </button>
-          <div className="mb-4 text-6xl drop-shadow-sm">{winner ? '🏆' : '🏳️'}</div>
-          <h2 className="mb-2 text-3xl font-extrabold text-white">
-            {winner ? 'Victory!' : 'Game Over'}
-          </h2>
-          <p className="mx-auto max-w-xl text-base text-white/90">
-            {winner ? `${winner.username} conquers the world!` : 'All players have been eliminated'}
-          </p>
-        </div>
-
-        {/* Content */}
-        <div className="space-y-6 p-6 lg:p-8">
-          {winner && (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-center shadow-inner">
-                <div
-                  className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg"
-                  style={{ backgroundColor: winner.color }}
-                >
-                  {winner.username.charAt(0).toUpperCase()}
-                </div>
-                <h3 className="mb-2 text-xl font-bold text-heading">Champion: {winner.username}</h3>
-                <p className="mx-auto mb-5 max-w-sm text-sm text-muted">
-                  {winner.username} outmaneuvered every rival to claim the board. Here’s how their
-                  empire finished the match.
-                </p>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="rounded-lg bg-surface-1/70 p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted">
-                      Final Territories
-                    </div>
-                    <div className="text-2xl font-semibold text-success">
-                      {winner.territories.length}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-surface-1/70 p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted">Total Armies</div>
-                    <div className="text-2xl font-semibold text-success">{winner.armies}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-left shadow-inner">
-                <h4 className="mb-3 text-lg font-semibold text-heading">Battle Debrief</h4>
-                <ul className="space-y-3 text-sm text-muted">
-                  <li>
-                    <span className="font-semibold text-heading">Aggression Meter:</span>{' '}
-                    {aggressionLabel}
-                  </li>
-                  <li>
-                    <span className="font-semibold text-heading">Final Army Strength:</span>{' '}
-                    {winner.armies} troops standing guard.
-                  </li>
-                  <li>
-                    <span className="font-semibold text-heading">Eliminations:</span>{' '}
-                    {eliminatedPlayers.length} {eliminatedPlayers.length === 1 ? 'rival' : 'rivals'}{' '}
-                    knocked out during the march to victory.
-                  </li>
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {eliminatedPlayers.length > 0 && (
-            <div className="rounded-xl border border-border/60 bg-danger-soft/40 p-4 text-center shadow-inner">
-              <h4 className="mb-3 font-semibold text-muted">Players Eliminated This Turn</h4>
-              <div className="flex flex-wrap justify-center gap-2">
-                {eliminatedPlayers.map((playerId) => (
-                  <div
-                    key={playerId}
-                    className="rounded-full bg-red-900/60 px-3 py-1 text-xs font-medium text-red-200"
-                  >
-                    Player eliminated
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Gunt's Prescription - Loss Message */}
-          {guntsPrescriptions && isCurrentUserLoser && (
-            <div className="bg-danger-soft border-2 border-red-600/50 rounded-lg p-6 mb-6">
-              <div className="text-center">
-                <h4 className="text-xl font-bold text-red-400 mb-4">
-                  💊 Dr. Gunt's Prescription 💊
-                </h4>
-                <p className="text-red-300 mb-4 text-lg">"Take these L's and get better!"</p>
-                <div className="flex justify-center gap-3 mb-4">
-                  {/* Pill graphics with L's */}
-                  <div className="bg-red-600 text-white rounded-full w-16 h-10 flex items-center justify-center font-bold text-xl shadow-lg transform rotate-12">
-                    L
-                  </div>
-                  <div className="bg-red-500 text-white rounded-full w-16 h-10 flex items-center justify-center font-bold text-xl shadow-lg transform -rotate-6">
-                    L
-                  </div>
-                  <div className="bg-red-600 text-white rounded-full w-16 h-10 flex items-center justify-center font-bold text-xl shadow-lg transform rotate-6">
-                    L
-                  </div>
-                </div>
-                <p className="text-red-200 text-sm italic">
-                  Side effects may include: improved strategy, better dice rolls, and an
-                  overwhelming desire to rematch.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-            <FinalStandings className="h-full" />
-            {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
-          </div>
-
-          {roomId && <PostGameCharts roomId={roomId} className="shadow-inner" />}
-
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            {onNewGame && (
-              <button
-                type="button"
-                onClick={onNewGame}
-                className="flex-1 rounded-lg bg-primary px-4 py-3 font-semibold text-white transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
-              >
-                🎮 {newGameLabel}
-              </button>
-            )}
-            {onBackToMenu && (
-              <button
-                type="button"
-                onClick={onBackToMenu}
-                className="flex-1 rounded-lg bg-surface-2 px-4 py-3 font-semibold text-text transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
-              >
-                🏠 Back to Menu
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-border bg-surface-1 px-4 py-3 font-semibold text-text transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
+            {/* Header */}
+            <div
+              className={`sticky top-0 z-10 -mx-6 -mt-6 px-6 pb-8 pt-10 text-center shadow-[0_6px_12px_rgba(0,0,0,0.25)] ${
+                winner
+                  ? 'bg-gradient-to-r from-gold to-violet/90 text-white'
+                  : 'bg-gradient-to-r from-surface-2/80 to-surface-1/60'
+              }`}
+              style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.5rem)' }}
             >
-              📊 View Final Board
-            </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white transition hover:scale-105 hover:bg-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                aria-label="Close game report"
+              >
+                ×
+              </button>
+              <div className="mb-4 text-6xl drop-shadow-sm">{winner ? '🏆' : '🏳️'}</div>
+              <h2 className="mb-2 text-3xl font-extrabold text-white">
+                {winner ? 'Victory!' : 'Game Over'}
+              </h2>
+              <p className="mx-auto max-w-xl text-base text-white/90">
+                {winner
+                  ? `${winner.username} conquers the world!`
+                  : 'All players have been eliminated'}
+              </p>
+            </div>
+
+            {winner && (
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-center shadow-inner">
+                  <div
+                    className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg"
+                    style={{ backgroundColor: winner.color }}
+                  >
+                    {winner.username.charAt(0).toUpperCase()}
+                  </div>
+                  <h3 className="mb-2 text-xl font-bold text-heading">
+                    Champion: {winner.username}
+                  </h3>
+                  <p className="mx-auto mb-5 max-w-sm text-sm text-muted">
+                    {winner.username} outmaneuvered every rival to claim the board. Here’s how their
+                    empire finished the match.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="rounded-lg bg-surface-1/70 p-3">
+                      <div className="text-xs uppercase tracking-wide text-muted">
+                        Final Territories
+                      </div>
+                      <div className="text-2xl font-semibold text-success">
+                        {winner.territories.length}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-surface-1/70 p-3">
+                      <div className="text-xs uppercase tracking-wide text-muted">Total Armies</div>
+                      <div className="text-2xl font-semibold text-success">{winner.armies}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-left shadow-inner">
+                  <h4 className="mb-3 text-lg font-semibold text-heading">Battle Debrief</h4>
+                  <ul className="space-y-3 text-sm text-muted">
+                    <li>
+                      <span className="font-semibold text-heading">Aggression Meter:</span>{' '}
+                      {aggressionLabel}
+                    </li>
+                    <li>
+                      <span className="font-semibold text-heading">Final Army Strength:</span>{' '}
+                      {winner.armies} troops standing guard.
+                    </li>
+                    <li>
+                      <span className="font-semibold text-heading">Eliminations:</span>{' '}
+                      {eliminatedPlayers.length}{' '}
+                      {eliminatedPlayers.length === 1 ? 'rival' : 'rivals'} knocked out during the
+                      march to victory.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {eliminatedPlayers.length > 0 && (
+              <div className="rounded-xl border border-border/60 bg-danger-soft/40 p-4 text-center shadow-inner">
+                <h4 className="mb-3 font-semibold text-muted">Players Eliminated This Turn</h4>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {eliminatedPlayers.map((playerId) => (
+                    <div
+                      key={playerId}
+                      className="rounded-full bg-red-900/60 px-3 py-1 text-xs font-medium text-red-200"
+                    >
+                      Player eliminated
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Gunt's Prescription - Loss Message */}
+            {guntsPrescriptions && isCurrentUserLoser && (
+              <div className="bg-danger-soft border-2 border-red-600/50 rounded-lg p-6 mb-6">
+                <div className="text-center">
+                  <h4 className="text-xl font-bold text-red-400 mb-4">
+                    💊 Dr. Gunt's Prescription 💊
+                  </h4>
+                  <p className="text-red-300 mb-4 text-lg">"Take these L's and get better!"</p>
+                  <div className="flex justify-center gap-3 mb-4">
+                    {/* Pill graphics with L's */}
+                    <div className="bg-red-600 text-white rounded-full w-16 h-10 flex items-center justify-center font-bold text-xl shadow-lg transform rotate-12">
+                      L
+                    </div>
+                    <div className="bg-red-500 text-white rounded-full w-16 h-10 flex items-center justify-center font-bold text-xl shadow-lg transform -rotate-6">
+                      L
+                    </div>
+                    <div className="bg-red-600 text-white rounded-full w-16 h-10 flex items-center justify-center font-bold text-xl shadow-lg transform rotate-6">
+                      L
+                    </div>
+                  </div>
+                  <p className="text-red-200 text-sm italic">
+                    Side effects may include: improved strategy, better dice rolls, and an
+                    overwhelming desire to rematch.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              <FinalStandings className="h-full" />
+              {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
+            </div>
+
+            {roomId && <PostGameCharts roomId={roomId} className="shadow-inner" />}
+
+            {/* Action Buttons */}
+            <div
+              className="flex flex-col gap-3 sm:flex-row sm:justify-end"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
+            >
+              {onNewGame && (
+                <button
+                  type="button"
+                  onClick={onNewGame}
+                  className="flex-1 rounded-lg bg-primary px-4 py-3 font-semibold text-white transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
+                >
+                  🎮 {newGameLabel}
+                </button>
+              )}
+              {onBackToMenu && (
+                <button
+                  type="button"
+                  onClick={onBackToMenu}
+                  className="flex-1 rounded-lg bg-surface-2 px-4 py-3 font-semibold text-text transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
+                >
+                  🏠 Back to Menu
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 rounded-lg border border-border bg-surface-1 px-4 py-3 font-semibold text-text transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
+              >
+                📊 View Final Board
+              </button>
+            </div>
           </div>
         </div>
       </div>

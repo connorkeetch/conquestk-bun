@@ -1163,7 +1163,7 @@ const LobbyPage: React.FC = () => {
                       <Link
                         key={game.id}
                         to={`/room/${game.roomCode ?? game.id}`}
-                        className="panel block group transition-shadow hover:border-[color:var(--color-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)]"
+                        className="panel block w-full overflow-hidden group transition-shadow hover:border-[color:var(--color-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)]"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">

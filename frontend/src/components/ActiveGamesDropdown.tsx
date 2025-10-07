@@ -145,7 +145,14 @@ const ActiveGamesDropdown: React.FC = () => {
           >
             <span className="sr-only">Close active games menu</span>
           </button>
-          <div className="absolute right-0 mt-2 w-96 bg-surface-1 border border-border rounded-lg shadow-xl z-50 max-h-[600px] overflow-y-auto">
+          <div
+            className="absolute right-0 mt-2 bg-surface-1 border border-border rounded-lg shadow-xl z-50 overflow-y-auto"
+            style={{
+              width: 'min(24rem, calc(100vw - 1.5rem))',
+              maxHeight: 'min(28rem, calc(100vh - 6rem))',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
             {/* Header */}
             <div className="p-4 border-b border-border">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
