@@ -159,6 +159,8 @@ export const {
 } = panelsSlice.actions
 
 // Selectors
+export const selectPanels = (state: RootState) => Object.values(state.panels.panels)
+
 export const selectPanelConfig = (state: RootState, panelId: PanelId) =>
   state.panels.panels[panelId]
 
