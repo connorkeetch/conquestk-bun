@@ -8,7 +8,9 @@ import type { GamePlayer } from '../types/game'
 
 interface GameOverModalProps {
   isOpen: boolean
-  winner: GamePlayer | null
+  winners?: GamePlayer[]
+  // Backward compatibility: single-winner prop may still be provided
+  winner?: GamePlayer | null
   eliminatedPlayers: string[]
   onClose: () => void
   onNewGame?: () => void
@@ -19,6 +21,7 @@ interface GameOverModalProps {
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
   isOpen,
+  winners: winnersProp,
   winner,
   eliminatedPlayers,
   onClose,
@@ -29,16 +32,18 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 }) => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
-  const isCurrentUserWinner = Boolean(winner && winner.id === currentUserId)
-  const isCurrentUserLoser = Boolean(winner && winner.id !== currentUserId)
+  const winners = React.useMemo(() => (winnersProp && winnersProp.length ? winnersProp : winner ? [winner] : []), [winnersProp, winner])
+  const isCurrentUserWinner = winners.some((w) => w.id === currentUserId)
+  const isCurrentUserLoser = winners.length > 0 && !isCurrentUserWinner
   const previousThemeRef = useRef<string | null>(null)
   const aggressionLabel = useMemo(() => {
-    if (!winner) return null
-    const territoryTotal = winner.territories.length
+    const primary = winners[0]
+    if (!primary) return null
+    const territoryTotal = primary.territories.length
     if (territoryTotal >= 20) return 'Conqueror'
     if (territoryTotal >= 10) return 'Opportunist'
     return 'Patient tactician'
-  }, [winner])
+  }, [winners])
 
   const restoreTheme = useCallback(() => {
     const root = document.documentElement
@@ -100,33 +105,37 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               >
                 ×
               </button>
-              <div className="mb-4 text-6xl drop-shadow-sm">{isCurrentUserWinner ? '🏆' : winner ? '💀' : '🏳️'}</div>
+              <div className="mb-4 text-6xl drop-shadow-sm">{isCurrentUserWinner ? '🏆' : winners.length > 0 ? '💀' : '🏳️'}</div>
               <h2 className="mb-2 text-3xl font-extrabold text-white">
-                {winner ? (isCurrentUserWinner ? 'Victory!' : 'Defeat') : 'Game Over'}
+                {winners.length > 0 ? (isCurrentUserWinner ? 'Victory!' : 'Defeat') : 'Game Over'}
               </h2>
               <p className="mx-auto max-w-xl text-base text-white/90">
-                {winner
+                {winners.length > 0
                   ? isCurrentUserWinner
-                    ? `${winner.username} conquers the world!`
-                    : `${winner.username} conquers the world.`
+                    ? (winners.length === 1
+                        ? `${winners[0].username} conquers the world!`
+                        : `${winners.map((w) => w.username).join(', ')} triumph!`)
+                    : (winners.length === 1
+                        ? `${winners[0].username} conquers the world.`
+                        : `${winners.map((w) => w.username).join(', ')} triumph.`)
                   : 'All players have been eliminated'}
               </p>
             </div>
 
-            {winner && (
+            {winners.length === 1 && (
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-center shadow-inner">
                   <div
                     className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg"
-                    style={{ backgroundColor: winner.color }}
+                    style={{ backgroundColor: winners[0].color }}
                   >
-                    {winner.username.charAt(0).toUpperCase()}
+                    {winners[0].username.charAt(0).toUpperCase()}
                   </div>
                   <h3 className="mb-2 text-xl font-bold text-heading">
-                    Champion: {winner.username}
+                    Champion: {winners[0].username}
                   </h3>
                   <p className="mx-auto mb-5 max-w-sm text-sm text-muted">
-                    {winner.username} outmaneuvered every rival to claim the board. Here’s how their
+                    {winners[0].username} outmaneuvered every rival to claim the board. Here’s how their
                     empire finished the match.
                   </p>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -134,13 +143,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                       <div className="text-xs uppercase tracking-wide text-muted">
                         Final Territories
                       </div>
-                      <div className="text-2xl font-semibold text-success">
-                        {winner.territories.length}
-                      </div>
+                      <div className="text-2xl font-semibold text-success">{winners[0].territories.length}</div>
                     </div>
                     <div className="rounded-lg bg-surface-1/70 p-3">
                       <div className="text-xs uppercase tracking-wide text-muted">Total Armies</div>
-                      <div className="text-2xl font-semibold text-success">{winner.armies}</div>
+                      <div className="text-2xl font-semibold text-success">{winners[0].armies}</div>
                     </div>
                   </div>
                 </div>
@@ -153,7 +160,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                     </li>
                     <li>
                       <span className="font-semibold text-heading">Final Army Strength:</span>{' '}
-                      {winner.armies} troops standing guard.
+                      {winners[0].armies} troops standing guard.
                     </li>
                     <li>
                       <span className="font-semibold text-heading">Eliminations:</span>{' '}
@@ -162,6 +169,29 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                       march to victory.
                     </li>
                   </ul>
+                </div>
+              </div>
+            )}
+
+            {winners.length > 1 && (
+              <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 shadow-inner">
+                <h3 className="mb-4 text-center text-xl font-bold text-heading">Champions</h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {winners.map((w) => (
+                    <div key={w.id} className="flex items-center gap-3 rounded-lg bg-surface-1/70 p-3">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
+                        style={{ backgroundColor: w.color }}
+                        title={w.username}
+                      >
+                        {w.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-heading">{w.username}</div>
+                        <div className="text-xs text-muted">Territories: {w.territories.length} • Armies: {w.armies}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -254,6 +284,7 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
   const territoriesByPlayer = new Map<string, number>()
   const armiesByPlayer = new Map<string, number>()
   const [elimTurn, setElimTurn] = React.useState<Record<string, number | null>>({})
+  const [cpDelta, setCpDelta] = React.useState<Record<string, number>>({})
 
   React.useEffect(() => {
     let active = true
@@ -277,6 +308,29 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
           }
         })
         if (active) setElimTurn(turns)
+
+        // Attempt to extract rating/CP deltas if backend provided
+        const deltas: Record<string, number> = {}
+        const maybe = resp as unknown as Record<string, unknown>
+        const tryMaps: Array<unknown> = []
+        if (maybe && typeof maybe === 'object') {
+          // Common shapes to try: summary.ratingChanges, ratingChanges, cpDeltaByPlayer, skillRatingDeltas
+          const candidates = [
+            (maybe.summary as unknown) as Record<string, unknown>,
+            (maybe as Record<string, unknown>).ratingChanges as unknown,
+            (maybe as Record<string, unknown>).cpDeltaByPlayer as unknown,
+            (maybe as Record<string, unknown>).skillRatingDeltas as unknown,
+          ]
+          for (const c of candidates) if (c && typeof c === 'object') tryMaps.push(c)
+        }
+        for (const m of tryMaps) {
+          const obj = m as Record<string, unknown>
+          for (const [k, v] of Object.entries(obj)) {
+            const num = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN
+            if (Number.isFinite(num)) deltas[k] = Math.trunc(num as number)
+          }
+        }
+        if (active) setCpDelta(deltas)
       } catch {
         /* ignore errors; elimination turn info is optional */
       }
@@ -299,6 +353,7 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
     armies: armiesByPlayer.get(p.id) ?? 0,
     eliminated: p.isEliminated,
     eliminatedTurn: elimTurn[p.id] ?? null,
+    cp: typeof cpDelta[p.id] === 'number' ? cpDelta[p.id] : null,
   }))
   const maxTerr = Math.max(1, ...entries.map((e) => e.territories))
   const maxArmy = Math.max(1, ...entries.map((e) => e.armies))
@@ -317,6 +372,11 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
               />
               <div className={`font-medium ${e.eliminated ? 'opacity-80' : ''}`}>
                 {idx + 1}. {e.name} {e.eliminated ? <span title="Eliminated">💀</span> : null}
+                {typeof e.cp === 'number' ? (
+                  <span className={`ml-2 text-[10px] ${e.cp >= 0 ? 'text-green-400' : 'text-red-400'}`} title="CP change">
+                    {e.cp >= 0 ? `+${e.cp}` : e.cp} CP
+                  </span>
+                ) : null}
                 {e.eliminated && e.eliminatedTurn ? (
                   <div className="text-[10px] text-muted">Eliminated on T{e.eliminatedTurn}</div>
                 ) : null}
@@ -351,6 +411,7 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ r
   const game = useAppSelector((s) => s.game.currentGame)
   const [stats, setStats] = React.useState<Array<Record<string, unknown>> | null>(null)
   const [error, setError] = React.useState<string | null>(null)
+  const [cpChange, setCpChange] = React.useState<number | null>(null)
   const me = React.useMemo(() => {
     if (!game || !currentUserId) return null
     return game.players.find((p) => p.userId === currentUserId) || null
@@ -363,6 +424,32 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ r
         const res = await gameService.getGameLog(roomId)
         if (!active) return
         setStats(Array.isArray(res.stats) ? res.stats : [])
+        // Try to glean CP/rating delta for current user
+        const maybe = res as unknown as Record<string, unknown>
+        const candidates: Array<Record<string, unknown> | undefined> = []
+        if (maybe && typeof maybe === 'object') {
+          const summary = maybe.summary as Record<string, unknown> | undefined
+          if (summary && typeof summary === 'object') candidates.push(summary)
+          const ratingChanges = maybe.ratingChanges as Record<string, unknown> | undefined
+          if (ratingChanges && typeof ratingChanges === 'object') candidates.push(ratingChanges)
+          const cpDeltaByPlayer = maybe.cpDeltaByPlayer as Record<string, unknown> | undefined
+          if (cpDeltaByPlayer && typeof cpDeltaByPlayer === 'object') candidates.push(cpDeltaByPlayer)
+          const skillRatingDeltas = maybe.skillRatingDeltas as Record<string, unknown> | undefined
+          if (skillRatingDeltas && typeof skillRatingDeltas === 'object') candidates.push(skillRatingDeltas)
+        }
+        let delta: number | null = null
+        if (me) {
+          for (const obj of candidates) {
+            if (!obj) continue
+            const raw = obj[me.id] ?? obj[me.userId || '']
+            const num = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN
+            if (Number.isFinite(num)) {
+              delta = Math.trunc(num as number)
+              break
+            }
+          }
+        }
+        if (active) setCpChange(delta)
       } catch {
         if (!active) return
         setError('Unable to load debrief stats')
@@ -419,6 +506,14 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({ r
         <li><span className="font-semibold text-heading">Final Armies:</span> {finalArmies}</li>
         <li><span className="font-semibold text-heading">Most Territories:</span> {maxTerritories}</li>
         <li><span className="font-semibold text-heading">Largest Army:</span> {maxArmies}</li>
+        {typeof cpChange === 'number' && (
+          <li>
+            <span className="font-semibold text-heading">CP Change:</span>{' '}
+            <span className={cpChange >= 0 ? 'text-green-400' : 'text-red-400'}>
+              {cpChange >= 0 ? `+${cpChange}` : cpChange}
+            </span>
+          </li>
+        )}
         {me.isEliminated && (
           <li><span className="font-semibold text-heading">Eliminated:</span> {eliminatedTurn ? `Turn T${eliminatedTurn}` : 'Yes'}</li>
         )}
