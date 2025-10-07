@@ -248,7 +248,7 @@ const LobbyPage: React.FC = () => {
   const [resendMessage, setResendMessage] = useState('')
   const [filters, setFilters] = useState<LobbyFilters>({ ...DEFAULT_LOBBY_FILTERS })
   const { section } = useParams<{ section?: string }>()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [, setSearchParams] = useSearchParams()
   const filterParam = useQueryParam('filter')
 
   // Table mode (desktop) state: column toggles and sorting
@@ -985,7 +985,7 @@ const LobbyPage: React.FC = () => {
             type="button"
             className={`tab ${activeTab === 'my-games' ? 'tab-active' : ''}`}
             onClick={() => {
-              const currentFilter = searchParams.get('filter') || myGamesFilter || 'all'
+              const currentFilter = filterParam || myGamesFilter || 'all'
               navigate(`/lobby/my-games?filter=${encodeURIComponent(currentFilter)}`)
             }}
           >
