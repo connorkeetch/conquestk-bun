@@ -1,3 +1,4 @@
+import { computeConquestOdds } from '@shared/utils/battleOdds'
 import { computeRollOdds } from '@shared/utils/combatOdds'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PlayerColor } from '@/constants/colors'
@@ -370,12 +371,23 @@ export default function UnifiedMapDisplay({
           if (srcArmies <= 1) return null
           const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
           const def = Math.min(2, Math.max(1, dstArmies)) as 1 | 2
+          // Full engagement conquest probability based on current stacks
+          const full = computeConquestOdds(srcArmies, dstArmies)
+          const winChance = full.winProbability * 100
+          // Keep per-roll odds around in case we want to show supporting info later
           const odds = computeRollOdds(att, def)
-          const winChance =
-            (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
           const left = (dst.x / mapData.width) * 100
           const top = (dst.y / mapData.height) * 100
-          return { att, def, odds, winChance, left, top }
+          return {
+            att,
+            def,
+            odds,
+            winChance,
+            left,
+            top,
+            expectedAttackerIfWin: full.conditional?.attackerIfWin,
+            expectedDefenderIfLoss: full.conditional?.defenderIfLoss,
+          }
         })()
 
   const conquestPopup =
@@ -684,6 +696,17 @@ export default function UnifiedMapDisplay({
             topPercent={oddsTooltip.top}
             attackerDice={oddsTooltip.att}
             defenderDice={oddsTooltip.def}
+            expectedAttackerIfWin={oddsTooltip.expectedAttackerIfWin}
+            expectedDefenderIfLoss={oddsTooltip.expectedDefenderIfLoss}
+            attackerArmies={(() => {
+              const src = territories.find((t) => t.id === (selectedTerritoryId ?? ''))
+              return src?.armies ?? 0
+            })()}
+            defenderArmies={(() => {
+              const id = selectedTargetTerritoryId ?? hoveredTargetId
+              const dst = territories.find((t) => t.id === (id ?? ''))
+              return dst?.armies ?? 0
+            })()}
             winChancePercent={oddsTooltip.winChance}
             onAttack={() => {
               const id = selectedTargetTerritoryId ?? hoveredTargetId

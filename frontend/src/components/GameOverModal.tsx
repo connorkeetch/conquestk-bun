@@ -48,26 +48,17 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
     }
   }, [])
 
-  // Victory state effect system
+  // Keep the report styled within the active theme; avoid forcing a temporary theme
   useEffect(() => {
-    if (!isOpen || !winner) return undefined
-
+    if (!isOpen) return undefined
     const root = document.documentElement
     if (previousThemeRef.current === null) {
       previousThemeRef.current = root.getAttribute('data-theme')
     }
-
-    root.setAttribute('data-theme', 'victory')
-
-    const timer = window.setTimeout(() => {
-      restoreTheme()
-    }, 5000)
-
     return () => {
-      window.clearTimeout(timer)
       restoreTheme()
     }
-  }, [isOpen, winner, restoreTheme])
+  }, [isOpen, restoreTheme])
 
   useEffect(() => {
     return () => {
@@ -384,14 +375,9 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     const run = async () => {
       try {
         const resp = await gameService.getGameLog(roomId)
-        const fromField = (resp as { log?: unknown[] } | null)?.log
-        const entriesUnknown = Array.isArray(fromField)
-          ? fromField
-          : Array.isArray(resp)
-            ? (resp as unknown[])
-            : []
+        const entries = Array.isArray(resp?.log) ? (resp.log as LogEntry[]) : []
         if (!active) return
-        setLog(Array.isArray(entriesUnknown) ? (entriesUnknown as LogEntry[]) : [])
+        setLog(entries)
       } catch (_e) {
         if (!active) return
         setError('Unable to load game log')

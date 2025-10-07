@@ -31,7 +31,7 @@ _Last updated: September 21, 2025_
 ### Option A — Harden the Responsive PWA (Web-only)
 **Summary:** Double down on the existing responsive client; encourage Add to Home Screen installs rather than shipping binaries.
 
-**Core workstreams**
+**Core workstreams** _(see [PWA Hardening Checklist](./pwa-hardening-checklist.md) for step-by-step tasks and definitions of done)_
 1. Audit Tailwind breakpoints and touch interactions (especially the game board canvas) for high-DPI devices.
 2. Implement or harden service worker caching via Vite/Workbox, covering assets and limited background sync.
 3. Refresh `manifest.json`, icons, deep-link handling, and install prompts.
