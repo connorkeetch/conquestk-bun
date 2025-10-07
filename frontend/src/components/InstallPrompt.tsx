@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
@@ -23,7 +23,7 @@ export default function InstallPrompt() {
   const [visible, setVisible] = useState(false)
   const [iosVisible, setIosVisible] = useState(false)
   // Track first render to delay iOS coachmark if needed
-  const _firstRender = useRef(true)
+  // (not currently used; kept for future tweaks)
 
   const installed = useMemo(() => isStandalone(), [])
 

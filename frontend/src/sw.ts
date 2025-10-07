@@ -6,14 +6,13 @@ declare let self: ServiceWorkerGlobalScope & typeof globalThis
 
 import { clientsClaim } from 'workbox-core'
 import { ExpirationPlugin } from 'workbox-expiration'
-import { enable } from 'workbox-navigation-preload'
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
   matchPrecache,
   precacheAndRoute,
 } from 'workbox-precaching'
-import { NavigationRoute, registerRoute, setCatchHandler, type RouteHandlerCallbackOptions } from 'workbox-routing'
+import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
 import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies'
 
 // Immediately activate the new SW and control uncontrolled clients
@@ -70,8 +69,8 @@ registerRoute(
 )
 
 // Offline catch handler: return offline page for navigation requests
-setCatchHandler(async (options: RouteHandlerCallbackOptions) => {
-  const event = options.event as FetchEvent
+setCatchHandler(async (options: unknown) => {
+  const event = (options as { event: FetchEvent }).event
   if (event.request.destination === 'document') {
     const offline = await matchPrecache('/offline.html')
     if (offline) return offline
@@ -127,7 +126,6 @@ self.addEventListener('push', (event: PushEvent) => {
     badge: notificationData.badge || '/icon-192.png',
     data: mergedData,
     tag: notificationData.tag || 'risk-game-notification',
-    renotify: notificationData.renotify ?? true,
   }
 
   event.waitUntil(
