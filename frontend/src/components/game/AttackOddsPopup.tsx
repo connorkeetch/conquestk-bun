@@ -90,6 +90,11 @@ export default function AttackOddsPopup({
     [leftPercent, topPercent],
   )
 
+  // Clamp initial position and whenever anchor changes so the popup starts in view
+  useEffect(() => {
+    setOffset(clamp(0, 0))
+  }, [clamp])
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       const d = dragRef.current
