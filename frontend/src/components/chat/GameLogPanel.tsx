@@ -42,7 +42,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const room = useAppSelector((s) => s.room.currentRoom)
   const game = useAppSelector((s) => s.game.currentGame)
   const clientLogs = useAppSelector((s) => s.uiRoom.clientLogs ?? [])
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? null)
   const [entries, setEntries] = useState<LogEntry[]>([])
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
@@ -58,21 +57,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
   const redact = fogOn && !gameEnded
   const backfillLoadedRef = useRef(false)
-
-  const isParticipant = useMemo(() => {
-    if (!room || !currentUserId) {
-      return false
-    }
-    if (room.hostId && room.hostId === currentUserId) {
-      return true
-    }
-    const players = Array.isArray(room.players) ? room.players : []
-    return players.some((player) => {
-      const candidate = (player.userId ?? player.id) as unknown
-      const participantId = typeof candidate === 'string' ? candidate : null
-      return participantId === currentUserId
-    })
-  }, [room, currentUserId])
 
   const toSafeInt = useMemo(
     () =>
@@ -164,9 +148,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     if (!gameId || redact || backfillLoadedRef.current) {
       return
     }
-    if (!isFinished && !isParticipant) {
-      return
-    }
+    // With server-side access opened to any authenticated user,
+    // we allow backfill for all logged-in users (still honoring fog-of-war redaction).
     let cancelled = false
     backfillLoadedRef.current = true
     ;(async () => {
@@ -513,17 +496,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [
-    gameId,
-    redact,
-    isParticipant,
-    playerName,
-    territoryName,
-    toSafeInt,
-    game?.phase,
-    room?.status,
-    playerColor,
-  ])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
 
   useEffect(() => {
     function add(text: string, ts?: Date, focusTerritories?: string[]) {

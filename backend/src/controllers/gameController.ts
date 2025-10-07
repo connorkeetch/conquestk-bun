@@ -765,21 +765,6 @@ export class GameController {
         return res.status(404).json({ message: 'Room not found' })
       }
 
-      const players = Array.isArray(room.players) ? room.players : []
-      const isParticipant = Boolean(
-        (room.hostId && room.hostId === userId) ||
-          players.some((player) => {
-            const candidate = (player.userId ?? player.id) as unknown
-            const participantId = typeof candidate === 'string' ? candidate : null
-            return participantId === userId
-          }),
-      )
-
-      // Only allow active-game access for participants; everyone else waits until it ends
-      if (!isParticipant && room.status !== 'completed' && room.status !== 'abandoned') {
-        return res.status(403).json({ message: 'Game log available after game ends' })
-      }
-
       const [log, stats] = await Promise.all([
         this.gameService.getBattleLog(roomId),
         (async () => {
@@ -795,6 +780,44 @@ export class GameController {
           }
         })(),
       ])
+
+      // Server-side fog-of-war redaction for non-participants during active games
+      const players = Array.isArray(room.players) ? room.players : []
+      const isParticipant = Boolean(
+        (room.hostId && room.hostId === userId) ||
+          players.some((player) => {
+            const candidate = (player.userId ?? player.id) as unknown
+            const participantId = typeof candidate === 'string' ? candidate : null
+            return participantId === userId
+          }),
+      )
+      const fogOn = (room.fogOfWar as string | undefined) && room.fogOfWar !== 'off'
+      const isActive = room.status === 'active'
+
+      if (fogOn && isActive && !isParticipant) {
+        // Redact sensitive fields from log entries while game is active for spectators
+        const redactedLog = (Array.isArray(log) ? log : []).map((entry) => {
+          const e = entry as Record<string, unknown>
+          const type = (e.type as string | undefined) ?? undefined
+          const timestamp = (e.timestamp as string | undefined) ?? undefined
+          // Only keep minimal safe fields per entry type
+          if (type === 'TURN') {
+            // Reveal only the event timing; omit playerId and reinforcement counts
+            const event = e.event as string | undefined
+            return event ? { type, timestamp, event } : { type, timestamp }
+          }
+          if (type === 'LIFECYCLE' || type === 'RATING') {
+            // Safe to pass through minimal info
+            return { type, timestamp }
+          }
+          // BATTLE, FORTIFY, REINFORCE, TREASURE, TREASURE_CASH or unknown types
+          return { type: type ?? 'BATTLE', timestamp }
+        })
+
+        // Do not expose per-turn stats during active fog-of-war games to spectators
+        return res.json({ log: redactedLog, stats: [] })
+      }
+
       return res.json({ log, stats })
     } catch (error) {
       logger.error('Get room log error:', error)
