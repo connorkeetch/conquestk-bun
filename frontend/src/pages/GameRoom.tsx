@@ -1417,7 +1417,10 @@ export default function GameRoom() {
                         const winners = currentGame.players.filter((p) => !p.isEliminated)
                         if (!winners.length) return null
                         const names = winners.map((w) => w.username)
-                        const label = names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} +${names.length - 3}`
+                        const label =
+                          names.length <= 3
+                            ? names.join(', ')
+                            : `${names.slice(0, 3).join(', ')} +${names.length - 3}`
                         return (
                           <span className="inline-flex min-w-0 items-center gap-2">
                             <span
@@ -1426,7 +1429,9 @@ export default function GameRoom() {
                               style={{ background: getColorValue(winners[0].color) }}
                               title={label}
                             />
-                            <span className="max-w-[200px] truncate font-medium">Winner{winners.length > 1 ? 's' : ''}: {label}</span>
+                            <span className="max-w-[200px] truncate font-medium">
+                              Winner{winners.length > 1 ? 's' : ''}: {label}
+                            </span>
                           </span>
                         )
                       })()}
@@ -1498,7 +1503,8 @@ export default function GameRoom() {
 
                 {/* Actions (right on wide, centered below on wrap) */}
                 <div className="order-2 flex w-full flex-wrap items-center justify-center gap-2 sm:order-none sm:w-auto sm:ml-auto">
-                  {isMyTurn && !isFinishedPhase &&
+                  {isMyTurn &&
+                    !isFinishedPhase &&
                     isGameActive &&
                     gamePhase === 'reinforcement' &&
                     placementHistoryLen > 0 && (
@@ -1511,16 +1517,20 @@ export default function GameRoom() {
                         ↶ Undo
                       </button>
                     )}
-                  {isMyTurn && !isFinishedPhase && isGameActive && gamePhase === 'fortify' && hasFortifyUndo && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => void dispatch(undoFortify())}
-                      title="Undo last fortify (Z)"
-                    >
-                      ↶ Undo
-                    </button>
-                  )}
+                  {isMyTurn &&
+                    !isFinishedPhase &&
+                    isGameActive &&
+                    gamePhase === 'fortify' &&
+                    hasFortifyUndo && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => void dispatch(undoFortify())}
+                        title="Undo last fortify (Z)"
+                      >
+                        ↶ Undo
+                      </button>
+                    )}
                   {isMyTurn && !isFinishedPhase && canGoBackToReinforcement && (
                     <button
                       type="button"

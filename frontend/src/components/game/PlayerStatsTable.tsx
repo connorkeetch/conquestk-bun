@@ -34,7 +34,9 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
           : player.cards?.length || 0
 
         // Calculate reinforcements per turn (territories / 3, rounded down, min 3)
-        const baseReinforcements = player.isEliminated ? 0 : Math.max(3, Math.floor(territoryCount / 3))
+        const baseReinforcements = player.isEliminated
+          ? 0
+          : Math.max(3, Math.floor(territoryCount / 3))
 
         return {
           ...player,
@@ -145,7 +147,11 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                             type="button"
                             className="truncate text-[color:var(--text)] hover:underline text-left font-medium"
                             onClick={() => handleProfileClick(player.username)}
-                            title={player.isEliminated ? 'Eliminated' : `${player.username} (${skillRating} CP)`}
+                            title={
+                              player.isEliminated
+                                ? 'Eliminated'
+                                : `${player.username} (${skillRating} CP)`
+                            }
                           >
                             {player.isEliminated ? (
                               <>
