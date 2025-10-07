@@ -20,6 +20,30 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Align 401 handling with global client: clear bad token and redirect to login
+let redirectingOn401 = false
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const status = error?.response?.status
+    if (status === 401) {
+      const token = localStorage.getItem('token')
+      if (token) localStorage.removeItem('token')
+      const path = typeof window !== 'undefined' ? window.location.pathname : ''
+      const isAuthRoute =
+        path.startsWith('/login') ||
+        path.startsWith('/register') ||
+        path.startsWith('/forgot-password') ||
+        path.startsWith('/reset-password')
+      if (token && !isAuthRoute && !redirectingOn401) {
+        redirectingOn401 = true
+        window.location.assign('/login')
+      }
+    }
+    return Promise.reject(error)
+  },
+)
+
 export interface CreateGameData {
   name: string
   maxPlayers: number
