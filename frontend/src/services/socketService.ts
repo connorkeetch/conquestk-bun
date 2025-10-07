@@ -429,20 +429,24 @@ class SocketService {
 
       const currentUserId = viewerId
 
-      // Handle turn notifications for phase changes
+      // Handle a single turn-start notification (avoid per-phase spam)
+      // Only notify when the turn first switches to the current user.
       if (payload.type === 'PHASE_CHANGE' && payload.currentPlayer === currentUserId) {
-        notificationService.addNotification({
-          type: 'turn_reminder',
-          title: "It's your turn!",
-          message: `It's your turn - ${payload.phase} phase`,
-          read: false,
-          actionUrl: `/room/${payload.roomId}`,
-          actionLabel: 'Go to game',
-          metadata: {
-            gameId: payload.roomId,
-          },
-        })
-        audioService.playEffect('turn')
+        const wasMyTurn = currentGame?.currentPlayer === currentUserId
+        if (!wasMyTurn) {
+          notificationService.addNotification({
+            type: 'turn_reminder',
+            title: "It's your turn!",
+            message: `It's your turn - ${payload.phase} phase`,
+            read: false,
+            actionUrl: `/room/${payload.roomId}`,
+            actionLabel: 'Go to game',
+            metadata: {
+              gameId: payload.roomId,
+            },
+          })
+          audioService.playEffect('turn')
+        }
       }
 
       // Reset local placement tracking at the start of reinforcement
