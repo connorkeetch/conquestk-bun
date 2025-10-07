@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react'
+import { computeRollOdds } from '@shared/utils/combatOdds'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { gameService } from '@/services/gameService'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
@@ -28,85 +29,146 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
   const isCurrentUserLoser = winner && winner.id !== currentUserId
+  const previousThemeRef = useRef<string | null>(null)
+  const aggressionLabel = useMemo(() => {
+    if (!winner) return null
+    const territoryTotal = winner.territories.length
+    if (territoryTotal >= 20) return 'Conqueror'
+    if (territoryTotal >= 10) return 'Opportunist'
+    return 'Patient tactician'
+  }, [winner])
+
+  const restoreTheme = useCallback(() => {
+    const root = document.documentElement
+    const prev = previousThemeRef.current
+    if (prev) {
+      root.setAttribute('data-theme', prev)
+    } else {
+      root.removeAttribute('data-theme')
+    }
+  }, [])
 
   // Victory state effect system
   useEffect(() => {
-    if (isOpen && winner) {
-      document.documentElement.setAttribute('data-theme', 'victory')
+    if (!isOpen || !winner) return undefined
 
-      // Remove after 5 seconds
-      const timer = setTimeout(() => {
-        document.documentElement.removeAttribute('data-theme')
-      }, 5000)
-
-      return () => clearTimeout(timer)
+    const root = document.documentElement
+    if (previousThemeRef.current === null) {
+      previousThemeRef.current = root.getAttribute('data-theme')
     }
-  }, [isOpen, winner])
+
+    root.setAttribute('data-theme', 'victory')
+
+    const timer = window.setTimeout(() => {
+      restoreTheme()
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timer)
+      restoreTheme()
+    }
+  }, [isOpen, winner, restoreTheme])
+
+  useEffect(() => {
+    return () => {
+      restoreTheme()
+    }
+  }, [restoreTheme])
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50">
-      <div className="bg-surface-1 border border-border rounded-xl shadow-2xl max-w-lg w-full m-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-8">
+      <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-surface-1 shadow-2xl">
         {/* Header */}
         <div
-          className={`p-6 text-center ${
+          className={`relative px-6 pb-8 pt-10 text-center ${
             winner
-              ? 'bg-gradient-to-r from-gold to-violet animate-victory-pulse'
-              : 'bg-gradient-to-r from-surface-2 to-surface-1'
+              ? 'bg-gradient-to-r from-gold to-violet/90 text-white'
+              : 'bg-gradient-to-r from-surface-2/80 to-surface-1/60'
           }`}
         >
-          <div className="text-6xl mb-4">{winner ? '🏆' : '🏳️'}</div>
-          <h2 className="text-3xl font-bold text-white mb-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white transition hover:scale-105 hover:bg-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            aria-label="Close game report"
+          >
+            ×
+          </button>
+          <div className="mb-4 text-6xl drop-shadow-sm">{winner ? '🏆' : '🏳️'}</div>
+          <h2 className="mb-2 text-3xl font-extrabold text-white">
             {winner ? 'Victory!' : 'Game Over'}
           </h2>
-          <p className="text-white/90">
+          <p className="mx-auto max-w-xl text-base text-white/90">
             {winner ? `${winner.username} conquers the world!` : 'All players have been eliminated'}
           </p>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="space-y-6 p-6 lg:p-8">
           {winner && (
-            <div className="text-center mb-6">
-              <div
-                className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white shadow-lg`}
-                style={{ backgroundColor: winner.color }}
-              >
-                {winner.username.charAt(0).toUpperCase()}
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Champion: {winner.username}</h3>
-              <div className="bg-warning-soft border border-yellow-600/50 rounded-lg p-4">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-center shadow-inner">
+                <div
+                  className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg"
+                  style={{ backgroundColor: winner.color }}
+                >
+                  {winner.username.charAt(0).toUpperCase()}
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-heading">Champion: {winner.username}</h3>
+                <p className="mx-auto mb-5 max-w-sm text-sm text-muted">
+                  {winner.username} outmaneuvered every rival to claim the board. Here’s how their
+                  empire finished the match.
+                </p>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-yellow-300">Final Territories:</span>
-                    <div className="text-yellow-200">{winner.territories.length}</div>
+                  <div className="rounded-lg bg-surface-1/70 p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted">
+                      Final Territories
+                    </div>
+                    <div className="text-2xl font-semibold text-success">
+                      {winner.territories.length}
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-medium text-yellow-300">Total Armies:</span>
-                    <div className="text-yellow-200">{winner.armies}</div>
+                  <div className="rounded-lg bg-surface-1/70 p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted">Total Armies</div>
+                    <div className="text-2xl font-semibold text-success">{winner.armies}</div>
                   </div>
                 </div>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-left shadow-inner">
+                <h4 className="mb-3 text-lg font-semibold text-heading">Battle Debrief</h4>
+                <ul className="space-y-3 text-sm text-muted">
+                  <li>
+                    <span className="font-semibold text-heading">Aggression Meter:</span>{' '}
+                    {aggressionLabel}
+                  </li>
+                  <li>
+                    <span className="font-semibold text-heading">Final Army Strength:</span>{' '}
+                    {winner.armies} troops standing guard.
+                  </li>
+                  <li>
+                    <span className="font-semibold text-heading">Eliminations:</span>{' '}
+                    {eliminatedPlayers.length} {eliminatedPlayers.length === 1 ? 'rival' : 'rivals'}{' '}
+                    knocked out during the march to victory.
+                  </li>
+                </ul>
               </div>
             </div>
           )}
 
           {eliminatedPlayers.length > 0 && (
-            <div className="mb-6">
-              <h4 className="font-semibold text-muted mb-3 text-center">
-                Players Eliminated This Turn
-              </h4>
-              <div className="bg-danger-soft border border-red-600/50 rounded-lg p-4">
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {eliminatedPlayers.map((playerId) => (
-                    <div
-                      key={playerId}
-                      className="bg-red-800/50 text-red-300 px-3 py-1 rounded-full text-sm"
-                    >
-                      Player eliminated
-                    </div>
-                  ))}
-                </div>
+            <div className="rounded-xl border border-border/60 bg-danger-soft/40 p-4 text-center shadow-inner">
+              <h4 className="mb-3 font-semibold text-muted">Players Eliminated This Turn</h4>
+              <div className="flex flex-wrap justify-center gap-2">
+                {eliminatedPlayers.map((playerId) => (
+                  <div
+                    key={playerId}
+                    className="rounded-full bg-red-900/60 px-3 py-1 text-xs font-medium text-red-200"
+                  >
+                    Player eliminated
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -139,22 +201,20 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </div>
           )}
 
-          {/* Final standings summary (armies and territories) */}
-          <FinalStandings />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+            <FinalStandings className="h-full" />
+            {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
+          </div>
 
-          {/* Game progress charts */}
-          {roomId && <PostGameCharts roomId={roomId} />}
-
-          {/* Key moments timeline */}
-          {roomId && <KeyMomentsTimeline roomId={roomId} />}
+          {roomId && <PostGameCharts roomId={roomId} className="shadow-inner" />}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             {onNewGame && (
               <button
                 type="button"
                 onClick={onNewGame}
-                className="flex-1 bg-primary hover:brightness-110 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                className="flex-1 rounded-lg bg-primary px-4 py-3 font-semibold text-white transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
               >
                 🎮 {newGameLabel}
               </button>
@@ -163,7 +223,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               <button
                 type="button"
                 onClick={onBackToMenu}
-                className="flex-1 bg-surface-2 hover:brightness-110 text-text py-3 px-4 rounded-lg font-semibold transition-all"
+                className="flex-1 rounded-lg bg-surface-2 px-4 py-3 font-semibold text-text transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
               >
                 🏠 Back to Menu
               </button>
@@ -171,7 +231,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-surface-1 hover:brightness-110 text-text py-3 px-4 rounded-lg font-semibold transition-all border border-border"
+              className="flex-1 rounded-lg border border-border bg-surface-1 px-4 py-3 font-semibold text-text transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
             >
               📊 View Final Board
             </button>
@@ -182,7 +242,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   )
 }
 
-const FinalStandings: React.FC = () => {
+const FinalStandings: React.FC<{ className?: string }> = ({ className }) => {
   const game = useAppSelector((s) => s.game.currentGame)
   if (!game) return null
   const players = game.players
@@ -206,8 +266,8 @@ const FinalStandings: React.FC = () => {
   const sorted = [...entries].sort((a, b) => b.territories - a.territories || b.armies - a.armies)
 
   return (
-    <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
-      <h4 className="font-semibold text-muted mb-3 text-center">Final Standings</h4>
+    <div className={`rounded-lg border border-border/60 bg-surface-2/50 p-4 ${className ?? ''}`}>
+      <h4 className="mb-3 text-center font-semibold text-muted">Final Standings</h4>
       <div className="space-y-3">
         {sorted.map((e, idx) => (
           <div key={e.id} className="grid grid-cols-12 items-center gap-2 text-sm">
@@ -261,12 +321,52 @@ type LogEntry =
       defendingTerritoryId: string
       attackerId: string
       defenderId: string | null
+      losses?: { attacker: number; defender: number }
       conquered: boolean
     }
   | { type: 'TREASURE'; timestamp: string; userId: string; metal: string }
   | { type: 'LIFECYCLE'; timestamp: string; event: string }
 
-const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
+const DICE_COMBOS = [
+  { attDice: 1 as const, defDice: 1 as const, odds: computeRollOdds(1, 1) },
+  { attDice: 1 as const, defDice: 2 as const, odds: computeRollOdds(1, 2) },
+  { attDice: 2 as const, defDice: 1 as const, odds: computeRollOdds(2, 1) },
+  { attDice: 2 as const, defDice: 2 as const, odds: computeRollOdds(2, 2) },
+  { attDice: 3 as const, defDice: 1 as const, odds: computeRollOdds(3, 1) },
+  { attDice: 3 as const, defDice: 2 as const, odds: computeRollOdds(3, 2) },
+] as const
+
+type DiceProbability = {
+  attDice: (typeof DICE_COMBOS)[number]['attDice']
+  defDice: (typeof DICE_COMBOS)[number]['defDice']
+  probability: number
+}
+
+const UNLIKELY_THRESHOLD = 0.33
+
+const outcomeProbability = (
+  odds: ReturnType<typeof computeRollOdds>,
+  attackerLosses: number,
+  defenderLosses: number,
+) => {
+  if (attackerLosses === 2 && defenderLosses === 0) return odds.probabilities.attackerLoses2
+  if (attackerLosses === 0 && defenderLosses === 2) return odds.probabilities.defenderLoses2
+  if (attackerLosses === 1 && defenderLosses === 1) return odds.probabilities.trade11
+  if (attackerLosses === 1 && defenderLosses === 0) return odds.probabilities.attackerLoses1
+  if (attackerLosses === 0 && defenderLosses === 1) return odds.probabilities.defenderLoses1
+  return 0
+}
+
+const formatProbability = (value: number) => {
+  if (!Number.isFinite(value)) return '0.0'
+  const percent = value * 100
+  return percent >= 10 ? percent.toFixed(1) : percent.toFixed(2)
+}
+
+const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
+  roomId,
+  className,
+}) => {
   const [log, setLog] = React.useState<LogEntry[] | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const game = useAppSelector((s) => s.game.currentGame)
@@ -284,13 +384,14 @@ const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
     const run = async () => {
       try {
         const resp = await gameService.getGameLog(roomId)
-        const r1 = resp as unknown
-        const maybeObj = r1 as { log?: unknown[] }
-        const entries = (
-          Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
-        ) as LogEntry[]
+        const fromField = (resp as { log?: unknown[] } | null)?.log
+        const entriesUnknown = Array.isArray(fromField)
+          ? fromField
+          : Array.isArray(resp)
+            ? (resp as unknown[])
+            : []
         if (!active) return
-        setLog(Array.isArray(entries) ? entries : [])
+        setLog(Array.isArray(entriesUnknown) ? (entriesUnknown as LogEntry[]) : [])
       } catch (_e) {
         if (!active) return
         setError('Unable to load game log')
@@ -303,73 +404,185 @@ const KeyMomentsTimeline: React.FC<{ roomId: string }> = ({ roomId }) => {
     }
   }, [roomId])
 
-  if (log === null) {
-    return (
-      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">
-        Loading key moments…
-      </div>
+  const containerClass = `rounded-lg border border-border/60 bg-surface-2/50 p-4 ${className ?? ''}`
+
+  const unlikelyMoments = React.useMemo(() => {
+    if (!log)
+      return [] as Array<{
+        key: string
+        label: string
+        detail: string
+        probability: number
+        rangeText?: string
+      }>
+
+    const battles = log.filter(
+      (entry): entry is Extract<LogEntry, { type: 'BATTLE' }> => entry.type === 'BATTLE',
     )
+    const moments: Array<{
+      key: string
+      label: string
+      detail: string
+      probability: number
+      rangeText?: string
+    }> = []
+
+    battles.forEach((battle, idx) => {
+      const losses = battle.losses
+      if (!losses) return
+
+      const combos = DICE_COMBOS.map((combo) => {
+        const probability = outcomeProbability(combo.odds, losses.attacker, losses.defender)
+        return probability > 0
+          ? ({
+              attDice: combo.attDice,
+              defDice: combo.defDice,
+              probability,
+            } satisfies DiceProbability)
+          : null
+      }).filter((combo): combo is DiceProbability => combo !== null)
+
+      if (combos.length === 0) return
+
+      const assumedCombo =
+        combos.find((combo) => combo.attDice === 3 && combo.defDice === 2) ??
+        combos.find((combo) => combo.attDice === 3 && combo.defDice === 1) ??
+        combos.find((combo) => combo.attDice === 2 && combo.defDice === 2) ??
+        combos[0]
+
+      if (assumedCombo.probability > UNLIKELY_THRESHOLD) return
+
+      const minProbability = Math.min(...combos.map((combo) => combo.probability))
+      const maxProbability = Math.max(...combos.map((combo) => combo.probability))
+
+      const attacker = playerName(battle.attackerId)
+      const defender = battle.defenderId ? playerName(battle.defenderId) : 'Neutral forces'
+      const from = territoryName(battle.attackingTerritoryId)
+      const to = territoryName(battle.defendingTerritoryId)
+
+      const label =
+        losses.attacker >= losses.defender ? `Defensive stand at ${to}` : `Blitz at ${to}`
+      const detail =
+        losses.attacker >= losses.defender
+          ? `${defender} held ${to} while ${attacker} lost ${losses.attacker} ${
+              losses.attacker === 1 ? 'army' : 'armies'
+            } in a single roll.`
+          : `${attacker} overran ${defender} from ${from}, costing the defender ${losses.defender} ${
+              losses.defender === 1 ? 'army' : 'armies'
+            } instantly.`
+
+      const rangeText =
+        maxProbability - minProbability > 0.05
+          ? `range ${formatProbability(minProbability)}–${formatProbability(maxProbability)}% depending on dice`
+          : undefined
+
+      moments.push({
+        key: `${battle.timestamp}-${idx}`,
+        label,
+        detail,
+        probability: assumedCombo.probability,
+        rangeText,
+      })
+    })
+
+    return moments.sort((a, b) => a.probability - b.probability).slice(0, 5)
+  }, [log, playerName, territoryName])
+
+  if (log === null) {
+    return <div className={`${containerClass} text-sm text-muted`}>Loading key moments…</div>
   }
   if (error) {
     return (
-      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-[color:var(--color-warning)]">
-        {error}
-      </div>
+      <div className={`${containerClass} text-sm text-[color:var(--color-warning)]`}>{error}</div>
     )
   }
 
   // Build a simple per-turn timeline of START events and notable battles (conquests)
-  const turnStarts = log.filter((e) => e.type === 'TURN' && e.event === 'START') as Extract<
-    LogEntry,
-    { type: 'TURN' }
-  >[]
-  const conquests = log.filter((e) => e.type === 'BATTLE' && e.conquered) as Extract<
-    LogEntry,
-    { type: 'BATTLE' }
-  >[]
+  const turnStarts = log.filter(
+    (e): e is Extract<LogEntry, { type: 'TURN' }> => e.type === 'TURN' && e.event === 'START',
+  )
+  const conquests = log.filter(
+    (e): e is Extract<LogEntry, { type: 'BATTLE' }> => e.type === 'BATTLE' && e.conquered,
+  )
 
-  const items: Array<{ when: string; label: string; detail?: string }> = []
+  const timelineItems: Array<{ when: string; label: string; detail?: string }> = []
   for (const t of turnStarts) {
     const who = playerName(t.playerId)
     const r = typeof t.reinforcementArmies === 'number' ? `${t.reinforcementArmies} troops` : '—'
     const terr = typeof t.territoryCount === 'number' ? `${t.territoryCount} terr.` : '—'
-    items.push({ when: t.timestamp, label: `Turn start — ${who}`, detail: `${r}, ${terr}` })
+    timelineItems.push({ when: t.timestamp, label: `Turn start — ${who}`, detail: `${r}, ${terr}` })
   }
   for (const b of conquests) {
     const from = territoryName(b.attackingTerritoryId)
     const to = territoryName(b.defendingTerritoryId)
     const who = playerName(b.attackerId)
-    items.push({ when: b.timestamp, label: `Conquest — ${who}`, detail: `${from} → ${to}` })
+    timelineItems.push({ when: b.timestamp, label: `Conquest — ${who}`, detail: `${from} → ${to}` })
   }
 
   // Show up to the last 15 items, newest last
-  const sorted = items
+  const sortedTimeline = timelineItems
     .map((e) => ({ ...e, time: new Date(e.when).getTime() || 0 }))
     .sort((a, b) => a.time - b.time)
     .slice(-15)
 
-  if (sorted.length === 0) return null
+  if (sortedTimeline.length === 0 && unlikelyMoments.length === 0) {
+    return null
+  }
 
   return (
-    <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
-      <h4 className="font-semibold text-muted mb-3 text-center">Key Moments</h4>
-      <ol className="space-y-2 text-sm">
-        {sorted.map((e, idx) => (
-          <li key={`${e.when}-${idx}`} className="flex items-start gap-2">
-            <span className="mt-1 inline-block w-2 h-2 rounded-full bg-primary" />
+    <div className={containerClass}>
+      <h4 className="mb-3 text-center font-semibold text-muted">Key Moments</h4>
+      {unlikelyMoments.length > 0 && (
+        <div className="mb-4 space-y-2 rounded-lg border border-border/40 bg-surface-1/70 p-3 text-sm">
+          <div className="flex items-start gap-2">
+            <span className="text-lg" aria-hidden="true">
+              🎲
+            </span>
             <div>
-              <div className="text-white">{e.label}</div>
-              {e.detail && <div className="text-muted text-xs">{e.detail}</div>}
+              <div className="font-semibold text-[color:var(--color-warning)]">
+                Unlikely rolls spotted
+              </div>
+              <p className="text-xs text-muted">
+                Odds assume both sides rolled the maximum dice available for that skirmish.
+              </p>
             </div>
-          </li>
-        ))}
-      </ol>
+          </div>
+          <ul className="space-y-2">
+            {unlikelyMoments.map((moment) => (
+              <li key={moment.key} className="rounded-md bg-surface-2/70 p-3">
+                <div className="text-sm font-semibold text-heading">{moment.label}</div>
+                <div className="text-xs text-muted">{moment.detail}</div>
+                <div className="mt-1 text-xs font-semibold text-[color:var(--color-warning)]">
+                  ≈{formatProbability(moment.probability)}% chance
+                  {moment.rangeText ? ` • ${moment.rangeText}` : ''}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {sortedTimeline.length > 0 && (
+        <ol className="space-y-2 text-sm">
+          {sortedTimeline.map((e, idx) => (
+            <li key={`${e.when}-${idx}`} className="flex items-start gap-2">
+              <span className="mt-1 inline-block h-2 w-2 rounded-full bg-primary" />
+              <div>
+                <div className="text-white">{e.label}</div>
+                {e.detail && <div className="text-xs text-muted">{e.detail}</div>}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }
 
 // Lightweight SVG charts for Territories/Armies over time
-const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
+const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
+  roomId,
+  className,
+}) => {
   const game = useAppSelector((s) => s.game.currentGame)
   const [stats, setStats] = React.useState<Array<Record<string, unknown>> | null>(null)
   const [tab, setTab] = React.useState<'territories' | 'armies'>('territories')
@@ -406,19 +619,15 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
   // Hover tooltip state must be defined before any early returns
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null)
 
+  const containerClass = `rounded-lg border border-border/60 bg-surface-2/50 p-4 ${className ?? ''}`
+
   if (!players.length) return null
   if (stats === null) {
-    return (
-      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-muted">
-        Preparing charts…
-      </div>
-    )
+    return <div className={`${containerClass} text-sm text-muted`}>Preparing charts…</div>
   }
   if (error) {
     return (
-      <div className="bg-surface-2/50 rounded-lg p-4 mb-6 text-sm text-[color:var(--color-warning)]">
-        {error}
-      </div>
+      <div className={`${containerClass} text-sm text-[color:var(--color-warning)]`}>{error}</div>
     )
   }
 
@@ -475,8 +684,8 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
   const yLabels = Array.from({ length: ticksY + 1 }, (_, i) => Math.round((maxY * i) / ticksY))
 
   return (
-    <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
-      <div className="flex items-center justify-between mb-2">
+    <div className={containerClass}>
+      <div className="mb-2 flex items-center justify-between">
         <h4 className="font-semibold text-muted">Game Progress</h4>
         <div className="flex items-center gap-2 text-xs">
           <button
@@ -496,7 +705,7 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="mb-3 flex flex-wrap gap-2">
         {series.map((s) => (
           <button
             key={s.id}
@@ -519,7 +728,7 @@ const PostGameCharts: React.FC<{ roomId: string }> = ({ roomId }) => {
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label="Post game chart"
-        className="w-full h-auto"
+        className="h-auto w-full"
         onMouseMove={(e) => {
           const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
           const x = e.clientX - rect.left
