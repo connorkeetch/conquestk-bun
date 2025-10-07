@@ -106,10 +106,10 @@ export default function TabbedGameChat({
 
     // No DM tabs in game room chat; DMs live in Inbox only
 
-    // Game Options tab (always available)
+    // Game Settings tab (always available)
     builtTabs.push({
       id: 'options',
-      label: 'Game Options',
+      label: 'Game Settings',
       type: 'options',
       conversationId: '',
       enabled: true,

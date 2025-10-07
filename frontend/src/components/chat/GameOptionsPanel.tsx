@@ -138,7 +138,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-white">Game Options</h3>
+          <h3 className="font-semibold text-white">Game Settings</h3>
           <div className="text-xs text-muted">Settings chosen at game creation</div>
         </div>
 
