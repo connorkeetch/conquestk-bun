@@ -26,7 +26,6 @@ import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { DEFAULT_TAGLINE, PROFILE_TAGLINES } from '../constants/profileTaglines'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
-import { useResponsiveLayout } from '../hooks/useResponsiveLayout'
 import audioService from '../services/audioService'
 import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
@@ -452,7 +451,6 @@ export default function Settings() {
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
-  const { isMobile: isMobileLayout } = useResponsiveLayout()
 
   // Get current color theme from centralized config
   const [currentColorTheme, setCurrentColorTheme] = useState<ThemeId>(() => getStoredTheme())
@@ -1651,39 +1649,33 @@ export default function Settings() {
       }
 
       case 'notifications': {
-        let pushDescription = 'Enable notifications for game updates'
-        if (isMobileLayout) {
-          pushDescription =
-            'Push notifications are only available on desktop browsers. Use email alerts to stay updated on mobile.'
-        } else if (!pushBackendEnabled && !isSubscribed) {
-          pushDescription =
-            'Push notifications are temporarily disabled while the server push service is offline.'
-        } else if (notificationStatus === 'granted') {
-          pushDescription = isSubscribed
-            ? 'Push notifications are enabled'
-            : 'Click to enable push notifications'
-        } else if (notificationStatus === 'denied') {
-          pushDescription = 'Notifications blocked - please enable in browser settings'
-        }
+        const pushDescription =
+          !pushBackendEnabled && !isSubscribed
+            ? 'Push notifications are temporarily disabled while the server push service is offline.'
+            : notificationStatus === 'granted'
+              ? isSubscribed
+                ? 'Push notifications are enabled'
+                : 'Click to enable push notifications'
+              : notificationStatus === 'denied'
+                ? 'Notifications blocked - please enable in browser settings'
+                : 'Enable notifications for game updates'
 
-        const backendDisabled = pushOperationInFlight || (!pushBackendEnabled && !isSubscribed)
-        const backendDisabledReason =
+        const disabled = pushOperationInFlight || (!pushBackendEnabled && !isSubscribed)
+        const disabledReason =
           !pushBackendEnabled && !isSubscribed
             ? 'Push notifications are currently disabled by the server. Please try again later.'
             : undefined
 
-        const pushSettings: SettingItem[] = [
+        return [
           {
             id: 'browser-notifications',
-            label: isMobileLayout ? 'Desktop Browser Notifications' : 'Browser Push Notifications',
+            label: 'Browser Push Notifications',
             description: pushDescription,
             type: 'toggle',
-            isWorking: !isMobileLayout,
+            isWorking: true,
             defaultValue: isSubscribed,
-            disabled: isMobileLayout || backendDisabled,
-            disabledReason: isMobileLayout
-              ? 'Desktop-class browsers are required for push notifications. Mobile browsers cannot subscribe yet.'
-              : backendDisabledReason,
+            disabled,
+            disabledReason,
             statusMessage: pushStatusMessage ?? undefined,
             onChange: (value) => {
               if (typeof value !== 'boolean') {
@@ -1728,10 +1720,7 @@ export default function Settings() {
               })()
             },
           },
-        ]
-
-        if (!isMobileLayout) {
-          pushSettings.push({
+          {
             id: 'test-notification',
             label: 'Test Notification',
             description: 'Send a test push notification',
@@ -1798,10 +1787,8 @@ export default function Settings() {
                 alert(message)
               }
             },
-          })
-        }
-
-        return pushSettings
+          },
+        ]
       }
 
       case 'privacy':
@@ -1960,7 +1947,7 @@ export default function Settings() {
           <thead>
             <tr className="border-b border-slate-600">
               <th className="text-left py-4 pr-4 text-gray-200 font-medium">Notification Type</th>
-              <th className="text-center py-4 px-4 text-gray-200 font-medium">Desktop Browser</th>
+              <th className="text-center py-4 px-4 text-gray-200 font-medium">Browser</th>
               <th className="text-center py-4 pl-4 text-gray-200 font-medium">Email</th>
             </tr>
           </thead>
@@ -1978,7 +1965,6 @@ export default function Settings() {
                     <input
                       type="checkbox"
                       checked={settings.notifications?.[notification.key]?.browser ?? false}
-                      disabled={isMobileLayout}
                       onChange={(e) => {
                         const newPref = {
                           type: notification.key,
@@ -2057,12 +2043,6 @@ export default function Settings() {
               Push Notification Setup
             </h3>
             <div className="space-y-4">{settingsData.map((setting) => renderSetting(setting))}</div>
-            {isMobileLayout && (
-              <p className="text-sm text-muted mt-4">
-                Push notifications require a desktop browser. We&apos;ll use your email settings{' '}
-                below to keep you updated on mobile.
-              </p>
-            )}
           </div>
 
           <div>

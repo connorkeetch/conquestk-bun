@@ -61,7 +61,8 @@ export function MapCanvas({
   return (
     <div
       ref={containerRef}
-      className="mapViewport relative w-full h-full overflow-hidden bg-[color:var(--surface-1)] touch-pan-y"
+      className="mapViewport relative w-full h-full overflow-hidden bg-[color:var(--surface-1)]"
+      style={{ touchAction: 'none', WebkitTapHighlightColor: 'transparent' as any }}
       role="application"
       aria-label="Game map viewport"
       onMouseDown={onMouseDown}

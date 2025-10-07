@@ -1,22 +1,29 @@
 {
   "name": "Conquest K",
-  "short_name": "Conquest K",
+  "short_name": "ConquestK",
   "description": "Strategic multiplayer conquest game",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f0f",
-  "theme_color": "#dc2626",
+  "theme_color": "#2563EB",
   "icons": [
     {
-      "src": "/conquest-icon.svg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/conquest-icon.svg",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

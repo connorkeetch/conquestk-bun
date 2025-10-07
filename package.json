@@ -16,6 +16,7 @@
     "build:shared": "cd shared && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && npm run build",
+    "gen:icons": "node scripts/generate-icons.mjs",
     "start": "cd backend && node dist/index.js",
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd backend && npm test",
@@ -35,7 +36,8 @@
     "docs:schema": "cd backend && NODE_ENV=production npm run check:schema -- --skip-validation --skip-row-counts --export ../docs/operations/database-schema.md",
     "check:services": "node scripts/ensure-services.js",
     "check:services:start": "node scripts/ensure-services.js --start",
-    "setup:env": "node scripts/setup-environments.js"
+    "setup:env": "node scripts/setup-environments.js",
+    "generate:odds": "node scripts/generateCombatOutcomes.js"
   },
   "repository": {
     "type": "git",

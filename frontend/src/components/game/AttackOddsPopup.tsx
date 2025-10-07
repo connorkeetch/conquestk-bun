@@ -5,7 +5,11 @@ interface AttackOddsPopupProps {
   topPercent: number
   attackerDice: 1 | 2 | 3
   defenderDice: 1 | 2
+  attackerArmies?: number
+  defenderArmies?: number
   winChancePercent: number
+  expectedAttackerIfWin?: number
+  expectedDefenderIfLoss?: number
   onAttack: () => void
   onCancel: () => void
   autoEnabled: boolean
@@ -17,7 +21,11 @@ export default function AttackOddsPopup({
   topPercent,
   attackerDice,
   defenderDice,
+  attackerArmies,
+  defenderArmies,
   winChancePercent,
+  expectedAttackerIfWin,
+  expectedDefenderIfLoss,
   onAttack,
   onCancel,
   autoEnabled,
@@ -174,7 +182,23 @@ export default function AttackOddsPopup({
         </button>
         <div className="mt-1 text-[color:var(--text-muted)]">
           {attackerDice}v{defenderDice} dice
+          {typeof attackerArmies === 'number' && typeof defenderArmies === 'number'
+            ? ` · ${attackerArmies} vs ${defenderArmies} armies`
+            : ''}
         </div>
+        {(typeof expectedAttackerIfWin === 'number' ||
+          typeof expectedDefenderIfLoss === 'number') && (
+          <div className="mt-1 text-[color:var(--text-muted)]">
+            {typeof expectedAttackerIfWin === 'number' && (
+              <span>if win: att ≈ {Math.round(expectedAttackerIfWin)}</span>
+            )}
+            {typeof expectedAttackerIfWin === 'number' &&
+              typeof expectedDefenderIfLoss === 'number' && <span> · </span>}
+            {typeof expectedDefenderIfLoss === 'number' && (
+              <span>if fail: def ≈ {Math.round(expectedDefenderIfLoss)}</span>
+            )}
+          </div>
+        )}
         <div className="mt-2 flex items-center justify-end gap-2">
           <button
             type="button"
