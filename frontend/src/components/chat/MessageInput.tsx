@@ -151,6 +151,8 @@ export default function MessageInput({
             </button>
             <textarea
               ref={inputRef}
+              name="message"
+              aria-label="Message"
               value={message}
               onChange={(e) => setMessage(e.target.value.slice(0, maxLength))}
               onKeyDown={handleKeyDown}
