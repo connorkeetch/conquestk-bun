@@ -63,11 +63,7 @@ export default function NotificationDropdown({
     return () => window.removeEventListener('mousedown', onClick)
   }, [isOpen, onClose, triggerRef])
 
-  // Mark all notifications as read immediately upon opening
-  useEffect(() => {
-    if (!isOpen) return
-    notificationService.markAllAsRead()
-  }, [isOpen])
+  // Do not auto-mark as read on open; users can mark per-item or use the button
 
   const handleNotificationClick = (n: Notification) => {
     notificationService.markAsRead(n.id)
@@ -124,29 +120,47 @@ export default function NotificationDropdown({
         ) : (
           <div className="max-h-[50vh] overflow-y-auto divide-y divide-[color:var(--panel-border)]">
             {notifications.slice(0, 12).map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => handleNotificationClick(n)}
-                className={`w-full text-left px-4 py-3 hover:bg-[color:var(--hover-bg)] transition ${
-                  n.read ? '' : 'bg-[color:var(--panel-bg-alt)]'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-xl leading-none">{n.icon || '🔔'}</span>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm ${n.read ? 'text-muted' : 'text-[color:var(--heading)]'} truncate`}
-                    >
-                      {n.title}
-                    </p>
-                    <p className="text-xs text-muted truncate">{n.message}</p>
+              <div key={n.id} className="relative">
+                <button
+                  type="button"
+                  onClick={() => handleNotificationClick(n)}
+                  className={`w-full text-left px-4 py-3 hover:bg-[color:var(--hover-bg)] transition ${
+                    n.read
+                      ? 'opacity-80'
+                      : 'bg-[color:var(--panel-bg-alt)] border-l-2 border-[color:var(--color-primary)]'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl leading-none">{n.icon || '🔔'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm ${
+                          n.read ? 'text-muted' : 'text-[color:var(--heading)]'
+                        } truncate`}
+                      >
+                        {n.title}
+                      </p>
+                      <p className="text-xs text-muted truncate">{n.message}</p>
+                    </div>
+                    <span className="text-[10px] text-muted whitespace-nowrap">
+                      {formatRelativeTime(n.timestamp)}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-muted whitespace-nowrap">
-                    {formatRelativeTime(n.timestamp)}
-                  </span>
-                </div>
-              </button>
+                </button>
+                {/* Per-notification delete (X) button */}
+                <button
+                  type="button"
+                  aria-label="Delete notification"
+                  className="absolute top-2 right-2 text-muted hover:text-[color:var(--heading)]"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    notificationService.deleteNotification(n.id)
+                  }}
+                  title="Delete"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}
