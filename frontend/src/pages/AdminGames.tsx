@@ -385,7 +385,9 @@ export default function AdminGames() {
                       <td className="py-3 px-4">{game.mapName}</td>
                       <td className="py-3 px-4">{game.createdByUsername}</td>
                       <td className="py-3 px-4">
-                        <span className={`inline-block px-2 py-1 rounded text-xs ${getGameStatusColor(game.status)}`}>
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs ${getGameStatusColor(game.status)}`}
+                        >
                           {getGameStatusLabel(game.status)}
                         </span>
                       </td>

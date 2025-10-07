@@ -8,8 +8,8 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { store } from './store'
 import './index.css'
-import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 import { preloadBattleOdds } from './bootstrap/preloadBattleOdds'
+import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 
 // Add comprehensive error logging
 logger.info('[MAIN] Starting React app initialization...')

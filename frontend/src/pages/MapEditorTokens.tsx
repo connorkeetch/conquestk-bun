@@ -1,8 +1,8 @@
 import axios from 'axios'
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
+import { useQueryParam } from '@/hooks/useQueryParam'
 import { logger } from '@/utils/logger'
 
 /**
@@ -748,9 +748,7 @@ export default function MapEditorTokens() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragUpdateFrameRef = useRef<number | null>(null)
   const pendingDragPositionRef = useRef<{ x: number; y: number } | null>(null)
-  const [searchParams] = useSearchParams()
-  // Derive a stable value instead of depending on URLSearchParams identity
-  const editParam = (searchParams.get('edit') || '').toLowerCase()
+  const editParam = useQueryParam('edit')
   const [draftId, setDraftId] = useState<string | null>(null)
   const [publishedMapId, setPublishedMapId] = useState<string | null>(null)
   const [_isAdminContext, setIsAdminContext] = useState(false)

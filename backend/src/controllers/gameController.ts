@@ -628,9 +628,10 @@ export class GameController {
         roomCode: game.roomCode,
         isYourTurn: game.currentTurnUserId === userId,
         // Return winner username when available
-        winner: game.status === 'completed' && typeof game.winner === 'string'
-          ? winnerNameMap.get(game.winner) ?? null
-          : null,
+        winner:
+          game.status === 'completed' && typeof game.winner === 'string'
+            ? (winnerNameMap.get(game.winner) ?? null)
+            : null,
         createdAt: game.createdAt,
         updatedAt: game.updatedAt ?? game.createdAt,
       }))

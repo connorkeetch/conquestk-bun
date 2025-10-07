@@ -14,8 +14,14 @@ async function run() {
     process.exit(1)
   }
   const svg = fs.readFileSync(svgPath)
-  await sharp(svg).resize(512, 512, { fit: 'contain', background: { r: 17, g: 24, b: 39, alpha: 1 } }).png().toFile(out512)
-  await sharp(svg).resize(180, 180, { fit: 'contain', background: { r: 17, g: 24, b: 39, alpha: 1 } }).png().toFile(out180)
+  await sharp(svg)
+    .resize(512, 512, { fit: 'contain', background: { r: 17, g: 24, b: 39, alpha: 1 } })
+    .png()
+    .toFile(out512)
+  await sharp(svg)
+    .resize(180, 180, { fit: 'contain', background: { r: 17, g: 24, b: 39, alpha: 1 } })
+    .png()
+    .toFile(out180)
   console.log('Generated', out512, 'and', out180)
 }
 
@@ -23,4 +29,3 @@ run().catch((e) => {
   console.error(e)
   process.exit(1)
 })
-

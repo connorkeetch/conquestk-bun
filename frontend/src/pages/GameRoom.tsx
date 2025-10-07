@@ -1,7 +1,7 @@
 import type { TreasureConfig } from '@shared/types'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import GameLogPanel from '@/components/chat/GameLogPanel'
 import { GameOverModal } from '@/components/GameOverModal'
 // Chat modal removed; drawers are used on all devices
@@ -16,6 +16,7 @@ import { ChatLogPanel, PlayerStatsPanel } from '@/components/panels'
 import DropZone from '@/components/panels/DropZone'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import SettingsModal from '@/components/SettingsModal'
+import { useQueryParam } from '@/hooks/useQueryParam'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 import {
   type PanelZone,
@@ -127,8 +128,7 @@ export default function GameRoom() {
     }
     return undefined
   }, [layout.isDesktopOrLarger, leftZonePanels, rightZonePanels])
-  const [searchParams] = useSearchParams()
-  const isSpectator = searchParams.get('spectate') === 'true'
+  const isSpectator = useQueryParam('spectate') === 'true'
   const [isRoomLoading, setIsRoomLoading] = useState(false)
   const [roomError, setRoomError] = useState<string | null>(null)
   // Mute button moved to bottom-right floating control; local state not needed here

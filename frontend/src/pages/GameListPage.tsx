@@ -59,7 +59,7 @@ const GameListPage: React.FC = () => {
       case 'paused':
         return 'Paused'
       case 'abandoned':
-        return 'Abandoned'
+        return 'Closed'
       default:
         return status
     }

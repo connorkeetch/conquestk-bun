@@ -1,8 +1,9 @@
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import InfoTooltip from '@/components/InfoTooltip'
 import MapDetailModal from '@/components/MapDetailModal'
+import { useQueryParam } from '@/hooks/useQueryParam'
 import { extractFirstHexColor, pickTextOnColor } from '@/utils/color'
 import { logger } from '@/utils/logger'
 import { sanitizeGameName } from '@/utils/sanitizer'
@@ -210,10 +211,8 @@ const CreateGamePage: React.FC = () => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   // Removed tournament visibility option; comingSoon UI flag not needed here
   const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
-  const [searchParams] = useSearchParams()
-
-  const initialMode: 'casual' | 'ranked' =
-    searchParams.get('mode') === 'ranked' ? 'ranked' : 'casual'
+  const modeParam = useQueryParam('mode')
+  const initialMode: 'casual' | 'ranked' = modeParam === 'ranked' ? 'ranked' : 'casual'
 
   // Get preferred color from settings, default to first player color
   const preferredColor = settings.game?.preferredColor || PLAYER_COLORS[0]
@@ -419,7 +418,6 @@ const CreateGamePage: React.FC = () => {
   }, [])
 
   const lastAppliedModeRef = useRef<'casual' | 'ranked' | null>(initialMode)
-  const modeParam = searchParams.get('mode')
 
   useEffect(() => {
     if (!territoryModifiersEnabled && useTerritoryModifiers) {

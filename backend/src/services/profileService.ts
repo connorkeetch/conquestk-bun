@@ -325,7 +325,8 @@ export class ProfileService {
         [userId],
       )
 
-      const totalEliminations = (elimQuery.rows[0]?.eliminations ?? 0) + (capitalElims.rows[0]?.cnt ?? 0)
+      const totalEliminations =
+        (elimQuery.rows[0]?.eliminations ?? 0) + (capitalElims.rows[0]?.cnt ?? 0)
 
       // Territories conquered = number of battle_log entries by this user where conquered=true
       const conqueredQuery = await client.query<{ conquests: number }>(
@@ -397,7 +398,8 @@ export class ProfileService {
               ? (overallStats as Record<string, unknown>).total_eliminations
               : totalEliminations,
           total_territories_conquered:
-            typeof (overallStats as Record<string, unknown>)?.total_territories_conquered === 'number'
+            typeof (overallStats as Record<string, unknown>)?.total_territories_conquered ===
+            'number'
               ? (overallStats as Record<string, unknown>).total_territories_conquered
               : (conqueredQuery.rows[0]?.conquests ?? 0),
           best_territories: Number(bestStats.best_territories ?? 0),
