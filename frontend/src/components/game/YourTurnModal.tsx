@@ -15,9 +15,15 @@ type Props = {
 export function YourTurnModal({ className = '' }: Props) {
   const userId = useAppSelector((s) => s.auth.user?.id)
   const game = useAppSelector((s) => s.game.currentGame)
-  // Room currently unused; keep logic self-contained
+  const room = useAppSelector((s) => s.room.currentRoom)
 
-  const isMyTurn = Boolean(userId && game?.currentPlayer === userId && game?.phase !== 'finished')
+  // Only consider active gameplay phases (exclude lobby/initializing/finished)
+  const phase = game?.phase as string | undefined
+  const isActivePhase = phase === 'reinforcement' || phase === 'attack' || phase === 'fortify'
+  const isRoomActive = room?.status === 'active'
+  const isMyTurn = Boolean(
+    userId && isRoomActive && isActivePhase && game?.currentPlayer === userId,
+  )
   const [visible, setVisible] = useState(false)
   const seenTurnRef = useRef<number | null>(null)
 
