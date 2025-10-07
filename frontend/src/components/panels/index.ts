@@ -1,3 +1,5 @@
+export { default as ChatLogPanel } from './ChatLogPanel'
 export { default as PanelContainer } from './PanelContainer'
 export { default as PanelHeader } from './PanelHeader'
+export { default as PlayerStatsPanel } from './PlayerStatsPanel'
 export { default as ResizablePanel } from './ResizablePanel'
