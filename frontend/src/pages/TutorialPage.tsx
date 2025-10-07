@@ -771,7 +771,7 @@ const TutorialPage: React.FC = () => {
         {activeTab === 'options' && (
           <div className="space-y-6">
             <header className="space-y-2">
-              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game options</h2>
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game settings</h2>
               <p className="text-sm text-muted max-w-2xl">
                 Dial in lobby rules to match your group&apos;s pace, playstyle, and competitive
                 level.
