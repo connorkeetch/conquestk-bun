@@ -616,12 +616,6 @@ export interface ServerToClientEvents {
   'friend.request.cancelled': (payload: { userId: string; at: string }) => void
   'friend.added': (payload: { userId: string; at: string }) => void
   'friend.removed': (payload: { userId: string; at: string }) => void
-  phaseChanged: (data: {
-    phase: GamePhase
-    currentPlayer: string
-    turn: number
-    reinforcementArmies?: number
-  }) => void
   capitalElimination: (data: {
     conqueror: string
     eliminated: string

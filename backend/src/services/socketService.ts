@@ -1161,13 +1161,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         )
         io.to(channel).emit('game-delta', phaseDelta)
 
-        // Keep legacy event for backward compatibility
-        io.to(channel).emit('phaseChanged', {
-          phase: result.gameState.phase,
-          currentPlayer: result.gameState.currentPlayer,
-          turn: result.gameState.turn,
-          reinforcementArmies: result.reinforcementArmies,
-        })
+        // Legacy 'phaseChanged' event removed in favor of unified 'game-delta'
 
         // Schedule AFK grace start for the next player's timer
         try {
