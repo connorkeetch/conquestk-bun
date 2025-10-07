@@ -67,7 +67,7 @@ export default function PanelHeader({
               } catch {
                 // ignore
               }
-              window.dispatchEvent(new CustomEvent('panel-drag-start'))
+              window.dispatchEvent(new CustomEvent('panel-drag-start', { detail: { panelId } }))
             }}
             onDragEnd={() => {
               window.dispatchEvent(new CustomEvent('panel-drag-end'))
