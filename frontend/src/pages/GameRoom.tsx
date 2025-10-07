@@ -109,26 +109,34 @@ export default function GameRoom() {
   const belowZonePanels = useAppSelector((s) => selectPanelsByZone(s, 'below-map'))
   const belowMapLayout = useAppSelector(selectBelowMapLayout)
   const [isDraggingPanel, setIsDraggingPanel] = useState(false)
+  const [isEditingLayout, setIsEditingLayout] = useState(false)
 
   const gridStyle = useMemo(() => {
     if (!layout.isDesktopOrLarger) return undefined
-    const leftWidth = leftZonePanels.length
+    const DEFAULT_SIDEBAR_WIDTH = 340
+    const hasLeft = leftZonePanels.length > 0
+    const hasRight = rightZonePanels.length > 0
+    const leftWidth = hasLeft
       ? Math.max(...leftZonePanels.map((p) => p.width || 0))
-      : 0
-    const rightWidth = rightZonePanels.length
+      : isDraggingPanel || isEditingLayout
+        ? DEFAULT_SIDEBAR_WIDTH
+        : 0
+    const rightWidth = hasRight
       ? Math.max(...rightZonePanels.map((p) => p.width || 0))
-      : 0
-    if (leftZonePanels.length > 0 && rightZonePanels.length > 0) {
+      : isDraggingPanel || isEditingLayout
+        ? DEFAULT_SIDEBAR_WIDTH
+        : 0
+    if ((hasLeft || isDraggingPanel || isEditingLayout) && (hasRight || isDraggingPanel || isEditingLayout)) {
       return { gridTemplateColumns: `${leftWidth}px 1fr ${rightWidth}px` }
     }
-    if (leftZonePanels.length > 0) {
+    if (hasLeft || isDraggingPanel || isEditingLayout) {
       return { gridTemplateColumns: `${leftWidth}px 1fr` }
     }
-    if (rightZonePanels.length > 0) {
+    if (hasRight || isDraggingPanel || isEditingLayout) {
       return { gridTemplateColumns: `1fr ${rightWidth}px` }
     }
     return undefined
-  }, [layout.isDesktopOrLarger, leftZonePanels, rightZonePanels])
+  }, [layout.isDesktopOrLarger, leftZonePanels, rightZonePanels, isDraggingPanel, isEditingLayout])
   const isSpectator = useQueryParam('spectate') === 'true'
   const [isRoomLoading, setIsRoomLoading] = useState(false)
   const [roomError, setRoomError] = useState<string | null>(null)
@@ -1338,7 +1346,7 @@ export default function GameRoom() {
           )}
 
           {/* Below Map Zone (Desktop+ and larger screens) */}
-          {layout.isDesktopOrLarger && (belowZonePanels.length > 0 || isDraggingPanel) && (
+          {layout.isDesktopOrLarger && (belowZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
             <>
               {/* Layout Toggle + Reset */}
               <div className="mt-3 mb-1 flex items-center justify-between gap-2 text-[11px] text-muted">
@@ -1387,7 +1395,7 @@ export default function GameRoom() {
                 } mt-1`}
               >
                 {/* Leading drop zone */}
-                {isDraggingPanel && (
+                {(isDraggingPanel || isEditingLayout) && (
                   <DropZone
                     onDrop={handleDropToZone('below-map', 0)}
                     active={true}
@@ -1399,16 +1407,16 @@ export default function GameRoom() {
                 {belowZonePanels.map((p, idx) => (
                   <div key={p.id} className={belowMapLayout === 'horizontal-row' ? 'flex-1' : ''}>
                     {/* Between-panels drop zone */}
-                    {isDraggingPanel && idx > 0 && (
-                      <DropZone
-                        onDrop={handleDropToZone('below-map', idx)}
-                        active={true}
-                        orientation={
-                          belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'
-                        }
-                        className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
-                      />
-                    )}
+                  {(isDraggingPanel || isEditingLayout) && idx > 0 && (
+                    <DropZone
+                      onDrop={handleDropToZone('below-map', idx)}
+                      active={true}
+                      orientation={
+                        belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'
+                      }
+                      className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
+                    />
+                  )}
                     {p.id === 'player-stats' && (
                       <PlayerStatsPanel
                         players={
@@ -1479,15 +1487,15 @@ export default function GameRoom() {
                   </div>
                 ))}
 
-                {/* Trailing drop zone */}
-                {isDraggingPanel && (
-                  <DropZone
-                    onDrop={handleDropToZone('below-map', belowZonePanels.length)}
-                    active={true}
-                    orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
-                    className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
-                  />
-                )}
+              {/* Trailing drop zone */}
+              {(isDraggingPanel || isEditingLayout) && (
+                <DropZone
+                  onDrop={handleDropToZone('below-map', belowZonePanels.length)}
+                  active={true}
+                  orientation={belowMapLayout === 'horizontal-row' ? 'horizontal' : 'vertical'}
+                  className={belowMapLayout === 'horizontal-row' ? '' : 'my-1'}
+                />
+              )}
               </div>
             </>
           )}
@@ -1749,15 +1757,15 @@ export default function GameRoom() {
       <div
         className={`
           flex flex-col gap-4
-          ${layout.isDesktopOrLarger && (leftZonePanels.length > 0 || rightZonePanels.length > 0) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
+          ${layout.isDesktopOrLarger && (leftZonePanels.length > 0 || rightZonePanels.length > 0 || isDraggingPanel || isEditingLayout) ? 'lg:grid lg:gap-6 lg:items-start' : ''}
         `}
         style={gridStyle}
       >
         {/* Left Sidebar Zone (Desktop+) */}
-        {layout.isDesktopOrLarger && (leftZonePanels.length > 0 || isDraggingPanel) && (
+        {layout.isDesktopOrLarger && (leftZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
           <aside className="sticky top-6 space-y-3">
             {/* Top drop zone for reordering */}
-            {isDraggingPanel && (
+            {(isDraggingPanel || isEditingLayout) && (
               <DropZone
                 onDrop={handleDropToZone('sidebar-left', 0)}
                 active={true}
@@ -1768,7 +1776,7 @@ export default function GameRoom() {
             {leftZonePanels.map((p, idx) => (
               <div key={p.id} className="space-y-3">
                 {/* Between-panels drop zone */}
-                {isDraggingPanel && idx > 0 && (
+                {(isDraggingPanel || isEditingLayout) && idx > 0 && (
                   <DropZone
                     onDrop={handleDropToZone('sidebar-left', idx)}
                     active={true}
@@ -1830,7 +1838,7 @@ export default function GameRoom() {
               </div>
             ))}
             {/* End drop zone */}
-            {isDraggingPanel && (
+            {(isDraggingPanel || isEditingLayout) && (
               <DropZone
                 onDrop={handleDropToZone('sidebar-left', leftZonePanels.length)}
                 active={true}
@@ -2016,10 +2024,10 @@ export default function GameRoom() {
         </div>
 
         {/* Right Sidebar Zone (Desktop+) */}
-        {layout.isDesktopOrLarger && (rightZonePanels.length > 0 || isDraggingPanel) && (
+        {layout.isDesktopOrLarger && (rightZonePanels.length > 0 || isDraggingPanel || isEditingLayout) && (
           <aside className="sticky top-6 space-y-3">
             {/* Top drop zone for reordering */}
-            {isDraggingPanel && (
+            {(isDraggingPanel || isEditingLayout) && (
               <DropZone
                 onDrop={handleDropToZone('sidebar-right', 0)}
                 active={true}
@@ -2029,7 +2037,7 @@ export default function GameRoom() {
             )}
             {rightZonePanels.map((p, idx) => (
               <div key={p.id} className="space-y-3">
-                {isDraggingPanel && idx > 0 && (
+                {(isDraggingPanel || isEditingLayout) && idx > 0 && (
                   <DropZone
                     onDrop={handleDropToZone('sidebar-right', idx)}
                     active={true}
@@ -2090,7 +2098,7 @@ export default function GameRoom() {
                 )}
               </div>
             ))}
-            {isDraggingPanel && (
+            {(isDraggingPanel || isEditingLayout) && (
               <DropZone
                 onDrop={handleDropToZone('sidebar-right', rightZonePanels.length)}
                 active={true}
@@ -2384,6 +2392,7 @@ export default function GameRoom() {
             setStatsDrawerOpen(true)
             setMobileDrawerOpen(false)
           }}
+          onLayoutClick={() => setIsEditingLayout((v) => !v)}
           isMobileDrawerOpen={mobileDrawerOpen}
         />
       )}

@@ -48,6 +48,15 @@ export default function PanelHeader({
               e.dataTransfer.effectAllowed = 'move'
               e.dataTransfer.dropEffect = 'move'
               e.dataTransfer.setData('application/x-conquestk-panel', panelId)
+              // Ensure consistent drag start across Chromium by setting a tiny drag image
+              const img = new Image()
+              img.src =
+                'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+              try {
+                e.dataTransfer.setDragImage(img, 0, 0)
+              } catch {
+                // ignore drag image errors
+              }
             } catch {
               // ignore
             }
