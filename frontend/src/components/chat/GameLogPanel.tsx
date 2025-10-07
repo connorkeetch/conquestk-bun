@@ -182,15 +182,48 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const lost = toSafeInt(losses?.attacker, 0)
             const conquered = Boolean(er.conquered)
             if (conquered) {
+              const attackerId = String((er.attackerId as string) || '')
+              const defenderId = (er.defenderId as string | undefined) || undefined
               formatted.push({
                 ts,
                 text: `${from} (${attackerName}) attacked ${to}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
+                rich: (
+                  <>
+                    {from} (
+                    <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                      {attackerName}
+                    </span>
+                    ) attacked {to}
+                    {defenderName ? (
+                      <>
+                        {' '}(
+                        <span
+                          className="font-semibold"
+                          style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
+                        >
+                          {defenderName}
+                        </span>
+                        )
+                      </>
+                    ) : null}{' '}
+                    conquering it, killing {killed}, losing {lost}.
+                  </>
+                ),
               })
               const moved = toSafeInt(er.movedArmies, 0)
               if (moved > 0) {
                 formatted.push({
                   ts,
                   text: `${from} (${attackerName}) occupied ${to} with ${moved} troops.`,
+                  rich: (
+                    <>
+                      {from} (
+                      <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                        {attackerName}
+                      </span>
+                      ) occupied {to} with {moved} troops.
+                    </>
+                  ),
                 })
               }
               // Log any eliminations associated with this conquest
@@ -201,28 +234,87 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 : []
               for (const eliminatedId of eliminated) {
                 const defeatedName = nameOf(eliminatedId) || eliminatedId
-                formatted.push({ ts, text: `${defeatedName} was defeated by ${attackerName}.` })
+                formatted.push({
+                  ts,
+                  text: `${defeatedName} was defeated by ${attackerName}.`,
+                  rich: (
+                    <>
+                      <span
+                        className="font-semibold"
+                        style={{ color: playerColor.get(eliminatedId) }}
+                      >
+                        {defeatedName}
+                      </span>{' '}
+                      was defeated by{' '}
+                      <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                        {attackerName}
+                      </span>
+                      .
+                    </>
+                  ),
+                })
               }
             } else {
+              const attackerId = String((er.attackerId as string) || '')
+              const defenderId = (er.defenderId as string | undefined) || undefined
               formatted.push({
                 ts,
                 text: `${from} (${attackerName}) attacked ${to}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
+                rich: (
+                  <>
+                    {from} (
+                    <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                      {attackerName}
+                    </span>
+                    ) attacked {to}
+                    {defenderName ? (
+                      <>
+                        {' '}(
+                        <span
+                          className="font-semibold"
+                          style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
+                        >
+                          {defenderName}
+                        </span>
+                        )
+                      </>
+                    ) : null}{' '}
+                    killing {killed}, losing {lost}.
+                  </>
+                ),
               })
             }
             continue
           }
           if (type === 'TREASURE') {
             const name = nameOf(er.userId as string) || 'Unknown'
-            formatted.push({ ts, text: `${name} received a card.` })
+            const id = String((er.userId as string) || '')
+            formatted.push({
+              ts,
+              text: `${name} received a card.`,
+              rich: (
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>{' '}
+                  received a card.
+                </>
+              ),
+            })
             continue
           }
           if (type === 'TREASURE_CASH') {
             const name = nameOf(er.playerId as string) || 'Unknown'
             const troops = toSafeInt(er.troops, 0)
             if (troops > 0) {
+              const id = String((er.playerId as string) || '')
               formatted.push({
                 ts,
                 text: `${name} received ${troops} troops for cashing treasures.`,
+                rich: (
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>{' '}
+                    received {troops} troops for cashing treasures.
+                  </>
+                ),
               })
             }
             continue
@@ -241,9 +333,19 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const from = toName(String(er.fromTerritoryId))
             const to = toName(String(er.toTerritoryId))
             const n = toSafeInt(er.movedArmies, 0)
+            const id = String((er.playerId as string) || '')
             formatted.push({
               ts,
               text: `${to} (${name}) was fortified from ${from} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
+              rich: (
+                <>
+                  {to} (
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>
+                  ) was fortified from {from} (
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>
+                  ) with {n} {n === 1 ? 'troop' : 'troops'}.
+                </>
+              ),
             })
             continue
           }
@@ -252,15 +354,31 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const territory = toName(String(er.territoryId))
             const change = toSafeInt(er.armies, 0)
             if (change > 0) {
+              const id = String((er.playerId as string) || '')
               formatted.push({
                 ts,
                 text: `${territory} (${name}) received ${change} ${change === 1 ? 'troop' : 'troops'}.`,
+                rich: (
+                  <>
+                    {territory} (
+                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>
+                    ) received {change} {change === 1 ? 'troop' : 'troops'}.
+                  </>
+                ),
               })
             } else if (change < 0) {
               const n = Math.abs(change)
+              const id = String((er.playerId as string) || '')
               formatted.push({
                 ts,
                 text: `${territory} (${name}) returned ${n} ${n === 1 ? 'troop' : 'troops'} to the reserves.`,
+                rich: (
+                  <>
+                    {territory} (
+                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>
+                    ) returned {n} {n === 1 ? 'troop' : 'troops'} to the reserves.
+                  </>
+                ),
               })
             }
             continue
@@ -269,20 +387,47 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const name = nameOf(er.playerId as string) || 'Unknown'
             const event = String(er.event)
             if (event === 'END') {
-              formatted.push({ ts, text: `${name} ended the turn.` })
+              const id = String((er.playerId as string) || '')
+              formatted.push({
+                ts,
+                text: `${name} ended the turn.`,
+                rich: (
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>{' '}
+                    ended the turn.
+                  </>
+                ),
+              })
             } else if (event === 'START') {
               const reinf = toSafeInt(er.reinforcementArmies, 0)
               const terrs = toSafeInt(er.territoryCount, 0)
               if (reinf > 0) {
+                const id = String((er.playerId as string) || '')
                 formatted.push({
                   ts,
                   text:
                     terrs > 0
                       ? `${name} received ${reinf} troops for ${terrs} territories.`
                       : `${name} received ${reinf} troops.`,
+                  rich: (
+                    <>
+                      <span className="font-semibold" style={{ color: playerColor.get(id) }}>{name}</span>{' '}
+                      received {reinf} troops{terrs > 0 ? <> for {terrs} territories</> : null}.
+                    </>
+                  ),
                 })
               }
-              formatted.push({ ts, text: `${name} started the turn.` })
+              const id2 = String((er.playerId as string) || '')
+              formatted.push({
+                ts,
+                text: `${name} started the turn.`,
+                rich: (
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(id2) }}>{name}</span>{' '}
+                    started the turn.
+                  </>
+                ),
+              })
             }
             continue
           }
@@ -292,7 +437,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const change = toSafeInt(er.change, 0)
             if (change !== 0) {
               const verb = change > 0 ? 'gained' : 'lost'
-              formatted.push({ ts, text: `${name} ${verb} ${Math.abs(change)} rating.` })
+              formatted.push({
+                ts,
+                text: `${name} ${verb} ${Math.abs(change)} rating.`,
+                rich: (
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(userId) }}>{name}</span>{' '}
+                    {verb} {Math.abs(change)} rating.
+                  </>
+                ),
+              })
             }
           }
         }
@@ -316,10 +470,35 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       )
     }
 
+    function addRich(
+      rich: React.ReactNode,
+      textFallback: string,
+      ts?: Date,
+      focusTerritories?: string[],
+    ) {
+      setEntries((prev) =>
+        [{ ts: ts ?? new Date(), text: textFallback, rich, focusTerritories }, ...prev].slice(
+          0,
+          500,
+        ),
+      )
+    }
+
     const onPlayerJoined: Parameters<typeof socketService.on<'player-joined'>>[1] = (payload) => {
       if (!payload || payload.roomId !== gameId) return
       const name = payload.player.username
-      add(`${name} joined the game.`)
+      const id = (payload.player.userId || payload.player.id) as string
+      addRich(
+        (
+          <>
+            <span className="font-semibold" style={{ color: playerColor.get(String(id)) }}>
+              {name}
+            </span>{' '}
+            joined the game.
+          </>
+        ),
+        `${name} joined the game.`,
+      )
     }
 
     const onLifecycle: Parameters<typeof socketService.on<'lifecycle:update'>>[1] = (payload) => {
@@ -355,7 +534,17 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       if (phaseRef.current === 'fortify' || (phaseRef.current && delta.phase === 'reinforcement')) {
         if (prevPlayer && prevPlayer !== nextPlayer) {
           const prevName = playerName.get(prevPlayer) || prevPlayer
-          add(`${prevName} ended the turn.`)
+          addRich(
+            (
+              <>
+                <span className="font-semibold" style={{ color: playerColor.get(prevPlayer) }}>
+                  {prevName}
+                </span>{' '}
+                ended the turn.
+              </>
+            ),
+            `${prevName} ended the turn.`,
+          )
         }
       }
       // Track phase changes and player order
@@ -370,10 +559,36 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           const name = playerName.get(delta.currentPlayer) || delta.currentPlayer
           if (turn !== prevTurn || !startedLoggedRef.current) {
             startedLoggedRef.current = true
-            add(`${name} started the turn.`)
+            addRich(
+              (
+                <>
+                  <span
+                    className="font-semibold"
+                    style={{ color: playerColor.get(delta.currentPlayer) }}
+                  >
+                    {name}
+                  </span>{' '}
+                  started the turn.
+                </>
+              ),
+              `${name} started the turn.`,
+            )
           }
           if (typeof delta.reinforcementArmies === 'number' && delta.reinforcementArmies > 0) {
-            add(`${name} received ${delta.reinforcementArmies} troops.`)
+            addRich(
+              (
+                <>
+                  <span
+                    className="font-semibold"
+                    style={{ color: playerColor.get(delta.currentPlayer) }}
+                  >
+                    {name}
+                  </span>{' '}
+                  received {delta.reinforcementArmies} troops.
+                </>
+              ),
+              `${name} received ${delta.reinforcementArmies} troops.`,
+            )
           }
         }
         lastPlayerRef.current = delta.currentPlayer
@@ -391,7 +606,22 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       const attackerName = attackerId ? playerName.get(attackerId) || attackerId : 'Unknown'
       for (const eliminatedId of eliminated) {
         const defeatedName = playerName.get(eliminatedId) || eliminatedId
-        add(`${defeatedName} was defeated by ${attackerName}.`, ts)
+        addRich(
+          (
+            <>
+              <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
+                {defeatedName}
+              </span>{' '}
+              was defeated by{' '}
+              <span className="font-semibold" style={{ color: playerColor.get(attackerId || '') }}>
+                {attackerName}
+              </span>
+              .
+            </>
+          ),
+          `${defeatedName} was defeated by ${attackerName}.`,
+          ts,
+        )
       }
     }
 
@@ -409,7 +639,29 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       const lost = br.attackerLosses
 
       if (br.conquered) {
-        add(
+        addRich(
+          (
+            <>
+              {fromName} (
+              <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                {attackerName}
+              </span>
+              ) attacked {toName}
+              {defenderName ? (
+                <>
+                  {' '}(
+                  <span
+                    className="font-semibold"
+                    style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
+                  >
+                    {defenderName}
+                  </span>
+                  )
+                </>
+              ) : null}{' '}
+              conquering it, killing {killed}, losing {lost}.
+            </>
+          ),
           `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
           undefined,
           [br.fromTerritory.id, br.toTerritory.id],
@@ -417,14 +669,46 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         // Moved troops equals final armies on conquered territory
         const moved = br.toTerritory.armies
         if (moved && moved > 0) {
-          add(`${fromName} (${attackerName}) occupied ${toName} with ${moved} troops.`, undefined, [
-            br.fromTerritory.id,
-            br.toTerritory.id,
-          ])
+          addRich(
+            (
+              <>
+                {fromName} (
+                <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                  {attackerName}
+                </span>
+                ) occupied {toName} with {moved} troops.
+              </>
+            ),
+            `${fromName} (${attackerName}) occupied ${toName} with ${moved} troops.`,
+            undefined,
+            [br.fromTerritory.id, br.toTerritory.id],
+          )
         }
         logEliminations(attackerId, br.eliminatedPlayers, new Date(delta.timestamp))
       } else {
-        add(
+        addRich(
+          (
+            <>
+              {fromName} (
+              <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                {attackerName}
+              </span>
+              ) attacked {toName}
+              {defenderName ? (
+                <>
+                  {' '}(
+                  <span
+                    className="font-semibold"
+                    style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
+                  >
+                    {defenderName}
+                  </span>
+                  )
+                </>
+              ) : null}{' '}
+              killing {killed}, losing {lost}.
+            </>
+          ),
           `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
           undefined,
           [br.fromTerritory.id, br.toTerritory.id],
@@ -472,7 +756,27 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                     const defeatedId = pu.playerId
                     const defeatedName = playerName.get(defeatedId) || defeatedId
                     const attackerName = playerName.get(attackerId) || attackerId
-                    add(`${defeatedName} was defeated by ${attackerName}.`)
+                    addRich(
+                      (
+                        <>
+                          <span
+                            className="font-semibold"
+                            style={{ color: playerColor.get(defeatedId) }}
+                          >
+                            {defeatedName}
+                          </span>{' '}
+                          was defeated by{' '}
+                          <span
+                            className="font-semibold"
+                            style={{ color: playerColor.get(attackerId || '') }}
+                          >
+                            {attackerName}
+                          </span>
+                          .
+                        </>
+                      ),
+                      `${defeatedName} was defeated by ${attackerName}.`,
+                    )
                   }
                 }
               }
@@ -490,7 +794,20 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         const fromName = territoryName.get(fr.fromTerritoryId) || fr.fromTerritoryId
         const toName = territoryName.get(fr.toTerritoryId) || fr.toTerritoryId
         const n = toSafeInt(fr.movedArmies, 0)
-        add(
+        addRich(
+          (
+            <>
+              {toName} (
+              <span className="font-semibold" style={{ color: playerColor.get(fr.playerId) }}>
+                {name}
+              </span>
+              ) was fortified from {fromName} (
+              <span className="font-semibold" style={{ color: playerColor.get(fr.playerId) }}>
+                {name}
+              </span>
+              ) with {n} {n === 1 ? 'troop' : 'troops'}.
+            </>
+          ),
           `${toName} (${name}) was fortified from ${fromName} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
           undefined,
           [fr.fromTerritoryId, fr.toTerritoryId],
@@ -500,7 +817,17 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       if (d.type === 'TREASURE_AWARDED') {
         const ta = d as TreasureAwardedDelta
         const name = playerName.get(ta.userId) || ta.userId
-        add(`${name} received a card.`)
+        addRich(
+          (
+            <>
+              <span className="font-semibold" style={{ color: playerColor.get(ta.userId) }}>
+                {name}
+              </span>{' '}
+              received a card.
+            </>
+          ),
+          `${name} received a card.`,
+        )
         return
       }
       if (d.type === 'GAME_END') {
@@ -517,7 +844,22 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const name = playerName.get(ownerId) || ownerId
             const terr = territoryName.get(d.territoryId) || d.territoryId
             const diff = next - prev
-            add(`${terr} (${name}) was reinforced by ${name} with ${diff} troops.`)
+            addRich(
+              (
+                <>
+                  {terr} (
+                  <span className="font-semibold" style={{ color: playerColor.get(ownerId) }}>
+                    {name}
+                  </span>
+                  ) was reinforced by{' '}
+                  <span className="font-semibold" style={{ color: playerColor.get(ownerId) }}>
+                    {name}
+                  </span>{' '}
+                  with {diff} troops.
+                </>
+              ),
+              `${terr} (${name}) was reinforced by ${name} with ${diff} troops.`,
+            )
           }
           lastArmiesRef.current[d.territoryId] = next
         } else {
@@ -549,7 +891,18 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         for (const ch of list) {
           const name = ch.username || playerName.get(ch.userId) || ch.userId
           const verb = ch.change > 0 ? 'gained' : 'lost'
-          add(`${name} ${verb} ${Math.abs(ch.change)} rating.`, now)
+          addRich(
+            (
+              <>
+                <span className="font-semibold" style={{ color: playerColor.get(ch.userId) }}>
+                  {name}
+                </span>{' '}
+                {verb} {Math.abs(ch.change)} rating.
+              </>
+            ),
+            `${name} ${verb} ${Math.abs(ch.change)} rating.`,
+            now,
+          )
         }
       } catch {
         /* ignore */
@@ -594,10 +947,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                         className="text-left text-white underline underline-offset-2 hover:text-[color:var(--color-accent)]"
                         onClick={() => e.focusTerritories && onFocus?.(e.focusTerritories)}
                       >
-                        {e.text}
+                        {e.rich ?? e.text}
                       </button>
                     ) : (
-                      <div className="text-white">{e.text}</div>
+                      <div className="text-white">{e.rich ?? e.text}</div>
                     )}
                   </div>
                 )
