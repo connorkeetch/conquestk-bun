@@ -105,6 +105,7 @@ const ActiveGamesDropdown: React.FC = () => {
   }, [])
 
   const activeGames = games.filter((g) => g.status === 'active')
+  const pausedGames = games.filter((g) => g.status === 'paused')
   const waitingGames = games.filter((g) => g.status === 'lobby' || g.status === 'initializing')
   const finishedGames = games.filter((g) => g.status === 'completed').slice(0, 3)
 
@@ -246,6 +247,48 @@ const ActiveGamesDropdown: React.FC = () => {
                                     </>
                                   )
                                 })()}
+                              </div>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-muted mt-1" />
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Paused Games */}
+                {pausedGames.length > 0 && (
+                  <div className="p-4 border-b border-border">
+                    <h4 className="text-sm font-semibold text-muted mb-2 uppercase flex items-center gap-2">
+                      <Clock className="w-3 h-3" />
+                      Paused ({pausedGames.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {pausedGames.slice(0, 5).map((game) => (
+                        <Link
+                          key={game.id}
+                          to={`/room/${(game as unknown as { roomCode?: number }).roomCode ?? game.id}`}
+                          className="block p-3 bg-surface-2 rounded-lg hover:bg-gray-600 transition-colors"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-white font-medium">
+                                {game.name}
+                                {typeof game.roomCode === 'number'
+                                  ? ` — Room ${game.roomCode}`
+                                  : ''}
+                              </p>
+                              <div className="flex items-center gap-3 text-sm text-muted mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Users className="w-3 h-3" />
+                                  {game.playerCount}/{game.maxPlayers}
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-xs text-amber-400 font-medium">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Paused</span>
+                                </span>
                               </div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-muted mt-1" />
