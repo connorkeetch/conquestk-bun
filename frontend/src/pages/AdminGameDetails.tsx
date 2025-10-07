@@ -403,7 +403,9 @@ export default function AdminGameDetailsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <div className="text-muted">Status</div>
-              <div className="font-medium">{details.status}</div>
+              <div className="font-medium">
+                {details.status === 'abandoned' ? 'Force Ended' : details.status}
+              </div>
             </div>
             <div>
               <div className="text-muted">Phase</div>

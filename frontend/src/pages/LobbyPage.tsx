@@ -248,6 +248,9 @@ const LobbyPage: React.FC = () => {
   const [filters, setFilters] = useState<LobbyFilters>({ ...DEFAULT_LOBBY_FILTERS })
   const { section } = useParams<{ section?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
+  // Stable derivation of the current filter param to avoid depending on the
+  // unstable URLSearchParams object identity in effects
+  const filterParam = (searchParams.get('filter') || 'all').toLowerCase()
 
   // Table mode (desktop) state: column toggles and sorting
   type MyGamesColumn =
@@ -581,26 +584,28 @@ const LobbyPage: React.FC = () => {
     }
   }, [section])
 
-  // Deep-link: sync my-games filter with query param
+  // Deep-link: sync my-games filter with query param (read-only -> state)
   useEffect(() => {
     if (activeTab !== 'my-games') return
-    const raw = (searchParams.get('filter') || 'all').toLowerCase()
+    const raw = filterParam
     const allowed = new Set(['all', 'active', 'lobby', 'completed'])
     const next = allowed.has(raw) ? (raw as 'all' | 'active' | 'lobby' | 'completed') : 'all'
     if (next !== myGamesFilter) {
       setMyGamesFilter(next)
     }
-  }, [activeTab, searchParams, myGamesFilter])
+  }, [activeTab, filterParam, myGamesFilter])
 
+  // Reflect state back to the URL when it changes (state -> write-only URL)
   useEffect(() => {
     if (activeTab !== 'my-games') return
-    const current = (searchParams.get('filter') || 'all').toLowerCase()
+    const current = filterParam
     if (current !== myGamesFilter) {
       const nextParams = new URLSearchParams(searchParams)
       nextParams.set('filter', myGamesFilter)
-      setSearchParams(nextParams)
+      // Use replace to avoid spamming history when toggling quickly
+      setSearchParams(nextParams, { replace: true })
     }
-  }, [myGamesFilter, activeTab, searchParams, setSearchParams])
+  }, [myGamesFilter, activeTab, filterParam, setSearchParams])
 
   useEffect(() => {
     // Check email verification status

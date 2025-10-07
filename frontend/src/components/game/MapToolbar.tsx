@@ -39,7 +39,9 @@ export function MapToolbar({ layout, zoom, showZoomPresets = true }: MapToolbarP
   }, [])
 
   const layoutClasses =
-    layout === 'horizontal' ? 'flex flex-wrap items-center gap-2' : 'flex flex-col gap-2'
+    layout === 'horizontal'
+      ? 'flex flex-wrap items-center gap-2 md:gap-3'
+      : 'flex flex-col gap-2 md:gap-3'
 
   const applyScaleTarget = useCallback(
     (targetScale: number) => {
@@ -84,7 +86,7 @@ export function MapToolbar({ layout, zoom, showZoomPresets = true }: MapToolbarP
                   key={target.scale}
                   type="button"
                   className={`${buttonBaseClasses('horizontal')} ${
-                    layout === 'horizontal' ? 'w-[72px]' : 'w-full'
+                    layout === 'horizontal' ? 'w-[72px] md:w-[84px]' : 'w-full'
                   } justify-center ${
                     active
                       ? 'bg-[color:var(--surface-3)] ring-1 ring-[color:var(--violet)]'
@@ -100,7 +102,7 @@ export function MapToolbar({ layout, zoom, showZoomPresets = true }: MapToolbarP
           <button
             type="button"
             className={`${buttonBaseClasses('horizontal')} ${
-              layout === 'horizontal' ? 'w-[72px]' : 'w-full'
+              layout === 'horizontal' ? 'w-[72px] md:w-[84px]' : 'w-full'
             } justify-center bg-[color:var(--surface-1)] hover:bg-[color:var(--surface-3)]`}
             onClick={() => {
               if (zoom) {

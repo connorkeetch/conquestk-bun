@@ -17,9 +17,9 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "@risk-game/shared": "file:../shared",
     "@hookform/resolvers": "5.2.2",
     "@reduxjs/toolkit": "^2.9.0",
+    "@risk-game/shared": "file:../shared",
     "@tailwindcss/vite": "^4.1.13",
     "@types/dompurify": "^3.0.5",
     "@types/uuid": "^10.0.0",
@@ -53,10 +53,11 @@
     "autoprefixer": "^10.4.21",
     "jsdom": "26.1.0",
     "postcss": "8.5.6",
-    "vite-plugin-pwa": "^0.20.5",
+    "sharp": "^0.34.4",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
+    "vite-plugin-pwa": "^1.0.3",
     "vitest": "3.2.4"
   },
   "engines": {

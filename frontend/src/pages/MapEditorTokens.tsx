@@ -749,6 +749,8 @@ export default function MapEditorTokens() {
   const dragUpdateFrameRef = useRef<number | null>(null)
   const pendingDragPositionRef = useRef<{ x: number; y: number } | null>(null)
   const [searchParams] = useSearchParams()
+  // Derive a stable value instead of depending on URLSearchParams identity
+  const editParam = (searchParams.get('edit') || '').toLowerCase()
   const [draftId, setDraftId] = useState<string | null>(null)
   const [publishedMapId, setPublishedMapId] = useState<string | null>(null)
   const [_isAdminContext, setIsAdminContext] = useState(false)
@@ -1776,7 +1778,7 @@ export default function MapEditorTokens() {
   // Check for saved draft on mount
   // Check URL params for edit mode and load drafts
   useEffect(() => {
-    const mapId = searchParams.get('edit')
+    const mapId = editParam || null
     if (mapId) {
       setDraftId(null)
       setPublishedMapId(mapId)
@@ -1795,7 +1797,7 @@ export default function MapEditorTokens() {
         }
       }
     }
-  }, [searchParams, loadMapForEditing])
+  }, [editParam, loadMapForEditing])
 
   // Load user's draft maps from database
   const loadDraftMaps = async () => {

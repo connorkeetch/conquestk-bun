@@ -536,8 +536,13 @@ export class GameRoomService {
           (row as Record<string, unknown>).grace_expires_at as Date | string | null | undefined,
         ) ?? null,
       readyCheckStartedAt: this.toDate(row.ready_check_started_at) ?? null,
-      // Time bank is not currently tracked; expose canonical field as null for now.
-      winner: row.winner ?? undefined,
+      // Winner (user id) captured at game end; DB column is winner_id
+      winner:
+        typeof (row as Record<string, unknown>).winner_id === 'string'
+          ? ((row as Record<string, unknown>).winner_id as string)
+          : (row as Record<string, unknown>).winner_id === null
+            ? null
+            : undefined,
       playerCount: normalizedPlayerCount,
       players,
       // Replacement pending user id for host decision
@@ -1438,21 +1443,98 @@ export class GameRoomService {
   }
 
   async leaveRoom(roomId: string, userId: string): Promise<void> {
-    const deleteQuery = `DELETE FROM room_players WHERE room_id = $1 AND user_id = $2`
-    await query(deleteQuery, [roomId, userId])
+    // Remove the player from the room
+    await query(`DELETE FROM room_players WHERE room_id = $1 AND user_id = $2`, [roomId, userId])
 
-    await query(
-      `
-      UPDATE game_rooms
-      SET status = 'lobby',
-          ready_check_started_at = NULL,
-          turn_number = 0,
-          turn_expires_at = NULL,
-          current_turn_user_id = NULL
-      WHERE id = $1 AND status IN ('lobby', 'initializing')
-    `,
+    // If the game hasn't started and the host leaves, auto-close the room to avoid orphan lobbies
+    const result = await query<{
+      host_id: string
+      status: string
+    }>('SELECT host_id, status FROM game_rooms WHERE id = $1', [roomId])
+    const row = result.rows[0]
+    if (!row) return
+
+    const status = this.normalizeStatus(row.status)
+    const hostLeft = row.host_id === userId
+
+    if (hostLeft && (status === 'lobby' || status === 'initializing')) {
+      await this.performCloseRoom(roomId)
+      return
+    }
+
+    // Otherwise, just normalize lobby state if pre-start
+    if (status === 'lobby' || status === 'initializing') {
+      await query(
+        `
+        UPDATE game_rooms
+        SET status = 'lobby',
+            ready_check_started_at = NULL,
+            turn_number = 0,
+            turn_expires_at = NULL,
+            current_turn_user_id = NULL
+        WHERE id = $1 AND status IN ('lobby', 'initializing')
+      `,
+        [roomId],
+      )
+    }
+  }
+
+  /**
+   * Host-requested close for a lobby (pre-start). Marks room as abandoned, clears players and transient state.
+   */
+  async closeRoom(roomId: string, actorUserId: string): Promise<void> {
+    const res = await query<{ host_id: string; status: string }>(
+      `SELECT host_id, status FROM game_rooms WHERE id = $1`,
       [roomId],
     )
+    const row = res.rows[0]
+    if (!row) {
+      throw new Error('Room not found')
+    }
+
+    const status = this.normalizeStatus(row.status)
+    if (row.host_id !== actorUserId) {
+      throw new Error('Only the host can close the room')
+    }
+    if (status !== 'lobby' && status !== 'initializing') {
+      throw new Error('Game already started')
+    }
+
+    await this.performCloseRoom(roomId)
+  }
+
+  private async performCloseRoom(roomId: string): Promise<void> {
+    // Ensure atomic update + cleanup
+    const client = await getClient()
+    try {
+      await client.query('BEGIN')
+      await client.query(
+        `UPDATE game_rooms
+         SET status = 'abandoned',
+             ended_at = NOW(),
+             ready_check_started_at = NULL,
+             turn_number = 0,
+             current_turn_user_id = NULL,
+             turn_expires_at = NULL,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [roomId],
+      )
+      await client.query(`DELETE FROM room_players WHERE room_id = $1`, [roomId])
+      await client.query(`DELETE FROM game_states WHERE room_id = $1`, [roomId])
+      await client.query('COMMIT')
+    } catch (e) {
+      await client.query('ROLLBACK')
+      throw e
+    } finally {
+      client.release()
+      try {
+        const { gameStateCache } = await import('./cacheService')
+        await gameStateCache.deleteGameState(roomId)
+      } catch {
+        // best-effort cache cleanup
+      }
+    }
   }
 
   async getUserGames(userId: string): Promise<GameRoom[]> {

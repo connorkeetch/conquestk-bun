@@ -364,6 +364,37 @@ export class GameController {
     }
   }
 
+  // Host-only close for lobbies that haven't started
+  closeRoom = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
+      const userId = req.userId
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
+
+      await this.gameRoomService.closeRoom(roomId, userId)
+      await this.lifecycleService.refreshLifecycle(roomId)
+      return res.json({ message: 'Room closed' })
+    } catch (error) {
+      logger.error('Close room error:', error)
+      if (error instanceof Error) {
+        if (error.message === 'Room not found') {
+          return res.status(404).json({ message: error.message })
+        }
+        if (error.message.includes('Only the host')) {
+          return res.status(403).json({ message: error.message })
+        }
+        if (error.message.includes('Game already started')) {
+          return res.status(409).json({ message: error.message })
+        }
+      }
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
+
   updateAiOpponents = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -563,6 +594,30 @@ export class GameController {
       // Get user's games from the service
       const games = await this.gameRoomService.getUserGames(userId)
 
+      // Resolve winner usernames for completed games
+      const winnerIds = Array.from(
+        new Set(
+          games
+            .map((g) => (typeof g.winner === 'string' ? g.winner : null))
+            .filter((v): v is string => Boolean(v)),
+        ),
+      )
+
+      let winnerNameMap = new Map<string, string>()
+      if (winnerIds.length > 0) {
+        try {
+          const result = await query<{ id: string; username: string }>(
+            'SELECT id, username FROM users WHERE id = ANY($1)',
+            [winnerIds],
+          )
+          winnerNameMap = new Map(result.rows.map((r) => [r.id, r.username]))
+        } catch (err) {
+          logger.warn('Failed to resolve winner usernames for my-games payload', {
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+
       // Format games for the frontend
       const formattedGames = games.map((game) => ({
         id: game.id,
@@ -572,7 +627,10 @@ export class GameController {
         maxPlayers: game.maxPlayers,
         roomCode: game.roomCode,
         isYourTurn: game.currentTurnUserId === userId,
-        winner: game.winner || null,
+        // Return winner username when available
+        winner: game.status === 'completed' && typeof game.winner === 'string'
+          ? winnerNameMap.get(game.winner) ?? null
+          : null,
         createdAt: game.createdAt,
         updatedAt: game.updatedAt ?? game.createdAt,
       }))
