@@ -67,7 +67,7 @@ export function DiceResultsBar() {
     return { attackerColor: aColor, defenderColor: dColor }
   }, [game, last])
 
-  // Reinforcement phase: show deployed/total summary for the active player (focus on UX for your turn)
+  // Reinforcement phase: show deployed/total summary for the active player only
   if (phase === 'reinforcement') {
     // Prefer server-reconciled spent; fallback to client placement history within this session
     const spentFromHistory = placementHistory.reduce(
@@ -78,8 +78,8 @@ export function DiceResultsBar() {
     const remaining = Math.max(0, Math.trunc(remainingReinforcements || 0))
     const total = Math.max(0, spent + remaining)
 
-    // Hide when not your turn and no meaningful info to show
-    if (!isMyTurn && total === 0) return null
+    // Only show for active player
+    if (!isMyTurn) return null
 
     return (
       <div className="mt-2 bg-[color:var(--surface-1)] border border-[color:var(--panel-border)] rounded p-2">
@@ -100,6 +100,48 @@ export function DiceResultsBar() {
                 Total equals deployed plus remaining. Remaining equals armies left to place this
                 phase.
               </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Fortify phase: show move count and limit semantics for the active player
+  if (phase === 'fortify') {
+    if (!isMyTurn || !game) return null
+    const movementType =
+      (game.gameConfig as { movementType?: string } | null)?.movementType ?? 'classic_adjacent'
+    const movedCount = Object.keys(game.movementTracking ?? {}).length
+
+    const limitLabel = (() => {
+      switch (movementType) {
+        case 'classic_adjacent':
+          return 'Limit: 1 move this phase'
+        case 'path_single':
+          return 'Limit: 1 move (any connected)'
+        case 'adjacent_multi':
+          return 'Limit: 1 move per territory'
+        case 'path_multi':
+          return 'Limit: 1 move per territory (any connected)'
+        default:
+          return 'Fortify rules active'
+      }
+    })()
+
+    const reachedLimit =
+      (movementType === 'classic_adjacent' || movementType === 'path_single') && movedCount >= 1
+
+    return (
+      <div className="mt-2 bg-[color:var(--surface-1)] border border-[color:var(--panel-border)] rounded p-2">
+        <div className="flex items-center justify-center gap-3 lg:gap-6 xl:gap-8 text-xs text-muted flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="uppercase tracking-wide text-[10px]">Fortify</span>
+            <span className="font-semibold text-[color:var(--heading)]">{movedCount}</span>
+            <span
+              className={`text-[10px] ${reachedLimit ? 'text-[color:var(--color-danger)]' : ''}`}
+            >
+              {reachedLimit ? 'Limit reached' : limitLabel}
             </span>
           </div>
         </div>
