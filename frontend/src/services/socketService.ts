@@ -20,11 +20,9 @@ import {
   applyDelta,
   fetchGameState,
   selectTargetTerritory,
-  selectTerritory,
   setBattleResult,
   setError,
   setGameState,
-  setPendingAction,
   setReinforcementArmies,
   updateGameState,
   updateTerritory,
@@ -882,7 +880,7 @@ class SocketService {
       )
     })
 
-    // Game-specific legacy events removed in favor of game-delta and phaseChanged
+    // Game-specific legacy events removed in favor of unified 'game-delta'
 
     this.socket.on('armiesDeployed', () => {
       // Play troop placement sound
@@ -990,27 +988,7 @@ class SocketService {
       store.dispatch(selectTargetTerritory(null))
     })
 
-    this.socket.on('phaseChanged', (data: unknown) => {
-      const payload = data as Parameters<ServerToClientEvents['phaseChanged']>[0]
-      store.dispatch(
-        updateGameState({
-          phase: payload.phase,
-          currentPlayer: payload.currentPlayer,
-        }),
-      )
-
-      // Set reinforcement armies when entering reinforcement phase
-      if (payload.phase === 'reinforcement') {
-        store.dispatch(setReinforcementArmies(payload.reinforcementArmies ?? 0))
-      } else {
-        store.dispatch(setReinforcementArmies(0))
-      }
-
-      // Clear selections when phase changes
-      store.dispatch(selectTerritory(null))
-      store.dispatch(selectTargetTerritory(null))
-      store.dispatch(setPendingAction(null))
-    })
+    // Legacy 'phaseChanged' listener removed; use 'game-delta' PHASE_CHANGE only
 
     this.socket.on('territoriesFortified', (data: unknown) => {
       const payload = data as Parameters<ServerToClientEvents['territoriesFortified']>[0]
@@ -1212,7 +1190,7 @@ class SocketService {
     this.socket.off('room-update')
     this.socket.off('armiesDeployed')
     this.socket.off('attackResult')
-    this.socket.off('phaseChanged')
+    // 'phaseChanged' removed
     this.socket.off('territoriesFortified')
     this.socket.off('capitalAttackCheck')
     this.socket.off('capitalElimination')

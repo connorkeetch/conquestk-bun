@@ -11,7 +11,7 @@ import GameRoomFooter from '@/components/game/GameRoomFooter'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
 import { TreasureTradeModal } from '@/components/game/TreasureTradeModal'
 import { TurnTimer } from '@/components/game/TurnTimer'
-import { YourTurnBanner } from '@/components/game/YourTurnBanner'
+// Removed YourTurnBanner in favor of styling the existing header
 import { YourTurnModal } from '@/components/game/YourTurnModal'
 import { ChatLogPanel, PlayerStatsPanel } from '@/components/panels'
 import DropZone from '@/components/panels/DropZone'
@@ -1376,7 +1376,13 @@ export default function GameRoom() {
             </div>
           </div>
           {showPhaseBar && currentGame && (
-            <div className="chip w-full flex flex-col gap-2 text-xs sm:text-sm">
+            <div
+              className={`chip w-full flex flex-col gap-2 text-xs sm:text-sm ${
+                isMyTurn
+                  ? 'ring-1 ring-[color:var(--color-accent)] bg-[color:var(--color-accent)]/12 animate-pulse'
+                  : 'bg-[color:var(--surface-2)]'
+              }`}
+            >
               {/* Unified, wrapping row: info + phases + actions */}
               <div className="flex w-full flex-wrap items-center gap-2">
                 {/* Turn info (left) */}
@@ -1497,7 +1503,6 @@ export default function GameRoom() {
       {/* Banners appear below the sticky title */}
       <ConnectionBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
-      <YourTurnBanner />
       <YourTurnModal />
 
       {joinError && (

@@ -246,12 +246,6 @@ export interface ServerToClientEvents {
   'receipt.read': (payload: ReceiptReadEventPayload) => void
   'typing.start': (payload: TypingEventResponse) => void
   'typing.stop': (payload: TypingEventResponse) => void
-  phaseChanged: (data: {
-    phase: GamePhase
-    currentPlayer: string
-    turn: number
-    reinforcementArmies?: number
-  }) => void
   capitalElimination: (data: {
     conqueror: string
     eliminated: string

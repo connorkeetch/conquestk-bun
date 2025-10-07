@@ -314,7 +314,7 @@ describe('socketService event handlers', () => {
     expect(roomEmit).toHaveBeenNthCalledWith(2, 'game-update', { id: 'state' })
   })
 
-  it('broadcasts phase changes to game channel on end turn', async () => {
+  it('broadcasts phase changes via unified game-delta on end turn', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
     const endTurnHandler = getSocketHandler(socket, 'endTurn')
 
@@ -330,15 +330,10 @@ describe('socketService event handlers', () => {
       expect.objectContaining({
         type: 'PHASE_CHANGE',
         roomId: 'room-end',
+        phase: 'reinforcement',
+        currentPlayer: 'player-2',
       }),
     )
-
-    expect(roomEmit).toHaveBeenNthCalledWith(2, 'phaseChanged', {
-      phase: 'reinforcement',
-      currentPlayer: 'player-2',
-      turn: 2,
-      reinforcementArmies: 5,
-    })
   })
 
   it('falls back gracefully when game action queue is unavailable', async () => {

@@ -37,12 +37,44 @@ export function YourTurnModal({ className = '' }: Props) {
       return
     }
     const currentTurn = game?.turn ?? null
-    if (currentTurn !== null && seenTurnRef.current !== currentTurn) {
+    const roomId = game?.roomId ?? null
+    if (currentTurn === null || !roomId || !userId) return
+
+    const storageKey = `ui.turnModal.seen:${roomId}:${userId}`
+    let seenForTurn: number | null = null
+    try {
+      const raw = localStorage.getItem(storageKey)
+      const n = raw ? Number.parseInt(raw, 10) : NaN
+      seenForTurn = Number.isFinite(n) ? n : null
+    } catch {
+      // ignore storage errors
+    }
+
+    const alreadySeen = seenForTurn === currentTurn
+    if (!alreadySeen && seenTurnRef.current !== currentTurn) {
       seenTurnRef.current = currentTurn
       setVisible(true)
-      // Audio cue already handled in socketService on turn start
+      // Mark as seen immediately to avoid popping again on refresh
+      try {
+        localStorage.setItem(storageKey, String(currentTurn))
+      } catch {
+        // ignore storage errors
+      }
     }
-  }, [isMyTurn, game?.turn])
+  }, [isMyTurn, game?.turn, game?.roomId, userId])
+
+  const handleClose = () => {
+    const currentTurn = game?.turn ?? null
+    const roomId = game?.roomId ?? null
+    if (currentTurn !== null && roomId && userId) {
+      try {
+        localStorage.setItem(`ui.turnModal.seen:${roomId}:${userId}`, String(currentTurn))
+      } catch {
+        // ignore
+      }
+    }
+    setVisible(false)
+  }
 
   if (!visible || !isMyTurn) return null
 
@@ -80,10 +112,10 @@ export function YourTurnModal({ className = '' }: Props) {
             <TurnTimer showBank={true} />
           </div>
           <div className="mt-5 flex items-center justify-end gap-2">
-            <button type="button" className="btn btn-secondary" onClick={() => setVisible(false)}>
+            <button type="button" className="btn btn-secondary" onClick={handleClose}>
               Later
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => setVisible(false)}>
+            <button type="button" className="btn btn-primary" onClick={handleClose}>
               Begin Turn
             </button>
           </div>
