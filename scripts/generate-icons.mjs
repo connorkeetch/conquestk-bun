@@ -17,14 +17,14 @@ async function run() {
   }
   const brandB64 = Buffer.from(fs.readFileSync(brandSvgPath)).toString('base64')
   const mkSquare = async (size, out) => {
-    const scaled = Math.round(size * 1.22)
+    const scaled = Math.round(size * 1.25)
     const x = -Math.round((scaled - size) / 2)
-    const y = -Math.round((scaled - size) * 0.65)
+    const y = 0
     const wrapper = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <defs>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="0" stdDeviation="${(size * 0.04).toFixed(2)}" flood-color="#cbd5e1" flood-opacity="0.9" />
+      <feDropShadow dx="0" dy="0" stdDeviation="${(size * 0.035).toFixed(2)}" flood-color="#cbd5e1" flood-opacity="0.9" />
     </filter>
   </defs>
   <g filter="url(#glow)">
