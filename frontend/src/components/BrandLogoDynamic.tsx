@@ -47,13 +47,7 @@ export default function BrandLogoDynamic({
         {withGlow ? (
           <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
             {/* neutral outer glow */}
-            <feDropShadow
-              dx="0"
-              dy="0"
-              stdDeviation="3"
-              floodColor="#cbd5e1"
-              floodOpacity="0.85"
-            />
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#cbd5e1" floodOpacity="0.85" />
           </filter>
         ) : null}
       </defs>
