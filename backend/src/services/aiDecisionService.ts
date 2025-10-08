@@ -130,6 +130,8 @@ class AIDecisionService {
         return this.generateRecruitPlan(request)
       case 'commander':
         return this.generateCommanderPlan(request)
+      case 'grandmaster':
+        return this.generateGrandmasterPlan(request)
       default:
         return []
     }
@@ -297,6 +299,215 @@ class AIDecisionService {
       playerId,
       payload: { fromTerritoryId: pick.from, toTerritoryId: pick.to, armies: pick.armies },
     }
+  }
+
+  // === Grandmaster (EV-driven) ===
+  private generateGrandmasterPlan(request: DecisionRequest): GameAction[] {
+    const { gameState, player, budget } = request
+    const roomId = gameState.roomId
+    const actions: GameAction[] = []
+    const push = (a: GameAction) => {
+      if (budget.maxPlannedActions !== undefined && actions.length >= budget.maxPlannedActions) {
+        return false
+      }
+      actions.push(a)
+      return true
+    }
+
+    if (gameState.phase === 'finished') return []
+
+    // Card timing (must cash or near cap)
+    try {
+      const cfg = (gameState.gameConfig as { treasureConfig?: unknown })?.treasureConfig as
+        | import('../types/game').TreasureConfig
+        | undefined
+      const hand = (player.treasures ?? []) as import('../types/game').Metal[]
+      const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures)
+      if (cfg && cfg.enabled && hand.length >= 3) {
+        const norm = normalizeTreasureConfig(cfg)
+        const sets = findRedeemableSets(hand)
+        const nearCap = hand.length >= Math.max(3, norm.handCap - 1)
+        if ((mustCash || nearCap) && sets.length > 0) {
+          const first = sets[0]
+          push({
+            type: 'trade_cards',
+            roomId,
+            playerId: player.id,
+            payload: { treasureSet: first.indices as unknown as [number, number, number] },
+          })
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    let phase = gameState.phase
+    if (phase === 'reinforcement') {
+      const avail = Math.max(0, player.armies)
+      if (avail > 0) {
+        const target = this.chooseCommanderReinforcement(gameState, player.id)
+        if (target) {
+          if (!push({
+            type: 'deploy',
+            roomId,
+            playerId: player.id,
+            payload: { territoryId: target, armies: avail },
+          }))
+            return actions
+        }
+      }
+      if (!push({ type: 'end_turn', roomId, playerId: player.id })) return actions
+      phase = 'attack'
+    }
+
+    if (phase === 'attack') {
+      const attack = this.findGrandmasterAttack(gameState, player.id, budget)
+      if (attack) {
+        if (!push(attack)) return actions
+      }
+      if (!push({ type: 'end_turn', roomId, playerId: player.id })) return actions
+      phase = 'fortify'
+    }
+
+    if (phase === 'fortify') {
+      const fort = this.findRecruitFortify(gameState, player.id)
+      if (fort) push(fort)
+      push({ type: 'end_turn', roomId, playerId: player.id })
+    }
+
+    return actions
+  }
+
+  private findGrandmasterAttack(
+    gameState: GameState,
+    playerId: string,
+    budget: DecisionBudget,
+  ): GameAction | null {
+    const owned = gameState.board.filter((t) => t.ownerId === playerId)
+    if (owned.length === 0) return null
+    const endTime = Date.now() + Math.max(0, budget.maxThinkTimeMs - 50)
+    const candidates: Array<{ from: string; to: string; ev: number; armies: number }> = []
+
+    for (const src of owned) {
+      if (src.armies <= 3) continue
+      for (const nid of src.adjacentTerritories) {
+        const tgt = this.getTerritory(gameState, nid)
+        if (!tgt || tgt.ownerId === playerId) continue
+        if (tgt.ownerId && this.arePlayersTeammates(gameState, playerId, tgt.ownerId)) continue
+        const attackDice = Math.min(3, Math.max(1, src.armies - 1))
+        const ev = this.estimateAttackEV(gameState, playerId, src.id, tgt.id, endTime)
+        candidates.push({ from: src.id, to: tgt.id, ev, armies: attackDice })
+      }
+    }
+
+    candidates.sort((a, b) => b.ev - a.ev)
+    const best = candidates[0]
+    if (!best) return null
+
+    // Thresholds: EV must be positive or win prob above configured min
+    if (best.ev <= 0) return null
+    return {
+      type: 'attack',
+      roomId: gameState.roomId,
+      playerId,
+      payload: { fromTerritoryId: best.from, toTerritoryId: best.to, armies: Math.min(3, Math.max(1, (this.getTerritory(gameState, best.from)?.armies ?? 2) - 1)) },
+    }
+  }
+
+  private estimateAttackEV(
+    gameState: GameState,
+    playerId: string,
+    fromId: string,
+    toId: string,
+    endTimeMs: number,
+  ): number {
+    const from = this.getTerritory(gameState, fromId)
+    const to = this.getTerritory(gameState, toId)
+    if (!from || !to) return 0
+    const attackersStart = Math.max(0, from.armies - 1)
+    const defendersStart = Math.max(0, to.armies)
+    if (attackersStart <= 0 || defendersStart <= 0) return 0
+
+    let wins = 0
+    let totalALoss = 0
+    let totalDLoss = 0
+    let trials = 0
+    const maxTrials = 200 // cap to keep fast
+
+    while (trials < maxTrials && Date.now() < endTimeMs) {
+      const { aLoss, dLoss, conquered } = this.simulateBattle(attackersStart, defendersStart)
+      if (conquered) wins += 1
+      totalALoss += aLoss
+      totalDLoss += dLoss
+      trials += 1
+    }
+    if (trials === 0) return 0
+
+    const pWin = wins / trials
+    const expALoss = totalALoss / trials
+    const expDLoss = totalDLoss / trials
+
+    const sectorVal = this.sectorCaptureValue(gameState, playerId, to)
+    const capitalBonus = to.isCapital === true ? 3 : 0
+    const territoryBase = 1
+    const valueIfWin = territoryBase + sectorVal + capitalBonus
+    const ev = pWin * valueIfWin - expALoss * 0.2 + expDLoss * 0.05
+    return ev
+  }
+
+  private sectorCaptureValue(state: GameState, playerId: string, to: GameState['board'][number]): number {
+    const sector = to.sector || to.continent
+    if (!sector) return 0
+    let total = 0
+    let owned = 0
+    for (const t of state.board) {
+      if ((t.sector || t.continent) !== sector) continue
+      total += 1
+      if (t.ownerId === playerId) owned += 1
+    }
+    // If capture would complete sector, bigger bonus; else small pressure value
+    const willOwn = owned + 1
+    if (total > 0 && willOwn === total) return 3
+    return Math.max(0, (willOwn / Math.max(1, total)) - (owned / Math.max(1, total)))
+  }
+
+  private simulateBattle(attackersStart: number, defendersStart: number): {
+    aLoss: number
+    dLoss: number
+    conquered: boolean
+  } {
+    let a = attackersStart
+    let d = defendersStart
+    let aLoss = 0
+    let dLoss = 0
+    while (a > 0 && d > 0) {
+      // Dice counts per Risk rules
+      const ad = Math.min(3, Math.max(1, a)) // Using all attacking dice available (a already excludes the 1 left behind)
+      const dd = Math.min(2, Math.max(1, d))
+      const aRolls = this.rollDice(ad)
+      const dRolls = this.rollDice(dd)
+      const pairs = Math.min(aRolls.length, dRolls.length)
+      for (let i = 0; i < pairs; i++) {
+        if (aRolls[i] > dRolls[i]) {
+          d -= 1
+          dLoss += 1
+        } else {
+          a -= 1
+          aLoss += 1
+        }
+      }
+      if (a <= 0 || d <= 0) break
+      // Stop if further progress is very unlikely (simple bound)
+      if (a <= d && a <= 1) break
+      // Clamp to leave one behind for occupation semantics
+      if (a <= 0) break
+    }
+    return { aLoss, dLoss, conquered: d <= 0 }
+  }
+
+  private rollDice(n: number): number[] {
+    const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6))
+    return rolls.sort((a, b) => b - a)
   }
 
   private generateRecruitPlan(request: DecisionRequest): GameAction[] {
