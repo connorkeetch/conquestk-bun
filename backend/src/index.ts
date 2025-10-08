@@ -782,6 +782,36 @@ async function startServer() {
 
             // Background queue workers are now initialized after Redis connection (see Redis initialization block)
 
+            // Lightweight stale session sweeper
+            try {
+              const { authTrackingService } = await import('./services/authTrackingService')
+              const maxAgeHours = parseInt(
+                process.env.SESSION_MAX_AGE_HOURS || '168',
+                10,
+              ) // default 7 days
+              const sweepMinutes = parseInt(
+                process.env.SESSION_SWEEP_INTERVAL_MINUTES || '60',
+                10,
+              ) // default hourly
+
+              // Run once on startup
+              await authTrackingService.closeStaleSessions(maxAgeHours)
+
+              // Then schedule periodic sweeps
+              setInterval(() => {
+                authTrackingService
+                  .closeStaleSessions(maxAgeHours)
+                  .catch((e) => logger.warn('Stale session sweep failed', getErrorMessage(e)))
+              }, Math.max(1, sweepMinutes) * 60 * 1000)
+
+              logger.info('🧹 Stale session sweeper enabled', {
+                maxAgeHours,
+                sweepMinutes,
+              })
+            } catch (e) {
+              logger.warn('Failed to initialize stale session sweeper', getErrorMessage(e))
+            }
+
             if (process.env.NODE_ENV === 'production') {
               logger.info('🌐 Production deployment ready at https://conquestk.com')
               logger.info('🎮 All game features and admin functionality should be available')
