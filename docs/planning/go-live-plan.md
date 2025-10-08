@@ -10,7 +10,7 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 ## Executive Summary
 - ✅ Core conquest gameplay, custom maps, and private matches have been validated end-to-end with test accounts.
 - 🚧 Ranked match closure and CP awards still need authoritative verification; we have not yet recorded a successful ranked completion with correct leaderboard deltas.
-- 🚧 Messaging dropdown UX (global inbox) is confusing and fails to clear unread state, which will be noisy even for a friends-only cohort.
+- ✅ Unread clearing regression in the global inbox is fixed; dropdown layout/clarity remains a P2 polish item.
 - 🚧 Push delivery must either work through the PWA install flow or fall back to Discord/Slack fan-out so players receive turn/game updates.
 - 📝 AI opponents, plans/strategies tooling, and non-conquest modes can remain disabled for beta, but we should document expectations for testers so they are not surprised.
 
