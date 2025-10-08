@@ -9,8 +9,10 @@ import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
 import type { AuthenticatedRequest } from '../types/express'
-import type { TreasureConfig } from '../types/game'
+import type { GameAction, TreasureConfig } from '../types/game'
 import { logger } from '../utils/logger'
+import { queueService } from '../services/queueService'
+import { tryGetSocketServer } from '../services/socketRegistry'
 
 export class GameController {
   private gameRoomService = new GameRoomService()
@@ -185,6 +187,117 @@ export class GameController {
         return res.status(403).json({ code: PREMIUM_UPSELL_ERROR_CODE, message: error.message })
       }
 
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
+
+  /**
+   * HTTP fallback for submitting a game action when WebSocket is unavailable.
+   * Designed to be used with Background Sync from the PWA service worker.
+   */
+  submitAction = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
+      const userId = req.userId
+      if (!userId) return res.status(401).json({ message: 'Authentication required' })
+
+      const isMember = await this.gameRoomService.isPlayerInRoom(roomId, userId)
+      if (!isMember) return res.status(403).json({ message: 'You are not in this game' })
+
+      // Accept { action: {...} } or a flat action body
+      const body = (req.body ?? {}) as Record<string, unknown>
+      const rawCandidate = (body.action ?? body) as unknown
+      const raw = (rawCandidate && typeof rawCandidate === 'object'
+        ? (rawCandidate as Partial<GameAction>)
+        : undefined) as Partial<GameAction> | undefined
+      if (!raw || typeof raw !== 'object' || typeof raw.type !== 'string') {
+        return res.status(400).json({ message: 'Invalid action payload' })
+      }
+
+      // Normalize action (server sets roomId/playerId)
+      const action: GameAction = { ...(raw as object), roomId, playerId: userId } as GameAction
+
+      const idempotencyKey =
+        (req.headers['x-idempotency-key'] as string | undefined) ||
+        (typeof (req.body as { idempotencyKey?: unknown })?.idempotencyKey === 'string'
+          ? (req.body as { idempotencyKey: string }).idempotencyKey
+          : undefined)
+
+      const job = await queueService.addGameAction({
+        gameId: roomId,
+        playerId: userId,
+        action,
+        idempotencyKey,
+      })
+
+      if (job) {
+        return res.status(202).json({ ok: true, queued: true, jobId: job.id })
+      }
+
+      // If queues are unavailable (dev without Redis), process inline
+      try {
+        await this.gameService.processGameAction(action, userId)
+        return res.status(200).json({ ok: true, queued: false })
+      } catch (inlineError) {
+        logger.warn('Inline action processing failed', {
+          roomId,
+          userId,
+          error: inlineError instanceof Error ? inlineError.message : inlineError,
+        })
+        return res.status(500).json({ ok: false, message: 'Failed to process action' })
+      }
+    } catch (error) {
+      logger.error('submitAction error:', error)
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
+
+  /**
+   * HTTP fallback for transferring conquest armies after a capture.
+   * Accepts JSON body: { fromTerritoryId, toTerritoryId, armies }
+   */
+  transferConquest = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
+      const userId = req.userId
+      if (!userId) return res.status(401).json({ message: 'Authentication required' })
+
+      const isMember = await this.gameRoomService.isPlayerInRoom(roomId, userId)
+      if (!isMember) return res.status(403).json({ message: 'You are not in this game' })
+
+      const { fromTerritoryId, toTerritoryId, armies } = (req.body ?? {}) as {
+        fromTerritoryId?: string
+        toTerritoryId?: string
+        armies?: number
+      }
+
+      if (!fromTerritoryId || !toTerritoryId || typeof armies !== 'number') {
+        return res.status(400).json({ message: 'Invalid conquest transfer payload' })
+      }
+
+      const result = await this.gameService.transferConquestArmies(
+        roomId,
+        userId,
+        fromTerritoryId,
+        toTerritoryId,
+        armies,
+      )
+
+      // Best-effort broadcast of updated state
+      try {
+        const io = tryGetSocketServer()
+        if (io) {
+          io.to(`game:${roomId}`).emit('game-update', result.gameState)
+        }
+      } catch {
+        // ignore broadcast errors
+      }
+
+      return res.status(200).json({ ok: true })
+    } catch (error) {
+      logger.error('transferConquest error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
   }

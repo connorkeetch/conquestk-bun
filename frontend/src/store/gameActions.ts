@@ -1,5 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from 'react-hot-toast'
+import { API_URL } from '@/config'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
 import { socketService } from '../services/socketService'
 import type { GameState, TradeCardsAction } from '../types/game'
@@ -223,12 +224,32 @@ export const deployArmies = createAsyncThunk(
   ) => {
     const state = getState() as RootState
     const { currentGame } = state.game
+    const { connectionStatus } = state.uiRoom
 
     if (!currentGame) throw new Error('No active game')
 
     try {
-      // Send to server - UI updates via socket deltas
-      socketService.deployArmies(currentGame.roomId, territoryId, armies)
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || connectionStatus !== 'connected')
+
+      if (shouldFallback) {
+        const action = {
+          type: 'deploy',
+          roomId: currentGame.roomId,
+          playerId: state.auth.user?.id || currentGame.currentPlayer,
+          payload: { territoryId, armies },
+        }
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action }),
+        }).catch(() => {})
+      } else {
+        // Send to server via socket - UI updates via socket deltas
+        socketService.deployArmies(currentGame.roomId, territoryId, armies)
+      }
 
       dispatch(
         addTerritoryAction({
@@ -277,7 +298,25 @@ export const undoLastPlacement = createAsyncThunk(
 
     const last = history[history.length - 1]
     try {
-      socketService.deployArmies(currentGame.roomId, last.territoryId, -last.armies)
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      if (shouldFallback) {
+        const action = {
+          type: 'deploy',
+          roomId: currentGame.roomId,
+          playerId: userId,
+          payload: { territoryId: last.territoryId, armies: -last.armies },
+        }
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action }),
+        }).catch(() => {})
+      } else {
+        socketService.deployArmies(currentGame.roomId, last.territoryId, -last.armies)
+      }
       dispatch(removeLastPlacement())
       dispatch(
         addClientLog({
@@ -305,10 +344,26 @@ export const executeAttack = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      // Do not send a fixed armies value; backend will use the territory's
-      // available armies to determine dice (up to 3 attack, 2 defend), and
-      // still only auto-commit 1 on conquest via transfer step.
-      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId)
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      if (shouldFallback) {
+        const action = {
+          type: 'attack',
+          roomId: currentGame.roomId,
+          playerId: state.auth.user?.id || currentGame.currentPlayer,
+          payload: { fromTerritoryId, toTerritoryId },
+        }
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action }),
+        }).catch(() => {})
+      } else {
+        // Do not send a fixed armies value; backend determines dice from available armies
+        socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId)
+      }
 
       dispatch(
         addTerritoryAction({
@@ -342,13 +397,27 @@ export const transferConquestArmies = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      // Use the new transferConquestArmies socket event
-      socketService.transferConquestArmies(
-        currentGame.roomId,
-        fromTerritoryId,
-        toTerritoryId,
-        armies,
-      )
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+
+      if (shouldFallback) {
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/transfer-conquest`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ fromTerritoryId, toTerritoryId, armies }),
+        }).catch(() => {})
+      } else {
+        // Use the socket event when connected
+        socketService.transferConquestArmies(
+          currentGame.roomId,
+          fromTerritoryId,
+          toTerritoryId,
+          armies,
+        )
+      }
 
       dispatch(
         addTerritoryAction({
@@ -380,7 +449,26 @@ export const executeFortify = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      socketService.fortify(currentGame.roomId, fromTerritoryId, toTerritoryId, armies)
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || (getState() as RootState).uiRoom.connectionStatus !== 'connected')
+
+      if (shouldFallback) {
+        const action = {
+          type: 'fortify',
+          roomId: currentGame.roomId,
+          playerId: (getState() as RootState).auth.user?.id || currentGame.currentPlayer,
+          payload: { fromTerritoryId, toTerritoryId, armies },
+        }
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action }),
+        }).catch(() => {})
+      } else {
+        socketService.fortify(currentGame.roomId, fromTerritoryId, toTerritoryId, armies)
+      }
 
       dispatch(
         addTerritoryAction({
@@ -409,7 +497,24 @@ export const undoFortify = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      socketService.undoFortify(currentGame.roomId)
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || (getState() as RootState).uiRoom.connectionStatus !== 'connected')
+      if (shouldFallback) {
+        const action = {
+          type: 'undo_fortify',
+          roomId: currentGame.roomId,
+          playerId: (getState() as RootState).auth.user?.id || currentGame.currentPlayer,
+        }
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action }),
+        }).catch(() => {})
+      } else {
+        socketService.undoFortify(currentGame.roomId)
+      }
 
       // Clear selections after undo
       dispatch(selectTerritory(null))
@@ -426,6 +531,7 @@ export const undoFortify = createAsyncThunk(
 export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, dispatch }) => {
   const state = getState() as RootState
   const { currentGame, reinforcementArmies } = state.game
+  const { connectionStatus } = state.uiRoom
 
   if (!currentGame) throw new Error('No active game')
 
@@ -441,7 +547,31 @@ export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, di
   }
 
   try {
-    socketService.endTurn(currentGame.roomId)
+    // If offline or socket disconnected, fall back to HTTP + Background Sync
+    const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || connectionStatus !== 'connected')
+
+    if (shouldFallback) {
+      const action = { type: 'end_turn', roomId: currentGame.roomId, playerId: state.auth.user?.id || currentGame.currentPlayer }
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+
+      // Use fetch so the service worker can intercept and queue via Background Sync
+      await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action }),
+      })
+        .then(() => {
+          try { toast.success('Turn queued — will submit when online') } catch {}
+        })
+        .catch(() => {
+          // If fetch throws (likely offline), Background Sync should enqueue the request
+          try { toast('Turn queued for background sync') } catch {}
+        })
+    } else {
+      socketService.endTurn(currentGame.roomId)
+    }
 
     // Clear all selections when ending turn
     dispatch(selectTerritory(null))
@@ -468,7 +598,19 @@ export const tradeTreasureSet = createAsyncThunk(
         playerId: state.auth.user?.id || '',
         payload: { treasureSet: indices },
       }
-      socketService.sendGameAction({ roomId: currentGame.roomId, action })
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      if (shouldFallback) {
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action }),
+        }).catch(() => {})
+      } else {
+        socketService.sendGameAction({ roomId: currentGame.roomId, action })
+      }
     } catch (_error) {
       dispatch(setError('Failed to trade treasures'))
     }
@@ -492,7 +634,20 @@ export const goBackToReinforcement = createAsyncThunk(
         roomId: currentGame.roomId,
         playerId: state.auth.user?.id || currentGame.currentPlayer,
       } as const
-      socketService.sendGameAction({ roomId: currentGame.roomId, action })
+
+      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      if (shouldFallback) {
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action }),
+        }).catch(() => {})
+      } else {
+        socketService.sendGameAction({ roomId: currentGame.roomId, action })
+      }
 
       // Clear all selections when going back
       dispatch(selectTerritory(null))
