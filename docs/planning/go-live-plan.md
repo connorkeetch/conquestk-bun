@@ -111,9 +111,9 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 
 ### P2.2 Ranked match analytics & logging
 - **Tags:** [be][ops]
-- **Opportunities:**
-  - Add structured logging around CP calculations for easier debugging.
-  - Capture latency metrics for battle resolution vs. client receipt.
+- **Status:** 🟢 Structured CP logging shipped (Oct 9, 2025)
+- **Next focus:** Capture latency metrics for battle resolution vs. client receipt.
+- **Notes:** Added backend logging that records per-player rating inputs and deltas when games complete, plus persistence success/failure logs around rating updates.
 
 ### P2.3 QA automation scaffolding
 - **Tags:** [qa]

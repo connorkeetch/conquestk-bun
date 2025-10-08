@@ -1,6 +1,7 @@
 import type { PoolClient, QueryResultRow } from 'pg'
 import type { DatabaseQueryResult } from '../config/database'
 import { query, transaction } from '../config/database'
+import { logger } from '../utils/logger'
 
 export interface PlayerRating {
   userId: string
@@ -160,14 +161,35 @@ export class EloService {
       await this.bulkUpdateUserRatings(dbClient, changes)
     }
 
-    if (client) {
-      await persist(client)
-      return
-    }
-
-    await transaction(async (dbClient) => {
-      await persist(dbClient)
+    logger.info('Persisting rating changes for ranked game', {
+      gameId,
+      players: changes.length,
+      updates: changes.map((change) => ({
+        userId: change.userId,
+        oldRating: change.oldRating,
+        newRating: change.newRating,
+        delta: change.change,
+      })),
     })
+
+    try {
+      if (client) {
+        await persist(client)
+      } else {
+        await transaction(async (dbClient) => {
+          await persist(dbClient)
+        })
+      }
+      logger.info('Finished persisting rating changes for ranked game', {
+        gameId,
+      })
+    } catch (error) {
+      logger.error('Failed to persist rating changes for ranked game', {
+        gameId,
+        error: error instanceof Error ? error.message : error,
+      })
+      throw error
+    }
   }
 
   private async bulkInsertRatingHistory(
