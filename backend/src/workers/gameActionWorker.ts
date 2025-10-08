@@ -235,6 +235,9 @@ export class GameActionWorker {
     const totalBudget = Math.max(0, budget.maxThinkTimeMs)
     let remainingBudget = Math.max(0, totalBudget - planningElapsed)
 
+    const chainLimit = Math.max(0, budget.maxAttackChains ?? 0)
+    let chainCount = 0
+
     for (let i = 0; i < actions.length; i++) {
       const now = Date.now()
       const elapsed = now - start
@@ -282,6 +285,39 @@ export class GameActionWorker {
                 await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
               } catch {
                 // best-effort; clients will converge on next snapshot
+              }
+            }
+
+            // Grandmaster attack chaining: replan for another attack within budget and chain limits
+            if (difficulty === 'grandmaster' && chainCount < chainLimit) {
+              // Update remaining budget and verify we're still in attack phase
+              const now2 = Date.now()
+              const elapsed2 = now2 - start
+              remainingBudget = Math.max(0, totalBudget - elapsed2)
+              if (remainingBudget > 0) {
+                try {
+                  const latest = await this.gameService.getGameState(gameId)
+                  if (latest && latest.currentPlayer === playerId && latest.phase === 'attack') {
+                    const subBudget: DecisionBudget = {
+                      ...budget,
+                      maxThinkTimeMs: Math.min(remainingBudget, 500),
+                      maxPlannedActions: 3,
+                    }
+                    const replanned = await aiDecisionService.chooseAction({
+                      gameState: latest,
+                      player: latest.players.find((p) => p.id === playerId)!,
+                      difficulty,
+                      budget: subBudget,
+                    })
+                    const nextAttack = replanned.actions.find((a) => a.type === 'attack')
+                    if (nextAttack) {
+                      actions.splice(i + 1, 0, nextAttack)
+                      chainCount += 1
+                    }
+                  }
+                } catch {
+                  // ignore chaining failure
+                }
               }
             }
             break
