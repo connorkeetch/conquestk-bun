@@ -1,4 +1,4 @@
-import { describe, expect, it, jest, beforeEach } from '@jest/globals'
+import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import type { Server } from 'socket.io'
 
 // Minimal IO mock
@@ -60,7 +60,9 @@ jest.mock('../services/aiDecisionService', () => ({
         budget: { maxThinkTimeMs: 1000 },
       },
     }),
-    buildFallbackPlan: jest.fn().mockReturnValue([{ type: 'end_turn', roomId: 'g1', playerId: 'p1' }]),
+    buildFallbackPlan: jest
+      .fn()
+      .mockReturnValue([{ type: 'end_turn', roomId: 'g1', playerId: 'p1' }]),
   },
 }))
 

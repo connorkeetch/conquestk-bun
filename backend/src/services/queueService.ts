@@ -421,7 +421,11 @@ export class QueueService {
   }
 
   // Analytics/Event Queue (fire-and-forget)
-  async addAnalyticsEvent(job: { event: string; gameId: string; data: unknown }): Promise<Bull.Job | null> {
+  async addAnalyticsEvent(job: {
+    event: string
+    gameId: string
+    data: unknown
+  }): Promise<Bull.Job | null> {
     if (!this.redis || !this.isInitialized) {
       return null
     }
@@ -855,6 +859,10 @@ export class QueueService {
 
   getCleanupQueue(): Bull.Queue<GameCleanupJob> {
     return this.requireQueue('gameCleanup') as Bull.Queue<GameCleanupJob>
+  }
+
+  getAnalyticsQueue(): Bull.Queue {
+    return this.requireQueue('analyticsEvents') as Bull.Queue
   }
 }
 

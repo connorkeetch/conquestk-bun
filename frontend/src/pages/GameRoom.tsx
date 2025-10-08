@@ -4,9 +4,11 @@ import { toast } from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'
 // Lazy-load heavy modals to trim initial bundle
 import { lazyWithRetry } from '@/utils/lazyWithRetry'
+
 const LazyGameOverModal = lazyWithRetry(async () => ({
   default: (await import('@/components/GameOverModal')).GameOverModal,
 }))
+
 // Chat modal removed; drawers are used on all devices
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { DiceResultsBar } from '@/components/game/DiceResultsBar'
@@ -19,6 +21,7 @@ import { TurnTimer } from '@/components/game/TurnTimer'
 // Removed YourTurnBanner in favor of styling the existing header
 import { YourTurnModal } from '@/components/game/YourTurnModal'
 import DropZone from '@/components/panels/DropZone'
+
 // Lazy-load heavy panels to reduce initial bundle size
 const LazyPlayerStatsPanel = lazyWithRetry(() => import('@/components/panels/PlayerStatsPanel'))
 const LazyChatLogPanel = lazyWithRetry(() => import('@/components/panels/ChatLogPanel'))
@@ -30,6 +33,7 @@ const LazyPlayerProfileModal = lazyWithRetry(
   () => import('@/components/profile/PlayerProfileModal'),
 )
 const LazySettingsModal = lazyWithRetry(() => import('@/components/SettingsModal'))
+
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 import {
@@ -248,7 +252,11 @@ export default function GameRoom() {
     const hasStats = panels.some((p) => p.id === 'player-stats')
     const hasLog = panels.some((p) => p.id === 'game-log')
 
-    const rIC = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number }).requestIdleCallback
+    const rIC = (
+      window as unknown as {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number
+      }
+    ).requestIdleCallback
     const schedule = (cb: () => void) =>
       typeof rIC === 'function' ? rIC(cb, { timeout: 1200 }) : window.setTimeout(cb, 600)
 
@@ -273,10 +281,15 @@ export default function GameRoom() {
   }, [panels, prefetchChatPanel, prefetchStatsPanel, prefetchGameLogPanel])
 
   useEffect(() => {
-    const rIC = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number }).requestIdleCallback
-    const id = typeof rIC === 'function'
-      ? rIC(prefetchModalsIdle, { timeout: 2000 })
-      : window.setTimeout(prefetchModalsIdle, 1000)
+    const rIC = (
+      window as unknown as {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number
+      }
+    ).requestIdleCallback
+    const id =
+      typeof rIC === 'function'
+        ? rIC(prefetchModalsIdle, { timeout: 2000 })
+        : window.setTimeout(prefetchModalsIdle, 1000)
     return () => {
       if (typeof (window as any).cancelIdleCallback === 'function') {
         ;(window as any).cancelIdleCallback(id)
@@ -1902,7 +1915,9 @@ export default function GameRoom() {
                     fallback={
                       <div className="panel p-0 overflow-hidden">
                         <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                          <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">
+                            Player Stats
+                          </div>
                         </div>
                         <div className="p-3">
                           <Skeleton variant="rectangular" width="100%" height={180} />
@@ -1914,42 +1929,42 @@ export default function GameRoom() {
                       players={
                         currentGame?.players ||
                         (currentRoom?.players || []).map((pl) => {
-                        const rawColor =
-                          ((pl as { selected_color?: string | null }).selected_color as
-                            | string
-                            | null) ||
-                          ((pl.preferred_color as string | null) ?? null) ||
-                          '#9CA3AF'
-                        return {
-                          id: pl.userId || pl.id,
-                          userId: pl.userId || pl.id,
-                          username: pl.username,
-                          color: rawColor as unknown as PlayerColor,
-                          territories: [],
-                          armies: 0,
-                          cards: [],
-                          isEliminated: false,
-                          isAi: pl.isAi,
-                          aiDifficulty: pl.aiDifficulty ?? null,
-                          teamId: pl.teamId ?? undefined,
-                          treasures: [],
-                        }
-                      })
-                    }
-                    currentPlayerId={currentGame?.currentPlayer}
-                    territories={
-                      currentGame
-                        ? Object.fromEntries(
-                            (currentGame.board || []).map((t) => [
-                              t.id,
-                              { owner: t.ownerId, armies: t.armies },
-                            ]),
-                          )
-                        : {}
-                    }
-                    isEditingLayout={isEditingLayout}
-                    onResignRequest={() => setResignDialogOpen(true)}
-                  />
+                          const rawColor =
+                            ((pl as { selected_color?: string | null }).selected_color as
+                              | string
+                              | null) ||
+                            ((pl.preferred_color as string | null) ?? null) ||
+                            '#9CA3AF'
+                          return {
+                            id: pl.userId || pl.id,
+                            userId: pl.userId || pl.id,
+                            username: pl.username,
+                            color: rawColor as unknown as PlayerColor,
+                            territories: [],
+                            armies: 0,
+                            cards: [],
+                            isEliminated: false,
+                            isAi: pl.isAi,
+                            aiDifficulty: pl.aiDifficulty ?? null,
+                            teamId: pl.teamId ?? undefined,
+                            treasures: [],
+                          }
+                        })
+                      }
+                      currentPlayerId={currentGame?.currentPlayer}
+                      territories={
+                        currentGame
+                          ? Object.fromEntries(
+                              (currentGame.board || []).map((t) => [
+                                t.id,
+                                { owner: t.ownerId, armies: t.armies },
+                              ]),
+                            )
+                          : {}
+                      }
+                      isEditingLayout={isEditingLayout}
+                      onResignRequest={() => setResignDialogOpen(true)}
+                    />
                   </Suspense>
                 )}
                 {p.id === 'chat' && currentGame && user && (
@@ -1957,7 +1972,9 @@ export default function GameRoom() {
                     fallback={
                       <div className="panel p-0 overflow-hidden">
                         <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                          <div className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</div>
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">
+                            Chat & Log
+                          </div>
                         </div>
                         <div className="p-3">
                           <Skeleton variant="rectangular" width="100%" height={160} />
@@ -1965,16 +1982,16 @@ export default function GameRoom() {
                       </div>
                     }
                   >
-                  <LazyChatLogPanel
-                    gameId={currentRoom?.id ?? roomId ?? ''}
-                    currentUserId={user.id}
-                    userTeamId={currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId}
-                    onLogFocus={(territories) => {
-                      const focus = territories[territories.length - 1]
-                      if (focus) dispatch(selectTerritory(focus))
-                    }}
-                    isEditingLayout={isEditingLayout}
-                  />
+                    <LazyChatLogPanel
+                      gameId={currentRoom?.id ?? roomId ?? ''}
+                      currentUserId={user.id}
+                      userTeamId={currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId}
+                      onLogFocus={(territories) => {
+                        const focus = territories[territories.length - 1]
+                        if (focus) dispatch(selectTerritory(focus))
+                      }}
+                      isEditingLayout={isEditingLayout}
+                    />
                   </Suspense>
                 )}
               </div>
@@ -2243,7 +2260,9 @@ export default function GameRoom() {
                         fallback={
                           <div className="panel p-0 overflow-hidden">
                             <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                              <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                              <div className="text-sm font-semibold text-[color:var(--heading)]">
+                                Player Stats
+                              </div>
                             </div>
                             <div className="p-3">
                               <Skeleton variant="rectangular" width="100%" height={180} />
@@ -2251,46 +2270,46 @@ export default function GameRoom() {
                           </div>
                         }
                       >
-                      <LazyPlayerStatsPanel
-                        players={
-                          currentGame?.players ||
-                          (currentRoom?.players || []).map((pl) => {
-                            const rawColor =
-                              ((pl as { selected_color?: string | null }).selected_color as
-                                | string
-                                | null) ||
-                              ((pl.preferred_color as string | null) ?? null) ||
-                              '#9CA3AF'
-                            return {
-                              id: pl.userId || pl.id,
-                              userId: pl.userId || pl.id,
-                              username: pl.username,
-                              color: rawColor as unknown as PlayerColor,
-                              territories: [],
-                              armies: 0,
-                              cards: [],
-                              isEliminated: false,
-                              isAi: pl.isAi,
-                              aiDifficulty: pl.aiDifficulty ?? null,
-                              teamId: pl.teamId ?? undefined,
-                              treasures: [],
-                            }
-                          })
-                        }
-                        currentPlayerId={currentGame?.currentPlayer}
-                        territories={
-                          currentGame
-                            ? Object.fromEntries(
-                                (currentGame.board || []).map((t) => [
-                                  t.id,
-                                  { owner: t.ownerId, armies: t.armies },
-                                ]),
-                              )
-                            : {}
-                        }
-                        isEditingLayout={isEditingLayout}
-                        onResignRequest={() => setResignDialogOpen(true)}
-                      />
+                        <LazyPlayerStatsPanel
+                          players={
+                            currentGame?.players ||
+                            (currentRoom?.players || []).map((pl) => {
+                              const rawColor =
+                                ((pl as { selected_color?: string | null }).selected_color as
+                                  | string
+                                  | null) ||
+                                ((pl.preferred_color as string | null) ?? null) ||
+                                '#9CA3AF'
+                              return {
+                                id: pl.userId || pl.id,
+                                userId: pl.userId || pl.id,
+                                username: pl.username,
+                                color: rawColor as unknown as PlayerColor,
+                                territories: [],
+                                armies: 0,
+                                cards: [],
+                                isEliminated: false,
+                                isAi: pl.isAi,
+                                aiDifficulty: pl.aiDifficulty ?? null,
+                                teamId: pl.teamId ?? undefined,
+                                treasures: [],
+                              }
+                            })
+                          }
+                          currentPlayerId={currentGame?.currentPlayer}
+                          territories={
+                            currentGame
+                              ? Object.fromEntries(
+                                  (currentGame.board || []).map((t) => [
+                                    t.id,
+                                    { owner: t.ownerId, armies: t.armies },
+                                  ]),
+                                )
+                              : {}
+                          }
+                          isEditingLayout={isEditingLayout}
+                          onResignRequest={() => setResignDialogOpen(true)}
+                        />
                       </Suspense>
                     )}
                     {p.id === 'chat' && roomId && user && (
@@ -2298,7 +2317,9 @@ export default function GameRoom() {
                         fallback={
                           <div className="panel p-0 overflow-hidden">
                             <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                              <div className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</div>
+                              <div className="text-sm font-semibold text-[color:var(--heading)]">
+                                Chat & Log
+                              </div>
                             </div>
                             <div className="p-3">
                               <Skeleton variant="rectangular" width="100%" height={160} />
@@ -2306,18 +2327,18 @@ export default function GameRoom() {
                           </div>
                         }
                       >
-                      <LazyChatLogPanel
-                        gameId={currentRoom?.id || roomId}
-                        currentUserId={user.id}
-                        userTeamId={
-                          currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
-                        }
-                        onLogFocus={(territories) => {
-                          const focus = territories[territories.length - 1]
-                          if (focus) dispatch(selectTerritory(focus))
-                        }}
-                        isEditingLayout={isEditingLayout}
-                      />
+                        <LazyChatLogPanel
+                          gameId={currentRoom?.id || roomId}
+                          currentUserId={user.id}
+                          userTeamId={
+                            currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
+                          }
+                          onLogFocus={(territories) => {
+                            const focus = territories[territories.length - 1]
+                            if (focus) dispatch(selectTerritory(focus))
+                          }}
+                          isEditingLayout={isEditingLayout}
+                        />
                       </Suspense>
                     )}
                     {p.id === 'game-log' && currentGame && (
@@ -2325,7 +2346,9 @@ export default function GameRoom() {
                         fallback={
                           <div className="panel p-0 overflow-hidden">
                             <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                              <div className="text-sm font-semibold text-[color:var(--heading)]">Game Log</div>
+                              <div className="text-sm font-semibold text-[color:var(--heading)]">
+                                Game Log
+                              </div>
                             </div>
                             <div className="p-3">
                               <Skeleton variant="rectangular" width="100%" height={160} />
@@ -2333,14 +2356,14 @@ export default function GameRoom() {
                           </div>
                         }
                       >
-                      <LazyGameLogPanelWrapper
-                        gameId={currentRoom?.id ?? roomId ?? ''}
-                        onLogFocus={(territories) => {
-                          const focus = territories[territories.length - 1]
-                          if (focus) dispatch(selectTerritory(focus))
-                        }}
-                        isEditingLayout={isEditingLayout}
-                      />
+                        <LazyGameLogPanelWrapper
+                          gameId={currentRoom?.id ?? roomId ?? ''}
+                          onLogFocus={(territories) => {
+                            const focus = territories[territories.length - 1]
+                            if (focus) dispatch(selectTerritory(focus))
+                          }}
+                          isEditingLayout={isEditingLayout}
+                        />
                       </Suspense>
                     )}
                   </div>
@@ -2381,7 +2404,9 @@ export default function GameRoom() {
                     fallback={
                       <div className="panel p-0 overflow-hidden">
                         <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                          <div className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</div>
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">
+                            Chat & Log
+                          </div>
                         </div>
                         <div className="p-3">
                           <Skeleton variant="rectangular" width="100%" height={160} />
@@ -2389,16 +2414,16 @@ export default function GameRoom() {
                       </div>
                     }
                   >
-                  <LazyChatLogPanel
-                    gameId={currentRoom?.id || roomId}
-                    currentUserId={user.id}
-                    userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
-                    onLogFocus={(territories) => {
-                      const focus = territories[territories.length - 1]
-                      if (focus) dispatch(selectTerritory(focus))
-                    }}
-                    isEditingLayout={isEditingLayout}
-                  />
+                    <LazyChatLogPanel
+                      gameId={currentRoom?.id || roomId}
+                      currentUserId={user.id}
+                      userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
+                      onLogFocus={(territories) => {
+                        const focus = territories[territories.length - 1]
+                        if (focus) dispatch(selectTerritory(focus))
+                      }}
+                      isEditingLayout={isEditingLayout}
+                    />
                   </Suspense>
                 )}
                 {p.id === 'player-stats' && (
@@ -2406,7 +2431,9 @@ export default function GameRoom() {
                     fallback={
                       <div className="panel p-0 overflow-hidden">
                         <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                          <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">
+                            Player Stats
+                          </div>
                         </div>
                         <div className="p-3">
                           <Skeleton variant="rectangular" width="100%" height={180} />
@@ -2414,46 +2441,46 @@ export default function GameRoom() {
                       </div>
                     }
                   >
-                  <LazyPlayerStatsPanel
-                    players={
-                      currentGame?.players ||
-                      (currentRoom?.players || []).map((pl) => {
-                        const rawColor =
-                          ((pl as { selected_color?: string | null }).selected_color as
-                            | string
-                            | null) ||
-                          ((pl.preferred_color as string | null) ?? null) ||
-                          '#9CA3AF'
-                        return {
-                          id: pl.userId || pl.id,
-                          userId: pl.userId || pl.id,
-                          username: pl.username,
-                          color: rawColor as unknown as PlayerColor,
-                          territories: [],
-                          armies: 0,
-                          cards: [],
-                          isEliminated: false,
-                          isAi: pl.isAi,
-                          aiDifficulty: pl.aiDifficulty ?? null,
-                          teamId: pl.teamId ?? undefined,
-                          treasures: [],
-                        }
-                      })
-                    }
-                    currentPlayerId={currentGame?.currentPlayer}
-                    territories={
-                      currentGame
-                        ? Object.fromEntries(
-                            (currentGame.board || []).map((t) => [
-                              t.id,
-                              { owner: t.ownerId, armies: t.armies },
-                            ]),
-                          )
-                        : {}
-                    }
-                    isEditingLayout={isEditingLayout}
-                    onResignRequest={() => setResignDialogOpen(true)}
-                  />
+                    <LazyPlayerStatsPanel
+                      players={
+                        currentGame?.players ||
+                        (currentRoom?.players || []).map((pl) => {
+                          const rawColor =
+                            ((pl as { selected_color?: string | null }).selected_color as
+                              | string
+                              | null) ||
+                            ((pl.preferred_color as string | null) ?? null) ||
+                            '#9CA3AF'
+                          return {
+                            id: pl.userId || pl.id,
+                            userId: pl.userId || pl.id,
+                            username: pl.username,
+                            color: rawColor as unknown as PlayerColor,
+                            territories: [],
+                            armies: 0,
+                            cards: [],
+                            isEliminated: false,
+                            isAi: pl.isAi,
+                            aiDifficulty: pl.aiDifficulty ?? null,
+                            teamId: pl.teamId ?? undefined,
+                            treasures: [],
+                          }
+                        })
+                      }
+                      currentPlayerId={currentGame?.currentPlayer}
+                      territories={
+                        currentGame
+                          ? Object.fromEntries(
+                              (currentGame.board || []).map((t) => [
+                                t.id,
+                                { owner: t.ownerId, armies: t.armies },
+                              ]),
+                            )
+                          : {}
+                      }
+                      isEditingLayout={isEditingLayout}
+                      onResignRequest={() => setResignDialogOpen(true)}
+                    />
                   </Suspense>
                 )}
               </div>
@@ -2676,7 +2703,9 @@ export default function GameRoom() {
                 fallback={
                   <div className="panel p-0 overflow-hidden">
                     <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
-                      <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                      <div className="text-sm font-semibold text-[color:var(--heading)]">
+                        Player Stats
+                      </div>
                     </div>
                     <div className="p-3">
                       <Skeleton variant="rectangular" width="100%" height={180} />
@@ -2684,18 +2713,18 @@ export default function GameRoom() {
                   </div>
                 }
               >
-              <LazyPlayerStatsPanel
-                players={currentGame.players || []}
-                currentPlayerId={currentGame.currentPlayer}
-                territories={Object.fromEntries(
-                  (currentGame.board || []).map((t) => [
-                    t.id,
-                    { owner: t.ownerId, armies: t.armies },
-                  ]),
-                )}
-                variant="full"
-                onResignRequest={() => setResignDialogOpen(true)}
-              />
+                <LazyPlayerStatsPanel
+                  players={currentGame.players || []}
+                  currentPlayerId={currentGame.currentPlayer}
+                  territories={Object.fromEntries(
+                    (currentGame.board || []).map((t) => [
+                      t.id,
+                      { owner: t.ownerId, armies: t.armies },
+                    ]),
+                  )}
+                  variant="full"
+                  onResignRequest={() => setResignDialogOpen(true)}
+                />
               </Suspense>
             </div>
           </div>

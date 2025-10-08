@@ -8,11 +8,11 @@ import {
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
+import { queueService } from '../services/queueService'
+import { tryGetSocketServer } from '../services/socketRegistry'
 import type { AuthenticatedRequest } from '../types/express'
 import type { GameAction, TreasureConfig } from '../types/game'
 import { logger } from '../utils/logger'
-import { queueService } from '../services/queueService'
-import { tryGetSocketServer } from '../services/socketRegistry'
 
 export class GameController {
   private gameRoomService = new GameRoomService()
@@ -208,9 +208,11 @@ export class GameController {
       // Accept { action: {...} } or a flat action body
       const body = (req.body ?? {}) as Record<string, unknown>
       const rawCandidate = (body.action ?? body) as unknown
-      const raw = (rawCandidate && typeof rawCandidate === 'object'
-        ? (rawCandidate as Partial<GameAction>)
-        : undefined) as Partial<GameAction> | undefined
+      const raw = (
+        rawCandidate && typeof rawCandidate === 'object'
+          ? (rawCandidate as Partial<GameAction>)
+          : undefined
+      ) as Partial<GameAction> | undefined
       if (!raw || typeof raw !== 'object' || typeof raw.type !== 'string') {
         return res.status(400).json({ message: 'Invalid action payload' })
       }
@@ -800,8 +802,12 @@ export class GameController {
                 : null
 
             let queueAhead: number | null = null
-            let phase: import('../types/game').GamePhase | 'lobby' | 'initializing' | 'finished' | null =
-              null
+            let phase:
+              | import('../types/game').GamePhase
+              | 'lobby'
+              | 'initializing'
+              | 'finished'
+              | null = null
             let currentTurnUsername: string | null = null
             try {
               const gameState = await this.gameService.getGameState(game.id)

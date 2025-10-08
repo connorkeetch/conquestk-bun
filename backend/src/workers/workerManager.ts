@@ -2,6 +2,7 @@ import type { Server } from 'socket.io'
 import { type QueueStats, queueService } from '../services/queueService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
+import { createAnalyticsWorker } from './analyticsWorker'
 import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
 import { createGameActionWorker } from './gameActionWorker'
@@ -32,6 +33,7 @@ export class WorkerManager {
       const battleWorker = createBattleWorker(this.io)
       const cleanupWorker = createCleanupWorker()
       const mapAssetWorker = createMapAssetWorker()
+      const analyticsWorker = createAnalyticsWorker()
       const maintenanceWorker = createMaintenanceWorker()
 
       await Promise.all([
@@ -40,6 +42,7 @@ export class WorkerManager {
         cleanupWorker.initialize(),
         mapAssetWorker.initialize(),
         maintenanceWorker.initialize(),
+        analyticsWorker.initialize(),
       ])
 
       this.mapAssetWorker = mapAssetWorker
