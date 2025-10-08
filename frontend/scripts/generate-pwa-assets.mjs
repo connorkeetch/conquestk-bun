@@ -9,7 +9,8 @@ import sharp from 'sharp'
 const root = path.resolve(process.cwd(), '..') // start from frontend/, go to repo root, then back to frontend/public
 const pub = path.resolve(process.cwd(), 'public')
 
-const ICON_SVG = path.join(pub, 'icon.svg')
+// Use the raw brand artwork as the base to avoid issues with <image href> in icon.svg
+const ICON_SVG = path.join(pub, 'Conquest_K_Logo.svg')
 const ICON_OUTS = [
   { file: 'icon-192-maskable.png', size: 192 },
   { file: 'icon-512-maskable.png', size: 512 },
@@ -64,8 +65,15 @@ async function generateMaskables() {
   const svg = await fs.promises.readFile(ICON_SVG)
   for (const { file, size } of ICON_OUTS) {
     const outPath = path.join(pub, file)
-    await sharp(svg)
-      .resize(size, size, { fit: 'contain', background: { r: 17, g: 24, b: 39, alpha: 1 } })
+    const logo = await sharp(svg)
+      .resize(size, size, { fit: 'cover', position: 'centre' })
+      .png()
+      .toBuffer()
+    // Composite onto dark background to avoid transparency and ensure maskable area
+    await sharp({
+      create: { width: size, height: size, channels: 4, background: { r: 17, g: 24, b: 39, alpha: 1 } },
+    })
+      .composite([{ input: logo }])
       .png()
       .toFile(outPath)
     process.stdout.write(`✔ maskable ${size} → ${outPath}\n`)
