@@ -12,7 +12,7 @@ function getViewerTeamId(state: GameState, viewerId: string): number | null {
   return p?.teamId ?? null
 }
 
-function computeVisibilityMask(state: GameState, viewerId: string): Set<string> {
+export function computeVisibilityMask(state: GameState, viewerId: string): Set<string> {
   const allowTeam = state.gameConfig?.allowTeamPlay === true
   const viewerTeam = allowTeam ? getViewerTeamId(state, viewerId) : null
 
@@ -182,7 +182,7 @@ export async function emitFogFilteredDelta(
   }
 }
 
-function filterFullStateForViewer(state: GameState, viewerId: string): GameState {
+export function filterFullStateForViewer(state: GameState, viewerId: string): GameState {
   const fogMode = (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })?.fogOfWar
   const fogEnabled = fogMode && fogMode !== 'off'
   if (!fogEnabled) return state
@@ -191,6 +191,13 @@ function filterFullStateForViewer(state: GameState, viewerId: string): GameState
     ...state,
     board: state.board.map((t) => (mask.has(t.id) ? t : { ...t, ownerId: null, armies: 0 })),
   }
+}
+
+// For AI planner: filter the game state so the AI only sees what the viewer would see under fog.
+// Currently identical to filterFullStateForViewer, but split for future planner-specific tweaks
+// (e.g., hiding opponent treasure counts or pending effects if needed).
+export function filterStateForPlanner(state: GameState, viewerId: string): GameState {
+  return filterFullStateForViewer(state, viewerId)
 }
 
 function serializeForClient(state: GameState | SerializedGameState): SerializedGameState {

@@ -61,7 +61,23 @@ class AIDecisionService {
     }
 
     try {
-      const plannedActions = this.generatePlan(request)
+      // Apply fog-of-war filtering so planner only sees visible info
+      const fogMode =
+        (request.gameState.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' } | undefined)
+          ?.fogOfWar ?? 'off'
+      const effectiveState = (() => {
+        if (fogMode === 'off') return request.gameState
+        try {
+          const { filterStateForPlanner } = require('../services/fogService') as {
+            filterStateForPlanner: (s: GameState, viewerId: string) => GameState
+          }
+          return filterStateForPlanner(request.gameState, request.player.id)
+        } catch {
+          return request.gameState
+        }
+      })()
+
+      const plannedActions = this.generatePlan({ ...request, gameState: effectiveState })
 
       if (request.budget.signal?.aborted) {
         return this.createFallbackPlan('aborted', request, start)
