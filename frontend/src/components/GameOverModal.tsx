@@ -93,7 +93,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           >
             {/* Header */}
             <div
-              className={`-mx-6 -mt-6 px-6 pb-8 pt-10 text-center ${
+              className={`sticky top-0 z-10 -mx-6 -mt-6 px-6 pb-8 pt-10 text-center shadow-[0_6px_12px_rgba(0,0,0,0.25)] ${
                 isCurrentUserWinner
                   ? 'bg-gradient-to-r from-gold to-violet/90 text-white'
                   : 'bg-gradient-to-r from-surface-2/80 to-surface-1/60'
@@ -253,7 +253,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
             {/* Action Buttons */}
             <div
-              className="flex flex-col gap-3 sm:flex-row sm:justify-end"
+              className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-3 border-t border-border/60 bg-surface-1/95 px-6 pt-4 backdrop-blur sm:flex-row sm:justify-end"
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
             >
               {onNewGame && (

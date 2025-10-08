@@ -62,6 +62,7 @@ class PushNotificationService {
     try {
       this.lastError = null
 
+      // Feature detection
       if (
         !('Notification' in window) ||
         !('serviceWorker' in navigator) ||
@@ -72,19 +73,7 @@ class PushNotificationService {
         return { success: false, message }
       }
 
-      if (Notification.permission !== 'granted') {
-        await Notification.requestPermission()
-        const currentPermission: NotificationPermission = Notification.permission
-        if (currentPermission === 'denied' || currentPermission === 'default') {
-          const blocked = currentPermission === 'denied'
-          const message = blocked
-            ? 'Notifications are blocked. Enable them in your browser or device settings and try again.'
-            : 'Notification permission was not granted'
-          this.lastError = message
-          return { success: false, message }
-        }
-      }
-
+      // Ensure service worker registration
       if (!this.registration) {
         const supported = await this.initialize()
         if (!supported) {
@@ -95,10 +84,24 @@ class PushNotificationService {
         }
       }
 
+      // Request permission if needed
+      if (Notification.permission !== 'granted') {
+        const permissionResult = await Notification.requestPermission()
+        const currentPermission: NotificationPermission = Notification.permission
+        if (permissionResult !== 'granted' && currentPermission !== 'granted') {
+          const blocked = permissionResult === 'denied' || currentPermission === 'denied'
+          const message = blocked
+            ? 'Notifications are blocked. Enable them in your browser or device settings and try again.'
+            : 'Notification permission was not granted'
+          this.lastError = message
+          return { success: false, message }
+        }
+      }
+
+      // Load/verify backend configuration
       if (!this.backendEnabled) {
         await this.loadBackendConfiguration()
       }
-
       if (!this.backendEnabled) {
         const message = 'Push notifications are currently disabled by the server'
         logger.warn(message)
@@ -112,6 +115,7 @@ class PushNotificationService {
         return { success: false, message }
       }
 
+      // Reuse existing subscription if present
       const existingSubscription = await this.registration.pushManager.getSubscription()
       if (existingSubscription) {
         this.subscription = existingSubscription
@@ -119,6 +123,7 @@ class PushNotificationService {
         return { success: true }
       }
 
+      // Resolve VAPID key and subscribe
       const vapidKey = await this.resolveVapidKey()
       if (!vapidKey) {
         const message = 'Missing VAPID public key for push notifications'
@@ -135,7 +140,6 @@ class PushNotificationService {
 
       this.subscription = newSubscription
       await this.sendSubscriptionToServer(newSubscription)
-
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to enable push notifications'
