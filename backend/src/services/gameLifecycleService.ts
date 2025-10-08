@@ -758,8 +758,8 @@ export class GameLifecycleService {
       } catch {
         // metrics only; ignore errors
       }
-      // direct emit here is acceptable; payload metrics already recorded above
-      io.to(roomId).emit('game-update', serialized)
+      // Emit snapshots consistently to the game:<id> channel
+      io.to(`game:${roomId}`).emit('game-update', serialized)
     }
 
     if (turnTimer && turnTimer > 0) {

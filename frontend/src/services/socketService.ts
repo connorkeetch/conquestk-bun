@@ -884,7 +884,7 @@ class SocketService {
       } catch {
         /* ignore */
       }
-      const roomUpdate: Partial<GameRoom> = {
+      const roomUpdateBase: Partial<GameRoom> = {
         id: roomId,
         status,
         lifecyclePhase: lifecyclePayload.lifecyclePhase,
@@ -904,8 +904,16 @@ class SocketService {
         ...(lifecyclePayload.replacementPendingUserId !== undefined
           ? { replacementPendingUserId: lifecyclePayload.replacementPendingUserId }
           : {}),
-        players: lifecyclePayload.players,
       }
+
+      // Important: do NOT overwrite players from 'room-update' unless the server explicitly
+      // supplies a normalized players array. The lifecycle:update event already carries a
+      // canonical players list and is handled above via applyLifecycleUpdate. Passing
+      // players: undefined here would clear currentRoom.players, falsely dropping membership.
+      const maybePlayers = (payload as { players?: unknown }).players
+      const roomUpdate: Partial<GameRoom> = Array.isArray(maybePlayers)
+        ? { ...roomUpdateBase, players: maybePlayers as GameRoom['players'] }
+        : roomUpdateBase
 
       store.dispatch(updateRoom(roomUpdate))
     })
