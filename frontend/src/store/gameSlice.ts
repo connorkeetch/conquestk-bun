@@ -401,6 +401,11 @@ const gameSlice = createSlice({
               if (incoming.changes.isEliminated !== undefined) {
                 player.isEliminated = incoming.changes.isEliminated
               }
+              if (incoming.changes.mustCashInTreasures !== undefined) {
+                // Update per-player cash-in requirement flag (drives Treasure HUD and modal UX)
+                ;(player as unknown as { mustCashInTreasures?: boolean }).mustCashInTreasures =
+                  incoming.changes.mustCashInTreasures
+              }
             }
             break
           }

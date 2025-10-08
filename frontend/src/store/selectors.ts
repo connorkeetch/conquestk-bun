@@ -14,14 +14,22 @@ const selectReinforcementArmies = (state: RootState) => state.game.reinforcement
 
 // Memoized valid targets calculation
 // This was previously recalculated on every territory selection
+// Fast territory index for O(1) lookups by id
+export const selectTerritoryIndex = createSelector([selectGameState], (gameState) => {
+  const index = new Map<string, GameState['board'][number]>()
+  if (!gameState) return index
+  for (const t of gameState.board) index.set(t.id, t)
+  return index
+})
+
 export const selectValidTargets = createSelector(
-  [selectGameState, selectSelectedTerritoryId, selectCurrentPlayerId],
-  (gameState, selectedTerritoryId, currentPlayerId): string[] => {
+  [selectGameState, selectTerritoryIndex, selectSelectedTerritoryId, selectCurrentPlayerId],
+  (gameState, territoryIndex, selectedTerritoryId, currentPlayerId): string[] => {
     if (!gameState || !selectedTerritoryId || !currentPlayerId) {
       return []
     }
 
-    const selectedTerritory = gameState.board.find((t) => t.id === selectedTerritoryId)
+    const selectedTerritory = territoryIndex.get(selectedTerritoryId)
     if (!selectedTerritory) {
       return []
     }
@@ -37,8 +45,8 @@ export const selectValidTargets = createSelector(
           return []
         }
         return selectedTerritory.adjacentTerritories.filter((adjId) => {
-          const adjTerritory = gameState.board.find((t) => t.id === adjId)
-          return adjTerritory && adjTerritory.ownerId !== currentPlayerId
+          const adj = territoryIndex.get(adjId)
+          return adj && adj.ownerId !== currentPlayerId
         })
       }
 
@@ -55,21 +63,25 @@ export const selectValidTargets = createSelector(
           case 'adjacent_multi':
             // Adjacent territories only
             return selectedTerritory.adjacentTerritories.filter((adjId) => {
-              const adjTerritory = gameState.board.find((t) => t.id === adjId)
-              return adjTerritory && adjTerritory.ownerId === currentPlayerId
+              const adj = territoryIndex.get(adjId)
+              return adj && adj.ownerId === currentPlayerId
             })
 
           case 'path_single':
           case 'path_multi':
             // Any connected territory through owned territories
+            // Build a Set of owned territory ids once for BFS checks
+            const ownedIds = new Set(
+              gameState.board.filter((t) => t.ownerId === currentPlayerId).map((t) => t.id),
+            )
             return gameState.board
-              .filter((t) => t.ownerId === currentPlayerId && t.id !== selectedTerritoryId)
+              .filter((t) => ownedIds.has(t.id) && t.id !== selectedTerritoryId)
               .filter((t) =>
-                isConnectedThroughOwnedTerritories(
+                isConnectedThroughOwnedTerritoriesIndex(
                   selectedTerritoryId,
                   t.id,
-                  gameState,
-                  currentPlayerId,
+                  territoryIndex,
+                  ownedIds,
                 ),
               )
               .map((t) => t.id)
@@ -121,6 +133,30 @@ function isConnectedThroughOwnedTerritories(
     }
   }
 
+  return false
+}
+
+// Optimized BFS using a prebuilt territoryIndex and ownedIds set
+function isConnectedThroughOwnedTerritoriesIndex(
+  fromId: string,
+  toId: string,
+  territoryIndex: Map<string, GameState['board'][number]>,
+  ownedIds: Set<string>,
+): boolean {
+  if (fromId === toId) return true
+  const visited = new Set<string>()
+  const queue = [fromId]
+  while (queue.length) {
+    const currentId = queue.shift()!
+    if (currentId === toId) return true
+    if (visited.has(currentId)) continue
+    visited.add(currentId)
+    const cur = territoryIndex.get(currentId)
+    if (!cur) continue
+    for (const adj of cur.adjacentTerritories) {
+      if (!visited.has(adj) && ownedIds.has(adj)) queue.push(adj)
+    }
+  }
   return false
 }
 
