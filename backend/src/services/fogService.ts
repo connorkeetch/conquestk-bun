@@ -1,6 +1,8 @@
 import type { GameDelta } from '@risk-game/shared/types'
 import type { Server } from 'socket.io'
 import type { GameState, SerializedGameState } from '../types/game'
+import { socketPayloadMetrics } from './metricsService'
+import { logger } from '../utils/logger'
 import { GameService } from './gameService'
 
 const ROOM_PREFIX = 'game:'
@@ -111,6 +113,12 @@ export async function emitFogFilteredDelta(
     }>
   } catch {
     // Fallback: if the test/mocks don't implement .in().fetchSockets(), broadcast as-is
+    try {
+      const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8')
+      socketPayloadMetrics.record('game-delta', bytes)
+    } catch {
+      /* metrics best-effort */
+    }
     io.to(channel).emit('game-delta', delta)
     return
   }
@@ -119,6 +127,12 @@ export async function emitFogFilteredDelta(
   const gameState = state ?? (await new GameService().getGameState(roomId))
   if (!gameState) {
     // Fallback: broadcast as-is
+    try {
+      const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8')
+      socketPayloadMetrics.record('game-delta', bytes)
+    } catch {
+      /* metrics best-effort */
+    }
     io.to(channel).emit('game-delta', delta)
     return
   }
@@ -128,6 +142,12 @@ export async function emitFogFilteredDelta(
       ?.fogOfWar ?? 'off'
 
   if (fogMode === 'off') {
+    try {
+      const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8')
+      socketPayloadMetrics.record('game-delta', bytes)
+    } catch {
+      /* metrics best-effort */
+    }
     io.to(channel).emit('game-delta', delta)
     return
   }
@@ -139,12 +159,26 @@ export async function emitFogFilteredDelta(
     const viewerId = (s as any).data?.userId as string | undefined
     if (!viewerId) {
       // Fallback: if viewer identity is missing, emit unfiltered delta to avoid silent drops
+      try {
+        const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8')
+        socketPayloadMetrics.record('game-delta', bytes)
+      } catch {
+        /* metrics best-effort */
+      }
       io.to(s.id).emit('game-delta', delta)
       continue
     }
     const mask = computeVisibilityMask(gameState, viewerId)
     const filtered = filterDeltaForMask(delta, mask)
-    if (filtered) io.to(s.id).emit('game-delta', filtered)
+    if (filtered) {
+      try {
+        const bytes = Buffer.byteLength(JSON.stringify(filtered), 'utf8')
+        socketPayloadMetrics.record('game-delta', bytes)
+      } catch {
+        /* metrics best-effort */
+      }
+      io.to(s.id).emit('game-delta', filtered)
+    }
   }
 }
 
@@ -195,5 +229,23 @@ export async function emitRevealSnapshot(
 
   const filtered = filterFullStateForViewer(gameState, viewerId)
   const serialized = serializeForClient(filtered)
+  try {
+    const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8')
+    socketPayloadMetrics.record('game-update', bytes)
+    if (socketPayloadMetrics.shouldLog('game-update')) {
+      const stats = socketPayloadMetrics.snapshot('game-update')
+      if (stats) {
+        logger.info('Socket payload stats', {
+          event: 'game-update',
+          windowCount: stats.count,
+          p50Bytes: stats.p50,
+          p95Bytes: stats.p95,
+          maxBytes: stats.max,
+        })
+      }
+    }
+  } catch {
+    // best-effort metrics only
+  }
   io.to(target.id).emit('game-update', serialized)
 }

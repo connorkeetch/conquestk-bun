@@ -7,6 +7,7 @@ import { DeltaBuilder } from '../types/deltaUpdates'
 import type { GamePlayer, GameState, SerializedGameState, Territory } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
+import { socketPayloadMetrics } from './metricsService'
 import { gameStateCache } from './cacheService'
 import { clanService } from './clanService'
 import { eloService, type PlayerRating } from './eloService'
@@ -79,6 +80,60 @@ function requireUserId(socket: AuthenticatedSocket): string {
 
 function getGameChannel(roomId: string): string {
   return `game:${roomId}`
+}
+
+// Compute JSON payload size in bytes (UTF-8)
+function computePayloadBytes(data: unknown): number {
+  try {
+    const json = JSON.stringify(data)
+    return Buffer.byteLength(json, 'utf8')
+  } catch {
+    return -1
+  }
+}
+
+// Emit helpers that record payload sizes and periodically log p50/p95
+function emitGameUpdateToRoom(
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  channel: string,
+  payload: SerializedGameState,
+) {
+  const bytes = computePayloadBytes(payload)
+  socketPayloadMetrics.record('game-update', bytes)
+  if (socketPayloadMetrics.shouldLog('game-update')) {
+    const stats = socketPayloadMetrics.snapshot('game-update')
+    if (stats) {
+      logger.info('Socket payload stats', {
+        event: 'game-update',
+        windowCount: stats.count,
+        p50Bytes: stats.p50,
+        p95Bytes: stats.p95,
+        maxBytes: stats.max,
+      })
+    }
+  }
+  io.to(channel).emit('game-update', payload)
+}
+
+function emitGameUpdateToSocket(
+  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
+  payload: SerializedGameState,
+) {
+  const bytes = computePayloadBytes(payload)
+  socketPayloadMetrics.record('game-update', bytes)
+  if (socketPayloadMetrics.shouldLog('game-update')) {
+    const stats = socketPayloadMetrics.snapshot('game-update')
+    if (stats) {
+      logger.info('Socket payload stats', {
+        event: 'game-update',
+        windowCount: stats.count,
+        p50Bytes: stats.p50,
+        p95Bytes: stats.p95,
+        maxBytes: stats.max,
+      })
+    }
+  }
+  socket.emit('game-update', payload)
 }
 
 function filterGameStateForPlayer(
@@ -377,7 +432,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           )
           const finalState = serializeGameStateForClient(filtered)
           if (finalState) {
-            socket.emit('game-update', finalState)
+            emitGameUpdateToSocket(socket, finalState)
           }
         }
 
@@ -456,7 +511,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const updatedState = await gameService.processGameAction(normalizedAction, userId)
             const serialized = serializeGameStateForClient(updatedState)
             if (serialized) {
-              io.to(channel).emit('game-update', serialized)
+              emitGameUpdateToRoom(io, channel, serialized)
             }
 
             if (normalizedAction.type === 'go_back_to_reinforcement') {
@@ -851,7 +906,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         // Broadcast updated game state
         const channel = getGameChannel(data.roomId)
-        io.to(channel).emit('game-update', serialized)
+        emitGameUpdateToRoom(io, channel, serialized)
 
         // Also send territory deltas for efficient updates
         io.to(channel).emit('game-delta', {
@@ -902,7 +957,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         )
         const channel = getGameChannel(data.roomId)
         io.to(channel).emit('territoriesFortified', result)
-        io.to(channel).emit('game-update', result.gameState)
+        emitGameUpdateToRoom(io, channel, result.gameState)
       }),
     )
 
@@ -951,9 +1006,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             userId,
           )
           const channel = getGameChannel(data.roomId)
-          const serialized = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
+          const serialized = await gameStateCache.getGameState<SerializedGameState>(
+            data.roomId,
+          )
           if (serialized) {
-            io.to(channel).emit('game-update', serialized)
+            emitGameUpdateToRoom(io, channel, serialized)
           }
         }
       }),
@@ -977,7 +1034,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const cached = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
         const serialized = serializeGameStateForClient(cached)
         if (serialized) {
-          io.to(channel).emit('game-update', serialized)
+          emitGameUpdateToRoom(io, channel, serialized)
         }
         // System log message for Game Log panel
         try {
@@ -1060,9 +1117,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           if (freshState) {
             const filtered = filterGameStateForPlayer(freshState, userId)
             const finalState = serializeGameStateForClient(filtered)
-            if (finalState) {
-              io.to(getGameChannel(roomId)).emit('game-update', finalState)
-            }
+          if (finalState) {
+            emitGameUpdateToRoom(io, getGameChannel(roomId), finalState)
+          }
           }
         },
       ),

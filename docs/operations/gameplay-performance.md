@@ -73,12 +73,83 @@ This note captures quick wins for keeping the live game responsive on both the c
 - Lower GPU usage during active gameplay
 - Better visibility into socket performance
 
-### 🔜 Phase 2: Deep Optimizations (Planned)
+### 🚧 Phase 2: Deep Optimizations (In Progress)
 
-- [ ] Batch database queries in `gameService` turn handlers
-- [ ] Optimize socket payload sizes (target: <50 KB per `gameUpdate`)
-- [ ] Consider delta compression for board state updates
-- [ ] Move analytics/events off hot path to Bull queues
+This phase focuses on shaving server-side latency and wire size during turns. Each work item below includes where to implement, concrete steps, and a clear “done when”. Capture a quick baseline first (see Baseline capture) so we can quantify wins.
+
+1) Batch database queries in turn handlers
+- Scope: Replace multi-round-trip patterns in hot paths with a single transaction/CTE pass.
+- Where:
+  - `backend/src/services/gameService.ts`
+  - Helpers in `backend/src/config/database.ts` (`transaction`), `backend/src/services/gameRoomService.ts`
+- Steps:
+  - Add `getTurnContext(gameId, playerId)` that returns in one call: current serialized game_state, minimal room info (turn_number/current_turn_user_id), and any flags required by the engine (e.g., conquest this turn). Use a CTE with `$n` params and `FOR UPDATE` where needed.
+  - In `endTurn`, `deployArmies`, `fortify`, and queued action appliers, call `getTurnContext` within a `transaction(...)` block and persist results + logs in the same transaction.
+  - Avoid N+1 user fetches when finalizing results: fetch players and stats with `WHERE id = ANY($1)` in a single call (already present in some flows; ensure all paths use it).
+- Done when:
+  - Attack, deploy, fortify, endTurn each perform ≤1 DB round‑trip for read + ≤1 round‑trip for write in a single transaction.
+  - No intermediate SELECTs between validation/persist within the same handler.
+  - Integration tests for these handlers run with comparable behavior but show fewer DB calls in debug logs.
+- Risks/rollback:
+  - Transaction lock contention on hot rooms. If observed, isolate updates to rows touched (`game_states`, minimal `game_rooms` columns) and keep snapshot inserts as `DO NOTHING` outside the critical section.
+
+2) Optimize socket payload sizes (<50 KB per `game-update`)
+- Scope: Reduce serialized payload and frequency; favor deltas.
+- Where:
+  - `backend/src/services/socketService.ts`
+  - `backend/src/services/metricsService.ts` (new payload metrics)
+  - Client consumers under `frontend/src/store` and `frontend/src/pages/GameRoom.tsx`
+- Steps:
+  - Instrument payload size: wrap `socket.emit('game-update', data)` and `io.to(channel).emit('game-update', data)` with a helper that measures `Buffer.byteLength(JSON.stringify(data),'utf8')` and records a metric `socket_payload_bytes{event="game-update"}` (add a Gauge in `metricsService`). Capture p50/p95 in logs for now.
+  - Trim shape: ensure `SerializedGameState` contains only required fields for the view. Prefer ids over embedded user objects; keep history/logs out of the hot message.
+  - Prefer targeted `game-delta` events where possible (already partially used). Audit all emits in `socketService.ts` and switch non-essential full‑state emits to deltas.
+- Done when:
+  - Median payload size for `game-update` < 30 KB, p95 < 50 KB across a 10‑minute synthetic session.
+  - At least two previously full‑state emits replaced with deltas with no UX regressions.
+- Risks/rollback:
+  - Older clients missing delta handlers: maintain the full‑state path behind a feature flag for one release.
+
+3) Delta compression rollout (server-led, client‑safe)
+- Scope: Use the existing `DeltaBuilder`/fog‑filtered emitters to drive convergence with minimal bytes.
+- Where:
+  - `backend/src/services/deltaEmitter.ts`
+  - `backend/src/services/socketService.ts` (ensure all actions emit deltas)
+  - `frontend/src/store` reducers/selectors to apply deltas without forcing full re-normalization
+- Steps:
+  - Confirm every action path emits appropriate deltas: deploy, attack, transfer on conquest, fortify, go-back-to-reinforcement, phase changes, game end.
+  - Add convergence fallback: when a client joins or signals out‑of‑sync, send a one‑off reveal snapshot with fog applied (`DeltaEmitter.emitRevealTo`).
+  - Tag outgoing deltas with monotonically increasing `version` (already supported in `DeltaBuilder` signatures). Store last-acked version per socket; on mismatch, trigger convergence fallback.
+- Done when:
+  - All turn actions emit at least one delta (and no redundant full-state emits) and clients converge without manual refresh.
+  - A simulated packet-loss test still converges via reveal snapshot.
+
+4) Move analytics/events off the hot path to Bull queues
+- Scope: Decouple event logging, achievements, and clan progression from action handlers.
+- Where:
+  - `backend/src/services/queueService.ts`
+  - Call sites in `backend/src/services/gameService.ts` that log or fan out non-critical work
+- Steps:
+  - Introduce a lightweight `analyticsEvent` queue job with a simple DTO and DLQ retention.
+  - Replace inline `query(...)` + log writes for analytics/telemetry with `queueService.add(...)` and minimal context. Keep a small in‑memory buffer if Redis is unavailable, and flush opportunistically.
+  - Ensure idempotency (hash key includes gameId + turn + event type).
+- Done when:
+  - Turn handlers do not await analytics persistence; p95 handler time improves measurably in dev.
+  - Dead-letter queue shows zero growth under normal play; errors are observable in logs/metrics.
+
+Baseline capture (do this once before the above)
+- Run a 10‑minute synthetic session locally (4 players, one AI). Capture:
+  - p50/p95 `game-update` payload bytes
+  - p50/p95 server handler time for deploy/attack/fortify/endTurn (console logs fine)
+  - DB calls per action (enable query debug or rough count via logger)
+  - Socket latency p95 (already exposed via `getSocketLatencyMetrics()`)
+
+Local verification checklist
+- `npm run dev:backend` and play a short match with 2–3 turns.
+- Confirm that: (a) payload size metrics log, (b) deltas arrive for each action, (c) full-state is only sent on join or desync, (d) no duplicated DB reads in turn handlers.
+
+Notes
+- Socket.io Redis adapter is already wired in `backend/src/index.ts:191-205` for multi‑instance scaling.
+- Delta infrastructure exists in `backend/src/services/deltaEmitter.ts`; this phase ensures complete coverage and adds convergence safeguards.
 
 ### 🔜 Phase 3: Asset & Media (Planned)
 

@@ -736,6 +736,26 @@ export class GameLifecycleService {
     const io = tryGetSocketServer()
     if (io) {
       const serialized = this.toSerializableGameState(gameState)
+      try {
+        const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8')
+        const { socketPayloadMetrics } = await import('./metricsService')
+        socketPayloadMetrics.record('game-update', bytes)
+        if (socketPayloadMetrics.shouldLog('game-update')) {
+          const stats = socketPayloadMetrics.snapshot('game-update')
+          if (stats) {
+            logger.info('Socket payload stats', {
+              event: 'game-update',
+              windowCount: stats.count,
+              p50Bytes: stats.p50,
+              p95Bytes: stats.p95,
+              maxBytes: stats.max,
+            })
+          }
+        }
+      } catch {
+        // metrics only; ignore errors
+      }
+      // direct emit here is acceptable; payload metrics already recorded above
       io.to(roomId).emit('game-update', serialized)
     }
 

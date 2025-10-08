@@ -174,6 +174,81 @@ class TreasureMetrics {
 
 export const treasureMetrics = new TreasureMetrics()
 
+// Lightweight rolling window stats for payload sizes
+class RollingWindowStats {
+  private readonly windowByKey = new Map<string, number[]>()
+  private readonly maxSize: number
+  private readonly lastLogAt = new Map<string, number>()
+  private readonly counts = new Map<string, number>()
+
+  constructor(maxSize = 200) {
+    this.maxSize = Math.max(1, maxSize)
+  }
+
+  record(key: string, value: number) {
+    const arr = this.windowByKey.get(key) ?? []
+    arr.push(value)
+    if (arr.length > this.maxSize) arr.shift()
+    this.windowByKey.set(key, arr)
+
+    const count = (this.counts.get(key) ?? 0) + 1
+    this.counts.set(key, count)
+  }
+
+  getPercentiles(key: string): { count: number; p50: number; p95: number; max: number } | null {
+    const arr = this.windowByKey.get(key)
+    if (!arr || arr.length === 0) return null
+    const sorted = [...arr].sort((a, b) => a - b)
+    const p = (q: number) => {
+      const idx = Math.ceil(sorted.length * q) - 1
+      if (idx < 0) return 0
+      return sorted[idx] ?? 0
+    }
+    return {
+      count: sorted.length,
+      p50: p(0.5),
+      p95: p(0.95),
+      max: sorted[sorted.length - 1] ?? 0,
+    }
+  }
+
+  shouldLog(key: string, { everyN = 50, minIntervalMs = 30000 } = {}): boolean {
+    const now = Date.now()
+    const last = this.lastLogAt.get(key) ?? 0
+    // Log immediately for a new key so developers see initial numbers
+    if (!this.lastLogAt.has(key)) {
+      this.lastLogAt.set(key, now)
+      return true
+    }
+    const count = this.counts.get(key) ?? 0
+    const due = now - last >= minIntervalMs || (everyN > 0 && count % everyN === 0)
+    if (due) this.lastLogAt.set(key, now)
+    return due
+  }
+}
+
+class SocketPayloadMetrics {
+  private readonly gauge = new GaugeMetric('socket_payload_bytes')
+  private readonly window = new RollingWindowStats(300)
+
+  record(event: string, bytes: number) {
+    if (Number.isFinite(bytes) && bytes >= 0) {
+      this.gauge.set(bytes, { event })
+      this.window.record(event, bytes)
+    }
+  }
+
+  snapshot(event: string) {
+    return this.window.getPercentiles(event)
+  }
+
+  shouldLog(event: string) {
+    return this.window.shouldLog(event)
+  }
+}
+
+export const socketPayloadMetrics = new SocketPayloadMetrics()
+
 type AITurnMetricRecord = {
   difficulty: AIDifficulty
   fallbackUsed: boolean
