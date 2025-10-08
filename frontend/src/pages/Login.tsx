@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import MountainLogo from '../components/MountainLogo'
+// Use the unified static SVG logo asset
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, login } from '../store/authSlice'
 
@@ -48,7 +48,16 @@ export default function Login() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <div className="flex items-center justify-center gap-3 mb-2">
-              <MountainLogo width={48} height={48} />
+              <img
+                src="/icon.svg"
+                width={48}
+                height={48}
+                alt="ConquestK logo"
+                style={{
+                  filter:
+                    'drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 2px var(--color-primary))',
+                }}
+              />
               <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
                 CONQUEST{' '}
                 <span
