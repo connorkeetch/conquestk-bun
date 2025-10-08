@@ -10,7 +10,7 @@ const root = path.resolve(process.cwd(), '..') // start from frontend/, go to re
 const pub = path.resolve(process.cwd(), 'public')
 
 // Use the raw brand artwork as the base to avoid issues with <image href> in icon.svg
-const ICON_SVG = path.join(pub, 'Conquest_K_Logo.svg')
+const BRAND_SVG = path.join(pub, 'Conquest_K_Logo.svg')
 const ICON_OUTS = [
   { file: 'icon-192-maskable.png', size: 192 },
   { file: 'icon-512-maskable.png', size: 512 },
@@ -61,21 +61,25 @@ async function ensureDir(dir) {
 }
 
 async function generateMaskables() {
-  if (!fs.existsSync(ICON_SVG)) throw new Error(`Missing base SVG at ${ICON_SVG}`)
-  const svg = await fs.promises.readFile(ICON_SVG)
+  if (!fs.existsSync(BRAND_SVG)) throw new Error(`Missing base SVG at ${BRAND_SVG}`)
+  const brandB64 = Buffer.from(await fs.promises.readFile(BRAND_SVG)).toString('base64')
   for (const { file, size } of ICON_OUTS) {
     const outPath = path.join(pub, file)
-    const logo = await sharp(svg)
-      .resize(size, size, { fit: 'cover', position: 'centre' })
-      .png()
-      .toBuffer()
-    // Composite onto dark background to avoid transparency and ensure maskable area
-    await sharp({
-      create: { width: size, height: size, channels: 4, background: { r: 17, g: 24, b: 39, alpha: 1 } },
-    })
-      .composite([{ input: logo }])
-      .png()
-      .toFile(outPath)
+    const scaled = Math.round(size * 1.22)
+    const x = -Math.round((scaled - size) / 2)
+    const y = -Math.round((scaled - size) * 0.65)
+    const wrapper = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="${(size * 0.04).toFixed(2)}" flood-color="#cbd5e1" flood-opacity="0.9" />
+    </filter>
+  </defs>
+  <g filter="url(#glow)">
+    <image href="data:image/svg+xml;base64,${brandB64}" x="${x}" y="${y}" width="${scaled}" height="${scaled}" preserveAspectRatio="xMidYMid slice" />
+  </g>
+</svg>`
+    await sharp(Buffer.from(wrapper)).png().toFile(outPath)
     process.stdout.write(`✔ maskable ${size} → ${outPath}\n`)
   }
 }

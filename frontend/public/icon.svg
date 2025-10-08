@@ -1,14 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
-  <style>
-    @media (prefers-color-scheme: dark) {
-      .bg { fill: #111827; }
-    }
-    @media (prefers-color-scheme: light) {
-      .bg { fill: #f8fafc; }
-    }
-  </style>
-  <!-- Background with rounded corners for maskable icons -->
-  <rect class="bg" width="192" height="192" rx="20" />
-  <!-- Embed the new brand SVG, center-cropped to square -->
-  <image href="/Conquest_K_Logo.svg" x="0" y="0" width="192" height="192" preserveAspectRatio="xMidYMid slice" />
+  <defs>
+    <filter id="brandGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#cbd5e1" flood-opacity="0.9" />
+    </filter>
+  </defs>
+  <!-- Center-cropped brand artwork, zoomed and biased upward for better flag visibility. Transparent background. -->
+  <g filter="url(#brandGlow)">
+    <!-- scale 1.22 on a 192 box → width/height ~ 234; center horizontally and bias upward -->
+    <image href="/Conquest_K_Logo.svg" x="-21" y="-27" width="234" height="234" preserveAspectRatio="xMidYMid slice" />
+  </g>
 </svg>
