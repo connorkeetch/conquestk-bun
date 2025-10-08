@@ -36,14 +36,11 @@ function backgroundSvg() {
 
 async function main() {
   if (!fs.existsSync(brandSvgPath)) {
-    console.error(`Missing ${brandSvgPath}`)
     process.exit(1)
   }
 
   // Render background
-  const bgBuf = await sharp(Buffer.from(backgroundSvg()))
-    .png()
-    .toBuffer()
+  const bgBuf = await sharp(Buffer.from(backgroundSvg())).png().toBuffer()
 
   // Render brand artwork and fit into a square left panel
   const logoSize = 260
@@ -53,17 +50,13 @@ async function main() {
     .toBuffer()
 
   await sharp(bgBuf)
-    .composite([
-      { input: logoBuf, left: 56 + 40, top: 56 + 60 },
-    ])
+    .composite([{ input: logoBuf, left: 56 + 40, top: 56 + 60 }])
     .png()
     .toFile(outPath)
 
   process.stdout.write(`✔ OG image → ${outPath}\n`)
 }
 
-main().catch((e) => {
-  console.error(e)
+main().catch((_e) => {
   process.exit(1)
 })
-

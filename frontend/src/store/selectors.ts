@@ -112,7 +112,8 @@ function isConnectedThroughOwnedTerritoriesIndex(
   const visited = new Set<string>()
   const queue = [fromId]
   while (queue.length) {
-    const currentId = queue.shift()!
+    const currentId = queue.shift()
+    if (currentId == null) break
     if (currentId === toId) return true
     if (visited.has(currentId)) continue
     visited.add(currentId)

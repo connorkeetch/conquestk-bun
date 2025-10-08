@@ -30,6 +30,7 @@ export default function BrandLogoDynamic({
   const w = width
   const h = height
   const titleId = React.useId()
+  const glowId = React.useId()
 
   return (
     <svg
@@ -44,9 +45,15 @@ export default function BrandLogoDynamic({
       <title id={titleId}>{title}</title>
       <defs>
         {withGlow ? (
-          <filter id="brandGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <!-- neutral outer glow -->
-            <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#cbd5e1" flood-opacity="0.85" />
+          <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+            {/* neutral outer glow */}
+            <feDropShadow
+              dx="0"
+              dy="0"
+              stdDeviation="3"
+              flood-color="#cbd5e1"
+              flood-opacity="0.85"
+            />
           </filter>
         ) : null}
       </defs>
@@ -58,7 +65,7 @@ export default function BrandLogoDynamic({
         const x = -extra / 2
         const y = -extra * yBias
         return (
-          <g filter={withGlow ? 'url(#brandGlow)' : undefined}>
+          <g filter={withGlow ? `url(#${glowId})` : undefined}>
             <image
               href="/Conquest_K_Logo.svg"
               x={x}

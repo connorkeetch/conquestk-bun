@@ -234,29 +234,6 @@ export class GameService {
     }
   }
 
-  private async insertImmutableTurnSnapshot(
-    roomId: string,
-    state: SerializedGameState,
-  ): Promise<void> {
-    try {
-      const turn = Math.max(1, Number(state.turn ?? 1))
-      const phase = String(state.phase ?? 'reinforcement')
-      await query(
-        `INSERT INTO game_state_snapshots (room_id, turn_number, phase, snapshot)
-         VALUES ($1, $2, $3, $4::jsonb)
-         ON CONFLICT (room_id, turn_number, phase) DO NOTHING`,
-        [roomId, turn, phase, JSON.stringify(state)],
-      )
-    } catch (error) {
-      logger.warn('Failed to insert immutable turn snapshot', {
-        roomId,
-        phase: state.phase,
-        turn: state.turn,
-        error: error instanceof Error ? error.message : error,
-      })
-    }
-  }
-
   /**
    * Persist the serialized game state and room turn indicators in a single transaction.
    * This reduces round-trips and keeps row-level updates consistent.

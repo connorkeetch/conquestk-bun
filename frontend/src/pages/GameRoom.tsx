@@ -223,26 +223,34 @@ export default function GameRoom() {
     try {
       void import('@/components/panels/ChatLogPanel')
       void import('@/components/chat/TabbedGameChat')
-    } catch {}
+    } catch (_e) {
+      /* prefetch optional panels may fail in dev hot reload */
+    }
   }, [])
   const prefetchStatsPanel = useCallback(() => {
     try {
       void import('@/components/panels/PlayerStatsPanel')
       void import('@/components/game/PlayerStatsTable')
-    } catch {}
+    } catch (_e) {
+      /* prefetch optional panels may fail in dev hot reload */
+    }
   }, [])
   const prefetchGameLogPanel = useCallback(() => {
     try {
       void import('@/components/panels/GameLogPanelWrapper')
       void import('@/components/chat/GameLogPanel')
-    } catch {}
+    } catch (_e) {
+      /* prefetch optional panels may fail in dev hot reload */
+    }
   }, [])
   const prefetchModalsIdle = useCallback(() => {
     try {
       void import('@/components/GameOverModal')
       void import('@/components/profile/PlayerProfileModal')
       void import('@/components/SettingsModal')
-    } catch {}
+    } catch (_e) {
+      /* prefetch optional panels may fail in dev hot reload */
+    }
   }, [])
 
   // Idle/viewport-based prefetch when panels are pinned or visible
@@ -291,8 +299,13 @@ export default function GameRoom() {
         ? rIC(prefetchModalsIdle, { timeout: 2000 })
         : window.setTimeout(prefetchModalsIdle, 1000)
     return () => {
-      if (typeof (window as any).cancelIdleCallback === 'function') {
-        ;(window as any).cancelIdleCallback(id)
+      const w = window as unknown as Record<string, unknown>
+      const cancel =
+        typeof w.cancelIdleCallback === 'function'
+          ? (w.cancelIdleCallback as (handle: number) => void)
+          : null
+      if (cancel) {
+        cancel(id as number)
       } else {
         window.clearTimeout(id)
       }

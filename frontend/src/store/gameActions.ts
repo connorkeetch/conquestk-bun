@@ -247,7 +247,9 @@ export const deployArmies = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ action }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         // Send to server via socket - UI updates via socket deltas
         socketService.deployArmies(currentGame.roomId, territoryId, armies)
@@ -318,7 +320,9 @@ export const undoLastPlacement = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ action }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         socketService.deployArmies(currentGame.roomId, last.territoryId, -last.armies)
       }
@@ -367,7 +371,9 @@ export const executeAttack = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ action }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         // Do not send a fixed armies value; backend determines dice from available armies
         socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId)
@@ -419,7 +425,9 @@ export const transferConquestArmies = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ fromTerritoryId, toTerritoryId, armies }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         // Use the socket event when connected
         socketService.transferConquestArmies(
@@ -479,7 +487,9 @@ export const executeFortify = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ action }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         socketService.fortify(currentGame.roomId, fromTerritoryId, toTerritoryId, armies)
       }
@@ -528,7 +538,9 @@ export const undoFortify = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ action }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         socketService.undoFortify(currentGame.roomId)
       }
@@ -588,13 +600,17 @@ export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, di
         .then(() => {
           try {
             toast.success('Turn queued — will submit when online')
-          } catch {}
+          } catch (_e) {
+            /* ignore toast errors */
+          }
         })
         .catch(() => {
           // If fetch throws (likely offline), Background Sync should enqueue the request
           try {
             toast('Turn queued for background sync')
-          } catch {}
+          } catch (_e) {
+            /* ignore toast errors */
+          }
         })
     } else {
       socketService.endTurn(currentGame.roomId)
@@ -637,7 +653,9 @@ export const tradeTreasureSet = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ action }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         socketService.sendGameAction({ roomId: currentGame.roomId, action })
       }
@@ -677,7 +695,9 @@ export const goBackToReinforcement = createAsyncThunk(
           method: 'POST',
           headers,
           body: JSON.stringify({ action }),
-        }).catch(() => {})
+        }).catch(() => {
+          /* offline fallback handled by service worker */
+        })
       } else {
         socketService.sendGameAction({ roomId: currentGame.roomId, action })
       }
