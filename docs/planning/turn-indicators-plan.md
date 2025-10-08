@@ -38,4 +38,9 @@ Use multiple cues that scale with urgency so the turn handoff is clear without o
 - **Accessibility:** provide a settings toggle to disable animations and choose a high-contrast alternative theme.
 - **Latency:** confirm the backend emits turn change events reliably; debounce UI cues so they do not flicker on reconnects.
 
+## Backend signals to drive indicators
+- `PHASE_CHANGE` (fog-filtered): authoritative signal for turn start/end; includes `currentPlayer`, optional `turn`, and `reinforcementArmies` when entering reinforcement (including after treasure cash-in).
+- `PLAYER_UPDATE` (fog-filtered): includes player `armies` and optional `mustCashInTreasures`; use to trigger a “must cash in” prompt/badge.
+- `SYSTEM_MESSAGE` with `text: "ai:thinking"`: lightweight hint emitted when an AI turn is scheduled; safe to show a subtle “AI is thinking” indicator. Do not block input.
+- Streaming AI actions: backend emits per-action deltas (deploy/attack/fortify/phase) with small pacing delays. Avoid long toasts between every AI action; prefer a single transient “AI thinking” indicator near the banner.
 

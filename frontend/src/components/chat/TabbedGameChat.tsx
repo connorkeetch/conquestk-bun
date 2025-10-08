@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import {
   ensureGameConversation,
@@ -36,6 +36,17 @@ export default function TabbedGameChat({
   const dispatch = useAppDispatch()
   const [activeTab, setActiveTab] = useState<string>('game')
   const conversations = useAppSelector(selectAllConversations)
+  const [logPrefetched, setLogPrefetched] = useState(false)
+
+  const prefetchLogPanel = useCallback(() => {
+    if (logPrefetched) return
+    try {
+      void import('./GameLogPanel')
+      setLogPrefetched(true)
+    } catch {
+      // Best-effort only; tab switch will still load as needed
+    }
+  }, [logPrefetched])
 
   // Note: we no longer gate chat by membership; spectators can view game chat
 
@@ -155,6 +166,8 @@ export default function TabbedGameChat({
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               disabled={!tab.enabled}
+              onMouseEnter={tab.id === 'log' ? prefetchLogPanel : undefined}
+              onFocus={tab.id === 'log' ? prefetchLogPanel : undefined}
               className={`
               flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap
               transition-all relative

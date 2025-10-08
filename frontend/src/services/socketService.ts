@@ -516,11 +516,32 @@ class SocketService {
       store.dispatch(applyDelta(payload))
     })
 
-    // Legacy game-update handler - kept for backward compatibility during transition
+    // Legacy game-update handler - used primarily for join/resync
     this.socket.on('game-update', (gameState) => {
       const typedGameState = gameState as GameState
-      const previousState = store.getState().game.currentGame
-      const currentUserId = store.getState().auth.user?.id
+      const { game, auth } = store.getState()
+      const previousState = game.currentGame
+      const currentUserId = auth.user?.id
+      const needsResync = game.needsResync === true
+
+      // Delta-first: ignore snapshots when we already have state and no resync requested,
+      // unless the snapshot clearly advances beyond our version (gap detected)
+      if (previousState && !needsResync) {
+        const prevVer = previousState.version
+        const nextVer = (typedGameState as unknown as { version?: number }).version
+        if (
+          typeof prevVer === 'number' &&
+          typeof nextVer === 'number' &&
+          // Only accept if server version leaps ahead (we missed deltas)
+          !(nextVer > prevVer + 1)
+        ) {
+          return
+        }
+        if (typeof prevVer !== 'number' || typeof nextVer !== 'number') {
+          // When versions are not comparable, keep delta-first and drop snapshot
+          return
+        }
+      }
 
       // Check if it's now the current user's turn
       if (

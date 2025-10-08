@@ -4,6 +4,19 @@
 - **Lobby + lifecycle plumbing is complete.** Hosts can add AI seats (Recruit/Commander/Grandmaster) and those seats flow through lobby state, sockets, and readiness snapshots thanks to the work tracked in the original AI rollout plan.【F:docs/planning/ai-players-plan.md†L26-L38】
 - **Decision scaffolding exists.** `GameService.executeAiTurn` wraps `aiDecisionService`, applies the chosen actions, logs telemetry, and falls back safely if the plan is empty or invalid.【F:backend/src/services/gameService.ts†L430-L520】
 - **Recruit heuristics are partially implemented.** The decision service deterministically deploys, attempts a single high-odds attack, and fortifies before ending the turn.【F:backend/src/services/aiDecisionService.ts†L91-L160】
+- **AI turn runner is live with streaming.** When an AI becomes the active player we queue and execute its turn with per-action pacing, emitting fog-filtered deltas (deploy/fortify/attack/phase) between 250–400 ms where budget allows. Trade-ins emit concise PlayerUpdate + PhaseChange without full snapshots.【F:backend/src/workers/gameActionWorker.ts†L220-L304】【F:backend/src/services/gameLifecycleService.ts†L992-L1060】
+
+## Status (Oct 2025)
+- Build the turn runner: DONE (queued orchestration, per-action streaming, fog-filtered deltas).
+- Budget + safety controls: PARTIAL (per-tier budgets enforced; pacing clamped by budget; fallback truncation wired; higher-tier odds/EV still to plug into models).
+- Commander/Grandmaster models: TODO (stubs; Recruit improved with capital-aware heuristics and one “spice” attack path).
+- Variant awareness: PARTIAL
+  - Capitals: basic prioritization for Recruit (attack/fortify bias toward capitals).
+  - Hidden Treasures: cash-in deltas optimized; strategy tradeoffs not implemented.
+  - Fog of War: emissions are fog-filtered; planner still sees full state and needs visibility filtering.
+  - Teams: teammate filtering in Recruit; no offensive coordination yet.
+- Integration tests: PARTIAL (AI job unit test and worker coverage; end-to-end multi-turn completion test still to add).
+- Observability: PARTIAL (aiTurnMetrics emitted; kill switches and dashboards to configure).
 
 ## Why AI currently stalls
 - **No turn orchestrator ever calls `executeAiTurn`.** When an AI becomes the active player the queues only schedule AFK timers; nothing triggers the AI planner, so the game waits indefinitely.【F:backend/src/workers/gameActionWorker.ts†L471-L507】【F:backend/src/services/gameService.ts†L430-L520】
@@ -11,7 +24,7 @@
 - **Mode-agnostic heuristics.** The current Recruit logic ignores Capitals, King of the Hill, Hidden Treasures, territory modifiers, fog, and custom timers, so even once the turn runner exists the AI will make nonsensical moves in those variants.【F:docs/guides/game-options.md†L60-L81】
 
 ## Work remaining before AI matches are reliable
-1. **Build the turn runner.** Detect AI turns (both on game start and after each `end_turn`) and queue `executeAiTurn` with a small human-visible delay. Wire this through Bull so we can throttle, cancel, or retry without blocking the socket thread.【F:backend/src/workers/gameActionWorker.ts†L471-L507】【F:backend/src/services/gameService.ts†L430-L520】
+1. **Build the turn runner.** DONE — AI turns are detected and scheduled on start and after `end_turn`, time-boxed by tier, with per-action streaming and fog-filtered deltas.【F:backend/src/workers/gameActionWorker.ts†L220-L304】【F:backend/src/services/gameLifecycleService.ts†L992-L1060】
 2. **Budget + safety controls.** Confirm per-difficulty think-time ceilings, maximum chained actions, and what to do when the wall-clock budget is exceeded (skip remainder of the turn vs. perform a minimal action) so we can populate the `DecisionBudget` contract.【F:backend/src/services/aiDecisionService.ts†L5-L83】【F:docs/planning/ai-players-plan.md†L45-L55】
 3. **Commander / Grandmaster decision models.** Flesh out heuristics for the higher tiers (threat scoring, card timing, multi-attack plans, etc.) per the roadmap so they produce meaningful turns instead of falling back immediately.【F:docs/planning/ai-players-plan.md†L45-L55】
 4. **Variant awareness.** Extend the planner to respect:

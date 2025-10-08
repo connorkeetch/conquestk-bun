@@ -1,4 +1,5 @@
 import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game'
+import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures'
 
 type FallbackReason = 'stubbed' | 'timeout' | 'aborted'
 
@@ -111,8 +112,174 @@ class AIDecisionService {
     switch (request.difficulty) {
       case 'recruit':
         return this.generateRecruitPlan(request)
+      case 'commander':
+        return this.generateCommanderPlan(request)
       default:
         return []
+    }
+  }
+
+  private generateCommanderPlan(request: DecisionRequest): GameAction[] {
+    const { gameState, player, budget } = request
+    const roomId = gameState.roomId
+    const actions: GameAction[] = []
+
+    const push = (a: GameAction) => {
+      if (budget.maxPlannedActions !== undefined && actions.length >= budget.maxPlannedActions) {
+        return false
+      }
+      actions.push(a)
+      return true
+    }
+
+    if (gameState.phase === 'finished') return []
+
+    // 1) Card timing: if we must cash in or we are at/over hand cap and have a set, trade first
+    try {
+      const cfg = (gameState.gameConfig as { treasureConfig?: unknown })?.treasureConfig as
+        | import('../types/game').TreasureConfig
+        | undefined
+      const hand = (player.treasures ?? []) as import('../types/game').Metal[]
+      const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures)
+      if (cfg && cfg.enabled && hand.length >= 3) {
+        const norm = normalizeTreasureConfig(cfg)
+        const sets = findRedeemableSets(hand)
+        const nearCap = hand.length >= Math.max(3, norm.handCap - 1)
+        if ((mustCash || nearCap) && sets.length > 0) {
+          const first = sets[0]
+          push({
+            type: 'trade_cards',
+            roomId,
+            playerId: player.id,
+            payload: { treasureSet: first.indices as unknown as [number, number, number] },
+          })
+          // Commander may place reinforcements next (handled below) without ending turn
+        }
+      }
+    } catch {
+      // if treasure logic fails, continue with normal flow
+    }
+
+    let phase = gameState.phase
+
+    // 2) Reinforcement: prefer sectors close to completion or defense of owned sectors
+    if (phase === 'reinforcement') {
+      const available = Math.max(0, player.armies)
+      if (available > 0) {
+        const target = this.chooseCommanderReinforcement(gameState, player.id)
+        if (target) {
+          if (!push({
+            type: 'deploy',
+            roomId,
+            playerId: player.id,
+            payload: { territoryId: target, armies: available },
+          }))
+            return actions
+        }
+      }
+      if (!push({ type: 'end_turn', roomId, playerId: player.id })) return actions
+      phase = 'attack'
+    }
+
+    // 3) Attack: choose a high-value border within priority sector
+    if (phase === 'attack') {
+      const attack = this.findCommanderAttack(gameState, player.id, budget)
+      if (attack) {
+        if (!push(attack)) return actions
+      }
+      if (!push({ type: 'end_turn', roomId, playerId: player.id })) return actions
+      phase = 'fortify'
+    }
+
+    // 4) Fortify toward weak borders and capitals
+    if (phase === 'fortify') {
+      const fort = this.findRecruitFortify(gameState, player.id)
+      if (fort) push(fort)
+      push({ type: 'end_turn', roomId, playerId: player.id })
+    }
+
+    return actions
+  }
+
+  private chooseCommanderReinforcement(gameState: GameState, playerId: string): string | null {
+    const owned = gameState.board.filter((t) => t.ownerId === playerId)
+    if (owned.length === 0) return null
+    // Group by sector and compute control
+    const sectorMap = new Map<string, { owned: number; total: number }>()
+    for (const t of gameState.board) {
+      const key = t.sector || t.continent || 'unknown'
+      const e = sectorMap.get(key) ?? { owned: 0, total: 0 }
+      e.total += 1
+      if (t.ownerId === playerId) e.owned += 1
+      sectorMap.set(key, e)
+    }
+    // Prefer sectors close to completion (highest owned/total) and where borders are weak
+    const candidateSectors = Array.from(sectorMap.entries())
+      .filter(([key]) => key !== 'unknown')
+      .sort((a, b) => b[1].owned / Math.max(1, b[1].total) - a[1].owned / Math.max(1, a[1].total))
+
+    // Find weakest border inside preferred sector
+    for (const [sector] of candidateSectors) {
+      const borders = owned
+        .filter((t) => (t.sector || t.continent) === sector && this.hasEnemyNeighbor(gameState, t, playerId))
+        .sort((a, b) => a.armies - b.armies)
+      if (borders.length > 0) return borders[0].id
+    }
+    // Fallback to weakest border overall
+    const allBorders = owned
+      .filter((t) => this.hasEnemyNeighbor(gameState, t, playerId))
+      .sort((a, b) => a.armies - b.armies)
+    return allBorders[0]?.id ?? owned[0].id
+  }
+
+  private findCommanderAttack(
+    gameState: GameState,
+    playerId: string,
+    budget: DecisionBudget,
+  ): GameAction | null {
+    const owned = gameState.board.filter((t) => t.ownerId === playerId)
+    if (owned.length === 0) return null
+    const sectorScore = new Map<string, number>()
+    for (const t of gameState.board) {
+      const key = t.sector || t.continent || 'unknown'
+      const e = sectorScore.get(key) ?? 0
+      sectorScore.set(key, e + (t.ownerId === playerId ? 1 : 0))
+    }
+    // Select best sector by control
+    const bestSector = Array.from(sectorScore.entries())
+      .filter(([k]) => k !== 'unknown')
+      .sort((a, b) => b[1] - a[1])[0]?.[0]
+
+    const candidates: Array<{ from: string; to: string; score: number; armies: number }> = []
+    for (const src of owned) {
+      if (src.armies <= 3) continue
+      for (const nid of src.adjacentTerritories) {
+        const tgt = this.getTerritory(gameState, nid)
+        if (!tgt || tgt.ownerId === playerId) continue
+        if (tgt.ownerId && this.arePlayersTeammates(gameState, playerId, tgt.ownerId)) continue
+        const attackDice = Math.min(3, Math.max(1, src.armies - 1))
+        const advantage = src.armies - 1 - (tgt.armies ?? 0)
+        const sectorBonus = (tgt.sector || tgt.continent) === bestSector ? 2 : 0
+        const isCapital = tgt.isCapital === true ? 2 : 0
+        const score = advantage * 2 + sectorBonus + isCapital
+        if (advantage >= 1) {
+          candidates.push({ from: src.id, to: tgt.id, score, armies: attackDice })
+        } else if (
+          advantage === 0 &&
+          (budget.minAttackOddsByTier?.commander ?? 0.68) <= 0.68 // only very marginal equal-odds
+        ) {
+          candidates.push({ from: src.id, to: tgt.id, score: score - 1, armies: attackDice })
+        }
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score)
+    const pick = candidates[0]
+    if (!pick) return null
+    return {
+      type: 'attack',
+      roomId: gameState.roomId,
+      playerId,
+      payload: { fromTerritoryId: pick.from, toTerritoryId: pick.to, armies: pick.armies },
     }
   }
 

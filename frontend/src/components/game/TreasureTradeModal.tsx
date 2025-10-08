@@ -25,6 +25,11 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
     | undefined
   const [selected, setSelected] = useState<number[]>([])
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
+  const mustCashIn = Boolean(
+    (me as unknown as { mustCashInTreasures?: boolean })?.mustCashInTreasures ??
+      game?.mustCashInTreasures,
+  )
+  const [closeWarn, setCloseWarn] = useState(false)
 
   // Helper functions defined with useCallback to stabilize dependencies
   const metalType = useCallback((m: string) => String(m).toLowerCase(), [])
@@ -245,13 +250,26 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            onClick={onClose}
+            onClick={() => {
+              if (mustCashIn) {
+                setCloseWarn(true)
+                // auto-clear after 3s to avoid sticky warning
+                window.setTimeout(() => setCloseWarn(false), 3000)
+                return
+              }
+              onClose()
+            }}
             aria-label="Close"
           >
             ✕
           </button>
         </div>
         <div className="p-4 space-y-3">
+          {mustCashIn && closeWarn && (
+            <div className="text-xs text-[color:var(--color-warning)] bg-[color:var(--surface-2)]/70 border border-[color:var(--color-warning)]/50 rounded p-2">
+              You need to trade a set before continuing. Select any 3 valid cards to cash in.
+            </div>
+          )}
           {!isMyTurn && (
             <div className="text-xs text-muted bg-[color:var(--surface-2)]/70 border border-border rounded p-2">
               You can trade treasures only on your turn.
@@ -334,7 +352,18 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
           </div>
         </div>
         <div className="p-4 border-t border-border flex items-center justify-end gap-2">
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              if (mustCashIn) {
+                setCloseWarn(true)
+                window.setTimeout(() => setCloseWarn(false), 3000)
+                return
+              }
+              onClose()
+            }}
+          >
             Close
           </button>
           <button
