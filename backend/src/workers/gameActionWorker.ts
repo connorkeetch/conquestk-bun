@@ -286,6 +286,41 @@ export class GameActionWorker {
             }
             break
           }
+          case 'trade_cards': {
+            // Capture player's pre-trade bank
+            const beforeState = await this.gameService.getGameState(gameId)
+            const prevBank = beforeState?.players.find((p) => p.id === playerId)?.armies ?? 0
+            const prevPhase = beforeState?.phase
+            const updated = await this.gameService.processGameAction(action as any, playerId)
+            // Emit concise deltas
+            try {
+              const postBank = updated.players.find((p) => p.id === playerId)?.armies ?? prevBank
+              const { emitFogFilteredDelta } = await import('../services/fogService')
+              const playerDelta = DeltaBuilder.playerUpdate(
+                gameId,
+                playerId,
+                { armies: Number(postBank) },
+                updated.version,
+              )
+              await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
+              if (updated.phase !== prevPhase) {
+                await this.deltaEmitter.emitPhaseChange(gameId, {
+                  phase: updated.phase,
+                  currentPlayer: updated.currentPlayer,
+                  turn: updated.turn,
+                  reinforcementArmies: Number(postBank),
+                  version: updated.version,
+                })
+              }
+            } catch {
+              // Fallback to snapshot
+              try {
+                const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+                if (serialized) this.emitGameUpdate(`game:${gameId}`, serialized)
+              } catch {}
+            }
+            break
+          }
           default: {
             await this.gameService.processGameAction(action, playerId)
             // Fallback to snapshot for uncommon actions
@@ -551,6 +586,8 @@ export class GameActionWorker {
 
           await this.gameService.processGameAction(action, playerId)
           const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+          const newPhase = serialized?.phase ?? currentState.phase
+          const version = serialized?.version
           // Attempt to backfill a human-readable log entry showing troops gained from cash-in
           try {
             const postBank = serialized?.players?.find((p) => p.id === playerId)?.armies ?? prevBank
@@ -587,8 +624,28 @@ export class GameActionWorker {
               error: logErr instanceof Error ? logErr.message : logErr,
             })
           }
-          if (serialized) {
-            this.emitGameUpdate(`game:${gameId}`, serialized)
+          // Emit concise, fog-filtered deltas: player bank update and optional phase change
+          try {
+            const postBank = serialized?.players?.find((p) => p.id === playerId)?.armies ?? prevBank
+            const { emitFogFilteredDelta } = await import('../services/fogService')
+            const playerDelta = DeltaBuilder.playerUpdate(gameId, playerId, { armies: Number(postBank) }, version)
+            await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
+
+            // If phase changed (commonly to reinforcement), emit phase change with bank as reinforcementArmies
+            if (newPhase !== currentState.phase) {
+              await this.deltaEmitter.emitPhaseChange(gameId, {
+                phase: newPhase,
+                currentPlayer: serialized?.currentPlayer ?? playerId,
+                turn: serialized?.turn ?? currentState.turn,
+                reinforcementArmies: Number(postBank),
+                version,
+              })
+            }
+          } catch (e) {
+            // Fallback: if delta emission fails, send a full snapshot to avoid desync
+            if (serialized) {
+              this.emitGameUpdate(`game:${gameId}`, serialized)
+            }
           }
           shouldBroadcast = false
           delta = null
