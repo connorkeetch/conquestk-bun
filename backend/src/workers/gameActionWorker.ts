@@ -12,6 +12,8 @@ import {
   queueService,
 } from '../services/queueService'
 import { DeltaBuilder } from '../types/deltaUpdates'
+import { aiTurnMetrics } from '../services/metricsService'
+import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService'
 import type {
   AttackAction,
   DeployAction,
@@ -125,15 +127,28 @@ export class GameActionWorker {
 
       const difficulty = current.aiDifficulty ?? 'recruit'
       const baseBudget = this.computeBudgetForDifficulty(difficulty)
-      const effectiveBudget = { ...baseBudget, ...(budgetOverrides || {}) }
+      const effectiveBudget: DecisionBudget = {
+        ...baseBudget,
+        ...(budgetOverrides || {}),
+        // Allow override via env for quick tuning
+        readableDelayMs:
+          typeof process.env.AI_READABLE_DELAY_MS === 'string'
+            ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
+            : (budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs),
+      }
 
-      // Execute the AI turn plan atomically (applies actions + persists + metrics)
-      const { gameState } = await this.gameService.executeAiTurn(gameId, effectiveBudget)
+      const streamEnabled = (process.env.AI_STREAM_ACTIONS ?? 'true').toLowerCase() !== 'false'
 
-      // Emit a full snapshot to ensure clients converge (simple and reliable)
-      const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
-      if (serialized) {
-        this.io.to(`game:${gameId}`).emit('game-update', serialized)
+      if (streamEnabled && (effectiveBudget.readableDelayMs ?? 0) > 0) {
+        await this.runAiTurnStreaming({ gameId, playerId, difficulty, budget: effectiveBudget })
+      } else {
+        // Execute the AI turn plan atomically (apply whole plan at once)
+        await this.gameService.executeAiTurn(gameId, effectiveBudget)
+        // Emit a full snapshot to ensure clients converge
+        const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+        if (serialized) {
+          this.io.to(`game:${gameId}`).emit('game-update', serialized)
+        }
       }
 
       // Schedule timeout for the next player and chain AI if next is AI
@@ -160,6 +175,104 @@ export class GameActionWorker {
       })
       throw error
     }
+  }
+
+  private async runAiTurnStreaming(args: {
+    gameId: string
+    playerId: string
+    difficulty: import('../types/game').AIDifficulty
+    budget: DecisionBudget
+  }): Promise<void> {
+    const { gameId, playerId, difficulty, budget } = args
+    const start = Date.now()
+
+    // Fetch frozen state for planning
+    const state = await this.gameService.getGameState(gameId)
+    if (!state) throw new Error('Game not found')
+    if (state.currentPlayer !== playerId) return
+
+    const plan = await aiDecisionService.chooseAction({
+      gameState: state,
+      player: state.players.find((p) => p.id === playerId)!,
+      difficulty,
+      budget,
+    })
+
+    const actions = Array.isArray(plan.actions) ? [...plan.actions] : []
+    let applied = 0
+    let usedFallback = plan.usedFallback
+    let fallbackReason = plan.reason
+
+    // Respect budget across pacing
+    const planningElapsed = plan.diagnostics?.durationMs ?? 0
+    const totalBudget = Math.max(0, budget.maxThinkTimeMs)
+    let remainingBudget = Math.max(0, totalBudget - planningElapsed)
+
+    for (let i = 0; i < actions.length; i++) {
+      const now = Date.now()
+      const elapsed = now - start
+      remainingBudget = Math.max(0, totalBudget - elapsed)
+      if (remainingBudget <= 0) {
+        usedFallback = true
+        fallbackReason = fallbackReason ?? 'timeout'
+        break
+      }
+
+      // Compute a safe per-step delay
+      const stepsLeft = actions.length - i
+      const desiredDelay = Math.max(0, budget.readableDelayMs ?? 0)
+      const maxDelay = Math.max(0, Math.floor(remainingBudget / (stepsLeft + 1)))
+      const stepDelay = Math.min(desiredDelay, maxDelay)
+      if (stepDelay > 0) await new Promise((r) => setTimeout(r, stepDelay))
+
+      // Apply action; if invalid mid-stream, stop and fallback
+      try {
+        await this.gameService.processGameAction(actions[i], playerId)
+      } catch (e) {
+        usedFallback = true
+        fallbackReason = fallbackReason ?? 'invalid_action'
+        break
+      }
+
+      applied += 1
+
+      // Emit snapshot after each step so clients see progress
+      try {
+        const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+        if (serialized) {
+          this.io.to(`game:${gameId}`).emit('game-update', serialized)
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
+    // If budget expired or action failed before completing the plan, try a minimal fallback
+    if (applied < actions.length) {
+      const latest = await this.gameService.getGameState(gameId)
+      if (latest && latest.currentPlayer === playerId) {
+        const fb = aiDecisionService.buildFallbackPlan(latest, playerId)
+        // Apply just one safe action (e.g., fortify or end_turn)
+        const tail = fb.slice(0, 1)
+        for (const a of tail) {
+          try {
+            await this.gameService.processGameAction(a, playerId)
+          } catch {
+            // ignore; last resort is to stop
+          }
+        }
+      }
+    }
+
+    // Record metrics similar to executeAiTurn
+    aiTurnMetrics.recordTurn({
+      difficulty,
+      fallbackUsed: usedFallback,
+      fallbackReason,
+      thinkTimeMs: Date.now() - start,
+      plannedActions: actions.length,
+      appliedActions: applied,
+    })
   }
 
   private computeBudgetForDifficulty(
