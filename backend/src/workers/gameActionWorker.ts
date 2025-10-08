@@ -342,7 +342,7 @@ export class GameActionWorker {
         }
       } catch (e) {
         usedFallback = true
-        fallbackReason = fallbackReason ?? 'invalid_action'
+        fallbackReason = fallbackReason ?? 'stubbed'
         break
       }
 
