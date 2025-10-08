@@ -16,7 +16,7 @@ import { logout } from '../store/authSlice'
 import { selectTotalUnreadDirectGroup } from '../store/messagesSlice'
 import { sanitizeText } from '../utils/sanitizer'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
-// Replaced inline logo with static SVG asset for consistency
+import BrandLogoDynamic from './BrandLogoDynamic'
 // Consolidated inbox drawer (messages + notifications)
 import InboxDrawer from './messages/InboxDrawer'
 import NotificationDropdown from './notifications/NotificationDropdown'
@@ -262,16 +262,7 @@ export default function Header() {
               to="/"
               className="text-[color:var(--text)] font-semibold tracking-wide flex items-center gap-2"
             >
-              <img
-                src="/icon.svg"
-                width={24}
-                height={24}
-                alt="ConquestK logo"
-                style={{
-                  filter:
-                    'drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 2px var(--color-primary))',
-                }}
-              />
+              <BrandLogoDynamic width={24} height={24} />
               <span className="hidden sm:inline">
                 CONQUEST{' '}
                 <span
@@ -487,16 +478,7 @@ export default function Header() {
         {/* Menu Header with Glass Effect */}
         <div className="sidebar-header px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img
-              src="/icon.svg"
-              width={28}
-              height={28}
-              alt="ConquestK logo"
-              style={{
-                filter:
-                  'drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 2px var(--color-primary))',
-              }}
-            />
+            <BrandLogoDynamic width={28} height={28} />
             <span className="text-xl font-bold text-[color:var(--text)]">
               CONQUEST{' '}
               <span
