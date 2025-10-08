@@ -1,27 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 60 60">
-  <title>ConquestK Safari Pinned Tab</title>
-  <!-- Monochrome silhouette for Safari pinned tabs (mask-icon). -->
-  <!-- Mountain silhouette -->
-  <path d="M 8 52 
-           L 16 38
-           L 20 40
-           L 24 34
-           L 26 30
-           L 28 26
-           L 29 22
-           L 30 18
-           L 31 22
-           L 32 26
-           L 34 30
-           L 36 34
-           L 40 40
-           L 44 38
-           L 52 52
-           Z" fill="#000"/>
-  <!-- Flag pole as a small rectangle for solid fill -->
-  <rect x="29.2" y="9" width="1.6" height="9" fill="#000"/>
-  <!-- Flag shape -->
-  <path d="M 30 9 Q 36 11, 39 9 L 39 14 Q 36 16, 30 13 Z" fill="#000"/>
+  <title>ConquestK Safari Pinned Tab (cropped)</title>
+  <!-- Safari pinned tabs use the alpha/mask from this file and tint it with the `color` in the link tag. -->
+  <!-- Use the new cropped brand art; render as a solid silhouette via a color matrix to ensure full-opacity mask. -->
+  <defs>
+    <filter id="solidMask" color-interpolation-filters="sRGB">
+      <!-- Convert any incoming colors/alpha to solid opaque black to serve as a mask. -->
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+    </filter>
+  </defs>
+  <g filter="url(#solidMask)">
+    <!-- Center crop the artwork to square; Safari will use the resulting alpha as the mask. -->
+    <image href="/Conquest_K_Logo-cropped.svg" x="-10" y="0" width="80" height="80" preserveAspectRatio="xMidYMid slice"/>
+  </g>
 </svg>
-
