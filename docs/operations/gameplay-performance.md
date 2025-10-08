@@ -123,6 +123,11 @@ This phase focuses on shaving server-side latency and wire size during turns. Ea
   - All turn actions emit at least one delta (and no redundant full-state emits) and clients converge without manual refresh.
   - A simulated packet-loss test still converges via reveal snapshot.
 
+Implementation notes (2025‑10‑08)
+- Frontend now prefers deltas over full snapshots during normal play. Snapshots are only accepted to recover gaps (server version leaps ahead) or on join/resync. See `frontend/src/services/socketService.ts:972`.
+- Turn reminder and audio cues are driven from PHASE_CHANGE deltas; snapshot is no longer required for these UX signals. Covered by test `frontend/src/services/socketService.delta.test.ts`.
+- Selectors optimized: `selectValidTargets` now uses an indexed board and O(1) lookups, reducing recompute time on frequent selection changes. See `frontend/src/store/selectors.ts`.
+
 4) Move analytics/events off the hot path to Bull queues
 - Scope: Decouple event logging, achievements, and clan progression from action handlers.
 - Where:
