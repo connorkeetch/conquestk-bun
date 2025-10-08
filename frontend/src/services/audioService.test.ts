@@ -46,3 +46,19 @@ describe('AudioService effect aliases', () => {
     expect(Array.from(usageStats.keys())).not.toContain('turn')
   })
 })
+
+describe('AudioService first-run mute + streaming', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    localStorage.clear()
+  })
+
+  it('defaults to muted on first run when no stored preference', async () => {
+    // Ensure keys are absent
+    expect(localStorage.getItem('audioMuted')).toBeNull()
+    const { default: audioService } = await import('./audioService')
+    expect(audioService.isMutedState()).toBe(true)
+    // Should persist the mute flag
+    expect(localStorage.getItem('audioMuted')).toBe('true')
+  })
+})

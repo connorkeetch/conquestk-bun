@@ -156,10 +156,14 @@ Notes
 - Socket.io Redis adapter is already wired in `backend/src/index.ts:191-205` for multi‑instance scaling.
 - Delta infrastructure exists in `backend/src/services/deltaEmitter.ts`; this phase ensures complete coverage and adds convergence safeguards.
 
-### 🔜 Phase 3: Asset & Media (Planned)
+### ✅ Phase 3: Asset & Media (In Progress)
 
-- [ ] Lazy-load heavy UI panels with `React.lazy` + `Suspense`
-- [ ] Conditional audio loading (stream long tracks, default mute for first-time players)
+- [x] Lazy-load heavy UI panels with `React.lazy` + `Suspense`
+  - Implemented for PlayerStatsPanel, ChatLogPanel, GameLogPanelWrapper; modals (GameOver, Settings, PlayerProfile) are lazy too.
+  - Intent prefetch on hover/focus and idle/viewport to smooth first-open UX.
+- [x] Conditional audio loading (stream long tracks, default mute for first-time players)
+  - Music (`playMusic`) now uses `html5: true` and `preload: false` to stream tracks.
+  - First run defaults to muted if no stored preference; persists `audioMuted=true`.
 - [ ] Static theme fallbacks for expensive themes (frontier, metal, halloween)
 - [ ] CDN image transformations (`format=avif`, keep thumbnails <300 KB)
 

@@ -120,6 +120,17 @@ class AudioService {
   private constructor() {
     this.audioEnabled = this.shouldEnableAudio()
     this.loadPreferences()
+    // Default to muted on first run if no preference stored
+    try {
+      const storage = this.getStorage()
+      const hasMuteKey = storage?.getItem(AUDIO_MUTED_KEY)
+      if (hasMuteKey === null) {
+        this.isMuted = true
+        this.saveMuteState()
+      }
+    } catch {
+      // best-effort only
+    }
     if (this.audioEnabled) {
       this.setupVisibilityListener()
       this.setupUserInteractionListeners()
@@ -491,6 +502,8 @@ class AudioService {
 
     this.currentMusic = new Howl({
       src: [trackPath],
+      html5: true, // use HTML5 Audio for streaming long tracks
+      preload: false, // avoid preloading long music files
       volume: this.getEffectiveVolume('music'),
       loop: false,
       onend: () => {
