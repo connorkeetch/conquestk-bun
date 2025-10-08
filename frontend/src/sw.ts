@@ -2,7 +2,8 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference lib="esnext" />
 
-declare let self: ServiceWorkerGlobalScope & typeof globalThis
+declare let self: ServiceWorkerGlobalScope &
+  typeof globalThis & { __WB_MANIFEST: unknown }
 
 // Extend NotificationOptions with service-worker actions for better TS support
 type SWNotificationAction = { action: string; title: string }
@@ -34,14 +35,16 @@ const spaHandler = createHandlerBoundToURL('/index.html')
 registerRoute(new NavigationRoute(spaHandler, { denylist: [/^\/api\//] }))
 
 // Runtime caching: application assets
+type RouteCtx = { request: Request; url: URL }
+
 registerRoute(
-  ({ request }) => ['script', 'style', 'worker'].includes(request.destination),
+  (ctx: RouteCtx) => ['script', 'style', 'worker'].includes(ctx.request.destination),
   new StaleWhileRevalidate({ cacheName: 'rk-assets' }),
 )
 
 // Images (local/CDN)
 registerRoute(
-  ({ request }) => request.destination === 'image',
+  (ctx: RouteCtx) => ctx.request.destination === 'image',
   new StaleWhileRevalidate({
     cacheName: 'rk-images',
     plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })],
@@ -50,7 +53,8 @@ registerRoute(
 
 // Fonts (Google fonts)
 registerRoute(
-  ({ request, url }) => request.destination === 'font' || url.hostname === 'fonts.gstatic.com',
+  (ctx: RouteCtx) =>
+    ctx.request.destination === 'font' || ctx.url.hostname === 'fonts.gstatic.com',
   new CacheFirst({
     cacheName: 'rk-fonts',
     plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 })],
@@ -59,7 +63,7 @@ registerRoute(
 
 // CDN assets (map/audio) — adjust host as needed
 registerRoute(
-  ({ url }) => url.hostname === 'assets.conquestk.com',
+  (ctx: RouteCtx) => ctx.url.hostname === 'assets.conquestk.com',
   new StaleWhileRevalidate({
     cacheName: 'rk-cdn',
     plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })],
@@ -68,7 +72,7 @@ registerRoute(
 
 // API GETs: cache-aside with network-first
 registerRoute(
-  ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET',
+  (ctx: RouteCtx) => ctx.url.pathname.startsWith('/api/') && ctx.request.method === 'GET',
   new NetworkFirst({ cacheName: 'rk-api', networkTimeoutSeconds: 5 }),
 )
 
