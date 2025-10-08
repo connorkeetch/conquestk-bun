@@ -1911,7 +1911,7 @@ export default function GameRoom() {
         >
           {/* Game Board - full width */}
           <div
-            className="flex-1 min-w-0 flex flex-col w-full max-w-none min-h-[65vh] sm:min-h-0"
+            className="flex-1 min-w-0 flex flex-col w-full max-w-none"
             style={{
               maxHeight: boardMaxHeight ? `${boardMaxHeight}px` : undefined,
             }}
@@ -2439,7 +2439,7 @@ export default function GameRoom() {
       {currentGame && chatPanel?.zone === 'drawer' && (
         <div
           id={mobileDrawerId}
-          className={`fixed bottom-0 left-0 right-0 lg:left-6 lg:right-auto lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >
@@ -2523,7 +2523,7 @@ export default function GameRoom() {
       {currentGame && statsPanel?.zone === 'drawer' && (
         <div
           id={statsDrawerId}
-          className={`fixed bottom-0 left-0 right-0 lg:left-6 lg:right-auto lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           role="dialog"
           aria-modal="true"
         >

@@ -714,7 +714,7 @@ export default function Settings() {
   const renderSetting = (setting: SettingItem) => {
     const isDisabled = !setting.isWorking || setting.disabled === true
 
-    const baseContainerClass = `panel relative w-full max-w-full overflow-hidden transition-all ${
+    const baseContainerClass = `panel relative transition-all ${
       !isDisabled
         ? 'hover:border-[color:var(--hover-border)] hover:shadow-[var(--shadow-1)]'
         : 'opacity-60'
@@ -1725,16 +1725,14 @@ export default function Settings() {
             label: 'Test Notification',
             description: 'Send a test push notification',
             type: 'button',
-            isWorking: true,
+            isWorking: isSubscribed && pushBackendEnabled && !pushOperationInFlight,
             buttonText: '🔔 Send Test',
-            disabled: !isSubscribed || !pushBackendEnabled || pushOperationInFlight,
+            disabled: !pushBackendEnabled || pushOperationInFlight,
             disabledReason: !pushBackendEnabled
               ? 'Push notifications are currently disabled by the server. Please try again later.'
-              : !isSubscribed
-                ? 'Enable browser notifications first to send a test notification.'
-                : pushOperationInFlight
-                  ? 'Please wait while we update your notification settings.'
-                  : undefined,
+              : pushOperationInFlight
+                ? 'Please wait while we update your notification settings.'
+                : undefined,
             onClick: async () => {
               if (!isSubscribed) {
                 alert('Please enable browser notifications first')
@@ -2092,7 +2090,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-8">
+    <div className="container mx-auto px-6 py-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-[color:var(--heading)] mb-2">Settings</h1>
         <p className="text-muted text-lg mb-8">Customize your game experience</p>
