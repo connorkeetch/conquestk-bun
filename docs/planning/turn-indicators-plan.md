@@ -26,8 +26,6 @@ Use multiple cues that scale with urgency so the turn handoff is clear without o
 
 4. **Avatar + chat integrations**
    - Player avatar in the sidebar pulses or gains a glowing ring.
-   - Chat input placeholder switches to "It’s your turn—take your move!" so players glancing at chat are reminded.
-   - Optionally pin a system message in the activity log each time turn control passes.
 
 5. **Audio & haptics (optional settings)**
    - Short celebratory chime with per-user volume toggle.
@@ -40,8 +38,4 @@ Use multiple cues that scale with urgency so the turn handoff is clear without o
 - **Accessibility:** provide a settings toggle to disable animations and choose a high-contrast alternative theme.
 - **Latency:** confirm the backend emits turn change events reliably; debounce UI cues so they do not flicker on reconnects.
 
-## Next steps
-- Validate the visual direction with mockups (Figma) focusing on header banner and toast.
-- Prototype the toast + banner combo in the Game Room using existing design tokens.
-- Conduct playtests to measure reaction time and annoyance factor; iterate on animation intensity and audio defaults.
-- Document configuration flags (audio, haptics, animation) in the player settings panel.
+
