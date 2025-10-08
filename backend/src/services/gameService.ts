@@ -25,6 +25,7 @@ import { featureFlagService } from './featureFlagService'
 import { mapService } from './mapService'
 import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService'
 import notificationService from './notificationService'
+import { queueService } from './queueService'
 import { tryGetSocketServer } from './socketRegistry'
 import territoryModifierService from './territoryModifierService'
 
@@ -254,6 +255,54 @@ export class GameService {
         error: error instanceof Error ? error.message : error,
       })
     }
+  }
+
+  /**
+   * Persist the serialized game state and room turn indicators in a single transaction.
+   * This reduces round-trips and keeps row-level updates consistent.
+   */
+  private async persistTurnStateTransactional(
+    roomId: string,
+    serialized: SerializedGameState,
+  ): Promise<void> {
+    await transaction(async (client) => {
+      // Upsert latest state view
+      await client.query(
+        `
+        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
+        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
+        ON CONFLICT (room_id) DO UPDATE
+          SET game_data = EXCLUDED.game_data,
+              turn_number = EXCLUDED.turn_number,
+              current_player_id = EXCLUDED.current_player_id,
+              game_phase = EXCLUDED.game_phase,
+              last_activity = NOW()
+        `,
+        [
+          roomId,
+          JSON.stringify(serialized),
+          Math.max(1, Number(serialized.turn ?? 1)),
+          serialized.currentPlayer ?? null,
+          serialized.phase ?? 'reinforcement',
+        ],
+      )
+
+      // Persist DB view of turn + actor for room-level queries/UI
+      await client.query(
+        `UPDATE game_rooms SET current_turn_user_id = $2, turn_number = $3 WHERE id = $1`,
+        [roomId, serialized.currentPlayer, serialized.turn],
+      )
+
+      // Immutable per-turn snapshot (best-effort; keep inside tx to avoid duplicate phase markers)
+      const turn = Math.max(1, Number(serialized.turn ?? 1))
+      const phase = String(serialized.phase ?? 'reinforcement')
+      await client.query(
+        `INSERT INTO game_state_snapshots (room_id, turn_number, phase, snapshot)
+         VALUES ($1, $2, $3, $4::jsonb)
+         ON CONFLICT (room_id, turn_number, phase) DO NOTHING`,
+        [roomId, turn, phase, JSON.stringify(serialized)],
+      )
+    })
   }
 
   // Expose safe wrapper for other services to persist a full snapshot
@@ -1044,27 +1093,16 @@ export class GameService {
     // Use longer TTL for finished games
     if (updatedState.phase === 'finished') {
       const finalSerialized = this.serializeGameState(updatedState)
+      // Cache inactive state first for fast reads
       await gameStateCache.setInactiveGameState(roomId, finalSerialized)
-      // Capture a final immutable snapshot for replay/debugging
-      await this.insertImmutableTurnSnapshot(roomId, finalSerialized)
+      // Persist state + room indicators + immutable snapshot atomically
+      await this.persistTurnStateTransactional(roomId, finalSerialized)
     } else {
       const serialized = this.serializeGameState(updatedState)
-      await this.persistGameStateSnapshot(roomId, serialized)
-      // Capture per-turn immutable snapshot at phase transition (end of turn)
-      await this.insertImmutableTurnSnapshot(roomId, serialized)
-    }
-
-    // Persist DB view of turn + actor for room-level queries/UI
-    try {
-      await query(
-        `UPDATE game_rooms SET current_turn_user_id = $2, turn_number = $3 WHERE id = $1`,
-        [roomId, updatedState.currentPlayer, updatedState.turn],
-      )
-    } catch (e) {
-      logger.warn('Failed to persist current_turn_user_id/turn_number after endTurn', {
-        roomId,
-        error: e instanceof Error ? e.message : e,
-      })
+      // Persist state + room indicators + immutable snapshot atomically
+      await this.persistTurnStateTransactional(roomId, serialized)
+      // Also populate cache for subsequent reads
+      await gameStateCache.setGameState(roomId, serialized)
     }
 
     if (notificationService.isEnabled()) {
@@ -1131,24 +1169,17 @@ export class GameService {
     }
 
     // Append TURN logs (END for previous, TREASURE if any, then START for next)
-    try {
+    // Offload analytics/logging to queue (fallback to async fire-and-forget)
+    {
       const now = new Date().toISOString()
       const entries: GameLogEntry[] = [
         { type: 'TURN', timestamp: now, playerId: previousPlayerId, event: 'END' },
       ]
-      // Log treasure award immediately after END to keep ordering intuitive
       if (treasureAwarded) {
-        entries.push({
-          type: 'TREASURE',
-          timestamp: now,
-          userId: previousPlayerId,
-          metal: treasureAwarded,
-        })
+        entries.push({ type: 'TREASURE', timestamp: now, userId: previousPlayerId, metal: treasureAwarded })
       }
       if (updatedState.phase === 'reinforcement') {
-        const territoryCount = updatedState.board.filter(
-          (t) => t.ownerId === updatedState.currentPlayer,
-        ).length
+        const territoryCount = updatedState.board.filter((t) => t.ownerId === updatedState.currentPlayer).length
         entries.push({
           type: 'TURN',
           timestamp: now,
@@ -1158,23 +1189,40 @@ export class GameService {
           territoryCount,
         })
       }
-      await this.appendLog(roomId, entries)
-    } catch (err) {
-      logger.warn('Failed to append turn logs', {
-        roomId,
-        error: err instanceof Error ? err.message : err,
-      })
+      try {
+        const job = await queueService.addAnalyticsEvent?.({
+          event: 'append_log',
+          gameId: roomId,
+          data: entries,
+        } as any)
+        if (!job) {
+          // Queue unavailable: best-effort async write
+          setImmediate(() => {
+            this.appendLog(roomId, entries).catch(() => {})
+          })
+        }
+      } catch {
+        setImmediate(() => {
+          this.appendLog(roomId, entries).catch(() => {})
+        })
+      }
     }
 
     // Append per-turn stats snapshot for analytics
     try {
       const stats = this.buildTurnStatsSnapshot(updatedState)
-      await this.appendTurnStats(roomId, stats)
-    } catch (e) {
-      logger.warn('Failed to append turn stats snapshot', {
-        roomId,
-        error: e instanceof Error ? e.message : e,
-      })
+      const job = await queueService.addAnalyticsEvent?.({
+        event: 'append_turn_stats',
+        gameId: roomId,
+        data: stats,
+      } as any)
+      if (!job) {
+        setImmediate(() => {
+          this.appendTurnStats(roomId, stats).catch(() => {})
+        })
+      }
+    } catch {
+      // swallow; non-critical
     }
 
     // Finalize game if this transition ended it outside of battle flow

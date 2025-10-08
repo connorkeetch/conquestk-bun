@@ -1540,12 +1540,14 @@ export class GameRoomService {
   }
 
   async getUserGames(userId: string): Promise<GameRoom[]> {
-    // Query for all games the user is involved in
+    // Query for all games the user is involved in, include host username and player count
     const gamesQuery = `
-      SELECT DISTINCT gr.*, 
-        (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount
+      SELECT DISTINCT gr.*,
+        (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
+        u.username as host_username
       FROM game_rooms gr
       INNER JOIN room_players rp ON gr.id = rp.room_id
+      LEFT JOIN users u ON u.id = gr.host_id
       WHERE rp.user_id = $1
       ORDER BY gr.created_at DESC
       LIMIT 50

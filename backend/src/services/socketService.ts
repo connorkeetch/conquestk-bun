@@ -198,16 +198,61 @@ function serializeGameStateForClient(
     return null
   }
 
-  const baseState: SerializedGameState = { ...state } as SerializedGameState
-  const territoryModifiers = (state as GameState).territoryModifiers
+  // Build a lean client payload: only include fields used by the active UI.
+  const s = state as GameState
+  const players = s.players.map((p) => ({
+    id: p.id,
+    userId: p.userId,
+    username: p.username,
+    color: p.color,
+    armies: p.armies,
+    isEliminated: p.isEliminated,
+    teamId: p.teamId,
+    treasures: p.treasures,
+  }))
+  const board = s.board.map((t) => ({
+    id: t.id,
+    name: t.name,
+    ownerId: t.ownerId,
+    armies: t.armies,
+    adjacentTerritories: t.adjacentTerritories,
+  }))
 
-  if (territoryModifiers instanceof Map) {
-    baseState.territoryModifiers = Object.fromEntries(territoryModifiers.entries())
-  } else if (territoryModifiers) {
-    baseState.territoryModifiers = territoryModifiers as SerializedGameState['territoryModifiers']
+  const cfg = s.gameConfig as import('../types/game').GameConfiguration
+  const gameConfig = {
+    movementType: cfg.movementType,
+    allowTeamPlay: cfg.allowTeamPlay,
+    teamMode: cfg.teamMode,
+    numberOfTeams: cfg.numberOfTeams,
+    mapId: cfg.mapId,
+    turnTimer: cfg.turnTimer,
+    fogOfWar: cfg.fogOfWar,
+    treasureConfig: cfg.treasureConfig,
+    isRanked: cfg.isRanked,
   }
 
-  return baseState
+  const base: SerializedGameState = {
+    roomId: s.roomId,
+    phase: s.phase,
+    currentPlayer: s.currentPlayer,
+    turn: s.turn,
+    players,
+    board,
+    gameConfig: gameConfig as unknown as SerializedGameState['gameConfig'],
+    reinforcementArmies: (s as SerializedGameState).reinforcementArmies,
+    kingOfTheHillState: (s as SerializedGameState).kingOfTheHillState,
+    assassinationTargets: (s as SerializedGameState).assassinationTargets,
+  } as SerializedGameState
+
+  // Include territory modifiers when present (convert Map to plain object)
+  const territoryModifiers = (s as GameState).territoryModifiers
+  if (territoryModifiers instanceof Map) {
+    ;(base as any).territoryModifiers = Object.fromEntries(territoryModifiers.entries())
+  } else if (territoryModifiers) {
+    ;(base as any).territoryModifiers = territoryModifiers
+  }
+
+  return base
 }
 
 interface UserRatingRow extends QueryResultRow {
