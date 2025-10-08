@@ -10,6 +10,7 @@ type SWNotificationOptions = NotificationOptions & { actions?: SWNotificationAct
 
 import { clientsClaim } from 'workbox-core'
 import { ExpirationPlugin } from 'workbox-expiration'
+import { BackgroundSyncPlugin } from 'workbox-background-sync'
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
@@ -17,7 +18,7 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
-import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies'
+import { CacheFirst, NetworkFirst, StaleWhileRevalidate, NetworkOnly } from 'workbox-strategies'
 
 // Immediately activate the new SW and control uncontrolled clients
 self.skipWaiting()
@@ -72,6 +73,31 @@ registerRoute(
 registerRoute(
   (ctx: RouteCtx) => ctx.url.pathname.startsWith('/api/') && ctx.request.method === 'GET',
   new NetworkFirst({ cacheName: 'rk-api', networkTimeoutSeconds: 5 }),
+)
+
+// Background Sync: queue turn submissions when offline
+// POST /api/game/rooms/:roomId/actions
+const turnSubmitQueue = new BackgroundSyncPlugin('rk-turn-submissions', {
+  maxRetentionTime: 24 * 60, // minutes (24h)
+})
+
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'POST' &&
+    url.pathname.startsWith('/api/game/rooms/') &&
+    url.pathname.endsWith('/actions'),
+  new NetworkOnly({ plugins: [turnSubmitQueue] }),
+  'POST',
+)
+
+// Background Sync: queue conquest transfer submissions
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'POST' &&
+    url.pathname.startsWith('/api/game/rooms/') &&
+    url.pathname.endsWith('/transfer-conquest'),
+  new NetworkOnly({ plugins: [turnSubmitQueue] }),
+  'POST',
 )
 
 // Offline catch handler: return offline page for navigation requests

@@ -34,6 +34,26 @@ This checklist breaks down the workstreams from the mobile app strategy into con
 
 **Definition of done**: Lighthouse PWA score ≥90, static asset caches warm within one navigation, background sync successfully replays at least one queued turn, and deploy notes document cache invalidation steps.
 
+### Progress (2025-10)
+- Added Workbox Background Sync for turn submissions: Service worker queues POSTs to `POST /api/game/rooms/:roomId/actions` when offline and replays them once connectivity returns. File: `frontend/src/sw.ts` (queue name `rk-turn-submissions`).
+- HTTP fallback endpoint implemented: `POST /api/game/rooms/:roomId/actions` accepts a `GameAction` and enqueues it on the server (`queueService.addGameAction`). Files: `backend/src/routes/game.ts`, `backend/src/controllers/gameController.ts` (`submitAction`).
+- Client fallbacks:
+  - End turn → HTTP + Background Sync
+  - Deploy (incl. undo placement via negative armies) → HTTP + Background Sync
+  - Attack → HTTP + Background Sync
+  - Fortify + Undo Fortify → HTTP + Background Sync
+  - Go back to reinforcement → HTTP + Background Sync
+  - Trade treasures → HTTP + Background Sync
+  - Conquest transfers → HTTP + Background Sync via dedicated endpoint
+  All in `frontend/src/store/gameActions.ts`.
+
+Additional endpoints and SW routes:
+- `POST /api/game/rooms/:roomId/transfer-conquest` processes transfer of armies after conquest server-side and is queued offline by the SW. Files: `backend/src/routes/game.ts`, `backend/src/controllers/gameController.ts` (`transferConquest`). SW route added in `frontend/src/sw.ts`.
+
+Verify locally:
+- Start both servers, open Game Room, go offline in DevTools, click End Turn; you should see “Turn queued — will submit when online”. Return online and watch the request replay in Application → Background Sync → rk-turn-submissions.
+- Confirm the backend logs show a queued job or inline processing when Redis is disabled.
+
 ## 3. Manifest, Icons, and Install UX
 1. **Manifest refresh**
    - Update `frontend/public/manifest.json` with human-readable `name`/`short_name`, display `standalone`, and accurate `start_url`.
@@ -48,6 +68,21 @@ This checklist breaks down the workstreams from the mobile app strategy into con
    - Ensure each core route renders correctly when loaded cold (no client state). Update router to hydrate from URL params for game IDs/invites.
 
 **Definition of done**: Manifest passes PWABuilder validation, icon assets load without 404s, install prompts show on Android Chrome after heuristics are met, and iOS instructions surface via a dismissible modal.
+
+### Progress (2025-10)
+- Implemented manifest refinements: stable `id`/`scope`, `categories`, `orientation`, and `screenshots` entries for both `narrow` and `wide` form factors. File: `frontend/public/manifest.json`.
+- Replaced discouraged `purpose: "any maskable"` with separate entries for `any` and `maskable`. Added generated files `icon-192-maskable.png` and `icon-512-maskable.png`.
+- Added generator: `frontend/scripts/generate-pwa-assets.mjs` (uses `sharp`) to produce maskable icons and two screenshots (`/screenshots/mobile-1080x1920.png`, `/screenshots/wide-1920x1080.png`). Run with `npm run gen:pwa-assets`.
+- Tweaked head tags in `frontend/index.html` to include `application-name`, `apple-mobile-web-app-title`, and `mask-icon` for Safari pinned tabs.
+
+What Connor should verify locally:
+- `npm run gen:pwa-assets` succeeds and creates the four images (2 icons, 2 screenshots) under `frontend/public`.
+- `npm run build` then load `http://localhost:5001/manifest.json` and check that image URLs resolve (no 404s) and that Lighthouse/PWA install UI no longer warns about missing screenshots.
+- In DevTools > Application > Manifest, confirm the two screenshots appear and richer install UI shows on desktop and mobile emulation.
+
+Risks / notes:
+- If production uses a CDN in front of `backend/public`, ensure these new paths are not cached incorrectly. Static cache headers are set in `backend/src/index.ts`—icons/screenshots fall under the one‑day cache path. Purge the CDN after deploy.
+- Keep screenshots fresh when UI changes; re-run the generator (or replace with real screenshots) and redeploy.
 
 ## 4. Cross-Platform QA Plan
 1. **Device lab matrix**

@@ -1,4 +1,5 @@
 import path from 'node:path'
+import fs from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -15,6 +16,11 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
+      // Keep plugin-generated manifest in sync with public/manifest.json
+      // This avoids conflicting data when the plugin injects a <link rel="manifest">.
+      manifest: JSON.parse(
+        fs.readFileSync(path.resolve(__dirname, 'public/manifest.json'), 'utf8'),
+      ),
       devOptions: {
         enabled: true,
         type: 'module',
