@@ -63,12 +63,16 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 
 ### P0.4 Publish tester onboarding & expectations
 - **Tags:** [doc]
-- **Status:** 🔴 Not started
+- **Status:** 🟡 Guide drafted (awaiting invite template update)
 - **Why it matters:** A small cohort still needs context on what works, what does not, and how to give feedback.
 - **Acceptance criteria:**
-  - Create `docs/planning/beta-onboarding.md` outlining: scope (friends-only), known limitations (AI offline, plans disabled, messaging quirks), how to report bugs, and recommended browser/devices.
-  - Include checklist for testers (install PWA or join notifications channel, play one ranked game, try messaging, optional map browse).
-  - Link doc from the invite email/DM template.
+  - ✅ Create `docs/planning/beta-onboarding.md` outlining: scope (friends-only), known limitations (AI offline, plans disabled, messaging quirks), how to report bugs, and recommended browser/devices.
+  - ✅ Include checklist for testers (install PWA or join notifications channel, play one ranked game, try messaging, optional map browse).
+  - ⬜ Link doc from the invite email/DM template.
+- **Next steps:**
+  1. Share the onboarding guide with invitees and update the invite template to reference it.
+  2. Collect tester questions during the first session and append an FAQ section if needed.
+  3. Keep the doc updated as other P0 items land so expectations stay accurate.
 
 ## P1 — Should Land Early in Beta
 
