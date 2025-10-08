@@ -6,6 +6,8 @@ interface GameRoomFooterProps {
   onSettingsClick: () => void
   onHelpClick?: () => void
   onStatsClick?: () => void
+  onChatHover?: () => void
+  onStatsHover?: () => void
   onLayoutClick?: () => void
   isMobileDrawerOpen?: boolean
   isEditingLayout?: boolean
@@ -17,6 +19,8 @@ export default function GameRoomFooter({
   onSettingsClick,
   onHelpClick,
   onStatsClick,
+  onChatHover,
+  onStatsHover,
   onLayoutClick,
   isMobileDrawerOpen = false,
   isEditingLayout = false,
@@ -47,6 +51,8 @@ export default function GameRoomFooter({
               <button
                 type="button"
                 onClick={onStatsClick}
+                onMouseEnter={onStatsHover}
+                onFocus={onStatsHover}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
                 title="Player Stats"
                 aria-label="Player Stats"
@@ -62,6 +68,8 @@ export default function GameRoomFooter({
             <button
               type="button"
               onClick={onChatClick}
+              onMouseEnter={onChatHover}
+              onFocus={onChatHover}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
               title="Open Chat & Log"
               aria-label="Open Chat & Log"
@@ -173,6 +181,8 @@ export default function GameRoomFooter({
                 <button
                   type="button"
                   onClick={onStatsClick}
+                  onMouseEnter={onStatsHover}
+                  onFocus={onStatsHover}
                   className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
                   title="Player Stats"
                   aria-label="Player Stats"
@@ -187,6 +197,8 @@ export default function GameRoomFooter({
               <button
                 type="button"
                 onClick={onChatClick}
+                onMouseEnter={onChatHover}
+                onFocus={onChatHover}
                 className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all ${
                   isMobileDrawerOpen
                     ? 'bg-primary text-white border-primary'

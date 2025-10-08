@@ -2,7 +2,11 @@ import type { TreasureConfig } from '@shared/types'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'
-import { GameOverModal } from '@/components/GameOverModal'
+// Lazy-load heavy modals to trim initial bundle
+import { lazyWithRetry } from '@/utils/lazyWithRetry'
+const LazyGameOverModal = lazyWithRetry(async () => ({
+  default: (await import('@/components/GameOverModal')).GameOverModal,
+}))
 // Chat modal removed; drawers are used on all devices
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { DiceResultsBar } from '@/components/game/DiceResultsBar'
@@ -14,11 +18,18 @@ import { TreasureTradeModal } from '@/components/game/TreasureTradeModal'
 import { TurnTimer } from '@/components/game/TurnTimer'
 // Removed YourTurnBanner in favor of styling the existing header
 import { YourTurnModal } from '@/components/game/YourTurnModal'
-import { ChatLogPanel, PlayerStatsPanel } from '@/components/panels'
 import DropZone from '@/components/panels/DropZone'
-import GameLogPanelWrapper from '@/components/panels/GameLogPanelWrapper'
-import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
-import SettingsModal from '@/components/SettingsModal'
+// Lazy-load heavy panels to reduce initial bundle size
+const LazyPlayerStatsPanel = lazyWithRetry(() => import('@/components/panels/PlayerStatsPanel'))
+const LazyChatLogPanel = lazyWithRetry(() => import('@/components/panels/ChatLogPanel'))
+const LazyGameLogPanelWrapper = lazyWithRetry(
+  () => import('@/components/panels/GameLogPanelWrapper'),
+)
+// Keep lightweight sync imports above
+const LazyPlayerProfileModal = lazyWithRetry(
+  () => import('@/components/profile/PlayerProfileModal'),
+)
+const LazySettingsModal = lazyWithRetry(() => import('@/components/SettingsModal'))
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 import {
@@ -79,7 +90,6 @@ import { setCurrentRoom } from '../store/roomSlice'
 import { addClientLog, hydrateFromStorage, setDice } from '../store/uiRoomSlice'
 import type { AIDifficulty, PlayerColor } from '../types/game'
 // import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
-import { lazyWithRetry } from '../utils/lazyWithRetry'
 import { hostDisplay, seatUsage } from '../utils/lobby'
 
 const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
@@ -203,6 +213,78 @@ export default function GameRoom() {
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
   const forcedPanelZonesRef = useRef<Partial<Record<PanelId, PanelZone>>>({})
+
+  // Prefetchers (hover/viewport intent)
+  const prefetchChatPanel = useCallback(() => {
+    try {
+      void import('@/components/panels/ChatLogPanel')
+      void import('@/components/chat/TabbedGameChat')
+    } catch {}
+  }, [])
+  const prefetchStatsPanel = useCallback(() => {
+    try {
+      void import('@/components/panels/PlayerStatsPanel')
+      void import('@/components/game/PlayerStatsTable')
+    } catch {}
+  }, [])
+  const prefetchGameLogPanel = useCallback(() => {
+    try {
+      void import('@/components/panels/GameLogPanelWrapper')
+      void import('@/components/chat/GameLogPanel')
+    } catch {}
+  }, [])
+  const prefetchModalsIdle = useCallback(() => {
+    try {
+      void import('@/components/GameOverModal')
+      void import('@/components/profile/PlayerProfileModal')
+      void import('@/components/SettingsModal')
+    } catch {}
+  }, [])
+
+  // Idle/viewport-based prefetch when panels are pinned or visible
+  const prefetchedRef = useRef<{ chat?: boolean; stats?: boolean; log?: boolean }>({})
+  useEffect(() => {
+    const hasChat = panels.some((p) => p.id === 'chat')
+    const hasStats = panels.some((p) => p.id === 'player-stats')
+    const hasLog = panels.some((p) => p.id === 'game-log')
+
+    const rIC = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number }).requestIdleCallback
+    const schedule = (cb: () => void) =>
+      typeof rIC === 'function' ? rIC(cb, { timeout: 1200 }) : window.setTimeout(cb, 600)
+
+    if (hasChat && !prefetchedRef.current.chat) {
+      schedule(() => {
+        prefetchChatPanel()
+        prefetchedRef.current.chat = true
+      })
+    }
+    if (hasStats && !prefetchedRef.current.stats) {
+      schedule(() => {
+        prefetchStatsPanel()
+        prefetchedRef.current.stats = true
+      })
+    }
+    if (hasLog && !prefetchedRef.current.log) {
+      schedule(() => {
+        prefetchGameLogPanel()
+        prefetchedRef.current.log = true
+      })
+    }
+  }, [panels, prefetchChatPanel, prefetchStatsPanel, prefetchGameLogPanel])
+
+  useEffect(() => {
+    const rIC = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number }).requestIdleCallback
+    const id = typeof rIC === 'function'
+      ? rIC(prefetchModalsIdle, { timeout: 2000 })
+      : window.setTimeout(prefetchModalsIdle, 1000)
+    return () => {
+      if (typeof (window as any).cancelIdleCallback === 'function') {
+        ;(window as any).cancelIdleCallback(id)
+      } else {
+        window.clearTimeout(id)
+      }
+    }
+  }, [prefetchModalsIdle])
 
   // Drag-and-drop helpers
   const parseDraggedPanelId = useCallback(
@@ -1816,10 +1898,22 @@ export default function GameRoom() {
             {leftZonePanels.map((p) => (
               <div key={p.id} className="space-y-3">
                 {p.id === 'player-stats' && (
-                  <PlayerStatsPanel
-                    players={
-                      currentGame?.players ||
-                      (currentRoom?.players || []).map((pl) => {
+                  <Suspense
+                    fallback={
+                      <div className="panel p-0 overflow-hidden">
+                        <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                        </div>
+                        <div className="p-3">
+                          <Skeleton variant="rectangular" width="100%" height={180} />
+                        </div>
+                      </div>
+                    }
+                  >
+                    <LazyPlayerStatsPanel
+                      players={
+                        currentGame?.players ||
+                        (currentRoom?.players || []).map((pl) => {
                         const rawColor =
                           ((pl as { selected_color?: string | null }).selected_color as
                             | string
@@ -1856,9 +1950,22 @@ export default function GameRoom() {
                     isEditingLayout={isEditingLayout}
                     onResignRequest={() => setResignDialogOpen(true)}
                   />
+                  </Suspense>
                 )}
                 {p.id === 'chat' && currentGame && user && (
-                  <ChatLogPanel
+                  <Suspense
+                    fallback={
+                      <div className="panel p-0 overflow-hidden">
+                        <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</div>
+                        </div>
+                        <div className="p-3">
+                          <Skeleton variant="rectangular" width="100%" height={160} />
+                        </div>
+                      </div>
+                    }
+                  >
+                  <LazyChatLogPanel
                     gameId={currentRoom?.id ?? roomId ?? ''}
                     currentUserId={user.id}
                     userTeamId={currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId}
@@ -1868,6 +1975,7 @@ export default function GameRoom() {
                     }}
                     isEditingLayout={isEditingLayout}
                   />
+                  </Suspense>
                 )}
               </div>
             ))}
@@ -2131,7 +2239,19 @@ export default function GameRoom() {
                 {belowZonePanels.map((p) => (
                   <div key={p.id}>
                     {p.id === 'player-stats' && (
-                      <PlayerStatsPanel
+                      <Suspense
+                        fallback={
+                          <div className="panel p-0 overflow-hidden">
+                            <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                              <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                            </div>
+                            <div className="p-3">
+                              <Skeleton variant="rectangular" width="100%" height={180} />
+                            </div>
+                          </div>
+                        }
+                      >
+                      <LazyPlayerStatsPanel
                         players={
                           currentGame?.players ||
                           (currentRoom?.players || []).map((pl) => {
@@ -2171,9 +2291,22 @@ export default function GameRoom() {
                         isEditingLayout={isEditingLayout}
                         onResignRequest={() => setResignDialogOpen(true)}
                       />
+                      </Suspense>
                     )}
                     {p.id === 'chat' && roomId && user && (
-                      <ChatLogPanel
+                      <Suspense
+                        fallback={
+                          <div className="panel p-0 overflow-hidden">
+                            <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                              <div className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</div>
+                            </div>
+                            <div className="p-3">
+                              <Skeleton variant="rectangular" width="100%" height={160} />
+                            </div>
+                          </div>
+                        }
+                      >
+                      <LazyChatLogPanel
                         gameId={currentRoom?.id || roomId}
                         currentUserId={user.id}
                         userTeamId={
@@ -2185,9 +2318,22 @@ export default function GameRoom() {
                         }}
                         isEditingLayout={isEditingLayout}
                       />
+                      </Suspense>
                     )}
                     {p.id === 'game-log' && currentGame && (
-                      <GameLogPanelWrapper
+                      <Suspense
+                        fallback={
+                          <div className="panel p-0 overflow-hidden">
+                            <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                              <div className="text-sm font-semibold text-[color:var(--heading)]">Game Log</div>
+                            </div>
+                            <div className="p-3">
+                              <Skeleton variant="rectangular" width="100%" height={160} />
+                            </div>
+                          </div>
+                        }
+                      >
+                      <LazyGameLogPanelWrapper
                         gameId={currentRoom?.id ?? roomId ?? ''}
                         onLogFocus={(territories) => {
                           const focus = territories[territories.length - 1]
@@ -2195,6 +2341,7 @@ export default function GameRoom() {
                         }}
                         isEditingLayout={isEditingLayout}
                       />
+                      </Suspense>
                     )}
                   </div>
                 ))}
@@ -2230,7 +2377,19 @@ export default function GameRoom() {
             {rightZonePanels.map((p) => (
               <div key={p.id} className="space-y-3">
                 {p.id === 'chat' && roomId && user && (
-                  <ChatLogPanel
+                  <Suspense
+                    fallback={
+                      <div className="panel p-0 overflow-hidden">
+                        <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">Chat & Log</div>
+                        </div>
+                        <div className="p-3">
+                          <Skeleton variant="rectangular" width="100%" height={160} />
+                        </div>
+                      </div>
+                    }
+                  >
+                  <LazyChatLogPanel
                     gameId={currentRoom?.id || roomId}
                     currentUserId={user.id}
                     userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
@@ -2240,9 +2399,22 @@ export default function GameRoom() {
                     }}
                     isEditingLayout={isEditingLayout}
                   />
+                  </Suspense>
                 )}
                 {p.id === 'player-stats' && (
-                  <PlayerStatsPanel
+                  <Suspense
+                    fallback={
+                      <div className="panel p-0 overflow-hidden">
+                        <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                          <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                        </div>
+                        <div className="p-3">
+                          <Skeleton variant="rectangular" width="100%" height={180} />
+                        </div>
+                      </div>
+                    }
+                  >
+                  <LazyPlayerStatsPanel
                     players={
                       currentGame?.players ||
                       (currentRoom?.players || []).map((pl) => {
@@ -2282,6 +2454,7 @@ export default function GameRoom() {
                     isEditingLayout={isEditingLayout}
                     onResignRequest={() => setResignDialogOpen(true)}
                   />
+                  </Suspense>
                 )}
               </div>
             ))}
@@ -2499,7 +2672,19 @@ export default function GameRoom() {
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
-              <PlayerStatsPanel
+              <Suspense
+                fallback={
+                  <div className="panel p-0 overflow-hidden">
+                    <div className="bg-[color:var(--surface-2)] px-3 py-2 border-b border-[color:var(--panel-border)]">
+                      <div className="text-sm font-semibold text-[color:var(--heading)]">Player Stats</div>
+                    </div>
+                    <div className="p-3">
+                      <Skeleton variant="rectangular" width="100%" height={180} />
+                    </div>
+                  </div>
+                }
+              >
+              <LazyPlayerStatsPanel
                 players={currentGame.players || []}
                 currentPlayerId={currentGame.currentPlayer}
                 territories={Object.fromEntries(
@@ -2511,6 +2696,7 @@ export default function GameRoom() {
                 variant="full"
                 onResignRequest={() => setResignDialogOpen(true)}
               />
+              </Suspense>
             </div>
           </div>
         </div>
@@ -2525,17 +2711,21 @@ export default function GameRoom() {
       />
 
       {/* Settings Modal */}
-      <SettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+      <Suspense fallback={null}>
+        <LazySettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+      </Suspense>
 
       {/* Game Room Footer (mobile + desktop) */}
       {currentGame && (
         <GameRoomFooter
           onChatClick={() => setMobileDrawerOpen((v) => !v)}
+          onChatHover={prefetchChatPanel}
           onSettingsClick={() => setSettingsModalOpen(true)}
           onStatsClick={() => {
             setStatsDrawerOpen(true)
             setMobileDrawerOpen(false)
           }}
+          onStatsHover={prefetchStatsPanel}
           onLayoutClick={() => setIsEditingLayout((v) => !v)}
           isMobileDrawerOpen={mobileDrawerOpen}
           isEditingLayout={isEditingLayout}
@@ -2544,7 +2734,7 @@ export default function GameRoom() {
 
       {/* Post-game results modal */}
       {showGameOver && currentGame && (
-        <GameOverModal
+        <LazyGameOverModal
           isOpen={showGameOver}
           winners={currentGame.players.filter((p) => !p.isEliminated)}
           eliminatedPlayers={currentGame.players.filter((p) => p.isEliminated).map((p) => p.id)}
@@ -2592,7 +2782,7 @@ export default function GameRoom() {
         />
       )}
 
-      <PlayerProfileModal
+      <LazyPlayerProfileModal
         open={profileUsername !== null}
         username={profileUsername}
         onClose={() => setProfileUsername(null)}
