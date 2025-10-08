@@ -447,6 +447,31 @@ const messagesSlice = createSlice({
         state.suppressServerUnread[normalized.conversationId] = false
       }
     },
+    // Optimistically update the lastMessage preview without inserting into the message list.
+    // The server's message.new event will reconcile with the authoritative payload.
+    updateLastMessagePreview(
+      state,
+      action: PayloadAction<{
+        conversationId: string
+        body: string
+        senderId?: string | null
+        createdAt?: string
+        metadata?: Record<string, unknown>
+      }>,
+    ) {
+      const { conversationId, body, senderId, createdAt, metadata } = action.payload
+      const conversation = state.conversations[conversationId]
+      if (!conversation) return
+      const ts = createdAt ?? new Date().toISOString()
+      conversation.updatedAt = ts
+      conversation.lastMessage = {
+        id: conversation.lastMessage?.id ?? `local-${Date.now()}`,
+        body,
+        senderId: senderId ?? null,
+        createdAt: ts,
+        metadata: metadata ?? {},
+      }
+    },
     conversationCreated(
       state,
       action: PayloadAction<{

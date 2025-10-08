@@ -5,6 +5,14 @@ type FallbackReason = 'stubbed' | 'timeout' | 'aborted'
 export interface DecisionBudget {
   maxThinkTimeMs: number
   maxPlannedActions?: number
+  readableDelayMs?: number
+  maxAttackChains?: number
+  minAttackOddsByTier?: {
+    recruit?: number
+    commander?: number
+    grandmaster?: number
+  }
+  allowOneSpiceAttack?: boolean
   signal?: AbortSignal
 }
 
@@ -19,17 +27,25 @@ export interface AIDecisionPlan {
   actions: GameAction[]
   usedFallback: boolean
   reason?: FallbackReason
-  diagnostics: {
-    generatedAt: string
-    durationMs: number
-    requestedDifficulty: AIDifficulty
-    plannedActionCount: number
-    budget: {
-      maxThinkTimeMs: number
-      maxPlannedActions?: number
+    diagnostics: {
+      generatedAt: string
+      durationMs: number
+      requestedDifficulty: AIDifficulty
+      plannedActionCount: number
+      budget: {
+        maxThinkTimeMs: number
+        maxPlannedActions?: number
+        readableDelayMs?: number
+        maxAttackChains?: number
+        minAttackOddsByTier?: {
+          recruit?: number
+          commander?: number
+          grandmaster?: number
+        }
+        allowOneSpiceAttack?: boolean
+      }
     }
   }
-}
 
 class AIDecisionService {
   async chooseAction(request: DecisionRequest): Promise<AIDecisionPlan> {
@@ -75,10 +91,14 @@ class AIDecisionService {
           budget: {
             maxThinkTimeMs: request.budget.maxThinkTimeMs,
             maxPlannedActions: request.budget.maxPlannedActions,
+            readableDelayMs: request.budget.readableDelayMs,
+            maxAttackChains: request.budget.maxAttackChains,
+            minAttackOddsByTier: request.budget.minAttackOddsByTier,
+            allowOneSpiceAttack: request.budget.allowOneSpiceAttack,
           },
-        },
-      }
-    } catch {
+      },
+    }
+  } catch {
       return this.createFallbackPlan('stubbed', request, start)
     }
   }
@@ -414,6 +434,10 @@ class AIDecisionService {
         budget: {
           maxThinkTimeMs: request.budget.maxThinkTimeMs,
           maxPlannedActions: request.budget.maxPlannedActions,
+          readableDelayMs: request.budget.readableDelayMs,
+          maxAttackChains: request.budget.maxAttackChains,
+          minAttackOddsByTier: request.budget.minAttackOddsByTier,
+          allowOneSpiceAttack: request.budget.allowOneSpiceAttack,
         },
       },
     }

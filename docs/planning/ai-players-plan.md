@@ -38,7 +38,23 @@ _Last updated: September 24, 2025_
 
 ## Architecture
 1. **Turn orchestration**: when current player is AI, build a read‑only `GameState` snapshot and call **aiDecisionService**. Stream returned `GameAction`s through the same validation and socket pipeline as humans.
-2. **Decision interface**: `chooseAction(gameState, budget): ActionPlan` with wall‑clock timeout and cancellation. Plans may stream actions deploy → attack → fortify → end turn.
+2. **Decision interface**: `chooseAction(gameState, budget): ActionPlan` with wall‑clock timeout and cancellation. Plans may stream actions deploy → attack → fortify → end turn. The `budget` contract exposes pacing and guardrails:
+   
+   ```ts
+   type DecisionBudget = {
+     maxThinkTimeMs: number
+     maxPlannedActions?: number
+     readableDelayMs?: number // UI pacing between actions (clamped by caps)
+     maxAttackChains?: number // soft limiter for attack sequences
+     minAttackOddsByTier?: {
+       recruit?: number
+       commander?: number
+       grandmaster?: number
+     }
+     allowOneSpiceAttack?: boolean // Recruit only
+     signal?: AbortSignal
+   }
+   ```
 3. **Runtime strategy**: TypeScript heuristics for Recruit/Commander. Evaluate Rust/Go worker for Grandmaster only if Node cannot meet budgets. Use gRPC or JSON over queue with strict SLAs.
 4. **Safety**: per‑turn action caps, timeouts with safe fallback (fortify + end turn), fog‑of‑war filtered inputs, stable JSON schema with versioning, centralized RNG seeds.
 
@@ -50,8 +66,10 @@ _Last updated: September 24, 2025_
 | Grandmaster | Competitive for experts | Monte Carlo over candidate plans, opponent modelling, adaptive aggression |
 
 **Performance budgets**  
-Real‑time: Recruit ≤ 1 s, Commander ≤ 2.5 s, Grandmaster ≤ 3 s.  
-Async: may exceed real‑time budgets with queue persistence, still bounded by wall‑clock timeout.
+Targets (average think time): Recruit ≤ 1 s, Commander ≤ 2.5 s, Grandmaster ≤ 3 s.  
+Caps (max per‑turn wall‑clock): Recruit ≤ 5 s, Commander ≤ 10 s, Grandmaster ≤ 15 s.  
+Readability delays: 250–400 ms between visible actions (deploy/attack/fortify/end) in real‑time, clamped so total never exceeds caps; ≤ 150 ms in async games.  
+Async: may exceed target averages with queue persistence but still bounded by caps.
 
 ## Data and state
 - Schema fields: `isAi`, `aiDifficulty`, `aiPersonalitySeed`.
