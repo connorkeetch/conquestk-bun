@@ -75,6 +75,17 @@ _Last updated: March 7, 2026_
 - Clan progression updates broadcast over the shared Socket.io layer as `clan:progress` events, fanning out to `clan:{clanId}` rooms. Payloads include XP deltas, placement metadata, and objective progress so web (and future mobile) clients can refresh contribution UI without refetching the entire profile.
 - Remaining work: finish validating creator/moderator map approval push fan-out and DM push roll-out (tracked in the go-live plan).
 
+## Turn Timers & AFK Flow
+- Room configuration includes `turn_timer` (seconds) and optional `time_bank_seconds` per player.
+- When a turn starts, `GameLifecycleService.scheduleTurnTimeout` persists `turn_expires_at` and enqueues a delayed Bull job to expire the turn.
+- On expiry, `GameLifecycleService.handleTurnTimeout`:
+  - Uses remaining time bank for the current player, if any, and reschedules the expiry; otherwise
+  - Increments `room_players.missed_turns` and sets `last_missed_turn_at = NOW()`
+  - Skips the rest of the player’s turn (advances phases up to the next player’s reinforcement)
+  - Emits a `phaseChange` delta for the next player and reschedules the next timeout
+  - Kicks and neutralizes the player on the 3rd miss in the same game (sets `is_kicked = TRUE`, `elimination_reason = 'timeout'`)
+- Development fallback: if Redis/Bull is unavailable, a local `setTimeout` triggers the same `handleTurnTimeout` logic. This fallback is disabled in production/staging.
+
 ## Deployment & Operations
 - Production (https://conquestk.com) and staging (Railway dev branch) deploy from the monorepo via npm scripts. `npm run build` produces frontend + backend bundles; `npm start` runs migrations then boots Express.
 - Logging centralizes through `backend/src/utils/logger.ts`, emitting structured JSON with request IDs. `/health` surfaces database, Redis, and queue status plus configuration hints for Sentry/connection strings.

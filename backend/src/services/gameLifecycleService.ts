@@ -39,6 +39,9 @@ export interface LifecycleSnapshot {
 export class GameLifecycleService {
   private gameRoomService = new GameRoomService()
   private gameService = new GameService()
+  // Dev-only local fallback timers when Redis/Bull queues are unavailable.
+  // Keyed by roomId. Never used in production.
+  private static localTurnTimeouts: Map<string, NodeJS.Timeout> = new Map()
 
   async setReadyState(roomId: string, userId: string, ready: boolean): Promise<LifecycleSnapshot> {
     // Acquire distributed lock to prevent race conditions
@@ -988,7 +991,7 @@ export class GameLifecycleService {
         // best-effort
       }
 
-      await queueService.addDelayedGameAction(
+      const job = await queueService.addDelayedGameAction(
         {
           gameId: roomId,
           playerId: currentTurnUserId,
@@ -999,6 +1002,48 @@ export class GameLifecycleService {
         seconds * 1000,
         { idempotencyKey: idKey, priority: 10 },
       )
+
+      // Development fallback: if queue is unavailable, schedule a local timer.
+      // This keeps local dev playable without Redis.
+      if (!job && process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
+        try {
+          const existing = GameLifecycleService.localTurnTimeouts.get(roomId)
+          if (existing) {
+            clearTimeout(existing)
+            GameLifecycleService.localTurnTimeouts.delete(roomId)
+          }
+          const timer: NodeJS.Timeout = setTimeout(
+            () => {
+              // Fire-and-forget; errors are logged inside handleTurnTimeout
+              this.handleTurnTimeout(roomId).catch(() => {
+                /* no-op */
+              })
+            },
+            Math.max(0, seconds * 1000),
+          )
+          // Ensure this timer does not keep the process alive
+          if (typeof timer.unref === 'function') {
+            timer.unref()
+          }
+          GameLifecycleService.localTurnTimeouts.set(roomId, timer)
+          logger.info('Scheduled local (dev) turn timeout fallback', {
+            roomId,
+            seconds,
+          })
+        } catch (e) {
+          logger.warn('Failed to schedule local dev fallback timer', {
+            roomId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
+      } else {
+        // If queues are available, clear any stray local timers for safety
+        const existing = GameLifecycleService.localTurnTimeouts.get(roomId)
+        if (existing) {
+          clearTimeout(existing)
+          GameLifecycleService.localTurnTimeouts.delete(roomId)
+        }
+      }
 
       await this.refreshLifecycle(roomId)
     } catch (error) {
@@ -1114,30 +1159,37 @@ export class GameLifecycleService {
     let targetUserId: string | null = null
     let consumedBankSeconds = 0
     let shouldSkip = false
+    // Clear any local fallback timer for this room
+    try {
+      const existing = GameLifecycleService.localTurnTimeouts.get(roomId)
+      if (existing) {
+        clearTimeout(existing)
+        GameLifecycleService.localTurnTimeouts.delete(roomId)
+      }
+    } catch {
+      // ignore
+    }
     try {
       await client.query('BEGIN')
-      const res = await client.query<{
+      // Lock only the game_rooms row to avoid PostgreSQL error with OUTER JOINs + FOR UPDATE
+      const roomRes = await client.query<{
         current_turn_user_id: string | null
         turn_expires_at: Date | null
         turn_timer: number | null
         using_time_bank: boolean
-        time_bank_seconds_remaining: number | null
       }>(
         `
         SELECT gr.current_turn_user_id,
                gr.turn_expires_at,
                gr.turn_timer,
-               gr.using_time_bank,
-               rp.time_bank_seconds_remaining
+               gr.using_time_bank
           FROM game_rooms gr
-          LEFT JOIN room_players rp
-            ON rp.room_id = gr.id AND rp.user_id = gr.current_turn_user_id
          WHERE gr.id = $1
-         FOR UPDATE
+         FOR UPDATE OF gr
         `,
         [roomId],
       )
-      const row = res.rows[0]
+      const row = roomRes.rows[0]
       if (!row || !row.current_turn_user_id) {
         await client.query('ROLLBACK')
         return
@@ -1150,7 +1202,22 @@ export class GameLifecycleService {
         return
       }
 
-      const remainingBank = Math.max(0, Math.trunc(row.time_bank_seconds_remaining ?? 0))
+      // Lock the current player's row in room_players to read time bank (only for humans)
+      let remainingBank = 0
+      try {
+        const bankRes = await client.query<{ time_bank_seconds_remaining: number | null }>(
+          `
+          SELECT time_bank_seconds_remaining
+            FROM room_players
+           WHERE room_id = $1 AND user_id = $2
+           FOR UPDATE
+          `,
+          [roomId, targetUserId],
+        )
+        remainingBank = Math.max(0, Math.trunc(bankRes.rows[0]?.time_bank_seconds_remaining ?? 0))
+      } catch (_e) {
+        remainingBank = 0
+      }
 
       if (!row.using_time_bank && remainingBank > 0) {
         consumedBankSeconds = remainingBank
@@ -1213,29 +1280,48 @@ export class GameLifecycleService {
     }
 
     try {
-      const result = await this.gameService.endTurn(roomId, targetUserId, { allowEarlyEnd: true })
+      // Skip the entire turn for the AFK player, regardless of current phase.
+      // We advance phases until the next player's reinforcement phase.
+      let lastResult: Awaited<ReturnType<GameService['endTurn']>> | null = null
+      let steps = 0
+      const MAX_STEPS = 3 // reinforcement -> attack -> fortify -> next player's reinforcement
+      // Advance while still the same player's turn and within safety bound
+      // allowEarlyEnd bypasses reinforcement placement requirement
+      while (steps < MAX_STEPS) {
+        const res = await this.gameService.endTurn(roomId, targetUserId, { allowEarlyEnd: true })
+        lastResult = res
+        steps += 1
+        if (
+          res.gameState.currentPlayer !== targetUserId &&
+          res.gameState.phase === 'reinforcement'
+        ) {
+          break
+        }
+      }
       try {
         const io = tryGetSocketServer()
         if (io) {
           const { DeltaBuilder } = await import('../types/deltaUpdates')
           const channel = `game:${roomId}`
-          if (result.treasureAwarded) {
+          if (lastResult?.treasureAwarded) {
             io.to(channel).emit('game-delta', {
               type: 'TREASURE_AWARDED',
               roomId,
               timestamp: Date.now(),
               userId: targetUserId,
-              metal: result.treasureAwarded,
+              metal: lastResult.treasureAwarded,
             })
           }
-          const phaseDelta = DeltaBuilder.phaseChange(
-            roomId,
-            result.gameState.phase,
-            result.gameState.currentPlayer,
-            result.gameState.turn,
-            result.reinforcementArmies,
-          )
-          io.to(channel).emit('game-delta', phaseDelta)
+          const phaseDelta = lastResult
+            ? DeltaBuilder.phaseChange(
+                roomId,
+                lastResult.gameState.phase,
+                lastResult.gameState.currentPlayer,
+                lastResult.gameState.turn,
+                lastResult.reinforcementArmies,
+              )
+            : null
+          if (phaseDelta) io.to(channel).emit('game-delta', phaseDelta)
         }
       } catch (ee) {
         logger.warn('Failed to emit deltas after timeout skip', {

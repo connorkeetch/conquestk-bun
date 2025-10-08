@@ -160,3 +160,15 @@ cd backend && npm run migrate
 \d+ map_sectors
 \d+ map_territories  -- expect a 'sector' column
 ```
+### ⏱️ Turn timer hits 0 but nothing happens
+**Problem**: AFK/timeout skip does not trigger
+1. Verify Redis is running locally on `localhost:6379`. The turn timeout job uses Bull + Redis.
+2. Check backend logs for `QueueService not available` warnings.
+3. Confirm WorkerManager is initialized: `GET /api/queue/health` (should return `healthy`).
+4. Development fallback: without Redis, the server uses a local in‑process timer to trigger timeouts. Ensure the backend process stayed alive past the expiry window.
+5. If you changed `turn_timer` mid-game, rescheduling happens on the next phase/turn transition.
+
+What happens on expiry:
+- If the player has a time bank, the turn consumes it and reschedules.
+- Otherwise the player’s `missed_turns` increments and `last_missed_turn_at` is set.
+- The rest of the turn is skipped immediately; on the 3rd miss, the player is kicked and neutralized.
