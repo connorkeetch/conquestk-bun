@@ -287,8 +287,7 @@ export interface ServerToClientEvents {
     turnExpiresAt: string | null
     readyCheckStartedAt: string | null
     timeBankSecondsRemaining?: number | null
-    graceActorUserId?: string | null
-    graceExpiresAt?: string | null
+    usingTimeBank?: boolean
     replacementPendingUserId?: string | null
     statusMessage?: string
     statusMessageLevel?: 'error' | 'info' | 'warn'
@@ -310,8 +309,7 @@ export interface ServerToClientEvents {
     turnExpiresAt?: string | null
     timeBankSecondsRemaining?: number | null
     readyCheckStartedAt?: string | null
-    graceActorUserId?: string | null
-    graceExpiresAt?: string | null
+    usingTimeBank?: boolean
     replacementPendingUserId?: string | null
     statusMessage?: string
     statusMessageLevel?: 'error' | 'info' | 'warn'
@@ -358,8 +356,6 @@ export interface ClientToServerEvents {
   undoFortify: (data: { roomId: string }) => void
   endTurn: (data: { roomId: string }) => void
   goBackToReinforcement: (data: { roomId: string }) => void
-  'afk:skip': (data: { roomId: string }) => void
-  'afk:remind': (data: { roomId: string }) => void
   'host:replacement': (data: {
     roomId: string
     targetUserId: string

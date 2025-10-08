@@ -56,14 +56,12 @@ jest.mock('../services/gameService', () => {
 })
 
 // Spy on lifecycle calls
-const beginAfkGraceMock = jest.fn().mockResolvedValue(undefined)
-const skipAfkTurnMock = jest.fn().mockResolvedValue(undefined)
+const handleTurnTimeoutMock = jest.fn().mockResolvedValue(undefined)
 
 jest.mock('../services/gameLifecycleService', () => {
   return {
     GameLifecycleService: class {
-      beginAfkGrace = beginAfkGraceMock
-      skipAfkTurn = skipAfkTurnMock
+      handleTurnTimeout = handleTurnTimeoutMock
     },
   }
 })
@@ -71,13 +69,12 @@ jest.mock('../services/gameLifecycleService', () => {
 // Import after mocks
 import { GameActionWorker } from './gameActionWorker'
 
-describe('GameActionWorker AFK stages', () => {
+describe('GameActionWorker turn timeout stage', () => {
   beforeEach(() => {
-    beginAfkGraceMock.mockClear()
-    skipAfkTurnMock.mockClear()
+    handleTurnTimeoutMock.mockClear()
   })
 
-  it('invokes beginAfkGrace on afk start', async () => {
+  it('invokes handleTurnTimeout on timeout job', async () => {
     const worker = new GameActionWorker(ioMock)
     // biome-ignore lint/suspicious/noExplicitAny: accessing private for targeted unit test
     const result = await (worker as any).processGameAction({
@@ -86,26 +83,10 @@ describe('GameActionWorker AFK stages', () => {
         gameId: 'g1',
         playerId: 'p1',
         action: { type: 'end_turn', playerId: 'p1', roomId: 'g1' },
-        afkStage: 'start',
+        turnTimeoutStage: 'expire',
       },
     })
-    expect(beginAfkGraceMock).toHaveBeenCalledWith('g1')
-    expect(result.processed).toBe(true)
-  })
-
-  it('invokes skipAfkTurn on afk skip', async () => {
-    const worker = new GameActionWorker(ioMock)
-    // biome-ignore lint/suspicious/noExplicitAny: accessing private for targeted unit test
-    const result = await (worker as any).processGameAction({
-      id: 'job2',
-      data: {
-        gameId: 'g2',
-        playerId: 'p2',
-        action: { type: 'end_turn', playerId: 'p2', roomId: 'g2' },
-        afkStage: 'skip',
-      },
-    })
-    expect(skipAfkTurnMock).toHaveBeenCalledWith('g2', 'p2', 'auto')
+    expect(handleTurnTimeoutMock).toHaveBeenCalledWith('g1')
     expect(result.processed).toBe(true)
   })
 })

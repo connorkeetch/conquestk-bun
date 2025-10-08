@@ -959,19 +959,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
-    // AFK grace: actor can skip or remind
-    socket.on(
-      'afk:skip',
-      withErrorHandler(socket, 'afk:skip', async (data: { roomId: string }) => {
-        if (!data || !data.roomId) throw new Error('Invalid AFK skip data')
-        const userId = requireUserId(socket)
-        // Validate membership
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) throw new Error('Not a member of this game')
-        await lifecycleService.skipAfkTurn(data.roomId, userId, 'actor')
-      }),
-    )
-
     // Player resigns: neutralize their territories and mark eliminated
     socket.on(
       'player:resign',
@@ -1080,53 +1067,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         },
       ),
     )
-    socket.on(
-      'afk:remind',
-      withErrorHandler(socket, 'afk:remind', async (data: { roomId: string }) => {
-        if (!data || !data.roomId) throw new Error('Invalid AFK remind data')
-        const userId = requireUserId(socket)
-        // Validate membership
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) throw new Error('Not a member of this game')
-
-        // Determine current turn user
-        const room = await gameRoomService.getRoomById(data.roomId)
-        const targetUserId = room?.currentTurnUserId
-        if (!targetUserId) return
-
-        try {
-          const { default: notificationService } = await import('./notificationService')
-          notificationService
-            .notifyTurnStart(data.roomId, targetUserId, 'Your turn — please respond')
-            .catch(() => {
-              /* noop: notification is best-effort */
-            })
-        } catch {
-          /* ignore optional notification service errors */
-        }
-
-        // Also emit an in-app real-time notification
-        const ioRef = require('./socketRegistry').tryGetSocketServer() as
-          | import('socket.io').Server<
-              import('../types/shared').ClientToServerEvents,
-              import('../types/shared').ServerToClientEvents
-            >
-          | null
-        if (ioRef) {
-          ioRef.to(`user:${targetUserId}`).emit('notification:new', {
-            id: `afk-reminder:${Date.now()}`,
-            type: 'turn_reminder',
-            title: "It's your turn",
-            message: 'Another player requested you to act or your turn may be skipped.',
-            createdAt: new Date().toISOString(),
-            actionUrl: `/room/${data.roomId}`,
-            actionLabel: 'Return to game',
-            metadata: { roomId: data.roomId },
-          })
-        }
-      }),
-    )
-
     // End turn
     socket.on(
       'endTurn',
@@ -1163,43 +1103,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         // Legacy 'phaseChanged' event removed in favor of unified 'game-delta'
 
-        // Schedule AFK grace start for the next player's timer
+        // Schedule timeout for the next player's turn
         try {
-          const { GameRoomService } = await import('./gameRoomService')
-          const roomService = new GameRoomService()
-          const room = await roomService.getRoomById(data.roomId)
-          const seconds = room?.turnTimerSeconds ?? 0
-          if (seconds && seconds > 0) {
-            // Persist new expiry for UI
-            await query(
-              `UPDATE game_rooms SET turn_expires_at = NOW() + ($2 * INTERVAL '1 second') WHERE id = $1`,
-              [data.roomId, seconds],
-            )
-            // Use deterministic job id per room+turn, and cancel any existing AFK-start for this turn
-            const idKey = `afk:${data.roomId}:turn:${result.gameState.turn}:start`
-            try {
-              await queueService.removeGameActionJob(idKey)
-            } catch (_e) {
-              // best-effort
-            }
-            await queueService.addDelayedGameAction(
-              {
-                gameId: data.roomId,
-                playerId: result.gameState.currentPlayer,
-                action: {
-                  type: 'end_turn',
-                  playerId: result.gameState.currentPlayer,
-                  roomId: data.roomId,
-                },
-                idempotencyKey: idKey,
-                afkStage: 'start',
-              },
-              seconds * 1000,
-              { idempotencyKey: idKey, priority: 10 },
-            )
-          }
+          const { GameLifecycleService } = await import('./gameLifecycleService')
+          const lifecycleService = new GameLifecycleService()
+          await lifecycleService.scheduleTurnTimeout(data.roomId)
         } catch (e) {
-          logger.warn('Failed to schedule AFK grace after manual endTurn', {
+          logger.warn('Failed to schedule turn timeout after manual endTurn', {
             roomId: data.roomId,
             error: e instanceof Error ? e.message : e,
           })

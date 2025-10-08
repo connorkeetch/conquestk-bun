@@ -698,15 +698,10 @@ class SocketService {
           (payload as Record<string, unknown>).statusMessageLevel === 'info'
             ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
             : undefined,
-        // Grace/replacement fields may be included by backend depending on lifecycle
-        graceActorUserId:
-          typeof (payload as Record<string, unknown>).graceActorUserId === 'string'
-            ? ((payload as Record<string, unknown>).graceActorUserId as string)
-            : null,
-        graceExpiresAt:
-          typeof (payload as Record<string, unknown>).graceExpiresAt === 'string'
-            ? ((payload as Record<string, unknown>).graceExpiresAt as string)
-            : null,
+        usingTimeBank:
+          typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
+            ? ((payload as Record<string, unknown>).usingTimeBank as boolean)
+            : undefined,
         replacementPendingUserId:
           typeof (payload as Record<string, unknown>).replacementPendingUserId === 'string'
             ? ((payload as Record<string, unknown>).replacementPendingUserId as string)
@@ -804,15 +799,10 @@ class SocketService {
           (payload as Record<string, unknown>).statusMessageLevel === 'info'
             ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
             : undefined,
-        // Grace/replacement fields may be included by backend depending on lifecycle
-        graceActorUserId:
-          typeof (payload as Record<string, unknown>).graceActorUserId === 'string'
-            ? ((payload as Record<string, unknown>).graceActorUserId as string)
-            : null,
-        graceExpiresAt:
-          typeof (payload as Record<string, unknown>).graceExpiresAt === 'string'
-            ? ((payload as Record<string, unknown>).graceExpiresAt as string)
-            : null,
+        usingTimeBank:
+          typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
+            ? ((payload as Record<string, unknown>).usingTimeBank as boolean)
+            : undefined,
         replacementPendingUserId:
           typeof (payload as Record<string, unknown>).replacementPendingUserId === 'string'
             ? ((payload as Record<string, unknown>).replacementPendingUserId as string)
@@ -850,11 +840,8 @@ class SocketService {
               statusMessageLevel: lifecyclePayload.statusMessageLevel ?? 'info',
             }
           : {}),
-        ...(lifecyclePayload.graceActorUserId !== undefined
-          ? { graceActorUserId: lifecyclePayload.graceActorUserId }
-          : {}),
-        ...(lifecyclePayload.graceExpiresAt !== undefined
-          ? { graceExpiresAt: lifecyclePayload.graceExpiresAt }
+        ...(lifecyclePayload.usingTimeBank !== undefined
+          ? { usingTimeBank: lifecyclePayload.usingTimeBank }
           : {}),
         ...(lifecyclePayload.replacementPendingUserId !== undefined
           ? { replacementPendingUserId: lifecyclePayload.replacementPendingUserId }
