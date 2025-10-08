@@ -1,12 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
   <defs>
     <filter id="brandGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#cbd5e1" flood-opacity="0.9" />
+      <feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#cbd5e1" flood-opacity="0.9" />
     </filter>
   </defs>
-  <!-- Center-cropped brand artwork, zoomed and biased upward for better flag visibility. Transparent background. -->
+  <!-- Transparent background. Zoom 1.25 and crop out bottom 1/4 (y=0). -->
   <g filter="url(#brandGlow)">
-    <!-- scale 1.22 on a 192 box → width/height ~ 234; center horizontally and bias upward -->
-    <image href="/Conquest_K_Logo.svg" x="-21" y="-27" width="234" height="234" preserveAspectRatio="xMidYMid slice" />
+    <image href="/Conquest_K_Logo.svg" x="-24" y="0" width="240" height="240" preserveAspectRatio="xMidYMid slice" />
   </g>
 </svg>

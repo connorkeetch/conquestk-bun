@@ -24,8 +24,8 @@ export default function BrandLogoDynamic({
   className = '',
   title = 'ConquestK logo',
   withGlow = true,
-  scale = 1.22,
-  yBias = 0.65,
+  scale = 1.25,
+  yBias = 0,
 }: Props) {
   const w = width
   const h = height

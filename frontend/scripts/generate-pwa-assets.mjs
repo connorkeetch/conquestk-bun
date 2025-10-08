@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 
-const root = path.resolve(process.cwd(), '..') // start from frontend/, go to repo root, then back to frontend/public
+const _root = path.resolve(process.cwd(), '..') // start from frontend/, go to repo root, then back to frontend/public
 const pub = path.resolve(process.cwd(), 'public')
 
 // Use the raw brand artwork as the base to avoid issues with <image href> in icon.svg
@@ -65,14 +65,14 @@ async function generateMaskables() {
   const brandB64 = Buffer.from(await fs.promises.readFile(BRAND_SVG)).toString('base64')
   for (const { file, size } of ICON_OUTS) {
     const outPath = path.join(pub, file)
-    const scaled = Math.round(size * 1.22)
+    const scaled = Math.round(size * 1.25)
     const x = -Math.round((scaled - size) / 2)
-    const y = -Math.round((scaled - size) * 0.65)
+    const y = 0
     const wrapper = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <defs>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="0" stdDeviation="${(size * 0.04).toFixed(2)}" flood-color="#cbd5e1" flood-opacity="0.9" />
+      <feDropShadow dx="0" dy="0" stdDeviation="${(size * 0.035).toFixed(2)}" flood-color="#cbd5e1" flood-opacity="0.9" />
     </filter>
   </defs>
   <g filter="url(#glow)">
@@ -100,7 +100,6 @@ async function main() {
   process.stdout.write('All PWA assets generated.\n')
 }
 
-main().catch((e) => {
-  console.error(e)
+main().catch((_e) => {
   process.exit(1)
 })
