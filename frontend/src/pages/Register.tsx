@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-// Use the unified static SVG logo asset
+import BrandLogoDynamic from '@/components/BrandLogoDynamic'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, register } from '../store/authSlice'
 import EmailVerificationPending from './EmailVerificationPending'
@@ -56,16 +56,7 @@ export default function Register() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <div className="flex items-center justify-center gap-3 mb-2">
-              <img
-                src="/icon.svg"
-                width={48}
-                height={48}
-                alt="ConquestK logo"
-                style={{
-                  filter:
-                    'drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 2px var(--color-primary))',
-                }}
-              />
+              <BrandLogoDynamic width={48} height={48} />
               <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
                 CONQUEST{' '}
                 <span
