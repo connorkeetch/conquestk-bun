@@ -930,131 +930,7 @@ class SocketService {
       )
     })
 
-    // Game-specific legacy events removed in favor of unified 'game-delta'
-
-    this.socket.on('armiesDeployed', () => {
-      // Play troop placement sound
-      // Territory/player updates now handled via game-delta
-      audioService.playEffect('placetroop')
-    })
-
-    this.socket.on('attackResult', (data: unknown) => {
-      const payload = data as Record<string, unknown>
-      const fromTerritory = payload.fromTerritory as { id: string; armies: number }
-      const toTerritory = payload.toTerritory as { id: string; armies: number; ownerId?: string }
-      const attackerLosses = Number(payload.attackerLosses ?? 0)
-      const defenderLosses = Number(payload.defenderLosses ?? 0)
-      const attackerDice = (payload.attackerDice as number[]) ?? []
-      const defenderDice = (payload.defenderDice as number[]) ?? []
-      const conquered = Boolean(payload.conquered)
-
-      // Play dice sound for battle
-      audioService.playEffect('dice')
-
-      // Update both attacking and defending territories
-      store.dispatch(
-        updateTerritory({
-          territoryId: fromTerritory.id,
-          armies: fromTerritory.armies,
-        }),
-      )
-
-      store.dispatch(
-        updateTerritory({
-          territoryId: toTerritory.id,
-          armies: toTerritory.armies,
-          ownerId: toTerritory.ownerId,
-        }),
-      )
-
-      // Play victory/defeat sound based on outcome
-      const currentUserId = store.getState().auth.user?.id
-      const attackerId = payload.attackerId as string | undefined
-      const defenderId = payload.defenderId as string | undefined
-
-      if (currentUserId === attackerId) {
-        // Current user is attacking
-        if (conquered) {
-          audioService.playEffect('capture')
-        } else if (attackerLosses < defenderLosses) {
-          audioService.playEffect('victory')
-        } else {
-          audioService.playEffect('defeat')
-        }
-      } else if (currentUserId === defenderId) {
-        // Current user is defending
-        if (conquered) {
-          audioService.playEffect('defeat')
-        } else if (defenderLosses < attackerLosses) {
-          audioService.playEffect('victory')
-        } else {
-          audioService.playEffect('defeat')
-        }
-      }
-
-      const battleResult: BattleResult = {
-        attackerId,
-        defenderId,
-        attackerDice,
-        defenderDice,
-        attackerLosses,
-        defenderLosses,
-        conquered,
-        fromTerritory: fromTerritory.id,
-        toTerritory: toTerritory.id,
-        capitalElimination: payload.capitalElimination as BattleResult['capitalElimination'],
-        gameEnded: payload.gameEnded as boolean | undefined,
-        gameState: payload.gameState as GameState | undefined,
-      }
-
-      // Show battle results
-      store.dispatch(setBattleResult(battleResult))
-
-      // Record dice recap for header bar
-      try {
-        store.dispatch(
-          recordBattleResult({
-            fromId: fromTerritory.id,
-            toId: toTerritory.id,
-            attackerId,
-            defenderId,
-            attackerDice,
-            defenderDice,
-            attackerLosses,
-            defenderLosses,
-            conquered,
-          }),
-        )
-      } catch {
-        // best-effort only
-      }
-
-      // If conquered, show inline conquest transfer overlay for next-commit adjustment
-      if (conquered) {
-        store.dispatch(showConquestOverlay({ fromId: fromTerritory.id, toId: toTerritory.id }))
-      }
-
-      // Clear target selection after attack
-      store.dispatch(selectTargetTerritory(null))
-    })
-
-    // Legacy 'phaseChanged' listener removed; use 'game-delta' PHASE_CHANGE only
-
-    this.socket.on('territoriesFortified', (data: unknown) => {
-      const payload = data as Parameters<ServerToClientEvents['territoriesFortified']>[0]
-      const from = (payload as { fromTerritoryId?: string; fromArmies?: number }) ?? {}
-      const to = (payload as { toTerritoryId?: string; toArmies?: number }) ?? {}
-
-      if (from.fromTerritoryId) {
-        store.dispatch(
-          updateTerritory({ territoryId: from.fromTerritoryId, armies: from.fromArmies }),
-        )
-      }
-
-      if (to.toTerritoryId) {
-        store.dispatch(updateTerritory({ territoryId: to.toTerritoryId, armies: to.toArmies }))
-      }
-    })
+    // Legacy events fully retired; rely on game-delta and game-delta-batch only
 
     // Capital-specific events
     this.socket.on('capitalAttackCheck', (data: unknown) => {
@@ -1238,10 +1114,7 @@ class SocketService {
     this.socket.off('game-update')
     this.socket.off('lifecycle:update')
     this.socket.off('room-update')
-    this.socket.off('armiesDeployed')
-    this.socket.off('attackResult')
-    // 'phaseChanged' removed
-    this.socket.off('territoriesFortified')
+    // Legacy events fully retired
     this.socket.off('capitalAttackCheck')
     this.socket.off('capitalElimination')
     this.socket.off('gameError')

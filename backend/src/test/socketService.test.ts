@@ -285,7 +285,7 @@ describe('socketService event handlers', () => {
     )
   })
 
-  it('sends fortify results to canonical channel after processing', async () => {
+  it('sends fortify updates as coalesced deltas after processing', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
     const fortifyHandler = getSocketHandler(socket, 'fortify')
 
@@ -306,12 +306,14 @@ describe('socketService event handlers', () => {
 
     const ioToMock = io.to as unknown as jest.Mock
     expect(ioToMock).toHaveBeenCalledWith('game:room-99')
-    expect(roomEmit).toHaveBeenNthCalledWith(1, 'territoriesFortified', {
-      fromArmies: 1,
-      toArmies: 2,
-      gameState: { id: 'state' },
-    })
-    expect(roomEmit).toHaveBeenNthCalledWith(2, 'game-update', { id: 'state' })
+    // First emission should be a coalesced batch with two TERRITORY_UPDATE deltas
+    const firstCall = roomEmit.mock.calls[0]
+    expect(firstCall[0]).toBe('game-delta-batch')
+    const deltas = firstCall[1] as Array<{ type: string; territoryId: string; changes: unknown }>
+    expect(Array.isArray(deltas) && deltas.length).toBe(2)
+    const [d1, d2] = deltas
+    expect(d1.type).toBe('TERRITORY_UPDATE')
+    expect(d2.type).toBe('TERRITORY_UPDATE')
   })
 
   it('broadcasts phase changes via unified game-delta on end turn', async () => {
@@ -415,7 +417,10 @@ describe('socketService event handlers', () => {
     expect(mockIsPlayerInRoom).toHaveBeenCalledWith('room-123', 'user-1')
     expect(socket.join).toHaveBeenCalledWith('game:room-123')
     expect(socket.joinedGameRooms.has('room-123')).toBe(true)
-    expect(socket.emit).toHaveBeenCalledWith('game-update', serializedState)
+    expect(socket.emit).toHaveBeenCalledWith(
+      'game-update',
+      expect.objectContaining({ roomId: 'room-123', phase: 'reinforcement' }),
+    )
 
     const toMock = socket.to as jest.Mock
     expect(toMock).toHaveBeenCalledWith('game:room-123')

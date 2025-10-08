@@ -232,9 +232,7 @@ export interface ServerToClientEvents {
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game-update': (gameState: SerializedGameState) => void
   'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting
-  armiesDeployed: (result: { territoryId?: string; armies?: number; serverSpent?: number }) => void
-  attackResult: (result: BattleResult) => void
-  territoriesFortified: (result: { gameState: SerializedGameState }) => void
+  'game-delta-batch': (deltas: GameDelta[]) => void
   'clan:progress': (payload: ClanProgressionSocketPayload) => void
   'message.new': (payload: ConversationMessageEventPayload) => void
   'conversation.message.new': (payload: ConversationMessageEventPayload) => void
