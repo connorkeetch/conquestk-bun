@@ -46,8 +46,27 @@ jest.mock('../services/gameLifecycleService', () => ({
   },
 }))
 
+// Mock AI decision to a simple single-step plan to exercise streaming
+jest.mock('../services/aiDecisionService', () => ({
+  aiDecisionService: {
+    chooseAction: jest.fn().mockResolvedValue({
+      actions: [{ type: 'end_turn', roomId: 'g1', playerId: 'p1' }],
+      usedFallback: false,
+      diagnostics: {
+        generatedAt: new Date().toISOString(),
+        durationMs: 5,
+        requestedDifficulty: 'recruit',
+        plannedActionCount: 1,
+        budget: { maxThinkTimeMs: 1000 },
+      },
+    }),
+    buildFallbackPlan: jest.fn().mockReturnValue([{ type: 'end_turn', roomId: 'g1', playerId: 'p1' }]),
+  },
+}))
+
 // Mock GameService
 const executeAiTurnMock = jest.fn().mockResolvedValue({ gameState: { roomId: 'g1' } })
+const processGameActionMock = jest.fn().mockResolvedValue({ roomId: 'g1' })
 const getGameStateMock = jest.fn().mockResolvedValue({
   roomId: 'g1',
   players: [
@@ -65,6 +84,7 @@ jest.mock('../services/gameService', () => {
   return {
     GameService: class {
       executeAiTurn = executeAiTurnMock
+      processGameAction = processGameActionMock
       getGameState = getGameStateMock
     },
   }
@@ -80,7 +100,10 @@ describe('AI turn worker job', () => {
     scheduleAiTurnMock.mockClear()
   })
 
-  it('runs executeAiTurn and schedules follow-ups', async () => {
+  it('streams AI actions and schedules follow-ups', async () => {
+    // Ensure streaming is enabled for the test
+    process.env.AI_STREAM_ACTIONS = 'true'
+    process.env.AI_READABLE_DELAY_MS = '1'
     const worker = new GameActionWorker(ioMock)
     // biome-ignore lint/suspicious/noExplicitAny: access private for unit test
     const result = await (worker as any).processAiTurn({
@@ -89,10 +112,9 @@ describe('AI turn worker job', () => {
     })
 
     expect(getGameStateMock).toHaveBeenCalled()
-    expect(executeAiTurnMock).toHaveBeenCalled()
+    expect(processGameActionMock).toHaveBeenCalled()
     expect(scheduleTurnTimeoutMock).toHaveBeenCalledWith('g1')
     expect(scheduleAiTurnMock).toHaveBeenCalledWith('g1')
     expect(result.processed).toBe(true)
   })
 })
-
