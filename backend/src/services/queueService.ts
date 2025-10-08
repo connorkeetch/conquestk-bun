@@ -827,8 +827,11 @@ export class QueueService {
     return this.requireQueue('battleSimulations') as Bull.Queue<BattleSimulationJob>
   }
 
-  getGameActionQueue(): Bull.Queue<GameActionJob> {
-    return this.requireQueue('gameActions') as Bull.Queue<GameActionJob>
+  // Return untyped queue here because the game-actions queue can carry
+  // multiple job payload shapes (e.g., process-game-action, execute-ai-turn).
+  // Call sites that add strongly-typed jobs should validate their own payloads.
+  getGameActionQueue(): Bull.Queue {
+    return this.requireQueue('gameActions') as Bull.Queue
   }
 
   getCleanupQueue(): Bull.Queue<GameCleanupJob> {

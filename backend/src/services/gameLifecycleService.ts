@@ -1050,16 +1050,16 @@ export class GameLifecycleService {
         },
       )
 
-      // Optional: lightweight lifecycle broadcast to indicate AI is thinking
+      // Optional: lightweight lifecycle hint using a system message (fog-safe)
       try {
         const io = tryGetSocketServer()
         if (io) {
           io.to(`game:${roomId}`).emit('game-delta', {
-            type: 'AI_THINKING',
+            type: 'SYSTEM_MESSAGE',
             roomId,
             timestamp: Date.now(),
+            text: 'ai:thinking',
             playerId: current.id,
-            turnNumber: state.turn,
           })
         }
       } catch {
