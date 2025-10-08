@@ -742,6 +742,9 @@ export class GameLifecycleService {
     if (turnTimer && turnTimer > 0) {
       await this.scheduleTurnTimeout(roomId, { seconds: turnTimer, usingTimeBank: false })
     }
+
+    // If the first player is AI, schedule their turn immediately with a short delay
+    await this.scheduleAiTurn(roomId)
   }
 
   private async broadcastLifecycle(snapshot: LifecycleSnapshot) {
@@ -983,6 +986,103 @@ export class GameLifecycleService {
         roomId,
         error: error instanceof Error ? error.message : error,
       })
+    }
+  }
+
+  async scheduleAiTurn(roomId: string, options?: { delayMs?: number }): Promise<void> {
+    try {
+      const state = await this.gameService.getGameState(roomId)
+      if (!state || state.phase === 'finished') return
+
+      const current = state.players.find((p) => p.id === state.currentPlayer)
+      if (!current || !current.isAi) return
+
+      // Build idempotent job id per turn
+      const idKey = `ai-turn:${roomId}:turn:${state.turn}`
+
+      // Remove any existing scheduled AI job for this turn (best-effort)
+      try {
+        await queueService.removeGameActionJob(idKey)
+      } catch {
+        // ignore
+      }
+
+      // Derive small human-visible delay
+      const delay = Math.max(0, Math.trunc(options?.delayMs ?? 300))
+
+      const queue = queueService.getGameActionQueue()
+      await queue.add(
+        'execute-ai-turn',
+        {
+          gameId: roomId,
+          playerId: current.id,
+          turnNumber: state.turn,
+          budgetOverrides: this.computeDefaultBudgetForDifficulty(current.aiDifficulty ?? 'recruit'),
+          idempotencyKey: idKey,
+        },
+        {
+          jobId: idKey,
+          delay,
+          attempts: 1,
+          removeOnFail: true,
+          removeOnComplete: 10,
+          priority: 7,
+        },
+      )
+
+      // Optional: lightweight lifecycle broadcast to indicate AI is thinking
+      try {
+        const io = tryGetSocketServer()
+        if (io) {
+          io.to(`game:${roomId}`).emit('game-delta', {
+            type: 'AI_THINKING',
+            roomId,
+            timestamp: Date.now(),
+            playerId: current.id,
+            turnNumber: state.turn,
+          })
+        }
+      } catch {
+        // best-effort
+      }
+    } catch (error) {
+      logger.warn('Failed to schedule AI turn', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
+  private computeDefaultBudgetForDifficulty(
+    difficulty: import('../types/game').AIDifficulty,
+  ): Partial<import('../services/aiDecisionService').DecisionBudget> {
+    switch (difficulty) {
+      case 'recruit':
+        return {
+          maxThinkTimeMs: 5000,
+          maxPlannedActions: 6,
+          readableDelayMs: 300,
+          maxAttackChains: 3,
+          minAttackOddsByTier: { recruit: 0.7 },
+          allowOneSpiceAttack: true,
+        }
+      case 'commander':
+        return {
+          maxThinkTimeMs: 10_000,
+          maxPlannedActions: 10,
+          readableDelayMs: 300,
+          maxAttackChains: 6,
+          minAttackOddsByTier: { commander: 0.68 },
+        }
+      case 'grandmaster':
+      default:
+        return {
+          maxThinkTimeMs: 15_000,
+          maxPlannedActions: 16,
+          readableDelayMs: 300,
+          maxAttackChains: 999,
+          minAttackOddsByTier: { grandmaster: 0.6 },
+        }
     }
   }
 

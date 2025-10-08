@@ -152,7 +152,7 @@ class AIDecisionService {
     }
 
     if (currentPhase === 'attack') {
-      const attack = this.findRecruitAttack(gameState, player.id)
+      const attack = this.findRecruitAttack(gameState, player.id, budget)
       if (attack) {
         if (!pushAction(attack)) {
           return actions
@@ -212,7 +212,11 @@ class AIDecisionService {
     }
   }
 
-  private findRecruitAttack(gameState: GameState, playerId: string): GameAction | null {
+  private findRecruitAttack(
+    gameState: GameState,
+    playerId: string,
+    budget: DecisionBudget,
+  ): GameAction | null {
     const ownedTerritories = gameState.board.filter((territory) => territory.ownerId === playerId)
     const rankedSources = [...ownedTerritories].sort((a, b) => b.armies - a.armies)
 
@@ -238,23 +242,47 @@ class AIDecisionService {
           }
           return true
         })
-        .sort((a, b) => a.armies - b.armies)
+        // Prefer enemy capitals first, then lower armies
+        .sort((a, b) => {
+          const capA = a.isCapital === true ? 1 : 0
+          const capB = b.isCapital === true ? 1 : 0
+          if (capA !== capB) return capB - capA
+          return a.armies - b.armies
+        })
 
-      const target = hostileNeighbors.find((neighbor) => source.armies - 1 > neighbor.armies)
-      if (!target) {
-        continue
+      // Safe attack: attacker (leaving 1 behind) exceeds defender by 1+
+      const safeTarget = hostileNeighbors.find((neighbor) => source.armies - 1 > neighbor.armies)
+      if (safeTarget) {
+        return {
+          type: 'attack',
+          roomId: gameState.roomId,
+          playerId,
+          payload: {
+            fromTerritoryId: source.id,
+            toTerritoryId: safeTarget.id,
+            armies: Math.min(3, Math.max(1, source.armies - 1)),
+          },
+        }
       }
 
-      return {
-        type: 'attack',
-        roomId: gameState.roomId,
-        playerId,
-        payload: {
-          fromTerritoryId: source.id,
-          toTerritoryId: target.id,
-          armies: Math.min(3, Math.max(1, source.armies - 1)),
-        },
+      // No safe target found; allow a single "spice" attack if configured
+      if (budget.allowOneSpiceAttack) {
+        const spice = hostileNeighbors.find((neighbor) => source.armies - 1 === neighbor.armies)
+        if (spice) {
+          return {
+            type: 'attack',
+            roomId: gameState.roomId,
+            playerId,
+            payload: {
+              fromTerritoryId: source.id,
+              toTerritoryId: spice.id,
+              armies: Math.min(3, Math.max(1, source.armies - 1)),
+            },
+          }
+        }
       }
+
+      // else continue to next source
     }
 
     return null
@@ -276,7 +304,13 @@ class AIDecisionService {
 
     const borderTargets = ownedTerritories
       .filter((territory) => this.hasEnemyNeighbor(gameState, territory, playerId))
-      .sort((a, b) => a.armies - b.armies)
+      .sort((a, b) => {
+        // Prefer fortifying capitals, then weakest borders
+        const capA = a.isCapital === true ? 1 : 0
+        const capB = b.isCapital === true ? 1 : 0
+        if (capA !== capB) return capB - capA
+        return a.armies - b.armies
+      })
 
     for (const source of interiorSources) {
       for (const target of borderTargets) {
