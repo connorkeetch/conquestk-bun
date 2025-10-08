@@ -93,6 +93,9 @@ This phase focuses on shaving server-side latency and wire size during turns. Ea
 - Risks/rollback:
   - Transaction lock contention on hot rooms. If observed, isolate updates to rows touched (`game_states`, minimal `game_rooms` columns) and keep snapshot inserts as `DO NOTHING` outside the critical section.
 
+Implementation notes (2025‑10‑08)
+- endTurn now persists `game_states` + `game_rooms` and the immutable snapshot in a single DB transaction via `persistTurnStateTransactional()`. Caching remains unchanged.
+
 2) Optimize socket payload sizes (<50 KB per `game-update`)
 - Scope: Reduce serialized payload and frequency; favor deltas.
 - Where:
@@ -108,6 +111,8 @@ This phase focuses on shaving server-side latency and wire size during turns. Ea
   - At least two previously full‑state emits replaced with deltas with no UX regressions.
 - Risks/rollback:
   - Older clients missing delta handlers: maintain the full‑state path behind a feature flag for one release.
+Implementation notes (2025‑10‑08)
+- Server now emits a lean `game-update` snapshot (players/board/config/targets/KOTH only) from `serializeGameStateForClient()`; heavy/unused fields are excluded.
 
 3) Delta compression rollout (server-led, client‑safe)
 - Scope: Use the existing `DeltaBuilder`/fog‑filtered emitters to drive convergence with minimal bytes.
@@ -127,6 +132,11 @@ Implementation notes (2025‑10‑08)
 - Frontend now prefers deltas over full snapshots during normal play. Snapshots are only accepted to recover gaps (server version leaps ahead) or on join/resync. See `frontend/src/services/socketService.ts:972`.
 - Turn reminder and audio cues are driven from PHASE_CHANGE deltas; snapshot is no longer required for these UX signals. Covered by test `frontend/src/services/socketService.delta.test.ts`.
 - Selectors optimized: `selectValidTargets` now uses an indexed board and O(1) lookups, reducing recompute time on frequent selection changes. See `frontend/src/store/selectors.ts`.
+
+4) Move analytics/events off the hot path to Bull queues
+
+Implementation notes (2025‑10‑08)
+- endTurn appends logs and per-turn stats via `queueService.addAnalyticsEvent()`; when queues are unavailable, these writes occur asynchronously (fire-and-forget) off the critical path.
 
 4) Move analytics/events off the hot path to Bull queues
 - Scope: Decouple event logging, achievements, and clan progression from action handlers.
