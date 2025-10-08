@@ -64,13 +64,24 @@ const roomSlice = createSlice({
       state.currentRoom = action.payload
     },
     updateRoom: (state, action: PayloadAction<Partial<GameRoom>>) => {
+      const { players, ...rest } = action.payload
+
       if (state.currentRoom) {
-        state.currentRoom = { ...state.currentRoom, ...action.payload }
+        const merged: Partial<GameRoom> = { ...state.currentRoom, ...rest }
+        if (players !== undefined) {
+          // Only overwrite players when explicitly provided
+          ;(merged as GameRoom).players = players as GameRoom['players']
+        }
+        state.currentRoom = merged as GameRoom
       }
 
       const roomIndex = state.rooms.findIndex((room) => room.id === action.payload.id)
       if (roomIndex !== -1) {
-        state.rooms[roomIndex] = { ...state.rooms[roomIndex], ...action.payload }
+        const mergedList: Partial<GameRoom> = { ...state.rooms[roomIndex], ...rest }
+        if (players !== undefined) {
+          ;(mergedList as GameRoom).players = players as GameRoom['players']
+        }
+        state.rooms[roomIndex] = mergedList as GameRoom
       }
     },
     addPlayerToRoom: (state, action: PayloadAction<{ roomId: string; player: RoomPlayer }>) => {
