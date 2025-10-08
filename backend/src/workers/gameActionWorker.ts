@@ -49,6 +49,11 @@ export class GameActionWorker {
       return this.processGameAction(job)
     })
 
+    // Orchestrate AI turns (queued as separate job name)
+    this.queue.process('execute-ai-turn', 5, async (job: Bull.Job<any>) => {
+      return this.processAiTurn(job)
+    })
+
     // Job event handlers
     this.queue.on('completed', (job, result) => {
       logger.info('✅ Game action job completed', {
@@ -69,6 +74,128 @@ export class GameActionWorker {
     })
 
     logger.info('✅ GameActionWorker initialized')
+  }
+
+  private async processAiTurn(job: Bull.Job<any>): Promise<ProcessGameActionResult> {
+    const { gameId, playerId, turnNumber, budgetOverrides } = job.data as {
+      gameId: string
+      playerId: string
+      turnNumber: number
+      budgetOverrides?: Partial<import('../services/aiDecisionService').DecisionBudget>
+    }
+
+    const idKey = job.id !== undefined ? String(job.id) : `ai:${gameId}:${turnNumber}`
+
+    const cached = await jobIdempotencyService.getProcessedJob<ProcessGameActionResult>(
+      this.queue.name,
+      idKey,
+    )
+    if (cached.exists && cached.value) {
+      logger.info('♻️ Skipping already processed AI turn job', {
+        gameId,
+        playerId,
+        jobId: job.id,
+      })
+      return { ...cached.value, processed: false }
+    }
+
+    try {
+      const state = await this.gameService.getGameState(gameId)
+      if (!state) throw new Error('Game not found')
+
+      // Validate this job still applies
+      if (state.phase === 'finished') {
+        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        return result
+      }
+
+      if (state.turn !== turnNumber || state.currentPlayer !== playerId) {
+        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        return result
+      }
+
+      const current = state.players.find((p) => p.id === playerId)
+      if (!current || !current.isAi) {
+        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        return result
+      }
+
+      const difficulty = current.aiDifficulty ?? 'recruit'
+      const baseBudget = this.computeBudgetForDifficulty(difficulty)
+      const effectiveBudget = { ...baseBudget, ...(budgetOverrides || {}) }
+
+      // Execute the AI turn plan atomically (applies actions + persists + metrics)
+      const { gameState } = await this.gameService.executeAiTurn(gameId, effectiveBudget)
+
+      // Emit a full snapshot to ensure clients converge (simple and reliable)
+      const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+      if (serialized) {
+        this.io.to(`game:${gameId}`).emit('game-update', serialized)
+      }
+
+      // Schedule timeout for the next player and chain AI if next is AI
+      try {
+        const { GameLifecycleService } = await import('../services/gameLifecycleService')
+        const lifecycle = new GameLifecycleService()
+        await lifecycle.scheduleTurnTimeout(gameId)
+        await lifecycle.scheduleAiTurn(gameId)
+      } catch (e) {
+        logger.warn('Failed to schedule lifecycle after AI turn', {
+          roomId: gameId,
+          error: e instanceof Error ? e.message : e,
+        })
+      }
+
+      const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+      await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+      return result
+    } catch (error) {
+      logger.error('❌ Failed to process AI turn', {
+        gameId,
+        playerId,
+        error,
+      })
+      throw error
+    }
+  }
+
+  private computeBudgetForDifficulty(
+    difficulty: import('../types/game').AIDifficulty,
+  ): import('../services/aiDecisionService').DecisionBudget {
+    // Defaults per AI readiness decisions (Oct 2025)
+    switch (difficulty) {
+      case 'recruit':
+        return {
+          maxThinkTimeMs: 5000,
+          maxPlannedActions: 6,
+          readableDelayMs: 300,
+          maxAttackChains: 3,
+          minAttackOddsByTier: { recruit: 0.7 },
+          allowOneSpiceAttack: true,
+        }
+      case 'commander':
+        return {
+          maxThinkTimeMs: 10_000,
+          maxPlannedActions: 10,
+          readableDelayMs: 300,
+          maxAttackChains: 6,
+          minAttackOddsByTier: { commander: 0.68 },
+          allowOneSpiceAttack: false,
+        }
+      case 'grandmaster':
+      default:
+        return {
+          maxThinkTimeMs: 15_000,
+          maxPlannedActions: 16,
+          readableDelayMs: 300,
+          maxAttackChains: 999,
+          minAttackOddsByTier: { grandmaster: 0.6 },
+          allowOneSpiceAttack: false,
+        }
+    }
   }
 
   private async processGameAction(job: Bull.Job<GameActionJob>): Promise<ProcessGameActionResult> {
@@ -460,6 +587,8 @@ export class GameActionWorker {
       const { GameLifecycleService } = await import('../services/gameLifecycleService')
       const lifecycle = new GameLifecycleService()
       await lifecycle.scheduleTurnTimeout(gameId)
+      // If next player is AI, schedule AI orchestrator
+      await lifecycle.scheduleAiTurn(gameId)
     } catch (error) {
       logger.warn('Failed to schedule turn timeout for next player', {
         roomId: gameId,
