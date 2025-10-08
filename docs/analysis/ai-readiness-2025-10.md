@@ -1,4 +1,4 @@
-# AI Opponent Readiness – February 2025 Audit
+# AI Opponent Readiness – Oct 2025 Audit
 
 ## What works today
 - **Lobby + lifecycle plumbing is complete.** Hosts can add AI seats (Recruit/Commander/Grandmaster) and those seats flow through lobby state, sockets, and readiness snapshots thanks to the work tracked in the original AI rollout plan.【F:docs/planning/ai-players-plan.md†L26-L38】
@@ -31,3 +31,60 @@ To implement the above confidently we need clarity on:
 - **Testing expectations:** What automated coverage (unit vs. integration vs. load) do you want before enabling AI seats broadly?
 
 Answering those will let us finish the turn runner, flesh out the decision models, and validate AI across every map/mode combo without surprises.
+
+## Confirmed decisions (Oct 2025)
+
+These decisions set production caps and UX behaviour; the tighter average targets in the AI Players Plan remain our performance goals (max vs. target distinction).
+
+**Action Pacing**
+- Real‑time per‑turn wall‑clock maxima by tier: Recruit ≤ 5 s; Commander ≤ 10 s; Grandmaster ≤ 15 s.
+- Target averages (unchanged; for performance telemetry): Recruit ≤ 1 s; Commander ≤ 2.5 s; Grandmaster ≤ 3 s.
+- Readability delays: 250–400 ms between visible actions (deploy/attack/fortify/end), clamped so total time never exceeds the tier max. In async games, condense delays to ≤ 150 ms.
+- Over‑budget handling: if the budget expires mid‑plan, truncate to a safe state (see Failure Handling) rather than running long.
+
+**Difficulty Differentiation**
+- Recruit — Playable, fast, forgiving
+  - Deterministic reinforcement (hold continents, shore up weak borders).
+  - Attack: one front at a time; favour ≥ 70% win odds; if none exist, allow at most one “spice” attack at 55–65% to keep play dynamic.
+  - Fortify: single simple move toward strongest border/capital; no multi‑hop pathing.
+  - Caps: max 3 attack sequences per turn.
+- Commander — Threat‑aware, balanced
+  - Greedy scoring + shallow search (1–2 ply) over a few best fronts.
+  - Continent pressure and card timing (avoid forced cash‑ins; snipe eliminations).
+  - Avoid low‑odds attacks; generally require ≥ 65–70% unless endgame payoff is clear.
+  - Fortify to hold continents and capitals; permit multi‑hop where rules allow.
+  - Caps: max 6 attack sequences per turn (still within budget).
+- Grandmaster — Competitive for experts
+  - Monte Carlo over candidate plans (time‑boxed); light opponent modelling and adaptive aggression.
+  - EV‑driven attack thresholds; take calculated risks for capitals/eliminations.
+  - Smarter fortify/reposition to set up multi‑turn pressure.
+  - Caps: no hard cap; implicitly limited by time budget and EV guardrails.
+
+**Variant Priorities**
+- Support all variants; optimize in this order for heuristics and tests: Classic → Capitals → Hidden Treasures → Fog of War → Teams → Territory Modifiers. Time Bank is orthogonal (scheduling) and needs no strategy changes.
+- Acceptance for each step:
+  - Classic: completes games with ≥ 95% reliability; no illegal moves; meets pacing targets.
+  - Capitals: defends own capital, opportunistically captures enemy capitals, fortifies toward capitals.
+  - Hidden Treasures: considers treasure value and set timing in reinforcement/attack decisions.
+  - Fog of War: planner uses only visible information; no leakage from hidden state.
+  - Teams: never attacks allies; basic fortify coordination (no offensive coordination required for first pass).
+
+**Failure Handling**
+- When no safe attack exists:
+  - Recruit: may take exactly one moderate‑risk attack (55–65% odds) to keep flow; otherwise fortify then end turn.
+  - Commander: skip risky attacks; prefer reposition/fortify; only attack when ≥ 65–70% or EV is clearly positive (e.g., elimination, capital capture).
+  - Grandmaster: respect EV thresholds from simulations; take low odds only for decisive objectives (capital, elimination, blocking set cash‑in), else fortify/end.
+- If time budget is exceeded mid‑turn:
+  - Recruit: immediately perform simple fortify (if available) then `end_turn`.
+  - Commander: execute the current best single action if EV ≥ threshold; else fall back to fortify + `end_turn`.
+  - Grandmaster: drop to a greedy fast path; if none available within 300 ms, fortify + `end_turn`.
+- Additional guards: per‑turn action caps (above), max 1 cash‑in decision per turn segment, and clamp dice rerolls to avoid thrash.
+
+Implementation notes:
+- Expose `DecisionBudget` fields to the strategy: `budgetMs`, `readableDelayMs`, `maxAttackChains`, `minAttackOddsByTier`, and `allowOneSpiceAttack` (Recruit only).
+- Log per‑tier metrics: planning time, actions tried/applied, odds distribution, and fallback reason (no‑safe‑attack, timeout, EV‑negative).
+
+What to verify locally:
+- Create Classic games with AI seats for each tier and confirm turns finish within caps and feel readable (small delays present, but not sluggish).
+- Spot‑check Capitals and Hidden Treasures with Recruit enabled: no illegal moves, basic capital defence, sensible treasure cash‑ins.
+- Enable Fog Adjacent and ensure no decisions rely on hidden info (watch logs for EV inputs).

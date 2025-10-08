@@ -675,7 +675,8 @@ export const selectTypingUsers = (
 ): Record<string, string> => state.messages.typing[conversationId] ?? {}
 
 export const selectHasMoreMessages = (state: RootState, conversationId: string): boolean =>
-  state.messages.hasMore[conversationId] ?? true
+  // Default to false until we've fetched at least once and know there are older messages
+  state.messages.hasMore[conversationId] ?? false
 
 export const selectActiveConversationId = (state: RootState): string | null =>
   state.messages.activeConversationId

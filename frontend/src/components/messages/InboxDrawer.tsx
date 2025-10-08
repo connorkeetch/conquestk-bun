@@ -230,7 +230,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
   const conversationSections = useMemo<ConversationSection[]>(() => {
     const sections: ConversationSection[] = [
-      { key: 'direct', label: 'Direct Messages', conversations: [] },
+      // Relabel leftbar section from "Direct Messages" to "Conversations"
+      { key: 'direct', label: 'Conversations', conversations: [] },
       { key: 'group', label: 'Group Chats', conversations: [] },
     ]
 
@@ -256,8 +257,9 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       : [],
   )
 
+  // Only show "Load earlier" when we know there are older messages
   const hasMore = drawerActiveConversationId
-    ? (hasMoreMap[drawerActiveConversationId] ?? true)
+    ? (hasMoreMap[drawerActiveConversationId] ?? false)
     : false
   const isThreadLoading = drawerActiveConversationId
     ? Boolean(loadingMessagesMap[drawerActiveConversationId])
@@ -288,7 +290,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       setDeleteError(null)
       const existing = messagesByConversation[conversationId]
       if (!existing || existing.length === 0) {
-        dispatch(loadConversationMessages({ conversationId, limit: 50 }))
+        // Load the most recent 20 messages on first open
+        dispatch(loadConversationMessages({ conversationId, limit: 20 }))
       }
       dispatch(refreshConversation(conversationId))
       dispatch(messagesActions.markReadOptimistic(conversationId))
@@ -320,7 +323,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     if (!drawerActiveConversationId) return
     const existing = messagesByConversation[drawerActiveConversationId] ?? []
     if (existing.length === 0) {
-      dispatch(loadConversationMessages({ conversationId: drawerActiveConversationId, limit: 50 }))
+      // Initial fetch if somehow not loaded yet (20 messages)
+      dispatch(loadConversationMessages({ conversationId: drawerActiveConversationId, limit: 20 }))
       return
     }
     const oldest = existing[0]
@@ -328,7 +332,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       loadConversationMessages({
         conversationId: drawerActiveConversationId,
         before: oldest.id,
-        limit: 50,
+        // Page older messages in batches of 20
+        limit: 20,
       }),
     )
   }, [drawerActiveConversationId, dispatch, messagesByConversation])
@@ -712,7 +717,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                       <div className="space-y-1">
                                         <p
                                           className={`text-sm ${
-                                            isActive
+                                            isActive || unread > 0
                                               ? 'font-semibold text-[color:var(--heading)]'
                                               : 'font-medium text-[color:var(--text)]'
                                           }`}

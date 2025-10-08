@@ -2,8 +2,7 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference lib="esnext" />
 
-declare let self: ServiceWorkerGlobalScope &
-  typeof globalThis & { __WB_MANIFEST: unknown }
+declare let self: ServiceWorkerGlobalScope & typeof globalThis & { __WB_MANIFEST: unknown }
 
 // Extend NotificationOptions with service-worker actions for better TS support
 type SWNotificationAction = { action: string; title: string }
@@ -53,8 +52,7 @@ registerRoute(
 
 // Fonts (Google fonts)
 registerRoute(
-  (ctx: RouteCtx) =>
-    ctx.request.destination === 'font' || ctx.url.hostname === 'fonts.gstatic.com',
+  (ctx: RouteCtx) => ctx.request.destination === 'font' || ctx.url.hostname === 'fonts.gstatic.com',
   new CacheFirst({
     cacheName: 'rk-fonts',
     plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 })],
