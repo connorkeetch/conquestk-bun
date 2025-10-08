@@ -25,8 +25,7 @@ export interface LifecycleUpdatePayload {
   turnExpiresAt?: string | null
   readyCheckStartedAt?: string | null
   timeBankSecondsRemaining?: number | null
-  graceActorUserId?: string | null
-  graceExpiresAt?: string | null
+  usingTimeBank?: boolean
   replacementPendingUserId?: string | null
   statusMessage?: string
   statusMessageLevel?: 'error' | 'info' | 'warn'
@@ -153,11 +152,8 @@ const roomSlice = createSlice({
           room.timeBankSecondsRemaining = action.payload.timeBankSecondsRemaining ?? null
         }
 
-        if (action.payload.graceActorUserId !== undefined) {
-          room.graceActorUserId = action.payload.graceActorUserId
-        }
-        if (action.payload.graceExpiresAt !== undefined) {
-          room.graceExpiresAt = action.payload.graceExpiresAt
+        if (action.payload.usingTimeBank !== undefined) {
+          room.usingTimeBank = action.payload.usingTimeBank
         }
         if (action.payload.replacementPendingUserId !== undefined) {
           room.replacementPendingUserId = action.payload.replacementPendingUserId

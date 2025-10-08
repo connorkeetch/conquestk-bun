@@ -44,9 +44,7 @@ export interface GameRoom {
   // Configured time bank capacity for turns (seconds)
   timeBankSeconds?: number
   timeBankSecondsRemaining?: number | null
-  // AFK grace window
-  graceActorUserId?: string | null
-  graceExpiresAt?: string | null
+  usingTimeBank?: boolean
   replacementPendingUserId?: string | null
   allowTeamPlay?: boolean
   teamMode?: 'none' | 'teams' | 'auto_balance' | null
@@ -75,4 +73,6 @@ export interface Player {
   isAi?: boolean
   aiDifficulty?: AIDifficulty | null
   aiPersonalitySeed?: number | null
+  missedTurns?: number
+  lastMissedTurnAt?: string | null
 }

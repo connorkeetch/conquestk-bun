@@ -45,10 +45,8 @@ export interface GameRoom {
   timeBankSecondsRemaining?: number | null
   // Configured time bank capacity for a turn (seconds)
   timeBankSeconds?: number
-  // AFK grace window
-  graceWindowSeconds?: number | null
-  graceActorUserId?: string | null
-  graceExpiresAt?: Date | null
+  // Whether the current player is in their time bank window
+  usingTimeBank?: boolean
   // Replacement decision by host after kick
   replacementPendingUserId?: string | null
   winner?: string | null
@@ -79,4 +77,6 @@ export interface Player {
   isAi?: boolean
   aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null
   aiPersonalitySeed?: number | null
+  missedTurns?: number
+  lastMissedTurnAt?: Date | null
 }

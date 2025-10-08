@@ -707,6 +707,7 @@ export class GameLifecycleService {
           turn_number = $2,
           current_turn_user_id = $3,
           turn_expires_at = CASE WHEN $4 > 0 THEN NOW() + ($4 * INTERVAL '1 second') ELSE NULL END,
+          using_time_bank = FALSE,
           ready_check_started_at = NULL,
           started_at = COALESCE(started_at, NOW())
       WHERE id = $1
@@ -738,121 +739,8 @@ export class GameLifecycleService {
       io.to(roomId).emit('game-update', serialized)
     }
 
-    // Schedule AFK grace start when the turn timer expires (instead of ending immediately)
-    try {
-      if (turnTimer && turnTimer > 0) {
-        const { queueService } = await import('./queueService')
-        const idKey = `afk:${roomId}:turn:${gameState.turn}:start`
-        await queueService.addDelayedGameAction(
-          {
-            gameId: roomId,
-            playerId: gameState.currentPlayer,
-            action: { type: 'end_turn', playerId: gameState.currentPlayer, roomId },
-            idempotencyKey: idKey,
-            afkStage: 'start',
-          },
-          turnTimer * 1000,
-          { idempotencyKey: idKey, priority: 10 },
-        )
-      }
-    } catch (error) {
-      logger.warn('Failed to schedule auto end-turn', {
-        roomId,
-        error: error instanceof Error ? error.message : error,
-      })
-    }
-  }
-
-  /**
-   * Try to extend the current player's turn by consuming time bank.
-   * Returns true if extension was applied and end-turn should be skipped.
-   */
-  async tryConsumeTimeBank(roomId: string, chunkSeconds = 15): Promise<boolean> {
-    const client = await getClient()
-    try {
-      await client.query('BEGIN')
-      const res = await client.query<{
-        current_turn_user_id: string | null
-        turn_expires_at: Date | null
-        turn_timer: number | null
-        remaining: number | null
-      }>(
-        `
-        SELECT gr.current_turn_user_id, gr.turn_expires_at, gr.turn_timer,
-               rp.time_bank_seconds_remaining as remaining
-        FROM game_rooms gr
-        LEFT JOIN room_players rp ON rp.room_id = gr.id AND rp.user_id = gr.current_turn_user_id
-        WHERE gr.id = $1
-        FOR UPDATE
-        `,
-        [roomId],
-      )
-      const row = res.rows[0]
-      if (!row || !row.current_turn_user_id || !row.remaining || row.remaining <= 0) {
-        await client.query('ROLLBACK')
-        return false
-      }
-
-      const extendBy = Math.max(1, Math.min(chunkSeconds, Math.trunc(row.remaining)))
-      await client.query(
-        `UPDATE room_players SET time_bank_seconds_remaining = time_bank_seconds_remaining - $2
-         WHERE room_id = $1 AND user_id = $3`,
-        [roomId, extendBy, row.current_turn_user_id],
-      )
-
-      // Update expiry to now + extendBy (or add to existing if in future)
-      await client.query(
-        `UPDATE game_rooms
-           SET turn_expires_at = CASE
-             WHEN turn_expires_at IS NULL OR turn_expires_at < NOW()
-               THEN NOW() + ($2 * INTERVAL '1 second')
-             ELSE turn_expires_at + ($2 * INTERVAL '1 second')
-           END
-         WHERE id = $1`,
-        [roomId, extendBy],
-      )
-
-      await client.query('COMMIT')
-
-      // Broadcast updated lifecycle
-      const snapshot = await this.getLifecycleSnapshot(roomId)
-      await this.broadcastLifecycle(snapshot)
-
-      // Reschedule AFK grace start for the extended chunk
-      try {
-        const turn = snapshot.room?.turnNumber ?? 0
-        const idKey = `afk:${roomId}:turn:${turn}:start`
-        // Cancel prior AFK-start for this turn, then schedule at new extended expiry
-        try {
-          await queueService.removeGameActionJob(idKey)
-        } catch (_c) {
-          // best-effort
-        }
-        await queueService.addDelayedGameAction(
-          {
-            gameId: roomId,
-            playerId: snapshot.room?.currentTurnUserId ?? '',
-            action: { type: 'end_turn', playerId: snapshot.room?.currentTurnUserId ?? '', roomId },
-            idempotencyKey: idKey,
-            afkStage: 'start',
-          },
-          extendBy * 1000,
-          { idempotencyKey: idKey, priority: 10 },
-        )
-      } catch (e) {
-        logger.warn('Failed to reschedule AFK grace after time bank extension', {
-          roomId,
-          error: e instanceof Error ? e.message : e,
-        })
-      }
-
-      return true
-    } catch (error) {
-      await client.query('ROLLBACK')
-      logger.error('Error trying to consume time bank', error)
-      return false
-    } finally {
-      client.release()
+    if (turnTimer && turnTimer > 0) {
+      await this.scheduleTurnTimeout(roomId, { seconds: turnTimer, usingTimeBank: false })
     }
   }
 
@@ -895,6 +783,14 @@ export class GameLifecycleService {
       isAi: player.isAi === true,
       aiDifficulty: player.aiDifficulty ?? null,
       aiPersonalitySeed: player.aiPersonalitySeed ?? null,
+      missedTurns:
+        typeof (player as { missedTurns?: number }).missedTurns === 'number'
+          ? ((player as { missedTurns?: number }).missedTurns as number)
+          : undefined,
+      lastMissedTurnAt:
+        player.lastMissedTurnAt instanceof Date
+          ? player.lastMissedTurnAt.toISOString()
+          : ((player as { lastMissedTurnAt?: string | null }).lastMissedTurnAt ?? null),
     }))
 
     const payload = {
@@ -908,10 +804,7 @@ export class GameLifecycleService {
         ? snapshot.room.readyCheckStartedAt.toISOString()
         : null,
       timeBankSecondsRemaining: snapshot.room.timeBankSecondsRemaining ?? null,
-      graceActorUserId: snapshot.room.graceActorUserId ?? null,
-      graceExpiresAt: snapshot.room.graceExpiresAt
-        ? snapshot.room.graceExpiresAt.toISOString()
-        : null,
+      usingTimeBank: snapshot.room.usingTimeBank ?? false,
       replacementPendingUserId: snapshot.room.replacementPendingUserId ?? null,
       readyStates: snapshot.readyStates,
       players,
@@ -932,12 +825,9 @@ export class GameLifecycleService {
       currentTurnUserId: snapshot.room.currentTurnUserId,
       turnExpiresAt: snapshot.room.turnExpiresAt ? snapshot.room.turnExpiresAt.toISOString() : null,
       timeBankSecondsRemaining: snapshot.room.timeBankSecondsRemaining ?? null,
+      usingTimeBank: snapshot.room.usingTimeBank ?? false,
       readyCheckStartedAt: snapshot.room.readyCheckStartedAt
         ? snapshot.room.readyCheckStartedAt.toISOString()
-        : null,
-      graceActorUserId: snapshot.room.graceActorUserId ?? null,
-      graceExpiresAt: snapshot.room.graceExpiresAt
-        ? snapshot.room.graceExpiresAt.toISOString()
         : null,
       replacementPendingUserId: snapshot.room.replacementPendingUserId ?? null,
       players,
@@ -1041,153 +931,135 @@ export class GameLifecycleService {
     return snapshot
   }
 
-  /**
-   * Begin AFK grace window when current player's time expires.
-   * Assign next player as grace actor and schedule auto-skip.
-   */
-  async beginAfkGrace(roomId: string): Promise<void> {
-    const client = await getClient()
+  async scheduleTurnTimeout(
+    roomId: string,
+    options?: { seconds?: number; usingTimeBank?: boolean },
+  ) {
     try {
-      await client.query('BEGIN')
-      const roomRes = await client.query<{
-        id: string
-        current_turn_user_id: string | null
-        turn_number: number | null
-        turn_expires_at: Date | null
-        grace_window_seconds: number | null
-        grace_actor_user_id: string | null
-        grace_expires_at: Date | null
-      }>(
-        `SELECT id, current_turn_user_id, turn_number, turn_expires_at, grace_window_seconds, grace_actor_user_id, grace_expires_at
-         FROM game_rooms
-         WHERE id = $1
-         FOR UPDATE`,
-        [roomId],
-      )
-      const room = roomRes.rows[0]
-      if (!room || !room.current_turn_user_id) {
-        await client.query('ROLLBACK')
-        return
-      }
-      // If the turn has been extended (e.g., via time bank) and not yet expired, do not start grace.
-      if (room.turn_expires_at && room.turn_expires_at > new Date()) {
-        await client.query('ROLLBACK')
-        return
-      }
-      // If already in grace and not expired, do nothing
-      if (room.grace_actor_user_id && room.grace_expires_at && room.grace_expires_at > new Date()) {
-        await client.query('ROLLBACK')
-        return
-      }
+      const room = await this.gameRoomService.getRoomById(roomId)
+      const seconds = options?.seconds ?? room?.turnTimerSeconds ?? 0
+      const currentTurnUserId = room?.currentTurnUserId ?? null
+      if (!seconds || seconds <= 0 || !currentTurnUserId) return
 
-      // Load current game state to compute next actor
-      const { gameStateCache } = await import('./cacheService')
-      const raw =
-        await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
-      if (!raw) {
-        await client.query('ROLLBACK')
-        return
-      }
-      const players = raw.players
-      const currentId = raw.currentPlayer
-      const currentIdx = players.findIndex((p) => p.id === currentId)
-      if (currentIdx < 0) {
-        await client.query('ROLLBACK')
-        return
-      }
-      let nextIdx = (currentIdx + 1) % players.length
-      while (players[nextIdx].isEliminated) {
-        nextIdx = (nextIdx + 1) % players.length
-        if (nextIdx === currentIdx) break
-      }
-      const graceActorId = players[nextIdx]?.id
-      if (!graceActorId || graceActorId === currentId) {
-        await client.query('ROLLBACK')
-        return
-      }
-
-      const windowSeconds = Math.max(5, Math.trunc(room.grace_window_seconds ?? 20))
-      await client.query(
-        `UPDATE game_rooms
-           SET grace_actor_user_id = $2,
-               grace_expires_at = NOW() + ($3 * INTERVAL '1 second')
-         WHERE id = $1`,
-        [roomId, graceActorId, windowSeconds],
-      )
-
-      await client.query('COMMIT')
-
-      // Broadcast lifecycle with grace fields
-      await this.refreshLifecycle(roomId)
-
-      // Schedule auto-skip when grace expires
       try {
-        const idKey = `afk:${roomId}:turn:${room.turn_number ?? 0}:skip`
-        await queueService.addDelayedGameAction(
-          {
-            gameId: roomId,
-            playerId: graceActorId,
-            action: { type: 'end_turn', playerId: room.current_turn_user_id, roomId },
-            idempotencyKey: idKey,
-            afkStage: 'skip',
-          },
-          windowSeconds * 1000,
-          { idempotencyKey: idKey, priority: 10 },
+        await query(
+          `UPDATE game_rooms
+             SET turn_expires_at = NOW() + ($2 * INTERVAL '1 second'),
+                 using_time_bank = $3
+           WHERE id = $1`,
+          [roomId, seconds, options?.usingTimeBank === true],
         )
       } catch (e) {
-        logger.warn('Failed to schedule AFK auto-skip', {
+        logger.warn('Failed to persist turn timeout window', {
           roomId,
+          usingTimeBank: options?.usingTimeBank === true,
           error: e instanceof Error ? e.message : e,
         })
       }
+
+      const turnNumber = room?.turnNumber ?? 0
+      const idKey = `turn-timeout:${roomId}:turn:${turnNumber}`
+      try {
+        await queueService.removeGameActionJob(idKey)
+      } catch (_e) {
+        // best-effort
+      }
+
+      await queueService.addDelayedGameAction(
+        {
+          gameId: roomId,
+          playerId: currentTurnUserId,
+          action: { type: 'end_turn', playerId: currentTurnUserId, roomId },
+          idempotencyKey: idKey,
+          turnTimeoutStage: 'expire',
+        },
+        seconds * 1000,
+        { idempotencyKey: idKey, priority: 10 },
+      )
+
+      await this.refreshLifecycle(roomId)
     } catch (error) {
-      await client.query('ROLLBACK')
-      logger.error('Error beginning AFK grace', error)
-    } finally {
-      client.release()
+      logger.warn('Failed to schedule turn timeout', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
     }
   }
 
-  /**
-   * Perform AFK skip of the current player's turn.
-   */
-  async skipAfkTurn(roomId: string, actorUserId: string | null, reason: 'auto' | 'actor' = 'auto') {
+  async handleTurnTimeout(roomId: string): Promise<void> {
     const client = await getClient()
+    let strikes = 0
+    let targetUserId: string | null = null
+    let consumedBankSeconds = 0
+    let shouldSkip = false
     try {
       await client.query('BEGIN')
-      const roomRes = await client.query<{
-        id: string
+      const res = await client.query<{
         current_turn_user_id: string | null
+        turn_expires_at: Date | null
         turn_timer: number | null
-        grace_actor_user_id: string | null
-        grace_expires_at: Date | null
+        using_time_bank: boolean
+        time_bank_seconds_remaining: number | null
       }>(
-        `SELECT id, current_turn_user_id, turn_timer, grace_actor_user_id, grace_expires_at FROM game_rooms WHERE id = $1 FOR UPDATE`,
+        `
+        SELECT gr.current_turn_user_id,
+               gr.turn_expires_at,
+               gr.turn_timer,
+               gr.using_time_bank,
+               rp.time_bank_seconds_remaining
+          FROM game_rooms gr
+          LEFT JOIN room_players rp
+            ON rp.room_id = gr.id AND rp.user_id = gr.current_turn_user_id
+         WHERE gr.id = $1
+         FOR UPDATE
+        `,
         [roomId],
       )
-      const room = roomRes.rows[0]
-      if (!room || !room.current_turn_user_id) {
+      const row = res.rows[0]
+      if (!row || !row.current_turn_user_id) {
         await client.query('ROLLBACK')
         return
       }
-      // Validate actor for manual skip
-      if (reason === 'actor') {
-        if (!actorUserId || room.grace_actor_user_id !== actorUserId) {
-          await client.query('ROLLBACK')
-          return
-        }
-        if (!room.grace_expires_at || room.grace_expires_at < new Date()) {
-          await client.query('ROLLBACK')
-          return
-        }
+
+      targetUserId = row.current_turn_user_id
+      const now = new Date()
+      if (row.turn_expires_at && row.turn_expires_at > now) {
+        await client.query('ROLLBACK')
+        return
       }
 
-      const targetUserId = room.current_turn_user_id
+      const remainingBank = Math.max(0, Math.trunc(row.time_bank_seconds_remaining ?? 0))
 
-      // Increment missed_turns
+      if (!row.using_time_bank && remainingBank > 0) {
+        consumedBankSeconds = remainingBank
+        await client.query(
+          `UPDATE room_players
+             SET time_bank_seconds_remaining = 0
+           WHERE room_id = $1 AND user_id = $2`,
+          [roomId, targetUserId],
+        )
+        await client.query(
+          `UPDATE game_rooms
+             SET using_time_bank = TRUE,
+                 turn_expires_at = NOW() + ($3 * INTERVAL '1 second')
+           WHERE id = $1`,
+          [roomId, consumedBankSeconds],
+        )
+
+        await client.query('COMMIT')
+
+        await this.scheduleTurnTimeout(roomId, {
+          seconds: consumedBankSeconds,
+          usingTimeBank: true,
+        })
+        return
+      }
+
+      shouldSkip = true
       await client.query(
         `UPDATE room_players
-           SET missed_turns = missed_turns + 1
+           SET missed_turns = missed_turns + 1,
+               last_missed_turn_at = NOW()
          WHERE room_id = $1 AND user_id = $2`,
         [roomId, targetUserId],
       )
@@ -1195,148 +1067,96 @@ export class GameLifecycleService {
         `SELECT missed_turns FROM room_players WHERE room_id = $1 AND user_id = $2`,
         [roomId, targetUserId],
       )
-      const strikes = missedRes.rows[0]?.missed_turns ?? 0
+      strikes = missedRes.rows[0]?.missed_turns ?? 0
 
-      // Clear grace fields immediately
       await client.query(
-        `UPDATE game_rooms SET grace_actor_user_id = NULL, grace_expires_at = NULL WHERE id = $1`,
+        `UPDATE game_rooms
+           SET using_time_bank = FALSE,
+               turn_expires_at = NULL
+         WHERE id = $1`,
         [roomId],
       )
 
       await client.query('COMMIT')
-
-      // Apply skip on game state and schedule next turn's timer
-      const { GameService } = await import('./gameService')
-      const gameService = new GameService()
-      try {
-        // AFK skip can advance even if reinforcements remain
-        const result = await gameService.endTurn(roomId, targetUserId, { allowEarlyEnd: true })
-        // Broadcast deltas like socketService does, ensuring treasure first
-        try {
-          const io = tryGetSocketServer()
-          if (io) {
-            const { DeltaBuilder } = await import('../types/deltaUpdates')
-            const channel = `game:${roomId}`
-            if (result.treasureAwarded) {
-              io.to(channel).emit('game-delta', {
-                type: 'TREASURE_AWARDED',
-                roomId,
-                timestamp: Date.now(),
-                userId: targetUserId,
-                metal: result.treasureAwarded,
-              })
-            }
-            const phaseDelta = DeltaBuilder.phaseChange(
-              roomId,
-              result.gameState.phase,
-              result.gameState.currentPlayer,
-              result.gameState.turn,
-              result.reinforcementArmies,
-            )
-            io.to(channel).emit('game-delta', phaseDelta)
-          }
-        } catch (ee) {
-          logger.warn('Failed to emit deltas after AFK skip', {
-            roomId,
-            error: ee instanceof Error ? ee.message : ee,
-          })
-        }
-      } catch (e) {
-        logger.warn('AFK skip: endTurn failed', {
-          roomId,
-          targetUserId,
-          error: e instanceof Error ? e.message : e,
-        })
-      }
-
-      // If strikes >= 3, mark kicked and set host replacement pending
-      if (strikes >= 3) {
-        try {
-          await query(
-            `UPDATE room_players SET is_kicked = TRUE WHERE room_id = $1 AND user_id = $2`,
-            [roomId, targetUserId],
-          )
-          await query(`UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`, [
-            roomId,
-            targetUserId,
-          ])
-        } catch (e) {
-          logger.warn('Failed to mark player kicked / replacement pending', {
-            roomId,
-            targetUserId,
-            error: e instanceof Error ? e.message : e,
-          })
-        }
-      }
-
-      // Schedule next AFK start for the new current player
-      await this.scheduleTurnAutoAfk(roomId)
-
-      // Broadcast updated lifecycle (includes replacement pending if applicable)
-      await this.refreshLifecycle(roomId)
     } catch (error) {
       await client.query('ROLLBACK')
-      logger.error('Error performing AFK skip', error)
+      logger.error('Error handling turn timeout', error)
+      return
     } finally {
       client.release()
     }
-  }
 
-  private async scheduleTurnAutoAfk(roomId: string) {
+    if (!shouldSkip || !targetUserId) {
+      return
+    }
+
     try {
-      const room = await this.gameRoomService.getRoomById(roomId)
-      const seconds = room?.turnTimerSeconds ?? 0
-      const currentTurnUserId = room?.currentTurnUserId ?? null
-      if (!seconds || seconds <= 0 || !currentTurnUserId) return
-      // Persist new turn_expires_at for UI
+      const result = await this.gameService.endTurn(roomId, targetUserId, { allowEarlyEnd: true })
       try {
-        await query(
-          `UPDATE game_rooms
-             SET turn_expires_at = NOW() + ($2 * INTERVAL '1 second')
-           WHERE id = $1`,
-          [roomId, seconds],
-        )
-      } catch (e) {
-        logger.warn('Failed to persist turn_expires_at', {
+        const io = tryGetSocketServer()
+        if (io) {
+          const { DeltaBuilder } = await import('../types/deltaUpdates')
+          const channel = `game:${roomId}`
+          if (result.treasureAwarded) {
+            io.to(channel).emit('game-delta', {
+              type: 'TREASURE_AWARDED',
+              roomId,
+              timestamp: Date.now(),
+              userId: targetUserId,
+              metal: result.treasureAwarded,
+            })
+          }
+          const phaseDelta = DeltaBuilder.phaseChange(
+            roomId,
+            result.gameState.phase,
+            result.gameState.currentPlayer,
+            result.gameState.turn,
+            result.reinforcementArmies,
+          )
+          io.to(channel).emit('game-delta', phaseDelta)
+        }
+      } catch (ee) {
+        logger.warn('Failed to emit deltas after timeout skip', {
           roomId,
-          error: e instanceof Error ? e.message : e,
+          error: ee instanceof Error ? ee.message : ee,
         })
       }
-      // Use deterministic job id per room+turn to allow rescheduling/cancellation
-      const idKey = `afk:${roomId}:turn:${room?.turnNumber ?? 0}:start`
-      // Cancel any existing AFK-start for this turn before scheduling a new one
-      try {
-        await queueService.removeGameActionJob(idKey)
-      } catch (_e) {
-        // best-effort
-      }
-      await queueService.addDelayedGameAction(
-        {
-          gameId: roomId,
-          playerId: currentTurnUserId,
-          action: { type: 'end_turn', playerId: currentTurnUserId, roomId },
-          idempotencyKey: idKey,
-          afkStage: 'start',
-        },
-        seconds * 1000,
-        { idempotencyKey: idKey, priority: 10 },
-      )
-      // Broadcast updated lifecycle so clients see the new timer
-      await this.refreshLifecycle(roomId)
     } catch (error) {
-      logger.warn('Failed to schedule AFK start for next player', {
+      logger.warn('Turn timeout: endTurn failed', {
         roomId,
+        targetUserId,
         error: error instanceof Error ? error.message : error,
       })
     }
+
+    if (strikes >= 3 && targetUserId) {
+      try {
+        await this.kickAndNeutralize(roomId, targetUserId)
+        await query(`UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`, [
+          roomId,
+          targetUserId,
+        ])
+      } catch (error) {
+        logger.warn('Failed to neutralize kicked player after strikes', {
+          roomId,
+          targetUserId,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+    }
+
+    await this.scheduleTurnTimeout(roomId)
   }
 
   async kickAndNeutralize(roomId: string, userId: string) {
     await this.gameService.neutralizePlayerAndResolve(roomId, userId)
     // Persist DB flags
-    await query(`UPDATE room_players SET is_kicked = TRUE WHERE room_id = $1 AND user_id = $2`, [
-      roomId,
-      userId,
-    ])
+    await query(
+      `UPDATE room_players
+         SET is_kicked = TRUE,
+             elimination_reason = 'timeout'
+       WHERE room_id = $1 AND user_id = $2`,
+      [roomId, userId],
+    )
   }
 }

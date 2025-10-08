@@ -97,6 +97,8 @@ interface PlayerRow {
   isAi?: boolean | null
   aiDifficulty?: string | null
   aiPersonalitySeed?: number | null
+  missedTurns?: number | null
+  lastMissedTurnAt?: Date | string | null
 }
 
 interface GameRoomWithPlayersRow extends GameRoomRow {
@@ -427,6 +429,11 @@ export class GameRoomService {
               : player.aiPersonalitySeed === null
                 ? null
                 : undefined,
+          missedTurns:
+            typeof player.missedTurns === 'number'
+              ? Math.max(0, Math.trunc(player.missedTurns))
+              : undefined,
+          lastMissedTurnAt: this.toDate(player.lastMissedTurnAt) ?? null,
         }
       })
 
@@ -524,17 +531,10 @@ export class GameRoomService {
       timeBankSecondsRemaining: this.parseNullableNumber(
         (row as Record<string, unknown>).time_bank_seconds_remaining,
       ),
-      graceWindowSeconds: this.parseNullableNumber(
-        (row as Record<string, unknown>).grace_window_seconds,
-      ),
-      graceActorUserId: (row as Record<string, unknown>).grace_actor_user_id as
-        | string
-        | null
-        | undefined,
-      graceExpiresAt:
-        this.toDate(
-          (row as Record<string, unknown>).grace_expires_at as Date | string | null | undefined,
-        ) ?? null,
+      usingTimeBank:
+        typeof (row as Record<string, unknown>).using_time_bank === 'boolean'
+          ? ((row as Record<string, unknown>).using_time_bank as boolean)
+          : false,
       readyCheckStartedAt: this.toDate(row.ready_check_started_at) ?? null,
       // Winner (user id) captured at game end; DB column is winner_id
       winner:
@@ -821,7 +821,9 @@ export class GameRoomService {
                   'teamId', rp.team_id,
                   'isAi', rp.is_ai,
                   'aiDifficulty', rp.ai_difficulty,
-                  'aiPersonalitySeed', rp.ai_personality_seed
+                  'aiPersonalitySeed', rp.ai_personality_seed,
+                  'missedTurns', rp.missed_turns,
+                  'lastMissedTurnAt', rp.last_missed_turn_at
                )
                ORDER BY rp.joined_at
              ) FILTER (WHERE rp.id IS NOT NULL) as players

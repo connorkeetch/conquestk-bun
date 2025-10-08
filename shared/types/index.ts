@@ -650,9 +650,7 @@ export interface ServerToClientEvents {
     turnExpiresAt: string | null
     readyCheckStartedAt: string | null
     timeBankSecondsRemaining?: number | null
-    // AFK grace window (if active)
-    graceActorUserId?: string | null
-    graceExpiresAt?: string | null
+    usingTimeBank?: boolean
     // Host replacement (if pending)
     replacementPendingUserId?: string | null
     readyStates: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
@@ -673,9 +671,7 @@ export interface ServerToClientEvents {
     turnExpiresAt?: string | null
     timeBankSecondsRemaining?: number | null
     readyCheckStartedAt?: string | null
-    // AFK grace window (if active)
-    graceActorUserId?: string | null
-    graceExpiresAt?: string | null
+    usingTimeBank?: boolean
     // Host replacement (if pending)
     replacementPendingUserId?: string | null
     players?: Array<{
@@ -720,8 +716,6 @@ export interface ClientToServerEvents {
     armies: number
   }) => void
   undoFortify: (data: { roomId: string }) => void
-  'afk:skip': (data: { roomId: string }) => void
-  'afk:remind': (data: { roomId: string }) => void
   'host:replacement': (data: {
     roomId: string
     targetUserId: string

@@ -98,29 +98,14 @@ export class GameActionWorker {
         actionType: action.type,
       })
 
-      // Special handling for AFK stages (grace scheduling/skip) before any validation
-      if ((job.data as { afkStage?: 'start' | 'skip' }).afkStage === 'start') {
+      // Special handling for automatic timeout progression before any validation
+      if ((job.data as { turnTimeoutStage?: 'expire' }).turnTimeoutStage === 'expire') {
         try {
           const { GameLifecycleService } = await import('../services/gameLifecycleService')
           const lifecycle = new GameLifecycleService()
-          await lifecycle.beginAfkGrace(gameId)
+          await lifecycle.handleTurnTimeout(gameId)
         } catch (e) {
-          logger.warn('AFK grace start failed', {
-            roomId: gameId,
-            error: e instanceof Error ? e.message : e,
-          })
-        }
-        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
-        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
-        return result
-      }
-      if ((job.data as { afkStage?: 'start' | 'skip' }).afkStage === 'skip') {
-        try {
-          const { GameLifecycleService } = await import('../services/gameLifecycleService')
-          const lifecycle = new GameLifecycleService()
-          await lifecycle.skipAfkTurn(gameId, job.data.playerId, 'auto')
-        } catch (e) {
-          logger.warn('AFK auto-skip failed', {
+          logger.warn('Turn timeout handling failed', {
             roomId: gameId,
             error: e instanceof Error ? e.message : e,
           })
@@ -471,34 +456,12 @@ export class GameActionWorker {
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
     const nextPlayer = await this.gameService.processEndTurn(gameId, playerId)
 
-    // Schedule next AFK grace start at the end of next player's timer
     try {
-      const { GameRoomService } = await import('../services/gameRoomService')
-      const roomService = new GameRoomService()
-      const room = await roomService.getRoomById(gameId)
-      const seconds = room?.turnTimerSeconds ?? 0
-      if (seconds && seconds > 0) {
-        // Use deterministic job id per room+turn and cancel any existing AFK-start for this turn
-        const idKey = `afk:${gameId}:turn:${room?.turnNumber ?? 0}:start`
-        try {
-          await queueService.removeGameActionJob(idKey)
-        } catch (_e) {
-          // best-effort
-        }
-        await queueService.addDelayedGameAction(
-          {
-            gameId,
-            playerId: nextPlayer.id,
-            action: { type: 'end_turn', playerId: nextPlayer.id, roomId: gameId },
-            idempotencyKey: idKey,
-            afkStage: 'start',
-          },
-          seconds * 1000,
-          { idempotencyKey: idKey, priority: 10 },
-        )
-      }
+      const { GameLifecycleService } = await import('../services/gameLifecycleService')
+      const lifecycle = new GameLifecycleService()
+      await lifecycle.scheduleTurnTimeout(gameId)
     } catch (error) {
-      logger.warn('Failed to schedule auto end-turn for next player', {
+      logger.warn('Failed to schedule turn timeout for next player', {
         roomId: gameId,
         error: error instanceof Error ? error.message : error,
       })

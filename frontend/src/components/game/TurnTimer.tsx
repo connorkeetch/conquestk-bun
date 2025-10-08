@@ -17,6 +17,7 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   const isFinished = game?.phase === 'finished' || room?.status === 'completed'
 
   const isCurrentTurn = Boolean(userId && game?.currentPlayer === userId)
+  const usingTimeBank = room?.usingTimeBank === true
 
   const expiresAt = useMemo(() => {
     if (!room?.turnExpiresAt) return null
@@ -45,7 +46,8 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   }, [isCurrentTurn, remainingMs, isFinished])
 
   const total = Math.max(1, (game?.settings?.turnTimer ?? game?.gameConfig?.turnTimer ?? 60) * 1000)
-  const ratio = Math.max(0, Math.min(1, (remainingMs ?? 0) / total))
+  const ratioBase = Math.max(0, Math.min(1, (remainingMs ?? 0) / total))
+  const ratio = usingTimeBank ? 0 : ratioBase
   const totalSeconds = Math.ceil((remainingMs ?? 0) / 1000)
 
   // Worded time format: e.g., "1h 02m 03s", "2m 05s", "45s"
@@ -69,23 +71,19 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
         ? 'text-yellow-300'
         : 'text-red-400'
 
-  // Optional: time bank display if the backend provides it
-  const bankSeconds =
+  const availableBankSeconds =
     typeof room?.timeBankSecondsRemaining === 'number'
       ? Math.max(0, Math.trunc(room.timeBankSecondsRemaining))
       : null
 
-  // Local approximation: when it's my turn and the main timer is exhausted, show
-  // a locally ticking time bank based on how long we've been in overtime.
-  const effectiveBankSeconds = useMemo(() => {
-    if (typeof bankSeconds !== 'number') return null
-    if (!isCurrentTurn) return bankSeconds
-    if (!expiresAt) return bankSeconds
-    const overMs = now - expiresAt
-    if (overMs <= 0) return bankSeconds
-    const consumed = Math.floor(overMs / 1000)
-    return Math.max(0, bankSeconds - consumed)
-  }, [bankSeconds, isCurrentTurn, expiresAt, now])
+  const activeBankSeconds =
+    usingTimeBank && expiresAt ? Math.max(0, Math.ceil((expiresAt - now) / 1000)) : null
+
+  const displaySeconds =
+    usingTimeBank && typeof activeBankSeconds === 'number' ? activeBankSeconds : totalSeconds
+  const timerClass = usingTimeBank
+    ? 'text-xs tabular-nums text-red-400 font-semibold animate-pulse'
+    : `text-xs tabular-nums ${color}`
 
   // After hooks are defined, early-return if no timer expiry provided
   if (isFinished) {
@@ -106,10 +104,23 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
         <div className={`text-xs ${color}`}>Paused</div>
       ) : (
         <>
-          <div className={`text-xs tabular-nums ${color}`}>{formatWorded(totalSeconds)}</div>
-          {showBank && typeof effectiveBankSeconds === 'number' && effectiveBankSeconds > 0 && (
-            <span className="chip text-[10px]" title="Time bank remaining">
-              +{formatWorded(effectiveBankSeconds)}
+          <div className={timerClass}>
+            {usingTimeBank ? `Bank ${formatWorded(displaySeconds)}` : formatWorded(displaySeconds)}
+          </div>
+          {showBank &&
+            !usingTimeBank &&
+            typeof availableBankSeconds === 'number' &&
+            availableBankSeconds > 0 && (
+              <span className="chip text-[10px]" title="Time bank remaining">
+                +{formatWorded(availableBankSeconds)}
+              </span>
+            )}
+          {showBank && usingTimeBank && (
+            <span
+              className="chip text-[10px] text-red-200 bg-red-500/20 animate-pulse"
+              title="Time bank active"
+            >
+              Time bank
             </span>
           )}
         </>
