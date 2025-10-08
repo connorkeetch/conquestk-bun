@@ -1,4 +1,5 @@
 import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game'
+import { GameEngine } from '../game/gameEngine'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures'
 
 type FallbackReason = 'stubbed' | 'timeout' | 'aborted'
@@ -211,7 +212,7 @@ class AIDecisionService {
 
     // 4) Fortify toward weak borders and capitals
     if (phase === 'fortify') {
-      const fort = this.findRecruitFortify(gameState, player.id)
+      const fort = this.findGrandmasterFortify(gameState, player.id)
       if (fort) push(fort)
       push({ type: 'end_turn', roomId, playerId: player.id })
     }
@@ -453,6 +454,61 @@ class AIDecisionService {
     const valueIfWin = territoryBase + sectorVal + capitalBonus
     const ev = pWin * valueIfWin - expALoss * 0.2 + expDLoss * 0.05
     return ev
+  }
+
+  private findGrandmasterFortify(gameState: GameState, playerId: string): GameAction | null {
+    const owned = gameState.board.filter((t) => t.ownerId === playerId)
+    if (owned.length === 0) return null
+
+    const engine = new GameEngine()
+
+    // Sources: interior stacks with enough armies to move
+    const sources = owned
+      .filter((t) => t.armies >= 4 && !this.hasEnemyNeighbor(gameState, t, playerId))
+      .sort((a, b) => b.armies - a.armies)
+
+    // Precompute sector control
+    const sectorCtrl = new Map<string, { owned: number; total: number }>()
+    for (const t of gameState.board) {
+      const key = t.sector || t.continent || 'unknown'
+      const e = sectorCtrl.get(key) ?? { owned: 0, total: 0 }
+      e.total += 1
+      if (t.ownerId === playerId) e.owned += 1
+      sectorCtrl.set(key, e)
+    }
+
+    let best: { from: string; to: string; armies: number; score: number } | null = null
+    for (const src of sources) {
+      const targets = engine.getValidFortifyTargets(gameState, src.id, playerId)
+      if (!targets || targets.length === 0) continue
+      for (const tid of targets) {
+        const tgt = this.getTerritory(gameState, tid)
+        if (!tgt) continue
+        // Prefer capitals and weak borders; avoid moving to interior
+        const isBorder = this.hasEnemyNeighbor(gameState, tgt, playerId)
+        if (!isBorder && !tgt.isCapital) continue
+        const sector = tgt.sector || tgt.continent || 'unknown'
+        const ctrl = sectorCtrl.get(sector) ?? { owned: 0, total: 1 }
+        const willOwn = ctrl.owned // fortify does not change ownership
+        const progress = willOwn / Math.max(1, ctrl.total)
+        const capBonus = tgt.isCapital === true ? 3 : 0
+        const borderWeakness = isBorder ? Math.max(0, 8 - tgt.armies) : 0
+        const score = capBonus + borderWeakness + progress
+        const moveable = Math.max(1, src.armies - 1)
+        const armies = Math.max(1, Math.min(moveable, Math.ceil(moveable / 2)))
+        if (!best || score > best.score) {
+          best = { from: src.id, to: tid, armies, score }
+        }
+      }
+    }
+
+    if (!best) return null
+    return {
+      type: 'fortify',
+      roomId: gameState.roomId,
+      playerId,
+      payload: { fromTerritoryId: best.from, toTerritoryId: best.to, armies: best.armies },
+    }
   }
 
   private sectorCaptureValue(state: GameState, playerId: string, to: GameState['board'][number]): number {
