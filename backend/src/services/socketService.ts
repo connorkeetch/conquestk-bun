@@ -202,12 +202,11 @@ function serializeGameStateForClient(
   const s = state as GameState
   const players = s.players.map((p) => ({
     id: p.id,
-    userId: p.userId,
     username: p.username,
     color: p.color,
     armies: p.armies,
     isEliminated: p.isEliminated,
-    teamId: p.teamId,
+    teamId: p.teamId ?? undefined,
     treasures: p.treasures,
   }))
   const board = s.board.map((t) => ({
@@ -225,13 +224,11 @@ function serializeGameStateForClient(
     teamMode: cfg.teamMode,
     numberOfTeams: cfg.numberOfTeams,
     mapId: cfg.mapId,
-    turnTimer: cfg.turnTimer,
     fogOfWar: cfg.fogOfWar,
     treasureConfig: cfg.treasureConfig,
-    isRanked: cfg.isRanked,
   }
 
-  const base: SerializedGameState = {
+  const base: any = {
     roomId: s.roomId,
     phase: s.phase,
     currentPlayer: s.currentPlayer,
@@ -239,9 +236,9 @@ function serializeGameStateForClient(
     players,
     board,
     gameConfig: gameConfig as unknown as SerializedGameState['gameConfig'],
-    reinforcementArmies: (s as SerializedGameState).reinforcementArmies,
     kingOfTheHillState: (s as SerializedGameState).kingOfTheHillState,
     assassinationTargets: (s as SerializedGameState).assassinationTargets,
+    cards: Array.isArray((s as any).cards) ? (s as any).cards : [],
   } as SerializedGameState
 
   // Include territory modifiers when present (convert Map to plain object)
@@ -252,7 +249,7 @@ function serializeGameStateForClient(
     ;(base as any).territoryModifiers = territoryModifiers
   }
 
-  return base
+  return base as SerializedGameState
 }
 
 interface UserRatingRow extends QueryResultRow {
