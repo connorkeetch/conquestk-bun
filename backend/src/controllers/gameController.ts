@@ -740,13 +740,18 @@ export class GameController {
         maxPlayers: game.maxPlayers,
         roomCode: game.roomCode,
         isYourTurn: game.currentTurnUserId === userId,
-        // Return winner username when available
+        // Winner username for completed games
         winner:
           game.status === 'completed' && typeof game.winner === 'string'
             ? (winnerNameMap.get(game.winner) ?? null)
             : null,
         createdAt: game.createdAt,
         updatedAt: game.updatedAt ?? game.createdAt,
+        // Extra fields to support My Games columns
+        isPrivate: game.isPrivate,
+        hostUsername: game.hostUsername,
+        isRanked: game.is_ranked === true,
+        gameMode: game.gameMode ?? null,
       }))
 
       return res.json({ games: formattedGames })
@@ -781,6 +786,7 @@ export class GameController {
                   turnExpiresAt: null,
                   timeBankSecondsRemaining: null,
                   queueAhead: null,
+                  phase: null,
                 },
               ] as const
             }
@@ -794,6 +800,8 @@ export class GameController {
                 : null
 
             let queueAhead: number | null = null
+            let phase: import('../types/game').GamePhase | 'lobby' | 'initializing' | 'finished' | null =
+              null
             let currentTurnUsername: string | null = null
             try {
               const gameState = await this.gameService.getGameState(game.id)
@@ -810,6 +818,8 @@ export class GameController {
                   const dist = (((youIdx - curIdx) % n) + n) % n
                   queueAhead = dist
                 }
+                // Capture current phase for active games
+                phase = gameState.phase
               }
             } catch (_err) {
               // Non-fatal; leave queueAhead/username as null
@@ -824,6 +834,7 @@ export class GameController {
                 turnExpiresAt,
                 timeBankSecondsRemaining,
                 queueAhead,
+                phase,
               },
             ] as const
           } catch (_err) {
@@ -836,6 +847,7 @@ export class GameController {
                 turnExpiresAt: null,
                 timeBankSecondsRemaining: null,
                 queueAhead: null,
+                phase: null,
               },
             ] as const
           }
@@ -851,6 +863,7 @@ export class GameController {
           turnExpiresAt: string | null
           timeBankSecondsRemaining: number | null
           queueAhead: number | null
+          phase: string | null
         }
       > = {}
 
