@@ -4,8 +4,8 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 const root = path.resolve(process.cwd())
-// Use the CROPPED brand artwork and wrap it with an inline glow + crop in SVG
-const brandSvgPath = path.join(root, 'frontend/public/Conquest_K_Logo-cropped.svg')
+// Use the base brand artwork and wrap it with an inline glow + crop in SVG
+const brandSvgPath = path.join(root, 'frontend/public/Conquest_K_Logo.svg')
 const out512 = path.join(root, 'frontend/public/icon-512.png')
 const out192 = path.join(root, 'frontend/public/icon-192.png')
 const out180 = path.join(root, 'frontend/public/apple-touch-icon-180.png')
