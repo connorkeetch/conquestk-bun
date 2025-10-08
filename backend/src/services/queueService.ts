@@ -106,6 +106,11 @@ const QUEUE_CONFIGS = {
     concurrency: 2,
     priority: 'low' as const,
   },
+  analyticsEvents: {
+    name: 'analytics-events',
+    concurrency: 5,
+    priority: 'low' as const,
+  },
 } as const
 
 export interface QueueStats {
@@ -413,6 +418,20 @@ export class QueueService {
       priority: 1, // Low priority
       delay: job.reason === 'timeout' ? 30000 : 0, // 30s delay for timeouts
     })
+  }
+
+  // Analytics/Event Queue (fire-and-forget)
+  async addAnalyticsEvent(job: { event: string; gameId: string; data: unknown }): Promise<Bull.Job | null> {
+    if (!this.redis || !this.isInitialized) {
+      return null
+    }
+    const queue = this.resolveQueue('analyticsEvents')
+    if (!queue) return null
+    try {
+      return queue.add('analytics-event', job, { priority: 1 })
+    } catch {
+      return null
+    }
   }
 
   // Queue monitoring

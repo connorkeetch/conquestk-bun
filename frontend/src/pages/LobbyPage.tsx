@@ -22,6 +22,12 @@ interface GameInfo {
   isYourTurn?: boolean
   winner?: string | null
   createdAt: string
+  // Additional fields provided by backend for My Games table
+  updatedAt?: string
+  gameMode?: string | null
+  isRanked?: boolean
+  hostUsername?: string
+  isPrivate?: boolean
 }
 
 type RawLobbyRoom = GameRoom & {
@@ -236,6 +242,7 @@ const LobbyPage: React.FC = () => {
         queueAhead?: number | null
         currentTurnUsername?: string | null
         isYourTurn?: boolean
+        phase?: string
       }
     >
   >({})
@@ -261,6 +268,7 @@ const LobbyPage: React.FC = () => {
     | 'phase'
     | 'queue'
     | 'timer'
+    | 'winner'
     | 'host'
     | 'updated'
     | 'privacy'
@@ -274,6 +282,7 @@ const LobbyPage: React.FC = () => {
     phase: false,
     queue: true,
     timer: true,
+    winner: false,
     host: false,
     updated: true,
     privacy: false,
@@ -491,6 +500,7 @@ const LobbyPage: React.FC = () => {
           queueAhead?: number | null
           currentTurnUsername?: string | null
           isYourTurn?: boolean
+          phase?: string | null
         }
       >
       const map: Record<
@@ -501,6 +511,7 @@ const LobbyPage: React.FC = () => {
           queueAhead?: number | null
           currentTurnUsername?: string | null
           isYourTurn?: boolean
+          phase?: string
         }
       > = {}
       for (const [id, m] of Object.entries(meta)) {
@@ -513,6 +524,7 @@ const LobbyPage: React.FC = () => {
           queueAhead: m.queueAhead ?? null,
           currentTurnUsername: m.currentTurnUsername ?? null,
           isYourTurn: m.isYourTurn ?? undefined,
+          phase: typeof m.phase === 'string' ? m.phase : undefined,
         }
       }
       setMyGamesMeta(map)
@@ -1380,6 +1392,9 @@ const LobbyPage: React.FC = () => {
                               Timer
                             </th>
                           )}
+                          {(myGamesFilter === 'completed' ? true : visibleCols.winner) && (
+                            <th className="py-2 px-3">Winner</th>
+                          )}
                           {visibleCols.host && <th className="py-2 px-3">Host</th>}
                           {visibleCols.updated && (
                             <th
@@ -1486,18 +1501,35 @@ const LobbyPage: React.FC = () => {
                                 </td>
                                 {visibleCols.mode && (
                                   <td className="py-2 px-3">
-                                    {(game as unknown as { gameMode?: string }).gameMode || '—'}
+                                    {game.gameMode || '—'}
                                   </td>
                                 )}
                                 {visibleCols.ranked && (
                                   <td className="py-2 px-3">
-                                    {(game as unknown as { isRanked?: boolean }).isRanked
-                                      ? '✓'
-                                      : '—'}
+                                    {game.isRanked ? '✓' : '—'}
                                   </td>
                                 )}
                                 <td className="py-2 px-3">{getStatusLabel(game.status)}</td>
-                                {visibleCols.phase && <td className="py-2 px-3">—</td>}
+                                {visibleCols.phase && (
+                                  <td className="py-2 px-3">
+                                    {(() => {
+                                      if (game.status !== 'active') return '—'
+                                      const p = myGamesMeta[game.id]?.phase
+                                      if (!p) return '—'
+                                      const label =
+                                        p === 'reinforcement'
+                                          ? 'Reinforcement'
+                                          : p === 'attack'
+                                            ? 'Attack'
+                                            : p === 'fortify'
+                                              ? 'Fortify'
+                                              : p === 'finished'
+                                                ? 'Finished'
+                                                : p
+                                      return label
+                                    })()}
+                                  </td>
+                                )}
                                 {visibleCols.queue && (
                                   <td className="py-2 px-3">
                                     {displayQueue == null ? (
@@ -1508,25 +1540,22 @@ const LobbyPage: React.FC = () => {
                                   </td>
                                 )}
                                 {visibleCols.timer && <td className="py-2 px-3">{timerText}</td>}
+                                {(myGamesFilter === 'completed' ? true : visibleCols.winner) && (
+                                  <td className="py-2 px-3">{game.winner || '—'}</td>
+                                )}
                                 {visibleCols.host && (
                                   <td className="py-2 px-3">
-                                    {(game as unknown as { hostUsername?: string }).hostUsername ||
-                                      '—'}
+                                    {game.hostUsername || '—'}
                                   </td>
                                 )}
                                 {visibleCols.updated && (
                                   <td className="py-2 px-3">
-                                    {formatTimeAgo(
-                                      ((game as unknown as { updatedAt?: string }).updatedAt ||
-                                        game.createdAt) as string,
-                                    )}
+                                    {formatTimeAgo((game.updatedAt || game.createdAt) as string)}
                                   </td>
                                 )}
                                 {visibleCols.privacy && (
                                   <td className="py-2 px-3">
-                                    {(game as unknown as { isPrivate?: boolean }).isPrivate
-                                      ? '🔒'
-                                      : '—'}
+                                    {game.isPrivate ? '🔒' : '—'}
                                   </td>
                                 )}
                                 <td className="py-2 px-3">
