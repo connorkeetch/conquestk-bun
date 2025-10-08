@@ -36,6 +36,9 @@ export default function ChatContainer({
   const [initializing, setInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [isNearBottom, setIsNearBottom] = useState(true)
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
 
   const conversation = useAppSelector((state) =>
     resolvedConversationId ? selectConversationById(state, resolvedConversationId) : undefined,
@@ -71,6 +74,36 @@ export default function ChatContainer({
     }
     return map
   })
+
+  // Scroll helpers: only snap to newest when near bottom; offer jump button otherwise
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      const threshold = 100
+      const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight)
+      const near = distanceFromBottom < threshold
+      setIsNearBottom(near)
+      if (near) setShowJumpToLatest(false)
+    }
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    if (!resolvedConversationId) return
+    if (isNearBottom) {
+      scrollToBottom()
+    } else if ((rawMessages?.length ?? 0) > 0) {
+      setShowJumpToLatest(true)
+    }
+  }, [resolvedConversationId, rawMessages.length, isNearBottom, scrollToBottom])
 
   useEffect(() => {
     let cancelled = false
@@ -263,7 +296,7 @@ export default function ChatContainer({
     <div
       className={`flex flex-col h-full min-h-0 overflow-hidden bg-surface-1 rounded-lg ${className}`}
     >
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} className="relative flex-1 overflow-y-auto p-4 space-y-4">
         {hasMore && (
           <div className="text-center">
             <button
@@ -296,6 +329,13 @@ export default function ChatContainer({
           </div>
         )}
 
+        {showJumpToLatest && (
+          <div className="absolute bottom-4 right-4">
+            <button type="button" className="btn-primary btn-sm" onClick={scrollToBottom}>
+              Jump to latest
+            </button>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 

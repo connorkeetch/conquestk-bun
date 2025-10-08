@@ -81,6 +81,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const hasMoreMap = useAppSelector((s) => s.messages.hasMore)
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? null)
   const unreadSummaryFetched = useAppSelector((s) => s.messages.unreadSummaryFetched)
+  const typingMap = useAppSelector((s) => s.messages.typing)
 
   // Local UI state
   const [sendError, setSendError] = useState<string | null>(null)
@@ -118,6 +119,16 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       fetchedOnOpenRef.current = true
     }
   }, [isOpen, dispatch, unreadSummaryFetched])
+
+  // Refresh unread summary on window focus to stay authoritative if sockets dropped
+  useEffect(() => {
+    if (!isOpen) return
+    const onFocus = () => {
+      dispatch(loadUnreadSummary())
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [dispatch, isOpen])
 
   useEffect(() => {
     if (!isOpen) {
@@ -225,7 +236,9 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     if (activeConversationId && visibleConversations.some((c) => c.id === activeConversationId)) {
       return activeConversationId
     }
-    return visibleConversations.length > 0 ? visibleConversations[0].id : null
+    // Fallback to the first unread, otherwise first visible
+    const firstUnread = visibleConversations.find((c) => (c.unreadCount ?? 0) > 0)
+    return firstUnread?.id ?? (visibleConversations.length > 0 ? visibleConversations[0].id : null)
   }, [activeConversationId, visibleConversations])
 
   const conversationSections = useMemo<ConversationSection[]>(() => {
@@ -265,6 +278,42 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     ? Boolean(loadingMessagesMap[drawerActiveConversationId])
     : false
 
+  // Scroll behavior: only snap to newest when near bottom; offer a jump button otherwise
+  const messageScrollRef = useRef<HTMLDivElement>(null)
+  const [isNearBottom, setIsNearBottom] = useState(true)
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
+
+  const scrollToBottom = useCallback(() => {
+    const el = messageScrollRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [])
+
+  useEffect(() => {
+    const el = messageScrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      const threshold = 100
+      const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight)
+      const near = distanceFromBottom < threshold
+      setIsNearBottom(near)
+      if (near) setShowJumpToLatest(false)
+    }
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // When active messages change, scroll appropriately
+  useEffect(() => {
+    if (!drawerActiveConversationId) return
+    if (isNearBottom) {
+      scrollToBottom()
+    } else if ((activeMessages?.length ?? 0) > 0) {
+      setShowJumpToLatest(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawerActiveConversationId, activeMessages.length, isNearBottom, scrollToBottom])
+
   // Mark read when visible and we have messages
   useEffect(() => {
     if (!isOpen || !drawerActiveConversationId) return
@@ -276,12 +325,14 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   // Auto-select first conversation on open
   useEffect(() => {
     if (!isOpen) return
-    // If global active is not an allowed DM/group, do not override it globally.
-    // We only auto-select globally when there is no active conversation at all.
-    if (!activeConversationId && visibleConversations.length > 0) {
-      dispatch(messagesActions.setActiveConversationId(visibleConversations[0].id))
+    // On open, auto-focus the first unread DM/group thread if available; else most recent
+    const firstUnread = visibleConversations.find((c) => (c.unreadCount ?? 0) > 0)
+    const targetId =
+      firstUnread?.id ?? (visibleConversations.length > 0 ? visibleConversations[0].id : null)
+    if (targetId) {
+      dispatch(messagesActions.setActiveConversationId(targetId))
     }
-  }, [isOpen, visibleConversations, activeConversationId, dispatch])
+  }, [isOpen, visibleConversations, dispatch])
 
   const handleSelectConversation = useCallback(
     (conversationId: string) => {
@@ -357,6 +408,14 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const handleSendMessage = useCallback(
     (text: string) => {
       if (!drawerActiveConversationId) return
+      // Optimistic last-message preview for the thread list
+      dispatch(
+        messagesActions.updateLastMessagePreview({
+          conversationId: drawerActiveConversationId,
+          body: text,
+          senderId: currentUserId,
+        }),
+      )
       socketService.sendConversationMessage(
         { conversationId: drawerActiveConversationId, body: text },
         (ack) => {
@@ -365,7 +424,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
         },
       )
     },
-    [drawerActiveConversationId],
+    [dispatch, drawerActiveConversationId, currentUserId],
   )
 
   const handleTyping = useCallback(
@@ -473,14 +532,28 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
         <div className="h-full modal flex flex-col">
           <header className="modal-header flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[color:var(--heading)]">Messages</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-ghost btn-icon"
-              aria-label="Close inbox"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <MarkAllReadButton
+                onMarkAllRead={() => {
+                  for (const c of visibleConversations) {
+                    const unread = c.unreadCount ?? 0
+                    if (unread > 0 && !c.isArchived) {
+                      dispatch(messagesActions.markReadOptimistic(c.id))
+                      socketService.markConversationReadViaSocket(c.id)
+                    }
+                  }
+                }}
+                conversations={visibleConversations}
+              />
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-ghost btn-icon"
+                aria-label="Close inbox"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </header>
 
           <div className="flex flex-1 min-h-0">
@@ -673,7 +746,11 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                           {section.conversations.map((conversation) => {
                             const isActive = conversation.id === drawerActiveConversationId
                             const unread = conversation.unreadCount ?? 0
-                            const subtitle = conversation.lastMessage?.body ?? 'No messages yet'
+                            const typingUsers = Object.values(typingMap[conversation.id] ?? {})
+                            const isTyping = typingUsers.length > 0
+                            const subtitle = isTyping
+                              ? 'typing…'
+                              : (conversation.lastMessage?.body ?? 'No messages yet')
                             const title = getConversationTitle(conversation, currentUserId)
                             const isDirect = conversation.kind === 'direct'
                             const partnerInitial =
@@ -730,7 +807,15 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                             {contextLabel}
                                           </div>
                                         )}
-                                        <p className="text-xs text-muted truncate">{subtitle}</p>
+                                        <p
+                                          className={`text-xs truncate ${
+                                            isTyping
+                                              ? 'text-[color:var(--color-primary)] italic'
+                                              : 'text-muted'
+                                          }`}
+                                        >
+                                          {subtitle}
+                                        </p>
                                       </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
@@ -959,7 +1044,10 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                     </div>
                   )}
 
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <div
+                    ref={messageScrollRef}
+                    className="relative flex-1 overflow-y-auto p-4 space-y-4"
+                  >
                     {hasMore && (
                       <div className="text-center">
                         <button
@@ -982,6 +1070,18 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                     {typingUsers.length > 0 && (
                       <div className="text-sm text-muted italic">
                         {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…
+                      </div>
+                    )}
+
+                    {showJumpToLatest && (
+                      <div className="absolute bottom-4 right-4">
+                        <button
+                          type="button"
+                          className="btn-primary btn-sm"
+                          onClick={scrollToBottom}
+                        >
+                          Jump to latest
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1016,5 +1116,27 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+// Small presentational button that is disabled when there are no unread conversations
+function MarkAllReadButton({
+  conversations,
+  onMarkAllRead,
+}: {
+  conversations: ConversationItem[]
+  onMarkAllRead: () => void
+}) {
+  const anyUnread = conversations.some((c) => (c.unreadCount ?? 0) > 0 && !c.isArchived)
+  return (
+    <button
+      type="button"
+      className="btn-outline btn-sm"
+      onClick={onMarkAllRead}
+      disabled={!anyUnread}
+      title={anyUnread ? 'Mark all as read' : 'No unread messages'}
+    >
+      Mark all read
+    </button>
   )
 }
