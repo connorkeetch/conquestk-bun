@@ -112,7 +112,8 @@ export default function ChatContainer({
         const id = detail.conversation.id
         setResolvedConversationId(id)
         dispatch(messagesActions.setActiveConversationId(id))
-        dispatch(loadConversationMessages({ conversationId: id, limit: 50 }))
+        // Load the most recent 20 messages by default
+        dispatch(loadConversationMessages({ conversationId: id, limit: 20 }))
         dispatch(refreshConversation(id))
         dispatch(messagesActions.markReadOptimistic(id))
         socketService.markConversationReadViaSocket(id)
@@ -186,7 +187,8 @@ export default function ChatContainer({
     }
     const existing = rawMessages
     if (existing.length === 0) {
-      dispatch(loadConversationMessages({ conversationId: resolvedConversationId, limit: 50 }))
+      // Initial fetch for older messages if none are present yet
+      dispatch(loadConversationMessages({ conversationId: resolvedConversationId, limit: 20 }))
       return
     }
     const oldest = existing[0]
@@ -194,7 +196,8 @@ export default function ChatContainer({
       loadConversationMessages({
         conversationId: resolvedConversationId,
         before: oldest.id,
-        limit: 50,
+        // Page older messages in batches of 20
+        limit: 20,
       }),
     )
   }, [dispatch, rawMessages, resolvedConversationId])

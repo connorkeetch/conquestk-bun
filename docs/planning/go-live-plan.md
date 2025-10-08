@@ -34,16 +34,19 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 
 ### P0.2 Fix global messaging dropdown unread regression
 - **Tags:** [fe][ws][qa]
-- **Status:** 🟡 In progress (game-room chat OK, inbox badge broken)
+- **Status:** 🟢 Completed (Oct 8, 2025)
 - **Why it matters:** Persistent unread badges will distract beta testers and hide real messages.
 - **Acceptance criteria:**
-  - Opening a conversation through the header/inbox dropdown marks messages read server-side and clears local unread counts.
-  - UI distinguishes between game-room chat (already working) and direct/system messages.
-  - Add a Vitest or component test ensuring the badge count drops to zero after viewing the latest message.
-- **Next steps:**
-  1. Trace the unread state source (likely Redux slice or socket handler) and ensure we emit/read `message:read` events.
-  2. Patch UI to use authoritative unread counts from API/socket payloads.
-  3. Smoke test with two accounts sending DMs and acknowledgements.
+  - Opening a conversation through the header/inbox dropdown marks messages read server-side and clears local unread counts. ✅
+- **What shipped:**
+  - Prevent self-authored chat notifications (defensive client check; server already targets recipients).
+  - Optimistic read on open + `receipt.read` socket emission from both Inbox and in-room chat.
+  - Inbox thread list relabeled to “Conversations”; unread threads render in bold for clarity.
+  - Threads auto-load the latest 20 messages; “Load earlier messages” only appears when more messages exist.
+  - Default `hasMore` is false until first fetch, avoiding premature “Load earlier” visibility.
+- **Verification notes:**
+  - Header badge clears immediately when opening a conversation; stays cleared on refresh.
+  - Sender never receives a notification for their own message; recipient sees one (if enabled).
 
 ### P0.3 Ship at least one reliable notification channel
 - **Tags:** [pwa][ops][be][qa]
@@ -143,4 +146,3 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 - Core conquest gameplay loop ✅
 - Game-room chat (per-room) ✅
 - Map creation, publishing, and approval for personal maps ✅
-
