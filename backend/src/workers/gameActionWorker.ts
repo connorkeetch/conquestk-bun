@@ -79,7 +79,7 @@ export class GameActionWorker {
     })
 
     // Orchestrate AI turns (queued as separate job name)
-    this.queue.process('execute-ai-turn', 5, async (job: Bull.Job<any>) => {
+    this.queue.process('execute-ai-turn', 5, async (job: Bull.Job) => {
       return this.processAiTurn(job)
     })
 
@@ -105,7 +105,7 @@ export class GameActionWorker {
     logger.info('✅ GameActionWorker initialized')
   }
 
-  private async processAiTurn(job: Bull.Job<any>): Promise<ProcessGameActionResult> {
+  private async processAiTurn(job: Bull.Job): Promise<ProcessGameActionResult> {
     const { gameId, playerId, turnNumber, budgetOverrides } = job.data as {
       gameId: string
       playerId: string
@@ -218,9 +218,15 @@ export class GameActionWorker {
     if (!state) throw new Error('Game not found')
     if (state.currentPlayer !== playerId) return
 
+    const aiPlayer = state.players.find((p) => p.id === playerId)
+    if (!aiPlayer) {
+      // Current player no longer AI; abort streaming turn gracefully
+      return
+    }
+
     const plan = await aiDecisionService.chooseAction({
       gameState: state,
-      player: state.players.find((p) => p.id === playerId)!,
+      player: aiPlayer,
       difficulty,
       budget,
     })
@@ -277,7 +283,11 @@ export class GameActionWorker {
             if (last) {
               try {
                 const battleDelta: import('@risk-game/shared/types').GameDelta =
-                  DeltaBuilder.battleResult(gameId, last as any, updated.version)
+                  DeltaBuilder.battleResult(
+                    gameId,
+                    last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
+                    updated.version,
+                  )
                 const { emitFogFilteredDelta } = await import('../services/fogService')
                 await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
               } catch {
@@ -300,9 +310,11 @@ export class GameActionWorker {
                       maxThinkTimeMs: Math.min(remainingBudget, 500),
                       maxPlannedActions: 3,
                     }
+                    const player2 = latest.players.find((p) => p.id === playerId)
+                    if (!player2) break
                     const replanned = await aiDecisionService.chooseAction({
                       gameState: latest,
-                      player: latest.players.find((p) => p.id === playerId)!,
+                      player: player2,
                       difficulty,
                       budget: subBudget,
                     })
@@ -324,7 +336,10 @@ export class GameActionWorker {
             const beforeState = await this.gameService.getGameState(gameId)
             const prevBank = beforeState?.players.find((p) => p.id === playerId)?.armies ?? 0
             const prevPhase = beforeState?.phase
-            const updated = await this.gameService.processGameAction(action as any, playerId)
+            const updated = await this.gameService.processGameAction(
+              action as Extract<import('../types/game').GameAction, { type: 'trade_cards' }>,
+              playerId,
+            )
             // Emit concise deltas
             try {
               const postPlayer = updated.players.find((p) => p.id === playerId)
@@ -358,7 +373,9 @@ export class GameActionWorker {
               try {
                 const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
                 if (serialized) this.emitGameUpdate(`game:${gameId}`, serialized)
-              } catch {}
+              } catch (_ee) {
+                /* snapshot fallback failed; will converge on next action */
+              }
             }
             break
           }
@@ -376,7 +393,7 @@ export class GameActionWorker {
             break
           }
         }
-      } catch (e) {
+      } catch (_e) {
         usedFallback = true
         fallbackReason = fallbackReason ?? 'stubbed'
         break
@@ -448,7 +465,6 @@ export class GameActionWorker {
           minAttackOddsByTier: { commander: 0.68 },
           allowOneSpiceAttack: false,
         }
-      case 'grandmaster':
       default:
         return {
           maxThinkTimeMs: 15_000,
@@ -633,7 +649,7 @@ export class GameActionWorker {
           try {
             const postPlayer = serialized?.players?.find((p) => p.id === playerId)
             const postBank = postPlayer?.armies ?? prevBank
-            const mustCash =
+            const _mustCash =
               typeof postPlayer?.mustCashInTreasures === 'boolean'
                 ? postPlayer?.mustCashInTreasures
                 : undefined
@@ -700,7 +716,7 @@ export class GameActionWorker {
                 version,
               })
             }
-          } catch (e) {
+          } catch (_e) {
             // Fallback: if delta emission fails, send a full snapshot to avoid desync
             if (serialized) {
               this.emitGameUpdate(`game:${gameId}`, serialized)

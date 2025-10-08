@@ -19,12 +19,10 @@ import { store } from '../store'
 import {
   applyDelta,
   fetchGameState,
-  
   setError,
   setGameState,
   setReinforcementArmies,
   updateGameState,
-  
 } from '../store/gameSlice'
 import {
   loadInbox,
@@ -47,7 +45,6 @@ import {
   setConnectionStatus,
   setDesyncDetected,
   setPlacementServerSpent,
-  
 } from '../store/uiRoomSlice'
 import type { GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'

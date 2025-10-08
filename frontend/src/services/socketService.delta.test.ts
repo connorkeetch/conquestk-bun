@@ -11,8 +11,12 @@ describe('socketService game-delta handling', () => {
 
   beforeEach(() => {
     // Spy side effects
-    vi.spyOn(audioService, 'playEffect').mockImplementation(() => {})
-    vi.spyOn(notificationService, 'addNotification').mockImplementation(() => {})
+    vi.spyOn(audioService, 'playEffect').mockImplementation(() => {
+      /* no-op for test */
+    })
+    vi.spyOn(notificationService, 'addNotification').mockImplementation(() => {
+      /* no-op for test */
+    })
 
     // Seed auth state with current user u2 (fulfill login thunk shape)
     store.dispatch({
@@ -69,7 +73,9 @@ describe('socketService game-delta handling', () => {
       on: (event: string, cb: (payload: unknown) => void) => {
         handlers[event] = cb
       },
-      off: () => {},
+      off: () => {
+        /* noop */
+      },
     }
     // biome-ignore lint/suspicious/noExplicitAny: test-only access to private method
     ;(socketService as any).setupEventListeners()

@@ -238,14 +238,21 @@ function serializeGameStateForClient(
     isEliminated: p.isEliminated,
     teamId: p.teamId ?? undefined,
     treasures: p.treasures,
-  }))
+    territories: p.territories,
+    cards: p.cards,
+  })) as GamePlayer[]
   const board = s.board.map((t) => ({
     id: t.id,
     name: t.name,
     ownerId: t.ownerId,
     armies: t.armies,
     adjacentTerritories: t.adjacentTerritories,
-  }))
+    sector: t.sector,
+    continent: t.continent,
+    isCapital: t.isCapital,
+    capitalOwnerId: t.capitalOwnerId,
+    coordinates: t.coordinates,
+  })) as Territory[]
 
   const cfg = (s.gameConfig ?? ({} as unknown)) as import('../types/game').GameConfiguration
   const gameConfig = {
@@ -258,7 +265,7 @@ function serializeGameStateForClient(
     treasureConfig: cfg?.treasureConfig,
   }
 
-  const base: any = {
+  const base: SerializedGameState = {
     roomId: s.roomId,
     phase: s.phase,
     currentPlayer: s.currentPlayer,
@@ -268,18 +275,24 @@ function serializeGameStateForClient(
     gameConfig: gameConfig as unknown as SerializedGameState['gameConfig'],
     kingOfTheHillState: (s as SerializedGameState).kingOfTheHillState,
     assassinationTargets: (s as SerializedGameState).assassinationTargets,
-    cards: Array.isArray((s as any).cards) ? (s as any).cards : [],
-  } as SerializedGameState
+    cards: Array.isArray((s as SerializedGameState).cards) ? (s as SerializedGameState).cards : [],
+  }
 
   // Include territory modifiers when present (convert Map to plain object)
   const territoryModifiers = (s as GameState).territoryModifiers
   if (territoryModifiers instanceof Map) {
-    ;(base as any).territoryModifiers = Object.fromEntries(territoryModifiers.entries())
-  } else if (territoryModifiers) {
-    ;(base as any).territoryModifiers = territoryModifiers
+    const obj = Object.fromEntries(
+      territoryModifiers.entries(),
+    ) as SerializedGameState['territoryModifiers']
+    return { ...base, territoryModifiers: obj }
   }
-
-  return base as SerializedGameState
+  if (territoryModifiers) {
+    return {
+      ...base,
+      territoryModifiers: territoryModifiers as SerializedGameState['territoryModifiers'],
+    }
+  }
+  return base
 }
 
 interface UserRatingRow extends QueryResultRow {

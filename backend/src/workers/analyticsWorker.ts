@@ -24,10 +24,16 @@ export class AnalyticsWorker {
       const { event, gameId, data } = job.data
       try {
         if (event === 'append_log') {
-          const entries = Array.isArray(data) ? (data as any[]) : []
-          await this.gameService.appendLog(gameId, entries as any)
+          const entries = Array.isArray(data) ? (data as unknown[]) : []
+          await this.gameService.appendLog(
+            gameId,
+            entries as Parameters<GameService['appendLog']>[1],
+          )
         } else if (event === 'append_turn_stats') {
-          await this.gameService.appendTurnStats(gameId, data as any)
+          await this.gameService.appendTurnStats(
+            gameId,
+            data as Parameters<GameService['appendTurnStats']>[1],
+          )
         } else {
           logger.warn('Unknown analytics event', { event })
         }

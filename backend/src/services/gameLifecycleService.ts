@@ -1141,7 +1141,6 @@ export class GameLifecycleService {
           maxAttackChains: 6,
           minAttackOddsByTier: { commander: 0.68 },
         }
-      case 'grandmaster':
       default:
         return {
           maxThinkTimeMs: 15_000,

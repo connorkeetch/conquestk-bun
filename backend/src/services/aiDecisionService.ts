@@ -163,7 +163,7 @@ class AIDecisionService {
         | undefined
       const hand = (player.treasures ?? []) as import('../types/game').Metal[]
       const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures)
-      if (cfg && cfg.enabled && hand.length >= 3) {
+      if (cfg?.enabled && hand.length >= 3) {
         const norm = normalizeTreasureConfig(cfg)
         const sets = findRedeemableSets(hand)
         const nearCap = hand.length >= Math.max(3, norm.handCap - 1)
@@ -332,7 +332,7 @@ class AIDecisionService {
         | undefined
       const hand = (player.treasures ?? []) as import('../types/game').Metal[]
       const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures)
-      if (cfg && cfg.enabled && hand.length >= 3) {
+      if (cfg?.enabled && hand.length >= 3) {
         const norm = normalizeTreasureConfig(cfg)
         const sets = findRedeemableSets(hand)
         const nearCap = hand.length >= Math.max(3, norm.handCap - 1)

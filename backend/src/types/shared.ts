@@ -5,7 +5,7 @@
 
 import type { GameDelta } from '@risk-game/shared/types'
 import type { ClanProgressionSocketPayload } from './clans'
-import type { BattleResult, GameAction, SerializedGameState } from './game'
+import type { GameAction, SerializedGameState } from './game'
 import type { Player as RoomPlayer } from './gameRoom'
 
 export interface ConversationEventSummary {
