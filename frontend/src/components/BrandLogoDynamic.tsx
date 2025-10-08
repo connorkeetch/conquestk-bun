@@ -51,8 +51,8 @@ export default function BrandLogoDynamic({
               dx="0"
               dy="0"
               stdDeviation="3"
-              flood-color="#cbd5e1"
-              flood-opacity="0.85"
+              floodColor="#cbd5e1"
+              floodOpacity="0.85"
             />
           </filter>
         ) : null}
