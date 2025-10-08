@@ -30,6 +30,7 @@ export interface PlayerDelta extends DeltaBase {
     armies?: number
     territories?: string[]
     isEliminated?: boolean
+    mustCashInTreasures?: boolean
   }
 }
 

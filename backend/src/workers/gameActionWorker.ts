@@ -294,12 +294,17 @@ export class GameActionWorker {
             const updated = await this.gameService.processGameAction(action as any, playerId)
             // Emit concise deltas
             try {
-              const postBank = updated.players.find((p) => p.id === playerId)?.armies ?? prevBank
+              const postPlayer = updated.players.find((p) => p.id === playerId)
+              const postBank = postPlayer?.armies ?? prevBank
+              const mustCash =
+                typeof postPlayer?.mustCashInTreasures === 'boolean'
+                  ? postPlayer?.mustCashInTreasures
+                  : undefined
               const { emitFogFilteredDelta } = await import('../services/fogService')
               const playerDelta = DeltaBuilder.playerUpdate(
                 gameId,
                 playerId,
-                { armies: Number(postBank) },
+                { armies: Number(postBank), ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}) },
                 updated.version,
               )
               await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
@@ -590,7 +595,12 @@ export class GameActionWorker {
           const version = serialized?.version
           // Attempt to backfill a human-readable log entry showing troops gained from cash-in
           try {
-            const postBank = serialized?.players?.find((p) => p.id === playerId)?.armies ?? prevBank
+            const postPlayer = serialized?.players?.find((p) => p.id === playerId)
+            const postBank = postPlayer?.armies ?? prevBank
+            const mustCash =
+              typeof postPlayer?.mustCashInTreasures === 'boolean'
+                ? postPlayer?.mustCashInTreasures
+                : undefined
             const gained = Math.max(0, (postBank as number) - prevBank)
             if (gained > 0) {
               await this.gameService.appendLog(gameId, [
@@ -626,9 +636,19 @@ export class GameActionWorker {
           }
           // Emit concise, fog-filtered deltas: player bank update and optional phase change
           try {
-            const postBank = serialized?.players?.find((p) => p.id === playerId)?.armies ?? prevBank
+            const postPlayer = serialized?.players?.find((p) => p.id === playerId)
+            const postBank = postPlayer?.armies ?? prevBank
+            const mustCash =
+              typeof postPlayer?.mustCashInTreasures === 'boolean'
+                ? postPlayer?.mustCashInTreasures
+                : undefined
             const { emitFogFilteredDelta } = await import('../services/fogService')
-            const playerDelta = DeltaBuilder.playerUpdate(gameId, playerId, { armies: Number(postBank) }, version)
+            const playerDelta = DeltaBuilder.playerUpdate(
+              gameId,
+              playerId,
+              { armies: Number(postBank), ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}) },
+              version,
+            )
             await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
 
             // If phase changed (commonly to reinforcement), emit phase change with bank as reinforcementArmies

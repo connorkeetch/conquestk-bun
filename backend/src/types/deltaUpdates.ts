@@ -46,7 +46,12 @@ export const DeltaBuilder = {
   playerUpdate(
     roomId: string,
     playerId: string,
-    changes: { armies?: number; territories?: string[]; isEliminated?: boolean },
+    changes: {
+      armies?: number
+      territories?: string[]
+      isEliminated?: boolean
+      mustCashInTreasures?: boolean
+    },
     version?: number,
   ): PlayerUpdateDelta {
     return {
