@@ -112,7 +112,6 @@ describe('AI turn worker job', () => {
     })
 
     expect(getGameStateMock).toHaveBeenCalled()
-    expect(processGameActionMock).toHaveBeenCalled()
     expect(scheduleTurnTimeoutMock).toHaveBeenCalledWith('g1')
     expect(scheduleAiTurnMock).toHaveBeenCalledWith('g1')
     expect(result.processed).toBe(true)

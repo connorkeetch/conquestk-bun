@@ -12,7 +12,7 @@ import {
   queueService,
 } from '../services/queueService'
 import { DeltaBuilder } from '../types/deltaUpdates'
-import { aiTurnMetrics } from '../services/metricsService'
+import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService'
 import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService'
 import type {
   AttackAction,
@@ -43,6 +43,33 @@ export class GameActionWorker {
     this.deltaEmitter = new DeltaEmitter(io)
     this.io = io
     this.queue = queueService.getGameActionQueue()
+  }
+
+  private computePayloadBytes(data: unknown): number {
+    try {
+      const json = JSON.stringify(data)
+      return Buffer.byteLength(json, 'utf8')
+    } catch {
+      return -1
+    }
+  }
+
+  private emitGameUpdate(channel: string, payload: SerializedGameState) {
+    const bytes = this.computePayloadBytes(payload)
+    socketPayloadMetrics.record('game-update', bytes)
+    if (socketPayloadMetrics.shouldLog('game-update')) {
+      const stats = socketPayloadMetrics.snapshot('game-update')
+      if (stats) {
+        logger.info('Socket payload stats', {
+          event: 'game-update',
+          windowCount: stats.count,
+          p50Bytes: stats.p50,
+          p95Bytes: stats.p95,
+          maxBytes: stats.max,
+        })
+      }
+    }
+    this.io.to(channel).emit('game-update', payload)
   }
 
   async initialize(): Promise<void> {
@@ -147,7 +174,7 @@ export class GameActionWorker {
         // Emit a full snapshot to ensure clients converge
         const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
         if (serialized) {
-          this.io.to(`game:${gameId}`).emit('game-update', serialized)
+          this.emitGameUpdate(`game:${gameId}`, serialized)
         }
       }
 
@@ -225,9 +252,54 @@ export class GameActionWorker {
       const stepDelay = Math.min(desiredDelay, maxDelay)
       if (stepDelay > 0) await new Promise((r) => setTimeout(r, stepDelay))
 
-      // Apply action; if invalid mid-stream, stop and fallback
+      // Apply action and emit fog-filtered deltas per action
+      const action = actions[i]
       try {
-        await this.gameService.processGameAction(actions[i], playerId)
+        switch (action.type) {
+          case 'deploy': {
+            await this.processPlaceArmies(gameId, playerId, action as DeployAction)
+            break
+          }
+          case 'fortify': {
+            await this.processFortify(gameId, playerId, action as FortifyAction)
+            break
+          }
+          case 'end_turn': {
+            await this.processEndTurn(gameId, playerId)
+            break
+          }
+          case 'attack': {
+            const updated = await this.gameService.processGameAction(action, playerId)
+            const last = updated.lastBattleResult
+            if (last) {
+              try {
+                const battleDelta: import('@risk-game/shared/types').GameDelta = DeltaBuilder.battleResult(
+                  gameId,
+                  last as any,
+                  updated.version,
+                )
+                const { emitFogFilteredDelta } = await import('../services/fogService')
+                await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
+              } catch {
+                // best-effort; clients will converge on next snapshot
+              }
+            }
+            break
+          }
+          default: {
+            await this.gameService.processGameAction(action, playerId)
+            // Fallback to snapshot for uncommon actions
+            try {
+              const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
+              if (serialized) {
+                this.emitGameUpdate(`game:${gameId}`, serialized)
+              }
+            } catch {
+              // ignore
+            }
+            break
+          }
+        }
       } catch (e) {
         usedFallback = true
         fallbackReason = fallbackReason ?? 'invalid_action'
@@ -235,16 +307,6 @@ export class GameActionWorker {
       }
 
       applied += 1
-
-      // Emit snapshot after each step so clients see progress
-      try {
-        const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
-        if (serialized) {
-          this.io.to(`game:${gameId}`).emit('game-update', serialized)
-        }
-      } catch {
-        // best-effort
-      }
     }
 
     // If budget expired or action failed before completing the plan, try a minimal fallback
@@ -252,11 +314,23 @@ export class GameActionWorker {
       const latest = await this.gameService.getGameState(gameId)
       if (latest && latest.currentPlayer === playerId) {
         const fb = aiDecisionService.buildFallbackPlan(latest, playerId)
-        // Apply just one safe action (e.g., fortify or end_turn)
         const tail = fb.slice(0, 1)
         for (const a of tail) {
           try {
-            await this.gameService.processGameAction(a, playerId)
+            switch (a.type) {
+              case 'deploy':
+                await this.processPlaceArmies(gameId, playerId, a as DeployAction)
+                break
+              case 'fortify':
+                await this.processFortify(gameId, playerId, a as FortifyAction)
+                break
+              case 'end_turn':
+                await this.processEndTurn(gameId, playerId)
+                break
+              default:
+                await this.gameService.processGameAction(a, playerId)
+                break
+            }
           } catch {
             // ignore; last resort is to stop
           }
@@ -514,7 +588,7 @@ export class GameActionWorker {
             })
           }
           if (serialized) {
-            this.io.to(`game:${gameId}`).emit('game-update', serialized)
+            this.emitGameUpdate(`game:${gameId}`, serialized)
           }
           shouldBroadcast = false
           delta = null
@@ -538,7 +612,7 @@ export class GameActionWorker {
           // Emit full state update since we don't have a lightweight delta
           const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
           if (serialized) {
-            this.io.to(`game:${gameId}`).emit('game-update', serialized)
+            this.emitGameUpdate(`game:${gameId}`, serialized)
           }
           // Avoid emitting an extra delta below
           shouldBroadcast = false
