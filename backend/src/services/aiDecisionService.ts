@@ -1,6 +1,6 @@
-import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game'
 import { GameEngine } from '../game/gameEngine'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures'
+import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game'
 
 type FallbackReason = 'stubbed' | 'timeout' | 'aborted'
 
@@ -29,25 +29,25 @@ export interface AIDecisionPlan {
   actions: GameAction[]
   usedFallback: boolean
   reason?: FallbackReason
-    diagnostics: {
-      generatedAt: string
-      durationMs: number
-      requestedDifficulty: AIDifficulty
-      plannedActionCount: number
-      budget: {
-        maxThinkTimeMs: number
-        maxPlannedActions?: number
-        readableDelayMs?: number
-        maxAttackChains?: number
-        minAttackOddsByTier?: {
-          recruit?: number
-          commander?: number
-          grandmaster?: number
-        }
-        allowOneSpiceAttack?: boolean
+  diagnostics: {
+    generatedAt: string
+    durationMs: number
+    requestedDifficulty: AIDifficulty
+    plannedActionCount: number
+    budget: {
+      maxThinkTimeMs: number
+      maxPlannedActions?: number
+      readableDelayMs?: number
+      maxAttackChains?: number
+      minAttackOddsByTier?: {
+        recruit?: number
+        commander?: number
+        grandmaster?: number
       }
+      allowOneSpiceAttack?: boolean
     }
   }
+}
 
 class AIDecisionService {
   async chooseAction(request: DecisionRequest): Promise<AIDecisionPlan> {
@@ -64,8 +64,11 @@ class AIDecisionService {
     try {
       // Apply fog-of-war filtering so planner only sees visible info
       const fogMode =
-        (request.gameState.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' } | undefined)
-          ?.fogOfWar ?? 'off'
+        (
+          request.gameState.gameConfig as
+            | { fogOfWar?: 'off' | 'adjacent' | 'persistent' }
+            | undefined
+        )?.fogOfWar ?? 'off'
       const effectiveState = (() => {
         if (fogMode === 'off') return request.gameState
         try {
@@ -114,9 +117,9 @@ class AIDecisionService {
             minAttackOddsByTier: request.budget.minAttackOddsByTier,
             allowOneSpiceAttack: request.budget.allowOneSpiceAttack,
           },
-      },
-    }
-  } catch {
+        },
+      }
+    } catch {
       return this.createFallbackPlan('stubbed', request, start)
     }
   }
@@ -187,12 +190,14 @@ class AIDecisionService {
       if (available > 0) {
         const target = this.chooseCommanderReinforcement(gameState, player.id)
         if (target) {
-          if (!push({
-            type: 'deploy',
-            roomId,
-            playerId: player.id,
-            payload: { territoryId: target, armies: available },
-          }))
+          if (
+            !push({
+              type: 'deploy',
+              roomId,
+              playerId: player.id,
+              payload: { territoryId: target, armies: available },
+            })
+          )
             return actions
         }
       }
@@ -240,7 +245,10 @@ class AIDecisionService {
     // Find weakest border inside preferred sector
     for (const [sector] of candidateSectors) {
       const borders = owned
-        .filter((t) => (t.sector || t.continent) === sector && this.hasEnemyNeighbor(gameState, t, playerId))
+        .filter(
+          (t) =>
+            (t.sector || t.continent) === sector && this.hasEnemyNeighbor(gameState, t, playerId),
+        )
         .sort((a, b) => a.armies - b.armies)
       if (borders.length > 0) return borders[0].id
     }
@@ -348,12 +356,14 @@ class AIDecisionService {
       if (avail > 0) {
         const target = this.chooseCommanderReinforcement(gameState, player.id)
         if (target) {
-          if (!push({
-            type: 'deploy',
-            roomId,
-            playerId: player.id,
-            payload: { territoryId: target, armies: avail },
-          }))
+          if (
+            !push({
+              type: 'deploy',
+              roomId,
+              playerId: player.id,
+              payload: { territoryId: target, armies: avail },
+            })
+          )
             return actions
         }
       }
@@ -411,7 +421,14 @@ class AIDecisionService {
       type: 'attack',
       roomId: gameState.roomId,
       playerId,
-      payload: { fromTerritoryId: best.from, toTerritoryId: best.to, armies: Math.min(3, Math.max(1, (this.getTerritory(gameState, best.from)?.armies ?? 2) - 1)) },
+      payload: {
+        fromTerritoryId: best.from,
+        toTerritoryId: best.to,
+        armies: Math.min(
+          3,
+          Math.max(1, (this.getTerritory(gameState, best.from)?.armies ?? 2) - 1),
+        ),
+      },
     }
   }
 
@@ -511,7 +528,11 @@ class AIDecisionService {
     }
   }
 
-  private sectorCaptureValue(state: GameState, playerId: string, to: GameState['board'][number]): number {
+  private sectorCaptureValue(
+    state: GameState,
+    playerId: string,
+    to: GameState['board'][number],
+  ): number {
     const sector = to.sector || to.continent
     if (!sector) return 0
     let total = 0
@@ -524,10 +545,13 @@ class AIDecisionService {
     // If capture would complete sector, bigger bonus; else small pressure value
     const willOwn = owned + 1
     if (total > 0 && willOwn === total) return 3
-    return Math.max(0, (willOwn / Math.max(1, total)) - (owned / Math.max(1, total)))
+    return Math.max(0, willOwn / Math.max(1, total) - owned / Math.max(1, total))
   }
 
-  private simulateBattle(attackersStart: number, defendersStart: number): {
+  private simulateBattle(
+    attackersStart: number,
+    defendersStart: number,
+  ): {
     aLoss: number
     dLoss: number
     conquered: boolean

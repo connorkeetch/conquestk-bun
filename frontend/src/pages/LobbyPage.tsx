@@ -1500,14 +1500,10 @@ const LobbyPage: React.FC = () => {
                                   {game.playerCount}/{game.maxPlayers}
                                 </td>
                                 {visibleCols.mode && (
-                                  <td className="py-2 px-3">
-                                    {game.gameMode || '—'}
-                                  </td>
+                                  <td className="py-2 px-3">{game.gameMode || '—'}</td>
                                 )}
                                 {visibleCols.ranked && (
-                                  <td className="py-2 px-3">
-                                    {game.isRanked ? '✓' : '—'}
-                                  </td>
+                                  <td className="py-2 px-3">{game.isRanked ? '✓' : '—'}</td>
                                 )}
                                 <td className="py-2 px-3">{getStatusLabel(game.status)}</td>
                                 {visibleCols.phase && (
@@ -1544,9 +1540,7 @@ const LobbyPage: React.FC = () => {
                                   <td className="py-2 px-3">{game.winner || '—'}</td>
                                 )}
                                 {visibleCols.host && (
-                                  <td className="py-2 px-3">
-                                    {game.hostUsername || '—'}
-                                  </td>
+                                  <td className="py-2 px-3">{game.hostUsername || '—'}</td>
                                 )}
                                 {visibleCols.updated && (
                                   <td className="py-2 px-3">
@@ -1554,9 +1548,7 @@ const LobbyPage: React.FC = () => {
                                   </td>
                                 )}
                                 {visibleCols.privacy && (
-                                  <td className="py-2 px-3">
-                                    {game.isPrivate ? '🔒' : '—'}
-                                  </td>
+                                  <td className="py-2 px-3">{game.isPrivate ? '🔒' : '—'}</td>
                                 )}
                                 <td className="py-2 px-3">
                                   {game.status === 'lobby' || game.status === 'initializing' ? (

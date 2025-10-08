@@ -68,7 +68,7 @@ export const selectValidTargets = createSelector(
             })
 
           case 'path_single':
-          case 'path_multi':
+          case 'path_multi': {
             // Any connected territory through owned territories
             // Build a Set of owned territory ids once for BFS checks
             const ownedIds = new Set(
@@ -85,6 +85,7 @@ export const selectValidTargets = createSelector(
                 ),
               )
               .map((t) => t.id)
+          }
 
           default:
             return []
@@ -98,43 +99,7 @@ export const selectValidTargets = createSelector(
 )
 
 // Helper function to check if territories are connected through owned territories
-function isConnectedThroughOwnedTerritories(
-  fromId: string,
-  toId: string,
-  gameState: GameState,
-  playerId: string,
-): boolean {
-  if (fromId === toId) return true
-
-  const ownedTerritories = gameState.board.filter((t) => t.ownerId === playerId)
-  const visited = new Set<string>()
-  const queue = [fromId]
-
-  while (queue.length > 0) {
-    const currentId = queue.shift()
-    if (!currentId) continue
-
-    if (currentId === toId) return true
-    if (visited.has(currentId)) continue
-
-    visited.add(currentId)
-
-    const currentTerritory = ownedTerritories.find((t) => t.id === currentId)
-    if (!currentTerritory) continue
-
-    // Add adjacent owned territories to queue
-    for (const adjacentId of currentTerritory.adjacentTerritories) {
-      if (!visited.has(adjacentId)) {
-        const adjacentTerritory = ownedTerritories.find((t) => t.id === adjacentId)
-        if (adjacentTerritory) {
-          queue.push(adjacentId)
-        }
-      }
-    }
-  }
-
-  return false
-}
+// (Removed) legacy BFS helper replaced by index-based version
 
 // Optimized BFS using a prebuilt territoryIndex and ownedIds set
 function isConnectedThroughOwnedTerritoriesIndex(

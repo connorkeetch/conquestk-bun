@@ -19,13 +19,12 @@ import { store } from '../store'
 import {
   applyDelta,
   fetchGameState,
-  selectTargetTerritory,
-  setBattleResult,
+  
   setError,
   setGameState,
   setReinforcementArmies,
   updateGameState,
-  updateTerritory,
+  
 } from '../store/gameSlice'
 import {
   loadInbox,
@@ -48,9 +47,9 @@ import {
   setConnectionStatus,
   setDesyncDetected,
   setPlacementServerSpent,
-  showConquestOverlay,
+  
 } from '../store/uiRoomSlice'
-import type { BattleResult, GameState } from '../types/game'
+import type { GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
@@ -520,7 +519,6 @@ class SocketService {
     })
 
     // Coalesced delta batches (optional optimization)
-    // @ts-expect-error: runtime event provided by server
     this.socket.on('game-delta-batch', (deltas: unknown) => {
       const array = Array.isArray(deltas) ? (deltas as unknown[]) : []
       if (array.length === 0) return

@@ -2,18 +2,18 @@ import type { GameDelta } from '@risk-game/shared/types'
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { query } from '../config/database'
+import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService'
 import { gameStateCache } from '../services/cacheService'
 import { DeltaEmitter } from '../services/deltaEmitter'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
+import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService'
 import {
   type BattleSimulationJob,
   type GameActionJob,
   queueService,
 } from '../services/queueService'
 import { DeltaBuilder } from '../types/deltaUpdates'
-import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService'
-import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService'
 import type {
   AttackAction,
   DeployAction,
@@ -276,11 +276,8 @@ export class GameActionWorker {
             const last = updated.lastBattleResult
             if (last) {
               try {
-                const battleDelta: import('@risk-game/shared/types').GameDelta = DeltaBuilder.battleResult(
-                  gameId,
-                  last as any,
-                  updated.version,
-                )
+                const battleDelta: import('@risk-game/shared/types').GameDelta =
+                  DeltaBuilder.battleResult(gameId, last as any, updated.version)
                 const { emitFogFilteredDelta } = await import('../services/fogService')
                 await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
               } catch {
@@ -340,7 +337,10 @@ export class GameActionWorker {
               const playerDelta = DeltaBuilder.playerUpdate(
                 gameId,
                 playerId,
-                { armies: Number(postBank), ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}) },
+                {
+                  armies: Number(postBank),
+                  ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}),
+                },
                 updated.version,
               )
               await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
@@ -682,7 +682,10 @@ export class GameActionWorker {
             const playerDelta = DeltaBuilder.playerUpdate(
               gameId,
               playerId,
-              { armies: Number(postBank), ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}) },
+              {
+                armies: Number(postBank),
+                ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}),
+              },
               version,
             )
             await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)

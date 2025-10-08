@@ -8,9 +8,9 @@ declare let self: ServiceWorkerGlobalScope & typeof globalThis & { __WB_MANIFEST
 type SWNotificationAction = { action: string; title: string }
 type SWNotificationOptions = NotificationOptions & { actions?: SWNotificationAction[] }
 
+import { BackgroundSyncPlugin } from 'workbox-background-sync'
 import { clientsClaim } from 'workbox-core'
 import { ExpirationPlugin } from 'workbox-expiration'
-import { BackgroundSyncPlugin } from 'workbox-background-sync'
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
@@ -18,7 +18,7 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
-import { CacheFirst, NetworkFirst, StaleWhileRevalidate, NetworkOnly } from 'workbox-strategies'
+import { CacheFirst, NetworkFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies'
 
 // Immediately activate the new SW and control uncontrolled clients
 self.skipWaiting()
@@ -82,7 +82,7 @@ const turnSubmitQueue = new BackgroundSyncPlugin('rk-turn-submissions', {
 })
 
 registerRoute(
-  ({ url, request }) =>
+  ({ url, request }: RouteCtx) =>
     request.method === 'POST' &&
     url.pathname.startsWith('/api/game/rooms/') &&
     url.pathname.endsWith('/actions'),
@@ -92,7 +92,7 @@ registerRoute(
 
 // Background Sync: queue conquest transfer submissions
 registerRoute(
-  ({ url, request }) =>
+  ({ url, request }: RouteCtx) =>
     request.method === 'POST' &&
     url.pathname.startsWith('/api/game/rooms/') &&
     url.pathname.endsWith('/transfer-conquest'),

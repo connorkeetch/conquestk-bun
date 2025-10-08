@@ -1037,7 +1037,9 @@ export class GameLifecycleService {
           gameId: roomId,
           playerId: current.id,
           turnNumber: state.turn,
-          budgetOverrides: this.computeDefaultBudgetForDifficulty(current.aiDifficulty ?? 'recruit'),
+          budgetOverrides: this.computeDefaultBudgetForDifficulty(
+            current.aiDifficulty ?? 'recruit',
+          ),
           idempotencyKey: idKey,
         },
         {

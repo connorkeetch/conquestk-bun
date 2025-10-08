@@ -1,9 +1,10 @@
+import type { Mock } from 'vitest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { store } from '../store'
-import { setGameState } from '../store/gameSlice'
 import audioService from '../services/audioService'
 import { notificationService } from '../services/notificationService'
 import { socketService } from '../services/socketService'
+import { store } from '../store'
+import { setGameState } from '../store/gameSlice'
 
 describe('socketService game-delta handling', () => {
   let handlers: Record<string, (payload: unknown) => void>
@@ -35,8 +36,24 @@ describe('socketService game-delta handling', () => {
         currentPlayer: 'u1',
         turn: 1,
         players: [
-          { id: 'u1', username: 'P1', color: '#F00', armies: 0, cards: [], treasures: [], isEliminated: false },
-          { id: 'u2', username: 'Me', color: '#0F0', armies: 0, cards: [], treasures: [], isEliminated: false },
+          {
+            id: 'u1',
+            username: 'P1',
+            color: '#F00',
+            armies: 0,
+            cards: [],
+            treasures: [],
+            isEliminated: false,
+          },
+          {
+            id: 'u2',
+            username: 'Me',
+            color: '#0F0',
+            armies: 0,
+            cards: [],
+            treasures: [],
+            isEliminated: false,
+          },
         ],
         board: [
           { id: 't1', name: 'T1', armies: 3, ownerId: 'u1', adjacentTerritories: [] },
@@ -77,7 +94,7 @@ describe('socketService game-delta handling', () => {
     // Side effects
     expect(audioService.playEffect).toHaveBeenCalledWith('turn')
     expect(notificationService.addNotification).toHaveBeenCalled()
-    const noteArg = (notificationService.addNotification as unknown as vi.Mock).mock.calls[0][0]
+    const noteArg = (notificationService.addNotification as unknown as Mock).mock.calls[0][0]
     expect(noteArg.type).toBe('turn_reminder')
 
     // State changes via reducer
@@ -86,4 +103,3 @@ describe('socketService game-delta handling', () => {
     expect(state.game.reinforcementArmies).toBe(5)
   })
 })
-

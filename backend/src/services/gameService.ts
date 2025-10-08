@@ -910,10 +910,12 @@ export class GameService {
     }
 
     const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
-    await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
+    const serialized = this.serializeGameState(updatedState)
+    await this.persistTurnStateTransactional(roomId, serialized)
+    await gameStateCache.setGameState(roomId, serialized)
 
     return {
-      gameState: this.serializeGameState(updatedState),
+      gameState: serialized,
       territoryId,
       armies: updatedState.board.find((t) => t.id === territoryId)?.armies || 0,
     }
@@ -1018,7 +1020,8 @@ export class GameService {
     )
 
     const serialized = this.serializeGameState(updatedState)
-    await this.persistGameStateSnapshot(roomId, serialized)
+    await this.persistTurnStateTransactional(roomId, serialized)
+    await gameStateCache.setGameState(roomId, serialized)
 
     const fromTerritory = updatedState.board.find((territory) => territory.id === fromTerritoryId)
     const toTerritory = updatedState.board.find((territory) => territory.id === toTerritoryId)
@@ -1055,10 +1058,12 @@ export class GameService {
     }
 
     const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
-    await this.persistGameStateSnapshot(roomId, this.serializeGameState(updatedState))
+    const serialized = this.serializeGameState(updatedState)
+    await this.persistTurnStateTransactional(roomId, serialized)
+    await gameStateCache.setGameState(roomId, serialized)
 
     return {
-      gameState: this.serializeGameState(updatedState),
+      gameState: serialized,
       fromTerritoryId,
       toTerritoryId,
       fromArmies: updatedState.board.find((t) => t.id === fromTerritoryId)?.armies || 0,
@@ -1176,10 +1181,17 @@ export class GameService {
         { type: 'TURN', timestamp: now, playerId: previousPlayerId, event: 'END' },
       ]
       if (treasureAwarded) {
-        entries.push({ type: 'TREASURE', timestamp: now, userId: previousPlayerId, metal: treasureAwarded })
+        entries.push({
+          type: 'TREASURE',
+          timestamp: now,
+          userId: previousPlayerId,
+          metal: treasureAwarded,
+        })
       }
       if (updatedState.phase === 'reinforcement') {
-        const territoryCount = updatedState.board.filter((t) => t.ownerId === updatedState.currentPlayer).length
+        const territoryCount = updatedState.board.filter(
+          (t) => t.ownerId === updatedState.currentPlayer,
+        ).length
         entries.push({
           type: 'TURN',
           timestamp: now,
@@ -1194,16 +1206,20 @@ export class GameService {
           event: 'append_log',
           gameId: roomId,
           data: entries,
-        } as any)
+        })
         if (!job) {
           // Queue unavailable: best-effort async write
           setImmediate(() => {
-            this.appendLog(roomId, entries).catch(() => {})
+            this.appendLog(roomId, entries).catch(() => {
+              /* no-op */
+            })
           })
         }
       } catch {
         setImmediate(() => {
-          this.appendLog(roomId, entries).catch(() => {})
+          this.appendLog(roomId, entries).catch(() => {
+            /* no-op */
+          })
         })
       }
     }
@@ -1215,10 +1231,12 @@ export class GameService {
         event: 'append_turn_stats',
         gameId: roomId,
         data: stats,
-      } as any)
+      })
       if (!job) {
         setImmediate(() => {
-          this.appendTurnStats(roomId, stats).catch(() => {})
+          this.appendTurnStats(roomId, stats).catch(() => {
+            /* no-op */
+          })
         })
       }
     } catch {
@@ -2025,7 +2043,14 @@ export class GameService {
       // Do not award treasures here. The GameEngine awards exactly one treasure
       // at end-of-turn if any conquest occurred. This avoids mid-turn multiple awards.
       serializedState = this.serializeGameState(updatedGameState)
-      await this.persistGameStateSnapshot(gameId, serializedState)
+      // Persist lean snapshot + room indicators + immutable snapshot atomically,
+      // and refresh cache for the hot read path.
+      await this.persistTurnStateTransactional(gameId, serializedState)
+      try {
+        await gameStateCache.setGameState(gameId, serializedState)
+      } catch {
+        // best-effort cache refresh
+      }
     }
 
     if (persistenceOutcome.applied && gameEnded) {

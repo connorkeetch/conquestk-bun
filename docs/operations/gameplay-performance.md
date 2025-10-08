@@ -26,6 +26,33 @@ This note captures quick wins for keeping the live game responsive on both the c
 - Track p95 socket latency via Socket.io's built-in metrics and surface it on the Grafana dashboard.
 - Add a synthetic play session that joins a lobby, starts a game, and performs a few turns. Alert when response time > 250 ms.
 
+### 2025‑10‑08: AI Orchestrator + Delta Optimisations (Shipped)
+
+Performance-oriented changes landed alongside AI work:
+
+- Per‑action AI streaming with readable pacing
+  - AI turns now emit fog‑filtered deltas (deploy/attack/fortify/phase) one step at a time with ~250–400 ms delays, clamped by an overall per‑tier time budget.
+  - Full snapshots are no longer broadcast mid‑turn for AI actions, reducing peak bandwidth and CPU on clients.
+
+- Concise treasure cash‑in updates
+  - Replaced full snapshot on `trade_cards` with two minimal deltas: `PLAYER_UPDATE` (armies, mustCashInTreasures) and conditional `PHASE_CHANGE` (reinforcement) — both fog‑filtered.
+
+- Socket payload metrics
+  - Added lightweight rolling metrics for `game-delta` and `game-update` events (p50/p95/max). Logged periodically to help track regressions in payload size.
+
+- Fog‑aware AI planning
+  - Planner state is filtered to owned + adjacent territories (team‑aware) when fog is enabled. Prevents EV calculations from using hidden information.
+
+- Grandmaster EV + chaining (budget‑aware)
+  - Grandmaster selects attacks using a time‑boxed Monte Carlo EV estimate (win prob + expected losses + capture/sector/capital value) and re‑plans to chain multiple attacks within remaining budget up to `maxAttackChains`.
+  - Commander received continent‑pressure reinforcement and simple card‑timing logic.
+
+What to verify locally
+- Observe deltas instead of full snapshots during AI turns and treasure cash‑ins.
+- Watch logs for `Socket payload stats` and ensure p95 sizes do not increase over time.
+- In fog games, confirm AI no longer targets unseen territories.
+- With Grandmaster, expect multiple attacks per turn within budget; phase still transitions promptly.
+
 ## Asset strategy
 
 1. **Backgrounds & audio:** Animated backgrounds are eye-catching but optional. On weaker devices, the cost is mostly GPU bound, so disable them (or swap to static imagery) once a game starts. Pre-render a static fallback screenshot for each theme to keep the brand feel without taxing the GPU.

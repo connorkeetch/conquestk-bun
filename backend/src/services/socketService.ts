@@ -1,3 +1,4 @@
+import type { GameDelta } from '@risk-game/shared/types'
 import * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
@@ -7,15 +8,14 @@ import { DeltaBuilder } from '../types/deltaUpdates'
 import type { GamePlayer, GameState, SerializedGameState, Territory } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
-import { socketPayloadMetrics } from './metricsService'
 import { gameStateCache } from './cacheService'
 import { clanService } from './clanService'
 import { eloService, type PlayerRating } from './eloService'
 import { GameActionProcessor } from './gameActionProcessor'
 import { GameRoomService } from './gameRoomService'
 import { GameService } from './gameService'
+import { socketPayloadMetrics } from './metricsService'
 import { queueService } from './queueService'
-import type { GameDelta } from '@risk-game/shared/types'
 import { registerSocketServer } from './socketRegistry'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
@@ -142,8 +142,6 @@ function emitGameDeltaBatchToRoom(
   // Emit as a batch event understood by modern clients; older clients will still
   // receive individual deltas where we keep them.
   // To preserve compatibility, we still support single 'game-delta' elsewhere.
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
   io.to(channel).emit('game-delta-batch', deltas)
 }
 
@@ -249,15 +247,15 @@ function serializeGameStateForClient(
     adjacentTerritories: t.adjacentTerritories,
   }))
 
-  const cfg = s.gameConfig as import('../types/game').GameConfiguration
+  const cfg = (s.gameConfig ?? ({} as unknown)) as import('../types/game').GameConfiguration
   const gameConfig = {
-    movementType: cfg.movementType,
-    allowTeamPlay: cfg.allowTeamPlay,
-    teamMode: cfg.teamMode,
-    numberOfTeams: cfg.numberOfTeams,
-    mapId: cfg.mapId,
-    fogOfWar: cfg.fogOfWar,
-    treasureConfig: cfg.treasureConfig,
+    movementType: cfg?.movementType,
+    allowTeamPlay: cfg?.allowTeamPlay,
+    teamMode: cfg?.teamMode,
+    numberOfTeams: cfg?.numberOfTeams,
+    mapId: cfg?.mapId,
+    fogOfWar: cfg?.fogOfWar,
+    treasureConfig: cfg?.treasureConfig,
   }
 
   const base: any = {
@@ -1089,9 +1087,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             userId,
           )
           const channel = getGameChannel(data.roomId)
-          const serialized = await gameStateCache.getGameState<SerializedGameState>(
-            data.roomId,
-          )
+          const serialized = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
           if (serialized) {
             emitGameUpdateToRoom(io, channel, serialized)
           }
@@ -1200,9 +1196,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           if (freshState) {
             const filtered = filterGameStateForPlayer(freshState, userId)
             const finalState = serializeGameStateForClient(filtered)
-          if (finalState) {
-            emitGameUpdateToRoom(io, getGameChannel(roomId), finalState)
-          }
+            if (finalState) {
+              emitGameUpdateToRoom(io, getGameChannel(roomId), finalState)
+            }
           }
         },
       ),

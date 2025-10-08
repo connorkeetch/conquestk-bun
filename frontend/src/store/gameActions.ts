@@ -229,7 +229,8 @@ export const deployArmies = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' && (!navigator.onLine || connectionStatus !== 'connected')
 
       if (shouldFallback) {
         const action = {
@@ -240,7 +241,8 @@ export const deployArmies = createAsyncThunk(
         }
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
           method: 'POST',
           headers,
@@ -298,7 +300,9 @@ export const undoLastPlacement = createAsyncThunk(
 
     const last = history[history.length - 1]
     try {
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
       if (shouldFallback) {
         const action = {
           type: 'deploy',
@@ -308,7 +312,8 @@ export const undoLastPlacement = createAsyncThunk(
         }
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
           method: 'POST',
           headers,
@@ -344,7 +349,9 @@ export const executeAttack = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
       if (shouldFallback) {
         const action = {
           type: 'attack',
@@ -354,7 +361,8 @@ export const executeAttack = createAsyncThunk(
         }
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
           method: 'POST',
           headers,
@@ -397,12 +405,15 @@ export const transferConquestArmies = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
 
       if (shouldFallback) {
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
 
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/transfer-conquest`, {
           method: 'POST',
@@ -449,7 +460,9 @@ export const executeFortify = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || (getState() as RootState).uiRoom.connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        (!navigator.onLine || (getState() as RootState).uiRoom.connectionStatus !== 'connected')
 
       if (shouldFallback) {
         const action = {
@@ -460,7 +473,8 @@ export const executeFortify = createAsyncThunk(
         }
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
           method: 'POST',
           headers,
@@ -497,7 +511,9 @@ export const undoFortify = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || (getState() as RootState).uiRoom.connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        (!navigator.onLine || (getState() as RootState).uiRoom.connectionStatus !== 'connected')
       if (shouldFallback) {
         const action = {
           type: 'undo_fortify',
@@ -506,7 +522,8 @@ export const undoFortify = createAsyncThunk(
         }
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
           method: 'POST',
           headers,
@@ -548,13 +565,19 @@ export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, di
 
   try {
     // If offline or socket disconnected, fall back to HTTP + Background Sync
-    const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || connectionStatus !== 'connected')
+    const shouldFallback =
+      typeof navigator !== 'undefined' && (!navigator.onLine || connectionStatus !== 'connected')
 
     if (shouldFallback) {
-      const action = { type: 'end_turn', roomId: currentGame.roomId, playerId: state.auth.user?.id || currentGame.currentPlayer }
+      const action = {
+        type: 'end_turn',
+        roomId: currentGame.roomId,
+        playerId: state.auth.user?.id || currentGame.currentPlayer,
+      }
       const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+      if (token && token !== 'null' && token !== 'undefined')
+        headers.Authorization = `Bearer ${token}`
 
       // Use fetch so the service worker can intercept and queue via Background Sync
       await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
@@ -563,11 +586,15 @@ export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, di
         body: JSON.stringify({ action }),
       })
         .then(() => {
-          try { toast.success('Turn queued — will submit when online') } catch {}
+          try {
+            toast.success('Turn queued — will submit when online')
+          } catch {}
         })
         .catch(() => {
           // If fetch throws (likely offline), Background Sync should enqueue the request
-          try { toast('Turn queued for background sync') } catch {}
+          try {
+            toast('Turn queued for background sync')
+          } catch {}
         })
     } else {
       socketService.endTurn(currentGame.roomId)
@@ -598,11 +625,14 @@ export const tradeTreasureSet = createAsyncThunk(
         playerId: state.auth.user?.id || '',
         payload: { treasureSet: indices },
       }
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
       if (shouldFallback) {
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
           method: 'POST',
           headers,
@@ -635,11 +665,14 @@ export const goBackToReinforcement = createAsyncThunk(
         playerId: state.auth.user?.id || currentGame.currentPlayer,
       } as const
 
-      const shouldFallback = typeof navigator !== 'undefined' && (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        (!navigator.onLine || state.uiRoom.connectionStatus !== 'connected')
       if (shouldFallback) {
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
+        if (token && token !== 'null' && token !== 'undefined')
+          headers.Authorization = `Bearer ${token}`
         await fetch(`${API_URL}/game/rooms/${currentGame.roomId}/actions`, {
           method: 'POST',
           headers,

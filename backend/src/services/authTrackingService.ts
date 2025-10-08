@@ -40,12 +40,12 @@ class AuthTrackingService {
     let browser = 'unknown'
     let browserVersion: string | undefined
     const matchers: Array<{ name: string; regex: RegExp }> = [
-      { name: 'Edge', regex: /Edg\/(\d+[\.\d+]*)/ },
-      { name: 'Chrome', regex: /Chrome\/(\d+[\.\d+]*)/ },
-      { name: 'Firefox', regex: /Firefox\/(\d+[\.\d+]*)/ },
+      { name: 'Edge', regex: /Edg\/(\d+[.\d+]*)/ },
+      { name: 'Chrome', regex: /Chrome\/(\d+[.\d+]*)/ },
+      { name: 'Firefox', regex: /Firefox\/(\d+[.\d+]*)/ },
       // Safari version is in Version/x.y but presence of Safari indicates engine
-      { name: 'Safari', regex: /Version\/(\d+[\.\d+]*)\s+Safari\// },
-      { name: 'Opera', regex: /OPR\/(\d+[\.\d+]*)/ },
+      { name: 'Safari', regex: /Version\/(\d+[.\d+]*)\s+Safari\// },
+      { name: 'Opera', regex: /OPR\/(\d+[.\d+]*)/ },
     ]
     for (const m of matchers) {
       const match = ua.match(m.regex)
@@ -114,7 +114,13 @@ class AuthTrackingService {
         `INSERT INTO user_sessions (user_id, ip_address, user_agent, device_info, session_data)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
-        [userId, ipAddress ?? null, userAgent ?? null, effectiveDeviceInfo ?? {}, sessionData ?? {}],
+        [
+          userId,
+          ipAddress ?? null,
+          userAgent ?? null,
+          effectiveDeviceInfo ?? {},
+          sessionData ?? {},
+        ],
       )
 
       return result.rows[0]?.id ?? null
