@@ -2446,6 +2446,28 @@ export class GameService {
         })
       }
 
+      if (ratingChanges.length > 0) {
+        const ratingInputMap = new Map(playerRatings.map((player) => [player.userId, player]))
+        logger.info('Calculated rating changes for completed ranked game', {
+          gameId,
+          players: ratingChanges.length,
+          breakdown: ratingChanges.map((change) => {
+            const input = ratingInputMap.get(change.userId)
+            return {
+              userId: change.userId,
+              position: input?.position ?? null,
+              gamesPlayed: input?.gamesPlayed ?? null,
+              oldRating: change.oldRating,
+              newRating: change.newRating,
+              delta: change.change,
+              expectedScore: Number(change.expectedScore.toFixed(3)),
+              actualScore: Number(change.actualScore.toFixed(3)),
+              kFactor: Number(change.kFactor.toFixed(2)),
+            }
+          }),
+        })
+      }
+
       const ratingChangeMap = new Map(ratingChanges.map((change) => [change.userId, change]))
 
       const playerSummary = playerRankings.map((ranking) => {
