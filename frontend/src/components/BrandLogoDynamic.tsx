@@ -5,8 +5,11 @@ type Props = {
   height?: number
   className?: string
   title?: string
-  rounded?: number
-  withShadow?: boolean
+  withGlow?: boolean
+  /** Scale the brand artwork (>1 zooms in). */
+  scale?: number
+  /** Bias of vertical crop for extra top visibility (0..1). 0.5 = center */
+  yBias?: number
 }
 
 /**
@@ -20,8 +23,9 @@ export default function BrandLogoDynamic({
   height = 28,
   className = '',
   title = 'ConquestK logo',
-  rounded = 6,
-  withShadow = true,
+  withGlow = true,
+  scale = 1.22,
+  yBias = 0.65,
 }: Props) {
   const w = width
   const h = height
@@ -36,33 +40,36 @@ export default function BrandLogoDynamic({
       role="img"
       aria-labelledby={titleId}
       className={className}
-      style={
-        withShadow
-          ? {
-              filter:
-                'drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 2px var(--color-primary))',
-            }
-          : undefined
-      }
     >
       <title id={titleId}>{title}</title>
-      {/* Background driven by theme CSS variables */}
-      <rect
-        width="192"
-        height="192"
-        rx={rounded}
-        fill="var(--surface-3, #111827)"
-      />
-      {/* Center-cropped brand artwork */}
-      <image
-        href="/Conquest_K_Logo.svg"
-        x="0"
-        y="0"
-        width="192"
-        height="192"
-        preserveAspectRatio="xMidYMid slice"
-      />
+      <defs>
+        {withGlow ? (
+          <filter id="brandGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <!-- neutral outer glow -->
+            <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#cbd5e1" flood-opacity="0.85" />
+          </filter>
+        ) : null}
+      </defs>
+
+      {(() => {
+        const base = 192
+        const scaled = base * scale
+        const extra = scaled - base
+        const x = -extra / 2
+        const y = -extra * yBias
+        return (
+          <g filter={withGlow ? 'url(#brandGlow)' : undefined}>
+            <image
+              href="/Conquest_K_Logo.svg"
+              x={x}
+              y={y}
+              width={scaled}
+              height={scaled}
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </g>
+        )
+      })()}
     </svg>
   )
 }
-

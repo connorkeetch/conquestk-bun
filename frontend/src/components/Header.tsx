@@ -262,7 +262,7 @@ export default function Header() {
               to="/"
               className="text-[color:var(--text)] font-semibold tracking-wide flex items-center gap-2"
             >
-              <BrandLogoDynamic width={24} height={24} />
+              <BrandLogoDynamic width={28} height={28} />
               <span className="hidden sm:inline">
                 CONQUEST{' '}
                 <span
@@ -478,7 +478,7 @@ export default function Header() {
         {/* Menu Header with Glass Effect */}
         <div className="sidebar-header px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BrandLogoDynamic width={28} height={28} />
+            <BrandLogoDynamic width={32} height={32} />
             <span className="text-xl font-bold text-[color:var(--text)]">
               CONQUEST{' '}
               <span

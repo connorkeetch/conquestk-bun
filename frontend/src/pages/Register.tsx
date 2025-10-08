@@ -56,7 +56,7 @@ export default function Register() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <div className="flex items-center justify-center gap-3 mb-2">
-              <BrandLogoDynamic width={48} height={48} />
+              <BrandLogoDynamic width={56} height={56} />
               <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
                 CONQUEST{' '}
                 <span

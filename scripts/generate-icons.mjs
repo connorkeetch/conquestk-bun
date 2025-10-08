@@ -4,27 +4,34 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 const root = path.resolve(process.cwd())
-// Use the raw brand artwork to avoid <image> href resolution issues in headless SVG rendering
-const svgPath = path.join(root, 'frontend/public/Conquest_K_Logo.svg')
+// Use the raw brand artwork and wrap it with an inline glow + crop in SVG
+const brandSvgPath = path.join(root, 'frontend/public/Conquest_K_Logo.svg')
 const out512 = path.join(root, 'frontend/public/icon-512.png')
 const out192 = path.join(root, 'frontend/public/icon-192.png')
 const out180 = path.join(root, 'frontend/public/apple-touch-icon-180.png')
 
 async function run() {
-  if (!fs.existsSync(svgPath)) {
-    process.stderr.write(`icon.svg not found at ${svgPath}\n`)
+  if (!fs.existsSync(brandSvgPath)) {
+    process.stderr.write(`Brand svg not found at ${brandSvgPath}\n`)
     process.exit(1)
   }
-  const svg = fs.readFileSync(svgPath)
+  const brandB64 = Buffer.from(fs.readFileSync(brandSvgPath)).toString('base64')
   const mkSquare = async (size, out) => {
-    const logo = await sharp(svg)
-      .resize(size, size, { fit: 'cover', position: 'centre' })
-      .png()
-      .toBuffer()
-    await sharp({ create: { width: size, height: size, channels: 4, background: { r: 17, g: 24, b: 39, alpha: 1 } } })
-      .composite([{ input: logo }])
-      .png()
-      .toFile(out)
+    const scaled = Math.round(size * 1.22)
+    const x = -Math.round((scaled - size) / 2)
+    const y = -Math.round((scaled - size) * 0.65)
+    const wrapper = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="${(size * 0.04).toFixed(2)}" flood-color="#cbd5e1" flood-opacity="0.9" />
+    </filter>
+  </defs>
+  <g filter="url(#glow)">
+    <image href="data:image/svg+xml;base64,${brandB64}" x="${x}" y="${y}" width="${scaled}" height="${scaled}" preserveAspectRatio="xMidYMid slice" />
+  </g>
+</svg>`
+    await sharp(Buffer.from(wrapper)).png().toFile(out)
   }
   await mkSquare(512, out512)
   await mkSquare(192, out192)
