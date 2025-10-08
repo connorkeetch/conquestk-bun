@@ -9,8 +9,8 @@ import sharp from 'sharp'
 const _root = path.resolve(process.cwd(), '..') // start from frontend/, go to repo root, then back to frontend/public
 const pub = path.resolve(process.cwd(), 'public')
 
-// Use the CROPPED brand artwork as the base
-const BRAND_SVG = path.join(pub, 'Conquest_K_Logo-cropped.svg')
+// Use the base brand artwork as the source
+const BRAND_SVG = path.join(pub, 'Conquest_K_Logo.svg')
 const ICON_OUTS = [
   { file: 'icon-192-maskable.png', size: 192 },
   { file: 'icon-512-maskable.png', size: 512 },

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 60 60">
-  <title>ConquestK Safari Pinned Tab (cropped)</title>
+  <title>ConquestK Safari Pinned Tab</title>
   <!-- Safari pinned tabs use the alpha/mask from this file and tint it with the `color` in the link tag. -->
   <!-- Use the new cropped brand art; render as a solid silhouette via a color matrix to ensure full-opacity mask. -->
   <defs>
@@ -11,6 +11,6 @@
   </defs>
   <g filter="url(#solidMask)">
     <!-- Center crop the artwork to square; Safari will use the resulting alpha as the mask. -->
-    <image href="/Conquest_K_Logo-cropped.svg" x="-10" y="0" width="80" height="80" preserveAspectRatio="xMidYMid slice"/>
+    <image href="/Conquest_K_Logo.svg" x="-10" y="0" width="80" height="80" preserveAspectRatio="xMidYMid slice"/>
   </g>
 </svg>
