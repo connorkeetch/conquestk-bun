@@ -369,8 +369,7 @@ class SocketService {
     })
 
     // Delta update handler - efficient real-time updates
-    this.socket.on('game-delta', (delta) => {
-      const payload = delta as unknown as GameDelta
+    const processDelta = (payload: GameDelta) => {
       const state = store.getState()
       const viewerId = state.auth.user?.id ?? null
       const currentGame = state.game.currentGame
@@ -514,6 +513,49 @@ class SocketService {
 
       // Apply delta to Redux store
       store.dispatch(applyDelta(payload))
+    }
+
+    this.socket.on('game-delta', (delta) => {
+      processDelta(delta as unknown as GameDelta)
+    })
+
+    // Coalesced delta batches (optional optimization)
+    // @ts-expect-error: runtime event provided by server
+    this.socket.on('game-delta-batch', (deltas: unknown) => {
+      const array = Array.isArray(deltas) ? (deltas as unknown[]) : []
+      if (array.length === 0) return
+      const last = array[array.length - 1] as unknown as GameDelta
+      for (const d of array) {
+        processDelta(d as unknown as GameDelta)
+      }
+      // Minimal UX side-effects for the last delta: notify on PHASE_CHANGE and clear placement if needed
+      try {
+        const payload = last
+        const { game, auth } = store.getState()
+        const previousState = game.currentGame
+        const currentUserId = auth.user?.id
+        if (payload.type === 'PHASE_CHANGE' && currentUserId) {
+          const wasMyTurn = previousState?.currentPlayer === currentUserId
+          if (payload.currentPlayer === currentUserId && !wasMyTurn) {
+            notificationService.addNotification({
+              type: 'turn_reminder',
+              title: "It's your turn!",
+              message: `It's your turn - ${payload.phase} phase`,
+              read: false,
+              actionUrl: `/room/${payload.roomId}`,
+              actionLabel: 'Go to game',
+              metadata: { gameId: payload.roomId },
+            })
+            audioService.playEffect('turn')
+          }
+          if (payload.phase === 'reinforcement') {
+            store.dispatch(clearPlacementHistory())
+            store.dispatch(setPlacementServerSpent(0))
+          }
+        }
+      } catch {
+        // best-effort notification/audio
+      }
     })
 
     // Legacy game-update handler - used primarily for join/resync

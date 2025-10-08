@@ -15,6 +15,7 @@ import { GameActionProcessor } from './gameActionProcessor'
 import { GameRoomService } from './gameRoomService'
 import { GameService } from './gameService'
 import { queueService } from './queueService'
+import type { GameDelta } from '@risk-game/shared/types'
 import { registerSocketServer } from './socketRegistry'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
@@ -113,6 +114,37 @@ function emitGameUpdateToRoom(
     }
   }
   io.to(channel).emit('game-update', payload)
+}
+
+function emitGameDeltaBatchToRoom(
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  channel: string,
+  deltas: GameDelta[],
+) {
+  try {
+    const bytes = computePayloadBytes(deltas)
+    socketPayloadMetrics.record('game-delta', bytes)
+    if (socketPayloadMetrics.shouldLog('game-delta')) {
+      const stats = socketPayloadMetrics.snapshot('game-delta')
+      if (stats) {
+        logger.info('Socket payload stats', {
+          event: 'game-delta',
+          windowCount: stats.count,
+          p50Bytes: stats.p50,
+          p95Bytes: stats.p95,
+          maxBytes: stats.max,
+        })
+      }
+    }
+  } catch {
+    // metrics best-effort
+  }
+  // Emit as a batch event understood by modern clients; older clients will still
+  // receive individual deltas where we keep them.
+  // To preserve compatibility, we still support single 'game-delta' elsewhere.
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  io.to(channel).emit('game-delta-batch', deltas)
 }
 
 function emitGameUpdateToSocket(
@@ -941,30 +973,24 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           data.armies,
         )
 
-        const serialized = serializeGameStateForClient(transferResult.gameState)
-        if (!serialized) {
-          throw new Error('Failed to serialize game state')
-        }
-
-        // Broadcast updated game state
+        // Broadcast territory deltas for efficient updates (no full snapshot)
         const channel = getGameChannel(data.roomId)
-        emitGameUpdateToRoom(io, channel, serialized)
-
-        // Also send territory deltas for efficient updates
-        io.to(channel).emit('game-delta', {
-          type: 'TERRITORY_UPDATE',
-          roomId: data.roomId,
-          territoryId: data.fromTerritoryId,
-          changes: { armies: transferResult.fromArmies },
-          timestamp: Date.now(),
-        })
-        io.to(channel).emit('game-delta', {
-          type: 'TERRITORY_UPDATE',
-          roomId: data.roomId,
-          territoryId: data.toTerritoryId,
-          changes: { armies: transferResult.toArmies },
-          timestamp: Date.now(),
-        })
+        emitGameDeltaBatchToRoom(io, channel, [
+          {
+            type: 'TERRITORY_UPDATE',
+            roomId: data.roomId,
+            territoryId: data.fromTerritoryId,
+            changes: { armies: transferResult.fromArmies },
+            timestamp: Date.now(),
+          } as import('@risk-game/shared/types').GameDelta,
+          {
+            type: 'TERRITORY_UPDATE',
+            roomId: data.roomId,
+            territoryId: data.toTerritoryId,
+            changes: { armies: transferResult.toArmies },
+            timestamp: Date.now(),
+          } as import('@risk-game/shared/types').GameDelta,
+        ])
       }),
     )
 
@@ -997,9 +1023,24 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           data.toTerritoryId,
           data.armies,
         )
+        // Emit deltas only (no snapshot) to minimize payload
         const channel = getGameChannel(data.roomId)
-        io.to(channel).emit('territoriesFortified', result)
-        emitGameUpdateToRoom(io, channel, result.gameState)
+        emitGameDeltaBatchToRoom(io, channel, [
+          {
+            type: 'TERRITORY_UPDATE',
+            roomId: data.roomId,
+            territoryId: data.fromTerritoryId,
+            changes: { armies: result.fromArmies },
+            timestamp: Date.now(),
+          } as import('@risk-game/shared/types').GameDelta,
+          {
+            type: 'TERRITORY_UPDATE',
+            roomId: data.roomId,
+            territoryId: data.toTerritoryId,
+            changes: { armies: result.toArmies },
+            timestamp: Date.now(),
+          } as import('@risk-game/shared/types').GameDelta,
+        ])
       }),
     )
 
@@ -1261,7 +1302,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
           if (!hasAccess) throw new Error('Not a member of this game')
           const channel = getGameChannel(data.roomId)
-          io.to(channel).emit('ping:territory', {
+          io.to(channel).volatile.emit('ping:territory', {
             roomId: data.roomId,
             territoryId: data.territoryId,
             userId,
