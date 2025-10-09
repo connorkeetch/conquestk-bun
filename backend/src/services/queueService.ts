@@ -70,6 +70,16 @@ const QUEUE_CONFIGS = {
     concurrency: 5,
     priority: 'low' as const,
   },
+  maintenance: {
+    name: 'maintenance',
+    concurrency: 1,
+    priority: 'low' as const,
+  },
+  mapAssets: {
+    name: 'map-assets',
+    concurrency: 1,
+    priority: 'low' as const,
+  },
 } as const
 
 export interface QueueStats {
@@ -316,6 +326,26 @@ export class QueueService {
       priority: 1, // Low priority
       delay: job.reason === 'timeout' ? 30000 : 0, // 30s delay for timeouts
     })
+  }
+
+  // Change delay on an existing delayed game-action by jobId
+  async changeDelayedGameActionDelay(jobId: string, delayMs: number): Promise<boolean> {
+    if (!this.redis || !this.isInitialized) return false
+    const queue = this.resolveQueue('gameActions')
+    if (!queue) return false
+    try {
+      const job = await queue.getJob(jobId)
+      if (!job) return false
+      await job.changeDelay(Math.max(0, Math.trunc(delayMs)))
+      return true
+    } catch (e) {
+      logger.warn('Failed to change delay for game action job', {
+        jobId,
+        delayMs,
+        error: e instanceof Error ? e.message : e,
+      })
+      return false
+    }
   }
 
   // Analytics/Event Queue (fire-and-forget)
@@ -857,6 +887,14 @@ export class QueueService {
 
   getAnalyticsQueue(): Queue {
     return this.requireQueue('analyticsEvents') as Queue
+  }
+
+  getMaintenanceQueue(): Queue {
+    return this.requireQueue('maintenance') as Queue
+  }
+
+  getMapAssetQueue(): Queue {
+    return this.requireQueue('mapAssets') as Queue
   }
 }
 

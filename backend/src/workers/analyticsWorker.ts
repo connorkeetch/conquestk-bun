@@ -51,6 +51,10 @@ export class AnalyticsWorker {
       },
       {
         concurrency: 5,
+        limiter: {
+          max: 50,
+          duration: 1000,
+        },
         // Dedicated Redis connection for BullMQ
         connection: (() => {
           const Redis = (require('ioredis') as typeof import('ioredis')).default

@@ -988,13 +988,11 @@ export class GameLifecycleService {
 
       const turnNumber = room?.turnNumber ?? 0
       const idKey = `turn-timeout:${roomId}:turn:${turnNumber}`
-      try {
-        await queueService.removeGameActionJob(idKey)
-      } catch (_e) {
-        // best-effort
-      }
-
-      const job = await queueService.addDelayedGameAction(
+      // Prefer changing delay on an existing job when rescheduling
+      const changed = await queueService.changeDelayedGameActionDelay(idKey, seconds * 1000)
+      const job = changed
+        ? null
+        : await queueService.addDelayedGameAction(
         {
           gameId: roomId,
           playerId: currentTurnUserId,
