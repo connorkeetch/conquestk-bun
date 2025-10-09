@@ -1,16 +1,93 @@
-import {
-  BookOpen,
-  Gamepad2,
-  Map as MapIcon,
-  Settings,
-  Shield,
-  Trophy,
-  Users,
-  Zap,
-} from 'lucide-react'
+import { BookOpen, Gamepad2, Map as MapIcon, Settings, Shield, Trophy, Zap } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 import { RANK_COLORS } from '../constants/colors'
+
+const formatRankRange = (min: number, max: number) => {
+  if (!Number.isFinite(max)) {
+    return `${min}+`
+  }
+  return `${min}-${max}`
+}
+
+const RANKING_TRACK = [
+  {
+    key: 'CHIEFTAIN',
+    icon: '🛡️',
+    label: 'Chieftain',
+    description: 'Village champion with a well-loved spear and something to prove.',
+    example: 'Vercingetorix',
+  },
+  {
+    key: 'WARLORD',
+    icon: '⚔️',
+    label: 'Warlord',
+    description: 'Regional bully who thinks diplomacy is a myth.',
+    example: 'Shaka Zulu',
+  },
+  {
+    key: 'RAIDER_KING',
+    icon: '⚓',
+    label: 'Raider King',
+    description: 'Fleet-fueled menace raiding coasts before breakfast.',
+    example: 'Ragnar Lothbrok',
+  },
+  {
+    key: 'SULTAN',
+    icon: '☪️',
+    label: 'Sultan',
+    description: 'Diplomat with an army, balancing silk routes and sieges.',
+    example: 'Saladin',
+  },
+  {
+    key: 'CAESAR',
+    icon: '🦅',
+    label: 'Caesar',
+    description: 'Empire-builder rewriting the senate agenda.',
+    example: 'Julius Caesar',
+  },
+  {
+    key: 'KHAN',
+    icon: '🏹',
+    label: 'Khan',
+    description: 'Lightning cavalry incarnate; moves faster than diplomacy.',
+    example: 'Genghis Khan',
+  },
+  {
+    key: 'EMPEROR',
+    icon: '👑',
+    label: 'Emperor',
+    description: 'Commands legions across continents and still finds time for pageantry.',
+    example: 'Napoleon Bonaparte',
+  },
+  {
+    key: 'GREAT_KING',
+    icon: '☀️',
+    label: 'Great King',
+    description: 'Ruler of rulers, basking in continent-wide adoration.',
+    example: 'Alexander the Great',
+  },
+  {
+    key: 'OVERLORD',
+    icon: '💀',
+    label: 'Overlord',
+    description: 'Obsidian-crowned tyrant; taxes are payable in fear.',
+    example: 'Attila the Hun',
+  },
+  {
+    key: 'APOCALYPSE',
+    icon: '☄️',
+    label: 'Apocalypse',
+    description: 'Walking extinction event and rumor mill legend.',
+    example: 'Tamerlane',
+  },
+] as const satisfies readonly {
+  key: keyof typeof RANK_COLORS
+  icon: string
+  label: string
+  description: string
+  example: string
+}[]
 
 const TutorialPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -22,7 +99,7 @@ const TutorialPage: React.FC = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[color:var(--color-primary)] mb-2">How to Play</h1>
         <p className="text-muted text-lg">
-          Master the art of conquest with our comprehensive guides
+          Welcome to boot camp, commander. Here&apos;s how to steamroll the map with style.
         </p>
       </div>
 
@@ -84,18 +161,22 @@ const TutorialPage: React.FC = () => {
           <div className="space-y-8">
             <header className="space-y-2">
               <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
-                Getting started
+                Boot camp briefing
               </h2>
               <p className="text-sm text-muted max-w-2xl">
-                Understand the win condition, the three-part turn loop, and the controls you&apos;ll
-                use in every match.
+                ConquestK is a three-phase loop of deploying troops, blasting neighbors, and
+                tightening borders. Learn the rhythm, press the shiny buttons, and the planet is
+                yours.
               </p>
             </header>
 
             <section className="panel-muted space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Objective</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Primary directive
+              </h3>
               <p className="text-muted text-sm">
-                Conquer territories, build armies, and eliminate all opponents to achieve global
+                Eliminate every rival commander or hit the special victory condition for your mode.
+                The scoreboard bar up top tracks rounds, active player, and your glorious march to
                 domination.
               </p>
             </section>
@@ -103,47 +184,92 @@ const TutorialPage: React.FC = () => {
             <section className="space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                  Turn phases
+                  Turn phases (a.k.a. the war drum)
                 </h3>
                 <p className="text-xs text-muted sm:text-sm max-w-xl">
-                  Each turn flows through three steps. Use them together to build momentum and
-                  secure the front lines.
+                  The phase chips in the action bar light up for each step. You only advance when
+                  you hit the big <strong>End Phase</strong> button, so take your time lining up the
+                  next conquest.
                 </p>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="panel-muted border-l-4 border-[color:var(--color-warning)]">
+                <div className="panel-muted border-l-4 border-[color:var(--color-warning)] space-y-2">
                   <h4 className="font-semibold text-[color:var(--color-warning)]">1. Reinforce</h4>
-                  <p className="text-sm text-muted mt-2">
-                    Deploy new troops to friendly territory. Bonus soldiers arrive when you hold
-                    entire sectors, and in team games you can reinforce an ally directly.
+                  <p className="text-sm text-muted">
+                    Click your territory (or an ally&apos;s in team play) to drop troops. The
+                    Reinforcements meter above the dice bar counts down every placement.
                   </p>
+                  <ul className="space-y-1 text-xs text-muted">
+                    <li>Hold entire sectors for bonus armies at the start of the turn.</li>
+                    <li>
+                      Mis-drop a troop? Hit <strong>↶ Undo</strong> in the action bar to rewind the
+                      last placement.
+                    </li>
+                    <li>
+                      When the meter hits zero, the <strong>End Phase → Attack</strong> button
+                      lights up. Smash it with gusto.
+                    </li>
+                  </ul>
                 </div>
-                <div className="panel-muted border-l-4 border-[color:var(--color-danger)]">
+                <div className="panel-muted border-l-4 border-[color:var(--color-danger)] space-y-2">
                   <h4 className="font-semibold text-[color:var(--color-danger)]">2. Attack</h4>
-                  <p className="text-sm text-muted mt-2">
-                    Strike adjacent enemies. Dice rolls resolve battles, and you can chain attacks
-                    until you stop or run out of units.
+                  <p className="text-sm text-muted">
+                    Select an owned territory with at least two armies, then click an adjacent enemy
+                    province to roll dice until someone blinks.
                   </p>
+                  <ul className="space-y-1 text-xs text-muted">
+                    <li>
+                      Chain assaults as long as you have troops; every victory lets you march in.
+                    </li>
+                    <li>
+                      Haven&apos;t actually attacked yet? You&apos;ll see{' '}
+                      <strong>↩ Reinforce</strong> so you can hop back and redeploy.
+                    </li>
+                    <li>
+                      Ready to dig in? Hit <strong>End Phase → Fortify</strong> to prep your
+                      borders.
+                    </li>
+                  </ul>
                 </div>
-                <div className="panel-muted border-l-4 border-[color:var(--color-success)]">
+                <div className="panel-muted border-l-4 border-[color:var(--color-success)] space-y-2">
                   <h4 className="font-semibold text-[color:var(--color-success)]">3. Fortify</h4>
-                  <p className="text-sm text-muted mt-2">
-                    Shift troops between connected territories to cover weak borders before the next
-                    player moves.
+                  <p className="text-sm text-muted">
+                    Choose a territory with spare troops, then a connected friendly target to shift
+                    bodies along the supply line.
                   </p>
+                  <ul className="space-y-1 text-xs text-muted">
+                    <li>The fortification style (Adjacent, Chained, etc.) dictates valid paths.</li>
+                    <li>
+                      Need a redo? <strong>↶ Undo</strong> rewinds the most recent transfer during
+                      the phase.
+                    </li>
+                    <li>
+                      Tap <strong>End Phase → End Turn</strong> to hand the battlefield to the next
+                      hopeful tyrant.
+                    </li>
+                  </ul>
                 </div>
               </div>
             </section>
 
             <section className="panel-muted space-y-3">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Basic controls
+                Command console
               </h3>
               <ul className="text-sm text-muted space-y-2">
-                <li>Click friendly territories (or a teammate&apos;s) to place reinforcements</li>
-                <li>Drag from your territory to an enemy territory to attack</li>
-                <li>Scroll or pinch to zoom the map, and drag to pan</li>
-                <li>Use right-click (or long press) to cancel the current action</li>
+                <li>
+                  Left-click / tap to select, attack, and fortify. Right-click or press Esc to
+                  cancel.
+                </li>
+                <li>Drag the map to pan. Scroll or pinch to zoom in on the carnage.</li>
+                <li>
+                  The dice bar shows battle results and remaining reinforcements so you know when to
+                  push harder.
+                </li>
+                <li>
+                  Turn timer and (optional) time bank sit next to the active player badge—don&apos;t
+                  let them hit zero unless you crave deserter status.
+                </li>
               </ul>
             </section>
           </div>
@@ -152,10 +278,12 @@ const TutorialPage: React.FC = () => {
         {activeTab === 'gametypes' && (
           <div className="space-y-6">
             <header className="space-y-2">
-              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game types</h2>
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
+                Pick your theatre
+              </h2>
               <p className="text-sm text-muted max-w-2xl">
-                Mix up the rules to keep matches fresh. These presets are available in matchmaking
-                and private lobbies.
+                Every mode is a different propaganda poster. Choose how you want to win, then brag
+                in global chat like the heroic liberator you are.
               </p>
             </header>
 
@@ -163,118 +291,124 @@ const TutorialPage: React.FC = () => {
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-success)]">
                 <h3 className="text-lg font-semibold text-[color:var(--color-success)]">Classic</h3>
                 <p className="text-sm text-muted">
-                  The standard ConquestK experience—start with shared territory, push opponents off
-                  the board, and rule the map.
+                  Everyone starts scattered across the map. Grind every enemy piece off the board
+                  and claim the planet as your commemorative snow globe.
                 </p>
+                <ul className="text-xs text-muted space-y-1">
+                  <li>Win condition: Last army standing.</li>
+                  <li>Territory count, cards, and bonuses match the standard ruleset.</li>
+                  <li>Ideal for first drops and teaching rookies humility.</li>
+                </ul>
               </div>
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-primary)]">
                 <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
                   Capitals
                 </h3>
                 <p className="text-sm text-muted">
-                  Each player defends a capital. Eliminating every rival still wins the war, but
-                  holding capitals creates strategic pressure.
+                  You get a capital to defend; lose it and you&apos;re vaporized even if other
+                  troops survive. Protect yours, vaporize theirs, cackle loudly.
                 </p>
+                <ul className="text-xs text-muted space-y-1">
+                  <li>Capital territories glow with a crown marker on the map.</li>
+                  <li>Card bonuses and continent income still apply—capitalize on both.</li>
+                  <li>Perfect for surgical strikes and dramatic comeback plays.</li>
+                </ul>
               </div>
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-warning)]">
                 <h3 className="text-lg font-semibold text-[color:var(--color-warning)]">
                   👑 King of the Hill
                 </h3>
                 <p className="text-sm text-muted">
-                  Control the designated hill territory to earn victory points each round. First to
-                  reach the target wins—or hold the most points when time runs out.
+                  Hold the featured territory through the entire round to scoop victory points.
+                  First to the target (default 10) triggers fireworks and salty rivals.
                 </p>
+                <ul className="text-xs text-muted space-y-1">
+                  <li>Neutral defenders garrison the hill at match start—bring explosives.</li>
+                  <li>
+                    If rotation is enabled, the future hill markers appear two turns out so you can
+                    road-trip early.
+                  </li>
+                  <li>Scoreboard pings every time points are tallied at round end.</li>
+                </ul>
               </div>
             </div>
 
-            {/* King of the Hill Details */}
             <div className="panel-muted space-y-4">
               <h3 className="text-xl font-semibold text-[color:var(--color-warning)]">
-                King of the Hill deep dive
+                Hill tactics dossier
               </h3>
-
               <div className="space-y-3">
                 <div>
-                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">Objective</h4>
+                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">
+                    How scoring works
+                  </h4>
                   <p className="text-sm text-muted">
-                    At the end of each round (after all players have taken their turns), the player
-                    controlling the hill territory earns <strong>1 victory point</strong>. The first
-                    player or team to reach the target point total (default: 10 points) wins
-                    immediately.
+                    Points are awarded after the last commander finishes their turn. Teams share a
+                    single score, so defend as a squad or watch someone else raise the flag.
                   </p>
                 </div>
-
                 <div>
-                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">Hill mechanics</h4>
+                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">
+                    Battlefield notes
+                  </h4>
                   <ul className="text-sm text-muted space-y-2">
                     <li className="flex items-start gap-2">
                       <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
                       <span>
-                        The hill starts neutral with elevated defenders (default: 8 armies)—you must
-                        conquer it like any other territory.
+                        Hill rotations follow your lobby setting (static or every N rounds). The
+                        preview ping appears on the map banner and in the objectives panel.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
                       <span>
-                        Hill locations can be static (one territory all game) or rotating (moving to
-                        a new location every N turns).
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Shield className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                      <span>
-                        When rotation is enabled, you'll receive advance notice (default: 2 turns)
-                        of where the hill will move next.
+                        Holding the hill through a full global turn earns one point; lose it at any
+                        point and the scoreboard shrugs.
                       </span>
                     </li>
                   </ul>
                 </div>
-
                 <div>
-                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">Strategy tips</h4>
+                  <h4 className="font-semibold text-[color:var(--heading)] mb-2">
+                    Suggested war crimes*
+                  </h4>
                   <ul className="text-sm text-muted space-y-2">
                     <li className="flex items-start gap-2">
                       <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
                       <span>
-                        <strong>Strike early:</strong> Securing the hill first can build an
-                        insurmountable point lead before others react.
+                        Blitz early to grab an uncontested lead—every point denied is a tantrum
+                        earned.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
                       <span>
-                        <strong>Fortify heavily:</strong> Holding the hill means surviving attacks
-                        from all directions. Stack defenders and adjacent reinforcements.
+                        Stack neighboring tiles so counter-attacks break on your meat shield instead
+                        of the hill proper.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
                       <span>
-                        <strong>Watch the scoreboard:</strong> If an opponent is close to victory,
-                        prioritize taking the hill rather than expanding elsewhere.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Zap className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                      <span>
-                        <strong>Rotation timing:</strong> When rotation is enabled, consider whether
-                        to defend the current hill or position armies near the next one.
+                        Watch the victory ticker; if an enemy is one point away, dump every army
+                        into denial plays.
                       </span>
                     </li>
                   </ul>
+                  <p className="text-[10px] text-muted">*Legally speaking, just clever strategy.</p>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-info)]">
-                <h3 className="text-lg font-semibold text-[color:var(--color-info)]">
-                  Random mode
-                </h3>
+                <h3 className="text-lg font-semibold text-[color:var(--color-info)]">Randomizer</h3>
                 <p className="text-sm text-muted">
-                  Shake up treasure payouts, timers, fog, and more with a single click. Perfect for
-                  groups who want every match to feel different.
+                  Can&apos;t decide? Random mode picks Classic or Capitals at match start and keeps
+                  opponents guessing about your true intentions.
+                </p>
+                <p className="text-xs text-muted">
+                  Combine with Random fortification and Fog of War for absolute chaos energy.
                 </p>
               </div>
             </div>
@@ -284,76 +418,92 @@ const TutorialPage: React.FC = () => {
         {activeTab === 'strategy' && (
           <div className="space-y-6">
             <header className="space-y-2">
-              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Strategic tips</h2>
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
+                War council intel
+              </h2>
               <p className="text-sm text-muted max-w-2xl">
-                Positioning, timing, and resource management win campaigns. These fundamentals help
-                at every stage of the match.
+                You already have armies. Now orchestrate them like an over-caffeinated general.
+                These tips keep the initiative firmly under your iron fist.
               </p>
             </header>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="panel-muted space-y-3">
                 <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
-                  Early game
+                  Operation Opening Salvo
                 </h3>
                 <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                    <span>Secure an easily defended sector to earn bonus reinforcements.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
                     <span>
-                      Favor regions with fewer borders (Australia, South America) early on.
+                      Grab a continent with two or fewer choke points; bonus troops are your oxygen.
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
                     <span>
-                      Consolidate strength before expanding—spread troops too thin and you invite
-                      counterattacks.
+                      Don&apos;t split forces across the globe. Concentrate, punch, relocate later.
                     </span>
                   </li>
-                </ul>
-              </div>
-              <div className="panel-muted space-y-3">
-                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
-                  Mid game
-                </h3>
-                <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
-                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                    <span>Break enemy sectors to choke off their bonus troops.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                    <span>Keep border territories stocked with at least 3–5 extra units.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                    <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
                     <span>
-                      Coordinate temporary alliances to check runaway leaders—but remember
-                      there&apos;s only one victor.
+                      Keep at least one border stacked so neighbors think twice about probing.
                     </span>
                   </li>
                 </ul>
               </div>
               <div className="panel-muted space-y-3">
                 <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
-                  Late game
+                  Operation Midgame Maelstrom
+                </h3>
+                <ul className="space-y-2 text-sm text-muted">
+                  <li className="flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                    <span>
+                      Break enemy continents even if you can&apos;t hold them. Denying income is
+                      victory.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                    <span>
+                      Track card counts. Anyone at 4 cards is a walking ATM—plan to finish them the
+                      moment they hit 5.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                    <span>
+                      Temporary alliances are fine. Just remember you&apos;re all future enemies.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+              <div className="panel-muted space-y-3">
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
+                  Operation Endgame Encore
                 </h3>
                 <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
                     <Trophy className="h-4 w-4 text-[color:var(--color-info)] mt-0.5" />
-                    <span>Time your card cash-ins to fuel decisive strikes.</span>
+                    <span>
+                      Chain eliminations by cashing cards mid-turn; each conquest feeds the next
+                      hit.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Trophy className="h-4 w-4 text-[color:var(--color-info)] mt-0.5" />
-                    <span>Eliminate weakened opponents quickly to capture their cards.</span>
+                    <span>
+                      Leave blocking stacks that force opponents to waste armies before reaching
+                      you.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Trophy className="h-4 w-4 text-[color:var(--color-info)] mt-0.5" />
-                    <span>Maintain a strong defensive line while pushing key objectives.</span>
+                    <span>
+                      Secure the win condition—capitals, hill points, total wipe—before gloating.
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -361,14 +511,37 @@ const TutorialPage: React.FC = () => {
 
             <section className="panel-muted space-y-2">
               <h3 className="text-lg font-semibold text-[color:var(--color-danger)]">
-                Combat odds at a glance
+                Combat math, but cooler
               </h3>
               <ul className="text-sm text-muted space-y-1">
-                <li>Attackers roll up to 3 dice; defenders roll up to 2.</li>
-                <li>Higher dice win ties in favor of the defender.</li>
-                <li>Aim for at least a 3:2 troop ratio when launching major assaults.</li>
                 <li>
-                  Never leave a captured territory with a single troop—keep reserves in place.
+                  Attackers roll up to 3 dice; defenders roll up to 2. Ties love the defender.
+                </li>
+                <li>
+                  Launch major assaults with at least a 3:2 troop ratio; 4:2 if you hate coin flips.
+                </li>
+                <li>
+                  Leaving a captured territory at 1 unit is how rebellions happen. Drop a spare
+                  guard before marching on.
+                </li>
+                <li>
+                  Card cash-ins escalate—save them for knockouts or hill rushes, not random flexes.
+                </li>
+              </ul>
+            </section>
+
+            <section className="panel-muted space-y-2">
+              <h3 className="text-lg font-semibold text-[color:var(--color-accent)]">
+                Diplomacy & psychological warfare
+              </h3>
+              <ul className="text-sm text-muted space-y-1">
+                <li>Use chat to coordinate—or to promise nothing and betray everything.</li>
+                <li>
+                  Ping the map to warn allies of weak spots; they can reinforce you during phase
+                  one.
+                </li>
+                <li>
+                  Track the timer. Running opponents out of time is a totally legitimate tactic.
                 </li>
               </ul>
             </section>
@@ -377,179 +550,108 @@ const TutorialPage: React.FC = () => {
 
         {activeTab === 'rankings' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
-              The Conqueror's Path – ranking system
-            </h2>
+            <header className="space-y-2">
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
+                Conquest Points & bragging rights
+              </h2>
+              <p className="text-sm text-muted max-w-2xl">
+                Ranked play measures your ability to bully the galaxy with mathematics. Win games,
+                climb tiers, unlock shinier borders, and make the leaderboard fear your name.
+              </p>
+            </header>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                  How Conquest Points (CP) work
-                </h3>
-                <p className="text-muted">
-                  Conquest Points (CP) measure your skill based on game results. Everyone starts at
-                  800 CP. Win against higher-rated players to gain more points, lose to lower-rated
-                  players to lose more points. Your journey follows the path of history's greatest
-                  conquerors!
-                </p>
-              </div>
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                How CP calculations behave
+              </h3>
+              <p className="text-sm text-muted">
+                Everyone starts at <strong>800 CP</strong>. Beat higher-rated foes to scoop bonus
+                points; lose to lower-rated players and the ledger hits harder. Eliminating an
+                opponent in ranked grants extra credit on top of the win payout.
+              </p>
+              <p className="text-xs text-muted">
+                Casual games are practice only—your CP bar won&apos;t budge there.
+              </p>
+            </section>
 
-              <div>
-                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                  The Conqueror&apos;s path
-                </h3>
-                <div className="space-y-3">
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">🛡️</span>
-                    <div>
-                      <div className="font-semibold" style={{ color: RANK_COLORS.CHIEFTAIN.base }}>
-                        Chieftain (0-599)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Leads a tribe or small clan, fighting for survival — Example: Vercingetorix
-                      </div>
-                    </div>
-                  </div>
+            <section className="panel-muted space-y-2">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Ranked lobby checklist
+              </h3>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                <li>
+                  Game must be <strong>Public</strong> with at least{' '}
+                  <strong>3 human players</strong>.
+                </li>
+                <li>No teams and no AI commanders allowed—steel yourself for pure betrayal.</li>
+                <li>
+                  Turn timer + optional time bank still apply; don&apos;t surrender turns to the
+                  void.
+                </li>
+              </ul>
+            </section>
 
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">⚔️</span>
-                    <div>
-                      <div className="font-semibold" style={{ color: RANK_COLORS.WARLORD.base }}>
-                        Warlord (600-799)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Rules by might, feared by neighboring villages — Example: Shaka Zulu
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">⚓</span>
-                    <div>
-                      <div
-                        className="font-semibold"
-                        style={{ color: RANK_COLORS.RAIDER_KING.base }}
-                      >
-                        Raider King (800-999)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Expands by plunder and coastal terror — Example: Ragnar Lothbrok
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">☪️</span>
-                    <div>
-                      <div className="font-semibold" style={{ color: RANK_COLORS.SULTAN.base }}>
-                        Sultan (1000-1199)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Wields faith and politics alongside armies — Example: Saladin
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">🦅</span>
-                    <div>
-                      <div className="font-semibold" style={{ color: RANK_COLORS.CAESAR.base }}>
-                        Caesar (1200-1399)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Transforms republic into empire — Example: Julius Caesar
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">🏹</span>
-                    <div>
-                      <div className="font-semibold" style={{ color: RANK_COLORS.KHAN.base }}>
-                        Khan (1400-1599)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Masters of cavalry and mobility — Example: Genghis Khan
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">👑</span>
-                    <div>
-                      <div className="font-semibold" style={{ color: RANK_COLORS.EMPEROR.base }}>
-                        Emperor (1600-1799)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Commands massive armies — Example: Napoleon Bonaparte
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">☀️</span>
-                    <div>
-                      <div className="font-semibold" style={{ color: RANK_COLORS.GREAT_KING.base }}>
-                        The Great King (1800-1999)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Ruler of kings, empire spanning sectors — Example: Alexander the Great
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">💀</span>
-                    <div>
-                      <div
-                        className="font-semibold"
-                        style={{
-                          color: RANK_COLORS.OVERLORD.base,
-                          textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
-                        }}
-                      >
-                        Overlord (2000-2199)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Tyrant who demands tribute and burns resistance — Example: Attila the Hun
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-muted flex items-center gap-3">
-                    <span className="text-2xl">☄️</span>
-                    <div>
-                      <div
-                        className="font-semibold"
-                        style={{
-                          background: RANK_COLORS.APOCALYPSE.base,
+            <section className="space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Badge progression
+              </h3>
+              <div className="space-y-3">
+                {RANKING_TRACK.map((rank) => {
+                  const palette = RANK_COLORS[rank.key]
+                  const range = formatRankRange(palette.minElo, palette.maxElo)
+                  const style =
+                    rank.key === 'APOCALYPSE'
+                      ? {
+                          background: palette.base,
                           backgroundClip: 'text',
                           WebkitBackgroundClip: 'text',
+                          color: 'transparent',
                           WebkitTextFillColor: 'transparent',
-                        }}
-                      >
-                        Worldbreaker (2200+)
-                      </div>
-                      <div className="text-sm text-muted">
-                        Apocalyptic conqueror, remembered for brutality — Example: Tamerlane
+                        }
+                      : rank.key === 'OVERLORD'
+                        ? { color: palette.base, textShadow: '0 0 8px rgba(255, 255, 255, 0.8)' }
+                        : { color: palette.base }
+
+                  return (
+                    <div className="panel-muted flex items-center gap-3" key={rank.key}>
+                      <span className="text-2xl" aria-hidden>
+                        {rank.icon}
+                      </span>
+                      <div>
+                        <div className="font-semibold" style={style}>
+                          {rank.label} ({range})
+                        </div>
+                        <div className="text-sm text-muted">
+                          {rank.description} — Example: {rank.example}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )
+                })}
               </div>
+            </section>
 
-              <div className="panel-muted space-y-2">
-                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                  Earning Conquest Points
-                </h3>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                  <li>Win games to grow your CP</li>
-                  <li>Eliminations and decisive victories award bonus points</li>
-                  <li>Ranked games adjust CP; casual matches are risk-free practice</li>
-                  <li>Consistency matters—stringing wins together accelerates progress</li>
-                </ul>
-              </div>
-            </div>
+            <section className="panel-muted space-y-2">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                CP economy pro tips
+              </h3>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                <li>
+                  String wins together—streaks feed the algorithm more than isolated victories.
+                </li>
+                <li>
+                  Finish eliminations yourself to steal their cards and bonus CP in one swoop.
+                </li>
+                <li>
+                  Dodging high-ranked challengers protects CP, but beating them catapults you
+                  upward.
+                </li>
+                <li>
+                  Falling below 1000 doesn&apos;t exile you; it just means the comeback montage
+                  starts now.
+                </li>
+              </ul>
+            </section>
           </div>
         )}
 
@@ -557,25 +659,25 @@ const TutorialPage: React.FC = () => {
           <div className="space-y-6">
             <header className="space-y-2">
               <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
-                Map editor guide
+                Forge your own battlegrounds
               </h2>
               <p className="text-sm text-muted max-w-2xl">
-                Create custom battlefields with the token-based editor and share them with the
-                community.
+                The map editor lets you sculpt continents, wire chokepoints, and subject friends to
+                suspiciously self-serving geography.
               </p>
             </header>
 
             <section className="panel-muted space-y-3">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Quick start steps
+                Rapid deployment plan
               </h3>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted">
-                <li>Upload a background image (minimum 400×300)</li>
-                <li>Place territory tokens on strategic locations</li>
-                <li>Assign sectors and bonuses as needed</li>
-                <li>Connect territories to define borders</li>
-                <li>Set capital positions for each player count</li>
-                <li>Save your map and submit it for approval</li>
+                <li>Upload a backdrop (minimum 400×300)—bonus points for propaganda posters.</li>
+                <li>Drop territory tokens wherever you want armies to brawl.</li>
+                <li>Assign sectors and troop bonuses so the map actually pays rent.</li>
+                <li>Connect neighbors to define who can punch whom.</li>
+                <li>Lay out capitals for every player count from 2 up to 12.</li>
+                <li>Hit save, run validations, and ship it for review.</li>
               </ol>
             </section>
 
@@ -585,37 +687,30 @@ const TutorialPage: React.FC = () => {
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-success)]">
-                    🗺️ Territories mode
-                  </h4>
+                  <h4 className="font-semibold text-[color:var(--color-success)]">🗺️ Territories</h4>
                   <p className="text-sm text-muted">
-                    Place and reposition territory tokens. Select a sector first to auto-assign new
-                    territories.
+                    Drag tokens, rename provinces, and set default army counts. Select a sector
+                    first to auto-tag new territories.
                   </p>
                 </div>
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-primary)]">
-                    🌍 Sectors mode
-                  </h4>
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">🌍 Sectors</h4>
                   <p className="text-sm text-muted">
-                    Group territories into sectors, set bonus values, and choose highlight colors.
+                    Group tiles into continents, pick highlight colors, and set reinforcement
+                    bonuses.
                   </p>
                 </div>
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-info)]">
-                    🔗 Connections mode
-                  </h4>
+                  <h4 className="font-semibold text-[color:var(--color-info)]">🔗 Connections</h4>
                   <p className="text-sm text-muted">
-                    Select a territory, then click neighbours to establish attack paths and
-                    adjacency.
+                    Select a territory, then click each neighbor to open or close attack routes.
                   </p>
                 </div>
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-warning)]">
-                    👑 Capitals mode
-                  </h4>
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">👑 Capitals</h4>
                   <p className="text-sm text-muted">
-                    Auto-generate or hand-pick balanced starting positions for 2–12 players.
+                    Auto-generate balanced starting spots or hand-place them for ultimate narrative
+                    control.
                   </p>
                 </div>
               </div>
@@ -623,37 +718,38 @@ const TutorialPage: React.FC = () => {
 
             <section className="panel-muted space-y-3">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Capital assignment system
+                Capital logic under the hood
               </h3>
               <p className="text-sm text-muted">
-                Balanced starting locations keep every match fair:
+                We keep starting positions fair so nobody spawns in a cul-de-sac of doom:
               </p>
               <ul className="space-y-2 text-sm text-muted">
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-success)]">✨</span>
                   <span>
-                    <strong>Auto-generation:</strong> Maximises distance between capitals using a
+                    <strong>Auto-generation</strong> maximizes distance between capitals using a
                     maximin algorithm.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-primary)]">🎯</span>
                   <span>
-                    <strong>Manual override:</strong> Click territories in Capitals mode to
-                    customise placements.
+                    <strong>Manual override</strong> lets you click exact spots if you have a
+                    dramatic narrative in mind.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-info)]">👥</span>
                   <span>
-                    <strong>Player-specific sets:</strong> Generates optimal layouts for every
-                    supported player count.
+                    <strong>Player-count presets</strong> produce layouts for every lobby size so
+                    your map scales gracefully.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-warning)]">⚖️</span>
                   <span>
-                    <strong>Fair play:</strong> Prevents unfair clustering or unreachable capitals.
+                    <strong>Fair-play guardrails</strong> stop you from stacking capitals in one
+                    corner or on isolated islands.
                   </span>
                 </li>
               </ul>
@@ -661,7 +757,7 @@ const TutorialPage: React.FC = () => {
 
             <section className="panel space-y-3">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Map requirements
+                Publishing requirements
               </h3>
               <table className="table text-sm">
                 <thead>
@@ -694,70 +790,76 @@ const TutorialPage: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
+              <p className="text-xs text-muted">
+                Keep assets crisp—blurry maps make commanders seasick.
+              </p>
             </section>
 
             <section className="panel-muted space-y-3">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Getting maps approved
+                Approval gauntlet
               </h3>
               <ol className="list-decimal list-inside space-y-2 text-sm text-muted">
                 <li>
-                  <strong>Validation:</strong> Automatic checks confirm minimum requirements.
+                  <strong>Validation</strong> checks verify minimum counts and image sizing.
                 </li>
                 <li>
-                  <strong>Playability:</strong> All territories must be connected.
+                  <strong>Connectivity</strong> review ensures every territory has a path to battle.
                 </li>
                 <li>
-                  <strong>Balance:</strong> Distribute territories and bonuses evenly.
+                  <strong>Balance pass</strong> confirms bonuses and chokepoints aren&apos;t absurd.
                 </li>
                 <li>
-                  <strong>Quality:</strong> Ensure clear visuals and theme consistency.
+                  <strong>Style audit</strong> keeps labels legible and themes cohesive.
                 </li>
                 <li>
-                  <strong>Community review:</strong> Gather feedback from playtesters.
+                  <strong>Community playtests</strong> gather salt levels and highlight exploits.
                 </li>
                 <li>
-                  <strong>Admin approval:</strong> Final verification before publication.
+                  <strong>Admin approval</strong> stamps it into the public rotation.
                 </li>
               </ol>
               <p className="text-sm text-muted">
-                💡 Tip: Well-balanced maps with interesting themes move through review faster.
+                Tip: Attach a short lore blurb—reviewers love dramatic flavor text.
               </p>
             </section>
 
             <section className="panel-muted space-y-2">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Advanced features
+                Advanced toys
               </h3>
               <ul className="space-y-2 text-sm text-muted">
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-info)]">📏</span>
                   <span>
-                    <strong>Grid snap:</strong> Toggle grid snapping for precise placement.
+                    <strong>Grid snap</strong> keeps territories aligned for screenshot perfection.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-primary)]">🔄</span>
                   <span>
-                    <strong>Import/export:</strong> Save maps as JSON for backup or collaboration.
+                    <strong>Import / export</strong> JSON backups for version control or
+                    co-designers.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-success)]">🎨</span>
                   <span>
-                    <strong>Token shapes:</strong> Choose hexagon, square, or circle tokens.
+                    <strong>Token shapes</strong> swap circles, squares, or hexes depending on vibe.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-warning)]">🔍</span>
                   <span>
-                    <strong>Image scaling:</strong> Adjust the background between 50% and 150%.
+                    <strong>Image scaling</strong> ranges from 50% to 150% without degrading
+                    clarity.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-danger)]">✂️</span>
                   <span>
-                    <strong>Smart cropping:</strong> Trim images to the ideal dimensions.
+                    <strong>Smart cropping</strong> trims edges so your final upload hits size
+                    targets.
                   </span>
                 </li>
               </ul>
@@ -768,70 +870,83 @@ const TutorialPage: React.FC = () => {
         {activeTab === 'options' && (
           <div className="space-y-6">
             <header className="space-y-2">
-              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game settings</h2>
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
+                Lobby configuration arsenal
+              </h2>
               <p className="text-sm text-muted max-w-2xl">
-                Dial in lobby rules to match your group&apos;s pace, playstyle, and competitive
-                level.
+                These toggles decide whether your match is a chill training mission or a screaming
+                front-line campaign. Choose wisely; soldiers gossip about bad hosts.
               </p>
             </header>
 
-            <section className="space-y-3">
+            <section className="panel-muted space-y-3">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Game settings
+                Identity & access
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-warning)]">
-                    Turn time limit
-                  </h4>
+                  <h4 className="font-semibold text-[color:var(--color-success)]">Visibility</h4>
                   <p className="text-sm text-muted">
-                    Async games default to 24 hours (customisable from 30 minutes up to 72 hours).
-                    Real-time games use shorter limits for fast-paced play.
+                    <strong>Public</strong> games appear in the lobby list. <strong>Private</strong>
+                    games hide behind a shareable link; the invite code field is cosmetic for now so
+                    copy the URL. Tournament slots piggyback on public visibility rules.
                   </p>
                 </div>
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-success)]">Players</h4>
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">Game type</h4>
                   <p className="text-sm text-muted">
-                    Support for 2–12 commanders. Enable the <em>Random</em> slot to let any player
-                    fill remaining seats.
+                    <strong>Casual</strong> ignores ranking. <strong>Ranked</strong> enforces the CP
+                    checklist: public lobby, 3+ humans, no teams, and no AI generals.
                   </p>
                 </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">Player slots</h4>
+                  <p className="text-sm text-muted">
+                    Supports 2–12 seats. Flag a slot as <em>Random</em> to let any applicant
+                    auto-join as soon as the lobby opens.
+                  </p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-info)]">Teams</h4>
+                  <p className="text-sm text-muted">
+                    Toggle free-for-all or fixed teams. Valid team counts must evenly divide the max
+                    players (e.g., 6 players → 2 or 3 teams). Ranked lobbies lock this off.
+                  </p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-danger)]">AI commanders</h4>
+                  <p className="text-sm text-muted">
+                    Add Recruit, Commander, or Grandmaster bots when the feature flag is active. AI
+                    are banned in ranked games and respect the seat limit like any other player.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Phase modifiers
+              </h3>
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="panel-muted space-y-2">
-                  <h4 className="font-semibold text-[color:var(--color-primary)]">
-                    Hidden Treasures
+                  <h4 className="font-semibold text-[color:var(--color-info)]">
+                    Fortification styles
                   </h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     <li>
-                      <strong>Progressive:</strong> 4, 6, 9, 13, 18, … increasing payouts per set.
+                      <strong>Adjacent:</strong> One move to a neighboring territory.
                     </li>
                     <li>
-                      <strong>Classic:</strong> 4, 6, 8, 10, 12, 15, 20, 25, 30, 35, then +5.
+                      <strong>Adjacent Multi:</strong> Multiple single-step moves per fortify phase.
                     </li>
                     <li>
-                      <strong>Fixed:</strong> A steady value per set (host selects the value).
+                      <strong>Chained:</strong> One move along any connected chain you control.
                     </li>
                     <li>
-                      <strong>Disabled:</strong> Sets redeem for 0 troops.
-                    </li>
-                  </ul>
-                  <p className="text-xs text-muted">
-                    Diamond chance is fixed at 8%. Hand limit is 5; sets with a diamond get +3.
-                  </p>
-                </div>
-                <div className="panel-muted space-y-2">
-                  <h4 className="font-semibold text-[color:var(--color-info)]">Fortification</h4>
-                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                    <li>
-                      <strong>Adjacent:</strong> One move to a connected territory.
+                      <strong>Unlimited:</strong> Shuffle across owned chains until satisfied.
                     </li>
                     <li>
-                      <strong>Adjacent multi:</strong> Multiple moves across adjacent spaces.
-                    </li>
-                    <li>
-                      <strong>Chained:</strong> One move along your contiguous territory chain.
-                    </li>
-                    <li>
-                      <strong>Unlimited:</strong> Reposition freely along owned chains.
+                      <strong>Random:</strong> Lobby rolls one of the above at match start.
                     </li>
                   </ul>
                 </div>
@@ -839,13 +954,57 @@ const TutorialPage: React.FC = () => {
                   <h4 className="font-semibold text-[color:var(--color-primary)]">Fog of war</h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     <li>
-                      <strong>Off:</strong> Everyone sees the entire map.
+                      <strong>Off:</strong> Satellite intel for everyone, everywhere.
                     </li>
                     <li>
-                      <strong>Adjacent:</strong> Vision extends only to neighbouring territories.
+                      <strong>Adjacent:</strong> See only territories touching your own forces.
                     </li>
                     <li>
-                      <strong>Persistent:</strong> Previously scouted territories stay revealed.
+                      <strong>Persistent:</strong> Scouted tiles stay revealed even after you
+                      retreat.
+                    </li>
+                  </ul>
+                </div>
+                <div className="panel-muted space-y-2">
+                  <h4 className="font-semibold text-[color:var(--color-success)]">
+                    Hidden Treasures
+                  </h4>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                    <li>
+                      <strong>Classic:</strong> 4, 6, 8, 10, 12, 15, 20, 25, 30, 35, then +5
+                      forever.
+                    </li>
+                    <li>
+                      <strong>Progressive:</strong> 4, 6, 9, 13, 18, 24... escalating payouts.
+                    </li>
+                    <li>
+                      <strong>Fixed:</strong> Same value every time—host chooses the troop award.
+                    </li>
+                    <li>
+                      <strong>Disabled:</strong> Keep the cards for decoration only.
+                    </li>
+                  </ul>
+                  <p className="text-xs text-muted">
+                    Diamond drop rate: 8%. Hand limit: 5 cards. Diamond sets add +3 troops
+                    automatically.
+                  </p>
+                </div>
+                <div className="panel-muted space-y-2">
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">
+                    Timers & banks
+                  </h4>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                    <li>
+                      <strong>Turn timer:</strong> 10 seconds up to 24 hours. Default async rooms
+                      start at 24h.
+                    </li>
+                    <li>
+                      <strong>Time bank:</strong> Optional shared reserve matching the timer value,
+                      spent in 30-second chunks.
+                    </li>
+                    <li>
+                      <strong>Grace:</strong> When the timer hits zero and your bank is dry, the
+                      game autopasses your turn.
                     </li>
                   </ul>
                 </div>
@@ -854,60 +1013,44 @@ const TutorialPage: React.FC = () => {
 
             <section className="panel-muted space-y-3">
               <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Room options
+                Map & extras
               </h3>
-              <ul className="space-y-2 text-sm text-muted">
-                <li className="flex items-start gap-2">
-                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
-                  <span>
-                    <strong>Player count:</strong> Choose the roster size for the lobby.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
-                  <span>
-                    <strong>Visibility:</strong> Set the match to Public, Private (invite code) or
-                    Tournament
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
-                  <span>
-                    <strong>Teams:</strong> Enable balanced teams or stick with free-for-all.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
-                  <span>
-                    <strong>Game type:</strong> Casual matches for practice or Ranked for CP stakes.
-                  </span>
-                </li>
-              </ul>
-            </section>
-
-            <section className="panel-muted space-y-2">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                Advanced options
-              </h3>
-              <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                <li>
-                  <strong>Territory modifiers:</strong> Sparse, Balanced, or Abundant bonus layouts.
-                </li>
-                <li>
-                  <strong>Game speed:</strong> Real-time (synchronous) or Async (take turns over
-                  hours).
-                </li>
-                <li>
-                  <strong>Auto-naming:</strong> Generate descriptive lobby names from settings.
-                </li>
-                <li>
-                  <strong>Color selection:</strong> Pick from standard or premium player palettes.
-                </li>
-                <li>
-                  <strong>Map selection:</strong> Classic world, community creations, or random
-                  choice.
-                </li>
-              </ul>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-success)]">Map selection</h4>
+                  <p className="text-sm text-muted">
+                    Pick any featured map, community upload, or let fate choose with{' '}
+                    <strong>Random Map</strong>
+                    (rolls at game start). Tooltips show territory counts, sectors, and ratings.
+                  </p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">Color draft</h4>
+                  <p className="text-sm text-muted">
+                    Assign player colors manually or leave them random. Premium palettes respect
+                    cosmetic unlocks if your profile has them.
+                  </p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-info)]">
+                    Territory modifiers
+                  </h4>
+                  <p className="text-sm text-muted">
+                    Toggle experimental bonus layouts (Sparse, Balanced, Abundant). Setting is
+                    stored but currently requires backend wiring for live games—treat it as preview
+                    functionality.
+                  </p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">
+                    Auto-naming & notes
+                  </h4>
+                  <p className="text-sm text-muted">
+                    Auto-name spins up a dramatic lobby title based on your settings. Add a lobby
+                    message to declare house rules or trash talk before troops even deploy.
+                  </p>
+                </div>
+              </div>
             </section>
           </div>
         )}
