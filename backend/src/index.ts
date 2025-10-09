@@ -223,6 +223,14 @@ initializeRedis()
     try {
       await workerManager.initialize()
       logger.info('✅ WorkerManager created and initialized after Redis connection')
+      // Mount Bull Board UI after workers/queues are initialized to avoid 404
+      try {
+        const bullBoardRouter = bullBoardRouterFactory()
+        app.use(bullBoardRouter)
+        logger.info('✅ Bull Board mounted at /admin/queues')
+      } catch (e) {
+        logger.warn('⚠️ Failed to mount Bull Board after init:', getErrorMessage(e))
+      }
     } catch (error) {
       logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error))
     }
@@ -398,6 +406,7 @@ app.get('/test', (_req: Request, res: Response) => {
   })
 })
 
+// Health endpoint (direct)
 app.get('/health', async (_req: Request, res: Response) => {
   let databaseStatus = 'unknown'
   let databaseError = null
@@ -448,6 +457,73 @@ app.get('/health', async (_req: Request, res: Response) => {
   }
 
   // Always return 200 OK for server health, but include database, Redis, and queue status
+  res.json({
+    status: 'OK',
+    server: 'running',
+    database: databaseStatus,
+    redis: redisStatus,
+    queues: queueStatus,
+    environment: process.env.NODE_ENV || 'development',
+    databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
+    redisUrl: process.env.REDIS_URL ? 'configured' : 'missing',
+    sentry: process.env.SENTRY_DSN ? 'configured' : 'disabled',
+    timestamp: new Date().toISOString(),
+    ...(databaseError && { databaseError }),
+    ...(redisError && { redisError }),
+    ...(queueError && { queueError }),
+  })
+})
+
+// Health endpoint under /api for production proxy compatibility
+app.get('/api/health', async (_req: Request, res: Response) => {
+  let databaseStatus = 'unknown'
+  let databaseError = null
+  let redisStatus = 'unknown'
+  let redisError = null
+  let queueStatus = 'unknown'
+  let queueError = null
+
+  try {
+    const { query } = await import('./config/database')
+    await query('SELECT 1')
+    databaseStatus = 'connected'
+  } catch (error) {
+    databaseStatus = 'disconnected'
+    databaseError = error instanceof Error ? error.message : 'Unknown error'
+  }
+
+  // Check Redis health
+  try {
+    const { checkRedisHealth } = await import('./config/redis')
+    const redisHealth = await checkRedisHealth()
+    redisStatus = redisHealth.healthy ? 'connected' : 'disconnected'
+    if (!redisHealth.healthy) {
+      redisError = redisHealth.message
+    }
+  } catch (error) {
+    redisStatus = 'disconnected'
+    redisError = error instanceof Error ? error.message : 'Unknown error'
+  }
+
+  // Check queue system health
+  try {
+    const { getWorkerManagerInstance } = await import('./workers/workerManager')
+    const workerManagerInstance = getWorkerManagerInstance()
+    if (workerManagerInstance) {
+      const queueHealth = await workerManagerInstance.healthCheck()
+      queueStatus = queueHealth.status
+      if (queueHealth.status !== 'healthy') {
+        queueError = queueHealth.details?.error || 'Queue system unhealthy'
+      }
+    } else {
+      queueStatus = 'not-initialized'
+      queueError = 'WorkerManager not initialized'
+    }
+  } catch (error) {
+    queueStatus = 'disconnected'
+    queueError = error instanceof Error ? error.message : 'Unknown error'
+  }
+
   res.json({
     status: 'OK',
     server: 'running',
