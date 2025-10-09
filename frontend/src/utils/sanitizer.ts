@@ -153,15 +153,31 @@ export function sanitizeMapData<T extends MapData>(mapData: Nullable<T>): Nullab
 
   // Sanitize territory names
   if (Array.isArray(sanitized.territories)) {
-    sanitized.territories = sanitized.territories.map((territory) => ({
-      ...territory,
-      name: territory?.name ? sanitizeText(territory.name) : '',
-      sector: (territory as unknown as { sector?: string; continent?: string })?.sector
-        ? sanitizeText((territory as unknown as { sector?: string }).sector as string)
-        : (territory as unknown as { continent?: string })?.continent
-          ? sanitizeText((territory as unknown as { continent?: string }).continent as string)
-          : '',
-    })) as T['territories']
+    sanitized.territories = sanitized.territories.map((territory) => {
+      const originalSector = (territory as unknown as { sector?: unknown }).sector
+      const originalContinent = (territory as unknown as { continent?: unknown }).continent
+
+      const sanitizedSector =
+        typeof originalSector === 'string'
+          ? sanitizeText(originalSector)
+          : typeof originalContinent === 'string'
+            ? sanitizeText(originalContinent)
+            : ''
+
+      const sanitizedTerritory: MapTerritory = {
+        ...territory,
+        name: territory?.name ? sanitizeText(territory.name) : '',
+        sector: sanitizedSector,
+      }
+
+      if (typeof originalContinent === 'string') {
+        sanitizedTerritory.continent = sanitizeText(originalContinent)
+      } else if ('continent' in sanitizedTerritory) {
+        delete sanitizedTerritory.continent
+      }
+
+      return sanitizedTerritory
+    }) as T['territories']
   }
 
   // Sanitize tags
