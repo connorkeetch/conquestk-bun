@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import type { Job } from 'bullmq'
-import type { CacheService } from '../services/cacheService'
-import type { GameService } from '../services/gameService'
-import type { JobIdempotencyService } from '../services/jobIdempotencyService'
-import type { GameCleanupJob } from '../services/queueService'
-import type { GameState } from '../types/game'
-import { CleanupWorker } from '../workers/cleanupWorker'
+import type { CacheService } from '../services/cacheService.js'
+import type { GameService } from '../services/gameService.js'
+import type { JobIdempotencyService } from '../services/jobIdempotencyService.js'
+import type { GameCleanupJob } from '../services/queueService.js'
+import type { GameState } from '../types/game.js'
+import { CleanupWorker } from '../workers/cleanupWorker.js'
 
 jest.mock('../config/database', () => ({
   query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),

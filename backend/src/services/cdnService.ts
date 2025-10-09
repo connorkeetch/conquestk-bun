@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 interface CDNProvider {
   name: string

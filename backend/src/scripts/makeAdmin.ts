@@ -1,5 +1,5 @@
-import { initDatabase, query } from '../config/database'
-import { logger } from '../utils/logger'
+import { initDatabase, query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 async function makeUserAdmin(email: string) {
   try {

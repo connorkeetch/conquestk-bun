@@ -22,7 +22,7 @@ const databaseModule = require('../config/database') as { query: jest.Mock }
 const userBlockModule = require('../services/userBlockService') as { isBlocked: jest.Mock }
 
 const { assertCanStartDirectConversation, assertCanInviteToGroup, assertCanSendDirectMessage } =
-  require('../services/messagingPolicyService') as typeof import('../services/messagingPolicyService')
+  require('../services/messagingPolicyService') as typeof import('../services/messagingPolicyService.js')
 
 describe('messagingPolicyService', () => {
   beforeEach(() => {

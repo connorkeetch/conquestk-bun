@@ -1,6 +1,6 @@
 import readline from 'node:readline'
-import { getRedisClient, initializeRedis } from '../config/redis'
-import { logger } from '../utils/logger'
+import { getRedisClient, initializeRedis } from '../config/redis.js'
+import { logger } from '../utils/logger.js'
 
 async function promptConfirm(message: string): Promise<boolean> {
   if (process.argv.includes('--yes') || process.argv.includes('-y')) return true

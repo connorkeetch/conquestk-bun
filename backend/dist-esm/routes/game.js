@@ -1,0 +1,26 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.gameRoutes = void 0;
+const express_1 = require("express");
+const gameController_js_1 = require("../controllers/gameController.js");
+const auth_js_1 = require("../middleware/auth.js");
+const router = (0, express_1.Router)();
+exports.gameRoutes = router;
+const gameController = new gameController_js_1.GameController();
+router.use(auth_js_1.authenticateToken);
+router.get('/rooms', gameController.getRooms);
+router.post('/rooms', gameController.createRoom);
+router.post('/rooms/:roomId/team-assignments', gameController.updateTeamAssignment);
+router.put('/rooms/:roomId/ai-opponents', gameController.updateAiOpponents);
+router.post('/rooms/:roomId/join', gameController.joinRoom);
+router.delete('/rooms/:roomId/leave', gameController.leaveRoom);
+router.post('/rooms/:roomId/close', gameController.closeRoom);
+router.post('/rooms/:roomId/ready-state', gameController.setReadyState);
+router.post('/rooms/:roomId/actions', gameController.submitAction);
+router.post('/rooms/:roomId/transfer-conquest', gameController.transferConquest);
+router.get('/rooms/:roomId', gameController.getRoomDetails);
+router.get('/rooms/:roomId/state', gameController.getRoomState);
+router.get('/rooms/:roomId/log', gameController.getRoomLog);
+router.get('/my-games', gameController.getMyGames);
+router.get('/my-games/meta', gameController.getMyGamesMeta);
+//# sourceMappingURL=game.js.map

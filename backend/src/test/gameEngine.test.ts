@@ -4,10 +4,10 @@ jest.mock('../config/database', () => ({
   query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
 }))
 
-import { GameEngine } from '../game/gameEngine'
-import { ensureTreasureState } from '../game/hiddenTreasures'
-import { gameStateCache } from '../services/cacheService'
-import { GameService } from '../services/gameService'
+import { GameEngine } from '../game/gameEngine.js'
+import { ensureTreasureState } from '../game/hiddenTreasures.js'
+import { gameStateCache } from '../services/cacheService.js'
+import { GameService } from '../services/gameService.js'
 import type {
   AttackAction,
   DeployAction,

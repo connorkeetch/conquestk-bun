@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import type { LifecycleSnapshot } from '../services/gameLifecycleService'
-import { GameLifecycleService } from '../services/gameLifecycleService'
+import type { LifecycleSnapshot } from '../services/gameLifecycleService.js'
+import { GameLifecycleService } from '../services/gameLifecycleService.js'
 
 const mockAcquireLock = jest.fn<Promise<string | null>, [string, number]>()
 const mockReleaseLock = jest.fn<Promise<void>, [string, string]>()

@@ -1,6 +1,7 @@
-import { GameEngine } from '../game/gameEngine'
-import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures'
-import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game'
+import { GameEngine } from '../game/gameEngine.js'
+import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js'
+import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game.js'
+import { filterStateForPlanner } from './fogService.js'
 
 type FallbackReason = 'stubbed' | 'timeout' | 'aborted'
 
@@ -69,17 +70,9 @@ class AIDecisionService {
             | { fogOfWar?: 'off' | 'adjacent' | 'persistent' }
             | undefined
         )?.fogOfWar ?? 'off'
-      const effectiveState = (() => {
-        if (fogMode === 'off') return request.gameState
-        try {
-          const { filterStateForPlanner } = require('../services/fogService') as {
-            filterStateForPlanner: (s: GameState, viewerId: string) => GameState
-          }
-          return filterStateForPlanner(request.gameState, request.player.id)
-        } catch {
-          return request.gameState
-        }
-      })()
+      const effectiveState = fogMode === 'off'
+        ? request.gameState
+        : filterStateForPlanner(request.gameState, request.player.id)
 
       const plannedActions = this.generatePlan({ ...request, gameState: effectiveState })
 
@@ -159,9 +152,9 @@ class AIDecisionService {
     // 1) Card timing: if we must cash in or we are at/over hand cap and have a set, trade first
     try {
       const cfg = (gameState.gameConfig as { treasureConfig?: unknown })?.treasureConfig as
-        | import('../types/game').TreasureConfig
+        | import('../types/game.js').TreasureConfig
         | undefined
-      const hand = (player.treasures ?? []) as import('../types/game').Metal[]
+      const hand = (player.treasures ?? []) as import('../types/game.js').Metal[]
       const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures)
       if (cfg?.enabled && hand.length >= 3) {
         const norm = normalizeTreasureConfig(cfg)
@@ -328,9 +321,9 @@ class AIDecisionService {
     // Card timing (must cash or near cap)
     try {
       const cfg = (gameState.gameConfig as { treasureConfig?: unknown })?.treasureConfig as
-        | import('../types/game').TreasureConfig
+        | import('../types/game.js').TreasureConfig
         | undefined
-      const hand = (player.treasures ?? []) as import('../types/game').Metal[]
+      const hand = (player.treasures ?? []) as import('../types/game.js').Metal[]
       const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures)
       if (cfg?.enabled && hand.length >= 3) {
         const norm = normalizeTreasureConfig(cfg)

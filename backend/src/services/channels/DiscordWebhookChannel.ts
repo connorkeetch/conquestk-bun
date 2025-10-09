@@ -1,7 +1,7 @@
 import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
-import { logger } from '../../utils/logger'
-import type { NotificationChannel } from '../NotificationDispatcher'
-import { formatDiscordWebhookPayload } from './discordFormatting'
+import { logger } from '../../utils/logger.js'
+import type { NotificationChannel } from '../NotificationDispatcher.js'
+import { formatDiscordWebhookPayload } from './discordFormatting.js'
 
 interface DiscordWebhookChannelOptions {
   webhookUrls: string[]

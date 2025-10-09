@@ -1,6 +1,6 @@
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
-import { isBlocked } from './userBlockService'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
+import { isBlocked } from './userBlockService.js'
 
 export type DmPolicy = 'everyone' | 'friends_only' | 'no_one'
 

@@ -2,9 +2,9 @@ import type { NextFunction, Request, Response } from 'express'
 import rateLimit from 'express-rate-limit'
 import slowDown from 'express-slow-down'
 import RedisStore, { type RedisReply, type SendCommandFn } from 'rate-limit-redis'
-import { getRedisClient } from '../config/redis'
-import { getErrorMessage } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import { getRedisClient } from '../config/redis.js'
+import { getErrorMessage } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
 
 /**
  * Rate limiting configurations for different endpoint types

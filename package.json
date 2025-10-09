@@ -72,9 +72,14 @@
     "shared"
   ],
   "overrides": {
-    "simple-swizzle": "0.2.2"
+    "simple-swizzle": "0.2.2",
+    "uuid": "11.1.0"
   },
   "resolutions": {
-    "simple-swizzle": "0.2.2"
+    "simple-swizzle": "0.2.2",
+    "uuid": "11.1.0"
   }
 }
+    "codemod:esm:check": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src",
+    "codemod:esm:apply": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src --apply",
+    "scan:requires": "node scripts/codemods/scan-requires.mjs --target backend/src",

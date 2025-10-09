@@ -1,6 +1,6 @@
 import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
 import type { QueryResultRow } from 'pg'
-import { withClient } from '../config/database'
+import { withClient } from '../config/database.js'
 import type {
   Achievement,
   AggregatedStatsSummary,
@@ -13,9 +13,9 @@ import type {
   UserProfile,
   UserRanking,
   UserStatistics,
-} from '../types/profile'
-import { validateBio } from '../utils/contentModeration'
-import { logger } from '../utils/logger'
+} from '../types/profile.js'
+import { validateBio } from '../utils/contentModeration.js'
+import { logger } from '../utils/logger.js'
 
 interface RawLeaderboardRow {
   user_id: string

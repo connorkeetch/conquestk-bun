@@ -9,10 +9,10 @@ import {
   PREMIUM_COLOR_MESSAGE,
   PREMIUM_THEME_MESSAGE,
   PREMIUM_UPSELL_ERROR_CODE,
-} from '../constants/premium'
-import { authenticateToken } from '../middleware/auth'
-import { UserPreferencesService } from '../services/UserPreferencesService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+} from '../constants/premium.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { UserPreferencesService } from '../services/UserPreferencesService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 export function createPreferencesRouter(pool: Pool): Router {
   const router = Router()

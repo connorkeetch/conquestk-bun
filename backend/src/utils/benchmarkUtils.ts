@@ -1,5 +1,5 @@
-import { performanceTestingService } from '../services/performanceTestingService'
-import { logger } from '../utils/logger'
+import { performanceTestingService } from '../services/performanceTestingService.js'
+import { logger } from '../utils/logger.js'
 
 type LoadTestResult = Awaited<ReturnType<typeof performanceTestingService.runLoadTest>>
 type LoadTestMetrics = LoadTestResult['results']

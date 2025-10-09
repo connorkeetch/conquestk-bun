@@ -3,11 +3,11 @@ import {
   MapNotFoundError,
   MapPermissionError,
   mapPermissionService,
-} from '../services/mapPermissionService'
-import mapWorkflowService from '../services/mapWorkflowService'
-import type { AuthenticatedRequest } from '../types/express'
-import type { MapDraft, MapStatus } from '../types/maps'
-import { handleRouteError } from '../utils/routeErrorHandler'
+} from '../services/mapPermissionService.js'
+import mapWorkflowService from '../services/mapWorkflowService.js'
+import type { AuthenticatedRequest } from '../types/express.js'
+import type { MapDraft, MapStatus } from '../types/maps.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 export class MapWorkflowController {
   /**

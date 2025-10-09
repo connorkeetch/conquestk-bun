@@ -1,7 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
-import { adminService } from '../services/adminService'
-import type { RequestUser } from '../types/express'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { adminService } from '../services/adminService.js'
+import type { RequestUser } from '../types/express.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 // Extend Express Request type to include admin info
 declare module 'express-serve-static-core' {

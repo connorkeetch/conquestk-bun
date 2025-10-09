@@ -1,7 +1,7 @@
 import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
-import { logger } from '../../utils/logger'
-import type { NotificationChannel } from '../NotificationDispatcher'
-import { formatSlackWebhookPayload, type SlackWebhookPayload } from './slackFormatting'
+import { logger } from '../../utils/logger.js'
+import type { NotificationChannel } from '../NotificationDispatcher.js'
+import { formatSlackWebhookPayload, type SlackWebhookPayload } from './slackFormatting.js'
 
 interface SlackWebhookChannelOptions {
   webhookUrls: string[]

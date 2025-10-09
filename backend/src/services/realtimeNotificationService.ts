@@ -1,4 +1,4 @@
-import { tryGetSocketServer } from './socketRegistry'
+import { tryGetSocketServer } from './socketRegistry.js'
 
 export interface RealtimeNotificationPayload {
   id: string

@@ -1,0 +1,1 @@
+{"version":3,"file":"mapLoader.d.ts","sourceRoot":"","sources":["../../../../src/game/mapLoader.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,cAAc,EAAE,SAAS,EAAE,MAAM,kBAAkB,CAAA;AAMjE,wBAAsB,gBAAgB,CAAC,KAAK,EAAE,MAAM,GAAG,OAAO,CAAC;IAC7D,WAAW,EAAE,SAAS,EAAE,CAAA;IACxB,gBAAgB,EAAE,cAAc,EAAE,CAAA;CACnC,CAAC,CAwDD"}

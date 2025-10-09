@@ -1,19 +1,19 @@
 import type { Request, Response } from 'express'
-import { query } from '../config/database'
+import { query } from '../config/database.js'
 import {
   PREMIUM_COLOR_MESSAGE,
   PREMIUM_GAME_LIMIT_MESSAGE,
   PREMIUM_UPSELL_ERROR_CODE,
-} from '../constants/premium'
-import { ensureGameConversation } from '../services/conversationService'
-import { GameLifecycleService } from '../services/gameLifecycleService'
-import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
-import { GameService } from '../services/gameService'
-import { queueService } from '../services/queueService'
-import { tryGetSocketServer } from '../services/socketRegistry'
-import type { AuthenticatedRequest } from '../types/express'
-import type { GameAction, TreasureConfig } from '../types/game'
-import { logger } from '../utils/logger'
+} from '../constants/premium.js'
+import { ensureGameConversation } from '../services/conversationService.js'
+import { GameLifecycleService } from '../services/gameLifecycleService.js'
+import { type CreateRoomData, GameRoomService } from '../services/gameRoomService.js'
+import { GameService } from '../services/gameService.js'
+import { queueService } from '../services/queueService.js'
+import { tryGetSocketServer } from '../services/socketRegistry.js'
+import type { AuthenticatedRequest } from '../types/express.js'
+import type { GameAction, TreasureConfig } from '../types/game.js'
+import { logger } from '../utils/logger.js'
 
 export class GameController {
   private gameRoomService = new GameRoomService()
@@ -817,7 +817,7 @@ export class GameController {
 
             let queueAhead: number | null = null
             let phase:
-              | import('../types/game').GamePhase
+              | import('../types/game.js').GamePhase
               | 'lobby'
               | 'initializing'
               | 'finished'

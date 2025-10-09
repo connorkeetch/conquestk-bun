@@ -1,11 +1,15 @@
 import { randomBytes } from 'node:crypto'
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import session from 'express-session'
-import { getRedisClient } from '../config/redis'
-import { getErrorMessage } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import { getRedisClient } from '../config/redis.js'
+import { getErrorMessage } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
+import { createRequire } from 'node:module'
 
-const { RedisStore } = require('connect-redis')
+// Keep CommonJS interop for connect-redis under ESM
+const requireCjs = createRequire(import.meta.url)
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { RedisStore } = requireCjs('connect-redis')
 
 /**
  * Session middleware that can reconfigure itself when Redis becomes available

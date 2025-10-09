@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { query } from '../config/database'
-import { logger } from './logger'
-import { type MigrationRecord, type MigrationStatus, MigrationTracker } from './migrationTracker'
+import { query } from '../config/database.js'
+import { logger } from './logger.js'
+import { type MigrationRecord, type MigrationStatus, MigrationTracker } from './migrationTracker.js'
 
 export class MigrationRunner {
   private migrationTracker: MigrationTracker

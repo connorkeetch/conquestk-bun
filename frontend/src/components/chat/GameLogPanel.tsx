@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '../../hooks/redux'
 import { gameService } from '../../services/gameService'
+import { deriveRoundMarkers, isParticipantInRoom } from '@/utils/gameLog'
 import { socketService } from '../../services/socketService'
 
 type Props = {
@@ -49,6 +50,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
   const lastTurnRef = useRef<number | null>(null)
+  const lastRoundRef = useRef<number | null>(null)
   const startedLoggedRef = useRef(false)
   const fogMode = (game?.gameConfig?.fogOfWar ?? room?.fogOfWar ?? 'off') as
     | 'off'
@@ -57,7 +59,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const fogOn = fogMode !== 'off'
   const gameEnded =
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
-  const redact = fogOn && !gameEnded
+  // Only redact for non-participants during active fog-of-war games
+  const currentUserId = useAppSelector((s) => s.auth.user?.id)
+  const isParticipant = useMemo(
+    () => isParticipantInRoom(room, game, currentUserId),
+    [room, game, currentUserId],
+  )
+  const redact = fogOn && !gameEnded && !isParticipant
   const backfillLoadedRef = useRef(false)
 
   // Aggregate consecutive battle rolls from the same source → target
@@ -264,6 +272,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         const r1 = resp as unknown
         const maybeObj = r1 as { log?: unknown[] }
         const raw = Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
+        const statsRaw = (resp as { stats?: unknown[] }).stats
+        const stats = Array.isArray(statsRaw) ? (statsRaw as Array<Record<string, unknown>>) : []
         if (cancelled) return
         // Format to display entries; build newest-first
         let sawGameEnd = false
@@ -788,6 +798,21 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         }
         // Flush if last entries were a battle sequence
         if (bfAgg) flushBf()
+
+        // Derive "Round X started." markers from turn_stats snapshots
+        try {
+          const markers = deriveRoundMarkers(
+            stats
+              .filter((s) => s && typeof s === 'object' && 'timestamp' in s && 'turn' in s)
+              .map((s) => s as unknown as { turn: number; timestamp: string; players?: Array<{ eliminated?: boolean }> }),
+          )
+          for (const m of markers) {
+            const ts = new Date(m.timestamp)
+            formatted.push({ ts, text: `Round ${m.round} started.` })
+          }
+        } catch {
+          /* best-effort only */
+        }
         // If the game has finished and there was no explicit GAME_END/LIFECYCLE COMPLETED in the log,
         // append a concise end summary as a fallback
         try {
@@ -910,6 +935,25 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       // Track phase changes and player order
       phaseRef.current = delta.phase
       if (delta.turn !== undefined) {
+        // Before updating, compute round change
+        const activePlayers = (() => {
+          try {
+            return Math.max(1, (game?.players || []).filter((p) => !p.isEliminated).length)
+          } catch {
+            return Math.max(1, (game?.players || []).length || 1)
+          }
+        })()
+        const computeRound = (turn: number | null) => {
+          if (!turn || !Number.isFinite(turn)) return null
+          return Math.max(1, Math.ceil(Math.max(1, turn) / activePlayers))
+        }
+        const beforeRound = computeRound(prevTurn)
+        const nextRound = computeRound(delta.turn ?? prevTurn ?? null)
+        if (nextRound && (!beforeRound || nextRound > beforeRound)) {
+          // Announce round boundary before announcing next player's start
+          add(`Round ${nextRound} started.`)
+          lastRoundRef.current = nextRound
+        }
         lastTurnRef.current = delta.turn
       }
       if (delta.currentPlayer) {

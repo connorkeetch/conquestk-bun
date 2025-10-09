@@ -1,5 +1,5 @@
-import { initDatabase, query } from '../config/database'
-import { logger } from '../utils/logger'
+import { initDatabase, query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 async function diagnoseAdminIssue(email: string) {
   try {
@@ -89,7 +89,7 @@ async function diagnoseAdminIssue(email: string) {
         })),
       })
     }
-    const { AdminService } = await import('../services/adminService')
+    const { AdminService } = await import('../services/adminService.js')
     const adminService = new AdminService()
 
     try {

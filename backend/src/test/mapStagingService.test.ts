@@ -28,7 +28,7 @@ jest.mock('../services/adminService', () => ({
 }))
 
 describe('mapStagingService', () => {
-  let mapStagingService: typeof import('../services/mapStagingService').mapStagingService
+  let mapStagingService: typeof import('../services/mapStagingService.js').mapStagingService
   let tempDir: string
 
   beforeEach(() => {

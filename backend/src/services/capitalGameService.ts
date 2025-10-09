@@ -1,8 +1,8 @@
-import { query } from '../config/database'
-import type { SerializedGameState } from '../types/game'
-import { logger } from '../utils/logger'
-import { gameStateCache } from './cacheService'
-import { mapService } from './mapService'
+import { query } from '../config/database.js'
+import type { SerializedGameState } from '../types/game.js'
+import { logger } from '../utils/logger.js'
+import { gameStateCache } from './cacheService.js'
+import { mapService } from './mapService.js'
 
 export interface CapitalGameState {
   gameId: string

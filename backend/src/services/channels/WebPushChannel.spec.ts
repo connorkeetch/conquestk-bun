@@ -1,6 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals'
 import type { NotificationEvent } from '@risk-game/shared/types/notifications'
-import { WebPushChannel, type WebPushService } from './WebPushChannel'
+import { WebPushChannel, type WebPushService } from './WebPushChannel.js'
 
 const baseEvent: NotificationEvent = {
   id: 'event-1',

@@ -1,9 +1,9 @@
 import type { GameDelta } from '@risk-game/shared/types'
 import type { Server } from 'socket.io'
-import type { GameState, SerializedGameState } from '../types/game'
-import { logger } from '../utils/logger'
-import { GameService } from './gameService'
-import { socketPayloadMetrics } from './metricsService'
+import type { GameState, SerializedGameState } from '../types/game.js'
+import { logger } from '../utils/logger.js'
+import { GameService } from './gameService.js'
+import { socketPayloadMetrics } from './metricsService.js'
 
 const ROOM_PREFIX = 'game:'
 

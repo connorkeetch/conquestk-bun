@@ -1,12 +1,12 @@
-import { query, transaction } from '../config/database'
+import { query, transaction } from '../config/database.js'
 import type {
   ClanApplication,
   ClanApplicationStatus,
   ClanMember,
   ClanMemberStatus,
-} from '../types/clans'
-import { logClanActivity } from './clanActivityService'
-import { clanService } from './clanService'
+} from '../types/clans.js'
+import { logClanActivity } from './clanActivityService.js'
+import { clanService } from './clanService.js'
 
 interface ClanApplicationRow {
   id: string

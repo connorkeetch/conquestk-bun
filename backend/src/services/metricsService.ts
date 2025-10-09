@@ -1,5 +1,5 @@
-import type { AIDifficulty, Metal, TreasureConfig } from '../types/game'
-import { logger } from '../utils/logger'
+import type { AIDifficulty, Metal, TreasureConfig } from '../types/game.js'
+import { logger } from '../utils/logger.js'
 
 type LabelValue = Record<string, string>
 

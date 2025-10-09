@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
 import type { GameDelta } from '@risk-game/shared/types'
-import { DeltaBuilder } from '../types/deltaUpdates'
+import { DeltaBuilder } from '../types/deltaUpdates.js'
 
 describe('DeltaBuilder compatibility with shared GameDelta', () => {
   it('territory update satisfies shared GameDelta', () => {

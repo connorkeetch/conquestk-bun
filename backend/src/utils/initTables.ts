@@ -1,5 +1,5 @@
-import { query } from '../config/database'
-import { logger } from './logger'
+import { query } from '../config/database.js'
+import { logger } from './logger.js'
 
 export async function ensureTablesExist(): Promise<void> {
   try {

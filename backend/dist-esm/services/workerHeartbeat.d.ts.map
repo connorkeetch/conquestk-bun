@@ -1,0 +1,1 @@
+{"version":3,"file":"workerHeartbeat.d.ts","sourceRoot":"","sources":["../../src/services/workerHeartbeat.ts"],"names":[],"mappings":"AAOA,MAAM,MAAM,eAAe,GAAG;IAC5B,IAAI,EAAE,MAAM,IAAI,CAAA;IAChB,GAAG,EAAE,MAAM,CAAA;CACZ,CAAA;AAED,wBAAgB,oBAAoB,CAClC,SAAS,EAAE,MAAM,EACjB,OAAO,CAAC,EAAE;IAAE,UAAU,CAAC,EAAE,MAAM,CAAC;IAAC,UAAU,CAAC,EAAE,MAAM,CAAA;CAAE,GACrD,eAAe,GAAG,IAAI,CAoCxB"}

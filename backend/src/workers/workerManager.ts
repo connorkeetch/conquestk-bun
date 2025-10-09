@@ -1,12 +1,12 @@
 import type { Server } from 'socket.io'
-import { type QueueStats, queueService } from '../services/queueService'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
-import { logger } from '../utils/logger'
-import { createAnalyticsWorker } from './analyticsWorker'
-import { createCleanupWorker } from './cleanupWorker'
-import { createGameActionWorker } from './gameActionWorker'
-import { createMaintenanceWorker, type MaintenanceWorker } from './maintenanceWorker'
-import { createMapAssetWorker, type MapAssetWorker } from './mapAssetWorker'
+import { type QueueStats, queueService } from '../services/queueService.js'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { logger } from '../utils/logger.js'
+import { createAnalyticsWorker } from './analyticsWorker.js'
+import { createCleanupWorker } from './cleanupWorker.js'
+import { createGameActionWorker } from './gameActionWorker.js'
+import { createMaintenanceWorker, type MaintenanceWorker } from './maintenanceWorker.js'
+import { createMapAssetWorker, type MapAssetWorker } from './mapAssetWorker.js'
 
 export class WorkerManager {
   private isInitialized = false

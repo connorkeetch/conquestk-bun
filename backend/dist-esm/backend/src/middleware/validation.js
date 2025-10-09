@@ -1,0 +1,384 @@
+import Joi from 'joi';
+import validator from 'validator';
+const usernamePattern = /^[a-zA-Z0-9_-]+$/;
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+const sqlInjectionPattern = /(\b(ALTER|CREATE|DELETE|DROP|EXEC(UTE)?|INSERT|SELECT|UNION|UPDATE)\b)|(-{2})|(\/*\*+(?:[^*/]|[/][^*])*\*+\/)|(\b(OR|AND)\b.*?=.*?['"=])|([';])|(\bEXEC\b)|(\bCAST\b)|(\bDECLARE\b)/i;
+const xssPattern = /<script|javascript:|onerror=|onclick=|<iframe|<embed|<object|eval\(|expression\(|prompt\(|alert\(/i;
+const noSqlInjectionPattern = /\$where|\$regex|\$ne|\$gt|\$lt|\$gte|\$lte|\$in|\$nin|\$or|\$and|\$not|\$exists/i;
+function sanitizeInput(input) {
+    if (!input)
+        return input;
+    let sanitized = input.replace(/\0/g, '');
+    sanitized = sanitized.trim();
+    sanitized = validator.escape(sanitized);
+    return sanitized;
+}
+function validateAgainstPatterns(value, fieldName) {
+    if (sqlInjectionPattern.test(value)) {
+        return `${fieldName} contains potentially malicious SQL patterns`;
+    }
+    if (xssPattern.test(value)) {
+        return `${fieldName} contains potentially malicious script patterns`;
+    }
+    if (noSqlInjectionPattern.test(value)) {
+        return `${fieldName} contains potentially malicious NoSQL patterns`;
+    }
+    return null;
+}
+const authSchema = Joi.object({
+    username: Joi.string()
+        .min(3)
+        .max(20)
+        .pattern(usernamePattern)
+        .custom((value, helpers) => {
+        const error = validateAgainstPatterns(value, 'Username');
+        if (error)
+            return helpers.error('any.invalid', { message: error });
+        return value.trim();
+    })
+        .messages({
+        'string.pattern.base': 'Username can only contain letters, numbers, underscores, and hyphens',
+        'string.min': 'Username must be at least 3 characters',
+        'string.max': 'Username cannot exceed 20 characters',
+    }),
+    identifier: Joi.string()
+        .max(255)
+        .messages({
+        'string.empty': 'Please provide username or email',
+        'any.required': 'Username or email is required',
+    }),
+    email: Joi.string()
+        .email({ tlds: { allow: true } })
+        .max(100)
+        .custom((value, helpers) => {
+        if (value && !validator.isEmail(value)) {
+            return helpers.error('any.invalid', { message: 'Invalid email format' });
+        }
+        if (value) {
+            const error = validateAgainstPatterns(value, 'Email');
+            if (error)
+                return helpers.error('any.invalid', { message: error });
+            return validator.normalizeEmail(value) || value;
+        }
+        return value;
+    })
+        .messages({
+        'string.email': 'Please provide a valid email address',
+        'string.max': 'Email cannot exceed 100 characters',
+    }),
+    password: Joi.string()
+        .min(8)
+        .max(128)
+        .pattern(passwordPattern)
+        .required()
+        .messages({
+        'string.pattern.base': 'Password must contain at least 8 characters, including 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character',
+        'string.min': 'Password must be at least 8 characters',
+        'string.max': 'Password cannot exceed 128 characters',
+    }),
+});
+const authRegisterSchema = authSchema.fork(['username', 'email'], (schema) => schema.required());
+const authLoginSchema = authSchema.fork(['identifier'], (schema) => schema.required());
+const gameSchema = Joi.object({
+    name: Joi.string()
+        .min(3)
+        .max(50)
+        .pattern(/^[a-zA-Z0-9\s\-_'.!]+$/)
+        .required()
+        .custom((value, helpers) => {
+        const error = validateAgainstPatterns(value, 'Game name');
+        if (error)
+            return helpers.error('any.invalid', { message: error });
+        return sanitizeInput(value);
+    })
+        .messages({
+        'string.pattern.base': 'Game name can only contain letters, numbers, spaces, and basic punctuation',
+        'string.min': 'Game name must be at least 3 characters',
+        'string.max': 'Game name cannot exceed 50 characters',
+    }),
+    maxPlayers: Joi.number().integer().min(2).max(8).required().messages({
+        'number.min': 'Game must have at least 2 players',
+        'number.max': 'Game cannot have more than 8 players',
+    }),
+    isPrivate: Joi.boolean().default(false),
+    password: Joi.string()
+        .max(50)
+        .custom((value, helpers) => {
+        if (value) {
+            const error = validateAgainstPatterns(value, 'Game password');
+            if (error)
+                return helpers.error('any.invalid', { message: error });
+        }
+        return value;
+    }),
+    mapId: Joi.string().uuid().required().messages({
+        'string.guid': 'Invalid map ID format',
+    }),
+    settings: Joi.object({
+        turnTimeLimit: Joi.number().integer().min(30).max(300),
+        cardTradeMode: Joi.string().valid('fixed', 'progressive', 'none'),
+        fogOfWar: Joi.boolean(),
+        autoAssignTerritories: Joi.boolean(),
+    }).default({}),
+});
+const messageSchema = Joi.object({
+    content: Joi.string()
+        .min(1)
+        .max(500)
+        .required()
+        .custom((value, helpers) => {
+        const error = validateAgainstPatterns(value, 'Message');
+        if (error)
+            return helpers.error('any.invalid', { message: error });
+        return sanitizeInput(value);
+    })
+        .messages({
+        'string.min': 'Message cannot be empty',
+        'string.max': 'Message cannot exceed 500 characters',
+    }),
+    roomId: Joi.string().uuid().required(),
+    type: Joi.string().valid('chat', 'system', 'game').default('chat'),
+});
+const profileSchema = Joi.object({
+    username: Joi.string()
+        .min(3)
+        .max(20)
+        .pattern(usernamePattern)
+        .custom((value, helpers) => {
+        const error = validateAgainstPatterns(value, 'Username');
+        if (error)
+            return helpers.error('any.invalid', { message: error });
+        return sanitizeInput(value);
+    }),
+    bio: Joi.string()
+        .max(500)
+        .allow('')
+        .custom((value, helpers) => {
+        if (value) {
+            const error = validateAgainstPatterns(value, 'Bio');
+            if (error)
+                return helpers.error('any.invalid', { message: error });
+            return sanitizeInput(value);
+        }
+        return value;
+    }),
+    location: Joi.string()
+        .max(100)
+        .allow('')
+        .custom((value, helpers) => {
+        if (value) {
+            const error = validateAgainstPatterns(value, 'Location');
+            if (error)
+                return helpers.error('any.invalid', { message: error });
+            return sanitizeInput(value);
+        }
+        return value;
+    }),
+    website: Joi.string()
+        .uri({ scheme: ['http', 'https'] })
+        .max(200)
+        .allow('')
+        .messages({
+        'string.uri': 'Please provide a valid website URL',
+    }),
+});
+const mapSchema = Joi.object({
+    name: Joi.string()
+        .min(3)
+        .max(100)
+        .required()
+        .custom((value, helpers) => {
+        const error = validateAgainstPatterns(value, 'Map name');
+        if (error)
+            return helpers.error('any.invalid', { message: error });
+        return sanitizeInput(value);
+    }),
+    description: Joi.string()
+        .max(1000)
+        .allow('')
+        .custom((value, helpers) => {
+        if (value) {
+            const error = validateAgainstPatterns(value, 'Description');
+            if (error)
+                return helpers.error('any.invalid', { message: error });
+            return sanitizeInput(value);
+        }
+        return value;
+    }),
+    tags: Joi.array()
+        .items(Joi.string()
+        .max(30)
+        .pattern(/^[a-zA-Z0-9\-_]+$/)
+        .custom((value, helpers) => {
+        const error = validateAgainstPatterns(value, 'Tag');
+        if (error)
+            return helpers.error('any.invalid', { message: error });
+        return sanitizeInput(value);
+    }))
+        .max(10)
+        .messages({
+        'array.max': 'Cannot have more than 10 tags',
+    }),
+    isPublic: Joi.boolean().default(false),
+    territories: Joi.array().min(10).max(200).required().messages({
+        'array.min': 'Map must have at least 10 territories',
+        'array.max': 'Map cannot have more than 200 territories',
+    }),
+});
+export const validateAuth = (req, res, next) => {
+    const isRegister = req.path === '/register' || req.path.endsWith('/register');
+    const isLogin = req.path === '/login' || req.path.endsWith('/login');
+    let schema = authSchema;
+    if (isRegister) {
+        schema = authRegisterSchema;
+    }
+    else if (isLogin) {
+        schema = authLoginSchema;
+    }
+    const { error, value } = schema.validate(req.body, {
+        abortEarly: false,
+    });
+    if (error) {
+        const details = error.details.map((detail) => {
+            const field = detail.path.join('.');
+            let message = detail.message;
+            if (field === 'password' && detail.type === 'string.pattern.base') {
+                message =
+                    'Password must be at least 8 characters and include: 1 uppercase letter (A-Z), 1 lowercase letter (a-z), 1 number (0-9), and 1 special character (@$!%*?&)';
+            }
+            return { field, message };
+        });
+        let mainMessage = 'Please check your input';
+        if (details.length > 0) {
+            if (details[0].field === 'password') {
+                mainMessage = 'Password does not meet security requirements';
+            }
+            else if (details[0].field === 'email') {
+                mainMessage = 'Please provide a valid email address';
+            }
+            else if (details[0].field === 'username') {
+                mainMessage = 'Username format is invalid';
+            }
+        }
+        return res.status(400).json({
+            error: 'Validation failed',
+            message: mainMessage,
+            details,
+        });
+    }
+    req.body = value;
+    return next();
+};
+export const validateGame = (req, res, next) => {
+    const { error, value } = gameSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation error',
+            message: 'Invalid game configuration',
+            details: error.details.map((detail) => ({
+                field: detail.path.join('.'),
+                message: detail.message,
+            })),
+        });
+    }
+    if (value.isPrivate && (!value.password || value.password.trim().length === 0)) {
+        return res.status(400).json({
+            error: 'Validation error',
+            message: 'Private games require a password',
+            details: [
+                {
+                    field: 'password',
+                    message: 'Password is required when creating a private game',
+                },
+            ],
+        });
+    }
+    req.body = value;
+    return next();
+};
+export const validateMessage = (req, res, next) => {
+    const { error, value } = messageSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation error',
+            message: 'Invalid message',
+            details: error.details.map((detail) => ({
+                field: detail.path.join('.'),
+                message: detail.message,
+            })),
+        });
+    }
+    req.body = value;
+    return next();
+};
+export const validateProfile = (req, res, next) => {
+    const { error, value } = profileSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation error',
+            message: 'Invalid profile data',
+            details: error.details.map((detail) => ({
+                field: detail.path.join('.'),
+                message: detail.message,
+            })),
+        });
+    }
+    req.body = value;
+    return next();
+};
+export const validateMap = (req, res, next) => {
+    const { error, value } = mapSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation error',
+            message: 'Invalid map data',
+            details: error.details.map((detail) => ({
+                field: detail.path.join('.'),
+                message: detail.message,
+            })),
+        });
+    }
+    req.body = value;
+    return next();
+};
+export const sanitizeAllInputs = (req, res, next) => {
+    if (req.query) {
+        for (const key of Object.keys(req.query)) {
+            if (typeof req.query[key] === 'string') {
+                const value = req.query[key];
+                const error = validateAgainstPatterns(value, `Query parameter ${key}`);
+                if (error) {
+                    res.status(400).json({
+                        error: 'Security validation failed',
+                        message: error,
+                    });
+                    return;
+                }
+            }
+        }
+    }
+    if (req.params) {
+        for (const key of Object.keys(req.params)) {
+            if (typeof req.params[key] === 'string') {
+                const value = req.params[key];
+                const error = validateAgainstPatterns(value, `URL parameter ${key}`);
+                if (error) {
+                    res.status(400).json({
+                        error: 'Security validation failed',
+                        message: error,
+                    });
+                    return;
+                }
+            }
+        }
+    }
+    next();
+};
+export const schemas = {
+    auth: authSchema,
+    game: gameSchema,
+    message: messageSchema,
+    profile: profileSchema,
+    map: mapSchema,
+};
+//# sourceMappingURL=validation.js.map

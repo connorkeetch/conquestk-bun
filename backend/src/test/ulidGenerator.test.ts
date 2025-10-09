@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import type { DatabaseQueryResult } from '../config/database'
+import type { DatabaseQueryResult } from '../config/database.js'
 
 type UlidQueryResult = DatabaseQueryResult<{ id: string }>
 type UlidQuery = (text: string, params?: unknown[]) => Promise<UlidQueryResult>
@@ -11,7 +11,7 @@ describe('generate_ulid SQL function', () => {
     let query: UlidQuery | undefined
 
     try {
-      const databaseModule = await import('../config/database')
+      const databaseModule = await import('../config/database.js')
       query = databaseModule.query as UlidQuery
     } catch (_error) {
       return

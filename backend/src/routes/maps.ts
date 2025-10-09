@@ -3,21 +3,21 @@ import { Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
 import jwt, { type JwtPayload } from 'jsonwebtoken'
 import multer from 'multer'
-import { getPool } from '../config/database'
-import { authenticateToken } from '../middleware/auth'
-import { CapitalGeneratorService } from '../services/capitalGeneratorService'
+import { getPool } from '../config/database.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { CapitalGeneratorService } from '../services/capitalGeneratorService.js'
 import {
   MapNotFoundError,
   MapPermissionError,
   mapPermissionService,
-} from '../services/mapPermissionService'
-import { mapService } from '../services/mapService'
-import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps'
-import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage'
-import { logger } from '../utils/logger'
-import { handleRouteError } from '../utils/routeErrorHandler'
-import { parseJsonField, parseTags } from '../utils/tagParser'
-import { resolveAssetUrl } from '../utils/url'
+} from '../services/mapPermissionService.js'
+import { mapService } from '../services/mapService.js'
+import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps.js'
+import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage.js'
+import { logger } from '../utils/logger.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
+import { parseJsonField, parseTags } from '../utils/tagParser.js'
+import { resolveAssetUrl } from '../utils/url.js'
 
 const router = Router()
 

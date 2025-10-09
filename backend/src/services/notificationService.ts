@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import webpush from 'web-push'
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
-import { emitNotificationToUsers } from './realtimeNotificationService'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
+import { emitNotificationToUsers } from './realtimeNotificationService.js'
 
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY

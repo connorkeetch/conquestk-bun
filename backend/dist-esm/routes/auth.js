@@ -1,0 +1,23 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authRoutes = void 0;
+const express_1 = require("express");
+const authController_js_1 = require("../controllers/authController.js");
+const auth_js_1 = require("../middleware/auth.js");
+const rateLimiter_js_1 = require("../middleware/rateLimiter.js");
+const validation_js_1 = require("../middleware/validation.js");
+const router = (0, express_1.Router)();
+exports.authRoutes = router;
+const authController = new authController_js_1.AuthController();
+router.post('/register', rateLimiter_js_1.authLimiter, validation_js_1.validateAuth, authController.register);
+router.post('/login', rateLimiter_js_1.authLimiter, rateLimiter_js_1.loginSlowDown, validation_js_1.validateAuth, authController.login);
+router.post('/logout', auth_js_1.authenticateToken, authController.logout);
+router.get('/me', auth_js_1.authenticateToken, authController.getProfile);
+router.post('/verify-email/:token', authController.verifyEmail);
+router.post('/resend-verification', rateLimiter_js_1.authLimiter, authController.resendVerification);
+router.post('/forgot-password', rateLimiter_js_1.authLimiter, authController.forgotPassword);
+router.post('/reset-password', rateLimiter_js_1.authLimiter, authController.resetPassword);
+router.post('/change-password', auth_js_1.authenticateToken, authController.changePassword);
+router.put('/settings', auth_js_1.authenticateToken, authController.updateSettings);
+router.delete('/delete-account', auth_js_1.authenticateToken, authController.deleteAccount);
+//# sourceMappingURL=auth.js.map

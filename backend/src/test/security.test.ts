@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import { schemas } from '../middleware/validation'
+import { schemas } from '../middleware/validation.js'
 
 /**
  * Security Test Suite

@@ -4,9 +4,9 @@ import dotenv from 'dotenv'
 // Keep quiet to avoid noisy logs in production
 dotenv.config({ quiet: true })
 
-import { initDatabase } from '../config/database'
-import { MigrationRunner } from '../utils/migrationRunner'
-import { MigrationTracker } from '../utils/migrationTracker'
+import { initDatabase } from '../config/database.js'
+import { MigrationRunner } from '../utils/migrationRunner.js'
+import { MigrationTracker } from '../utils/migrationTracker.js'
 
 async function runMigration() {
   try {

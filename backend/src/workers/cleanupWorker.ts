@@ -1,14 +1,14 @@
 import { type Job, Worker } from 'bullmq'
-import { CacheService } from '../services/cacheService'
-import { GameRoomService } from '../services/gameRoomService'
-import { GameService } from '../services/gameService'
-import type { JobIdempotencyService } from '../services/jobIdempotencyService'
-import { jobIdempotencyService } from '../services/jobIdempotencyService'
-import { type GameCleanupJob, queueService } from '../services/queueService'
-import territoryModifierService from '../services/territoryModifierService'
-import { startWorkerHeartbeat } from '../services/workerHeartbeat'
-import type { GameState } from '../types/game'
-import { logger } from '../utils/logger'
+import { CacheService } from '../services/cacheService.js'
+import { GameRoomService } from '../services/gameRoomService.js'
+import { GameService } from '../services/gameService.js'
+import type { JobIdempotencyService } from '../services/jobIdempotencyService.js'
+import { jobIdempotencyService } from '../services/jobIdempotencyService.js'
+import { type GameCleanupJob, queueService } from '../services/queueService.js'
+import territoryModifierService from '../services/territoryModifierService.js'
+import { startWorkerHeartbeat } from '../services/workerHeartbeat.js'
+import type { GameState } from '../types/game.js'
+import { logger } from '../utils/logger.js'
 
 interface CleanupMetadata {
   winner?: string | null
@@ -64,7 +64,7 @@ export class CleanupWorker {
     // Process cleanup jobs
     {
       const Redis = (await import('ioredis')).default
-      const redis = (await import('../config/redis')).getRedisClient()
+      const redis = (await import('../config/redis.js')).getRedisClient()
       const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
       const connection = new Redis({
         ...baseOpts,

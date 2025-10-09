@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
-import { initDatabase, query } from '../config/database'
-import { logger } from '../utils/logger'
+import { initDatabase, query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 // Test users to seed
 const TEST_USERS = [

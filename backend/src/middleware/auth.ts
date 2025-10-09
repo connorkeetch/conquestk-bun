@@ -1,10 +1,10 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import jwt, { TokenExpiredError } from 'jsonwebtoken'
-import { query } from '../config/database'
-import { clanService } from '../services/clanService'
-import type { RequestUser } from '../types/express'
-import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import { query } from '../config/database.js'
+import { clanService } from '../services/clanService.js'
+import type { RequestUser } from '../types/express.js'
+import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
 
 type AuthTokenPayload = jwt.JwtPayload & {
   userId: string

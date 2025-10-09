@@ -1,4 +1,4 @@
-import { EloService, type PlayerRating, RatingChange } from './eloService'
+import { EloService, type PlayerRating, RatingChange } from './eloService.js'
 
 // Mock the database query function
 jest.mock('../config/database', () => ({

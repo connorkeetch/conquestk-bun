@@ -3,8 +3,8 @@ import dotenv from 'dotenv'
 // Load environment variables before anything else
 dotenv.config()
 
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 type TableName =
   | 'conversations'

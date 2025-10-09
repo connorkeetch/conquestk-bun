@@ -1,6 +1,6 @@
 import path from 'node:path'
 import dotenv from 'dotenv'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
 
@@ -42,7 +42,7 @@ async function run() {
   }
 
   // Load map + metadata
-  const { query } = (await import('../config/database')) as typeof import('../config/database')
+  const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
   const result = await query<MapRow>('SELECT id, name, metadata FROM maps WHERE id = $1', [mapId])
   const row = result.rows[0]
   if (!row) {

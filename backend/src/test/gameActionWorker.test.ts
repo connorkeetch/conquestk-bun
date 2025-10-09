@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import type { Job } from 'bullmq'
 import type { Server } from 'socket.io'
-import type { GameActionJob } from '../services/queueService'
-import type { GameState } from '../types/game'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
-import { GameActionWorker } from '../workers/gameActionWorker'
+import type { GameActionJob } from '../services/queueService.js'
+import type { GameState } from '../types/game.js'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { GameActionWorker } from '../workers/gameActionWorker.js'
 
 const mockGetProcessedJob = jest.fn()
 const mockMarkProcessedJob = jest.fn()

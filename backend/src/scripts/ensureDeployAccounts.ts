@@ -1,13 +1,13 @@
 import bcrypt from 'bcryptjs'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 const OWNER_EMAIL = 'connorkeetch@gmail.com'
 const SUPER_ADMIN_ROLE = 'super_admin'
 const REQUIRED_TEST_ACCOUNTS = 12
 const TEST_ACCOUNT_PASSWORD = 'Password123!'
 
-type QueryFunction = typeof import('../config/database')['query']
-type DatabaseModule = typeof import('../config/database')
+type QueryFunction = typeof import('../config/database.js')['query']
+type DatabaseModule = typeof import('../config/database.js')
 
 const targetEnvironments = new Set(['production', 'staging'])
 
@@ -383,7 +383,7 @@ async function run() {
 
   let databaseModule: DatabaseModule
   try {
-    databaseModule = await import('../config/database')
+    databaseModule = await import('../config/database.js')
   } catch (error) {
     logger.error('Failed to load database module', error)
     throw error

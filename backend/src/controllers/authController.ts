@@ -9,13 +9,13 @@ import {
   PREMIUM_COLOR_MESSAGE,
   PREMIUM_THEME_MESSAGE,
   PREMIUM_UPSELL_ERROR_CODE,
-} from '../constants/premium'
-import { adminService } from '../services/adminService'
-import { authTrackingService } from '../services/authTrackingService'
-import emailService from '../services/emailService'
-import { UserService } from '../services/userService'
-import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+} from '../constants/premium.js'
+import { adminService } from '../services/adminService.js'
+import { authTrackingService } from '../services/authTrackingService.js'
+import emailService from '../services/emailService.js'
+import { UserService } from '../services/userService.js'
+import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
 
 export class AuthController {
   private userService = new UserService()
@@ -122,7 +122,7 @@ export class AuthController {
       // Send verification email only if service is enabled
       if (emailService.isEnabled() && verificationToken) {
         try {
-          const { buildFrontendUrl } = await import('../utils/url')
+          const { buildFrontendUrl } = await import('../utils/url.js')
           const verificationLink = buildFrontendUrl(req, `/verify-email/${verificationToken}`)
           await emailService.sendVerificationEmail({
             username,
@@ -267,7 +267,7 @@ export class AuthController {
 
       // Block login for banned/suspended accounts (honor expires_at if set)
       try {
-        const { query } = await import('../config/database')
+        const { query } = await import('../config/database.js')
         const statusResult = await query<{
           status: string
           reason: string | null
@@ -308,7 +308,7 @@ export class AuthController {
       // Get user preferences for theme loading
       let preferences = null
       try {
-        const { query } = await import('../config/database')
+        const { query } = await import('../config/database.js')
         const preferencesResult = await query(
           `SELECT theme FROM user_preferences WHERE user_id = $1`,
           [user.id],
@@ -434,7 +434,7 @@ export class AuthController {
       // Get user settings (if they exist)
       let settings = null
       try {
-        const { query } = await import('../config/database')
+        const { query } = await import('../config/database.js')
         const settingsResult = await query('SELECT * FROM user_preferences WHERE user_id = $1', [
           userId,
         ])
@@ -447,7 +447,7 @@ export class AuthController {
       // Get user preferences (theme, etc) from user_preferences table
       let preferences = null
       try {
-        const { query } = await import('../config/database')
+        const { query } = await import('../config/database.js')
         const preferencesResult = await query(
           `SELECT theme, sound_enabled, music_enabled, notification_enabled, 
            auto_ready, show_timer, show_army_numbers, animation_speed, language 
@@ -598,7 +598,7 @@ export class AuthController {
 
       // Send reset email
       if (emailService.isEnabled()) {
-        const { buildFrontendUrl } = await import('../utils/url')
+        const { buildFrontendUrl } = await import('../utils/url.js')
         const resetLink = buildFrontendUrl(req, `/reset-password/${resetToken}`)
         await emailService.sendPasswordResetEmail({
           username: user.username,
@@ -714,7 +714,7 @@ export class AuthController {
 
       // Send verification email
       if (emailService.isEnabled()) {
-        const { buildFrontendUrl } = await import('../utils/url')
+        const { buildFrontendUrl } = await import('../utils/url.js')
         const verificationLink = buildFrontendUrl(req, `/verify-email/${verificationToken}`)
         await emailService.sendVerificationEmail({
           username: user.username,
@@ -817,7 +817,7 @@ export class AuthController {
         })
       }
 
-      const { query } = await import('../config/database')
+      const { query } = await import('../config/database.js')
 
       let resolvedHasPremium: boolean | undefined =
         typeof req.user?.hasPremium === 'boolean' ? req.user?.hasPremium : undefined

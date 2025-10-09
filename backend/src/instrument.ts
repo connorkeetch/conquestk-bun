@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/node'
 import dotenv from 'dotenv'
-import { logger } from './utils/logger'
+import { logger } from './utils/logger.js'
 
 // Load environment variables for development
 if (process.env.NODE_ENV !== 'production') {

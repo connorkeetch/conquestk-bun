@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals'
-import type { PerformanceAlert } from '../performanceMonitorService'
-import { buildPerformanceAlertNotification } from './performanceAlerts'
+import type { PerformanceAlert } from '../performanceMonitorService.js'
+import { buildPerformanceAlertNotification } from './performanceAlerts.js'
 
 describe('buildPerformanceAlertNotification', () => {
   beforeAll(() => {

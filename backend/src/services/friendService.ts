@@ -1,8 +1,8 @@
-import { query, transaction } from '../config/database'
-import { logger } from '../utils/logger'
-import notificationService from './notificationService'
-import { tryGetSocketServer } from './socketRegistry'
-import { isBlocked } from './userBlockService'
+import { query, transaction } from '../config/database.js'
+import { logger } from '../utils/logger.js'
+import notificationService from './notificationService.js'
+import { tryGetSocketServer } from './socketRegistry.js'
+import { isBlocked } from './userBlockService.js'
 
 export type FriendshipStatus = 'pending' | 'accepted' | 'blocked'
 

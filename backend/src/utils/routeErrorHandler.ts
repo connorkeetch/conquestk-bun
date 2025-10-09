@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node'
 import type { Request } from 'express'
-import { getErrorMessage, toKnownError } from './errorHelpers'
-import { logger } from './logger'
+import { getErrorMessage, toKnownError } from './errorHelpers.js'
+import { logger } from './logger.js'
 
 export function handleRouteError(
   error: unknown,

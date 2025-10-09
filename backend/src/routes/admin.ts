@@ -1,14 +1,14 @@
 import { type NextFunction, type Request, type Response, Router } from 'express'
 import { body, param, query as queryParam, validationResult } from 'express-validator'
-import { query as dbQuery, transaction } from '../config/database'
-import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { adminService } from '../services/adminService'
-import { GameLifecycleService } from '../services/gameLifecycleService'
-import { mapService } from '../services/mapService'
-import { logger } from '../utils/logger'
-import { handleRouteError } from '../utils/routeErrorHandler'
-import { resolveAssetUrl } from '../utils/url'
+import { query as dbQuery, transaction } from '../config/database.js'
+import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { adminService } from '../services/adminService.js'
+import { GameLifecycleService } from '../services/gameLifecycleService.js'
+import { mapService } from '../services/mapService.js'
+import { logger } from '../utils/logger.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
+import { resolveAssetUrl } from '../utils/url.js'
 
 const router = Router()
 
@@ -1340,7 +1340,7 @@ router.delete(
 
       // Best-effort: clear any cached state
       try {
-        const { gameStateCache } = await import('../services/cacheService')
+        const { gameStateCache } = await import('../services/cacheService.js')
         await gameStateCache.deleteGameState(gameId)
       } catch (_e) {
         // ignore cache errors; deletion already committed
@@ -2348,7 +2348,9 @@ router.post(
       // For example, if you have a map cache or user cache:
 
       // Clear map service cache if it exists
-      const { mapService } = require('../services/mapService')
+      const { mapService } = (await import('../services/mapService.js')) as unknown as {
+        mapService: { clearCache?: () => void }
+      }
       if (mapService && typeof mapService.clearCache === 'function') {
         mapService.clearCache()
       }
@@ -2358,7 +2360,7 @@ router.post(
       if (redisUrl) {
         try {
           // Use the existing Redis client if available
-          const { getRedisClient } = require('../config/redis')
+          const { getRedisClient } = await import('../config/redis.js')
           const redis = getRedisClient()
           if (redis) {
             await redis.flushdb()
@@ -2372,13 +2374,7 @@ router.post(
       }
 
       // Clear any Node.js module cache for hot-reloading (development only)
-      if (process.env.NODE_ENV === 'development') {
-        Object.keys(require.cache).forEach((key) => {
-          if (key.includes('/services/') || key.includes('/config/')) {
-            delete require.cache[key]
-          }
-        })
-      }
+      // In ESM, module cache invalidation is not supported the same way; skip in dev.
 
       logger.info('Cache refresh completed successfully', { adminId: userId })
       res.json({

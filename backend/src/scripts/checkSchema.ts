@@ -16,9 +16,9 @@ for (const candidate of envCandidates) {
 // Allow environment variables that are already defined (e.g. CI) to take precedence.
 dotenv.config()
 
-import { query } from '../config/database'
-import { getErrorMessage } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import { query } from '../config/database.js'
+import { getErrorMessage } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
 
 // Required tables mirrored from the current production schema snapshot
 const REQUIRED_TABLES = [

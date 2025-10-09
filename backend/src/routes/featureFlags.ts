@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
-import { query } from '../config/database'
-import { requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { type AccessLevel, featureFlagService } from '../services/featureFlagService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { query } from '../config/database.js'
+import { requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { type AccessLevel, featureFlagService } from '../services/featureFlagService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 

@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { GameController } from '../controllers/gameController'
-import { authenticateToken } from '../middleware/auth'
+import { GameController } from '../controllers/gameController.js'
+import { authenticateToken } from '../middleware/auth.js'
 
 const router = Router()
 const gameController = new GameController()

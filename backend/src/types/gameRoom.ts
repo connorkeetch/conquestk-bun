@@ -1,4 +1,4 @@
-import type { GamePhase, KingOfTheHillConfig, MovementType, TreasureConfig } from './game'
+import type { GamePhase, KingOfTheHillConfig, MovementType, TreasureConfig } from './game.js'
 
 export type GameLifecycleStatus =
   | 'lobby'

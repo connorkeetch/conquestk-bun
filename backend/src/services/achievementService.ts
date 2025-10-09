@@ -1,6 +1,6 @@
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
-import { profileService } from './profileService'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
+import { profileService } from './profileService.js'
 
 type MinimalRanking = {
   userId: string

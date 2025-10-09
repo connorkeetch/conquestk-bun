@@ -1,8 +1,8 @@
 import { type Request, type Response, Router } from 'express'
-import { logAdminActivity, requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import notificationService from '../services/notificationService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { logAdminActivity, requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import notificationService from '../services/notificationService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 

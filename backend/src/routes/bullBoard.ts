@@ -2,9 +2,9 @@ import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { ExpressAdapter } from '@bull-board/express'
 import { Router } from 'express'
-import { requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { queueService } from '../services/queueService'
+import { requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { queueService } from '../services/queueService.js'
 
 export const createBullBoardRouter = () => {
   const router = Router()

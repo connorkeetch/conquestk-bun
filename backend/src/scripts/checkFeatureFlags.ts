@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 type ScanResult = {
   usedFromCalls: Set<string>

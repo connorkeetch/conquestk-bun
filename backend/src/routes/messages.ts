@@ -1,7 +1,7 @@
 import { type Request, type Response, Router } from 'express'
-import { requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { messageLimiter } from '../middleware/rateLimiter'
+import { requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { messageLimiter } from '../middleware/rateLimiter.js'
 import {
   addMembersToConversation,
   ConversationError,
@@ -17,14 +17,14 @@ import {
   markConversationRead,
   removeConversationMember,
   sendMessage,
-} from '../services/conversationService'
+} from '../services/conversationService.js'
 import {
   createBlock,
   getBlockRecords,
   getBlocksForUser,
   removeBlock,
-} from '../services/userBlockService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+} from '../services/userBlockService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 

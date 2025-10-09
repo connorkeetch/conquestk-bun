@@ -1,14 +1,14 @@
 import express from 'express'
-import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import MapApprovalService from '../services/mapApprovalService'
+import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import MapApprovalService from '../services/mapApprovalService.js'
 import {
   MapNotFoundError,
   MapPermissionError,
   mapPermissionService,
-} from '../services/mapPermissionService'
-import { getErrorMessage } from '../utils/errorHelpers'
-import { handleRouteError } from '../utils/routeErrorHandler'
+} from '../services/mapPermissionService.js'
+import { getErrorMessage } from '../utils/errorHelpers.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = express.Router()
 

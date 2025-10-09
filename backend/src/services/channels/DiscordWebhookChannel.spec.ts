@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals'
 import type { NotificationEvent } from '@risk-game/shared/types/notifications'
-import { DiscordWebhookChannel } from './DiscordWebhookChannel'
+import { DiscordWebhookChannel } from './DiscordWebhookChannel.js'
 
 const baseEvent: NotificationEvent = {
   id: 'event-2',

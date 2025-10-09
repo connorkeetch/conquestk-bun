@@ -1,4 +1,4 @@
-import { comparePerformance, type PerformanceSnapshot } from '../utils/benchmarkUtils'
+import { comparePerformance, type PerformanceSnapshot } from '../utils/benchmarkUtils.js'
 
 describe('comparePerformance', () => {
   it('handles zero baseline metrics without producing infinite values', () => {

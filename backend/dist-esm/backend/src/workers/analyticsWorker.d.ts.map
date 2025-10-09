@@ -1,0 +1,1 @@
+{"version":3,"file":"analyticsWorker.d.ts","sourceRoot":"","sources":["../../../../src/workers/analyticsWorker.ts"],"names":[],"mappings":"AAcA,qBAAa,eAAe;IAC1B,OAAO,CAAC,MAAM,CAAsB;IACpC,OAAO,CAAC,WAAW,CAAa;;IAM1B,UAAU,IAAI,OAAO,CAAC,IAAI,CAAC;CAmElC;AAED,eAAO,MAAM,qBAAqB,uBAA8B,CAAA"}

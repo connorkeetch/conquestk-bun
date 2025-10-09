@@ -1,5 +1,5 @@
 import type { Pool } from 'pg'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 type BoundaryCoordinates = Array<[number, number]>
 

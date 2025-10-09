@@ -1,7 +1,7 @@
 import { type Job, Worker } from 'bullmq'
-import { mapStagingService } from '../services/mapStagingService'
-import { queueService } from '../services/queueService'
-import { logger } from '../utils/logger'
+import { mapStagingService } from '../services/mapStagingService.js'
+import { queueService } from '../services/queueService.js'
+import { logger } from '../utils/logger.js'
 
 interface PurgeOptions {
   batchSize?: number
@@ -31,7 +31,7 @@ export class MapAssetWorker {
 
       // Worker to process purge jobs
       const Redis = (await import('ioredis')).default
-      const redis = (await import('../config/redis')).getRedisClient()
+      const redis = (await import('../config/redis.js')).getRedisClient()
       const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
       const connection = new Redis({
         ...baseOpts,

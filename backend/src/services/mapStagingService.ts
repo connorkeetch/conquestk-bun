@@ -1,10 +1,10 @@
 import * as path from 'node:path'
 import sharp from 'sharp'
-import { query } from '../config/database'
-import { assetExists, deleteAsset, uploadAsset } from '../utils/assetStorage'
-import { logger } from '../utils/logger'
-import { adminService } from './adminService'
-import notificationService from './notificationService'
+import { query } from '../config/database.js'
+import { assetExists, deleteAsset, uploadAsset } from '../utils/assetStorage.js'
+import { logger } from '../utils/logger.js'
+import { adminService } from './adminService.js'
+import notificationService from './notificationService.js'
 
 export interface StagingImage {
   id: string

@@ -1,6 +1,6 @@
 import type { PoolClient } from 'pg'
-import { getClient, query } from '../config/database'
-import type { ContinentBonus } from '../types/game'
+import { getClient, query } from '../config/database.js'
+import type { ContinentBonus } from '../types/game.js'
 import type {
   ConnectionRequirements,
   Coordinate,
@@ -24,10 +24,10 @@ import type {
   TerritoryAdjacency,
   TerritoryModifierMetadata,
   UpdateMapRequest,
-} from '../types/maps'
-import { deleteAsset, extractStorageKeyFromUrl, getPublicAssetUrl } from '../utils/assetStorage'
-import { logger } from '../utils/logger'
-import { MapNotFoundError, mapPermissionService } from './mapPermissionService'
+} from '../types/maps.js'
+import { deleteAsset, extractStorageKeyFromUrl, getPublicAssetUrl } from '../utils/assetStorage.js'
+import { logger } from '../utils/logger.js'
+import { MapNotFoundError, mapPermissionService } from './mapPermissionService.js'
 
 type SqlValue = string | number | boolean | string[] | null | Date
 
