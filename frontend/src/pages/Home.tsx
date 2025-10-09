@@ -204,7 +204,7 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           {/* Single container with world map background */}
           <div
-            className="relative h-80 md:h-[500px] rounded-2xl border border-white/10 p-12
+            className="relative h-80 md:h-[500px] rounded-2xl border border-border p-12
                       shadow-[inset_0_1px_0_0_rgba(255,255,255,.06)]
                       flex items-center justify-center overflow-hidden"
             style={{
@@ -215,10 +215,10 @@ const Home: React.FC = () => {
             }}
           >
             {/* Dark overlay for better text contrast */}
-            <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-black/80 rounded-2xl"></div>
+            <div className="absolute inset-0 bg-[color:color-mix(in_srgb,var(--surface-1)_80%,black)] rounded-2xl"></div>
 
             {/* Subtle gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent rounded-2xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[color:color-mix(in_srgb,black_50%,transparent)] via-transparent to-transparent rounded-2xl"></div>
 
             {/* Battle Text Overlay */}
             <div className="relative z-10 text-center px-8">
@@ -248,8 +248,8 @@ const Home: React.FC = () => {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group min-h-[96px] rounded-xl border border-white/10 bg-white/[.05] p-5
-                         hover:bg-white/[.07] hover:-translate-y-0.5 transition will-change-transform"
+                className="group min-h-[96px] rounded-xl border border-border bg-surface-2/50 p-5
+                         hover:bg-surface-2/70 hover:-translate-y-0.5 transition will-change-transform"
               >
                 <div className="flex items-start gap-3">
                   <div className="text-2xl flex-shrink-0">{feature.icon}</div>
@@ -288,7 +288,7 @@ const Home: React.FC = () => {
             {gameExperiences.map((experience) => (
               <div
                 key={experience.title}
-                className="rounded-xl border border-white/10 bg-white/[.06] p-5 flex flex-col gap-4"
+                className="rounded-xl border border-border bg-surface-2/60 p-5 flex flex-col gap-4"
               >
                 <div className="flex items-start gap-3">
                   <span className="text-2xl" aria-hidden="true">
@@ -300,7 +300,7 @@ const Home: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-auto">
-                  <p className="text-xs uppercase tracking-wide text-white/60 bg-white/5 border border-white/10 inline-flex px-3 py-1 rounded-full">
+                  <p className="text-xs uppercase tracking-wide text-muted bg-surface-1/50 border border-border inline-flex px-3 py-1 rounded-full">
                     {experience.meta}
                   </p>
                 </div>
@@ -327,7 +327,7 @@ const Home: React.FC = () => {
             {highlights.map((highlight) => (
               <div
                 key={highlight.title}
-                className="rounded-xl border border-white/10 bg-white/[.05] p-5 text-left"
+                className="rounded-xl border border-border bg-surface-2/50 p-5 text-left"
               >
                 <h3 className="text-lg font-medium text-white">{highlight.title}</h3>
                 <p className="mt-2 text-sm text-white/70">{highlight.description}</p>
@@ -367,7 +367,7 @@ const Home: React.FC = () => {
             {roadmap.map((item) => (
               <div
                 key={item.title}
-                className="rounded-xl border border-white/10 bg-white/[.04] p-5 md:p-6 flex flex-col md:flex-row md:items-center md:gap-6"
+                className="rounded-xl border border-border bg-surface-2/40 p-5 md:p-6 flex flex-col md:flex-row md:items-center md:gap-6"
               >
                 <div className="flex items-center gap-3 mb-4 md:mb-0">
                   <span className="text-white text-lg font-medium">{item.title}</span>
@@ -397,32 +397,32 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-white/10 bg-white/[.07] p-5 text-center">
+            <div className="rounded-xl border border-border bg-surface-2/70 p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 1
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">Deploy Strategically</h3>
-              <p className="text-white/70 text-sm">
+              <h3 className="text-lg font-medium text-heading mb-2">Deploy Strategically</h3>
+              <p className="text-muted text-sm">
                 Position forces across chokepoints and key territories
               </p>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[.07] p-5 text-center">
+            <div className="rounded-xl border border-border bg-surface-2/70 p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 2
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">Attack & Defend</h3>
-              <p className="text-white/70 text-sm">
+              <h3 className="text-lg font-medium text-heading mb-2">Attack & Defend</h3>
+              <p className="text-muted text-sm">
                 Time your strikes and fortify vulnerable positions
               </p>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[.07] p-5 text-center">
+            <div className="rounded-xl border border-border bg-surface-2/70 p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 3
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">Claim Victory</h3>
-              <p className="text-white/70 text-sm">Adapt your strategy and conquer the world</p>
+              <h3 className="text-lg font-medium text-heading mb-2">Claim Victory</h3>
+              <p className="text-muted text-sm">Adapt your strategy and conquer the world</p>
             </div>
           </div>
         </div>
@@ -431,7 +431,7 @@ const Home: React.FC = () => {
       {/* Final CTA */}
       <section className="relative z-10 section-spacing">
         <div className="container mx-auto px-6 max-w-4xl">
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-slate-900/80 p-8 md:p-12 text-center">
+          <div className="rounded-2xl border border-border bg-surface-2/60 p-8 md:p-12 text-center">
             <h2 className="text-3xl font-bold text-white">Ready to command your next war?</h2>
             <p className="mt-4 text-white/80 text-base md:text-lg">
               The beta is live today. Rally your allies, draft a new map, or drop into matchmaking

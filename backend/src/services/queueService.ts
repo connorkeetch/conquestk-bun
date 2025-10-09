@@ -57,17 +57,6 @@ export interface GameActionJob {
   turnTimeoutStage?: 'expire'
 }
 
-export interface BattleSimulationJob {
-  gameId: string
-  attackingTerritory: string
-  defendingTerritory: string
-  attackingArmies: number
-  defendingArmies: number
-  playerId: string
-  moveId?: string
-  idempotencyKey?: string
-}
-
 export interface GameCleanupJob {
   gameId: string
   reason: 'finished' | 'timeout' | 'abandoned'
@@ -96,11 +85,6 @@ const QUEUE_CONFIGS = {
     name: 'game-actions',
     concurrency: 10,
     priority: 'high' as const,
-  },
-  battleSimulations: {
-    name: 'battle-simulations',
-    concurrency: 5,
-    priority: 'medium' as const,
   },
   gameCleanup: {
     name: 'game-cleanup',
@@ -370,31 +354,6 @@ export class QueueService {
       removeOnFail: true,
       removeOnComplete: 10,
       priority: options?.priority ?? this.getActionPriority(job.action),
-    })
-  }
-
-  // Battle Simulation Queue
-  async addBattleSimulation(
-    job: BattleSimulationJob,
-  ): Promise<Bull.Job<BattleSimulationJob> | null> {
-    if (!this.redis || !this.isInitialized) {
-      logger.warn('QueueService not available, skipping battle simulation queue')
-      return null
-    }
-
-    const queue = this.resolveQueue('battleSimulations')
-    if (!queue) throw new Error('Battle simulations queue not initialized')
-
-    const idempotencyKey = job.idempotencyKey ?? randomUUID()
-    const payload: BattleSimulationJob = {
-      ...job,
-      idempotencyKey,
-    }
-
-    return queue.add('simulate-battle', payload, {
-      jobId: idempotencyKey,
-      priority: 5, // Medium priority
-      delay: 0,
     })
   }
 
@@ -845,10 +804,6 @@ export class QueueService {
       throw new Error(`Queue ${name} not found. Make sure initialize() was called first.`)
     }
     return queue
-  }
-
-  getBattleQueue(): Bull.Queue<BattleSimulationJob> {
-    return this.requireQueue('battleSimulations') as Bull.Queue<BattleSimulationJob>
   }
 
   // Return untyped queue here because the game-actions queue can carry

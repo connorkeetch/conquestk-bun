@@ -12,10 +12,12 @@ import { queueService } from './queueService'
 export class GameActionProcessor {
   private gameService: GameService
   private deltaEmitter: DeltaEmitter
+  private io: Server<ClientToServerEvents, ServerToClientEvents>
 
   constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
     this.gameService = new GameService()
     this.deltaEmitter = new DeltaEmitter(io)
+    this.io = io
   }
 
   /**
@@ -245,5 +247,92 @@ export class GameActionProcessor {
    */
   getDeltaEmitter(): DeltaEmitter {
     return this.deltaEmitter
+  }
+
+  /**
+   * Process an attack action. Queues when workers available; otherwise inline via GameEngine.
+   */
+  async processAttack(
+    gameId: string,
+    playerId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    armies?: number,
+    socketId?: string,
+  ): Promise<{ mode: 'queued' | 'inline' }> {
+    const job = await queueService.addGameAction({
+      gameId,
+      playerId,
+      action: {
+        type: 'attack',
+        roomId: gameId,
+        playerId,
+        payload: {
+          fromTerritoryId,
+          toTerritoryId,
+          ...(typeof armies === 'number' ? { armies } : {}),
+        },
+      },
+      socketId,
+    })
+
+    if (job) {
+      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+      if (hasWorkers) {
+        logger.info('Queued attack action for worker processing', {
+          gameId,
+          jobId: job.id,
+          fromTerritoryId,
+          toTerritoryId,
+          armies,
+        })
+        return { mode: 'queued' }
+      }
+      try {
+        await job.remove()
+      } catch (err) {
+        logger.warn('Failed to remove queued job for inline fallback', {
+          gameId,
+          jobId: job.id,
+          error: err instanceof Error ? err.message : err,
+        })
+      }
+    }
+
+    // Inline fallback: process through GameService/GameEngine and emit battle result delta
+    const updated = await this.gameService.processGameAction(
+      {
+        type: 'attack',
+        roomId: gameId,
+        playerId,
+        payload: {
+          fromTerritoryId,
+          toTerritoryId,
+          ...(typeof armies === 'number' ? { armies } : {}),
+        },
+      },
+      playerId,
+    )
+    const last = updated.lastBattleResult
+    if (last) {
+      try {
+        const battleDelta: import('@risk-game/shared/types').GameDelta = (
+          await import('../types/deltaUpdates')
+        ).DeltaBuilder.battleResult(
+          gameId,
+          last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
+          updated.version,
+        )
+        const { emitFogFilteredDelta } = await import('./fogService')
+        await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
+      } catch (e) {
+        logger.debug('Failed to emit fog-filtered battle delta in inline attack', {
+          gameId,
+          error: e instanceof Error ? e.message : e,
+        })
+      }
+    }
+    await this.deltaEmitter.emitRevealTo(gameId, playerId)
+    return { mode: 'inline' }
   }
 }

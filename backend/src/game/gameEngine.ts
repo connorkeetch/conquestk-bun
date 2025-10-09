@@ -32,6 +32,63 @@ export class GameEngine {
   // Cache modifiers per room to prevent memory leaks
   private gameModifiersCache: Map<string, Map<string, GameTerritoryModifier>> = new Map()
 
+  private cyrb128(seed: string): [number, number, number, number] {
+    let h1 = 1779033703
+    let h2 = 3144134277
+    let h3 = 1013904242
+    let h4 = 2773480762
+    for (let i = 0; i < seed.length; i++) {
+      const k = seed.charCodeAt(i)
+      h1 = (h2 ^ Math.imul(h1 ^ k, 597399067)) >>> 0
+      h2 = (h3 ^ Math.imul(h2 ^ k, 2869860233)) >>> 0
+      h3 = (h4 ^ Math.imul(h3 ^ k, 951274213)) >>> 0
+      h4 = (h1 ^ Math.imul(h4 ^ k, 2716044179)) >>> 0
+    }
+    h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067) >>> 0
+    h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233) >>> 0
+    h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213) >>> 0
+    h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179) >>> 0
+    return [h1, h2, h3, h4]
+  }
+
+  private sfc32(a: number, b: number, c: number, d: number): () => number {
+    let _a = a >>> 0
+    let _b = b >>> 0
+    let _c = c >>> 0
+    let _d = d >>> 0
+    return () => {
+      const t = (((_a + _b) | 0) + _d) | 0
+      _d = (_d + 1) | 0
+      _a = _b ^ (_b >>> 9)
+      _b = (_c + (_c << 3)) | 0
+      _c = (_c << 21) | (_c >>> 11) | 0
+      _c = (_c + t) | 0
+      return (t >>> 0) / 4294967296
+    }
+  }
+
+  private ensureCombatRng(gameState: GameState): { a: number; b: number; c: number; d: number } {
+    if (!gameState.combatRngSeed || !gameState.combatRngState) {
+      const seed = gameState.combatRngSeed || `${gameState.roomId}:legacy`
+      const [a, b, c, d] = this.cyrb128(seed)
+      gameState.combatRngSeed = seed
+      gameState.combatRngState = { a, b, c, d }
+    }
+    return gameState.combatRngState
+  }
+
+  private nextRandom(gameState: GameState): number {
+    const st = this.ensureCombatRng(gameState)
+    const next = this.sfc32(st.a, st.b, st.c, st.d)
+    const r = next()
+    const r1 = Math.floor(next() * 4294967296) >>> 0
+    const r2 = Math.floor(next() * 4294967296) >>> 0
+    const r3 = Math.floor(next() * 4294967296) >>> 0
+    const r4 = Math.floor(next() * 4294967296) >>> 0
+    gameState.combatRngState = { a: r1, b: r2, c: r3, d: r4 }
+    return r
+  }
+
   /**
    * Clear cached modifiers for a specific room (call when game ends)
    */
@@ -1101,7 +1158,7 @@ export class GameEngine {
     const attackerDiceCount = Math.max(1, Math.min(3, fromTerritory.armies - 1))
     const defenderDiceCount = Math.max(1, Math.min(2, toTerritory.armies))
 
-    const battleResult = this.simulateBattle(attackerDiceCount, defenderDiceCount)
+    const battleResult = this.simulateBattle(gameState, attackerDiceCount, defenderDiceCount)
 
     // Apply losses
     fromTerritory.armies -= battleResult.attackerLosses
@@ -1717,6 +1774,7 @@ export class GameEngine {
   }
 
   private simulateBattle(
+    gameState: GameState,
     attackerDiceCount: number,
     defenderDiceCount: number,
     attackBonus: number = 0,
@@ -1728,8 +1786,8 @@ export class GameEngine {
     defenderLosses: number
   } {
     // Roll dice for attacker and defender
-    let attackerDice = this.rollDice(attackerDiceCount).sort((a, b) => b - a)
-    let defenderDice = this.rollDice(defenderDiceCount).sort((a, b) => b - a)
+    let attackerDice = this.rollDice(gameState, attackerDiceCount).sort((a, b) => b - a)
+    let defenderDice = this.rollDice(gameState, defenderDiceCount).sort((a, b) => b - a)
 
     // Apply territory modifiers to dice rolls
     // Bonuses are applied to all dice, capped between 1 and 6
@@ -1769,10 +1827,11 @@ export class GameEngine {
     }
   }
 
-  private rollDice(count: number): number[] {
+  private rollDice(gameState: GameState, count: number): number[] {
     const dice: number[] = []
     for (let i = 0; i < count; i++) {
-      dice.push(Math.floor(Math.random() * 6) + 1)
+      const r = this.nextRandom(gameState)
+      dice.push(Math.floor(r * 6) + 1)
     }
     return dice
   }

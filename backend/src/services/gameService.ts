@@ -130,6 +130,14 @@ type LifecycleLogEntry = {
   event: 'CREATED' | 'STARTED'
 }
 
+type RngLogEntry = {
+  type: 'RNG'
+  timestamp: string
+  scope: 'combat'
+  algorithm: 'sfc32'
+  seed: string
+}
+
 type ReinforceLogEntry = {
   type: 'REINFORCE'
   timestamp: string
@@ -167,6 +175,7 @@ type GameLogEntry =
   | RatingLogEntry
   | TreasureCashLogEntry
   | EngagementSummaryLogEntry
+  | RngLogEntry
 
 type PlayerRankingSummary = {
   userId: string
@@ -674,6 +683,33 @@ export class GameService {
       territories: loaded.territories,
       continentBonuses: loaded.continentBonuses,
     })
+
+    try {
+      const crypto = await import('node:crypto')
+      const seed = crypto.randomBytes(16).toString('hex')
+      const seedStr = `sfc32:${seed}`
+      gameState.combatRngSeed = seedStr
+      try {
+        const entry: RngLogEntry = {
+          type: 'RNG',
+          timestamp: new Date().toISOString(),
+          scope: 'combat',
+          algorithm: 'sfc32',
+          seed: seedStr,
+        }
+        await this.appendLog(roomId, [entry])
+      } catch (logErr) {
+        logger.debug('Skipped RNG seed appendLog', {
+          roomId,
+          error: logErr instanceof Error ? logErr.message : logErr,
+        })
+      }
+    } catch (e) {
+      logger.warn('Failed to initialize or log combat RNG seed', {
+        roomId,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
 
     // Initialize territory modifiers if enabled
     if (config.useTerritoryModifiers) {

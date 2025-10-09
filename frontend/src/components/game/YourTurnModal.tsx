@@ -165,7 +165,7 @@ export function YourTurnModal({ className = '' }: Props) {
       aria-label="Your turn"
     >
       <div
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] ${closing ? 'opacity-0' : 'opacity-100'}`}
+        className={`absolute inset-0 bg-[color:color-mix(in_srgb,var(--surface-1)_8%,black)] backdrop-blur-sm transition-opacity duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] ${closing ? 'opacity-0' : 'opacity-100'}`}
       />
       <div
         className={`relative w-[min(92vw,520px)] rounded-xl overflow-hidden shadow-2xl border transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] ${closing ? 'opacity-0 translate-y-1 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}

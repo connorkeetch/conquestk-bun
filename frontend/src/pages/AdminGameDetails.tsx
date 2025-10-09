@@ -60,6 +60,10 @@ export default function AdminGameDetailsPage() {
 
   // State
   const [rawState, setRawState] = useState<Record<string, unknown> | null>(null)
+  // Combat seed (auditable RNG)
+  const [combatSeed, setCombatSeed] = useState<string | null>(null)
+  const [seedSource, setSeedSource] = useState<'log' | 'state' | null>(null)
+  const [seedLoading, setSeedLoading] = useState(false)
 
   // Snapshots
   const [snapshots, setSnapshots] = useState<
@@ -228,6 +232,25 @@ export default function AdminGameDetailsPage() {
       }
     }
     void loadStats()
+  }, [activeTab, gameId])
+
+  // Load combat RNG seed on overview
+  useEffect(() => {
+    const loadSeed = async () => {
+      if (!gameId || activeTab !== 'overview') return
+      try {
+        setSeedLoading(true)
+        const res = await adminService.getGameSeed(gameId)
+        setCombatSeed(res.seed ?? null)
+        setSeedSource((res.source as 'log' | 'state' | null) ?? null)
+      } catch {
+        setCombatSeed(null)
+        setSeedSource(null)
+      } finally {
+        setSeedLoading(false)
+      }
+    }
+    void loadSeed()
   }, [activeTab, gameId])
 
   // Load log on demand
@@ -473,6 +496,52 @@ export default function AdminGameDetailsPage() {
           <div className="p-4">
             {activeTab === 'overview' && (
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="text-lg font-medium">Combat Seed</div>
+                  <div className="border border-border rounded p-3 bg-surface-2 text-sm flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-muted">Auditable RNG (combat) seed</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="bg-surface-1 hover:bg-gray-700 px-2 py-1 rounded text-xs"
+                          onClick={async () => {
+                            if (!gameId) return
+                            try {
+                              setSeedLoading(true)
+                              const res = await adminService.getGameSeed(gameId)
+                              setCombatSeed(res.seed ?? null)
+                              setSeedSource((res.source as 'log' | 'state' | null) ?? null)
+                            } finally {
+                              setSeedLoading(false)
+                            }
+                          }}
+                        >
+                          Refresh
+                        </button>
+                        <button
+                          type="button"
+                          className="bg-surface-1 hover:bg-gray-700 px-2 py-1 rounded text-xs disabled:opacity-50"
+                          disabled={!combatSeed}
+                          onClick={() => {
+                            if (!combatSeed) return
+                            try {
+                              void navigator.clipboard.writeText(combatSeed)
+                            } catch (_e) {
+                              // noop
+                            }
+                          }}
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                    <div className="font-mono break-all whitespace-pre-wrap">
+                      {seedLoading ? 'Loading…' : (combatSeed ?? 'No seed on record')}
+                    </div>
+                    {seedSource && <div className="text-xs text-muted">Source: {seedSource}</div>}
+                  </div>
+                </div>
                 <div className="text-lg font-medium">Players</div>
                 <div className="overflow-auto">
                   <table className="w-full text-sm">

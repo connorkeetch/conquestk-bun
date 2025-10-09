@@ -311,6 +311,13 @@ class AdminService {
     return response.data
   }
 
+  async getGameSeed(
+    gameId: string,
+  ): Promise<{ seed: string | null; source: 'log' | 'state' | null }> {
+    const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/seed`)
+    return response.data
+  }
+
   async getGameState(gameId: string): Promise<{ state: Record<string, unknown> | null }> {
     const response = await apiClient.get(`${this.baseUrl}/games/${gameId}/state`)
     return response.data
