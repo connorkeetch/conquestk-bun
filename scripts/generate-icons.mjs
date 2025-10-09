@@ -9,6 +9,8 @@ const brandSvgPath = path.join(root, 'frontend/public/conquest_k_logo.svg')
 const out512 = path.join(root, 'frontend/public/icon-512.png')
 const out192 = path.join(root, 'frontend/public/icon-192.png')
 const out180 = path.join(root, 'frontend/public/apple-touch-icon-180.png')
+const out32 = path.join(root, 'frontend/public/favicon-32x32.png')
+const out16 = path.join(root, 'frontend/public/favicon-16x16.png')
 
 async function run() {
   if (!fs.existsSync(brandSvgPath)) {
@@ -36,7 +38,9 @@ async function run() {
   await mkSquare(512, out512)
   await mkSquare(192, out192)
   await mkSquare(180, out180)
-  process.stdout.write(`Generated ${out512}, ${out192} and ${out180}\n`)
+  await mkSquare(32, out32)
+  await mkSquare(16, out16)
+  process.stdout.write(`Generated ${out512}, ${out192}, ${out180}, ${out32}, and ${out16}\n`)
 }
 
 run().catch((e) => {

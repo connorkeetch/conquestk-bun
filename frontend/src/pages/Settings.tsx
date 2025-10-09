@@ -43,6 +43,22 @@ import {
   setShowOnlineStatus,
 } from '../store/settingsSlice'
 
+// PWA install helpers
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
+const pwaIsStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)').matches ||
+  // iOS Safari
+  (navigator as unknown as { standalone?: boolean }).standalone === true
+
+const pwaIsIOS = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) && !/android/i.test(navigator.userAgent)
+
+const pwaIsSafari = () => /safari/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent)
+
 // Color Dropdown Component
 function ColorDropdown({
   value,
@@ -1093,6 +1109,86 @@ export default function Settings() {
               <ColorDropdown value={currentColor} onChange={(color) => setting.onChange?.(color)} />
             )
           }
+          if (setting.id === 'install-app') {
+            // Inline state/effects scoped to this custom control
+            const [installed, setInstalled] = useState<boolean>(() => pwaIsStandalone())
+            const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+
+            useEffect(() => {
+              if (installed) return
+
+              const onBIP = (e: Event) => {
+                e.preventDefault()
+                setDeferredPrompt(e as BeforeInstallPromptEvent)
+              }
+              const onInstalled = () => setInstalled(true)
+
+              window.addEventListener('beforeinstallprompt', onBIP as EventListener)
+              window.addEventListener('appinstalled', onInstalled)
+              return () => {
+                window.removeEventListener('beforeinstallprompt', onBIP as EventListener)
+                window.removeEventListener('appinstalled', onInstalled)
+              }
+            }, [installed])
+
+            const iosSafari = pwaIsIOS() && pwaIsSafari()
+
+            return (
+              <div className={baseContainerClass}>
+                {renderComingSoonBadge()}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className={labelClass}>{setting.label}</div>
+                      <div className={descriptionClass}>{setting.description}</div>
+                    </div>
+                    {installed ? (
+                      <div className="text-[color:var(--color-success)] font-medium">Installed ✓</div>
+                    ) : deferredPrompt ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={async () => {
+                          try {
+                            await deferredPrompt.prompt()
+                            await deferredPrompt.userChoice
+                          } finally {
+                            setDeferredPrompt(null)
+                          }
+                        }}
+                      >
+                        Install
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {!installed && !deferredPrompt && (
+                    <div className="rounded-md border border-[color:var(--panel-border)] bg-[color:var(--surface-2)] p-3 text-sm text-muted">
+                      {iosSafari ? (
+                        <div>
+                          <div className="font-medium text-[color:var(--text)] mb-1">How to install on iOS</div>
+                          <ol className="list-decimal list-inside space-y-1">
+                            <li>Open this site in Safari</li>
+                            <li>Tap the Share button</li>
+                            <li>Select "Add to Home Screen"</li>
+                          </ol>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="font-medium text-[color:var(--text)] mb-1">How to install</div>
+                          <ul className="list-disc list-inside space-y-1">
+                            <li>Chrome/Android: open menu (⋮) → Install app</li>
+                            <li>Chrome/Edge desktop: click the Install icon in the address bar or menu</li>
+                            <li>Firefox Android: open menu → Add to Home screen</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          }
           return null
 
         case 'color-theme-selector': {
@@ -1841,6 +1937,13 @@ export default function Settings() {
 
       case 'advanced': {
         const advancedSettings: SettingItem[] = [
+          {
+            id: 'install-app',
+            label: 'Install Conquest K',
+            description: 'Install the app for faster launch and fullscreen experience',
+            type: 'custom',
+            isWorking: true,
+          },
           {
             id: 'reset-settings',
             label: 'Reset All Settings',
