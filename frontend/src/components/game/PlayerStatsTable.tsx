@@ -126,7 +126,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
               </thead>
               <tbody>
                 {sortedPlayers.map((player, _index) => {
-                  const skillRating = player.skillRating ?? 1000
+                  const skillRating = player.skillRating ?? 800
                   const rank = getConquestRank(skillRating)
                   return (
                     <tr

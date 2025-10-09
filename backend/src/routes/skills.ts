@@ -36,7 +36,7 @@ router.get('/users/:userId/rating', async (req, res) => {
     }
 
     const user = result.rows[0]
-    const tier = eloService.getSkillTier(user.skill_rating || 1000)
+    const tier = eloService.getSkillTier(user.skill_rating || 800)
 
     // Calculate win rate
     const winRate =
@@ -47,7 +47,7 @@ router.get('/users/:userId/rating', async (req, res) => {
     return res.json({
       userId: user.id,
       username: user.username,
-      skillRating: user.skill_rating || 1000,
+      skillRating: user.skill_rating || 800,
       confidence: user.skill_confidence || 0,
       tier: {
         ...tier,
@@ -58,7 +58,7 @@ router.get('/users/:userId/rating', async (req, res) => {
         wins: user.ranked_wins || 0,
         losses: user.ranked_losses || 0,
         winRate: parseFloat(winRate as string),
-        highestRating: user.highest_skill_rating || 1000,
+        highestRating: user.highest_skill_rating || 800,
       },
       lastRankedGame: user.last_ranked_game_at,
     })

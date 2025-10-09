@@ -2602,7 +2602,7 @@ export class GameService {
 
       const playerRatings: PlayerRating[] = playerRankings.map((ranking) => ({
         userId: ranking.userId,
-        currentRating: userMap.get(ranking.userId)?.skill_rating ?? 1000,
+        currentRating: userMap.get(ranking.userId)?.skill_rating ?? 800,
         gamesPlayed: statsMap.get(ranking.userId) ?? 0,
         position: ranking.position,
       }))
@@ -2654,8 +2654,8 @@ export class GameService {
           territories: ranking.territories,
           armies: ranking.armies,
           eliminationOrder: ranking.eliminationOrder,
-          ratingBefore: ratingChange?.oldRating ?? user?.skill_rating ?? 1000,
-          ratingAfter: ratingChange?.newRating ?? user?.skill_rating ?? 1000,
+          ratingBefore: ratingChange?.oldRating ?? user?.skill_rating ?? 800,
+          ratingAfter: ratingChange?.newRating ?? user?.skill_rating ?? 800,
           ratingChange: ratingChange?.change ?? 0,
         }
       })
@@ -2718,8 +2718,8 @@ export class GameService {
         playerRankings.forEach((ranking, index) => {
           const ratingChange = ratingChangeMap.get(ranking.userId)
           const user = userMap.get(ranking.userId)
-          const ratingBefore = ratingChange?.oldRating ?? user?.skill_rating ?? 1000
-          const ratingAfter = ratingChange?.newRating ?? user?.skill_rating ?? 1000
+          const ratingBefore = ratingChange?.oldRating ?? user?.skill_rating ?? 800
+          const ratingAfter = ratingChange?.newRating ?? user?.skill_rating ?? 800
           const ratingDelta = ratingChange?.change ?? 0
           const baseIndex = index * 11
           resultsPlaceholders.push(

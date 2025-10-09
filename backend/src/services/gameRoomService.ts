@@ -1180,7 +1180,7 @@ export class GameRoomService {
       const premiumTier = userRow.premium_tier ?? 'free'
       const userHasPremium = premiumTier !== 'free'
       const userIsVip = userRow.is_vip === true
-      const userRating = typeof userRow.skill_rating === 'number' ? userRow.skill_rating : 1000
+      const userRating = typeof userRow.skill_rating === 'number' ? userRow.skill_rating : 800
 
       // Check if the map is VIP-only
       if (room.map_id) {

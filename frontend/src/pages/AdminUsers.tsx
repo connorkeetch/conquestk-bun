@@ -439,7 +439,7 @@ const AdminUsers: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted">Conquest Points (CP):</span>
-                  <span className="text-[color:var(--text)]">{selectedUser.elo || 1000}</span>
+                  <span className="text-[color:var(--text)]">{selectedUser.elo || 800}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted">Email verified:</span>
@@ -1123,7 +1123,7 @@ const AdminUsers: React.FC = () => {
                         </span>
                       </td>
                       <td>{user.gamesPlayed || 0}</td>
-                      <td>{user.elo || 1000}</td>
+                      <td>{user.elo || 800}</td>
                       <td>
                         {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                       </td>

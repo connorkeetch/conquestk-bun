@@ -1192,7 +1192,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const position = sortedPlayers.findIndex((p) => p.id === player.id) + 1
             playerRatings.push({
               userId: player.id,
-              currentRating: userData.skill_rating ?? 1000,
+              currentRating: userData.skill_rating ?? 800,
               gamesPlayed: userData.total_ranked_games ?? 0,
               position: position, // Position based on original sorted array
             })
