@@ -1939,7 +1939,9 @@ export class GameEngine {
     const allowedTerritories = gameState.board.filter((t) =>
       this.canUseForPathfinding(t, playerId, gameState),
     )
-    const allowedTerritoryMap = new Map(allowedTerritories.map((territory) => [territory.id, territory]))
+    const allowedTerritoryMap = new Map(
+      allowedTerritories.map((territory) => [territory.id, territory]),
+    )
     const visited = new Set<string>()
     const queue: string[] = [fromId]
     let queueIndex = 0

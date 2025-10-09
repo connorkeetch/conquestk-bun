@@ -792,13 +792,11 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         ]
         const windowMs = 2000
         const dup = existing.some(
-          (e) => e.text === textFallback && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
+          (e) =>
+            e.text === textFallback && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
         )
         if (dup) return prev
-        return [
-          { ts: targetTs, text: textFallback, rich, focusTerritories },
-          ...prev,
-        ].slice(0, 500)
+        return [{ ts: targetTs, text: textFallback, rich, focusTerritories }, ...prev].slice(0, 500)
       })
     }
 
