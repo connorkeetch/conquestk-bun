@@ -58,13 +58,15 @@ export default function PlayerStatsPanel({
       return
     }
     const confirmed = window.confirm(
-      'Are you sure you want to resign? Your territories will become neutral. This cannot be undone.',
+      'Are you sure you want to resign? Your territories will immediately become neutral. This cannot be undone.',
     )
     if (!confirmed) return
     try {
       socketService.emit('player:resign', { roomId: currentRoom.id })
-      dispatch(addClientLog({ text: 'You requested to resign.', roomId: currentRoom.id }))
-      toast.success('Resign requested')
+      dispatch(
+        addClientLog({ text: 'You resigned. Territories are now neutral.', roomId: currentRoom.id }),
+      )
+      toast.success('Resigned')
     } catch {
       /* ignore */
     }

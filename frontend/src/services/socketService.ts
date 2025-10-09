@@ -544,6 +544,20 @@ class SocketService {
 
       // Apply delta to Redux store
       store.dispatch(applyDelta(payload))
+
+      // Align room lifecycle status with end-of-game signals immediately
+      try {
+        if (payload.type === 'GAME_END') {
+          store.dispatch(updateRoom({ id: payload.roomId, status: 'completed' }))
+        } else if (payload.type === 'PHASE_CHANGE') {
+          const p = payload as import('@shared/types').PhaseChangeDelta
+          if (p.phase === 'finished') {
+            store.dispatch(updateRoom({ id: payload.roomId, status: 'completed' }))
+          }
+        }
+      } catch {
+        /* best-effort */
+      }
     }
 
     this.socket.on('game-delta', (delta) => {

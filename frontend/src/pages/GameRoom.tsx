@@ -1781,8 +1781,8 @@ export default function GameRoom() {
               Resign from game?
             </h2>
             <p className="text-sm text-muted">
-              This will request to resign and set your territories to neutral. This action cannot be
-              undone.
+              This will immediately resign you and set your territories to neutral. This action
+              cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
@@ -1799,9 +1799,9 @@ export default function GameRoom() {
                   try {
                     socketService.emit('player:resign', { roomId: currentRoom.id })
                     dispatch(
-                      addClientLog({ text: 'You requested to resign.', roomId: currentRoom.id }),
+                      addClientLog({ text: 'You resigned. Territories are now neutral.', roomId: currentRoom.id }),
                     )
-                    toast.success('Resign requested')
+                    toast.success('Resigned')
                   } catch {
                     // ignore resign emit/logging failures
                   }
