@@ -664,6 +664,25 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                   </>
                 ),
               })
+            } else if (event === 'MISSED') {
+              const id = String((er.playerId as string) || '')
+              const reason =
+                er && typeof er === 'object' && 'reason' in er && er.reason === 'timeout'
+                  ? ' (timer expired)'
+                  : ''
+              formatted.push({
+                ts,
+                text: `${name} missed the turn${reason}.`,
+                rich: (
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                      {name}
+                    </span>{' '}
+                    missed the turn
+                    {reason ? <span className="whitespace-pre"> (timer expired)</span> : null}.
+                  </>
+                ),
+              })
             } else if (event === 'START') {
               const reinf = toSafeInt(er.reinforcementArmies, 0)
               const terrs = toSafeInt(er.territoryCount, 0)

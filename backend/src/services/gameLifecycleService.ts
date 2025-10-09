@@ -965,7 +965,10 @@ export class GameLifecycleService {
       const room = await this.gameRoomService.getRoomById(roomId)
       const seconds = options?.seconds ?? room?.turnTimerSeconds ?? 0
       const currentTurnUserId = room?.currentTurnUserId ?? null
-      if (!seconds || seconds <= 0 || !currentTurnUserId) return
+      if (!seconds || seconds <= 0 || !currentTurnUserId) {
+        await this.refreshLifecycle(roomId)
+        return
+      }
 
       try {
         await query(
@@ -1278,19 +1281,26 @@ export class GameLifecycleService {
       return
     }
 
+    let lastResult: Awaited<ReturnType<GameService['endTurn']>> | null = null
     try {
       // Skip the entire turn for the AFK player, regardless of current phase.
       // We advance phases until the next player's reinforcement phase.
-      let lastResult: Awaited<ReturnType<GameService['endTurn']>> | null = null
       let steps = 0
       const MAX_STEPS = 3 // reinforcement -> attack -> fortify -> next player's reinforcement
       // Advance while still the same player's turn and within safety bound
       // allowEarlyEnd bypasses reinforcement placement requirement
       while (steps < MAX_STEPS) {
-        const res = await this.gameService.endTurn(roomId, targetUserId, { allowEarlyEnd: true })
+        const res = await this.gameService.endTurn(roomId, targetUserId, {
+          allowEarlyEnd: true,
+          endedByTimeout: true,
+        })
         lastResult = res
         steps += 1
+        if (res.gameState.phase === 'finished') {
+          break
+        }
         if (
+          res.turnAdvanced &&
           res.gameState.currentPlayer !== targetUserId &&
           res.gameState.phase === 'reinforcement'
         ) {
@@ -1336,9 +1346,12 @@ export class GameLifecycleService {
       })
     }
 
+    let neutralizeOutcome: Awaited<
+      ReturnType<GameLifecycleService['kickAndNeutralize']>
+    > | null = null
     if (strikes >= 3 && targetUserId) {
       try {
-        await this.kickAndNeutralize(roomId, targetUserId)
+        neutralizeOutcome = await this.kickAndNeutralize(roomId, targetUserId)
         await query(`UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`, [
           roomId,
           targetUserId,
@@ -1352,11 +1365,33 @@ export class GameLifecycleService {
       }
     }
 
+    const gameEnded =
+      (neutralizeOutcome?.elimination.gameEnded ?? false) ||
+      (neutralizeOutcome?.state.phase === 'finished' ?? false) ||
+      (lastResult?.gameState.phase === 'finished' ?? false)
+
+    if (gameEnded) {
+      try {
+        await this.refreshLifecycle(roomId)
+      } catch (error) {
+        logger.warn('Failed to refresh lifecycle after timeout game end', {
+          roomId,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+      return
+    }
+
     await this.scheduleTurnTimeout(roomId)
   }
 
-  async kickAndNeutralize(roomId: string, userId: string) {
-    await this.gameService.neutralizePlayerAndResolve(roomId, userId)
+  async kickAndNeutralize(
+    roomId: string,
+    userId: string,
+  ): Promise<
+    Awaited<ReturnType<GameService['neutralizePlayerAndResolve']>>
+  > {
+    const result = await this.gameService.neutralizePlayerAndResolve(roomId, userId)
     // Persist DB flags
     await query(
       `UPDATE room_players
@@ -1365,5 +1400,6 @@ export class GameLifecycleService {
        WHERE room_id = $1 AND user_id = $2`,
       [roomId, userId],
     )
+    return result
   }
 }

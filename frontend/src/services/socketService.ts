@@ -208,6 +208,10 @@ class SocketService {
     this.socket?.emit('endTurn', { roomId })
   }
 
+  beginTurn(roomId: string) {
+    this.socket?.emit('turn:begin', { roomId })
+  }
+
   sendConversationMessage(payload: MessageSendPayload, callback?: (ack: MessageSendAck) => void) {
     this.socket?.emit('message.send', payload, callback)
   }

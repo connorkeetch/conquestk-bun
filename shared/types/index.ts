@@ -707,6 +707,7 @@ export interface ClientToServerEvents {
     armies: number
   }) => void
   endTurn: (data: { roomId: string }) => void
+  'turn:begin': (data: { roomId: string }) => void
   transferConquestArmies: (data: {
     roomId: string
     fromTerritoryId: string
