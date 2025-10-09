@@ -386,6 +386,58 @@ class AdminService {
     return response.data
   }
 
+  // ============= QUEUES (Admin) =============
+
+  async getQueueStats(): Promise<{
+    initialized: boolean
+    queues: Record<
+      string,
+      {
+        waiting: number
+        active: number
+        completed: number
+        failed: number
+        delayed: number
+        deadLetter: number
+        stalled: number
+        isPaused: boolean
+        oldestWaitingMs: number | null
+        avgProcessingMs: number | null
+        warnings: string[]
+      }
+    >
+    timestamp: string
+  }> {
+    const response = await apiClient.get(`/queues/stats`)
+    return response.data?.data ?? response.data
+  }
+
+  async getDeadLetters(params: {
+    queue: 'gameActions' | 'gameCleanup' | 'analyticsEvents'
+    offset?: number
+    limit?: number
+  }): Promise<{
+    success: boolean
+    items: Array<{
+      id: string
+      failedReason: string
+      failedAt: string
+      jobName: string
+      attemptsMade: number
+    }>
+  }> {
+    const response = await apiClient.get(`/admin/queues/dlq`, { params })
+    return response.data
+  }
+
+  async requeueDeadLetter(params: {
+    queue: 'gameActions' | 'gameCleanup' | 'analyticsEvents'
+    jobId: string
+  }): Promise<{ success: boolean; newJobId?: string }> {
+    const response = await apiClient.post(`/admin/queues/dlq/requeue`, params)
+    return response.data
+  }
+
   // ============= UTILITY METHODS =============
 
   async checkAdminAccess(): Promise<boolean> {

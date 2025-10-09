@@ -31,6 +31,26 @@ interface AdminInfo {
 
 export default function AdminDashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
+  const [queueStats, setQueueStats] = useState<{
+    initialized: boolean
+    queues: Record<
+      string,
+      {
+        waiting: number
+        active: number
+        completed: number
+        failed: number
+        delayed: number
+        deadLetter: number
+        stalled: number
+        isPaused: boolean
+        oldestWaitingMs: number | null
+        avgProcessingMs: number | null
+        warnings: string[]
+      }
+    >
+    timestamp: string
+  } | null>(null)
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -127,6 +147,18 @@ export default function AdminDashboard() {
       setRefreshingFlags(false)
     }
   }, [loadDashboardData])
+
+  useEffect(() => {
+    const loadQueues = async () => {
+      try {
+        const stats = await adminService.getQueueStats()
+        setQueueStats(stats)
+      } catch {
+        // non-fatal for dashboard
+      }
+    }
+    void loadQueues()
+  }, [])
 
   const handleClearCache = useCallback(async () => {
     if (!confirm('Are you sure you want to clear the server cache?')) {
@@ -291,7 +323,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="glass-box">
             <div className="flex items-center justify-between">
               <div>
@@ -355,6 +387,41 @@ export default function AdminDashboard() {
                 <div className="text-sm text-muted">Pending Approvals</div>
               </div>
               <div className="text-3xl">⏳</div>
+            </div>
+          </div>
+          <div className="glass-box">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-blue-400">
+                  {Object.values(queueStats?.queues ?? {}).reduce(
+                    (sum, q) => sum + (q.deadLetter || 0),
+                    0,
+                  )}
+                </div>
+                <div className="text-sm text-muted">Dead-letter Jobs</div>
+              </div>
+              <div className="text-3xl">📥</div>
+            </div>
+            <div className="mt-3 text-xs text-muted space-y-1">
+              <div>
+                Waiting total:{' '}
+                {Object.values(queueStats?.queues ?? {}).reduce(
+                  (sum, q) => sum + (q.waiting || 0),
+                  0,
+                )}
+              </div>
+              <div>
+                Failed total:{' '}
+                {Object.values(queueStats?.queues ?? {}).reduce(
+                  (sum, q) => sum + (q.failed || 0),
+                  0,
+                )}
+              </div>
+              <div className="pt-1">
+                <a href="/admin/queue-tools" className="underline text-[color:var(--heading)]">
+                  Open queue tools →
+                </a>
+              </div>
             </div>
           </div>
         </div>

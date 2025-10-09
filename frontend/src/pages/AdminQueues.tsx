@@ -1,0 +1,237 @@
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { adminService } from '../services/adminService'
+
+type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
+
+export default function AdminQueues() {
+  const selectId = useId()
+  const [selectedQueue, setSelectedQueue] = useState<QueueKey>('gameActions')
+  const [dlq, setDlq] = useState<
+    Array<{
+      id: string
+      failedReason: string
+      failedAt: string
+      jobName: string
+      attemptsMade: number
+    }>
+  >([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [requeueing, setRequeueing] = useState<string | null>(null)
+  const [stats, setStats] = useState<null | {
+    initialized: boolean
+    queues: Record<
+      string,
+      {
+        waiting: number
+        active: number
+        completed: number
+        failed: number
+        delayed: number
+        deadLetter: number
+        stalled: number
+        isPaused: boolean
+        oldestWaitingMs: number | null
+        avgProcessingMs: number | null
+        warnings: string[]
+      }
+    >
+    timestamp: string
+  }>(null)
+
+  const loadDlq = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const result = await adminService.getDeadLetters({ queue: selectedQueue, limit: 50 })
+      setDlq(result.items ?? [])
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load DLQ')
+      setDlq([])
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedQueue])
+
+  const loadStats = useCallback(async () => {
+    try {
+      const s = await adminService.getQueueStats()
+      setStats(s)
+    } catch {
+      // non-fatal
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadDlq()
+  }, [loadDlq])
+
+  useEffect(() => {
+    void loadStats()
+  }, [loadStats])
+
+  const queuesList = useMemo(
+    () =>
+      [
+        { key: 'gameActions', label: 'Game Actions' },
+        { key: 'gameCleanup', label: 'Game Cleanup' },
+        { key: 'analyticsEvents', label: 'Analytics Events' },
+      ] as Array<{ key: QueueKey; label: string }>,
+    [],
+  )
+
+  const onRequeue = async (jobId: string) => {
+    try {
+      setRequeueing(jobId)
+      await adminService.requeueDeadLetter({ queue: selectedQueue, jobId })
+      await loadDlq()
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed to requeue job')
+    } finally {
+      setRequeueing(null)
+    }
+  }
+
+  return (
+    <div className="p-6">
+      <AdminPageHeader
+        title="Queues"
+        subtitle="Inspect dead-letter jobs and queue health"
+        icon="📥"
+        actions={
+          <div className="flex items-center gap-2">
+            <a
+              href="/admin/queues"
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-2 text-sm rounded bg-purple-600 hover:brightness-110"
+            >
+              Open Bull Board
+            </a>
+            <button
+              type="button"
+              className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80"
+              onClick={() => void loadStats()}
+            >
+              Refresh Stats
+            </button>
+          </div>
+        }
+      />
+
+      {/* Stats overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {queuesList.map((q) => {
+          const s = stats?.queues?.[q.key]
+          return (
+            <div key={q.key} className="glass-box">
+              <div className="flex items-center justify-between">
+                <div className="font-semibold">{q.label}</div>
+                {s?.warnings?.length ? (
+                  <span className="text-xs text-yellow-300">{s.warnings.length} warnings</span>
+                ) : null}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted">
+                <div>
+                  Waiting: <span className="text-[color:var(--heading)]">{s?.waiting ?? 0}</span>
+                </div>
+                <div>
+                  Active: <span className="text-[color:var(--heading)]">{s?.active ?? 0}</span>
+                </div>
+                <div>
+                  Failed: <span className="text-[color:var(--heading)]">{s?.failed ?? 0}</span>
+                </div>
+                <div>
+                  Delayed: <span className="text-[color:var(--heading)]">{s?.delayed ?? 0}</span>
+                </div>
+                <div>
+                  DLQ: <span className="text-[color:var(--heading)]">{s?.deadLetter ?? 0}</span>
+                </div>
+                <div>
+                  Paused:{' '}
+                  <span className="text-[color:var(--heading)]">{s?.isPaused ? 'yes' : 'no'}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* DLQ controls */}
+      <div className="glass-box-lg">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <label htmlFor={selectId} className="text-sm text-muted">
+              Queue
+            </label>
+            <select
+              id={selectId}
+              value={selectedQueue}
+              onChange={(e) => setSelectedQueue(e.target.value as QueueKey)}
+              className="px-2 py-1 rounded bg-surface-2 border border-border text-sm"
+            >
+              {queuesList.map((q) => (
+                <option key={q.key} value={q.key}>
+                  {q.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadDlq()}
+            className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80 disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading ? 'Loading...' : 'Refresh DLQ'}
+          </button>
+        </div>
+
+        {error ? (
+          <div className="text-sm text-red-400">{error}</div>
+        ) : dlq.length === 0 ? (
+          <div className="text-sm text-muted">No dead-letter jobs.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted border-b border-border">
+                  <th className="py-2 pr-4">Job ID</th>
+                  <th className="py-2 pr-4">Name</th>
+                  <th className="py-2 pr-4">Failed</th>
+                  <th className="py-2 pr-4">Reason</th>
+                  <th className="py-2 pr-4">Attempts</th>
+                  <th className="py-2 pr-4">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dlq.map((item) => (
+                  <tr key={item.id} className="border-b border-border/40">
+                    <td className="py-2 pr-4 font-mono text-xs">{item.id}</td>
+                    <td className="py-2 pr-4">{item.jobName}</td>
+                    <td className="py-2 pr-4">{new Date(item.failedAt).toLocaleString()}</td>
+                    <td className="py-2 pr-4 max-w-[360px] truncate" title={item.failedReason}>
+                      {item.failedReason}
+                    </td>
+                    <td className="py-2 pr-4">{item.attemptsMade}</td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        onClick={() => void onRequeue(item.id)}
+                        className="px-2 py-1 text-sm rounded bg-primary hover:brightness-110 disabled:opacity-60"
+                        disabled={requeueing === item.id}
+                      >
+                        {requeueing === item.id ? 'Requeuing…' : 'Requeue'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
