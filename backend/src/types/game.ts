@@ -109,6 +109,8 @@ export interface GamePlayer {
   territories: string[]
   cards: Card[]
   isEliminated: boolean
+  // Competitive rating (CP/ELO). Optional for backwards compatibility.
+  skillRating?: number
   capitalTerritory?: string
   teamId?: number | null
   isAi?: boolean

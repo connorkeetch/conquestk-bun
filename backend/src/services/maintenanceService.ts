@@ -1,5 +1,6 @@
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
+import { eloService } from './eloService.js'
 
 export type PruneNotificationsOptions = {
   retentionDays: number
@@ -143,6 +144,25 @@ export class MaintenanceService {
     }
 
     return { archivedMoves, archivedGames, ranAt }
+  }
+
+  /**
+   * Refreshes the all‑time skill leaderboard cache so API responses include
+   * up‑to‑date skillRating, wins, and losses without live queries.
+   */
+  async refreshSkillLeaderboardCache(): Promise<{ refreshed: boolean; ranAt: string }> {
+    const ranAt = new Date().toISOString()
+    try {
+      await eloService.updateLeaderboardCache()
+      logger.info('✅ Skill leaderboard cache refreshed', { ranAt })
+      return { refreshed: true, ranAt }
+    } catch (error) {
+      logger.warn('⚠️ Failed to refresh skill leaderboard cache', {
+        error: error instanceof Error ? error.message : String(error),
+        ranAt,
+      })
+      return { refreshed: false, ranAt }
+    }
   }
 }
 

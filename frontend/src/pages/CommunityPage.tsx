@@ -45,13 +45,12 @@ const CommunityPage: React.FC = () => {
         return
       }
 
-      // Use public backend route: GET /api/leaderboard (aliases to global)
-      const response = await api.get('/leaderboard', {
+      // Use skill leaderboard: GET /api/skills/leaderboards/skill
+      const response = await api.get('/skills/leaderboards/skill', {
         params: { limit: 100 },
       })
 
-      // Backend returns an array (profileService.getLeaderboard),
-      // but also support { leaderboard: [...] } just in case.
+      // Expected shape: { leaderboard: [...] }. Also support array fallback just in case.
       const raw = Array.isArray(response.data) ? response.data : response.data?.leaderboard || []
 
       type AnyLeaderboardLike = Partial<Record<string, string | number | null | undefined>>

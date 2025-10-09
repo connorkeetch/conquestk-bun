@@ -1,5 +1,6 @@
 import type React from 'react'
 import { RANK_COLORS } from '../constants/colors'
+import { RANKS } from '@risk-game/shared/constants/ranks'
 
 export interface ConquestRank {
   name: string
@@ -22,18 +23,39 @@ export const RANK_ROMAN_NUMERALS = [
 ] as const
 
 // 🎯 NOW USING UNIFIED COLOR SYSTEM - All colors reference RANK_COLORS from colors.ts
-export const CONQUEST_RANKS: ConquestRank[] = [
-  { name: 'Chieftain', minRating: 0, color: RANK_COLORS.CHIEFTAIN.base, insignia: '🛡️' },
-  { name: 'Warlord', minRating: 600, color: RANK_COLORS.WARLORD.base, insignia: '⚔️' },
-  { name: 'Raider King', minRating: 800, color: RANK_COLORS.RAIDER_KING.base, insignia: '⚓' },
-  { name: 'Sultan', minRating: 1000, color: RANK_COLORS.SULTAN.base, insignia: '☪️' },
-  { name: 'Caesar', minRating: 1200, color: RANK_COLORS.CAESAR.base, insignia: '🦅' },
-  { name: 'Khan', minRating: 1400, color: RANK_COLORS.KHAN.base, insignia: '🏹' },
-  { name: 'Emperor', minRating: 1600, color: RANK_COLORS.EMPEROR.base, insignia: '👑' },
-  { name: 'The Great King', minRating: 1800, color: RANK_COLORS.GREAT_KING.base, insignia: '☀️' },
-  { name: 'Overlord', minRating: 2000, color: RANK_COLORS.OVERLORD.base, insignia: '💀' },
-  { name: 'Worldbreaker', minRating: 2200, color: RANK_COLORS.WORLDBREAKER.base, insignia: '☄️' },
-]
+// Build frontend rank table from shared thresholds, layering UI colors/insignia locally
+const RANK_INSIGNIA: Record<string, string> = {
+  Chieftain: '🛡️',
+  Warlord: '⚔️',
+  'Raider King': '⚓',
+  Sultan: '☪️',
+  Caesar: '🦅',
+  Khan: '🏹',
+  Emperor: '👑',
+  'The Great King': '☀️',
+  Overlord: '💀',
+  Worldbreaker: '☄️',
+}
+
+const COLOR_BY_NAME: Record<string, string> = {
+  Chieftain: RANK_COLORS.CHIEFTAIN.base,
+  Warlord: RANK_COLORS.WARLORD.base,
+  'Raider King': RANK_COLORS.RAIDER_KING.base,
+  Sultan: RANK_COLORS.SULTAN.base,
+  Caesar: RANK_COLORS.CAESAR.base,
+  Khan: RANK_COLORS.KHAN.base,
+  Emperor: RANK_COLORS.EMPEROR.base,
+  'The Great King': RANK_COLORS.GREAT_KING.base,
+  Overlord: RANK_COLORS.OVERLORD.base,
+  Worldbreaker: RANK_COLORS.WORLDBREAKER.base,
+}
+
+export const CONQUEST_RANKS: ConquestRank[] = RANKS.map((r) => ({
+  name: r.name,
+  minRating: r.minRating,
+  color: COLOR_BY_NAME[r.name] ?? RANK_COLORS.CHIEFTAIN.base,
+  insignia: RANK_INSIGNIA[r.name] ?? '🏅',
+}))
 
 export function getConquestRank(skillRating: number): ConquestRank {
   for (let i = CONQUEST_RANKS.length - 1; i >= 0; i--) {
