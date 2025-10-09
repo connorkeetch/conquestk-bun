@@ -109,20 +109,25 @@ function isConnectedThroughOwnedTerritoriesIndex(
   ownedIds: Set<string>,
 ): boolean {
   if (fromId === toId) return true
-  const visited = new Set<string>()
-  const queue = [fromId]
-  while (queue.length) {
-    const currentId = queue.shift()
-    if (currentId == null) break
+
+  const visited = new Set<string>([fromId])
+  const queue: string[] = [fromId]
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const currentId = queue[index]
     if (currentId === toId) return true
-    if (visited.has(currentId)) continue
-    visited.add(currentId)
-    const cur = territoryIndex.get(currentId)
-    if (!cur) continue
-    for (const adj of cur.adjacentTerritories) {
-      if (!visited.has(adj) && ownedIds.has(adj)) queue.push(adj)
+
+    const currentTerritory = territoryIndex.get(currentId)
+    if (!currentTerritory) continue
+
+    for (const adjacentId of currentTerritory.adjacentTerritories) {
+      if (!ownedIds.has(adjacentId) || visited.has(adjacentId)) continue
+      if (adjacentId === toId) return true
+      visited.add(adjacentId)
+      queue.push(adjacentId)
     }
   }
+
   return false
 }
 
