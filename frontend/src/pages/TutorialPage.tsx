@@ -388,7 +388,7 @@ const TutorialPage: React.FC = () => {
                 </h3>
                 <p className="text-muted">
                   Conquest Points (CP) measure your skill based on game results. Everyone starts at
-                  1000 CP. Win against higher-rated players to gain more points, lose to lower-rated
+                  800 CP. Win against higher-rated players to gain more points, lose to lower-rated
                   players to lose more points. Your journey follows the path of history's greatest
                   conquerors!
                 </p>

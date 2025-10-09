@@ -329,7 +329,7 @@ export class AdminService {
         u.preferred_language as "preferredLanguage",
         u.timezone as "timezone",
         COALESCE(ps.games_played, 0) as "gamesPlayed",
-        COALESCE(u.skill_rating, 1000) as "elo",
+        COALESCE(u.skill_rating, 800) as "elo",
         COALESCE(uas.status, 'active') as status,
         uas.reason as status_reason,
         STRING_AGG(ar.name, ',') as admin_roles
@@ -372,7 +372,7 @@ export class AdminService {
       premiumTier: row.premiumTier || 'free',
       premiumExpiresAt: row.premiumExpiresAt,
       gamesPlayed: Number.parseInt(String(row.gamesPlayed ?? '0'), 10),
-      elo: Number.parseInt(String(row.elo ?? '1000'), 10),
+      elo: Number.parseInt(String(row.elo ?? '800'), 10),
       emailVerified: Boolean(row.emailVerified),
       isBetaUser: Boolean(row.isBetaUser),
       preferredLanguage: row.preferredLanguage,

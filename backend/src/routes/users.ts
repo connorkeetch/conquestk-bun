@@ -190,7 +190,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     }
 
     const user = result.rows[0]
-    const elo = user.skill_rating || 1000
+    const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
     const nextRank =
       CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
@@ -269,7 +269,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     }
 
     const user = result.rows[0]
-    const elo = user.skill_rating || 1000
+    const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
     const nextRank =
       CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
