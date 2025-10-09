@@ -6,6 +6,28 @@ import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import type { GamePlayer } from '../types/game'
 
+const FALLBACK_PLAYER_COLOR = '#F59E0B'
+
+const extractFirstColorStop = (value?: string | null) => {
+  if (!value) return null
+  const lower = value.toLowerCase()
+  if (!lower.includes('gradient')) return value
+  const match = value.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))/)
+  return match ? match[1] : null
+}
+
+const resolvePlayerColor = (color?: string | null) => {
+  if (!color) return FALLBACK_PLAYER_COLOR
+  try {
+    const mapped = getColorValue(color as PlayerColor)
+    const solid = extractFirstColorStop(mapped) ?? extractFirstColorStop(color)
+    return solid ?? FALLBACK_PLAYER_COLOR
+  } catch {
+    const solid = extractFirstColorStop(color)
+    return solid ?? FALLBACK_PLAYER_COLOR
+  }
+}
+
 interface GameOverModalProps {
   isOpen: boolean
   winners?: GamePlayer[]
@@ -38,6 +60,23 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   )
   const isCurrentUserWinner = winners.some((w) => w.id === currentUserId)
   const isCurrentUserLoser = winners.length > 0 && !isCurrentUserWinner
+  const primaryWinnerColor = useMemo(() => {
+    if (!winners.length) return null
+    return resolvePlayerColor(winners[0]?.color)
+  }, [winners])
+  const headerBackground = useMemo(() => {
+    if (!winners.length) {
+      return 'linear-gradient(120deg, rgba(34,38,56,0.97), rgba(16,19,31,0.97))'
+    }
+    if (primaryWinnerColor) {
+      return isCurrentUserWinner
+        ? `linear-gradient(120deg, ${primaryWinnerColor}, rgba(18,21,32,0.95))`
+        : `linear-gradient(120deg, rgba(18,21,32,0.95), ${primaryWinnerColor})`
+    }
+    return isCurrentUserWinner
+      ? 'linear-gradient(120deg, rgba(223,175,55,0.96), rgba(108,92,231,0.95))'
+      : 'linear-gradient(120deg, rgba(34,38,56,0.97), rgba(16,19,31,0.97))'
+  }, [isCurrentUserWinner, primaryWinnerColor, winners.length])
   const previousThemeRef = useRef<string | null>(null)
   const aggressionLabel = useMemo(() => {
     const primary = winners[0]
@@ -92,39 +131,50 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             }}
           >
             {/* Header */}
-            <div
-              className={`sticky top-0 z-20 -mx-6 -mt-6 px-6 pb-8 pt-10 text-center shadow-[0_6px_12px_rgba(0,0,0,0.25)] border-b border-border/60 supports-[backdrop-filter]:backdrop-blur-md ${
-                isCurrentUserWinner
-                  ? 'bg-gradient-to-r from-gold/95 to-violet/95 text-white'
-                  : 'bg-gradient-to-r from-surface-2/95 to-surface-1/90 text-white'
-              }`}
-              style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.5rem)' }}
-            >
-              <button
-                type="button"
-                onClick={onClose}
-                className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white transition hover:scale-105 hover:bg-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                aria-label="Close game report"
+            <div className="sticky top-0 z-20 -mx-6 -mt-6 px-6">
+              <div
+                className="relative overflow-hidden rounded-b-2xl border-b border-border/60 text-center shadow-[0_12px_24px_rgba(0,0,0,0.35)]"
+                style={{ background: headerBackground }}
               >
-                ×
-              </button>
-              <div className="mb-4 text-6xl drop-shadow-sm">
-                {isCurrentUserWinner ? '🏆' : winners.length > 0 ? '💀' : '🏳️'}
+                <div
+                  className="pointer-events-none absolute inset-0 bg-black/40"
+                  aria-hidden="true"
+                />
+                <div
+                  className="relative px-6 pb-8 pt-10 text-white backdrop-blur"
+                  style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.5rem)' }}
+                >
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white transition hover:scale-105 hover:bg-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    aria-label="Close game report"
+                  >
+                    ×
+                  </button>
+                  <div className="mb-4 text-6xl drop-shadow-sm">
+                    {isCurrentUserWinner ? '🏆' : winners.length > 0 ? '💀' : '🏳️'}
+                  </div>
+                  <h2 className="mb-2 text-3xl font-extrabold text-white">
+                    {winners.length > 0
+                      ? isCurrentUserWinner
+                        ? 'Victory!'
+                        : 'Defeat'
+                      : 'Game Over'}
+                  </h2>
+                  <p className="mx-auto max-w-xl text-base text-white/90">
+                    {winners.length > 0
+                      ? isCurrentUserWinner
+                        ? winners.length === 1
+                          ? `${winners[0].username} conquers the world!`
+                          : `${winners.map((w) => w.username).join(', ')} triumph!`
+                        : winners.length === 1
+                          ? `${winners[0].username} conquers the world.`
+                          : `${winners.map((w) => w.username).join(', ')} triumph.`
+                      : 'All players have been eliminated'}
+                  </p>
+                </div>
               </div>
-              <h2 className="mb-2 text-3xl font-extrabold text-white">
-                {winners.length > 0 ? (isCurrentUserWinner ? 'Victory!' : 'Defeat') : 'Game Over'}
-              </h2>
-              <p className="mx-auto max-w-xl text-base text-white/90">
-                {winners.length > 0
-                  ? isCurrentUserWinner
-                    ? winners.length === 1
-                      ? `${winners[0].username} conquers the world!`
-                      : `${winners.map((w) => w.username).join(', ')} triumph!`
-                    : winners.length === 1
-                      ? `${winners[0].username} conquers the world.`
-                      : `${winners.map((w) => w.username).join(', ')} triumph.`
-                  : 'All players have been eliminated'}
-              </p>
             </div>
 
             {winners.length === 1 && (
@@ -132,7 +182,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 <div className="rounded-xl border border-border/60 bg-surface-2/60 p-6 text-center shadow-inner">
                   <div
                     className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg"
-                    style={{ backgroundColor: winners[0].color }}
+                    style={{ backgroundColor: primaryWinnerColor ?? FALLBACK_PLAYER_COLOR }}
                   >
                     {winners[0].username.charAt(0).toUpperCase()}
                   </div>
@@ -301,11 +351,12 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
   const armiesByPlayer = new Map<string, number>()
 
   React.useEffect(() => {
+    if (!roomId) return undefined
     let active = true
+    const controller = new AbortController()
     const run = async () => {
-      if (!roomId) return
       try {
-        const resp = await gameService.getGameLog(roomId)
+        const resp = await gameService.getGameLog(roomId, { signal: controller.signal })
         const stats = Array.isArray(resp.stats) ? resp.stats : []
         const turns: Record<string, number | null> = {}
         // Initialize with nulls
@@ -348,13 +399,17 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
           }
         }
         if (active) setCpDelta(deltas)
-      } catch {
+      } catch (_error) {
+        if (!active || controller.signal.aborted) {
+          return
+        }
         /* ignore errors; elimination turn info is optional */
       }
     }
     void run()
     return () => {
       active = false
+      controller.abort()
     }
   }, [roomId, players])
 
@@ -368,7 +423,7 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
   const entries = players.map((p) => ({
     id: p.id,
     name: p.username,
-    color: p.color,
+    color: resolvePlayerColor(p.color),
     territories: territoriesByPlayer.get(p.id) ?? 0,
     armies: armiesByPlayer.get(p.id) ?? 0,
     eliminated: p.isEliminated,
@@ -449,10 +504,11 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({
   }, [game, currentUserId])
 
   React.useEffect(() => {
+    const controller = new AbortController()
     let active = true
     const run = async () => {
       try {
-        const res = await gameService.getGameLog(roomId)
+        const res = await gameService.getGameLog(roomId, { signal: controller.signal })
         if (!active) return
         setStats(Array.isArray(res.stats) ? res.stats : [])
         // Try to glean CP/rating delta for current user
@@ -483,8 +539,8 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({
           }
         }
         if (active) setCpChange(delta)
-      } catch {
-        if (!active) return
+      } catch (_error) {
+        if (!active || controller.signal.aborted) return
         setError('Unable to load debrief stats')
         setStats([])
       }
@@ -492,6 +548,7 @@ const PlayerDebrief: React.FC<{ roomId: string; currentUserId?: string }> = ({
     void run()
     return () => {
       active = false
+      controller.abort()
     }
   }, [roomId, me])
 
@@ -630,11 +687,7 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     const map = new Map<string, string>()
     if (game?.players) {
       for (const p of game.players) {
-        try {
-          map.set(p.id, getColorValue(p.color as unknown as PlayerColor))
-        } catch {
-          // ignore mapping issues
-        }
+        map.set(p.id, resolvePlayerColor(p.color))
       }
     }
     return map
@@ -645,15 +698,17 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
   )
 
   React.useEffect(() => {
+    if (!roomId) return undefined
     let active = true
+    const controller = new AbortController()
     const run = async () => {
       try {
-        const resp = await gameService.getGameLog(roomId)
+        const resp = await gameService.getGameLog(roomId, { signal: controller.signal })
         const entries = Array.isArray(resp?.log) ? (resp.log as LogEntry[]) : []
         if (!active) return
         setLog(entries)
       } catch (_e) {
-        if (!active) return
+        if (!active || controller.signal.aborted) return
         setError('Unable to load game log')
         setLog([])
       }
@@ -661,6 +716,7 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     void run()
     return () => {
       active = false
+      controller.abort()
     }
   }, [roomId])
 
@@ -900,10 +956,12 @@ const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
   const playerMap = React.useMemo(() => new Map(players.map((p) => [p.id, p])), [players])
 
   React.useEffect(() => {
+    if (!roomId) return undefined
     let active = true
+    const controller = new AbortController()
     const run = async () => {
       try {
-        const res = await gameService.getGameLog(roomId)
+        const res = await gameService.getGameLog(roomId, { signal: controller.signal })
         if (!active) return
         const raw = Array.isArray(res.stats) ? res.stats : []
         setStats(raw)
@@ -912,7 +970,7 @@ const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
         for (const p of players) next[p.id] = true
         setVisible(next)
       } catch (_e) {
-        if (!active) return
+        if (!active || controller.signal.aborted) return
         setError('Unable to load turn stats')
         setStats([])
       }
@@ -920,6 +978,7 @@ const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
     void run()
     return () => {
       active = false
+      controller.abort()
     }
   }, [roomId, players])
 
@@ -951,7 +1010,7 @@ const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
   const series: Series[] = players.map((p) => ({
     id: p.id,
     name: p.username,
-    color: p.color,
+    color: resolvePlayerColor(p.color),
     values: [],
   }))
   for (const snap of snapshots) {
