@@ -42,9 +42,10 @@ class FeatureFlagService {
         ...DEFAULT_FLAGS,
         ...fetchedFlags,
       }
-      this.notifyListeners()
     } catch (error) {
       logger.error('Failed to load feature flags', error)
+    } finally {
+      this.notifyListeners()
     }
   }
 
