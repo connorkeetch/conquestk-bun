@@ -181,7 +181,8 @@ export class QueueService {
           defaultJobOptions,
         })
 
-        const deadLetterQueue = new Queue(`${config.name}:dead-letter`, {
+        // Avoid colon in queue names (BullMQ prohibits ":" in names)
+        const deadLetterQueue = new Queue(`${config.name}-dead-letter`, {
           connection: redisClient,
           defaultJobOptions: {
             removeOnComplete: false,
