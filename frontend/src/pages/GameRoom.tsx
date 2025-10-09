@@ -206,9 +206,11 @@ export default function GameRoom() {
   const chatOverlayOpen = Boolean(chatPanel?.zone === 'drawer' && mobileDrawerOpen && !chatPinned)
   const statsOverlayOpen = Boolean(statsPanel?.zone === 'drawer' && statsDrawerOpen && !statsPinned)
   const bothPinned = chatPinned && statsPinned
-  // Wider default widths for better readability
-  const MAX_SINGLE_DRAWER_PX = 960
-  const MAX_PINNED_DRAWER_PX = 720
+  // Content width baseline (align drawers to main content/boxes)
+  const CONTENT_MAX_WIDTH_PX = 1200
+  // Wider default widths but bounded by content width so drawers don't exceed boxes
+  const MAX_SINGLE_DRAWER_PX = Math.min(960, CONTENT_MAX_WIDTH_PX)
+  const MAX_PINNED_DRAWER_PX = Math.floor(CONTENT_MAX_WIDTH_PX / 2)
   // Gate treasure trade modal until turn-intro is dismissed
   const [turnIntroActive, setTurnIntroActive] = useState(false)
   useEffect(() => {
@@ -2654,16 +2656,23 @@ export default function GameRoom() {
           className={`fixed bottom-0 z-30 ${chatDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${chatOpen ? 'translate-y-0' : 'translate-y-full'}`}
           style={{
             height: chatOpen ? `${chatDrawerResize.height}px` : undefined,
-            // Chat is anchored left; adjust width/offset based on pinned/overlay state
-            left: '0',
-            // Both pinned: equal split with a wider max
+            // Chat positioning and width rules
             ...(bothPinned
-              ? { width: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
-              : // Stats pinned but chat not pinned: occupy remaining space to the left of stats
-                statsPinned && !chatPinned
-                ? { right: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
-                : // Chat alone (pinned or overlay): centered max width cap
-                  { width: `min(100%, ${MAX_SINGLE_DRAWER_PX}px)` }),
+              ? {
+                  left: '0',
+                  width: `min(50%, ${MAX_PINNED_DRAWER_PX}px)`,
+                }
+              : statsPinned && !chatPinned
+                ? {
+                    left: '0',
+                    right: `min(50%, ${MAX_PINNED_DRAWER_PX}px)`,
+                  }
+                : {
+                    // Center single drawer within content width so it doesn't exceed boxes
+                    left: `calc((100% - min(100%, ${MAX_SINGLE_DRAWER_PX}px)) / 2)`,
+                    width: `min(100%, ${MAX_SINGLE_DRAWER_PX}px)`,
+                    right: 'auto',
+                  }),
             maxWidth: '100%',
             paddingBottom: 'calc(env(safe-area-inset-bottom) + 64px)', // Extra space for footer
           }}
@@ -2776,13 +2785,23 @@ export default function GameRoom() {
           className={`fixed bottom-0 z-30 ${statsDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${statsOpen ? 'translate-y-0' : 'translate-y-full'}`}
           style={{
             height: statsOpen ? `${statsDrawerResize.height}px` : undefined,
-            // Stats is anchored right; adjust width/offset based on pinned/overlay state
-            right: '0',
+            // Stats positioning and width rules
             ...(bothPinned
-              ? { width: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
+              ? {
+                  right: '0',
+                  width: `min(50%, ${MAX_PINNED_DRAWER_PX}px)`,
+                }
               : chatPinned && !statsPinned
-                ? { left: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
-                : { width: `min(100%, ${MAX_SINGLE_DRAWER_PX}px)` }),
+                ? {
+                    right: '0',
+                    left: `min(50%, ${MAX_PINNED_DRAWER_PX}px)`,
+                  }
+                : {
+                    // Center single drawer within content width so it doesn't exceed boxes
+                    left: `calc((100% - min(100%, ${MAX_SINGLE_DRAWER_PX}px)) / 2)`,
+                    width: `min(100%, ${MAX_SINGLE_DRAWER_PX}px)`,
+                    right: 'auto',
+                  }),
             maxWidth: '100%',
             paddingBottom: 'calc(env(safe-area-inset-bottom) + 64px)', // Extra space for footer
           }}

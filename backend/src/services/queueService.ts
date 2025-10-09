@@ -609,7 +609,8 @@ export class QueueService {
     try {
       const events = new QueueEvents(queue.name, {
         // Use the live Redis client instance for BullMQ events
-        connection: (this.redis ?? ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
+        connection: (this.redis ??
+          ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
       })
 
       events.on('failed', async ({ jobId, failedReason }) => {
