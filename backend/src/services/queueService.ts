@@ -164,26 +164,37 @@ export class QueueService {
         ...redisClientOptions
       } = redisClient.options as RedisOptions
 
+      const bullPrefix = process.env.BULL_PREFIX?.trim() || 'bull'
+
       // Initialize all queues using the centralized Redis connection
       for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
-        const defaultJobOptions: JobsOptions = {
-          removeOnComplete: 10,
-          removeOnFail: 5,
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-        }
+        // Base defaults, may be overridden per-queue below
+        const defaultJobOptions: JobsOptions =
+          config.name === 'analytics-events'
+            ? {
+                // Retain fewer analytics jobs and for shorter time
+                removeOnComplete: { age: 600, count: 100 }, // 10 minutes or last 100
+                removeOnFail: { age: 3600, count: 50 }, // 1 hour or last 50
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 2000, }
+              }
+            : {
+                removeOnComplete: 10,
+                removeOnFail: 5,
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 2000 },
+              }
 
         const queue = new Queue(config.name, {
           connection: redisClient,
+          prefix: bullPrefix,
           defaultJobOptions,
         })
 
         // Avoid colon in queue names (BullMQ prohibits ":" in names)
         const deadLetterQueue = new Queue(`${config.name}-dead-letter`, {
           connection: redisClient,
+          prefix: bullPrefix,
           defaultJobOptions: {
             removeOnComplete: false,
             removeOnFail: false,
@@ -639,8 +650,10 @@ export class QueueService {
         // Avoid per-command timeouts on blocking ops
         commandTimeout: undefined,
       })
+      const bullPrefix = process.env.BULL_PREFIX?.trim() || 'bull'
       const events = new QueueEvents(queue.name, {
         connection: eventsConn,
+        prefix: bullPrefix,
       })
 
       events.on('failed', async ({ jobId, failedReason }) => {

@@ -74,6 +74,7 @@ Queue names accepted: `game-actions`, `game-cleanup`, `analytics-events`, `maint
 
 Queue naming
 - Queue names avoid colon (`:`) characters. Dead-letter queues use a hyphen suffix: `-dead-letter` (for example, `game-actions-dead-letter`).
+- Redis key prefix can be configured with `BULL_PREFIX` (default `bull`). Use unique prefixes per environment to prevent cross-env key collisions.
 
 ## AFK & Turn Timeout (reference)
 - On game start or after each turn, the backend schedules a delayed job that triggers `handleTurnTimeout` when the deadline passes.

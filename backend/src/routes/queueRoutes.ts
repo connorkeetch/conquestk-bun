@@ -128,6 +128,55 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
   }
 })
 
+// Dead-letter listing (admin)
+router.get('/dlq/:queueName', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { queueName } = req.params
+    const offset = Number.parseInt(String(req.query.offset ?? '0'), 10) || 0
+    const limit = Number.parseInt(String(req.query.limit ?? '50'), 10) || 50
+    const keyMap: Record<string, keyof typeof import('../services/queueService').queueService> = {}
+    const key = (queueName || '').toLowerCase()
+    const keyToQueueKey = (name: string): import('../services/queueService').QueueHealthResult['details'] extends never
+      ? never
+      : 'gameActions' | 'gameCleanup' | 'analyticsEvents' | 'maintenance' | 'mapAssets' => {
+      if (name === 'game-actions' || name === 'gameactions' || name === 'game') return 'gameActions'
+      if (name === 'game-cleanup' || name === 'gamecleanup' || name === 'cleanup') return 'gameCleanup'
+      if (name === 'analytics-events' || name === 'analyticsevents' || name === 'analytics') return 'analyticsEvents'
+      if (name === 'maintenance' || name === 'maint') return 'maintenance'
+      if (name === 'map-assets' || name === 'mapassets' || name === 'assets') return 'mapAssets'
+      return 'gameActions'
+    }
+    const queueKey = keyToQueueKey(key)
+    const items = await queueService.listDeadLetters(queueKey as any, { offset, limit })
+    res.json({ success: true, data: items, pagination: { offset, limit } })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to list DLQ')
+    res.status(500).json({ success: false, error: 'Failed to list DLQ' })
+  }
+})
+
+// Dead-letter requeue (admin)
+router.post('/dlq/:queueName/requeue/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { queueName, id } = req.params
+    const key = (queueName || '').toLowerCase()
+    const keyToQueueKey = (name: string): 'gameActions' | 'gameCleanup' | 'analyticsEvents' | 'maintenance' | 'mapAssets' => {
+      if (name === 'game-actions' || name === 'gameactions' || name === 'game') return 'gameActions'
+      if (name === 'game-cleanup' || name === 'gamecleanup' || name === 'cleanup') return 'gameCleanup'
+      if (name === 'analytics-events' || name === 'analyticsevents' || name === 'analytics') return 'analyticsEvents'
+      if (name === 'maintenance' || name === 'maint') return 'maintenance'
+      if (name === 'map-assets' || name === 'mapassets' || name === 'assets') return 'mapAssets'
+      return 'gameActions'
+    }
+    const queueKey = keyToQueueKey(key)
+    const result = await queueService.requeueDeadLetter(queueKey as any, id)
+    res.json({ success: result.requeued, newJobId: result.newJobId ?? null })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to requeue DLQ job')
+    res.status(500).json({ success: false, error: 'Failed to requeue DLQ job' })
+  }
+})
+
 // Queue management endpoints (admin only)
 const resolveQueueByParam = (name: string) => {
   const key = name.toLowerCase()
