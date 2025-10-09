@@ -147,11 +147,17 @@ try {
 }
 
 // Generic query function
+export interface QueryOptions {
+  client?: PoolClient
+}
+
 export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params?: QueryValues,
+  options?: QueryOptions,
 ): Promise<DatabaseQueryResult<T>> {
-  if (!pgPool) {
+  const executor = options?.client ?? pgPool
+  if (!executor) {
     throw new Error('Database connection not available')
   }
 
@@ -164,7 +170,7 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
     }
     const queryValues = values ? [...values] : undefined
 
-    const result = await pgPool.query<T>(preparedText, queryValues)
+    const result = await executor.query<T>(preparedText, queryValues)
     return {
       rows: result.rows,
       rowCount: result.rowCount,
@@ -190,6 +196,39 @@ export async function transaction<T>(callback: (client: PoolClient) => Promise<T
   } catch (error) {
     await client.query('ROLLBACK')
     throw error
+  } finally {
+    client.release()
+  }
+}
+
+interface WithClientOptions {
+  client?: PoolClient
+}
+
+/**
+ * Utility helper to borrow a database client, ensuring it is always released.
+ *
+ * When a client is supplied (typically from an existing transaction), it will
+ * be passed straight through to the callback without touching the pool. When no
+ * client is provided, the helper acquires one from the pool and guarantees it
+ * is released even if the callback throws.
+ */
+export async function withClient<T>(
+  callback: (client: PoolClient) => Promise<T>,
+  options: WithClientOptions = {},
+): Promise<T> {
+  if (options.client) {
+    return await callback(options.client)
+  }
+
+  if (!pgPool) {
+    throw new Error('Database connection not available')
+  }
+
+  const client = await pgPool.connect()
+
+  try {
+    return await callback(client)
   } finally {
     client.release()
   }

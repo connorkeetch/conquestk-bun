@@ -316,8 +316,28 @@ router.get('/', async (req: Request, res: Response) => {
     const tag = req.query.tag as string
 
     // Build query based on filters
+    const filters: string[] = []
+    const filterParams: QueryParam[] = []
+    let placeholderIndex = 0
+
+    if (isPublic) {
+      filters.push('m.is_public = true')
+    }
+
+    if (status) {
+      filters.push(`m.status = $${++placeholderIndex}`)
+      filterParams.push(status)
+    }
+
+    if (tag) {
+      filters.push(`$${++placeholderIndex} = ANY(m.tags)`)
+      filterParams.push(tag)
+    }
+
+    const whereSql = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : ''
+
     let query = `
-      SELECT 
+      SELECT
         m.id,
         m.name,
         m.description,
@@ -337,26 +357,8 @@ router.get('/', async (req: Request, res: Response) => {
         (SELECT COUNT(DISTINCT sector) FROM map_territories WHERE map_id = m.id AND sector IS NOT NULL) as sector_count
       FROM maps m
       LEFT JOIN users u ON m.creator_id = u.id
-      WHERE 1=1
+      ${whereSql}
     `
-
-    const params: QueryParam[] = []
-    let paramCount = 0
-
-    // Add filters
-    if (isPublic) {
-      query += ` AND m.is_public = true`
-    }
-
-    if (status) {
-      query += ` AND m.status = $${++paramCount}`
-      params.push(status)
-    }
-
-    if (tag) {
-      query += ` AND $${++paramCount} = ANY(m.tags)`
-      params.push(tag)
-    }
 
     // Add sorting
     switch (sortBy) {
@@ -374,11 +376,11 @@ router.get('/', async (req: Request, res: Response) => {
         break
     }
 
-    // Add pagination
-    query += ` LIMIT $${++paramCount} OFFSET $${++paramCount}`
-    params.push(limit, offset)
+    const limitPlaceholder = `$${++placeholderIndex}`
+    const offsetPlaceholder = `$${++placeholderIndex}`
+    query += ` LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`
 
-    const result = await pool.query(query, params)
+    const result = await pool.query(query, [...filterParams, limit, offset])
 
     const maps = result.rows.map((row) => ({
       id: row.id,
@@ -405,12 +407,9 @@ router.get('/', async (req: Request, res: Response) => {
     const countQuery = `
       SELECT COUNT(*) as total
       FROM maps m
-      WHERE 1=1
-      ${isPublic ? ' AND m.is_public = true' : ''}
-      ${status ? ` AND m.status = '${status}'` : ''}
-      ${tag ? ` AND '${tag}' = ANY(m.tags)` : ''}
+      ${whereSql}
     `
-    const countResult = await pool.query(countQuery)
+    const countResult = await pool.query(countQuery, filterParams)
     const total = parseInt(countResult.rows[0]?.total || '0', 10)
 
     return res.json({

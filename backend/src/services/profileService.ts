@@ -1,6 +1,6 @@
 import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
 import type { QueryResultRow } from 'pg'
-import { getClient } from '../config/database'
+import { withClient } from '../config/database'
 import type {
   Achievement,
   AggregatedStatsSummary,
@@ -73,9 +73,7 @@ const mapGameHistoryRow = (row: GameHistoryRow): GameHistoryEntry => ({
 export class ProfileService {
   // Get complete user profile with all related data
   async getUserProfile(userId: string): Promise<ProfileResponse> {
-    const client = await getClient()
-
-    try {
+    return await withClient(async (client) => {
       // Get profile data
       // user_profiles table removed - profile data is now in users table
       const profileResult = await client.query('SELECT * FROM users WHERE id = $1', [userId])
@@ -99,9 +97,9 @@ export class ProfileService {
 
       // Get recent games from game_rooms + room_players (game_history table doesn't exist)
       const recentGamesResult = await client.query(
-        `SELECT 
+        `SELECT
           gr.id as game_id,
-          gr.name as game_name, 
+          gr.name as game_name,
           gr.started_at,
           gr.ended_at,
           gr.game_mode,
@@ -128,16 +126,12 @@ export class ProfileService {
         recentGames: (recentGamesResult.rows as GameHistoryRow[]).map(mapGameHistoryRow),
         preferences: preferencesResult.rows[0] || this.createDefaultPreferences(userId),
       }
-    } finally {
-      if (client.release) client.release()
-    }
+    })
   }
 
   // Update user profile
   async updateProfile(userId: string, updates: ProfileUpdateRequest): Promise<UserProfile> {
-    const client = await getClient()
-
-    try {
+    await withClient(async (client) => {
       const updateClauses: string[] = []
       const values: unknown[] = []
       let paramIndex = 0
@@ -177,9 +171,7 @@ export class ProfileService {
         values.push(userId)
         await client.query(queryText, values)
       }
-    } finally {
-      if (client.release) client.release()
-    }
+    })
 
     if (updates.preferences && Object.keys(updates.preferences).length > 0) {
       await this.updatePreferences(userId, updates.preferences)
@@ -191,9 +183,7 @@ export class ProfileService {
 
   // Get user statistics with breakdowns
   async getUserStats(userId: string): Promise<StatsBreakdown> {
-    const client = await getClient()
-
-    try {
+    return await withClient(async (client) => {
       // Overall stats from aggregated table
       const overallResult = await client.query('SELECT * FROM player_stats WHERE user_id = $1', [
         userId,
@@ -419,18 +409,14 @@ export class ProfileService {
         byGameMode,
         timeline: timelineResult.rows || [],
       }
-    } finally {
-      if (client.release) client.release()
-    }
+    })
   }
 
   // Get available achievements and user progress
   async getAchievements(
     userId: string,
   ): Promise<{ unlocked: UserAchievement[]; available: Achievement[] }> {
-    const client = await getClient()
-
-    try {
+    return await withClient(async (client) => {
       // Get unlocked achievements
       const unlockedResult = await client.query(
         `
@@ -454,16 +440,12 @@ export class ProfileService {
         unlocked: unlockedResult.rows || [],
         available: availableResult.rows || [],
       }
-    } finally {
-      if (client.release) client.release()
-    }
+    })
   }
 
   // Unlock achievement for user
   async unlockAchievement(userId: string, achievementId: string): Promise<UserAchievement> {
-    const client = await getClient()
-
-    try {
+    return await withClient(async (client) => {
       // Check if already unlocked
       const existing = await client.query(
         'SELECT * FROM user_achievements WHERE user_id = $1 AND achievement_id = $2',
@@ -503,9 +485,7 @@ export class ProfileService {
       }
 
       return preferences
-    } finally {
-      if (client.release) client.release()
-    }
+    })
   }
 
   // Get game history with pagination
@@ -514,9 +494,7 @@ export class ProfileService {
     limit: number = 50,
     offset: number = 0,
   ): Promise<GameHistoryEntry[]> {
-    const client = await getClient()
-
-    try {
+    return await withClient(async (client) => {
       const result = await client.query(
         `
         SELECT
@@ -538,9 +516,7 @@ export class ProfileService {
       )
 
       return (result.rows as GameHistoryRow[]).map(mapGameHistoryRow)
-    } finally {
-      if (client.release) client.release()
-    }
+    })
   }
 
   // Update user preferences
@@ -548,9 +524,7 @@ export class ProfileService {
     userId: string,
     preferences: Partial<UserPreferences>,
   ): Promise<UserPreferences> {
-    const client = await getClient()
-
-    try {
+    return await withClient(async (client) => {
       const updateFields: string[] = []
       const values: Array<string | number | boolean> = []
       let paramCount = 0
@@ -600,16 +574,12 @@ export class ProfileService {
             ? normalizeThemeId(updatedPreferences.theme)
             : DEFAULT_THEME_ID,
       }
-    } finally {
-      if (client.release) client.release()
-    }
+    })
   }
 
   // Get global leaderboard
   async getLeaderboard(limit: number = 100): Promise<UserRanking[]> {
-    const client = await getClient()
-
-    try {
+    return await withClient(async (client) => {
       const result = await client.query(
         `
         SELECT 
@@ -642,9 +612,7 @@ export class ProfileService {
         winRate: Math.round(row.win_rate),
         level: row.level,
       }))
-    } finally {
-      if (client.release) client.release()
-    }
+    })
   }
 
   // Helper methods
