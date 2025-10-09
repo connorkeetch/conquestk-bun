@@ -1346,9 +1346,8 @@ export class GameLifecycleService {
       })
     }
 
-    let neutralizeOutcome: Awaited<
-      ReturnType<GameLifecycleService['kickAndNeutralize']>
-    > | null = null
+    let neutralizeOutcome: Awaited<ReturnType<GameLifecycleService['kickAndNeutralize']>> | null =
+      null
     if (strikes >= 3 && targetUserId) {
       try {
         neutralizeOutcome = await this.kickAndNeutralize(roomId, targetUserId)
@@ -1388,9 +1387,7 @@ export class GameLifecycleService {
   async kickAndNeutralize(
     roomId: string,
     userId: string,
-  ): Promise<
-    Awaited<ReturnType<GameService['neutralizePlayerAndResolve']>>
-  > {
+  ): Promise<Awaited<ReturnType<GameService['neutralizePlayerAndResolve']>>> {
     const result = await this.gameService.neutralizePlayerAndResolve(roomId, userId)
     // Persist DB flags
     await query(
