@@ -128,6 +128,7 @@ async function main() {
         'room_players',
         'game_states',
         'game_moves',
+        'game_move_archive',
         'game_results',
         'game_territory_modifiers',
         'capital_eliminations',
@@ -140,6 +141,7 @@ async function main() {
              ($1::text = 'room_players' AND room_id = ANY($2)) OR
              ($1::text = 'game_states' AND room_id = ANY($2)) OR
              ($1::text = 'game_moves' AND room_id = ANY($2)) OR
+             ($1::text = 'game_move_archive' AND room_id = ANY($2)) OR
              ($1::text = 'game_results' AND room_id = ANY($2)) OR
              ($1::text = 'game_territory_modifiers' AND game_id = ANY($2)) OR
              ($1::text = 'capital_eliminations' AND game_id = ANY($2)) OR
@@ -185,6 +187,11 @@ async function main() {
       {
         label: 'Delete game_moves',
         sql: `DELETE FROM game_moves WHERE room_id = ANY($1)`,
+        params: [targetIds],
+      },
+      {
+        label: 'Delete game_move_archive',
+        sql: `DELETE FROM game_move_archive WHERE room_id = ANY($1)`,
         params: [targetIds],
       },
       {

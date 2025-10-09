@@ -671,6 +671,8 @@ const CreateGamePage: React.FC = () => {
         gameMode: finalGameMode,
         capitalsEnabled: finalGameMode === 'capitals',
         useTerritoryModifiers: finalModifiers,
+        // Ensure the host is joined with their chosen color
+        selectedColor,
       }
 
       // Attach King of the Hill configuration

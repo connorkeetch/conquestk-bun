@@ -2705,6 +2705,58 @@ export class GameService {
     logger.debug(`Archiving game ${gameId}:`, results)
   }
 
+  async archiveGameMoves(gameId: string): Promise<{ archived: number }> {
+    if (!gameId) {
+      return { archived: 0 }
+    }
+
+    const archived = await transaction(async (client) => {
+      const result = await client.query<{ id: string }>(
+        `
+          WITH moved AS (
+            DELETE FROM game_moves
+            WHERE room_id = $1
+            RETURNING id, room_id, player_id, turn_number, move_type, move_data, is_valid, validation_error, created_at
+          )
+          INSERT INTO game_move_archive (
+            id,
+            room_id,
+            player_id,
+            turn_number,
+            move_type,
+            move_data,
+            is_valid,
+            validation_error,
+            created_at,
+            archived_at
+          )
+          SELECT
+            id,
+            room_id,
+            player_id,
+            turn_number,
+            move_type,
+            move_data,
+            is_valid,
+            validation_error,
+            created_at,
+            NOW()
+          FROM moved
+          RETURNING id
+        `,
+        [gameId],
+      )
+
+      return result.rowCount ?? 0
+    })
+
+    if (archived > 0) {
+      logger.debug('Archived game moves', { gameId, archived })
+    }
+
+    return { archived }
+  }
+
   async updateEloRatings(gameId: string, _gameState: unknown): Promise<void> {
     // TODO: Update ELO ratings
     logger.debug(`Updating ELO for game ${gameId}`)

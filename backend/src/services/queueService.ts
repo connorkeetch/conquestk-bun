@@ -64,6 +64,7 @@ export interface BattleSimulationJob {
   attackingArmies: number
   defendingArmies: number
   playerId: string
+  moveId?: string
   idempotencyKey?: string
 }
 

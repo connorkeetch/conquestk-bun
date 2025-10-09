@@ -47,6 +47,7 @@ export class GameController {
         isRanked,
         aiOpponents,
         treasureConfig,
+        selectedColor,
       } = req.body as CreateRoomRequestBody
       const hostId = req.userId
 
@@ -155,7 +156,9 @@ export class GameController {
 
       // Ensure host is part of the room immediately after creation
       try {
-        await this.gameRoomService.joinRoom(room.id, hostId)
+        await this.gameRoomService.joinRoom(room.id, hostId, {
+          selectedColor: typeof selectedColor === 'string' ? selectedColor : undefined,
+        })
       } catch (joinError) {
         logger.warn('Host auto-join failed after room creation', {
           roomId: room.id,
@@ -995,4 +998,6 @@ type CreateRoomRequestBody = {
     personalitySeed?: number
   }>
   treasureConfig?: Partial<TreasureConfig>
+  // Optional host-selected color; if provided, the host will be joined with this exact color
+  selectedColor?: string
 }

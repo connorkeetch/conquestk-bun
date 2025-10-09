@@ -742,9 +742,20 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
 
   useEffect(() => {
     function add(text: string, ts?: Date, focusTerritories?: string[]) {
-      setEntries((prev) =>
-        [{ ts: ts ?? new Date(), text, focusTerritories }, ...prev].slice(0, 500),
-      )
+      const targetTs = ts ?? new Date()
+      setEntries((prev) => {
+        // De-dup by identical text within 2 seconds across client + persisted logs
+        const existing: { ts: Date; text: string }[] = [
+          ...prev,
+          ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text })),
+        ]
+        const windowMs = 2000
+        const dup = existing.some(
+          (e) => e.text === text && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
+        )
+        if (dup) return prev
+        return [{ ts: targetTs, text, focusTerritories }, ...prev].slice(0, 500)
+      })
     }
 
     function addRich(
@@ -753,12 +764,23 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       ts?: Date,
       focusTerritories?: string[],
     ) {
-      setEntries((prev) =>
-        [{ ts: ts ?? new Date(), text: textFallback, rich, focusTerritories }, ...prev].slice(
-          0,
-          500,
-        ),
-      )
+      const targetTs = ts ?? new Date()
+      setEntries((prev) => {
+        // De-dup by identical text within 2 seconds across client + persisted logs
+        const existing: { ts: Date; text: string }[] = [
+          ...prev,
+          ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text })),
+        ]
+        const windowMs = 2000
+        const dup = existing.some(
+          (e) => e.text === textFallback && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
+        )
+        if (dup) return prev
+        return [
+          { ts: targetTs, text: textFallback, rich, focusTerritories },
+          ...prev,
+        ].slice(0, 500)
+      })
     }
 
     const onPlayerJoined: Parameters<typeof socketService.on<'player-joined'>>[1] = (payload) => {
@@ -1169,6 +1191,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     toSafeInt,
     playerColor,
     flushAggregate,
+    clientLogs,
   ])
 
   return (

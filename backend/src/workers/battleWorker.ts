@@ -1,6 +1,7 @@
 import type { BattleResultDelta, GameDelta, GameEndDelta } from '@risk-game/shared/types'
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
+import { query } from '../config/database'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { type BattleSimulationJob, queueService } from '../services/queueService'
@@ -71,6 +72,7 @@ export class BattleWorker {
       attackingArmies,
       defendingArmies,
       playerId,
+      moveId,
       idempotencyKey,
     } = job.data
     const jobId = job.id !== undefined ? String(job.id) : `${gameId}:${Date.now()}`
@@ -130,6 +132,40 @@ export class BattleWorker {
       const finalDefenderArmies = battleResult.territoryConquered
         ? Math.max(movingArmies, 0)
         : Math.max(newDefendingArmies, 0)
+
+      if (moveId) {
+        try {
+          const augmentation = {
+            dice: battleResult.dice,
+            losses: {
+              attacker: battleResult.attackerLosses,
+              defender: battleResult.defenderLosses,
+            },
+            preRoll: {
+              attackingArmies,
+              defendingArmies,
+            },
+            outcome: {
+              territoryConquered: battleResult.territoryConquered,
+              attackerArmiesRemaining: finalAttackerArmies,
+              defenderArmiesRemaining: finalDefenderArmies,
+            },
+            battleJobId: jobId,
+            updatedAt: new Date().toISOString(),
+          }
+          await query(`UPDATE game_moves SET move_data = move_data || $2::jsonb WHERE id = $1`, [
+            moveId,
+            JSON.stringify(augmentation),
+          ])
+        } catch (error) {
+          logger.warn('Failed to append battle result to move', {
+            gameId,
+            moveId,
+            jobId,
+            error: error instanceof Error ? error.message : error,
+          })
+        }
+      }
 
       if (battleResult.territoryConquered) {
         // Territory conquered - transfer ownership

@@ -583,10 +583,16 @@ export class GameActionWorker {
             idempotencyKey: `${idKey}:battle:${attackAction.payload?.fromTerritoryId ?? 'unknown'}:${attackAction.payload?.toTerritoryId ?? 'unknown'}`,
           }
 
-          await queueService.addBattleSimulation(battleJob)
+          const moveId = await this.recordMove(
+            gameId,
+            playerId,
+            currentState.turn,
+            'attack',
+            action.payload,
+          )
 
-          // Record attack move
-          await this.recordMove(gameId, playerId, currentState.turn, 'attack', action.payload)
+          const jobPayload = moveId ? { ...battleJob, moveId } : battleJob
+          await queueService.addBattleSimulation(jobPayload)
 
           // Don't broadcast immediately for attacks - wait for battle result
           shouldBroadcast = false
@@ -623,13 +629,7 @@ export class GameActionWorker {
                   ? { cardCount: count, treasureSet: payload?.treasureSet }
                   : { cardCount: 0 }
 
-            await query(
-              `
-              INSERT INTO game_moves (room_id, player_id, turn_number, move_type, move_data)
-              VALUES ($1, $2, $3, 'trade_cards', $4::jsonb)
-            `,
-              [gameId, playerId, currentState.turn, JSON.stringify(moveData)],
-            )
+            await this.recordMove(gameId, playerId, currentState.turn, 'trade_cards', moveData)
           } catch (e) {
             // Non-fatal; trading still progresses even if analytics write fails
             logger.debug('Skipped logging trade_cards move', {
@@ -730,6 +730,7 @@ export class GameActionWorker {
           const result = await this.gameService.processGoBackToReinforcement(gameId, playerId)
           // Emit phase change delta with version
           await this.deltaEmitter.emitPhaseChange(gameId, result)
+          await this.recordMove(gameId, playerId, currentState.turn, 'go_back_to_reinforcement', {})
           // Don't broadcast extra delta below
           shouldBroadcast = false
           break
@@ -741,6 +742,7 @@ export class GameActionWorker {
             { type: 'undo_fortify', roomId: gameId, playerId },
             playerId,
           )
+          await this.recordMove(gameId, playerId, currentState.turn, 'undo_fortify', {})
           // Emit full state update since we don't have a lightweight delta
           const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
           if (serialized) {
@@ -816,14 +818,17 @@ export class GameActionWorker {
     turnNumber: number,
     moveType: string,
     payload: unknown,
-  ): Promise<void> {
+  ): Promise<string | null> {
     try {
-      await query(
+      const result = await query<{ id: string }>(
         `INSERT INTO game_moves (room_id, player_id, turn_number, move_type, move_data)
-         VALUES ($1, $2, $3, $4, $5::jsonb)`,
+         VALUES ($1, $2, $3, $4, $5::jsonb)
+         RETURNING id`,
         [gameId, playerId, turnNumber, moveType, JSON.stringify(payload || {})],
       )
-      logger.debug('Recorded game move', { gameId, playerId, turnNumber, moveType })
+      const moveId = result.rows[0]?.id ?? null
+      logger.debug('Recorded game move', { gameId, playerId, turnNumber, moveType, moveId })
+      return moveId
     } catch (error) {
       // Non-fatal: move recording is for analytics/troubleshooting
       logger.warn('Failed to record game move', {
@@ -833,6 +838,7 @@ export class GameActionWorker {
         moveType,
         error: error instanceof Error ? error.message : error,
       })
+      return null
     }
   }
 
