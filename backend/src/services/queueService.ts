@@ -608,7 +608,10 @@ export class QueueService {
     // Create QueueEvents listener for failed jobs so we can implement DLQ semantics globally.
     try {
       const events = new QueueEvents(queue.name, {
-        connection: (this.redis?.options ?? {}) as unknown as import('bullmq').ConnectionOptions,
+        // Attach using the live Redis client when available for consistent behavior
+        connection: (this.redis ??
+          this.redis?.options ??
+          {}) as unknown as import('bullmq').ConnectionOptions,
       })
 
       events.on('failed', async ({ jobId, failedReason }) => {

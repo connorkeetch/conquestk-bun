@@ -84,8 +84,9 @@ export class GameActionWorker {
 
     this.worker = new Worker(this.queueName, processJob, {
       concurrency: 10,
-      connection: ((await import('../config/redis')).getRedisClient()?.options ??
-        {}) as unknown as import('bullmq').ConnectionOptions,
+      // Use the actual Redis client instance to avoid issues with blocking commands/timeouts
+      connection: ((await import('../config/redis')).getRedisClient() ??
+        ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
     })
 
     this.worker.on('completed', (job, result) => {

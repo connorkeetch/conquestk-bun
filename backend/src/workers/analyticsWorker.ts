@@ -51,8 +51,9 @@ export class AnalyticsWorker {
       },
       {
         concurrency: 5,
-        connection: ((await import('../config/redis')).getRedisClient()?.options ??
-          {}) as unknown as import('bullmq').ConnectionOptions,
+        // Prefer using the Redis client instance
+        connection: ((await import('../config/redis')).getRedisClient() ??
+          ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
       },
     )
 

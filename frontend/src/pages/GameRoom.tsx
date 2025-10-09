@@ -2652,8 +2652,12 @@ export default function GameRoom() {
           aria-modal="true"
         >
           <div
-            className="h-full rounded-t-xl border border-border bg-surface-1 shadow-2xl flex flex-col"
+            className="h-full rounded-t-xl border border-border shadow-2xl flex flex-col"
             style={{
+              // Darker, theme-aware glass background
+              backgroundColor: 'color-mix(in srgb, var(--surface-1) 72%, black 28%)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
               paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
               paddingLeft: 'calc(env(safe-area-inset-left) + 12px)',
               paddingRight: 'calc(env(safe-area-inset-right) + 12px)',
@@ -2767,8 +2771,12 @@ export default function GameRoom() {
           aria-modal="true"
         >
           <div
-            className="h-full rounded-t-xl border border-border bg-surface-1 shadow-2xl flex flex-col"
+            className="h-full rounded-t-xl border border-border shadow-2xl flex flex-col"
             style={{
+              // Darker, theme-aware glass background
+              backgroundColor: 'color-mix(in srgb, var(--surface-1) 72%, black 28%)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
               paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
               paddingLeft: 'calc(env(safe-area-inset-left) + 12px)',
               paddingRight: 'calc(env(safe-area-inset-right) + 12px)',
