@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import session from 'express-session'
 import { getRedisClient } from '../config/redis'
@@ -12,12 +13,44 @@ const { RedisStore } = require('connect-redis')
 let currentSessionMiddleware: RequestHandler | null = null
 let isRedisStoreActive = false
 
+const DEFAULT_DEV_SECRET = 'default-dev-secret-change-in-production'
+
+const sessionSecret = resolveSessionSecret()
+
+function resolveSessionSecret(): string {
+  const configuredSecret = process.env.SESSION_SECRET
+
+  if (configuredSecret && configuredSecret !== DEFAULT_DEV_SECRET) {
+    return configuredSecret
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    const errorMessage =
+      'SESSION_SECRET must be set to a strong, unique value in production. The insecure default fallback was detected.'
+    logger.error(errorMessage)
+    throw new Error(errorMessage)
+  }
+
+  const generatedSecret = randomBytes(32).toString('hex')
+
+  if (!configuredSecret) {
+    logger.warn(
+      '⚠️ SESSION_SECRET is not set. Generating an ephemeral development secret. Sessions will reset on server restarts until SESSION_SECRET is configured.',
+    )
+  } else {
+    logger.warn(
+      '⚠️ Ignoring insecure default SESSION_SECRET value. Generating an ephemeral development secret instead. Sessions will reset on server restarts until SESSION_SECRET is configured.',
+    )
+  }
+
+  process.env.SESSION_SECRET = generatedSecret
+  return generatedSecret
+}
+
 /**
  * Create initial session middleware (may use in-memory store initially)
  */
 export function createSessionMiddleware() {
-  const sessionSecret = process.env.SESSION_SECRET || 'default-dev-secret-change-in-production'
-
   // Base session configuration
   const sessionConfig: session.SessionOptions = {
     secret: sessionSecret,
@@ -98,8 +131,6 @@ export function enableRedisSessionStore(): boolean {
   if (redisClient) {
     try {
       // Create new session configuration with Redis store
-      const sessionSecret = process.env.SESSION_SECRET || 'default-dev-secret-change-in-production'
-
       const sessionConfig: session.SessionOptions = {
         secret: sessionSecret,
         resave: false,
