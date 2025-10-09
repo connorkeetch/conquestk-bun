@@ -57,7 +57,7 @@ export default function GameRoomFooter({
                 onClick={onStatsClick}
                 onMouseEnter={onStatsHover}
                 onFocus={onStatsHover}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
+                className="flex items-center justify-center gap-2 h-10 min-w-[140px] px-4 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
                 title="Player Stats"
                 aria-label="Player Stats"
               >
@@ -74,7 +74,7 @@ export default function GameRoomFooter({
               onClick={onChatClick}
               onMouseEnter={onChatHover}
               onFocus={onChatHover}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
+              className="flex items-center justify-center gap-2 h-10 min-w-[140px] px-4 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
               title="Open Chat & Log"
               aria-label="Open Chat & Log"
             >
@@ -88,7 +88,7 @@ export default function GameRoomFooter({
             <button
               type="button"
               onClick={handleToggleMute}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
+              className="flex items-center justify-center gap-2 h-10 min-w-[140px] px-4 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
               title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
               aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
             >

@@ -67,8 +67,9 @@ export class CleanupWorker {
       async (job: Job<GameCleanupJob>) => this.cleanupGame(job),
       {
         concurrency: 2,
-        connection: ((await import('../config/redis')).getRedisClient()?.options ??
-          {}) as unknown as import('bullmq').ConnectionOptions,
+        // Use Redis client instance for BullMQ connection stability
+        connection: ((await import('../config/redis')).getRedisClient() ??
+          ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
       },
     )
 
