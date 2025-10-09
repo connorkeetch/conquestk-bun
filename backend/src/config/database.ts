@@ -267,33 +267,70 @@ export async function closeDatabase(): Promise<void> {
   }
 }
 
-// Helper function for parameterized queries
+/**
+ * Helper function for parameterized UPDATE queries
+ *
+ * ⚠️ SECURITY WARNING: This function does NOT validate table or column names.
+ * Column and table names MUST be validated against a strict whitelist before calling this function
+ * to prevent SQL injection attacks. Do NOT pass user-controllable values directly as keys.
+ *
+ * @example
+ * // SAFE: Using predefined column names
+ * const ALLOWED_COLUMNS = ['username', 'email', 'updated_at'];
+ * const safeUpdates = Object.fromEntries(
+ *   Object.entries(updates).filter(([key]) => ALLOWED_COLUMNS.includes(key))
+ * );
+ * const query = buildUpdateQuery('users', safeUpdates, { id: userId });
+ */
 export function buildUpdateQuery(
   table: string,
   updates: Record<string, unknown>,
   conditions: Record<string, unknown>,
 ): { text: string; values: unknown[] } {
+  // Validate that we have updates and conditions
+  if (Object.keys(updates).length === 0) {
+    throw new Error('buildUpdateQuery: updates object cannot be empty')
+  }
+  if (Object.keys(conditions).length === 0) {
+    throw new Error('buildUpdateQuery: conditions object cannot be empty')
+  }
+
   const updateParts: string[] = []
   const conditionParts: string[] = []
   const values: unknown[] = []
   let paramCounter = 1
 
   // Build SET clause
+  // WARNING: Keys are interpolated directly - caller MUST validate column names
   for (const [key, value] of Object.entries(updates)) {
+    // Basic sanity check - column names should be simple identifiers
+    if (!/^[a-z_][a-z0-9_]*$/i.test(key)) {
+      throw new Error(`buildUpdateQuery: Invalid column name format: ${key}`)
+    }
     updateParts.push(`${key} = $${paramCounter}`)
     values.push(value)
     paramCounter++
   }
 
   // Build WHERE clause
+  // WARNING: Keys are interpolated directly - caller MUST validate column names
   for (const [key, value] of Object.entries(conditions)) {
+    // Basic sanity check - column names should be simple identifiers
+    if (!/^[a-z_][a-z0-9_]*$/i.test(key)) {
+      throw new Error(`buildUpdateQuery: Invalid column name format: ${key}`)
+    }
     conditionParts.push(`${key} = $${paramCounter}`)
     values.push(value)
     paramCounter++
   }
 
+  // Basic sanity check for table name
+  if (!/^[a-z_][a-z0-9_]*$/i.test(table)) {
+    throw new Error(`buildUpdateQuery: Invalid table name format: ${table}`)
+  }
+
   const text = `
-    UPDATE ${table} 
+    UPDATE ${table}
     SET ${updateParts.join(', ')}, updated_at = CURRENT_TIMESTAMP
     WHERE ${conditionParts.join(' AND ')}
   `
@@ -301,22 +338,56 @@ export function buildUpdateQuery(
   return { text, values }
 }
 
-// Helper for INSERT queries with RETURNING
+/**
+ * Helper for INSERT queries with RETURNING clause
+ *
+ * ⚠️ SECURITY WARNING: This function does NOT validate table or column names.
+ * Column and table names MUST be validated against a strict whitelist before calling this function
+ * to prevent SQL injection attacks. Do NOT pass user-controllable values directly as keys.
+ *
+ * @example
+ * // SAFE: Using predefined column names
+ * const ALLOWED_COLUMNS = ['username', 'email', 'created_at'];
+ * const safeData = Object.fromEntries(
+ *   Object.entries(data).filter(([key]) => ALLOWED_COLUMNS.includes(key))
+ * );
+ * const query = buildInsertQuery('users', safeData);
+ */
 export function buildInsertQuery(
   table: string,
   data: Record<string, unknown>,
   returning = '*',
 ): { text: string; values: unknown[] } {
+  // Validate that we have data to insert
+  if (Object.keys(data).length === 0) {
+    throw new Error('buildInsertQuery: data object cannot be empty')
+  }
+
   const columns: string[] = []
   const placeholders: string[] = []
   const values: unknown[] = []
   let paramCounter = 1
 
+  // WARNING: Keys are interpolated directly - caller MUST validate column names
   for (const [key, value] of Object.entries(data)) {
+    // Basic sanity check - column names should be simple identifiers
+    if (!/^[a-z_][a-z0-9_]*$/i.test(key)) {
+      throw new Error(`buildInsertQuery: Invalid column name format: ${key}`)
+    }
     columns.push(key)
     placeholders.push(`$${paramCounter}`)
     values.push(value)
     paramCounter++
+  }
+
+  // Basic sanity check for table name
+  if (!/^[a-z_][a-z0-9_]*$/i.test(table)) {
+    throw new Error(`buildInsertQuery: Invalid table name format: ${table}`)
+  }
+
+  // Basic sanity check for RETURNING clause
+  if (returning !== '*' && !/^[a-z_][a-z0-9_,\s]*$/i.test(returning)) {
+    throw new Error(`buildInsertQuery: Invalid RETURNING clause format: ${returning}`)
   }
 
   const text = `
