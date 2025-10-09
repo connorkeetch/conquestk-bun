@@ -98,18 +98,15 @@ export default function PanelHeader({
           </button>
         )}
 
-        {/* Pin/Unpin Button */}
+        {/* Return to drawer button (for popped-out panels) */}
         <button
           type="button"
           onClick={onTogglePin}
-          className={`p-1 hover:bg-[color:var(--surface-3)] rounded transition-colors ${
-            isPinned ? 'text-[color:var(--color-accent)]' : 'text-muted'
-          }`}
-          title={isPinned ? 'Unpin to drawer' : 'Pin to room'}
-          aria-label={isPinned ? 'Unpin to drawer' : 'Pin to room'}
-          aria-pressed={isPinned}
+          className="p-1 hover:bg-[color:var(--surface-3)] rounded transition-colors text-muted hover:text-[color:var(--heading)]"
+          title={isPinned ? 'Return to drawer' : 'Send to drawer'}
+          aria-label={isPinned ? 'Return to drawer' : 'Send to drawer'}
         >
-          <span className="text-sm">{isPinned ? '📌' : '📍'}</span>
+          <span className="text-sm">{isPinned ? '⬇' : '↩'}</span>
         </button>
 
         {/* Close Button (optional) */}

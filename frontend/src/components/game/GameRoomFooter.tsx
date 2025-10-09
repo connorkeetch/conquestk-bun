@@ -39,7 +39,7 @@ export default function GameRoomFooter({
 
   return (
     <footer
-      className={`fixed bottom-0 left-0 right-0 z-40 bg-surface-1/80 backdrop-blur-md border-t border-border shadow-[0_-2px_10px_rgba(0,0,0,0.1)] ${className}`}
+      className={`fixed bottom-0 left-0 right-0 z-40 bg-surface-1/95 backdrop-blur-md border-t border-border shadow-[0_-2px_10px_rgba(0,0,0,0.1)] ${className}`}
       style={{
         paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
         paddingLeft: 'env(safe-area-inset-left)',

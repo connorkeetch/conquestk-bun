@@ -2611,9 +2611,15 @@ export default function GameRoom() {
       {currentGame && chatPanel?.zone === 'drawer' && (
         <div
           id={mobileDrawerId}
-          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 ${chatDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 z-30 ${chatDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           style={{
             height: mobileDrawerOpen ? `${chatDrawerResize.height}px` : undefined,
+            // Handle multiple pinned drawers side-by-side
+            left: statsDrawerOpen && statsPanel?.isPinned ? 'min(500px, 45%)' : '0',
+            right: statsDrawerOpen && statsPanel?.isPinned ? '0' : undefined,
+            width: statsDrawerOpen && statsPanel?.isPinned ? 'min(500px, 45%)' : 'min(600px, 100%)',
+            maxWidth: statsDrawerOpen && statsPanel?.isPinned ? undefined : '100%',
+            paddingBottom: 'calc(env(safe-area-inset-bottom) + 64px)', // Extra space for footer
           }}
           role="dialog"
           aria-modal="true"
@@ -2654,9 +2660,9 @@ export default function GameRoom() {
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={() => dispatch(togglePin('chat'))}
-                    title="Move to sidebar"
+                    title="Pop out to main view"
                   >
-                    ⬆️ Sidebar
+                    🗗 Pop Out
                   </button>
                 )}
               </div>
@@ -2717,9 +2723,15 @@ export default function GameRoom() {
       {currentGame && statsPanel?.zone === 'drawer' && (
         <div
           id={statsDrawerId}
-          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 ${statsDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 z-30 ${statsDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
           style={{
             height: statsDrawerOpen ? `${statsDrawerResize.height}px` : undefined,
+            // Handle multiple pinned drawers side-by-side
+            left: mobileDrawerOpen && chatPanel?.isPinned ? 'min(500px, 45%)' : '0',
+            right: mobileDrawerOpen && chatPanel?.isPinned ? '0' : undefined,
+            width: mobileDrawerOpen && chatPanel?.isPinned ? 'min(500px, 45%)' : 'min(600px, 100%)',
+            maxWidth: mobileDrawerOpen && chatPanel?.isPinned ? undefined : '100%',
+            paddingBottom: 'calc(env(safe-area-inset-bottom) + 64px)', // Extra space for footer
           }}
           role="dialog"
           aria-modal="true"
@@ -2766,9 +2778,9 @@ export default function GameRoom() {
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={() => dispatch(togglePin('player-stats'))}
-                    title="Move to sidebar"
+                    title="Pop out to main view"
                   >
-                    ⬆️ Sidebar
+                    🗗 Pop Out
                   </button>
                 )}
                 <button

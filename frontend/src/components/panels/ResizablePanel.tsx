@@ -58,7 +58,7 @@ export default function ResizablePanel({
     return null
   }
 
-  const { zone: panelZone, isMinimized } = panelConfig
+  const { isMinimized } = panelConfig
 
   return (
     <div
@@ -68,18 +68,26 @@ export default function ResizablePanel({
         transition: isDragging ? 'none' : 'width 0.2s ease-out',
       }}
     >
-      {/* Resize Handle - Left side for right panels, right side for left panels */}
+      {/* Left edge resize handle - always available for popped-out panels */}
       {canResize && !isMinimized && (
         <div
           {...resizeHandleProps}
-          className={`absolute top-0 bottom-0 w-1 cursor-ew-resize hover:bg-[color:var(--color-accent)] transition-colors z-10 ${
-            panelZone === 'sidebar-left' ? 'right-0' : 'left-0'
-          } ${isDragging ? 'bg-[color:var(--color-accent)]' : 'bg-transparent'}`}
+          className={`absolute top-0 bottom-0 left-0 w-1 cursor-ew-resize hover:bg-[color:var(--color-accent)] transition-colors z-10 ${isDragging ? 'bg-[color:var(--color-accent)]' : 'bg-transparent'}`}
           style={{
-            // Add a wider invisible hit area for easier grabbing
             width: '4px',
-            marginLeft: panelZone === 'sidebar-right' ? '-2px' : 0,
-            marginRight: panelZone === 'sidebar-left' ? '-2px' : 0,
+            marginLeft: '-2px',
+          }}
+        />
+      )}
+
+      {/* Right edge resize handle - always available for popped-out panels */}
+      {canResize && !isMinimized && (
+        <div
+          {...resizeHandleProps}
+          className={`absolute top-0 bottom-0 right-0 w-1 cursor-ew-resize hover:bg-[color:var(--color-accent)] transition-colors z-10 ${isDragging ? 'bg-[color:var(--color-accent)]' : 'bg-transparent'}`}
+          style={{
+            width: '4px',
+            marginRight: '-2px',
           }}
         />
       )}
