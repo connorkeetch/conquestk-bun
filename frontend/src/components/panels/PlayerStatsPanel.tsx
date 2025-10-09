@@ -51,6 +51,12 @@ export default function PlayerStatsPanel({
     return isActive && isMember && !isEliminated && !gameOver
   }, [user, currentRoom, currentGame])
 
+  const gameFinished = useMemo(() => {
+    const roomStatus = currentRoom?.status
+    const phase = currentGame?.phase
+    return phase === 'finished' || roomStatus === 'completed' || roomStatus === 'abandoned'
+  }, [currentGame?.phase, currentRoom?.status])
+
   const handleResign = () => {
     if (!currentRoom) return
     if (onResignRequest) {
@@ -113,6 +119,7 @@ export default function PlayerStatsPanel({
                 currentPlayerId={currentPlayerId}
                 territories={territories}
                 variant={variant}
+                gameFinished={gameFinished}
               />
             </div>
           ) : (

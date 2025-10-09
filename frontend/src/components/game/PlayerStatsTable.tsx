@@ -12,10 +12,12 @@ interface PlayerStatsTableProps {
   currentPlayerId?: string
   territories: Record<string, { owner?: string | null; armies?: number }>
   variant?: 'full' | 'compact' | 'minimal'
+  // When true, show a crown next to winners (non-eliminated players)
+  gameFinished?: boolean
 }
 
 export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
-  ({ players, currentPlayerId, territories, variant = 'full' }) => {
+  ({ players, currentPlayerId, territories, variant = 'full', gameFinished = false }) => {
     const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
     // Memoize expensive stats calculation
@@ -147,15 +149,21 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                             type="button"
                             className="truncate text-[color:var(--text)] hover:underline text-left font-medium"
                             onClick={() => handleProfileClick(player.username)}
-                            title={
-                              player.isEliminated
-                                ? 'Eliminated'
+                          title={
+                            player.isEliminated
+                              ? 'Eliminated'
+                              : gameFinished
+                                ? 'Winner'
                                 : `${player.username} (${skillRating} CP)`
-                            }
+                          }
                           >
                             {player.isEliminated ? (
                               <>
                                 <span title="Eliminated">💀</span> {player.username}
+                              </>
+                            ) : gameFinished ? (
+                              <>
+                                <span title="Winner">👑</span> {player.username}
                               </>
                             ) : (
                               player.username
@@ -210,7 +218,9 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
     return (
       prevProps.currentPlayerId === nextProps.currentPlayerId &&
       prevProps.players === nextProps.players &&
-      prevProps.territories === nextProps.territories
+      prevProps.territories === nextProps.territories &&
+      prevProps.gameFinished === nextProps.gameFinished &&
+      prevProps.variant === nextProps.variant
     )
   },
 )
