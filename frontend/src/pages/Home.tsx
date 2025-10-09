@@ -18,20 +18,23 @@ const Home: React.FC = () => {
   const features: Feature[] = [
     {
       icon: '⚔️',
-      title: 'Strategic Battles',
-      description: 'Authentic dice mechanics with tactical combat',
+      title: 'Authoritative Warfare',
+      description:
+        'Server-enforced dice rolls, combat logs, and anti-cheese guardrails keep every invasion legit.',
       status: 'available',
     },
     {
       icon: '🎨',
-      title: 'Map Editor',
-      description: 'Design custom battlefields with advanced tools',
+      title: 'War Forge',
+      description:
+        'Build and publish worlds with the same tooling our map moderators wield—bonuses, adjacencies, the whole arsenal.',
       status: 'available',
     },
     {
       icon: '👥',
-      title: 'Massive Multiplayer Wars',
-      description: 'Epic battles with up to 12 conquerors',
+      title: '12-Player Chaos',
+      description:
+        'Party up with alliances, betrayals, and simultaneous screams as sockets synchronize every move.',
       status: 'available',
     },
   ]
@@ -46,24 +49,24 @@ const Home: React.FC = () => {
   const gameExperiences: GameExperience[] = [
     {
       icon: '🛡️',
-      title: 'Casual & Ranked War Rooms',
+      title: 'Ranked War Rooms',
       description:
-        'Jump into real-time matches with ready-checks, lifecycle enforcement, and authoritative battle history.',
-      meta: 'Powered by live delta streaming',
+        'Ready-check, deploy, and grind CP on servers that document every die you throw and every territory you torch.',
+      meta: 'Live delta streaming keeps the carnage in sync',
     },
     {
       icon: '🗺️',
-      title: 'Custom Map Showdowns',
+      title: 'Custom Map Sieges',
       description:
-        'Host games on official or community maps with sector bonuses, capital rules, and team alliances.',
-      meta: 'Up to 12 commanders per battle',
+        'Spin up lobbies on official rotations or community fever dreams with capital rules, alliances, and fog of war toggles.',
+      meta: 'Up to 12 commanders per battlefield',
     },
     {
       icon: '🏗️',
-      title: 'Creator Playground',
+      title: 'Creator Foundry',
       description:
-        'Design, iterate, and publish new arenas in the map editor—territories, sectors, and adjacencies included.',
-      meta: 'Review and approval workflow built-in',
+        'Draft, iterate, and submit new arenas with full version history, reviewer feedback, and instant staging previews.',
+      meta: 'Moderation workflow built straight into the editor',
     },
   ]
 
@@ -75,32 +78,33 @@ const Home: React.FC = () => {
 
   const highlights: Highlight[] = [
     {
-      title: 'Competitive infrastructure',
+      title: 'Battle telemetry',
       description:
-        'Every match is tracked, ranked, and backed by the same systems we use internally.',
+        'Our servers notarize every die, treaty, and betrayal so post-game tribunals can replay the carnage frame-by-frame.',
       bullets: [
-        'Authoritative game archival captures every dice roll and territory swing.',
-        'CP ladders, win streaks, and performance stats update the moment a battle ends.',
-        'Lifecycle engine enforces lobby → active → completed states with ready-checks.',
+        'Authoritative archives track territory swings, card cash-ins, and bonus math in real time.',
+        'Rank ladders recalculate CP, streaks, and hidden MMR the moment the final stronghold falls.',
+        'Lifecycle enforcement keeps lobbies honest from ready-check to victory parade.',
       ],
     },
     {
-      title: 'Creator tools that scale',
+      title: 'Creator logistics',
       description:
-        'Build worlds with the same workflows moderators use to review and ship official maps.',
+        'Moderated pipelines let you prototype a continent in the morning and ship it to the rotation before dinner.',
       bullets: [
-        'Advanced editor manages territories, sectors, bonuses, and adjacency in one place.',
-        'Versioned drafts flow through review queues before they reach the live rotation.',
-        'Automated asset lifecycle keeps staging buckets tidy as maps evolve.',
+        'Visual editor wrangles territories, sectors, and adjacency matrices without touching JSON.',
+        'Review queues capture inline feedback, approvals, and rejection reasons automatically.',
+        'Asset lifecycle sweeps staging buckets so your CDN only serves fresh propaganda.',
       ],
     },
     {
-      title: 'Player-first experience',
-      description: 'Stay connected from the moment a lobby opens to the final domination screen.',
+      title: 'Commander quality of life',
+      description:
+        'Stay locked in with alerts, comms, and accessibility tuned for war councils and night-owls alike.',
       bullets: [
-        'Turn notifications and push alerts keep your army ready to strike.',
-        'In-game chat, DMs, and moderation tools respect authenticated identities.',
-        'Theme system, audio cues, and accessibility presets keep the board readable for every commander.',
+        'Push notifications, turn pings, and ready-check reminders prevent AFK disasters.',
+        'Chat, clans, and reporting tools tie every message to an authenticated identity.',
+        'Theme presets, audio cues, and contrast-friendly overlays keep fog-of-war legible.',
       ],
     },
   ]
@@ -118,25 +122,25 @@ const Home: React.FC = () => {
       title: 'Live multiplayer core',
       status: 'complete',
       description:
-        'Real-time delta streaming, lifecycle enforcement, and battle archival now power every match.',
+        'Sockets stream deltas in milliseconds while lifecycle rules boot deserters and archive the aftermath.',
     },
     {
       title: 'Map authoring security',
       status: 'in-progress',
       description:
-        'Locking down collaborator permissions and approvals to protect community-created maps.',
+        'Role-based locks, audit trails, and collaborator approvals are hardening the community map pipeline.',
     },
     {
       title: 'Creator notifications',
       status: 'in-progress',
       description:
-        'Rolling out push + socket alerts so reviewers and authors get updates the moment decisions land.',
+        'Push alerts and socket toasts are rolling out so reviewers and authors get verdicts instantly.',
     },
     {
       title: 'Advanced game modes',
       status: 'up-next',
       description:
-        'Assassin, Zombie Apocalypse, King of the Hill, and more once core workflows finish hardening.',
+        'Assassin contracts, Zombie Apocalypse, and King of the Hill await final balance passes before deployment.',
     },
   ]
 
@@ -163,15 +167,16 @@ const Home: React.FC = () => {
         <div className="relative container mx-auto px-6 max-w-6xl flex flex-col items-center">
           {/* Standardized Hero Title */}
           <h1 className="mt-2 text-[clamp(2rem,3.8vw,3.5rem)] font-bold leading-tight text-white text-center">
-            Strategic Warfare{' '}
+            Welcome to the{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-violet-400">
-              Redefined
+              Galactic War Council
             </span>
           </h1>
 
           {/* Tighter Value Proposition */}
-          <p className="mt-3 mx-auto max-w-[42ch] text-white/80 text-center text-lg md:text-xl">
-            Command armies. Conquer territories. Dominate the battlefield.
+          <p className="mt-3 mx-auto max-w-[52ch] text-white/80 text-center text-lg md:text-xl">
+            Draft orders, break treaties, and steamroll the map—ConquestK tracks every glorious{' '}
+            betrayal for history.
           </p>
 
           {/* Clearer Primary Action */}
@@ -179,19 +184,19 @@ const Home: React.FC = () => {
             {isAuthenticated ? (
               <>
                 <Link to="/lobby" className="btn-primary btn-lg">
-                  ⚡ Start Playing →
+                  ⚡ Deploy Troops →
                 </Link>
                 <Link to="/map-editor" className="btn-secondary btn-lg">
-                  Map Editor
+                  Forge a Map
                 </Link>
               </>
             ) : (
               <>
                 <Link to="/register" className="btn-primary btn-lg">
-                  Join the War →
+                  Enlist Today →
                 </Link>
                 <Link to="/login" className="btn-secondary btn-lg">
-                  Login
+                  Veteran Login
                 </Link>
               </>
             )}
@@ -228,7 +233,7 @@ const Home: React.FC = () => {
                 </span>
               </h2>
               <p className="text-xl text-muted max-w-2xl mx-auto">
-                Deploy armies • Capture territories • Achieve total domination
+                Deploy armies • Capture capitals • Trigger global domination alerts
               </p>
             </div>
           </div>
@@ -240,7 +245,7 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">
-              <span className="text-white">Core Features</span>
+              <span className="text-white">Battlefield Systems</span>
             </h2>
           </div>
 
@@ -279,8 +284,8 @@ const Home: React.FC = () => {
               <span className="text-white">Play your way</span>
             </h2>
             <p className="text-muted text-sm">
-              Whether you are climbing the ladder or hosting private wars, ConquestK has a room for
-              you.
+              Ladder sweat, casual treaties, or clan scrims—we have a lobby ready for every flavor
+              of conquest.
             </p>
           </div>
 
@@ -318,8 +323,8 @@ const Home: React.FC = () => {
               <span className="text-white">Why commanders stay</span>
             </h2>
             <p className="text-muted text-sm">
-              The platform is engineered for competitive clarity, creator freedom, and reliable
-              operations.
+              Built for commanders who crave receipts, tools, and uptime when the invasion clock
+              hits zero.
             </p>
           </div>
 
@@ -358,8 +363,7 @@ const Home: React.FC = () => {
               <span className="text-white">Roadmap snapshot</span>
             </h2>
             <p className="text-muted text-sm">
-              We build in the open. Here is what just shipped, what is underway, and what is queued
-              next.
+              We broadcast the roadmap so you know what the engineering corps is weaponizing next.
             </p>
           </div>
 
@@ -392,7 +396,7 @@ const Home: React.FC = () => {
               <span className="text-white">How to Dominate</span>
             </h2>
             <p className="text-muted text-sm">
-              Master these three fundamentals to become a legendary commander
+              Master these three fundamentals to keep your troops cheering instead of mutinying.
             </p>
           </div>
 
@@ -401,9 +405,10 @@ const Home: React.FC = () => {
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 1
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Deploy Strategically</h3>
+              <h3 className="text-lg font-medium text-heading mb-2">Deploy Like a Menace</h3>
               <p className="text-muted text-sm">
-                Position forces across chokepoints and key territories
+                Stack capitals, guard borders, and leave just enough bait to lure foolish
+                counterattacks.
               </p>
             </div>
 
@@ -411,9 +416,10 @@ const Home: React.FC = () => {
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 2
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Attack & Defend</h3>
+              <h3 className="text-lg font-medium text-heading mb-2">Roll the Bones</h3>
               <p className="text-muted text-sm">
-                Time your strikes and fortify vulnerable positions
+                Blitz when the odds peak, turtle when the dice betray you, and rotate fronts before
+                the map catches fire.
               </p>
             </div>
 
@@ -421,8 +427,11 @@ const Home: React.FC = () => {
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 3
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Claim Victory</h3>
-              <p className="text-muted text-sm">Adapt your strategy and conquer the world</p>
+              <h3 className="text-lg font-medium text-heading mb-2">Broadcast Supremacy</h3>
+              <p className="text-muted text-sm">
+                Cash cards, trigger domination, and screen-cap the results before rivals spin the
+                narrative.
+              </p>
             </div>
           </div>
         </div>
@@ -432,28 +441,30 @@ const Home: React.FC = () => {
       <section className="relative z-10 section-spacing">
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="rounded-2xl border border-border bg-surface-2/60 p-8 md:p-12 text-center">
-            <h2 className="text-3xl font-bold text-white">Ready to command your next war?</h2>
+            <h2 className="text-3xl font-bold text-white">
+              Command wants to know: are you invading tonight?
+            </h2>
             <p className="mt-4 text-white/80 text-base md:text-lg">
-              The beta is live today. Rally your allies, draft a new map, or drop into matchmaking
-              and climb the ladder.
+              The live beta is online. Rally your squad, draft a fresh map, or queue solo and claim
+              the top of the CP charts.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               {isAuthenticated ? (
                 <>
                   <Link to="/lobby" className="btn-primary btn-lg w-full sm:w-auto">
-                    Resume the fight
+                    Rejoin the Front
                   </Link>
                   <Link to="/maps" className="btn-secondary btn-lg w-full sm:w-auto">
-                    Explore maps
+                    Inspect Warzones
                   </Link>
                 </>
               ) : (
                 <>
                   <Link to="/register" className="btn-primary btn-lg w-full sm:w-auto">
-                    Join ConquestK
+                    Sign the Enlistment Papers
                   </Link>
                   <Link to="/learn" className="btn-secondary btn-lg w-full sm:w-auto">
-                    Learn more
+                    Review Field Manual
                   </Link>
                 </>
               )}
