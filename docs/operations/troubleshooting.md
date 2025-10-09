@@ -164,7 +164,7 @@ cd backend && npm run migrate
 **Problem**: AFK/timeout skip does not trigger
 1. Verify Redis is running locally on `localhost:6379`. The turn timeout job uses BullMQ + Redis.
 2. Check backend logs for `QueueService not available` warnings.
-3. Confirm WorkerManager is initialized: `GET /api/queue/health` (should return `healthy`).
+3. Confirm WorkerManager is initialized: `GET /api/queues/health` (should return `healthy`). For a quick check, use `GET /api/queues/ping`.
 4. Development fallback: without Redis, the server uses a local in‑process timer to trigger timeouts. Ensure the backend process stayed alive past the expiry window.
 5. If you changed `turn_timer` mid-game, rescheduling happens on the next phase/turn transition.
 
