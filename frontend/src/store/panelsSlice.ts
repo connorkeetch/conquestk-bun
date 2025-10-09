@@ -29,7 +29,7 @@ export interface PanelsState {
 const DEFAULT_PANEL_WIDTH = 360
 const MIN_PANEL_WIDTH = 280
 const MAX_PANEL_WIDTH = 600
-const DEFAULT_DRAWER_HEIGHT = 300
+const DEFAULT_DRAWER_HEIGHT = 400 // Increased for better content visibility
 const MIN_DRAWER_HEIGHT = 200
 const MAX_DRAWER_HEIGHT_VH = 80 // percentage of viewport height
 
