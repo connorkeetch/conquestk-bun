@@ -16,6 +16,8 @@ export const createBullBoardRouter = () => {
     new BullMQAdapter(queueService.getGameActionQueue()),
     new BullMQAdapter(queueService.getCleanupQueue()),
     new BullMQAdapter(queueService.getAnalyticsQueue()),
+    new BullMQAdapter(queueService.getMaintenanceQueue()),
+    new BullMQAdapter(queueService.getMapAssetQueue()),
   ]
 
   createBullBoard({ queues: queues as unknown as readonly never[], serverAdapter })

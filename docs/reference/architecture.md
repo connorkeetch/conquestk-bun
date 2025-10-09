@@ -28,6 +28,7 @@ _Last updated: March 7, 2026_
   - `mapAssetWorker.ts` runs periodic purges of soft-deleted map art through `mapStagingService`.
   - `maintenanceWorker.ts` removes expired notifications and password reset tokens via `maintenanceService`.
 - `workerManager.ts` bootstraps the queue service, initializes every worker in parallel, and exposes health/stats APIs consumed by `/api/queues` routes and the `/api/health` probe.
+- Periodic tasks (maintenance and map asset purges) use BullMQ Job Schedulers on dedicated queues (`maintenance`, `map-assets`) with Workers handling `maintenance:prune` and `map-assets:purge` jobs. This replaces ad-hoc setInterval timers and is resilient across scaled instances.
 - `queueService` gracefully degrades when Redis is unavailable and can fall back to inline execution through `GameActionProcessor`, so gameplay remains responsive even without background workers.
 - Job idempotency helpers (`jobIdempotencyService.ts`) and metrics instrumentation (`metricsService.ts`) keep retries observable and safe.
 

@@ -1,5 +1,6 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth'
+import { requireAdmin } from '../middleware/adminAuth'
 import { type QueueStats, queueService } from '../services/queueService'
 import { handleRouteError } from '../utils/routeErrorHandler'
 import { getWorkerManagerInstance } from '../workers/workerManager'
@@ -128,13 +129,38 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 })
 
 // Queue management endpoints (admin only)
-router.post('/pause/:queueName', authenticateToken, async (req, res) => {
+const resolveQueueByParam = (name: string) => {
+  const key = name.toLowerCase()
+  if (key === 'game-actions' || key === 'gameactions' || key === 'game') {
+    return queueService.getGameActionQueue()
+  }
+  if (key === 'game-cleanup' || key === 'gamecleanup' || key === 'cleanup') {
+    return queueService.getCleanupQueue()
+  }
+  if (key === 'analytics-events' || key === 'analyticsevents' || key === 'analytics') {
+    return queueService.getAnalyticsQueue()
+  }
+  if (key === 'maintenance' || key === 'maint') {
+    return queueService.getMaintenanceQueue()
+  }
+  if (key === 'map-assets' || key === 'mapassets' || key === 'assets') {
+    return queueService.getMapAssetQueue()
+  }
+  return null
+}
+
+router.post('/pause/:queueName', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { queueName } = req.params
-    // Implementation would pause specific queue
+    const queue = resolveQueueByParam(queueName)
+    if (!queue) {
+      res.status(404).json({ success: false, error: 'Queue not found' })
+      return
+    }
+    await queue.pause()
     res.json({
       success: true,
-      message: `Queue ${queueName} paused`,
+      message: `Queue ${queue.name} paused`,
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to pause queue', 500, {
@@ -147,13 +173,18 @@ router.post('/pause/:queueName', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/resume/:queueName', authenticateToken, async (req, res) => {
+router.post('/resume/:queueName', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { queueName } = req.params
-    // Implementation would resume specific queue
+    const queue = resolveQueueByParam(queueName)
+    if (!queue) {
+      res.status(404).json({ success: false, error: 'Queue not found' })
+      return
+    }
+    await queue.resume()
     res.json({
       success: true,
-      message: `Queue ${queueName} resumed`,
+      message: `Queue ${queue.name} resumed`,
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to resume queue', 500, {
@@ -166,15 +197,31 @@ router.post('/resume/:queueName', authenticateToken, async (req, res) => {
   }
 })
 
-router.delete('/clear/:queueName', authenticateToken, async (req, res) => {
+router.delete('/clear/:queueName', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { queueName } = req.params
-    const { type = 'all' } = req.query
+    const type = String(req.query.type || 'all').toLowerCase()
+    const queue = resolveQueueByParam(queueName)
+    if (!queue) {
+      res.status(404).json({ success: false, error: 'Queue not found' })
+      return
+    }
 
-    // Implementation would clear queue jobs based on type (waiting, failed, completed, all)
+    const doClean = async (state: 'wait' | 'completed' | 'failed' | 'delayed') =>
+      queue.clean(0, 1000, state)
+
+    if (type === 'all') {
+      await Promise.all([doClean('wait'), doClean('completed'), doClean('failed'), doClean('delayed')])
+    } else if (['wait', 'completed', 'failed', 'delayed'].includes(type)) {
+      await doClean(type as 'wait' | 'completed' | 'failed' | 'delayed')
+    } else {
+      res.status(400).json({ success: false, error: 'Invalid type' })
+      return
+    }
+
     res.json({
       success: true,
-      message: `Cleared ${type} jobs from queue ${queueName}`,
+      message: `Cleared ${type} jobs from queue ${queue.name}`,
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to clear queue', 500, {

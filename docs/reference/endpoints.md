@@ -65,6 +65,13 @@ Example payload (200):
   - Lists `game-actions`, `game-cleanup`, and `analytics-events` queues.
   - Note: UI mounts after workers/queues initialize, to avoid a 404 during warm-up.
 
+Admin APIs (auth: admin)
+- Pause: `POST /api/queues/pause/:queueName`
+- Resume: `POST /api/queues/resume/:queueName`
+- Clear: `DELETE /api/queues/clear/:queueName?type=wait|failed|completed|delayed|all`
+
+Queue names accepted: `game-actions`, `game-cleanup`, `analytics-events`, `maintenance`, `map-assets`.
+
 Queue naming
 - Queue names avoid colon (`:`) characters. Dead-letter queues use a hyphen suffix: `-dead-letter` (for example, `game-actions-dead-letter`).
 
@@ -88,4 +95,3 @@ curl -sS https://risk-game-production-9935.up.railway.app/health | jq
 curl -sS http://localhost:5001/health | jq
 curl -sS http://localhost:5001/api/queues/ping | jq
 ```
-

@@ -1,4 +1,6 @@
+import { type Job, Worker } from 'bullmq'
 import { maintenanceService } from '../services/maintenanceService'
+import { queueService } from '../services/queueService'
 import { logger } from '../utils/logger'
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
@@ -35,6 +37,7 @@ function getMoveArchiveBatchSize(): number {
 
 export class MaintenanceWorker {
   private timer: NodeJS.Timeout | null = null
+  private worker: Worker | null = null
 
   async initialize(): Promise<void> {
     const intervalMs = getIntervalMs()
@@ -49,18 +52,52 @@ export class MaintenanceWorker {
       moveArchiveBatchSize,
     })
 
+    // Schedule BullMQ Job Scheduler for periodic maintenance
+    try {
+      const queue = queueService.getMaintenanceQueue()
+      await queue.upsertJobScheduler('maintenance:prune', {
+        every: intervalMs,
+      })
+      // Create a worker to process scheduled maintenance jobs
+      const Redis = (await import('ioredis')).default
+      const redis = (await import('../config/redis')).getRedisClient()
+      const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+      const connection = new Redis({
+        ...baseOpts,
+        enableReadyCheck: false,
+        lazyConnect: false,
+        maxRetriesPerRequest: null,
+        commandTimeout: undefined,
+      })
+      this.worker = new Worker(
+        queue.name,
+        async (job: Job) => {
+          if (job.name && job.name !== 'maintenance:prune') return null
+          await this.runOnce('interval')
+          return { ok: true }
+        },
+        {
+          connection,
+        },
+      )
+    } catch (e) {
+      logger.warn('Failed to initialize maintenance scheduler; falling back to setInterval', {
+        error: e instanceof Error ? e.message : e,
+      })
+      // Fallback interval
+      if (intervalMs > 0) {
+        this.timer = setInterval(() => {
+          this.runOnce('interval').catch((error) => {
+            logger.error('❌ Scheduled maintenance prune failed', { error })
+          })
+        }, intervalMs)
+      }
+    }
+
     // Run once on startup (non-blocking)
     this.runOnce('startup').catch((error) => {
       logger.error('❌ Initial maintenance prune failed', { error })
     })
-
-    if (intervalMs > 0) {
-      this.timer = setInterval(() => {
-        this.runOnce('interval').catch((error) => {
-          logger.error('❌ Scheduled maintenance prune failed', { error })
-        })
-      }, intervalMs)
-    }
 
     logger.info('✅ MaintenanceWorker initialized')
   }
@@ -96,6 +133,13 @@ export class MaintenanceWorker {
     if (this.timer) {
       clearInterval(this.timer)
       this.timer = null
+    }
+    if (this.worker) {
+      // Close worker connection gracefully
+      this.worker
+        .close()
+        .catch((e) => logger.warn('Failed to close Maintenance worker', { error: String(e) }))
+      this.worker = null
     }
   }
 }
