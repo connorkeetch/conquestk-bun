@@ -31,6 +31,7 @@ export interface ConversationMembership {
   shadowMuted: boolean
   lastReadMessageId: string | null
   lastReadAt: string | null
+  accessLevel: 'member' | 'spectator'
 }
 
 export interface ConversationMessageSummary {

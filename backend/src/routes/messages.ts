@@ -288,7 +288,9 @@ router.get(
         await markConversationRead(conversationId, req.userId)
       }
 
-      const detail = await getConversationDetail(conversationId, req.userId)
+      const detail = await getConversationDetail(conversationId, req.userId, {
+        allowSpectatorGameAccess: true,
+      })
       return res.json(detail)
     } catch (error) {
       if (error instanceof ConversationError) {
@@ -351,7 +353,9 @@ router.post('/conversations/game', authenticateToken, async (req: Request, res: 
     }
 
     const conversation = await ensureGameConversation(gameId)
-    const detail = await getConversationDetail(conversation.id, req.userId)
+    const detail = await getConversationDetail(conversation.id, req.userId, {
+      allowSpectatorGameAccess: true,
+    })
     return res.status(200).json(detail)
   } catch (error) {
     if (error instanceof ConversationError) {

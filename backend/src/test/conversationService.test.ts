@@ -333,20 +333,6 @@ describe('conversationService', () => {
       .mockResolvedValueOnce({
         rows: [
           {
-            role: 'member',
-            shadow_muted: false,
-            joined_at: joinedAt,
-            last_read_message_id: null,
-            last_read_at: null,
-            is_muted: false,
-            is_pinned: false,
-          },
-        ],
-        rowCount: 1,
-      })
-      .mockResolvedValueOnce({
-        rows: [
-          {
             id: 'conv-99',
             kind: 'group',
             title: 'Alliance',
@@ -357,6 +343,20 @@ describe('conversationService', () => {
             is_read_only: false,
             game_id: null,
             metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            role: 'member',
+            shadow_muted: false,
+            joined_at: joinedAt,
+            last_read_message_id: null,
+            last_read_at: null,
+            is_muted: false,
+            is_pinned: false,
           },
         ],
         rowCount: 1,
@@ -384,7 +384,54 @@ describe('conversationService', () => {
 
     expect(detail.conversation.id).toBe('conv-99')
     expect(detail.membership.joinedAt).toEqual(joinedAt)
+    expect(detail.membership.accessLevel).toBe('member')
     expect(detail.unreadCount).toBe(4)
+  })
+
+  it('allows spectators to view public game conversations', async () => {
+    const createdAt = new Date('2025-09-23T10:00:00Z')
+
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'conv-game',
+            kind: 'game',
+            title: null,
+            created_by: 'host-1',
+            created_at: createdAt,
+            updated_at: createdAt,
+            is_archived: false,
+            is_read_only: false,
+            game_id: 'room-1',
+            metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+      .mockResolvedValueOnce({ rows: [{ is_private: false }], rowCount: 1 })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            conversation_id: 'conv-game',
+            user_id: 'host-1',
+            role: 'owner',
+            joined_at: createdAt,
+            shadow_muted: false,
+            username: 'HostOne',
+          },
+        ],
+        rowCount: 1,
+      })
+
+    const detail = await getConversationDetail('conv-game', 'spectator-9', {
+      allowSpectatorGameAccess: true,
+    })
+
+    expect(detail.conversation.id).toBe('conv-game')
+    expect(detail.membership.accessLevel).toBe('spectator')
+    expect(detail.unreadCount).toBe(0)
   })
 
   it('summarizes unread counts by conversation', async () => {
@@ -411,6 +458,37 @@ describe('conversationService', () => {
       .mockResolvedValueOnce({
         rows: [
           {
+            id: 'conv-5',
+            kind: 'group',
+            title: 'Battle prep',
+            created_by: 'leader',
+            created_at: createdAt,
+            updated_at: createdAt,
+            is_archived: false,
+            is_read_only: false,
+            game_id: null,
+            metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            role: 'member',
+            shadow_muted: false,
+            joined_at: createdAt,
+            last_read_message_id: null,
+            last_read_at: null,
+            is_muted: false,
+            is_pinned: false,
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
             id: 'msg-123',
             conversation_id: 'conv-5',
             sender_id: 'user-5',
@@ -430,7 +508,7 @@ describe('conversationService', () => {
     await markConversationRead('conv-5', 'user-9')
 
     expect(mockQuery).toHaveBeenNthCalledWith(
-      2,
+      4,
       expect.stringContaining('UPDATE conversation_members'),
       ['conv-5', 'user-9', 'msg-123', createdAt],
     )
