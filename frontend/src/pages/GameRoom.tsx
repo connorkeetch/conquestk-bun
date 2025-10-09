@@ -34,6 +34,7 @@ const LazyPlayerProfileModal = lazyWithRetry(
 )
 const LazySettingsModal = lazyWithRetry(() => import('@/components/SettingsModal'))
 
+import { useDrawerResize } from '@/hooks/useDrawerResize'
 import { useQueryParam } from '@/hooks/useQueryParam'
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout'
 import {
@@ -46,6 +47,8 @@ import {
   selectPanels,
   selectPanelsByZone,
   setBelowMapLayout,
+  setDrawerHeight,
+  setDrawerPinned,
   setPanelZone,
   togglePin,
 } from '@/store/panelsSlice'
@@ -217,6 +220,19 @@ export default function GameRoom() {
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
   const forcedPanelZonesRef = useRef<Partial<Record<PanelId, PanelZone>>>({})
+
+  // Drawer resize hooks
+  const chatDrawerResize = useDrawerResize({
+    initialHeight: chatPanel?.drawerHeight ?? 300,
+    onResize: (height) => dispatch(setDrawerHeight({ panelId: 'chat', height })),
+    disabled: !mobileDrawerOpen,
+  })
+
+  const statsDrawerResize = useDrawerResize({
+    initialHeight: statsPanel?.drawerHeight ?? 300,
+    onResize: (height) => dispatch(setDrawerHeight({ panelId: 'player-stats', height })),
+    disabled: !statsDrawerOpen,
+  })
 
   // Prefetchers (hover/viewport intent)
   const prefetchChatPanel = useCallback(() => {
@@ -2575,8 +2591,8 @@ export default function GameRoom() {
 
       {/* Mobile FAB - REMOVED: Now integrated into footer */}
 
-      {/* Drawer backdrop (chat) */}
-      {currentGame && chatPanel?.zone === 'drawer' && (
+      {/* Drawer backdrop (chat) - hidden when pinned */}
+      {currentGame && chatPanel?.zone === 'drawer' && !chatPanel.isPinned && (
         <button
           className={`fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           onClick={() => setMobileDrawerOpen(false)}
@@ -2592,41 +2608,64 @@ export default function GameRoom() {
       {currentGame && chatPanel?.zone === 'drawer' && (
         <div
           id={mobileDrawerId}
-          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 ${chatDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          style={{
+            height: mobileDrawerOpen ? `${chatDrawerResize.height}px` : undefined,
+          }}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="rounded-t-xl border border-border bg-surface-1 shadow-2xl"
+            className="h-full rounded-t-xl border border-border bg-surface-1 shadow-2xl flex flex-col"
             style={{
               paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
               paddingLeft: 'calc(env(safe-area-inset-left) + 12px)',
               paddingRight: 'calc(env(safe-area-inset-right) + 12px)',
             }}
           >
-            <div className="flex items-center justify-between px-3 pt-2">
-              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30" />
-            </div>
+            {/* Resize handle */}
+            <hr
+              {...chatDrawerResize.resizeHandleProps}
+              className={`px-3 pt-2 h-6 border-0 cursor-ns-resize select-none ${chatDrawerResize.isDragging ? 'bg-[color:var(--color-accent)]/20' : 'hover:bg-[color:var(--surface-2)]'} transition-colors`}
+              title="Drag to resize"
+              aria-label="Resize drawer"
+              aria-orientation="horizontal"
+              tabIndex={0}
+              aria-valuenow={Number.isFinite(chatDrawerResize.height) ? chatDrawerResize.height : 0}
+            />
             <div className="flex items-center justify-between px-3 pb-2">
-              {layout.isDesktopOrLarger && (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => dispatch(togglePin('chat'))}
-                  title="Pin to room"
+                  className={`btn btn-ghost btn-sm ${chatPanel.isPinned ? 'text-[color:var(--color-accent)]' : ''}`}
+                  onClick={() =>
+                    dispatch(setDrawerPinned({ panelId: 'chat', isPinned: !chatPanel.isPinned }))
+                  }
+                  title={chatPanel.isPinned ? 'Unpin drawer' : 'Pin drawer open'}
+                  aria-pressed={chatPanel.isPinned}
                 >
-                  📌 Pin
+                  {chatPanel.isPinned ? '📌' : '📍'} {chatPanel.isPinned ? 'Pinned' : 'Pin'}
                 </button>
-              )}
+                {layout.isDesktopOrLarger && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => dispatch(togglePin('chat'))}
+                    title="Move to sidebar"
+                  >
+                    ⬆️ Sidebar
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
-                className="btn btn-ghost btn-sm ml-auto"
+                className="btn btn-ghost btn-sm"
                 onClick={() => setMobileDrawerOpen(false)}
               >
                 Close
               </button>
             </div>
-            <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-3">
               {roomId && user ? (
                 shouldHydrateChat ? (
                   <Suspense
@@ -2658,8 +2697,8 @@ export default function GameRoom() {
         </div>
       )}
 
-      {/* Drawer backdrop (stats) */}
-      {currentGame && statsPanel?.zone === 'drawer' && (
+      {/* Drawer backdrop (stats) - hidden when pinned */}
+      {currentGame && statsPanel?.zone === 'drawer' && !statsPanel.isPinned && (
         <button
           className={`fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] ${statsDrawerOpen ? 'block' : 'hidden'}`}
           onClick={() => setStatsDrawerOpen(false)}
@@ -2675,32 +2714,58 @@ export default function GameRoom() {
       {currentGame && statsPanel?.zone === 'drawer' && (
         <div
           id={statsDrawerId}
-          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 left-0 right-0 md:left-4 md:right-auto md:max-w-md lg:max-w-lg xl:max-w-xl z-50 ${statsDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          style={{
+            height: statsDrawerOpen ? `${statsDrawerResize.height}px` : undefined,
+          }}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="rounded-t-xl border border-border bg-surface-1 shadow-2xl"
+            className="h-full rounded-t-xl border border-border bg-surface-1 shadow-2xl flex flex-col"
             style={{
               paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
               paddingLeft: 'calc(env(safe-area-inset-left) + 12px)',
               paddingRight: 'calc(env(safe-area-inset-right) + 12px)',
             }}
           >
-            <div className="flex items-center justify-between px-3 pt-2">
-              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30" />
-            </div>
+            {/* Resize handle */}
+            <hr
+              {...statsDrawerResize.resizeHandleProps}
+              className={`px-3 pt-2 h-6 border-0 cursor-ns-resize select-none ${statsDrawerResize.isDragging ? 'bg-[color:var(--color-accent)]/20' : 'hover:bg-[color:var(--surface-2)]'} transition-colors`}
+              title="Drag to resize"
+              aria-label="Resize drawer"
+              aria-orientation="horizontal"
+              tabIndex={0}
+              aria-valuenow={
+                Number.isFinite(statsDrawerResize.height) ? statsDrawerResize.height : 0
+              }
+            />
             <div className="flex items-center justify-between px-3 pb-2">
               <div className="font-medium">Player Stats</div>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className={`btn btn-ghost btn-sm ${statsPanel.isPinned ? 'text-[color:var(--color-accent)]' : ''}`}
+                  onClick={() =>
+                    dispatch(
+                      setDrawerPinned({ panelId: 'player-stats', isPinned: !statsPanel.isPinned }),
+                    )
+                  }
+                  title={statsPanel.isPinned ? 'Unpin drawer' : 'Pin drawer open'}
+                  aria-pressed={statsPanel.isPinned}
+                >
+                  {statsPanel.isPinned ? '📌' : '📍'}
+                  {statsPanel.isPinned ? 'Pinned' : 'Pin'}
+                </button>
                 {layout.isDesktopOrLarger && (
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={() => dispatch(togglePin('player-stats'))}
-                    title="Pin to room"
+                    title="Move to sidebar"
                   >
-                    📌 Pin
+                    ⬆️ Sidebar
                   </button>
                 )}
                 <button
@@ -2712,7 +2777,7 @@ export default function GameRoom() {
                 </button>
               </div>
             </div>
-            <div className="max-h-[60vh] overflow-y-auto px-2 pb-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-3">
               <Suspense
                 fallback={
                   <div className="panel p-0 overflow-hidden">
@@ -2772,6 +2837,8 @@ export default function GameRoom() {
           onLayoutClick={() => setIsEditingLayout((v) => !v)}
           isMobileDrawerOpen={mobileDrawerOpen}
           isEditingLayout={isEditingLayout}
+          isChatPinned={chatPanel?.isPinned ?? false}
+          isStatsPinned={statsPanel?.isPinned ?? false}
         />
       )}
 

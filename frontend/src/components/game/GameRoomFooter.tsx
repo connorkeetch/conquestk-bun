@@ -11,6 +11,8 @@ interface GameRoomFooterProps {
   onLayoutClick?: () => void
   isMobileDrawerOpen?: boolean
   isEditingLayout?: boolean
+  isChatPinned?: boolean
+  isStatsPinned?: boolean
   className?: string
 }
 
@@ -24,6 +26,8 @@ export default function GameRoomFooter({
   onLayoutClick,
   isMobileDrawerOpen = false,
   isEditingLayout = false,
+  isChatPinned = false,
+  isStatsPinned = false,
   className = '',
 }: GameRoomFooterProps) {
   const [isMuted, setIsMuted] = useState(() => audioService.isMutedState())
@@ -183,13 +187,22 @@ export default function GameRoomFooter({
                   onClick={onStatsClick}
                   onMouseEnter={onStatsHover}
                   onFocus={onStatsHover}
-                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all"
+                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all relative"
                   title="Player Stats"
                   aria-label="Player Stats"
                 >
                   <span className="text-lg" aria-hidden="true">
                     📊
                   </span>
+                  {isStatsPinned && (
+                    <span
+                      className="absolute -top-1 -right-1 text-xs"
+                      aria-hidden="true"
+                      title="Stats pinned"
+                    >
+                      📌
+                    </span>
+                  )}
                 </button>
               )}
 
@@ -199,7 +212,7 @@ export default function GameRoomFooter({
                 onClick={onChatClick}
                 onMouseEnter={onChatHover}
                 onFocus={onChatHover}
-                className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all ${
+                className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all relative ${
                   isMobileDrawerOpen
                     ? 'bg-primary text-white border-primary'
                     : 'bg-surface-2 border-border'
@@ -210,6 +223,15 @@ export default function GameRoomFooter({
                 <span className="text-lg" aria-hidden="true">
                   {isMobileDrawerOpen ? '✕' : '💬'}
                 </span>
+                {isChatPinned && (
+                  <span
+                    className="absolute -top-1 -right-1 text-xs"
+                    aria-hidden="true"
+                    title="Chat pinned"
+                  >
+                    📌
+                  </span>
+                )}
               </button>
               {/* Mute Button */}
               <button
