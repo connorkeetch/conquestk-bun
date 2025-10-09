@@ -1094,13 +1094,16 @@ export default function GameRoom() {
             const latestRoom = latestState.room.currentRoom
             const MAX_RETRIES = 10
 
-            // Only retry for 'initializing' status - active/paused rooms should have game state
-            if (
+            const shouldRetry =
               latestRoom &&
               latestRoom.id === roomId &&
-              latestRoom.status === 'initializing' &&
-              lifecycleAutoFetchRetryCountRef.current < MAX_RETRIES
-            ) {
+              (latestRoom.status === 'initializing' ||
+                latestRoom.status === 'active' ||
+                latestRoom.status === 'paused')
+
+            // Lifecycle updates may flip to "active" before the engine exposes a state snapshot,
+            // so allow retries for any in-progress lifecycle status rather than only initializing.
+            if (shouldRetry && lifecycleAutoFetchRetryCountRef.current < MAX_RETRIES) {
               lifecycleAutoFetchRetryCountRef.current++
               lifecycleAutoFetchTimeoutRef.current = window.setTimeout(attemptFetch, 750)
             } else if (lifecycleAutoFetchRetryCountRef.current >= MAX_RETRIES) {
