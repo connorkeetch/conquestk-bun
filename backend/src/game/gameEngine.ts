@@ -538,6 +538,7 @@ export class GameEngine {
     territories: Territory[],
   ): KingOfTheHillConfig {
     const territoryIds = territories.map((territory) => territory.id)
+    const territoryIdSet = new Set(territoryIds)
 
     const eligibleSource = Array.isArray((config as Record<string, unknown>)?.eligibleTerritories)
       ? ((config as Record<string, unknown>).eligibleTerritories as string[])
@@ -545,7 +546,7 @@ export class GameEngine {
 
     const eligibleSet = new Set<string>(
       (eligibleSource && eligibleSource.length > 0 ? eligibleSource : territoryIds).filter((id) =>
-        territoryIds.includes(id),
+        territoryIdSet.has(id),
       ),
     )
 
@@ -555,14 +556,16 @@ export class GameEngine {
       }
     }
 
-    const rawRotationOrder = Array.isArray(config?.rotationOrder) ? config?.rotationOrder : []
-    const rotationOrder = Array.from(
-      new Set(
-        rawRotationOrder?.filter(
-          (id): id is string => typeof id === 'string' && eligibleSet.has(id),
-        ),
-      ),
-    )
+    const rawRotationOrder = Array.isArray(config?.rotationOrder) ? config.rotationOrder : []
+    const rotationOrder: string[] = []
+    const seenRotation = new Set<string>()
+    for (const id of rawRotationOrder) {
+      if (typeof id !== 'string' || !eligibleSet.has(id) || seenRotation.has(id)) {
+        continue
+      }
+      seenRotation.add(id)
+      rotationOrder.push(id)
+    }
 
     const targetPoints = Math.max(1, Math.floor(config?.targetPoints ?? 10))
     const neutralArmies = Math.max(1, Math.floor(config?.neutralArmies ?? 8))
@@ -588,9 +591,10 @@ export class GameEngine {
     config: KingOfTheHillConfig,
   ): { current: string; queue: string[] } | null {
     const territoryIds = territories.map((territory) => territory.id)
+    const territoryIdSet = new Set(territoryIds)
     const eligiblePool =
       config.eligibleTerritoryIds && config.eligibleTerritoryIds.length > 0
-        ? config.eligibleTerritoryIds.filter((id) => territoryIds.includes(id))
+        ? config.eligibleTerritoryIds.filter((id) => territoryIdSet.has(id))
         : territoryIds
 
     if (eligiblePool.length === 0) {
@@ -598,12 +602,19 @@ export class GameEngine {
     }
 
     let rotationPool: string[]
+    const eligiblePoolSet = new Set(eligiblePool)
 
     if (config.rotationOrder && config.rotationOrder.length > 0) {
-      const uniqueOrder = config.rotationOrder.filter(
-        (id, index, arr) => arr.indexOf(id) === index && eligiblePool.includes(id),
-      )
-      const remaining = eligiblePool.filter((id) => !uniqueOrder.includes(id))
+      const uniqueOrder: string[] = []
+      const seen = new Set<string>()
+      for (const id of config.rotationOrder) {
+        if (typeof id !== 'string' || !eligiblePoolSet.has(id) || seen.has(id)) {
+          continue
+        }
+        seen.add(id)
+        uniqueOrder.push(id)
+      }
+      const remaining = eligiblePool.filter((id) => !seen.has(id))
       rotationPool = [...uniqueOrder, ...remaining]
     } else {
       rotationPool = [...eligiblePool]
@@ -788,9 +799,15 @@ export class GameEngine {
         ? state.eligibleTerritoryIds
         : gameState.board.map((territory) => territory.id)
 
-    const pool = eligibleIds
-      .filter((id) => id !== state.currentHillTerritoryId)
-      .filter((id, index, arr) => arr.indexOf(id) === index)
+    const pool: string[] = []
+    const seen = new Set<string>()
+    for (const id of eligibleIds) {
+      if (id === state.currentHillTerritoryId || seen.has(id)) {
+        continue
+      }
+      seen.add(id)
+      pool.push(id)
+    }
 
     this.shuffleArray(pool)
     return pool
@@ -1922,11 +1939,13 @@ export class GameEngine {
     const allowedTerritories = gameState.board.filter((t) =>
       this.canUseForPathfinding(t, playerId, gameState),
     )
+    const allowedTerritoryMap = new Map(allowedTerritories.map((territory) => [territory.id, territory]))
     const visited = new Set<string>()
-    const queue = [fromId]
+    const queue: string[] = [fromId]
+    let queueIndex = 0
 
-    while (queue.length > 0) {
-      const currentId = queue.shift()
+    while (queueIndex < queue.length) {
+      const currentId = queue[queueIndex++]
       if (!currentId) {
         continue
       }
@@ -1941,16 +1960,13 @@ export class GameEngine {
 
       visited.add(currentId)
 
-      const currentTerritory = allowedTerritories.find((t) => t.id === currentId)
+      const currentTerritory = allowedTerritoryMap.get(currentId)
       if (!currentTerritory) continue
 
       // Add adjacent territories that can be used for pathfinding
       for (const adjacentId of currentTerritory.adjacentTerritories) {
-        if (!visited.has(adjacentId)) {
-          const adjacentTerritory = allowedTerritories.find((t) => t.id === adjacentId)
-          if (adjacentTerritory) {
-            queue.push(adjacentId)
-          }
+        if (!visited.has(adjacentId) && allowedTerritoryMap.has(adjacentId)) {
+          queue.push(adjacentId)
         }
       }
     }
