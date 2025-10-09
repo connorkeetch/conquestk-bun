@@ -765,13 +765,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           if (isComplete && !sawGameEnd) {
             const tsEnd = new Date()
             formatted.push({ ts: tsEnd, text: 'Game finished.' })
-            const winners = game?.players?.filter((p) => !p.isEliminated) ?? []
-            if (winners.length > 0) {
-              const names = winners
-                .map((p) => playerName.get(p.id) || p.username || p.id)
-                .join(', ')
-              formatted.push({ ts: tsEnd, text: `${names} won the game.` })
-            }
           }
         } catch {
           /* ignore */
@@ -790,17 +783,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [
-    gameId,
-    redact,
-    playerName,
-    territoryName,
-    toSafeInt,
-    game?.phase,
-    game?.players,
-    room?.status,
-    playerColor,
-  ])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
 
   useEffect(() => {
     function add(text: string, ts?: Date, focusTerritories?: string[]) {
