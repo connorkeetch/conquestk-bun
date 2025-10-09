@@ -16,6 +16,8 @@ export interface PanelConfig {
   order: number // stacking order within zone
   isMinimized: boolean
   width: number // for sidebars
+  isPinned: boolean // for drawers: keep open while interacting with map
+  drawerHeight: number // for drawers: vertical height in pixels
 }
 
 export interface PanelsState {
@@ -27,6 +29,9 @@ export interface PanelsState {
 const DEFAULT_PANEL_WIDTH = 360
 const MIN_PANEL_WIDTH = 280
 const MAX_PANEL_WIDTH = 600
+const DEFAULT_DRAWER_HEIGHT = 300
+const MIN_DRAWER_HEIGHT = 200
+const MAX_DRAWER_HEIGHT_VH = 80 // percentage of viewport height
 
 function getDefaultPanels(): Record<PanelId, PanelConfig> {
   return {
@@ -36,6 +41,8 @@ function getDefaultPanels(): Record<PanelId, PanelConfig> {
       order: 0,
       isMinimized: false,
       width: DEFAULT_PANEL_WIDTH,
+      isPinned: false,
+      drawerHeight: DEFAULT_DRAWER_HEIGHT,
     },
     chat: {
       id: 'chat',
@@ -43,6 +50,8 @@ function getDefaultPanels(): Record<PanelId, PanelConfig> {
       order: 0,
       isMinimized: false,
       width: DEFAULT_PANEL_WIDTH,
+      isPinned: false,
+      drawerHeight: DEFAULT_DRAWER_HEIGHT,
     },
     'game-log': {
       id: 'game-log',
@@ -50,6 +59,8 @@ function getDefaultPanels(): Record<PanelId, PanelConfig> {
       order: 1,
       isMinimized: false,
       width: DEFAULT_PANEL_WIDTH,
+      isPinned: false,
+      drawerHeight: DEFAULT_DRAWER_HEIGHT,
     },
   }
 }
@@ -106,6 +117,8 @@ function loadPanelLayout(): {
           order: v1Panels['player-stats']?.order ?? 0,
           isMinimized: v1Panels['player-stats']?.isMinimized ?? false,
           width: v1Panels['player-stats']?.width ?? DEFAULT_PANEL_WIDTH,
+          isPinned: false,
+          drawerHeight: DEFAULT_DRAWER_HEIGHT,
         },
         chat: {
           id: 'chat',
@@ -117,6 +130,8 @@ function loadPanelLayout(): {
           order: v1Panels.chat?.order ?? 0,
           isMinimized: v1Panels.chat?.isMinimized ?? false,
           width: v1Panels.chat?.width ?? DEFAULT_PANEL_WIDTH,
+          isPinned: false,
+          drawerHeight: DEFAULT_DRAWER_HEIGHT,
         },
         'game-log': {
           id: 'game-log',
@@ -128,6 +143,8 @@ function loadPanelLayout(): {
           order: v1Panels['game-log']?.order ?? 1,
           isMinimized: v1Panels['game-log']?.isMinimized ?? false,
           width: v1Panels['game-log']?.width ?? DEFAULT_PANEL_WIDTH,
+          isPinned: false,
+          drawerHeight: DEFAULT_DRAWER_HEIGHT,
         },
       }
 
@@ -205,6 +222,24 @@ const panelsSlice = createSlice({
       }
     },
 
+    setDrawerHeight(state, action: PayloadAction<{ panelId: PanelId; height: number }>) {
+      const panel = state.panels[action.payload.panelId]
+      if (panel && panel.zone === 'drawer') {
+        // Clamp height to min/max bounds
+        const maxHeight = (window.innerHeight * MAX_DRAWER_HEIGHT_VH) / 100
+        panel.drawerHeight = Math.max(MIN_DRAWER_HEIGHT, Math.min(maxHeight, action.payload.height))
+        savePanelLayout(state)
+      }
+    },
+
+    setDrawerPinned(state, action: PayloadAction<{ panelId: PanelId; isPinned: boolean }>) {
+      const panel = state.panels[action.payload.panelId]
+      if (panel && panel.zone === 'drawer') {
+        panel.isPinned = action.payload.isPinned
+        savePanelLayout(state)
+      }
+    },
+
     // Set the zone and optional order
     setPanelZone(
       state,
@@ -266,6 +301,8 @@ export const {
   togglePin,
   toggleMinimize,
   resizePanel,
+  setDrawerHeight,
+  setDrawerPinned,
   setPanelZone,
   setPanelOrder,
   setBelowMapLayout,
@@ -289,4 +326,11 @@ export const selectBelowMapLayout = (state: RootState) => state.panels.belowMapL
 export default panelsSlice.reducer
 
 // Export constants for use in components
-export { MIN_PANEL_WIDTH, MAX_PANEL_WIDTH, DEFAULT_PANEL_WIDTH }
+export {
+  MIN_PANEL_WIDTH,
+  MAX_PANEL_WIDTH,
+  DEFAULT_PANEL_WIDTH,
+  MIN_DRAWER_HEIGHT,
+  MAX_DRAWER_HEIGHT_VH,
+  DEFAULT_DRAWER_HEIGHT,
+}
