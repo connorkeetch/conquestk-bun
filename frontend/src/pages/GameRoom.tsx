@@ -98,7 +98,7 @@ import { setCurrentRoom } from '../store/roomSlice'
 import { addClientLog, hydrateFromStorage, setDice } from '../store/uiRoomSlice'
 import type { AIDifficulty, PlayerColor } from '../types/game'
 // import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
-import { hostDisplay, seatUsage, formatStatus } from '../utils/lobby'
+import { formatStatus, hostDisplay, seatUsage } from '../utils/lobby'
 
 const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
   recruit: 'Recruit',
@@ -1491,8 +1491,6 @@ export default function GameRoom() {
                         return 'text-yellow-400 font-medium'
                       case 'paused':
                         return 'text-orange-300 font-medium'
-                      case 'completed':
-                      case 'abandoned':
                       default:
                         return 'text-muted font-medium'
                     }
