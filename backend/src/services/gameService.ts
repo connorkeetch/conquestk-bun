@@ -1593,7 +1593,7 @@ export class GameService {
     const reinforcementArmies = this.gameEngine.calculateBaseReinforcementArmies(state, userId)
     const territoryCount = state.board.filter((t) => t.ownerId === userId).length
     let logged = false
-    let appendedEntry: TurnLogEntry | null = null
+    let _appendedEntry: TurnLogEntry | null = null
     await transaction(async (client) => {
       const existing = await client.query<{ game_log: GameLogEntry[] | null }>(
         'SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE',
@@ -1636,20 +1636,8 @@ export class GameService {
         [roomId, JSON.stringify(updated)],
       )
       logged = true
-      appendedEntry = entry
+      _appendedEntry = entry
     })
-
-    if (logged && appendedEntry) {
-      try {
-        await queueService.addAnalyticsEvent?.({
-          event: 'append_log',
-          gameId: roomId,
-          data: [appendedEntry],
-        })
-      } catch {
-        // analytics queue is best-effort; ignore failures here
-      }
-    }
 
     return { logged, reinforcementArmies, turnNumber }
   }
@@ -2547,6 +2535,7 @@ export class GameService {
     const archiveTimestamp = new Date()
 
     let finalRatingChanges: RatingChange[] = []
+    let isRankedGame = false
     const persisted = await transaction<boolean>(async (client) => {
       const existingResult = await client.query<{ room_id: string }>(
         'SELECT room_id FROM game_results WHERE room_id = $1',
@@ -2561,13 +2550,18 @@ export class GameService {
         map_id: string | null
         started_at: Date | null
         ended_at: Date | null
-      }>('SELECT map_id, started_at, ended_at FROM game_rooms WHERE id = $1 FOR UPDATE', [gameId])
+        is_ranked: boolean
+      }>(
+        'SELECT map_id, started_at, ended_at, is_ranked FROM game_rooms WHERE id = $1 FOR UPDATE',
+        [gameId],
+      )
 
       if ((roomResult.rowCount ?? 0) === 0) {
         throw new Error('Game room not found during archival')
       }
 
       const room = roomResult.rows[0]
+      isRankedGame = Boolean(room.is_ranked)
       const startedAt = room.started_at ? new Date(room.started_at) : null
       const durationSeconds =
         startedAt !== null
@@ -2795,6 +2789,28 @@ export class GameService {
       logger.info('Archived completed game', {
         gameId,
         winnerId: winner?.userId ?? null,
+      })
+    }
+
+    // Emit rating updates to room subscribers for ranked games
+    try {
+      if (isRankedGame && finalRatingChanges && finalRatingChanges.length > 0) {
+        const io = tryGetSocketServer()
+        if (io) {
+          io.to(`game:${gameId}`).emit('ratingUpdate', {
+            changes: finalRatingChanges.map((c) => ({
+              userId: c.userId,
+              oldRating: c.oldRating,
+              newRating: c.newRating,
+              change: c.change,
+            })),
+          })
+        }
+      }
+    } catch (e) {
+      logger.warn('Failed to emit ratingUpdate socket event', {
+        gameId,
+        error: e instanceof Error ? e.message : e,
       })
     }
 

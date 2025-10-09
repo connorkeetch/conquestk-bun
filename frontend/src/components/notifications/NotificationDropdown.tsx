@@ -1,6 +1,7 @@
 import { Bell, MessageSquare } from 'lucide-react'
 import { type RefObject, useEffect, useRef, useState } from 'react'
 import { notificationService } from '@/services/notificationService'
+import { ratingChangeModalService } from '@/services/ratingChangeModalService'
 import type { Notification } from '@/types/notification'
 
 interface NotificationDropdownProps {
@@ -67,6 +68,22 @@ export default function NotificationDropdown({
 
   const handleNotificationClick = (n: Notification) => {
     notificationService.markAsRead(n.id)
+    if (n.type === 'rank_update') {
+      const meta = (n.metadata ?? {}) as Record<string, unknown>
+      const change = Number(meta.change)
+      if (Number.isFinite(change)) {
+        ratingChangeModalService.open({
+          change: Math.trunc(change as number),
+          oldRating: typeof meta.oldRating === 'number' ? (meta.oldRating as number) : undefined,
+          newRating: typeof meta.newRating === 'number' ? (meta.newRating as number) : undefined,
+          oldRank: typeof meta.oldRank === 'string' ? (meta.oldRank as string) : undefined,
+          newRank: typeof meta.newRank === 'string' ? (meta.newRank as string) : undefined,
+        })
+      }
+      // Auto-close the dropdown when opening the rating change overlay
+      onClose()
+      return
+    }
     if (n.actionUrl) {
       window.location.href = n.actionUrl
     }

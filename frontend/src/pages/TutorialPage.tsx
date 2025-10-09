@@ -75,9 +75,9 @@ const RANKING_TRACK = [
     example: 'Attila the Hun',
   },
   {
-    key: 'APOCALYPSE',
+    key: 'WORLDBREAKER',
     icon: '☄️',
-    label: 'Apocalypse',
+    label: 'Worldbreaker',
     description: 'Walking extinction event and rumor mill legend.',
     example: 'Tamerlane',
   },
@@ -600,7 +600,7 @@ const TutorialPage: React.FC = () => {
                   const palette = RANK_COLORS[rank.key]
                   const range = formatRankRange(palette.minElo, palette.maxElo)
                   const style =
-                    rank.key === 'APOCALYPSE'
+                    rank.key === 'WORLDBREAKER'
                       ? {
                           background: palette.base,
                           backgroundClip: 'text',

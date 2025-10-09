@@ -89,7 +89,10 @@ export class GameActionWorker {
     this.queue.on('failed', (job, error) => {
       logger.error('❌ Game action job failed', {
         jobId: job.id,
-        error,
+        error:
+          error instanceof Error
+            ? { message: error.message, name: error.name, stack: error.stack }
+            : String(error),
       })
     })
 
@@ -557,6 +560,25 @@ export class GameActionWorker {
                 last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
                 updated.version,
               )
+              // Attach concise territory updates so clients immediately reflect armies/ownership
+              // biome-ignore lint/suspicious/noExplicitAny: extending delta payload for client convenience
+              ;(battleDelta as any).changes = [
+                DeltaBuilder.territoryUpdate(
+                  gameId,
+                  last.fromTerritory.id,
+                  { armies: last.fromTerritory.armies },
+                  updated.version,
+                ),
+                DeltaBuilder.territoryUpdate(
+                  gameId,
+                  last.toTerritory.id,
+                  {
+                    armies: last.toTerritory.armies,
+                    ownerId: last.toTerritory.ownerId ?? undefined,
+                  },
+                  updated.version,
+                ),
+              ]
               const { emitFogFilteredDelta } = await import('../services/fogService')
               await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
             } catch (e) {
@@ -748,7 +770,10 @@ export class GameActionWorker {
         gameId,
         playerId,
         actionType: action.type,
-        error,
+        error:
+          error instanceof Error
+            ? { message: error.message, name: error.name, stack: error.stack }
+            : String(error),
       })
 
       // Emit error to specific socket if available

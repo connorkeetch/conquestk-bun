@@ -15,6 +15,7 @@ import type {
 } from '@shared/types'
 import { toast } from 'react-hot-toast'
 import { io, type Socket } from 'socket.io-client'
+import { getConquestRank } from '@/components/RankInsignia'
 import { store } from '../store'
 import {
   applyDelta,
@@ -554,6 +555,40 @@ class SocketService {
         }
       } catch {
         // best-effort notification/audio
+      }
+    })
+
+    // Rating updates (rank changes -> notifications)
+    this.socket.on('ratingUpdate', (data) => {
+      try {
+        const currentUserId = store.getState().auth.user?.id
+        if (!currentUserId) return
+        const changes = Array.isArray(data?.changes) ? data.changes : []
+        const mine = changes.find((c) => c.userId === currentUserId)
+        if (!mine) return
+        const oldRank = getConquestRank(mine.oldRating)
+        const newRank = getConquestRank(mine.newRating)
+        if (oldRank.name !== newRank.name) {
+          const promoted = mine.newRating > mine.oldRating
+          notificationService.addNotification({
+            type: 'rank_update',
+            title: promoted ? 'Rank Up!' : 'Rank Updated',
+            message: promoted
+              ? `Promoted to ${newRank.name} (${mine.newRating} CP)`
+              : `New rank: ${newRank.name} (${mine.newRating} CP)`,
+            read: false,
+            icon: newRank.name === 'Worldbreaker' ? '☄️' : '🏅',
+            metadata: {
+              oldRating: mine.oldRating,
+              newRating: mine.newRating,
+              change: mine.change,
+              oldRank: oldRank.name,
+              newRank: newRank.name,
+            },
+          })
+        }
+      } catch {
+        // best-effort only
       }
     })
 

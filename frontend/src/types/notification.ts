@@ -5,6 +5,7 @@ export type NotificationType =
   | 'game_ended'
   | 'friend_request'
   | 'achievement'
+  | 'rank_update'
   | 'system'
   | 'chat_message'
   | 'admin'

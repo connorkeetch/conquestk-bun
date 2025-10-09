@@ -323,6 +323,22 @@ export class GameActionProcessor {
           last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
           updated.version,
         )
+        // Attach concise territory updates so clients immediately reflect armies/ownership
+        // biome-ignore lint/suspicious/noExplicitAny: extending delta payload for client convenience
+        ;(battleDelta as any).changes = [
+          (await import('../types/deltaUpdates')).DeltaBuilder.territoryUpdate(
+            gameId,
+            last.fromTerritory.id,
+            { armies: last.fromTerritory.armies },
+            updated.version,
+          ),
+          (await import('../types/deltaUpdates')).DeltaBuilder.territoryUpdate(
+            gameId,
+            last.toTerritory.id,
+            { armies: last.toTerritory.armies, ownerId: last.toTerritory.ownerId ?? undefined },
+            updated.version,
+          ),
+        ]
         const { emitFogFilteredDelta } = await import('./fogService')
         await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
       } catch (e) {

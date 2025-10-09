@@ -5,7 +5,6 @@ import { gameService } from '@/services/gameService'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import type { GamePlayer } from '../types/game'
-import RatingChangeAnimation from './RatingChangeAnimation'
 
 const FALLBACK_PLAYER_COLOR = '#F59E0B'
 
@@ -61,10 +60,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   )
   const isCurrentUserWinner = winners.some((w) => w.id === currentUserId)
   const isCurrentUserLoser = winners.length > 0 && !isCurrentUserWinner
-  const [ratingChange, setRatingChange] = React.useState<number | null>(null)
-  const [showRatingToast, setShowRatingToast] = React.useState(false)
-  const ratingToastShownRef = React.useRef(false)
-  const activeRoomRef = React.useRef<string | undefined>(undefined)
+  // Removed local rating toast; rank change now surfaces via global notifications
   const primaryWinnerColor = useMemo(() => {
     if (!winners.length) return null
     return resolvePlayerColor(winners[0]?.color)
@@ -120,42 +116,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
     }
   }, [restoreTheme])
 
-  useEffect(() => {
-    if (!isOpen) {
-      setShowRatingToast(false)
-      activeRoomRef.current = undefined
-      return
-    }
-    if (activeRoomRef.current !== roomId) {
-      activeRoomRef.current = roomId
-      ratingToastShownRef.current = false
-      setShowRatingToast(false)
-      setRatingChange(null)
-    }
-  }, [isOpen, roomId])
-
-  const handleRatingDelta = useCallback(
-    (delta: number | null) => {
-      if (typeof delta !== 'number') return
-      if (ratingToastShownRef.current && ratingChange === delta) return
-      ratingToastShownRef.current = true
-      setRatingChange(delta)
-      setShowRatingToast(true)
-    },
-    [ratingChange],
-  )
+  // No-op: rating delta is now handled globally via socket notifications
 
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--surface-1)_8%,black)] backdrop-blur-sm px-4 py-8">
       <div className="relative w-full max-w-5xl">
-        {showRatingToast && typeof ratingChange === 'number' ? (
-          <RatingChangeAnimation
-            change={ratingChange}
-            onComplete={() => setShowRatingToast(false)}
-          />
-        ) : null}
+        {/* Rating change animation moved to a global overlay opened via notifications */}
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-surface-1 shadow-2xl">
           <div
             className="space-y-6 p-6 lg:p-8"
@@ -332,11 +300,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
             {roomId && (
               <>
-                <PlayerDebrief
-                  roomId={roomId}
-                  currentUserId={currentUserId || undefined}
-                  onRatingDelta={handleRatingDelta}
-                />
+                <PlayerDebrief roomId={roomId} currentUserId={currentUserId || undefined} />
                 <PostGameCharts roomId={roomId} className="shadow-inner" />
               </>
             )}
