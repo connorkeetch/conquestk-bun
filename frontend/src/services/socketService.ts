@@ -1045,6 +1045,7 @@ class SocketService {
             shadowMuted: false,
             lastReadMessageId: null,
             lastReadAt: null,
+            accessLevel: 'member',
           },
         }),
       )

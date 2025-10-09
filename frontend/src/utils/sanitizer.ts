@@ -141,10 +141,11 @@ export function sanitizeGameName(name: string): string {
  * @param mapData - Map configuration object
  * @returns Sanitized map data
  */
-export function sanitizeMapData<T extends MapData>(mapData: Nullable<T>): Nullable<T> {
+export function sanitizeMapData(mapData: Nullable<MapData>): Nullable<MapData> {
   if (!mapData) return mapData
 
-  const sanitized: T = { ...mapData }
+  // Start with a shallow copy so we preserve any extra fields
+  const sanitized: MapData = { ...mapData }
 
   // Sanitize string fields
   if (sanitized.name) sanitized.name = sanitizeText(sanitized.name)
@@ -173,14 +174,14 @@ export function sanitizeMapData<T extends MapData>(mapData: Nullable<T>): Nullab
       }
 
       return sanitizedTerritory
-    }) as T['territories']
+    })
   }
 
   // Sanitize tags
   if (Array.isArray(sanitized.tags)) {
     sanitized.tags = sanitized.tags
       .filter((tag): tag is string => typeof tag === 'string')
-      .map((tag) => sanitizeText(tag)) as T['tags']
+      .map((tag) => sanitizeText(tag))
   }
 
   return sanitized

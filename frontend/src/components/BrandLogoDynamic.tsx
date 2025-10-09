@@ -30,7 +30,6 @@ export default function BrandLogoDynamic({
   const w = width
   const h = height
   const titleId = React.useId()
-  const _glowId = React.useId()
 
   return (
     <svg
