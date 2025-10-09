@@ -151,28 +151,24 @@ export function sanitizeMapData<T extends MapData>(mapData: Nullable<T>): Nullab
   if (sanitized.description) sanitized.description = sanitizeText(sanitized.description)
   if (sanitized.creator) sanitized.creator = sanitizeText(sanitized.creator)
 
-  // Sanitize territory names
+  // Sanitize territory names and sector/continent fields
+  // Note: 'sector' is the canonical field; 'continent' is a legacy fallback
   if (Array.isArray(sanitized.territories)) {
     sanitized.territories = sanitized.territories.map((territory) => {
-      const originalSector = (territory as unknown as { sector?: unknown }).sector
-      const originalContinent = (territory as unknown as { continent?: unknown }).continent
-
-      const sanitizedSector =
-        typeof originalSector === 'string'
-          ? sanitizeText(originalSector)
-          : typeof originalContinent === 'string'
-            ? sanitizeText(originalContinent)
-            : ''
-
       const sanitizedTerritory: MapTerritory = {
         ...territory,
         name: territory?.name ? sanitizeText(territory.name) : '',
-        sector: sanitizedSector,
       }
 
-      if (typeof originalContinent === 'string') {
-        sanitizedTerritory.continent = sanitizeText(originalContinent)
+      // Handle sector field: use sector if present, fall back to continent for legacy maps
+      const sectorValue = territory.sector || territory.continent || ''
+      sanitizedTerritory.sector = typeof sectorValue === 'string' ? sanitizeText(sectorValue) : ''
+
+      // Sanitize continent if present (preserve for backward compatibility)
+      if (typeof territory.continent === 'string') {
+        sanitizedTerritory.continent = sanitizeText(territory.continent)
       } else if ('continent' in sanitizedTerritory) {
+        // Clean up if continent was in spread but not valid
         delete sanitizedTerritory.continent
       }
 
