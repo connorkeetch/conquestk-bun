@@ -1784,7 +1784,10 @@ export async function getConversationDetail(
     }
   }
 
-  const membershipRow = access.membership!
+  if (!access.membership) {
+    throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation')
+  }
+  const membershipRow = access.membership
 
   const unreadResult = await query<{ count: number }>(
     `

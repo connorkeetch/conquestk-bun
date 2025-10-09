@@ -1365,9 +1365,9 @@ export class GameLifecycleService {
     }
 
     const gameEnded =
-      (neutralizeOutcome?.elimination.gameEnded ?? false) ||
-      (neutralizeOutcome?.state.phase === 'finished' ?? false) ||
-      (lastResult?.gameState.phase === 'finished' ?? false)
+      (neutralizeOutcome?.elimination?.gameEnded ?? false) ||
+      neutralizeOutcome?.state?.phase === 'finished' ||
+      lastResult?.gameState?.phase === 'finished'
 
     if (gameEnded) {
       try {

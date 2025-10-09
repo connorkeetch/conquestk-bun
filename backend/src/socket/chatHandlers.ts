@@ -1,9 +1,9 @@
 import type { Server, Socket } from 'socket.io'
 import {
   addMembersToConversation,
+  type ConversationDetailResult,
   ConversationError,
   type ConversationMessageRecord,
-  type ConversationDetailResult,
   type ConversationWithMembers,
   createGroupConversation,
   ensureDirectConversation,

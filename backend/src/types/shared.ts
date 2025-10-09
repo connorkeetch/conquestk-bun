@@ -353,6 +353,7 @@ export interface ClientToServerEvents {
   }) => void
   undoFortify: (data: { roomId: string }) => void
   endTurn: (data: { roomId: string }) => void
+  'turn:begin': (data: { roomId: string }) => void
   goBackToReinforcement: (data: { roomId: string }) => void
   'host:replacement': (data: {
     roomId: string
