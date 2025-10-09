@@ -99,6 +99,12 @@ export interface QueueStats {
     failedAt: string
   }
   warnings: string[]
+  events?: {
+    completed: number
+    failed: number
+    stalled: number
+  }
+  eventsSince?: string
 }
 
 type QueueHealthDisabled = {
@@ -126,6 +132,9 @@ export class QueueService {
   private deadLetterQueues: Map<string, Queue> = new Map()
   private queueDisplayNames: Map<string, string> = new Map()
   private queueEvents: Map<string, QueueEvents> = new Map()
+  private queueEventCounters: Map<string, { completed: number; failed: number; stalled: number }> =
+    new Map()
+  private eventCountersSince: string | null = null
   private queueErrorState: Map<
     string,
     {
@@ -161,7 +170,7 @@ export class QueueService {
       const {
         // Strip commandTimeout so BullMQ's blocking commands don't trigger false timeouts
         commandTimeout: _ignoredCommandTimeout,
-        ...redisClientOptions
+        ..._redisClientOptions
       } = redisClient.options as RedisOptions
 
       const bullPrefix = process.env.BULL_PREFIX?.trim() || 'bull'
@@ -176,7 +185,7 @@ export class QueueService {
                 removeOnComplete: { age: 600, count: 100 }, // 10 minutes or last 100
                 removeOnFail: { age: 3600, count: 50 }, // 1 hour or last 50
                 attempts: 3,
-                backoff: { type: 'exponential', delay: 2000, }
+                backoff: { type: 'exponential', delay: 2000 },
               }
             : {
                 removeOnComplete: 10,
@@ -227,6 +236,7 @@ export class QueueService {
       }
 
       this.isInitialized = true
+      this.eventCountersSince = new Date().toISOString()
       logger.info('✅ QueueService initialized successfully')
     } catch (error) {
       logger.error('❌ Failed to initialize QueueService:', error)
@@ -377,6 +387,27 @@ export class QueueService {
     }
   }
 
+  // Bulk analytics events (more efficient under load)
+  async addAnalyticsEventsBulk(
+    jobs: Array<{ event: string; gameId: string; data: unknown }>,
+  ): Promise<Array<Pick<Job, 'id' | 'name'>> | null> {
+    if (!this.redis || !this.isInitialized) return null
+    const queue = this.resolveQueue('analyticsEvents')
+    if (!queue) return null
+    try {
+      const added = await queue.addBulk(
+        jobs.map((j) => ({ name: 'analytics-event', data: j, opts: { priority: 1 } })),
+      )
+      return added.map((j) => ({ id: j.id as string, name: j.name }))
+    } catch (e) {
+      logger.warn('Failed to add analytics events in bulk', {
+        count: jobs.length,
+        error: e instanceof Error ? e.message : e,
+      })
+      return null
+    }
+  }
+
   // Queue monitoring
   async getQueueStats(): Promise<Record<string, QueueStats>> {
     const stats: Record<string, QueueStats> = {}
@@ -451,6 +482,12 @@ export class QueueService {
         warnings.push(`oldest waiting job is ${seconds}s old`)
       }
 
+      const counters = this.queueEventCounters.get(key) ?? {
+        completed: 0,
+        failed: 0,
+        stalled: 0,
+      }
+
       stats[key] = {
         waiting: Number(jobCounts.wait ?? jobCounts.waiting ?? 0),
         active: Number(jobCounts.active ?? 0),
@@ -464,6 +501,8 @@ export class QueueService {
         avgProcessingMs,
         lastFailedJob: lastFailed,
         warnings,
+        events: counters,
+        eventsSince: this.eventCountersSince ?? undefined,
       }
     }
 
