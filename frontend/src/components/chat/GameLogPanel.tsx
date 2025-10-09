@@ -569,15 +569,48 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const troops = toSafeInt(er.troops, 0)
             if (troops > 0) {
               const id = String((er.playerId as string) || '')
+              const cards = Array.isArray((er as { cards?: unknown[] }).cards)
+                ? ((er as { cards?: string[] }).cards as string[])
+                : []
+              const cardsText =
+                cards.length === 3
+                  ? ` for turning in cards ${cards[0]}, ${cards[1]}, and ${cards[2]}`
+                  : ''
               formatted.push({
                 ts,
-                text: `${name} received ${troops} troops for cashing treasures.`,
+                text: `${name} received ${troops} troops${cardsText || ' for cashing treasures.'}`,
                 rich: (
                   <>
                     <span className="font-semibold" style={{ color: playerColor.get(id) }}>
                       {name}
                     </span>{' '}
-                    received {troops} troops for cashing treasures.
+                    received {troops} troops
+                    {cardsText ? (
+                      <span className="whitespace-pre">{cardsText}</span>
+                    ) : (
+                      ' for cashing treasures.'
+                    )}
+                  </>
+                ),
+              })
+            }
+            continue
+          }
+          if (type === 'SECTOR_BONUS') {
+            const id = String((er.playerId as string) || '')
+            const name = nameOf(id) || 'Unknown'
+            const sectorName = String((er as { sectorName?: string }).sectorName || 'a sector')
+            const bonus = toSafeInt((er as { bonus?: number }).bonus, 0)
+            if (bonus > 0) {
+              formatted.push({
+                ts,
+                text: `${name} received ${bonus} troops for holding ${sectorName}.`,
+                rich: (
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                      {name}
+                    </span>{' '}
+                    received {bonus} troops for holding {sectorName}.
                   </>
                 ),
               })

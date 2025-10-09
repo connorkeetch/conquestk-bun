@@ -103,6 +103,15 @@ type GameEndLogEntry = {
   eliminatedPlayers: string[]
 }
 
+type SectorBonusLogEntry = {
+  type: 'SECTOR_BONUS'
+  timestamp: string
+  playerId: string
+  sectorId: string
+  sectorName: string
+  bonus: number
+}
+
 type FortifyLogEntry = {
   type: 'FORTIFY'
   timestamp: string
@@ -170,6 +179,7 @@ type TreasureCashLogEntry = {
   playerId: string
   troops: number
   cardCount?: number
+  cards?: string[]
 }
 
 type GameLogEntry =
@@ -185,6 +195,7 @@ type GameLogEntry =
   | EngagementSummaryLogEntry
   | RngLogEntry
   | GameEndLogEntry
+  | SectorBonusLogEntry
 
 type PlayerRankingSummary = {
   userId: string
@@ -1685,7 +1696,39 @@ export class GameService {
         turnNumber,
       }
 
-      const updated = [...current, entry].slice(-500)
+      // Compute sector/continent bonuses for detailed logging (non-fog breakdown aid)
+      const sectorEntries: SectorBonusLogEntry[] = (() => {
+        try {
+          const cfg = state.gameConfig
+          const bonuses =
+            cfg.continentBonuses !== undefined
+              ? cfg.continentBonuses || []
+              : cfg.sectorBonuses || []
+          if (Array.isArray(bonuses) && bonuses.length > 0) {
+            const owned = new Set(state.board.filter((t) => t.ownerId === userId).map((t) => t.id))
+            const list: SectorBonusLogEntry[] = []
+            for (const b of bonuses) {
+              const ownsAll = (b.territories || []).every((tid) => owned.has(tid))
+              if (ownsAll && typeof b.bonusArmies === 'number' && b.bonusArmies > 0) {
+                list.push({
+                  type: 'SECTOR_BONUS',
+                  timestamp: entry.timestamp,
+                  playerId: userId,
+                  sectorId: String(b.id || ''),
+                  sectorName: String(b.name || b.id || 'sector'),
+                  bonus: Math.trunc(b.bonusArmies),
+                })
+              }
+            }
+            return list
+          }
+        } catch {
+          /* ignore bonus calc errors */
+        }
+        return []
+      })()
+
+      const updated = [...current, entry, ...sectorEntries].slice(-500)
       await client.query(
         `INSERT INTO game_states (room_id, game_log, last_activity, game_phase, turn_number)
          VALUES ($1, $2, NOW(), 'lobby', 1)

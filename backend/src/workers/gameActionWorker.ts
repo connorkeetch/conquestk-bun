@@ -675,13 +675,30 @@ export class GameActionWorker {
                 : undefined
             const gained = Math.max(0, (postBank as number) - prevBank)
             if (gained > 0) {
+              // Try to derive card names from the pre-trade hand and the submitted indices
+              let cardNames: string[] | undefined
+              try {
+                const before = currentState.players.find((p) => p.id === playerId)
+                const sel = (action as { payload?: { treasureSet?: number[] } }).payload
+                  ?.treasureSet
+                if (before && Array.isArray(before.treasures) && Array.isArray(sel)) {
+                  cardNames = sel
+                    .map((idx) => Number(idx))
+                    .filter((idx) => Number.isFinite(idx))
+                    .map((idx) => (before.treasures as unknown[])[idx])
+                    .map((m) => String(m))
+                }
+              } catch {
+                /* ignore */
+              }
               await this.gameService.appendLog(gameId, [
                 {
                   type: 'TREASURE_CASH',
                   timestamp: new Date().toISOString(),
                   playerId,
                   troops: gained,
-                  // We don't know exact card names; include count when available
+                  // Include card names when derivable from submitted indices
+                  cards: cardNames && cardNames.length === 3 ? cardNames : undefined,
                   cardCount: Array.isArray(
                     (action as { payload?: { cards?: unknown[] } }).payload?.cards,
                   )
