@@ -247,8 +247,7 @@ const LobbyPage: React.FC = () => {
     >
   >({})
   const [now, setNow] = useState<number>(() => Date.now())
-  // Prevent URL<->state sync ping-pong for My Games filter
-  const syncingFilterFromUrlRef = useRef(false)
+  // Track My Games filter via URL, but only update when URL changes
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [privateGameCode, setPrivateGameCode] = useState('')
@@ -603,21 +602,12 @@ const LobbyPage: React.FC = () => {
     const raw = filterParam
     const allowed = new Set(['all', 'active', 'lobby', 'completed'])
     const next = allowed.has(raw) ? (raw as 'all' | 'active' | 'lobby' | 'completed') : 'all'
-    if (next !== myGamesFilter) {
-      // Mark that we are driving state from the URL to avoid write-back loop
-      syncingFilterFromUrlRef.current = true
-      setMyGamesFilter(next)
-    }
-  }, [activeTab, filterParam, myGamesFilter])
+    setMyGamesFilter((prev) => (prev === next ? prev : next))
+  }, [activeTab, filterParam])
 
   // Reflect state back to the URL when it changes (state -> write-only URL)
   useEffect(() => {
     if (activeTab !== 'my-games') return
-    // If we just applied filter from URL, skip writing back once
-    if (syncingFilterFromUrlRef.current) {
-      syncingFilterFromUrlRef.current = false
-      return
-    }
     const current = filterParam
     if (current !== myGamesFilter) {
       const nextParams = new URLSearchParams(window.location.search)
