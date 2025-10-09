@@ -154,16 +154,6 @@ export class QueueService {
         ...redisClientOptions
       } = redisClient.options as RedisOptions
 
-      const _baseRedisOptions: RedisOptions = {
-        ...redisClientOptions,
-        // Ensure BullMQ queue connections inherit the same resilience tuning as our main client
-        enableReadyCheck: false,
-        lazyConnect: false,
-        maxRetriesPerRequest: null,
-        // Explicitly disable per-command timeouts for BullMQ-managed connections
-        commandTimeout: undefined,
-      }
-
       // Initialize all queues using the centralized Redis connection
       for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
         const defaultJobOptions: JobsOptions = {
@@ -201,7 +191,7 @@ export class QueueService {
         try {
           await Promise.all([
             this.waitForQueueReady(queue, config.name),
-            this.waitForQueueReady(deadLetterQueue, `${config.name}:dead-letter`),
+            this.waitForQueueReady(deadLetterQueue, `${config.name}-dead-letter`),
           ])
         } catch (queueReadyError) {
           const formatted = this.formatQueueError(queueReadyError)
@@ -608,10 +598,19 @@ export class QueueService {
     // BullMQ does not emit job events on Queue directly; those are available via QueueEvents or Worker.
     // Create QueueEvents listener for failed jobs so we can implement DLQ semantics globally.
     try {
+      const Redis = (require('ioredis') as typeof import('ioredis')).default
+      const baseOpts = (this.redis?.options ?? {}) as import('ioredis').RedisOptions
+      const eventsConn = new Redis({
+        ...baseOpts,
+        enableReadyCheck: false,
+        lazyConnect: false,
+        // Critical for BullMQ blocking commands
+        maxRetriesPerRequest: null,
+        // Avoid per-command timeouts on blocking ops
+        commandTimeout: undefined,
+      })
       const events = new QueueEvents(queue.name, {
-        // Use the live Redis client instance for BullMQ events
-        connection: (this.redis ??
-          ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
+        connection: eventsConn,
       })
 
       events.on('failed', async ({ jobId, failedReason }) => {

@@ -51,9 +51,19 @@ export class AnalyticsWorker {
       },
       {
         concurrency: 5,
-        // Prefer using the Redis client instance
-        connection: ((await import('../config/redis')).getRedisClient() ??
-          ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
+        // Dedicated Redis connection for BullMQ
+        connection: (() => {
+          const Redis = (require('ioredis') as typeof import('ioredis')).default
+          const redis = (require('../config/redis') as typeof import('../config/redis')).getRedisClient()
+          const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+          return new Redis({
+            ...baseOpts,
+            enableReadyCheck: false,
+            lazyConnect: false,
+            maxRetriesPerRequest: null,
+            commandTimeout: undefined,
+          })
+        })(),
       },
     )
 
