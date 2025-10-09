@@ -1,7 +1,7 @@
 import type { Request } from 'express'
 import type { ParamsDictionary } from 'express-serve-static-core'
 import type { ParsedQs } from 'qs'
-import type { ClanMembershipContext } from './clans'
+import type { ClanMembershipContext } from './clans.js'
 
 export interface RequestUser {
   id: string

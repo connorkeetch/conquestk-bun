@@ -44,6 +44,47 @@ export default function AdminGameDetailsPage() {
 
   // Log
   const [logEntries, setLogEntries] = useState<LogEntry[]>([])
+  const logWithRounds = useMemo(() => {
+    try {
+      const snaps = (turnStats || []) as Array<{
+        turn: number
+        timestamp: string
+        players?: Array<{ eliminated?: boolean }>
+      }>
+      // Build round markers
+      const sortedSnaps = [...snaps].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      )
+      const markers: Array<{ type: 'ROUND_MARKER'; timestamp: string; round: number }> = []
+      let lastRound = 0
+      for (const s of sortedSnaps) {
+        const turn = Number.isFinite(Number(s.turn)) ? Math.max(1, Math.trunc(Number(s.turn))) : NaN
+        if (!Number.isFinite(turn)) continue
+        const playersArr = Array.isArray(s.players) ? s.players : []
+        const active = Math.max(
+          1,
+          playersArr.filter((p) => !p?.eliminated).length || playersArr.length || 1,
+        )
+        const round = Math.max(1, Math.ceil(turn / active))
+        if (round > lastRound) {
+          markers.push({ type: 'ROUND_MARKER', timestamp: s.timestamp, round })
+          lastRound = round
+        }
+      }
+      const combined = [
+        ...logEntries,
+        ...markers,
+      ] as Array<LogEntry | { type: 'ROUND_MARKER'; timestamp: string; round: number }>
+      combined.sort((a, b) => {
+        const ta = new Date(String((a as { timestamp?: string }).timestamp)).getTime()
+        const tb = new Date(String((b as { timestamp?: string }).timestamp)).getTime()
+        return ta - tb
+      })
+      return combined
+    } catch {
+      return logEntries
+    }
+  }, [logEntries, turnStats])
   // Per-player diagnostics
   const [perPlayerStats, setPerPlayerStats] = useState<
     Record<
@@ -219,10 +260,10 @@ export default function AdminGameDetailsPage() {
     void loadMoves()
   }, [activeTab, gameId, movesLimit, movesPage, moveTypeFilter, movesPlayerFilter, movesTurnFilter])
 
-  // Load turn stats on demand
+  // Load turn stats on demand (also used by Log tab for round markers)
   useEffect(() => {
     const loadStats = async () => {
-      if (!gameId || activeTab !== 'turnStats') return
+      if (!gameId || (activeTab !== 'turnStats' && activeTab !== 'log')) return
       try {
         const result = await adminService.getGameTurnStats(gameId)
         // Coerce to expected shape; backend returns loosely-typed records
@@ -770,8 +811,10 @@ export default function AdminGameDetailsPage() {
                 {logEntries.length === 0 ? (
                   <div className="text-muted">No log entries</div>
                 ) : (
-                  logEntries.map((e) => {
-                    const k = e.id || e.timestamp || JSON.stringify(e)
+                  logWithRounds.map((e) => {
+                    const k = (e as { id?: string; timestamp?: string }).id ||
+                      (e as { timestamp?: string }).timestamp ||
+                      JSON.stringify(e)
                     const type = (e as { type?: string }).type || 'UNKNOWN'
                     const ts = (e as { timestamp?: string }).timestamp
                     const when = ts ? new Date(ts).toLocaleString() : ''
@@ -781,7 +824,10 @@ export default function AdminGameDetailsPage() {
                       id ? territoryNameById[id] || id.slice(0, 8) : '—'
 
                     let summary = ''
-                    if (type === 'BATTLE') {
+                    if (type === 'ROUND_MARKER') {
+                      const r = (e as { round?: number }).round || 0
+                      summary = `${when} • Round ${r} started.`
+                    } else if (type === 'BATTLE') {
                       const aId = (e as { attackerId?: string }).attackerId
                       const dId = (e as { defenderId?: string | null }).defenderId || null
                       const aTer = (e as { attackingTerritoryId?: string }).attackingTerritoryId

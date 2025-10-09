@@ -92,7 +92,7 @@ jest.mock('../services/gameService', () => {
   }
 })
 
-import { GameActionWorker } from './gameActionWorker'
+import { GameActionWorker } from './gameActionWorker.js'
 
 describe('AI turn worker job', () => {
   beforeEach(() => {

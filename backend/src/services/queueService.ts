@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { type Job, type JobsOptions, Queue, QueueEvents } from 'bullmq'
-import type Redis from 'ioredis'
-import type { RedisOptions } from 'ioredis'
-import { getRedisClient } from '../config/redis'
-import type { GameAction } from '../types/game'
-import { logger } from '../utils/logger'
+import Redis, { type RedisOptions } from 'ioredis'
+import { getRedisClient } from '../config/redis.js'
+import type { GameAction } from '../types/game.js'
+import { logger } from '../utils/logger.js'
 
 // Note: BullMQ sampling uses getJobs on states; no extra inspection types needed.
 
@@ -678,7 +677,6 @@ export class QueueService {
     // BullMQ does not emit job events on Queue directly; those are available via QueueEvents or Worker.
     // Create QueueEvents listener for failed jobs so we can implement DLQ semantics globally.
     try {
-      const Redis = (require('ioredis') as typeof import('ioredis')).default
       const baseOpts = (this.redis?.options ?? {}) as import('ioredis').RedisOptions
       const eventsConn = new Redis({
         ...baseOpts,

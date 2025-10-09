@@ -1,5 +1,5 @@
 import type { PoolClient } from 'pg'
-import { query, transaction } from '../config/database'
+import { query, transaction } from '../config/database.js'
 import type {
   Clan,
   ClanActivityEvent,
@@ -14,9 +14,9 @@ import type {
   ClanPrivacy,
   ClanRecruitmentPolicy,
   ClanRecruitmentStatus,
-} from '../types/clans'
-import { logClanActivity } from './clanActivityService'
-import { clanProgressionService } from './clanProgressionService'
+} from '../types/clans.js'
+import { logClanActivity } from './clanActivityService.js'
+import { clanProgressionService } from './clanProgressionService.js'
 
 interface ClanRow {
   id: string

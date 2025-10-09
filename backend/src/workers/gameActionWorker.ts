@@ -1,17 +1,17 @@
 import type { GameDelta } from '@risk-game/shared/types'
 import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
-import { query } from '../config/database'
-import { acquireLock, releaseLock } from '../config/redis'
-import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService'
-import { gameStateCache } from '../services/cacheService'
-import { DeltaEmitter } from '../services/deltaEmitter'
-import { GameService } from '../services/gameService'
-import { jobIdempotencyService } from '../services/jobIdempotencyService'
-import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService'
-import { type GameActionJob, queueService } from '../services/queueService'
-import { startWorkerHeartbeat } from '../services/workerHeartbeat'
-import { DeltaBuilder } from '../types/deltaUpdates'
+import { query } from '../config/database.js'
+import { acquireLock, releaseLock } from '../config/redis.js'
+import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService.js'
+import { gameStateCache } from '../services/cacheService.js'
+import { DeltaEmitter } from '../services/deltaEmitter.js'
+import { GameService } from '../services/gameService.js'
+import { jobIdempotencyService } from '../services/jobIdempotencyService.js'
+import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService.js'
+import { type GameActionJob, queueService } from '../services/queueService.js'
+import { startWorkerHeartbeat } from '../services/workerHeartbeat.js'
+import { DeltaBuilder } from '../types/deltaUpdates.js'
 import type {
   DeployAction,
   FortifyAction,
@@ -19,9 +19,9 @@ import type {
   GamePhase,
   GameState,
   SerializedGameState,
-} from '../types/game'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
-import { logger } from '../utils/logger'
+} from '../types/game.js'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { logger } from '../utils/logger.js'
 
 interface ProcessGameActionResult {
   success: true
@@ -84,7 +84,7 @@ export class GameActionWorker {
 
     {
       const Redis = (await import('ioredis')).default
-      const redis = (await import('../config/redis')).getRedisClient()
+      const redis = (await import('../config/redis.js')).getRedisClient()
       const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
       const connection = new Redis({
         ...baseOpts,
@@ -133,7 +133,7 @@ export class GameActionWorker {
       gameId: string
       playerId: string
       turnNumber: number
-      budgetOverrides?: Partial<import('../services/aiDecisionService').DecisionBudget>
+      budgetOverrides?: Partial<import('../services/aiDecisionService.js').DecisionBudget>
     }
 
     const idKey = job.id !== undefined ? String(job.id) : `ai:${gameId}:${turnNumber}`
@@ -203,7 +203,7 @@ export class GameActionWorker {
 
       // Schedule timeout for the next player and chain AI if next is AI
       try {
-        const { GameLifecycleService } = await import('../services/gameLifecycleService')
+        const { GameLifecycleService } = await import('../services/gameLifecycleService.js')
         const lifecycle = new GameLifecycleService()
         await lifecycle.scheduleTurnTimeout(gameId)
         await lifecycle.scheduleAiTurn(gameId)
@@ -230,7 +230,7 @@ export class GameActionWorker {
   private async runAiTurnStreaming(args: {
     gameId: string
     playerId: string
-    difficulty: import('../types/game').AIDifficulty
+    difficulty: import('../types/game.js').AIDifficulty
     budget: DecisionBudget
   }): Promise<void> {
     const { gameId, playerId, difficulty, budget } = args
@@ -311,7 +311,7 @@ export class GameActionWorker {
                     last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
                     updated.version,
                   )
-                const { emitFogFilteredDelta } = await import('../services/fogService')
+                const { emitFogFilteredDelta } = await import('../services/fogService.js')
                 await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
               } catch {
                 // best-effort; clients will converge on next snapshot
@@ -360,7 +360,7 @@ export class GameActionWorker {
             const prevBank = beforeState?.players.find((p) => p.id === playerId)?.armies ?? 0
             const prevPhase = beforeState?.phase
             const updated = await this.gameService.processGameAction(
-              action as Extract<import('../types/game').GameAction, { type: 'trade_cards' }>,
+              action as Extract<import('../types/game.js').GameAction, { type: 'trade_cards' }>,
               playerId,
             )
             // Emit concise deltas
@@ -371,7 +371,7 @@ export class GameActionWorker {
                 typeof postPlayer?.mustCashInTreasures === 'boolean'
                   ? postPlayer?.mustCashInTreasures
                   : undefined
-              const { emitFogFilteredDelta } = await import('../services/fogService')
+              const { emitFogFilteredDelta } = await import('../services/fogService.js')
               const playerDelta = DeltaBuilder.playerUpdate(
                 gameId,
                 playerId,
@@ -466,8 +466,8 @@ export class GameActionWorker {
   }
 
   private computeBudgetForDifficulty(
-    difficulty: import('../types/game').AIDifficulty,
-  ): import('../services/aiDecisionService').DecisionBudget {
+    difficulty: import('../types/game.js').AIDifficulty,
+  ): import('../services/aiDecisionService.js').DecisionBudget {
     // Defaults per AI readiness decisions (Oct 2025)
     switch (difficulty) {
       case 'recruit':
@@ -543,7 +543,7 @@ export class GameActionWorker {
       // Special handling for automatic timeout progression before any validation
       if ((job.data as { turnTimeoutStage?: 'expire' }).turnTimeoutStage === 'expire') {
         try {
-          const { GameLifecycleService } = await import('../services/gameLifecycleService')
+          const { GameLifecycleService } = await import('../services/gameLifecycleService.js')
           const lifecycle = new GameLifecycleService()
           await lifecycle.handleTurnTimeout(gameId)
         } catch (e) {
@@ -617,7 +617,7 @@ export class GameActionWorker {
                   updated.version,
                 ),
               ]
-              const { emitFogFilteredDelta } = await import('../services/fogService')
+              const { emitFogFilteredDelta } = await import('../services/fogService.js')
               await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
             } catch (e) {
               logger.debug('Failed to emit fog-filtered battle delta in worker attack', {
@@ -742,7 +742,7 @@ export class GameActionWorker {
               typeof postPlayer?.mustCashInTreasures === 'boolean'
                 ? postPlayer?.mustCashInTreasures
                 : undefined
-            const { emitFogFilteredDelta } = await import('../services/fogService')
+            const { emitFogFilteredDelta } = await import('../services/fogService.js')
             const playerDelta = DeltaBuilder.playerUpdate(
               gameId,
               playerId,
@@ -809,7 +809,7 @@ export class GameActionWorker {
 
       // Broadcast delta update if needed
       if (shouldBroadcast && delta) {
-        const { emitFogFilteredDelta } = await import('../services/fogService')
+        const { emitFogFilteredDelta } = await import('../services/fogService.js')
         await emitFogFilteredDelta(this.io as unknown as Server, gameId, delta)
       }
 
@@ -953,7 +953,7 @@ export class GameActionWorker {
         toArmies: result.toArmies,
         playerId,
       }
-      const { emitFogFilteredDelta } = await import('../services/fogService')
+      const { emitFogFilteredDelta } = await import('../services/fogService.js')
       await emitFogFilteredDelta(this.io as unknown as Server, gameId, fortifyDelta)
     } catch (_e) {
       // Non-fatal: fortify summary is best-effort
@@ -968,7 +968,7 @@ export class GameActionWorker {
     const nextPlayer = await this.gameService.processEndTurn(gameId, playerId)
 
     try {
-      const { GameLifecycleService } = await import('../services/gameLifecycleService')
+      const { GameLifecycleService } = await import('../services/gameLifecycleService.js')
       const lifecycle = new GameLifecycleService()
       await lifecycle.scheduleTurnTimeout(gameId)
       // If next player is AI, schedule AI orchestrator

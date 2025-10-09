@@ -1,9 +1,9 @@
 import type { Server } from 'socket.io'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
-import { logger } from '../utils/logger'
-import { DeltaEmitter } from './deltaEmitter'
-import { GameService } from './gameService'
-import { queueService } from './queueService'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { logger } from '../utils/logger.js'
+import { DeltaEmitter } from './deltaEmitter.js'
+import { GameService } from './gameService.js'
+import { queueService } from './queueService.js'
 
 /**
  * Unified game action processor
@@ -30,7 +30,7 @@ export class GameActionProcessor {
     territoryId: string,
     armies: number,
     socketId?: string,
-  ): Promise<{ mode: 'queued' | 'inline'; result?: import('./deltaEmitter').ActionResult }> {
+  ): Promise<{ mode: 'queued' | 'inline'; result?: import('./deltaEmitter.js').ActionResult }> {
     // Try to queue the action
     const job = await queueService.addGameAction({
       gameId,
@@ -84,7 +84,7 @@ export class GameActionProcessor {
     playerId: string,
     territoryId: string,
     armies: number,
-  ): Promise<import('./deltaEmitter').ActionResult> {
+  ): Promise<import('./deltaEmitter.js').ActionResult> {
     logger.info('Processing deployment inline (no queue)', {
       gameId,
       playerId,
@@ -302,7 +302,7 @@ export class GameActionProcessor {
     // Inline fallback: process through GameService/GameEngine and emit battle result delta
     // Serialize inline path too to avoid double-apply in non-queue environments
     let lockToken: string | null = null
-    const { acquireLock, releaseLock } = await import('../config/redis')
+    const { acquireLock, releaseLock } = await import('../config/redis.js')
     const lockKey = `lock:game-actions:${gameId}`
     const startWait = Date.now()
     lockToken = await acquireLock(lockKey, 5000)
@@ -328,7 +328,7 @@ export class GameActionProcessor {
     if (last) {
       try {
         const battleDelta: import('@risk-game/shared/types').GameDelta = (
-          await import('../types/deltaUpdates')
+          await import('../types/deltaUpdates.js')
         ).DeltaBuilder.battleResult(
           gameId,
           last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
@@ -337,20 +337,20 @@ export class GameActionProcessor {
         // Attach concise territory updates so clients immediately reflect armies/ownership
         // biome-ignore lint/suspicious/noExplicitAny: extending delta payload for client convenience
         ;(battleDelta as any).changes = [
-          (await import('../types/deltaUpdates')).DeltaBuilder.territoryUpdate(
+          (await import('../types/deltaUpdates.js')).DeltaBuilder.territoryUpdate(
             gameId,
             last.fromTerritory.id,
             { armies: last.fromTerritory.armies },
             updated.version,
           ),
-          (await import('../types/deltaUpdates')).DeltaBuilder.territoryUpdate(
+          (await import('../types/deltaUpdates.js')).DeltaBuilder.territoryUpdate(
             gameId,
             last.toTerritory.id,
             { armies: last.toTerritory.armies, ownerId: last.toTerritory.ownerId ?? undefined },
             updated.version,
           ),
         ]
-        const { emitFogFilteredDelta } = await import('./fogService')
+        const { emitFogFilteredDelta } = await import('./fogService.js')
         await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
       } catch (e) {
         logger.debug('Failed to emit fog-filtered battle delta in inline attack', {

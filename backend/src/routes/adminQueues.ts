@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import { requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { queueService } from '../services/queueService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { queueService } from '../services/queueService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 
@@ -14,7 +14,7 @@ router.get('/dlq', async (req, res) => {
   try {
     const _q = String(
       req.query.queue || '',
-    ) as keyof typeof import('../services/queueService').queueService
+    ) as keyof typeof import('../services/queueService.js').queueService
     const key =
       (req.query.queue as 'gameActions' | 'gameCleanup' | 'analyticsEvents') || 'gameActions'
     const offset = Number(req.query.offset ?? 0)

@@ -1,7 +1,7 @@
 import type Redis from 'ioredis'
 import { Cluster } from 'ioredis'
-import { getRedisClient } from '../config/redis'
-import { logger } from '../utils/logger'
+import { getRedisClient } from '../config/redis.js'
+import { logger } from '../utils/logger.js'
 
 interface CacheMetrics {
   hits: number

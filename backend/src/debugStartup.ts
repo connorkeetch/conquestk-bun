@@ -1,4 +1,7 @@
-import { logger } from './utils/logger'
+import { logger } from './utils/logger.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 function isVerbose(): boolean {
   const lvl = (process.env.LOG_LEVEL || 'info').toLowerCase()
@@ -89,7 +92,7 @@ export async function testDatabaseConnection() {
 
   try {
     // Try to import and use the query function
-    const { query } = await import('./config/database')
+    const { query } = await import('./config/database.js')
 
     // Test basic connection
     logger.debug('  Testing SELECT 1...')
@@ -134,9 +137,9 @@ export async function testMigrationFiles() {
   else logger.debug('📁 Checking migration files...')
 
   try {
-    const fs = require('node:fs')
-    const path = require('node:path')
 
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
     const migrationsPath = path.join(__dirname, '../migrations')
     if (verbose) logger.info(`  Looking for migrations in: ${migrationsPath}`)
     else logger.debug(`  Looking for migrations in: ${migrationsPath}`)

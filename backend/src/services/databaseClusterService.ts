@@ -1,5 +1,5 @@
 import { Pool, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 interface DatabaseNode {
   id: string

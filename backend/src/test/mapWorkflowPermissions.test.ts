@@ -132,7 +132,7 @@ const notificationDispatcherModule = require('../services/NotificationDispatcher
   notificationDispatcher: { dispatch: jest.Mock }
 }
 
-type MapWorkflowServiceInstance = typeof import('../services/mapWorkflowService').default
+type MapWorkflowServiceInstance = typeof import('../services/mapWorkflowService.js').default
 
 const mapWorkflowServiceInstance = require('../services/mapWorkflowService')
   .default as MapWorkflowServiceInstance

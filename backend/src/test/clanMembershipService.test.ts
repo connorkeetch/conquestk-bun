@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { logClanActivity } from '../services/clanActivityService'
+import { logClanActivity } from '../services/clanActivityService.js'
 import {
   ClanMembershipServiceError,
   clanMembershipService,

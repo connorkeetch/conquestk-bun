@@ -1,5 +1,5 @@
 import type { NotificationEvent } from '@risk-game/shared/types/notifications'
-import type { PerformanceAlert } from '../performanceMonitorService'
+import type { PerformanceAlert } from '../performanceMonitorService.js'
 
 export function buildPerformanceAlertNotification(
   alert: PerformanceAlert,

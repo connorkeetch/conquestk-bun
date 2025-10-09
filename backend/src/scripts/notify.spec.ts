@@ -33,7 +33,7 @@ describe('notify CLI', () => {
     ]
 
     try {
-      const { runCli } = await import('./notify')
+      const { runCli } = await import('./notify.js')
 
       await runCli()
 

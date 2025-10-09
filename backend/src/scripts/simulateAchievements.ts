@@ -3,10 +3,10 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import { v4 as uuidv4 } from 'uuid'
-import { initDatabase, query } from '../config/database'
-import achievementService from '../services/achievementService'
-import { profileService } from '../services/profileService'
-import { logger } from '../utils/logger'
+import { initDatabase, query } from '../config/database.js'
+import achievementService from '../services/achievementService.js'
+import { profileService } from '../services/profileService.js'
+import { logger } from '../utils/logger.js'
 
 async function ensureUsers(): Promise<{ p1: { id: string }; p2: { id: string } }> {
   // Try to find player1/player2; if missing, seed them via insert

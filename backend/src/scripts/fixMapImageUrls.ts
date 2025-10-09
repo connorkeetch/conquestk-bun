@@ -1,6 +1,6 @@
 import path from 'node:path'
 import dotenv from 'dotenv'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 // Load env before importing database module
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
@@ -31,7 +31,7 @@ const parseArgs = (): Options => {
 
 async function run() {
   const opts = parseArgs()
-  const { query } = (await import('../config/database')) as typeof import('../config/database')
+  const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
 
   const endpoint = process.env.ASSET_ENDPOINT?.replace(/\/$/, '')
   const bucket = process.env.ASSET_BUCKET?.replace(/\/$/, '')

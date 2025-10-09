@@ -383,6 +383,18 @@ const gameSlice = createSlice({
             break
           }
 
+          case 'FORTIFY_RESULT': {
+            // Mark the source territory as having moved this fortify phase so the UI can reflect count/limits
+            if (state.currentGame) {
+              if (!state.currentGame.movementTracking) state.currentGame.movementTracking = {}
+              const fromId = (incoming as unknown as { fromTerritoryId?: string }).fromTerritoryId
+              if (typeof fromId === 'string' && fromId.length > 0) {
+                state.currentGame.movementTracking[fromId] = true
+              }
+            }
+            break
+          }
+
           case 'PLAYER_UPDATE': {
             const player = state.currentGame?.players.find((p) => p.id === incoming.playerId)
             if (player) {
@@ -416,6 +428,10 @@ const gameSlice = createSlice({
               state.currentGame.currentPlayer = incoming.currentPlayer
               if (incoming.turn !== undefined) {
                 state.currentGame.turn = incoming.turn
+              }
+              // Reset per-fortify movement tracking at the start of fortify (and when leaving prior turn)
+              if (incoming.phase === 'fortify' || incoming.phase === 'reinforcement') {
+                state.currentGame.movementTracking = {}
               }
             }
             if (incoming.reinforcementArmies !== undefined) {

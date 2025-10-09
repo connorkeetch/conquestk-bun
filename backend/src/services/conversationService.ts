@@ -1,13 +1,13 @@
 import type { PoolClient } from 'pg'
-import { query, transaction } from '../config/database'
-import { logger } from '../utils/logger'
+import { query, transaction } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 import {
   assertCanInviteToGroup,
   assertCanSendDirectMessage,
   assertCanStartDirectConversation,
   MessagingPolicyError,
-} from './messagingPolicyService'
-import { tryGetSocketServer } from './socketRegistry'
+} from './messagingPolicyService.js'
+import { tryGetSocketServer } from './socketRegistry.js'
 
 export const MAX_MESSAGE_LENGTH = 2000
 export const MAX_GROUP_MEMBERS = 50

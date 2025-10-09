@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import { AuthController } from '../controllers/authController'
-import { authenticateToken } from '../middleware/auth'
-import { authLimiter, loginSlowDown } from '../middleware/rateLimiter'
-import { validateAuth } from '../middleware/validation'
+import { AuthController } from '../controllers/authController.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { authLimiter, loginSlowDown } from '../middleware/rateLimiter.js'
+import { validateAuth } from '../middleware/validation.js'
 
 const router = Router()
 const authController = new AuthController()

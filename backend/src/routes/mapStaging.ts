@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
 import multer from 'multer'
-import { requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { mapStagingService } from '../services/mapStagingService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { mapStagingService } from '../services/mapStagingService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 

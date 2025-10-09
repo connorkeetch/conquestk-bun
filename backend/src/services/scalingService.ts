@@ -1,7 +1,7 @@
 import type { Worker as ClusterWorker } from 'node:cluster'
 import cluster from 'node:cluster'
 import os from 'node:os'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 interface ScalingMetrics {
   totalWorkers: number

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import notificationService from '../services/notificationService'
+import notificationService from '../services/notificationService.js'
 
 const mockQuery = jest.fn()
 

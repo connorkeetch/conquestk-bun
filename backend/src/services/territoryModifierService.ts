@@ -1,7 +1,7 @@
 import type { QueryResultRow } from 'pg'
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
-import { territoryModifierCache } from './cacheService'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
+import { territoryModifierCache } from './cacheService.js'
 
 export interface TerritoryModifierTemplate {
   id: string

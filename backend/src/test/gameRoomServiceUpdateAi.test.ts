@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { GameRoomService } from '../services/gameRoomService'
+import { GameRoomService } from '../services/gameRoomService.js'
 
 const mockQuery = jest.fn()
 const mockClientQuery = jest.fn()

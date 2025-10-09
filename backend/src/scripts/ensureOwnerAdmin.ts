@@ -1,5 +1,5 @@
-import { getPool } from '../config/database'
-import { logger } from '../utils/logger'
+import { getPool } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 /**
  * Ensures the owner (connorkeetch@gmail.com) has super admin privileges

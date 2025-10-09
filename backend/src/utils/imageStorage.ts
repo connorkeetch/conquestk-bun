@@ -1,7 +1,7 @@
 import path from 'node:path'
 import sizeOf from 'image-size'
-import { getPublicAssetUrl, uploadAsset } from './assetStorage'
-import { logger } from './logger'
+import { getPublicAssetUrl, uploadAsset } from './assetStorage.js'
+import { logger } from './logger.js'
 
 interface StoreImageOptions {
   mimeType?: string

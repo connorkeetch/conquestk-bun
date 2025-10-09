@@ -1,6 +1,6 @@
-import { initDatabase, query } from '../config/database'
-import { getErrorMessage } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import { initDatabase, query } from '../config/database.js'
+import { getErrorMessage } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
 
 async function setupProductionAdmin(email: string) {
   try {

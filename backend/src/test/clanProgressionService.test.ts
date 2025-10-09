@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { logClanActivity } from '../services/clanActivityService'
-import { clanProgressionService } from '../services/clanProgressionService'
+import { logClanActivity } from '../services/clanActivityService.js'
+import { clanProgressionService } from '../services/clanProgressionService.js'
 
 const mockQuery = jest.fn()
 const mockTransaction = jest.fn()

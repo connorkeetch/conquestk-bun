@@ -2,8 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { writeHeapSnapshot } from 'node:v8'
 
-import { getErrorMessage } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import { getErrorMessage } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
 
 const MB = 1024 * 1024
 

@@ -73,11 +73,11 @@ jest.mock('../game/mapLoader', () => ({
   loadMapForEngine: mockLoadMapForEngine,
 }))
 
-import type { ContinentBonus, GameAction, GameState, Territory } from '../types/game'
-import { gameStateCache } from './cacheService'
-import { aiDecisionService } from './aiDecisionService'
-import { aiTurnMetrics, assassinationMetrics } from './metricsService'
-import { GameService } from './gameService'
+import type { ContinentBonus, GameAction, GameState, Territory } from '../types/game.js'
+import { gameStateCache } from './cacheService.js'
+import { aiDecisionService } from './aiDecisionService.js'
+import { aiTurnMetrics, assassinationMetrics } from './metricsService.js'
+import { GameService } from './gameService.js'
 
 describe('GameService', () => {
   let gameService: GameService

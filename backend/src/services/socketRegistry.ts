@@ -1,5 +1,5 @@
 import type { Server } from 'socket.io'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 
 let ioInstance: Server<ClientToServerEvents, ServerToClientEvents> | null = null
 

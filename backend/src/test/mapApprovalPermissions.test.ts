@@ -8,7 +8,7 @@ import request from 'supertest'
 const queryMock = jest.fn()
 
 jest.mock(
-  '../config/database',
+  '../config/database.js',
   () => ({
     __esModule: true,
     query: queryMock,
@@ -20,7 +20,7 @@ jest.mock(
 )
 
 jest.mock(
-  '../middleware/auth',
+  '../middleware/auth.js',
   () => ({
     authenticateToken: (
       req: express.Request,
@@ -43,7 +43,7 @@ jest.mock(
 const logActivityMock = jest.fn()
 
 jest.mock(
-  '../middleware/adminAuth',
+  '../middleware/adminAuth.js',
   () => ({
     requireAdmin: (req: express.Request, res: express.Response, next: express.NextFunction) => {
       if (req.headers['x-test-admin'] !== 'true') {
@@ -86,7 +86,7 @@ jest.mock(
   { virtual: true },
 )
 
-jest.mock('../services/mapPermissionService', () => {
+jest.mock('../services/mapPermissionService.js', () => {
   class MapPermissionError extends Error {}
   return {
     mapPermissionService: {
@@ -98,7 +98,7 @@ jest.mock('../services/mapPermissionService', () => {
 })
 
 jest.mock(
-  '../services/mapApprovalService',
+  '../services/mapApprovalService.js',
   () => ({
     __esModule: true,
     default: {
@@ -123,12 +123,12 @@ jest.mock(
   { virtual: true },
 )
 
-const mapApprovalService = require('../services/mapApprovalService').default as {
+const mapApprovalService = require('../services/mapApprovalService.js').default as {
   getVersionHistory: jest.Mock
   getPendingApprovalRequests: jest.Mock
 }
 
-const { mapPermissionService } = require('../services/mapPermissionService') as {
+const { mapPermissionService } = require('../services/mapPermissionService.js') as {
   mapPermissionService: {
     assertCanEditMap: jest.Mock
     getMapEditorContext: jest.Mock
@@ -137,7 +137,7 @@ const { mapPermissionService } = require('../services/mapPermissionService') as 
 }
 
 jest.mock(
-  '../utils/errorHelpers',
+  '../utils/errorHelpers.js',
   () => ({
     __esModule: true,
     getErrorMessage: jest.fn((error: unknown) =>
@@ -151,7 +151,7 @@ const createApp = () => {
   const app = express()
   app.use(express.json())
 
-  const router = require('../routes/mapApproval').default as express.Router
+  const router = require('../routes/mapApproval.js').default as express.Router
   app.use('/api/map-approval', router)
   return app
 }

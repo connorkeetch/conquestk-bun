@@ -12,9 +12,9 @@ import type {
   MetadataSectorInput,
   MetadataTerritoryInput,
   TerritoryModifierMetadata,
-} from '../types/maps'
-import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage'
-import { logger } from '../utils/logger'
+} from '../types/maps.js'
+import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage.js'
+import { logger } from '../utils/logger.js'
 
 type Json = unknown
 
@@ -146,7 +146,7 @@ const findImageFile = (
 
 async function resolveCreatorUserId(explicit?: string): Promise<string> {
   if (explicit) return explicit
-  const { query } = (await import('../config/database')) as typeof import('../config/database')
+  const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
   const admin = await query<{ id: string }>(
     'SELECT id FROM users WHERE is_admin = TRUE ORDER BY created_at ASC LIMIT 1',
   )
@@ -157,7 +157,7 @@ async function resolveCreatorUserId(explicit?: string): Promise<string> {
 }
 
 async function resolveAdminUserId(): Promise<string> {
-  const { query } = (await import('../config/database')) as typeof import('../config/database')
+  const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
   const admin = await query<{ id: string }>(
     'SELECT id FROM users WHERE is_admin = TRUE ORDER BY created_at ASC LIMIT 1',
   )
@@ -182,7 +182,7 @@ const normalizeImageUrl = (url?: string): string | undefined => {
 async function extractZip(zipPath: string): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const AdmZip = require('adm-zip')
+    const AdmZip: any = (await import('adm-zip')).default as any
     const tempDir = path.join(os.tmpdir(), `maps-import-${randomUUID()}`)
     fs.mkdirSync(tempDir, { recursive: true })
     const zip = new AdmZip(zipPath)
@@ -240,7 +240,7 @@ async function run(): Promise<void> {
       }
 
       // Skip if a map or draft with this name already exists (default behavior)
-      const { query } = (await import('../config/database')) as typeof import('../config/database')
+      const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
       const existingMap = await query<{ id: string }>(
         'SELECT id FROM maps WHERE LOWER(name) = LOWER($1) LIMIT 1',
         [data.name.trim()],
@@ -502,8 +502,8 @@ async function run(): Promise<void> {
 
       if (opts.forceDraft) {
         const { default: mapWorkflowService } = (await import(
-          '../services/mapWorkflowService'
-        )) as typeof import('../services/mapWorkflowService')
+          '../services/mapWorkflowService.js'
+        )) as any
         const draft = await mapWorkflowService.saveDraft(userId as string, {
           name: data.name,
           description: data.description || undefined,
@@ -523,8 +523,8 @@ async function run(): Promise<void> {
 
       try {
         const { mapService } = (await import(
-          '../services/mapService'
-        )) as typeof import('../services/mapService')
+          '../services/mapService.js'
+        )) as typeof import('../services/mapService.js')
         const created = await mapService.createMap(userId as string, {
           name: data.name,
           description: data.description || undefined,
@@ -549,18 +549,16 @@ async function run(): Promise<void> {
 
         // Post-insert row counts (authoritative from DB)
         try {
-          const { query } = (await import(
-            '../config/database'
-          )) as typeof import('../config/database')
-          const t = await query<{ c: string }>(
+          const { query } = (await import('../config/database.js')) as any
+          const t = await query(
             'SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1',
             [created.id],
           )
-          const c = await query<{ c: string }>(
+          const c = await query(
             'SELECT COUNT(*) AS c FROM map_sectors WHERE map_id = $1',
             [created.id],
           )
-          const a = await query<{ c: string }>(
+          const a = await query(
             'SELECT COUNT(*) AS c FROM territory_adjacencies WHERE map_id = $1',
             [created.id],
           )
@@ -578,8 +576,8 @@ async function run(): Promise<void> {
           try {
             const adminId = await resolveAdminUserId()
             const { default: mapWorkflowService } = (await import(
-              '../services/mapWorkflowService'
-            )) as typeof import('../services/mapWorkflowService')
+              '../services/mapWorkflowService.js'
+            )) as any
             await mapWorkflowService.approveMap(created.id, adminId, {
               notes: 'Auto-approved by import script',
             })
@@ -594,8 +592,8 @@ async function run(): Promise<void> {
       } catch (createErr) {
         if (opts.draftOnFail) {
           const { default: mapWorkflowService } = (await import(
-            '../services/mapWorkflowService'
-          )) as typeof import('../services/mapWorkflowService')
+            '../services/mapWorkflowService.js'
+          )) as any
           const draft = await mapWorkflowService.saveDraft(userId as string, {
             name: data.name,
             description: data.description || undefined,
@@ -628,7 +626,7 @@ async function run(): Promise<void> {
     if (endpoint && bucket && publicBase) {
       const oldPrefix = `${endpoint}/${bucket}`
       const like = `${oldPrefix}/%`
-      const { query } = (await import('../config/database')) as typeof import('../config/database')
+      const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
 
       // Update maps table
       const mapsToUpdate = await query<{ total: string }>(

@@ -5,7 +5,7 @@ import dotenv from 'dotenv'
 // Load environment variables
 dotenv.config()
 
-import { query } from '../config/database'
+import { query } from '../config/database.js'
 
 async function runMigrations() {
   const migrationsDir = path.join(__dirname, '../../migrations')

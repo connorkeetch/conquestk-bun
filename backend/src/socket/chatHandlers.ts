@@ -13,8 +13,8 @@ import {
   sendMessage as sendConversationMessage,
   setConversationArchived,
   updateConversationMemberRole,
-} from '../services/conversationService'
-import notificationService from '../services/notificationService'
+} from '../services/conversationService.js'
+import notificationService from '../services/notificationService.js'
 import type {
   ClientToServerEvents,
   ConversationCreateAck,
@@ -33,8 +33,8 @@ import type {
   ServerToClientEvents,
   TypingEventPayload,
   TypingEventResponse,
-} from '../types/shared'
-import { logger } from '../utils/logger'
+} from '../types/shared.js'
+import { logger } from '../utils/logger.js'
 
 type SocketWithUser = Socket<ClientToServerEvents, ServerToClientEvents> & {
   userId?: string
@@ -132,8 +132,10 @@ const ackError = <T extends { ok: boolean }>(callback: ConversationAckCallback<T
 }
 
 const getUserInfo = async (userId: string): Promise<{ username: string }> => {
-  const { query } = require('../config/database')
-  const result = await query('SELECT username FROM users WHERE id = $1', [userId])
+  const { query } = await import('../config/database.js')
+  const result = await query<{ username: string }>('SELECT username FROM users WHERE id = $1', [
+    userId,
+  ])
   return result.rows[0] || { username: 'Unknown User' }
 }
 

@@ -4,9 +4,9 @@
  */
 
 import type { GameDelta } from '@risk-game/shared/types'
-import type { ClanProgressionSocketPayload } from './clans'
-import type { GameAction, SerializedGameState } from './game'
-import type { Player as RoomPlayer } from './gameRoom'
+import type { ClanProgressionSocketPayload } from './clans.js'
+import type { GameAction, SerializedGameState } from './game.js'
+import type { Player as RoomPlayer } from './gameRoom.js'
 
 export interface ConversationEventSummary {
   id: string

@@ -1,8 +1,8 @@
 import crypto from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { query } from '../config/database'
-import { logger } from './logger'
+import { query } from '../config/database.js'
+import { logger } from './logger.js'
 
 type MigrationStatusRow = {
   filename: string

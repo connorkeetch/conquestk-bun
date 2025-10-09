@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { DeleteObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
-import { logger } from './logger'
+import { logger } from './logger.js'
 
 const bucket = process.env.ASSET_BUCKET?.trim()
 const accessKeyId = process.env.ASSET_ACCESS_KEY_ID?.trim()

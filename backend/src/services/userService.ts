@@ -1,5 +1,5 @@
-import { query } from '../config/database'
-import type { User } from '../types/user'
+import { query } from '../config/database.js'
+import type { User } from '../types/user.js'
 
 type CreateUserInput = {
   username: string

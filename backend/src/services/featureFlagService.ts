@@ -1,5 +1,5 @@
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 export type AccessLevel = 'disabled' | 'internal' | 'beta' | 'public'
 export type FeatureCategory = 'gameplay' | 'ui' | 'experimental' | 'premium' | 'vip'

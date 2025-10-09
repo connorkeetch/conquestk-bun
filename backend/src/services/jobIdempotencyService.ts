@@ -1,5 +1,5 @@
-import { getRedisClient } from '../config/redis'
-import { logger } from '../utils/logger'
+import { getRedisClient } from '../config/redis.js'
+import { logger } from '../utils/logger.js'
 
 type StoredJobValue<T> = {
   storedAt: string

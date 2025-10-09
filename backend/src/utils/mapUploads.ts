@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { logger } from './logger'
+import { logger } from './logger.js'
 
 let cachedMapUploadsDir: string | null = null
 let cachedStagingDir: string | null = null

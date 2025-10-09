@@ -67,7 +67,7 @@ jest.mock('../services/gameLifecycleService', () => {
 })
 
 // Import after mocks
-import { GameActionWorker } from './gameActionWorker'
+import { GameActionWorker } from './gameActionWorker.js'
 
 describe('GameActionWorker turn timeout stage', () => {
   beforeEach(() => {

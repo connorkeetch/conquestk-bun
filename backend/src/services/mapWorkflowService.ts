@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { query } from '../config/database'
+import { query } from '../config/database.js'
 import type {
   AdminNotification,
   CreateMapRequest,
@@ -13,19 +13,19 @@ import type {
   MetadataSectorInput,
   MetadataTerritoryInput,
   TerritoryModifierMetadata,
-} from '../types/maps'
-import { storeBase64Image } from '../utils/imageStorage'
-import { logger } from '../utils/logger'
-import { adminService } from './adminService'
-import { MapNotFoundError, mapPermissionService } from './mapPermissionService'
-import { mapService } from './mapService'
-import { mapStagingService } from './mapStagingService'
-import { notificationDispatcher } from './NotificationDispatcher'
-import notificationService from './notificationService'
+} from '../types/maps.js'
+import { storeBase64Image } from '../utils/imageStorage.js'
+import { logger } from '../utils/logger.js'
+import { adminService } from './adminService.js'
+import { MapNotFoundError, mapPermissionService } from './mapPermissionService.js'
+import { mapService } from './mapService.js'
+import { mapStagingService } from './mapStagingService.js'
+import { notificationDispatcher } from './NotificationDispatcher.js'
+import notificationService from './notificationService.js'
 import {
   buildMapWorkflowNotification,
   type MapWorkflowNotificationInput,
-} from './notifications/mapWorkflowNotifications'
+} from './notifications/mapWorkflowNotifications.js'
 
 type JsonPrimitive = string | number | boolean | null
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }

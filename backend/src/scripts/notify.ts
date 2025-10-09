@@ -4,8 +4,8 @@ import type {
   NotificationEvent,
   NotificationSeverity,
 } from '@risk-game/shared/types/notifications'
-import { notificationDispatcher } from '../services/NotificationDispatcher'
-import { logger } from '../utils/logger'
+import { notificationDispatcher } from '../services/NotificationDispatcher.js'
+import { logger } from '../utils/logger.js'
 
 interface CliOptions {
   type?: string

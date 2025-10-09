@@ -1,5 +1,5 @@
-import { mapService } from '../services/mapService'
-import type { ContinentBonus, Territory } from '../types/game'
+import { mapService } from '../services/mapService.js'
+import type { ContinentBonus, Territory } from '../types/game.js'
 
 /**
  * Loads a map from the database and adapts it to the GameEngine types.

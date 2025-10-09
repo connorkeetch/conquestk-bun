@@ -49,7 +49,7 @@ jest.mock('../services/NotificationDispatcher', () => ({
 }))
 
 describe('mapWorkflowService.approveMap', () => {
-  let mapWorkflowService: typeof import('../services/mapWorkflowService').default
+  let mapWorkflowService: typeof import('../services/mapWorkflowService.js').default
 
   beforeEach(() => {
     jest.resetModules()
@@ -117,7 +117,7 @@ describe('mapWorkflowService.approveMap', () => {
 
 describe('mapWorkflowService.publishDraft', () => {
   const nowIso = new Date().toISOString()
-  let mapWorkflowService: typeof import('../services/mapWorkflowService').default
+  let mapWorkflowService: typeof import('../services/mapWorkflowService.js').default
 
   beforeEach(() => {
     jest.resetModules()

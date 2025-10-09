@@ -1,12 +1,12 @@
 import express, { type Request, type Response } from 'express'
-import { authenticateToken } from '../middleware/auth'
-import { cdnService } from '../services/cdnService'
-import { databaseClusterService } from '../services/databaseClusterService'
-import { performanceMonitorService } from '../services/performanceMonitorService'
-import { redisClusterService } from '../services/redisClusterService'
-import { getErrorMessage } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { authenticateToken } from '../middleware/auth.js'
+import { cdnService } from '../services/cdnService.js'
+import { databaseClusterService } from '../services/databaseClusterService.js'
+import { performanceMonitorService } from '../services/performanceMonitorService.js'
+import { redisClusterService } from '../services/redisClusterService.js'
+import { getErrorMessage } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 type ServiceHealthResult = {
   status: string

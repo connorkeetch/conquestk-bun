@@ -1,8 +1,8 @@
 import type { Server } from 'socket.io'
-import { DeltaBuilder } from '../types/deltaUpdates'
-import type { GameState } from '../types/game'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
-import { logger } from '../utils/logger'
+import { DeltaBuilder } from '../types/deltaUpdates.js'
+import type { GameState } from '../types/game.js'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { logger } from '../utils/logger.js'
 
 /**
  * Result from a game action that needs delta emission
@@ -45,7 +45,7 @@ export class DeltaEmitter {
 
   private async getEmitter() {
     if (!this.emitFogFilteredDelta) {
-      const { emitFogFilteredDelta } = await import('./fogService')
+      const { emitFogFilteredDelta } = await import('./fogService.js')
       this.emitFogFilteredDelta = emitFogFilteredDelta
     }
     return this.emitFogFilteredDelta
@@ -211,7 +211,7 @@ export class DeltaEmitter {
    */
   async emitRevealTo(gameId: string, viewerId: string, state?: GameState): Promise<void> {
     try {
-      const { emitRevealSnapshot } = await import('./fogService')
+      const { emitRevealSnapshot } = await import('./fogService.js')
       await emitRevealSnapshot(this.io as unknown as Server, gameId, viewerId, state)
     } catch (error) {
       logger.warn('Failed to emit targeted reveal snapshot', {

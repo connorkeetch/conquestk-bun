@@ -2,8 +2,8 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-import emailService from '../services/emailService'
-import { logger } from '../utils/logger'
+import emailService from '../services/emailService.js'
+import { logger } from '../utils/logger.js'
 
 async function testEmail() {
   const testEmail = 'connorkeetch@gmail.com' // Your email for testing

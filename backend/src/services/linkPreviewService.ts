@@ -1,5 +1,5 @@
 import ogs from 'open-graph-scraper'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 export interface LinkPreview {
   url: string

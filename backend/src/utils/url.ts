@@ -1,4 +1,5 @@
 import type { Request } from 'express'
+import { getPublicAssetUrl } from './assetStorage.js'
 
 /**
  * Build an absolute URL to the frontend from a request.
@@ -60,7 +61,6 @@ export function resolveAssetUrl(req: Request, value?: string | null): string | n
 
   // Treat as storage key
   try {
-    const { getPublicAssetUrl } = require('./assetStorage') as typeof import('./assetStorage')
     return getPublicAssetUrl(url)
   } catch {
     // Fallback to returning original value if storage helper is unavailable

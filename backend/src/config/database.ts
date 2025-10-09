@@ -1,5 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 // Normalized query result interface
 export interface DatabaseQueryResult<T extends QueryResultRow = QueryResultRow> {

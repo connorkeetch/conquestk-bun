@@ -1,0 +1,27 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const mapWorkflowController_js_1 = require("../controllers/mapWorkflowController.js");
+const adminAuth_js_1 = require("../middleware/adminAuth.js");
+const auth_js_1 = require("../middleware/auth.js");
+const rateLimiter_js_1 = require("../middleware/rateLimiter.js");
+const router = (0, express_1.Router)();
+const mapWorkflowController = new mapWorkflowController_js_1.MapWorkflowController();
+router.use(auth_js_1.authenticateToken);
+router.use(rateLimiter_js_1.standardLimiter);
+router.post('/drafts', mapWorkflowController.saveDraft.bind(mapWorkflowController));
+router.get('/drafts', mapWorkflowController.getUserDrafts.bind(mapWorkflowController));
+router.get('/drafts/:draftId', mapWorkflowController.getDraft.bind(mapWorkflowController));
+router.post('/drafts/:draftId/publish', mapWorkflowController.publishDraft.bind(mapWorkflowController));
+router.post('/maps/:mapId/submit', mapWorkflowController.submitForReview.bind(mapWorkflowController));
+router.get('/maps/:mapId/history', mapWorkflowController.getMapHistory.bind(mapWorkflowController));
+router.get('/admin/reviews/pending', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), mapWorkflowController.getPendingReviews.bind(mapWorkflowController));
+router.post('/admin/maps/:mapId/approve', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_approve'), mapWorkflowController.approveMap.bind(mapWorkflowController));
+router.post('/admin/maps/:mapId/reject', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_reject'), mapWorkflowController.rejectMap.bind(mapWorkflowController));
+router.post('/admin/maps/:mapId/archive', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_archive'), mapWorkflowController.archiveMap.bind(mapWorkflowController));
+router.post('/admin/maps/:mapId/toggle-featured', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_toggle_featured'), mapWorkflowController.toggleFeatured.bind(mapWorkflowController));
+router.get('/admin/maps/status/:status', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), mapWorkflowController.getMapsByStatus.bind(mapWorkflowController));
+router.get('/admin/notifications', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), mapWorkflowController.getAdminNotifications.bind(mapWorkflowController));
+router.post('/admin/notifications/:notificationId/read', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), mapWorkflowController.markNotificationRead.bind(mapWorkflowController));
+exports.default = router;
+//# sourceMappingURL=mapWorkflow.js.map

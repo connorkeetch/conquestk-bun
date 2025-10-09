@@ -1,9 +1,9 @@
-import { query, transaction } from '../config/database'
-import { GameEngine } from '../game/gameEngine'
-import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures'
-import { loadMapForEngine } from '../game/mapLoader'
-import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans'
-import { DeltaBuilder } from '../types/deltaUpdates'
+import { query, transaction } from '../config/database.js'
+import { GameEngine } from '../game/gameEngine.js'
+import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js'
+import { loadMapForEngine } from '../game/mapLoader.js'
+import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans.js'
+import { DeltaBuilder } from '../types/deltaUpdates.js'
 import type {
   AIDifficulty,
   GameAction,
@@ -14,21 +14,21 @@ import type {
   GameTerritoryModifier,
   SerializedGameState,
   Territory,
-} from '../types/game'
-import { logger } from '../utils/logger'
-import { type AIDecisionPlan, aiDecisionService, type DecisionBudget } from './aiDecisionService'
-import { gameStateCache } from './cacheService'
-import { ClanProgressionServiceError, clanProgressionService } from './clanProgressionService'
-import { clanService } from './clanService'
-import type { PlayerRating, RatingChange } from './eloService'
-import { eloService } from './eloService'
-import { featureFlagService } from './featureFlagService'
-import { mapService } from './mapService'
-import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService'
-import notificationService from './notificationService'
-import { queueService } from './queueService'
-import { tryGetSocketServer } from './socketRegistry'
-import territoryModifierService from './territoryModifierService'
+} from '../types/game.js'
+import { logger } from '../utils/logger.js'
+import { type AIDecisionPlan, aiDecisionService, type DecisionBudget } from './aiDecisionService.js'
+import { gameStateCache } from './cacheService.js'
+import { ClanProgressionServiceError, clanProgressionService } from './clanProgressionService.js'
+import { clanService } from './clanService.js'
+import type { PlayerRating, RatingChange } from './eloService.js'
+import { eloService } from './eloService.js'
+import { featureFlagService } from './featureFlagService.js'
+import { mapService } from './mapService.js'
+import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
+import notificationService from './notificationService.js'
+import { queueService } from './queueService.js'
+import { tryGetSocketServer } from './socketRegistry.js'
+import territoryModifierService from './territoryModifierService.js'
 
 type BattleWorkerResult = {
   attackerLosses: number
@@ -138,7 +138,7 @@ type TreasureLogEntry = {
   type: 'TREASURE'
   timestamp: string
   userId: string
-  metal: import('../types/game').Metal
+  metal: import('../types/game.js').Metal
 }
 
 type LifecycleLogEntry = {
@@ -873,7 +873,7 @@ export class GameService {
           }
           await this.awardClanContributions(roomId, finalization.playerRankings)
           try {
-            const { achievementService } = await import('./achievementService')
+            const { achievementService } = await import('./achievementService.js')
             const minimal = finalization.playerRankings.map((r) => ({
               userId: r.userId,
               isWinner: r.isWinner,
@@ -1205,7 +1205,7 @@ export class GameService {
     }
 
     // Detect treasure card awarded to the player who just ended their turn
-    let treasureAwarded: import('../types/game').Metal | undefined
+    let treasureAwarded: import('../types/game.js').Metal | undefined
     try {
       const afterPlayer = updatedState.players.find((p) => p.id === previousPlayerId)
       const afterTreasures = afterPlayer?.treasures
@@ -1219,7 +1219,7 @@ export class GameService {
           if (c > 0) {
             counts.set(m, c - 1)
           } else {
-            treasureAwarded = m as import('../types/game').Metal
+            treasureAwarded = m as import('../types/game.js').Metal
             break
           }
         }
@@ -1365,7 +1365,7 @@ export class GameService {
           }
           await this.awardClanContributions(roomId, finalization.playerRankings)
           try {
-            const { achievementService } = await import('./achievementService')
+            const { achievementService } = await import('./achievementService.js')
             const minimal = finalization.playerRankings.map((r) => ({
               userId: r.userId,
               isWinner: r.isWinner,
@@ -2209,7 +2209,7 @@ export class GameService {
               }
               if (transferred > 0 && eliminatorHand.length >= cfg.handCap) {
                 const hasValidSet =
-                  findRedeemableSets(eliminatorHand as unknown as import('../types/game').Metal[])
+                  findRedeemableSets(eliminatorHand as unknown as import('../types/game.js').Metal[])
                     .length > 0
                 eliminator.mustCashInTreasures = hasValidSet
                 if (hasValidSet && eliminator.id === updatedGameState.currentPlayer) {
@@ -2277,7 +2277,7 @@ export class GameService {
         }
         await this.awardClanContributions(gameId, finalization.playerRankings)
         try {
-          const { achievementService } = await import('./achievementService')
+          const { achievementService } = await import('./achievementService.js')
           // Map to minimal structure to avoid type coupling
           const minimal = finalization.playerRankings.map((r) => ({
             userId: r.userId,

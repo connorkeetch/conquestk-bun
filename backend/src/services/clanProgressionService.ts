@@ -1,13 +1,13 @@
 import type { PoolClient } from 'pg'
-import { query, transaction } from '../config/database'
+import { query, transaction } from '../config/database.js'
 import type {
   ClanContributionResult,
   ClanObjective,
   ClanObjectiveProgressUpdate,
   ClanObjectiveType,
   ClanProgressionSummary,
-} from '../types/clans'
-import { logClanActivity } from './clanActivityService'
+} from '../types/clans.js'
+import { logClanActivity } from './clanActivityService.js'
 
 interface ClanProgressionRow {
   total_xp: string | number

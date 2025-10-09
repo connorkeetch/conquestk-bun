@@ -1,7 +1,12 @@
-import { validate as uuidValidate } from 'uuid'
-import { getClient, query } from '../config/database'
-import { logger } from '../utils/logger'
-import { featureFlagService } from './featureFlagService'
+// Local UUID validator to avoid ESM-only uuid dependency in tests
+const uuidValidate = (value: string): boolean => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  )
+}
+import { getClient, query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
+import { featureFlagService } from './featureFlagService.js'
 
 const domainPermissionMap: Record<string, string[]> = {
   users: ['users.*', 'user_management', 'system_admin'],
@@ -436,7 +441,7 @@ export class AdminService {
     adminUserId: string,
     newPassword: string,
   ): Promise<void> {
-    const bcrypt = require('bcrypt')
+    const bcrypt = await import('bcryptjs')
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, targetUserId])

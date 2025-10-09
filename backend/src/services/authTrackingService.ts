@@ -1,5 +1,5 @@
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
+import { query } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 export type AuthEventType = 'user_login' | 'user_logout' | 'user_registration'
 

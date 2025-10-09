@@ -1,6 +1,6 @@
 import readline from 'node:readline'
-import { getClient } from '../config/database'
-import { logger } from '../utils/logger'
+import { getClient } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 type Filters = {
   ids?: string[]

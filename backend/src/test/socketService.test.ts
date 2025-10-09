@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import type { Server } from 'socket.io'
-import { queueService } from '../services/queueService'
-import { setupSocketHandlers } from '../services/socketService'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
+import { queueService } from '../services/queueService.js'
+import { setupSocketHandlers } from '../services/socketService.js'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 
 type QueueServiceMocks = {
   addGameAction: jest.Mock

@@ -31,7 +31,7 @@
  * - Conquest draws occur after successful territory capture.
  * - `trade_cards` with `treasureSet` indexes is validated then redeemed.
  */
-import type { Metal, TreasureConfig, TreasureState } from '../types/game'
+import type { Metal, TreasureConfig, TreasureState } from '../types/game.js'
 
 export type TreasureSetPattern = 'three_of_a_kind' | 'one_of_each' | 'diamond_combo'
 

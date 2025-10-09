@@ -1,8 +1,8 @@
 import type { Request, RequestHandler, Response } from 'express'
 import { Router } from 'express'
-import { authenticateToken } from '../middleware/auth'
-import { termsService } from '../services/termsService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { authenticateToken } from '../middleware/auth.js'
+import { termsService } from '../services/termsService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 const authenticateRequest: RequestHandler = async (req, res, next) => {

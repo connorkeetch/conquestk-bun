@@ -2,20 +2,20 @@ import type { Request, Response } from 'express'
 import { Router } from 'express'
 import type { ParamsDictionary } from 'express-serve-static-core'
 import { body, param, query, validationResult } from 'express-validator'
-import { authenticateToken } from '../middleware/auth'
+import { authenticateToken } from '../middleware/auth.js'
 import {
   ClanMembershipServiceError,
   clanMembershipService,
-} from '../services/clanMembershipService'
-import { ClanServiceError, clanService } from '../services/clanService'
+} from '../services/clanMembershipService.js'
+import { ClanServiceError, clanService } from '../services/clanService.js'
 import type {
   ClanCreateRequest,
   ClanListFilters,
   ClanPrivacy,
   ClanRecruitmentStatus,
-} from '../types/clans'
-import type { AuthenticatedRequest } from '../types/express'
-import { handleRouteError } from '../utils/routeErrorHandler'
+} from '../types/clans.js'
+import type { AuthenticatedRequest } from '../types/express.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { GameEngine } from '../game/gameEngine'
-import type { AttackAction, GameState } from '../types/game'
+import { GameEngine } from '../game/gameEngine.js'
+import type { AttackAction, GameState } from '../types/game.js'
 
 function createConquestState(): GameState {
   return {

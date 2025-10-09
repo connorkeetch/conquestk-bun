@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import { getClient, query, transaction } from '../config/database'
+import { getClient, query, transaction } from '../config/database.js'
 import {
   isPremiumColorChoice,
   PREMIUM_ACTIVE_STATUS_VALUES,
   PREMIUM_COLOR_MESSAGE,
   PREMIUM_GAME_LIMIT,
   PREMIUM_GAME_LIMIT_MESSAGE,
-} from '../constants/premium'
-import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom'
-import { logger } from '../utils/logger'
+} from '../constants/premium.js'
+import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom.js'
+import { logger } from '../utils/logger.js'
 
 type AIDifficultyOption = NonNullable<Player['aiDifficulty']>
 
@@ -502,11 +502,11 @@ export class GameRoomService {
       cardTradeMode: typeof row.card_trade_mode === 'string' ? row.card_trade_mode : undefined,
       bonusType: typeof row.bonus_type === 'string' ? row.bonus_type : undefined,
       treasureConfig: (row.treasure_config ?? undefined) as
-        | import('../types/game').TreasureConfig
+        | import('../types/game.js').TreasureConfig
         | null
         | undefined,
       kingOfTheHillConfig: (row.king_of_the_hill_config ?? undefined) as
-        | import('../types/game').KingOfTheHillConfig
+        | import('../types/game.js').KingOfTheHillConfig
         | null
         | undefined,
       currentPlayers: aggregatedCurrentPlayers ?? (players ? players.length : undefined),
@@ -877,7 +877,7 @@ export class GameRoomService {
   }
 
   private async triggerAutoStartIfReady(roomId: string): Promise<void> {
-    const { GameLifecycleService } = await import('./gameLifecycleService')
+    const { GameLifecycleService } = await import('./gameLifecycleService.js')
 
     try {
       const lifecycleService = new GameLifecycleService()
@@ -1531,7 +1531,7 @@ export class GameRoomService {
     } finally {
       client.release()
       try {
-        const { gameStateCache } = await import('./cacheService')
+        const { gameStateCache } = await import('./cacheService.js')
         await gameStateCache.deleteGameState(roomId)
       } catch {
         // best-effort cache cleanup

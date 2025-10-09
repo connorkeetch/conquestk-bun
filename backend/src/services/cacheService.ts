@@ -1,5 +1,5 @@
-import { getRedisClient } from '../config/redis'
-import { logger } from '../utils/logger'
+import { getRedisClient } from '../config/redis.js'
+import { logger } from '../utils/logger.js'
 
 /**
  * Generic caching service with Redis backend

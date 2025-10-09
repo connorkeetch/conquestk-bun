@@ -1,5 +1,5 @@
-import { aiDecisionService, type DecisionRequest } from '../services/aiDecisionService'
-import type { GamePlayer, GameState, Territory } from '../types/game'
+import { aiDecisionService, type DecisionRequest } from '../services/aiDecisionService.js'
+import type { GamePlayer, GameState, Territory } from '../types/game.js'
 
 const baseTerritories: Territory[] = [
   {

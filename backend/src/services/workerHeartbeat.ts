@@ -1,6 +1,6 @@
 import type Redis from 'ioredis'
-import { getRedisClient } from '../config/redis'
-import { logger } from '../utils/logger'
+import { getRedisClient } from '../config/redis.js'
+import { logger } from '../utils/logger.js'
 
 const DEFAULT_TTL_SECONDS = 10
 const DEFAULT_INTERVAL_MS = 5000

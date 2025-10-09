@@ -17,7 +17,7 @@ import type {
   GameState,
   Territory,
 } from '../types/game'
-import { GameEngine } from './gameEngine'
+import { GameEngine } from './gameEngine.js'
 
 describe('GameEngine', () => {
   let gameEngine: GameEngine

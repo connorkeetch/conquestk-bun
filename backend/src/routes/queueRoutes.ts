@@ -1,9 +1,9 @@
 import express from 'express'
-import { requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { type QueueStats, queueService } from '../services/queueService'
-import { handleRouteError } from '../utils/routeErrorHandler'
-import { getWorkerManagerInstance } from '../workers/workerManager'
+import { requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { type QueueStats, queueService } from '../services/queueService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
+import { getWorkerManagerInstance } from '../workers/workerManager.js'
 
 const router = express.Router()
 
@@ -67,7 +67,7 @@ router.get('/health', authenticateToken, async (req, res) => {
         queues:
           (
             wmHealth.details as {
-              queues?: Record<string, import('../services/queueService').QueueStats>
+              queues?: Record<string, import('../services/queueService.js').QueueStats>
             }
           ).queues ?? {},
         redis: (qsHealth.details as { redis?: string }).redis ?? 'UNKNOWN',

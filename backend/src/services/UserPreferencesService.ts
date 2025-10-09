@@ -1,7 +1,7 @@
 import type { ThemeId } from '@risk-game/shared/types/themes'
 import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
 import type { Pool } from 'pg'
-import { logger } from '../utils/logger'
+import { logger } from '../utils/logger.js'
 
 export interface UserPreferences {
   userId: string

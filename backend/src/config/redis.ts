@@ -1,16 +1,15 @@
-import type { RedisOptions } from 'ioredis'
-import Redis from 'ioredis'
-import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import Redis, { type RedisOptions, type Redis as IORedis } from 'ioredis'
+import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js'
+import { logger } from '../utils/logger.js'
 
-let redisClient: Redis | null = null
-let pubClient: Redis | null = null
-let subClient: Redis | null = null
+let redisClient: IORedis | null = null
+let pubClient: IORedis | null = null
+let subClient: IORedis | null = null
 
 export interface RedisClients {
-  redisClient: Redis | null
-  pubClient: Redis | null
-  subClient: Redis | null
+  redisClient: IORedis | null
+  pubClient: IORedis | null
+  subClient: IORedis | null
 }
 
 /**
@@ -236,7 +235,7 @@ export async function initializeRedis(): Promise<RedisClients> {
       }
 
       // Clean up failed clients properly
-      const cleanup = async (client: Redis | null, name: string) => {
+      const cleanup = async (client: IORedis | null, name: string) => {
         if (client) {
           try {
             await client.disconnect()
@@ -264,14 +263,14 @@ export async function initializeRedis(): Promise<RedisClients> {
 /**
  * Get the Redis client instance
  */
-export function getRedisClient(): Redis | null {
+export function getRedisClient(): IORedis | null {
   return redisClient
 }
 
 /**
  * Get pub/sub clients for Socket.io
  */
-export function getPubSubClients(): { pubClient: Redis | null; subClient: Redis | null } {
+export function getPubSubClients(): { pubClient: IORedis | null; subClient: IORedis | null } {
   return { pubClient, subClient }
 }
 
