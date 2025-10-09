@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { profileService } from '../services/profileService'
 import type { ProfileResponse, ProfileUpdateRequest } from '../types/profile'
@@ -51,9 +52,10 @@ router.get(
   }),
 )
 
-// POST /api/profile/achievements/:achievementId - Unlock achievement (admin/testing)
+// POST /api/profile/achievements/:achievementId - Unlock achievement (admin/testing only)
 router.post(
   '/achievements/:achievementId',
+  requireAdmin,
   asyncHandler(async (req, res) => {
     const userId = req.userId
     const { achievementId } = req.params
