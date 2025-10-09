@@ -300,6 +300,17 @@ export class GameActionProcessor {
     }
 
     // Inline fallback: process through GameService/GameEngine and emit battle result delta
+    // Serialize inline path too to avoid double-apply in non-queue environments
+    let lockToken: string | null = null
+    const { acquireLock, releaseLock } = await import('../config/redis')
+    const lockKey = `lock:game-actions:${gameId}`
+    const startWait = Date.now()
+    lockToken = await acquireLock(lockKey, 5000)
+    while (!lockToken) {
+      if (Date.now() - startWait > 1500) break
+      await new Promise((r) => setTimeout(r, 25))
+      lockToken = await acquireLock(lockKey, 5000)
+    }
     const updated = await this.gameService.processGameAction(
       {
         type: 'attack',
@@ -349,6 +360,13 @@ export class GameActionProcessor {
       }
     }
     await this.deltaEmitter.emitRevealTo(gameId, playerId)
+    if (lockToken) {
+      try {
+        await releaseLock(lockKey, lockToken)
+      } catch {
+        // best-effort
+      }
+    }
     return { mode: 'inline' }
   }
 }

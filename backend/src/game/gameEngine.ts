@@ -1124,6 +1124,14 @@ export class GameEngine {
       throw new Error('Invalid territories for attack')
     }
 
+    // Enforce phase and minimum armies invariant here as a safety net
+    if (gameState.phase !== 'attack') {
+      throw new Error('Cannot attack outside of attack phase')
+    }
+    if (fromTerritory.armies <= 1) {
+      throw new Error('Not enough armies to attack')
+    }
+
     const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
 
     // Mark that player has attacked this turn
@@ -1161,8 +1169,8 @@ export class GameEngine {
     const battleResult = this.simulateBattle(gameState, attackerDiceCount, defenderDiceCount)
 
     // Apply losses
-    fromTerritory.armies -= battleResult.attackerLosses
-    toTerritory.armies -= battleResult.defenderLosses
+    fromTerritory.armies = Math.max(1, fromTerritory.armies - battleResult.attackerLosses)
+    toTerritory.armies = Math.max(0, toTerritory.armies - battleResult.defenderLosses)
 
     // Check if territory was conquered
     const conquered = toTerritory.armies === 0
@@ -1684,16 +1692,35 @@ export class GameEngine {
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
 
+    // Must be in attack phase
+    if (gameState.phase !== 'attack') {
+      return false
+    }
+
     if (toTerritory && this.arePlayersTeammates(gameState, action.playerId, toTerritory.ownerId)) {
       return false
     }
 
+    // Require at least 2 armies to attack (must leave 1 behind)
+    const hasEnoughArmies = fromTerritory ? fromTerritory.armies >= 2 : false
+
+    // If client supplied an armies number (legacy), ensure it does not exceed from - 1 and is positive
+    const armiesOk =
+      typeof armies === 'number' && armies > 0
+        ? fromTerritory
+          ? armies <= Math.max(0, fromTerritory.armies - 1)
+          : false
+        : true // when not provided, engine will determine dice, so skip this check
+
     return !!(
       fromTerritory &&
       toTerritory &&
+      gameState.currentPlayer === action.playerId &&
+      gameState.phase === 'attack' &&
       fromTerritory.ownerId === action.playerId &&
       toTerritory.ownerId !== action.playerId &&
-      fromTerritory.armies > armies &&
+      hasEnoughArmies &&
+      armiesOk &&
       fromTerritory.adjacentTerritories.includes(toTerritoryId)
     )
   }

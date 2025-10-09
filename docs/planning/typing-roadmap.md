@@ -30,7 +30,7 @@ _Last updated: September 21, 2025_
 
 ### Phase 2 – Domain typing (🟡 in progress — target October 18, 2025)
 - **Replace service `any`s:** Define explicit DTOs for `UserService.create`, password reset lookups, and Redis cache setters to remove the broad `any` signatures that leak through request handlers.
-- **Queue and worker payloads:** Tighten the Bull queue setup so event handlers and worker callbacks expose real payload interfaces instead of generic objects (e.g., Redis "node error" handler, cache tier wrappers).
+- **Queue and worker payloads:** Tighten the BullMQ queue setup so event handlers and worker callbacks expose real payload interfaces instead of generic objects (e.g., Redis "node error" handler, cache tier wrappers).
 - **Test utilities:** Introduce typed factories for socket/game fixtures so unit tests no longer rely on implicit any structures, eliminating the majority of Biome’s undeclared-variable diagnostics.
 
 ### Phase 3 – Platform surfaces (⚪ not started — target November 15, 2025)

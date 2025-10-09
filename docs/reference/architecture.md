@@ -4,9 +4,9 @@ _Last updated: March 7, 2026_
 
 ## Stack Overview
 - **Frontend:** React 19 + Vite 7 + Redux Toolkit + Tailwind CSS v4, written in TypeScript (`frontend/`).
-- **Backend:** Node.js 22.12 on Express 5 with Socket.io, Bull, and PostgreSQL, also TypeScript-first (`backend/`).
+- **Backend:** Node.js 22.12 on Express 5 with Socket.io, BullMQ, and PostgreSQL, also TypeScript-first (`backend/`).
 - **Shared package:** Common types and helpers are built from `shared/` and consumed by both runtime targets.
-- **Data stores:** PostgreSQL (authoritative persistence), Redis (session cache, socket fan-out, Bull queues), and Cloudflare R2/S3-compatible object storage for map and media assets.
+- **Data stores:** PostgreSQL (authoritative persistence), Redis (session cache, socket fan-out, BullMQ queues), and Cloudflare R2/S3-compatible object storage for map and media assets.
 - **Tooling:** npm workspaces, Biome for lint/format, Vitest (frontend) + Jest (backend) + Playwright smoke tests.
 
 ## Runtime Architecture
@@ -21,7 +21,7 @@ _Last updated: March 7, 2026_
 - Realtime rooms follow the `game:{roomId}` convention via helpers in `socketService.ts` (`getGameChannel`) and `backend/src/services/socketRegistry.ts`, so workers, lifecycle services, and reconnect logic target the same identifiers.
 
 ### Workers & Queues
-- Bull queues (`queueService.ts`) drive asynchronous work. Key workers live in `backend/src/workers/`:
+- BullMQ queues (`queueService.ts`) drive asynchronous work. Key workers live in `backend/src/workers/`:
   - `gameActionWorker.ts` processes turn-based commands and emits deltas via `DeltaEmitter`.
   - `battleWorker.ts` resolves combat jobs.
   - `cleanupWorker.ts` retires completed games, prunes stale lobbies, and clears cache/modifier state.
@@ -66,7 +66,7 @@ _Last updated: March 7, 2026_
 ## Data & Persistence
 - PostgreSQL migrations live in `backend/migrations` following the `NNN_description.sql` convention. `npm run migrate` applies them through the runner in `backend/src/scripts/runMigration.ts` / `backend/src/utils/migrationRunner.ts`.
 - Primary tables include `game_rooms`, `room_players`, `game_states`, `game_results`, `player_game_results`, `player_stats`, `game_moves`, archival tables like `game_move_archive`, map catalog tables (`maps`, `map_versions`, `map_territories`, `map_sectors`, `territory_adjacencies`), messaging tables (`conversations`, `conversation_messages`, `message_read_receipts`), and notification delivery (`notifications`, `web_push_subscriptions`).
-- Redis powers `gameStateCache`, modifier caching, socket presence, session storage, and Bull job queues.
+- Redis powers `gameStateCache`, modifier caching, socket presence, session storage, and BullMQ job queues.
 - Map assets store in R2/S3 via `mapStagingService.ts`; soft-deleted assets are reclaimed by the staging purge workflow (tracked in `map_asset_purge_runs`) once retention windows expire.
 
 ## Notifications & Messaging
@@ -77,14 +77,14 @@ _Last updated: March 7, 2026_
 
 ## Turn Timers & AFK Flow
 - Room configuration includes `turn_timer` (seconds) and optional `time_bank_seconds` per player.
-- When a turn starts, `GameLifecycleService.scheduleTurnTimeout` persists `turn_expires_at` and enqueues a delayed Bull job to expire the turn.
+- When a turn starts, `GameLifecycleService.scheduleTurnTimeout` persists `turn_expires_at` and enqueues a delayed BullMQ job to expire the turn.
 - On expiry, `GameLifecycleService.handleTurnTimeout`:
   - Uses remaining time bank for the current player, if any, and reschedules the expiry; otherwise
   - Increments `room_players.missed_turns` and sets `last_missed_turn_at = NOW()`
   - Skips the rest of the player’s turn (advances phases up to the next player’s reinforcement)
   - Emits a `phaseChange` delta for the next player and reschedules the next timeout
   - Kicks and neutralizes the player on the 3rd miss in the same game (sets `is_kicked = TRUE`, `elimination_reason = 'timeout'`)
-- Development fallback: if Redis/Bull is unavailable, a local `setTimeout` triggers the same `handleTurnTimeout` logic. This fallback is disabled in production/staging.
+- Development fallback: if Redis/BullMQ is unavailable, a local `setTimeout` triggers the same `handleTurnTimeout` logic. This fallback is disabled in production/staging.
 
 ## Deployment & Operations
 - Production (https://conquestk.com) and staging (Railway dev branch) deploy from the monorepo via npm scripts. `npm run build` produces frontend + backend bundles; `npm start` runs migrations then boots Express.

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import type Bull from 'bull'
+import type { Job } from 'bullmq'
 import type { Server } from 'socket.io'
 import type { GameActionJob } from '../services/queueService'
 import type { GameState } from '../types/game'
@@ -37,6 +37,7 @@ const mockProcessFortify = jest.fn()
 const mockProcessEndTurn = jest.fn()
 const mockProcessPhaseChange = jest.fn()
 const mockProcessGoBackToReinforcement = jest.fn()
+const mockProcessGameAction = jest.fn()
 
 jest.mock('../services/gameService', () => ({
   GameService: jest.fn(() => ({
@@ -46,6 +47,7 @@ jest.mock('../services/gameService', () => ({
     processEndTurn: (...args: unknown[]) => mockProcessEndTurn(...args),
     processPhaseChange: (...args: unknown[]) => mockProcessPhaseChange(...args),
     processGoBackToReinforcement: (...args: unknown[]) => mockProcessGoBackToReinforcement(...args),
+    processGameAction: (...args: unknown[]) => mockProcessGameAction(...args),
   })),
 }))
 
@@ -117,9 +119,9 @@ describe('GameActionWorker', () => {
     ...overrides,
   })
 
-  const invokeProcess = async (job: Bull.Job<GameActionJob>) => {
+  const invokeProcess = async (job: Job<GameActionJob>) => {
     const method = worker as unknown as {
-      processGameAction: (queued: Bull.Job<GameActionJob>) => Promise<unknown>
+      processGameAction: (queued: Job<GameActionJob>) => Promise<unknown>
     }
     return method.processGameAction(job)
   }
@@ -161,7 +163,7 @@ describe('GameActionWorker', () => {
           payload: { territoryId: 'north', armies: 2 },
         },
       },
-    } as unknown as Bull.Job<GameActionJob>
+    } as unknown as Job<GameActionJob>
 
     const result = await invokeProcess(job)
 
@@ -188,8 +190,9 @@ describe('GameActionWorker', () => {
     )
   })
 
-  it('queues battle simulations for attack actions without broadcasting immediately', async () => {
+  it('processes attack actions and defers broadcasting when no battle result', async () => {
     mockGetGameState.mockResolvedValue(buildGameState())
+    mockProcessGameAction.mockResolvedValue({ lastBattleResult: null })
 
     const job = {
       id: 'job-attack',
@@ -204,21 +207,12 @@ describe('GameActionWorker', () => {
         },
         socketId: 'socket-1',
       },
-    } as unknown as Bull.Job<GameActionJob>
+    } as unknown as Job<GameActionJob>
 
     const result = await invokeProcess(job)
 
     expect(mockGetGameState).toHaveBeenCalledWith('game-1')
-    expect(mockAddBattleSimulation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        gameId: 'game-1',
-        attackingTerritory: 'north',
-        defendingTerritory: 'south',
-        attackingArmies: 3, // Capped at requested armies (action.payload.armies)
-        defendingArmies: 3,
-        playerId: 'player-1',
-      }),
-    )
+    expect(mockAddBattleSimulation).not.toHaveBeenCalled()
     expect(io.to).not.toHaveBeenCalledWith('game:game-1')
     expect(roomEmit).not.toHaveBeenCalled()
     expect(mockEmitFogFilteredDelta).not.toHaveBeenCalled()
@@ -253,7 +247,7 @@ describe('GameActionWorker', () => {
           playerId: 'player-1',
         },
       },
-    } as unknown as Bull.Job<GameActionJob>
+    } as unknown as Job<GameActionJob>
 
     const result = await invokeProcess(job)
 

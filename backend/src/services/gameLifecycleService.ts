@@ -39,7 +39,7 @@ export interface LifecycleSnapshot {
 export class GameLifecycleService {
   private gameRoomService = new GameRoomService()
   private gameService = new GameService()
-  // Dev-only local fallback timers when Redis/Bull queues are unavailable.
+  // Dev-only local fallback timers when Redis/BullMQ queues are unavailable.
   // Keyed by roomId. Never used in production.
   private static localTurnTimeouts: Map<string, NodeJS.Timeout> = new Map()
 

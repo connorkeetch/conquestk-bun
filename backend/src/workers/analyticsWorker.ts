@@ -1,4 +1,4 @@
-import type Bull from 'bull'
+import { type Job, Worker } from 'bullmq'
 import { GameService } from '../services/gameService'
 import { queueService } from '../services/queueService'
 import { logger } from '../utils/logger'
@@ -10,50 +10,58 @@ type AnalyticsJob = {
 }
 
 export class AnalyticsWorker {
-  private queue: Bull.Queue
+  private worker: Worker | null = null
   private gameService: GameService
 
   constructor() {
-    // Untyped queue acceptable (heterogeneous events)
-    this.queue = queueService.getAnalyticsQueue()
     this.gameService = new GameService()
   }
 
   async initialize(): Promise<void> {
-    this.queue.process('analytics-event', 5, async (job: Bull.Job<AnalyticsJob>) => {
-      const { event, gameId, data } = job.data
-      try {
-        if (event === 'append_log') {
-          const entries = Array.isArray(data) ? (data as unknown[]) : []
-          await this.gameService.appendLog(
-            gameId,
-            entries as Parameters<GameService['appendLog']>[1],
-          )
-        } else if (event === 'append_turn_stats') {
-          await this.gameService.appendTurnStats(
-            gameId,
-            data as Parameters<GameService['appendTurnStats']>[1],
-          )
-        } else {
-          logger.warn('Unknown analytics event', { event })
-        }
-      } catch (error) {
-        logger.warn('Failed to process analytics-event', {
-          event,
-          gameId,
-          error: error instanceof Error ? error.message : error,
-        })
-        throw error
-      }
-    })
+    const queueName = queueService.getAnalyticsQueue().name
 
-    this.queue.on('completed', (job) => {
+    this.worker = new Worker(
+      queueName,
+      async (job: Job<AnalyticsJob>) => {
+        const { event, gameId, data } = job.data
+        try {
+          if (event === 'append_log') {
+            const entries = Array.isArray(data) ? (data as unknown[]) : []
+            await this.gameService.appendLog(
+              gameId,
+              entries as Parameters<GameService['appendLog']>[1],
+            )
+          } else if (event === 'append_turn_stats') {
+            await this.gameService.appendTurnStats(
+              gameId,
+              data as Parameters<GameService['appendTurnStats']>[1],
+            )
+          } else {
+            logger.warn('Unknown analytics event', { event })
+          }
+        } catch (error) {
+          logger.warn('Failed to process analytics-event', {
+            event,
+            gameId,
+            error: error instanceof Error ? error.message : error,
+          })
+          throw error
+        }
+      },
+      {
+        concurrency: 5,
+        connection: ((await import('../config/redis')).getRedisClient()?.options ??
+          {}) as unknown as import('bullmq').ConnectionOptions,
+      },
+    )
+
+    this.worker.on('completed', (job) => {
       logger.debug('📈 Analytics job completed', { jobId: job.id })
     })
 
-    this.queue.on('failed', (job, error) => {
+    this.worker.on('failed', (job, error) => {
       logger.warn('📉 Analytics job failed', {
-        jobId: job.id,
+        jobId: job?.id,
         error: error instanceof Error ? error.message : error,
       })
     })

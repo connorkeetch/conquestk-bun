@@ -107,7 +107,7 @@ Async: may exceed target averages with queue persistence but still bounded by ca
 - Async turn SLA targets and notification rules.
 
 ## Dependencies
-- Battle worker reactivation, Bull queue reliability, Redis monitoring, AI strings and localization.
+- Battle worker reactivation, BullMQ queue reliability, Redis monitoring, AI strings and localization.
 
 ## Next steps
 1. Expose AI opponent controls in the Create Game and lobby management UI (difficulty picker, slot counts) gated by the existing feature flags.

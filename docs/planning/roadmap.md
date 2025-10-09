@@ -24,7 +24,7 @@ Progress over the summer 2025 cycle that is now in production:
 | **Play hub truthfulness** | Connor | Gate or reroute Quick Match/Ranked/AI cards until real flows exist, and surface links to the working lobby experience. |
 | **Chat source of truth** | Connor | Replace `localStorage` chat identity with authenticated Redux state and broadcast edit/delete events to every participant. |
 | **Player stats surfaces** | Connor | Wire profile + header metrics to the new `player_stats`, game history, and leaderboard data instead of placeholder values. |
-| **Worker safety hardening** | Connor | Finish Bull queue enablement by wiring modifier cleanup, dead-letter monitoring, and idempotent job handling before toggling queues on. |
+| **Worker safety hardening** | Connor | Finish BullMQ queue enablement by wiring modifier cleanup, dead-letter monitoring, and idempotent job handling before toggling queues on. |
 
 ## 🎯 Next-up backlog (ready for sprint planning)
 - **Approval notifications:** extend the push/websocket system so creators/moderators get map workflow updates once authZ is enforced.
@@ -42,7 +42,7 @@ Progress over the summer 2025 cycle that is now in production:
 
 ## 🧹 Maintenance watchlist
 - **Codebase cleanup:** track duplicate audio directories, outdated deployment scripts, and backup artefacts in [Codebase Cleanup Plan](./codebase-cleanup.md).
-- **Queue & cache monitoring:** Bull workers + Redis metrics must land before scaling traffic; revisit once worker safety tasks above finish.
+- **Queue & cache monitoring:** BullMQ workers + Redis metrics must land before scaling traffic; revisit once worker safety tasks above finish.
 - **Automated coverage:** expand integration coverage for game actions, map editor auth, and socket join/broadcast flows prior to public launch.
 
 ---

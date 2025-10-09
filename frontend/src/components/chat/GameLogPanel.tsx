@@ -202,14 +202,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
                 {defeatedName}
               </span>{' '}
-              was defeated by{' '}
+              was conquered by{' '}
               <span className="font-semibold" style={{ color: attackerColor }}>
                 {agg.attackerName}
               </span>
               .
             </>
           )
-          const elimText = `${defeatedName} was defeated by ${agg.attackerName}.`
+          const elimText = `${defeatedName} was conquered by ${agg.attackerName}.`
           append(elimRich, elimText, agg.lastTs)
         }
       }
@@ -369,7 +369,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               const defeatedName = nameOf(eliminatedId) || eliminatedId
               formatted.push({
                 ts: bfAgg.tsLast,
-                text: `${defeatedName} was defeated by ${bfAgg.attackerName}.`,
+                text: `${defeatedName} was conquered by ${bfAgg.attackerName}.`,
                 rich: (
                   <>
                     <span
@@ -378,7 +378,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                     >
                       {defeatedName}
                     </span>{' '}
-                    was defeated by{' '}
+                    was conquered by{' '}
                     <span className="font-semibold" style={{ color: attackerColor }}>
                       {bfAgg.attackerName}
                     </span>
@@ -743,6 +743,26 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         }
         // Flush if last entries were a battle sequence
         if (bfAgg) flushBf()
+        // If the game has finished, append a concise end summary
+        try {
+          const isComplete =
+            (room?.status as string | undefined) === 'completed' ||
+            (room?.status as string | undefined) === 'abandoned' ||
+            game?.phase === 'finished'
+          if (isComplete) {
+            const tsEnd = new Date()
+            formatted.push({ ts: tsEnd, text: 'Game finished.' })
+            const winners = game?.players?.filter((p) => !p.isEliminated) ?? []
+            if (winners.length > 0) {
+              const names = winners
+                .map((p) => playerName.get(p.id) || p.username || p.id)
+                .join(', ')
+              formatted.push({ ts: tsEnd, text: `${names} won the game.` })
+            }
+          }
+        } catch {
+          /* ignore */
+        }
         // Newest first
         formatted.sort((a, b) => b.ts.getTime() - a.ts.getTime())
         setEntries(formatted)
@@ -757,7 +777,17 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
+  }, [
+    gameId,
+    redact,
+    playerName,
+    territoryName,
+    toSafeInt,
+    game?.phase,
+    game?.players,
+    room?.status,
+    playerColor,
+  ])
 
   useEffect(() => {
     function add(text: string, ts?: Date, focusTerritories?: string[]) {
@@ -822,7 +852,19 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         startedLoggedRef.current = true
         add('Game started.')
       } else if (payload.status === 'completed') {
-        add('Game ended.')
+        // Prefer consistent phrasing with history backfill
+        add('Game finished.')
+        // Announce winners if the game state is available
+        try {
+          const current = game
+          const winners = current?.players?.filter((p) => !p.isEliminated) ?? []
+          if (winners.length > 0) {
+            const names = winners.map((p) => playerName.get(p.id) || p.username || p.id).join(', ')
+            add(`${names} won the game.`)
+          }
+        } catch {
+          /* ignore */
+        }
       }
     }
 
@@ -908,13 +950,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             <span className="font-semibold" style={{ color: playerColor.get(eliminatedId) }}>
               {defeatedName}
             </span>{' '}
-            was defeated by{' '}
+            was conquered by{' '}
             <span className="font-semibold" style={{ color: playerColor.get(attackerId || '') }}>
               {attackerName}
             </span>
             .
           </>,
-          `${defeatedName} was defeated by ${attackerName}.`,
+          `${defeatedName} was conquered by ${attackerName}.`,
           ts,
         )
       }
@@ -1058,7 +1100,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                         >
                           {defeatedName}
                         </span>{' '}
-                        was defeated by{' '}
+                        was conquered by{' '}
                         <span
                           className="font-semibold"
                           style={{ color: playerColor.get(attackerId || '') }}
@@ -1067,7 +1109,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                         </span>
                         .
                       </>,
-                      `${defeatedName} was defeated by ${attackerName}.`,
+                      `${defeatedName} was conquered by ${attackerName}.`,
                     )
                   }
                 }
@@ -1204,6 +1246,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     playerName,
     territoryName,
     game?.currentPlayer,
+    game?.players,
     redact,
     toSafeInt,
     playerColor,

@@ -671,31 +671,43 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     // Attack phase - always route through GameActionProcessor/GameEngine
     socket.on(
       'attack',
-      withErrorHandler(socket, 'attack', async (data) => {
-        if (!data || !data.roomId || !data.fromTerritoryId || !data.toTerritoryId) {
-          throw new Error('Invalid attack data')
-        }
+      withErrorHandler(
+        socket,
+        'attack',
+        async (data, ack?: (r: { ok: boolean; queued?: boolean }) => void) => {
+          if (!data || !data.roomId || !data.fromTerritoryId || !data.toTerritoryId) {
+            throw new Error('Invalid attack data')
+          }
 
-        const userId = requireUserId(socket)
+          const userId = requireUserId(socket)
 
-        // Authorization check: verify player is in the room
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) {
-          throw new Error('Unauthorized: You are not a member of this game')
-        }
+          // Authorization check: verify player is in the room
+          const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
+          if (!hasAccess) {
+            throw new Error('Unauthorized: You are not a member of this game')
+          }
 
-        // If client doesn't specify armies, let downstream logic use the territory's
-        // available armies to determine dice (max 3/2). Avoid defaulting to 1.
-        const armies: number | undefined = typeof data.armies === 'number' ? data.armies : undefined
-        await gameActionProcessor.processAttack(
-          data.roomId,
-          userId,
-          data.fromTerritoryId,
-          data.toTerritoryId,
-          armies,
-          socket.id,
-        )
-      }),
+          // If client doesn't specify armies, let downstream logic use the territory's
+          // available armies to determine dice (max 3/2). Avoid defaulting to 1.
+          const armies: number | undefined =
+            typeof data.armies === 'number' ? data.armies : undefined
+          const outcome = await gameActionProcessor.processAttack(
+            data.roomId,
+            userId,
+            data.fromTerritoryId,
+            data.toTerritoryId,
+            armies,
+            socket.id,
+          )
+          if (typeof ack === 'function') {
+            try {
+              ack({ ok: true, queued: outcome.mode === 'queued' })
+            } catch {
+              // ignore ack errors
+            }
+          }
+        },
+      ),
     )
 
     // Capital warning check
