@@ -93,10 +93,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           >
             {/* Header */}
             <div
-              className={`sticky top-0 z-10 -mx-6 -mt-6 px-6 pb-8 pt-10 text-center shadow-[0_6px_12px_rgba(0,0,0,0.25)] ${
+              className={`sticky top-0 z-20 -mx-6 -mt-6 px-6 pb-8 pt-10 text-center shadow-[0_6px_12px_rgba(0,0,0,0.25)] border-b border-border/60 supports-[backdrop-filter]:backdrop-blur-md ${
                 isCurrentUserWinner
-                  ? 'bg-gradient-to-r from-gold to-violet/90 text-white'
-                  : 'bg-gradient-to-r from-surface-2/80 to-surface-1/60'
+                  ? 'bg-gradient-to-r from-gold/95 to-violet/95 text-white'
+                  : 'bg-gradient-to-r from-surface-2/95 to-surface-1/90 text-white'
               }`}
               style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.5rem)' }}
             >
@@ -826,54 +826,60 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     .map((e) => ({ ...e, time: new Date(e.when).getTime() || 0 }))
     .sort((a, b) => a.time - b.time)
     .slice(-15)
-
-  if (sortedTimeline.length === 0 && unlikelyMoments.length === 0) {
-    return null
-  }
+  const hasKeyMoments = sortedTimeline.length > 0 || unlikelyMoments.length > 0
 
   return (
     <div className={containerClass}>
       <h4 className="mb-3 text-center font-semibold text-muted">Key Moments</h4>
-      {unlikelyMoments.length > 0 && (
-        <div className="mb-4 space-y-2 rounded-lg border border-border/40 bg-surface-1/70 p-3 text-sm">
-          <div className="flex items-start gap-2">
-            <span className="text-lg" aria-hidden="true">
-              🎲
-            </span>
-            <div>
-              <div className="font-semibold text-[color:var(--color-warning)]">
-                Unlikely rolls spotted
-              </div>
-              <p className="text-xs text-muted">
-                Odds reflect chance to conquer from the initial stacks.
-              </p>
-            </div>
-          </div>
-          <ul className="space-y-2">
-            {unlikelyMoments.map((moment) => (
-              <li key={moment.key} className="rounded-md bg-surface-2/70 p-3">
-                <div className="text-sm font-semibold text-heading">{moment.label}</div>
-                <div className="text-xs text-muted">{moment.detail}</div>
-                <div className="mt-1 text-xs font-semibold text-[color:var(--color-warning)]">
-                  ≈{formatProbability(moment.probability)}% chance
+      {hasKeyMoments ? (
+        <>
+          {unlikelyMoments.length > 0 && (
+            <div className="mb-4 space-y-2 rounded-lg border border-border/40 bg-surface-1/70 p-3 text-sm">
+              <div className="flex items-start gap-2">
+                <span className="text-lg" aria-hidden="true">
+                  🎲
+                </span>
+                <div>
+                  <div className="font-semibold text-[color:var(--color-warning)]">
+                    Unlikely rolls spotted
+                  </div>
+                  <p className="text-xs text-muted">
+                    Odds reflect chance to conquer from the initial stacks.
+                  </p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {sortedTimeline.length > 0 && (
-        <ol className="space-y-2 text-sm">
-          {sortedTimeline.map((e, idx) => (
-            <li key={`${e.when}-${idx}`} className="flex items-start gap-2">
-              <span className="mt-1 inline-block h-2 w-2 rounded-full bg-primary" />
-              <div>
-                <div className="text-white">{e.labelRich ?? e.label}</div>
-                {e.detail && <div className="text-xs text-muted">{e.detail}</div>}
               </div>
-            </li>
-          ))}
-        </ol>
+              <ul className="space-y-2">
+                {unlikelyMoments.map((moment) => (
+                  <li key={moment.key} className="rounded-md bg-surface-2/70 p-3">
+                    <div className="text-sm font-semibold text-heading">{moment.label}</div>
+                    <div className="text-xs text-muted">{moment.detail}</div>
+                    <div className="mt-1 text-xs font-semibold text-[color:var(--color-warning)]">
+                      ≈{formatProbability(moment.probability)}% chance
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {sortedTimeline.length > 0 && (
+            <ol className="space-y-2 text-sm">
+              {sortedTimeline.map((e, idx) => (
+                <li key={`${e.when}-${idx}`} className="flex items-start gap-2">
+                  <span className="mt-1 inline-block h-2 w-2 rounded-full bg-primary" />
+                  <div>
+                    <div className="text-white">{e.labelRich ?? e.label}</div>
+                    {e.detail && <div className="text-xs text-muted">{e.detail}</div>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      ) : (
+        <div className="rounded-lg border border-dashed border-border/50 bg-surface-1/60 p-4 text-center text-xs text-muted">
+          No notable events were captured for this battle. We'll surface key turns here once the
+          game log includes more detail.
+        </div>
       )}
     </div>
   )
