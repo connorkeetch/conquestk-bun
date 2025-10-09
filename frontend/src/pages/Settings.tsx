@@ -22,10 +22,8 @@ import {
   PREMIUM_COLORS,
   STANDARD_COLORS,
 } from '../constants/colors'
-import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { DEFAULT_TAGLINE, PROFILE_TAGLINES } from '../constants/profileTaglines'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import audioService from '../services/audioService'
 import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
@@ -450,7 +448,6 @@ export default function Settings() {
   const { user } = useAppSelector((state) => state.auth)
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
-  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
 
   // Get current color theme from centralized config
   const [currentColorTheme, setCurrentColorTheme] = useState<ThemeId>(() => getStoredTheme())
@@ -1408,17 +1405,15 @@ export default function Settings() {
           },
         ]
 
-        if (comingSoonUiEnabled) {
-          items.push({
-            id: 'two-factor',
-            label: 'Two-Factor Authentication',
-            description: 'Enable 2FA for extra security',
-            type: 'button',
-            isWorking: false,
-            buttonText: '📱 Enable 2FA',
-            buttonVariant: 'secondary',
-          })
-        }
+        items.push({
+          id: 'two-factor',
+          label: 'Two-Factor Authentication',
+          description: 'Enable 2FA for extra security',
+          type: 'button',
+          isWorking: false,
+          buttonText: '📱 Enable 2FA',
+          buttonVariant: 'secondary',
+        })
 
         items.push({
           id: 'delete-account',

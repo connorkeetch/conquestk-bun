@@ -11,8 +11,6 @@ export const FEATURE_FLAGS = {
 
   // UI Features
   MAP_POLYGON_EDITOR: 'ui_map_polygon_editor',
-  COMING_SOON_UI: 'ui_coming_soon_placeholders',
-  PROFILE_EXTRAS: 'ui_profile_extras',
 
   // Theme/UX hardening
   UI_THEME_COOKIE_FALLBACK: 'ui_theme_cookie_fallback',

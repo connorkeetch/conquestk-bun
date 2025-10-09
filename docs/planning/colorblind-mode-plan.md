@@ -12,7 +12,7 @@
 4. Collect enough feedback/telemetry to iterate on palette choices if reports surface visibility issues.
 
 ## Current state snapshot
-- UI toggle exists in **Settings → Display** but is disabled behind the `COMING_SOON_UI` flag and hard-coded `isWorking: false`.
+- UI toggle exists in **Settings → Display** but remains hard-coded with `isWorking: false`, so the control is visible yet non-functional.
 - Player colors rely on the 12-color `PLAYER_COLORS` palette; helpers (`getPlayerColor`, `getColorValue`) assume the current hex values and have no alternate palette concept.
 - Components read `player.color` directly (maps, badges, overlays, activity log) so overrides must be centralized to avoid regressions.
 - Frontend settings state only tracks theme and preferred color; there is no place to store `colorblindMode` locally or in API payloads.
@@ -35,7 +35,7 @@
 ### Phase 2 – Frontend state & settings plumbing
 - Add `colorblindMode` boolean to the Redux settings slice (`frontend/src/store/settingsSlice.ts`).
 - Update local persistence helpers (`loadSettings`, `saveSettings`, `persistSetting`) to read/write the new flag and include it in API payloads.
-- Remove the `COMING_SOON_UI` gate or ensure it’s enabled for QA; hook the settings toggle `onChange` to dispatch the new action.
+- Hook the settings toggle `onChange` to dispatch the new action and wire it through settings state.
 - Provide a subtle tooltip or helper text in the settings modal explaining what the mode changes and how to report issues.
 
 ### Phase 3 – Color resolution helpers & UI coverage

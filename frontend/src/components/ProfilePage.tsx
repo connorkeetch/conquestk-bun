@@ -25,9 +25,7 @@ import {
   type PlayerColor,
   PREMIUM_PLAYER_COLORS,
 } from '../constants/colors'
-import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import {
   type MatchHistoryEntry,
   type ProfileSummary,
@@ -248,8 +246,6 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const requestControllerRef = useRef<AbortController | null>(null)
-  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
-  const profileExtrasEnabled = useFeatureFlag(FEATURE_FLAGS.PROFILE_EXTRAS)
   const [relationship, setRelationship] = useState<RelationshipStatus>('none')
   const [friendSince, setFriendSince] = useState<string | undefined>(undefined)
   const [mutual, setMutual] = useState<{
@@ -422,16 +418,16 @@ const ProfilePage: React.FC = () => {
   // Pick initial tab from query string if provided
   useEffect(() => {
     const t = tabParam
-    if (t === 'overview' || t === 'stats' || t === 'friends') {
+    if (
+      t === 'overview' ||
+      t === 'stats' ||
+      t === 'friends' ||
+      t === 'matches' ||
+      t === 'achievements'
+    ) {
       setActiveTab(t)
     }
   }, [tabParam])
-
-  useEffect(() => {
-    if (!comingSoonUiEnabled && activeTab === 'achievements') {
-      setActiveTab('overview')
-    }
-  }, [comingSoonUiEnabled, activeTab])
 
   // Load friends/followers data for Friends tab
   useEffect(() => {
@@ -782,14 +778,9 @@ const ProfilePage: React.FC = () => {
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
     { id: 'stats', label: 'Statistics', icon: '📊', available: true },
     { id: 'friends', label: 'Friends', icon: '🤝', available: true },
+    { id: 'matches', label: 'Matches', icon: '🎮', available: true },
+    { id: 'achievements', label: 'Achievements', icon: '🏆', available: true },
   ]
-
-  if (profileExtrasEnabled) {
-    tabs.push(
-      { id: 'matches', label: 'Matches', icon: '🎮', available: true },
-      { id: 'achievements', label: 'Achievements', icon: '🏆', available: true },
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep text-white p-4 sm:p-6 lg:p-8">
@@ -1205,8 +1196,6 @@ const ProfilePage: React.FC = () => {
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
           {tabs.map((tab) => {
-            const isPreviewTab = tab.id === 'matches' || tab.id === 'achievements'
-
             return (
               <button
                 type="button"
@@ -1224,9 +1213,6 @@ const ProfilePage: React.FC = () => {
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {!tab.available && <span className="text-xs">(Soon)</span>}
-                {tab.available && comingSoonUiEnabled && isPreviewTab && (
-                  <span className="text-xs text-muted">(Preview)</span>
-                )}
               </button>
             )
           })}
@@ -1784,7 +1770,7 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {profileExtrasEnabled && activeTab === 'achievements' && (
+          {activeTab === 'achievements' && (
             <div className="relative glass-box-xl shadow-xl">
               <AchievementsPanel />
             </div>

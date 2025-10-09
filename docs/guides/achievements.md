@@ -6,7 +6,7 @@ This guide summarizes how achievements are modeled, exposed, and rendered in Con
 - Definitions live in the `achievements` table; user unlocks use `user_achievements`.
 - For future incremental tracking, use the `progress_data` JSONB column on `user_achievements`. There is no standalone `achievement_progress` table in v1.
 - Backend API surfaces the current user's unlocked and available achievements.
-- The Profile page renders an Achievements tab guarded by the `ui_profile_extras` feature flag.
+- The Profile page renders an Achievements tab that is now available to all players by default.
 
 ## Data Model
 - `achievements` columns (key): `id`, `name`, `description`, `category`, `icon`, `points`, `rarity`, `unlock_criteria` (JSONB), `is_secret` (hidden), `created_at`.
@@ -29,8 +29,6 @@ Notes
   - `getMyAchievements()` returns normalized unlocked/available lists.
 - UI: `frontend/src/components/profile/AchievementsPanel.tsx`
   - Renders unlocked and all achievements; uses emoji or `/assets/achievements/<slug>.svg` fallback.
-- Feature flag: `ui_profile_extras` (constant: `FEATURE_FLAGS.PROFILE_EXTRAS`)
-  - Gates the Achievements tab and panel in `ProfilePage`.
 
 ## Developer Tasks (Phase 1 MVP)
 - Add final definitions for v1 catalog via SQL seed or admin script.
@@ -38,7 +36,6 @@ Notes
 - Replace placeholder badge art as assets become available.
 
 ## Verification
-- Enable `ui_profile_extras` for your user via the feature flags admin or DB.
 - Visit `/profile/:username` and switch to the Achievements tab.
 - Confirm `GET /api/profile/achievements` returns data and the UI renders unlocked/available lists.
 
