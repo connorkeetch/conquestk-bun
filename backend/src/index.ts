@@ -227,7 +227,7 @@ initializeRedis()
       try {
         const bullBoardRouter = bullBoardRouterFactory()
         app.use(bullBoardRouter)
-        logger.info('✅ Bull Board mounted at /admin/queues')
+        logger.info('✅ Bull Board mounted at /api/admin/queues/ui')
       } catch (e) {
         logger.warn('⚠️ Failed to mount Bull Board after init:', getErrorMessage(e))
       }
@@ -383,7 +383,7 @@ app.use('/api/feature-flags', require('./routes/featureFlags').default)
 app.use('/api/queues', require('./routes/queueRoutes').default)
 app.use('/api/performance', require('./routes/performanceRoutes').default)
 app.use('/api/benchmark', require('./routes/benchmarkRoutes').default)
-// Mount Bull Board UI behind admin auth at /admin/queues
+// Mount Bull Board UI behind admin auth at /api/admin/queues/ui
 try {
   const bullBoardRouter = bullBoardRouterFactory()
   app.use(bullBoardRouter)

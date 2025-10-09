@@ -10,7 +10,9 @@ export const createBullBoardRouter = () => {
   const router = Router()
 
   const serverAdapter = new ExpressAdapter()
-  serverAdapter.setBasePath('/admin/queues')
+  // Mount behind API prefix so production proxy forwards it
+  const basePath = '/api/admin/queues/ui'
+  serverAdapter.setBasePath(basePath)
 
   const queues = [
     new BullMQAdapter(queueService.getGameActionQueue()),
@@ -23,7 +25,7 @@ export const createBullBoardRouter = () => {
   createBullBoard({ queues: queues as unknown as readonly never[], serverAdapter })
 
   // Guard the UI behind admin auth
-  router.use('/admin/queues', authenticateToken, requireAdmin, serverAdapter.getRouter())
+  router.use(basePath, authenticateToken, requireAdmin, serverAdapter.getRouter())
   return router
 }
 
