@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import type Bull from 'bull'
+import type { Job } from 'bullmq'
 import type { CacheService } from '../services/cacheService'
 import type { GameService } from '../services/gameService'
 import type { JobIdempotencyService } from '../services/jobIdempotencyService'
@@ -107,14 +107,14 @@ describe('CleanupWorker', () => {
   let mockCacheService: MockedCacheService
   let mockIdempotencyService: MockedIdempotencyService
   let worker: CleanupWorker
-  let job: Bull.Job<GameCleanupJob>
+  let job: Job<GameCleanupJob>
 
-  const queue = { name: 'game-cleanup' } as unknown as Bull.Queue<GameCleanupJob>
+  const queue = { name: 'game-cleanup' } as unknown as { name: string }
 
-  const invokeCleanup = (instance: CleanupWorker, cleanupJob: Bull.Job<GameCleanupJob>) =>
+  const invokeCleanup = (instance: CleanupWorker, cleanupJob: Job<GameCleanupJob>) =>
     (
       instance as unknown as {
-        cleanupGame: (queuedJob: Bull.Job<GameCleanupJob>) => Promise<unknown>
+        cleanupGame: (queuedJob: Job<GameCleanupJob>) => Promise<unknown>
       }
     ).cleanupGame(cleanupJob)
 
@@ -153,7 +153,7 @@ describe('CleanupWorker', () => {
         reason: 'finished',
         idempotencyKey: 'cleanup-job-1',
       },
-    } as unknown as Bull.Job<GameCleanupJob>
+    } as unknown as Job<GameCleanupJob>
   })
 
   it('cleans up finished games and removes territory modifiers', async () => {

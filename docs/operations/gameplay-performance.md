@@ -18,7 +18,7 @@ This note captures quick wins for keeping the live game responsive on both the c
 ## Backend & transport
 
 1. **Socket message size:** Keep payloads under 50 KB per tick. Use selectors on the client to derive view-only data instead of sending it all over the wire. Consider delta compression for map state if spikes persist.
-2. **Database round-trips:** Lobby transitions call multiple services (maps, clans, stats). Batch queries in `gameService` so the turn handler only hits the database once per action. Push analytics/events off the hot path via Bull queues.
+2. **Database round-trips:** Lobby transitions call multiple services (maps, clans, stats). Batch queries in `gameService` so the turn handler only hits the database once per action. Push analytics/events off the hot path via BullMQ queues.
 3. **Latency budgets:** Aim for <100 ms RTT between client and server. Enable Redis Socket.io adapter in production to prevent a single instance from becoming the bottleneck.
 
 ### Operational monitoring
@@ -160,12 +160,12 @@ Implementation notes (2025‑10‑08)
 - Turn reminder and audio cues are driven from PHASE_CHANGE deltas; snapshot is no longer required for these UX signals. Covered by test `frontend/src/services/socketService.delta.test.ts`.
 - Selectors optimized: `selectValidTargets` now uses an indexed board and O(1) lookups, reducing recompute time on frequent selection changes. See `frontend/src/store/selectors.ts`.
 
-4) Move analytics/events off the hot path to Bull queues
+4) Move analytics/events off the hot path to BullMQ queues
 
 Implementation notes (2025‑10‑08)
 - endTurn appends logs and per-turn stats via `queueService.addAnalyticsEvent()`; when queues are unavailable, these writes occur asynchronously (fire-and-forget) off the critical path.
 
-4) Move analytics/events off the hot path to Bull queues
+4) Move analytics/events off the hot path to BullMQ queues
 - Scope: Decouple event logging, achievements, and clan progression from action handlers.
 - Where:
   - `backend/src/services/queueService.ts`

@@ -11,7 +11,7 @@
 **Baseline in prod today:**
 
 * Community Hub shows leaderboards; **Clans tab is disabled** (placeholder only).
-* Backend exposes users/profiles/player stats; Socket.io & Redis available; Bull workers scaffolded; feature flags exist.
+* Backend exposes users/profiles/player stats; Socket.io & Redis available; BullMQ workers scaffolded; feature flags exist.
 * We will reuse existing user services/types to avoid duplicating account logic.
 
 ---
@@ -131,7 +131,7 @@
 * Rooms per clan: `clan:{id}`.
 * Events: `clan:joined`, `clan:left`, `clan:memberUpdated`, `clan:announcement`, `clan:chat:{new|edited|deleted}`, `clan:war:update`, `clan:objective:update`.
 
-### 6.4 Background Jobs (Bull)
+### 6.4 Background Jobs (BullMQ)
 
 * Invitation expiry; probation checks; objective rotation & weekly resets; seasonal snapshots; war scheduling & timeouts; email/in‑app digests.
 

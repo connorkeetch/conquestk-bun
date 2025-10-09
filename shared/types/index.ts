@@ -693,12 +693,15 @@ export interface ClientToServerEvents {
     data: { roomId: string; territoryId: string; armies: number },
     callback?: (response: { ok: boolean; queued?: boolean; version?: number }) => void,
   ) => void
-  attack: (data: {
-    roomId: string
-    fromTerritoryId: string
-    toTerritoryId: string
-    armies?: number
-  }) => void
+  attack: (
+    data: {
+      roomId: string
+      fromTerritoryId: string
+      toTerritoryId: string
+      armies?: number
+    },
+    callback?: (response: { ok: boolean; queued?: boolean }) => void,
+  ) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
   fortify: (data: {
     roomId: string

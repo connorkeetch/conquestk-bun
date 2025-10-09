@@ -1,7 +1,8 @@
 import type { GameDelta } from '@risk-game/shared/types'
-import type Bull from 'bull'
+import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
 import { query } from '../config/database'
+import { acquireLock, releaseLock } from '../config/redis'
 import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService'
 import { gameStateCache } from '../services/cacheService'
 import { DeltaEmitter } from '../services/deltaEmitter'
@@ -28,7 +29,8 @@ interface ProcessGameActionResult {
 }
 
 export class GameActionWorker {
-  private queue: Bull.Queue<GameActionJob>
+  private worker: Worker | null = null
+  private queueName: string
   private gameService: GameService
   private deltaEmitter: DeltaEmitter
   private io: Server<ClientToServerEvents, ServerToClientEvents>
@@ -37,7 +39,7 @@ export class GameActionWorker {
     this.gameService = new GameService()
     this.deltaEmitter = new DeltaEmitter(io)
     this.io = io
-    this.queue = queueService.getGameActionQueue()
+    this.queueName = queueService.getGameActionQueue().name
   }
 
   private computePayloadBytes(data: unknown): number {
@@ -68,27 +70,33 @@ export class GameActionWorker {
   }
 
   async initialize(): Promise<void> {
-    // Process game action jobs
-    this.queue.process('process-game-action', 10, async (job: Bull.Job<GameActionJob>) => {
-      return this.processGameAction(job)
+    const processJob = async (job: Job): Promise<unknown> => {
+      if (job.name === 'process-game-action') {
+        return this.processGameAction(job as Job<GameActionJob>)
+      }
+      if (job.name === 'execute-ai-turn') {
+        return this.processAiTurn(job)
+      }
+      logger.warn('Received unknown job for game-actions queue', { name: job.name, id: job.id })
+      return null
+    }
+
+    this.worker = new Worker(this.queueName, processJob, {
+      concurrency: 10,
+      connection: ((await import('../config/redis')).getRedisClient()?.options ??
+        {}) as unknown as import('bullmq').ConnectionOptions,
     })
 
-    // Orchestrate AI turns (queued as separate job name)
-    this.queue.process('execute-ai-turn', 5, async (job: Bull.Job) => {
-      return this.processAiTurn(job)
-    })
-
-    // Job event handlers
-    this.queue.on('completed', (job, result) => {
+    this.worker.on('completed', (job, result) => {
       logger.info('✅ Game action job completed', {
         jobId: job.id,
         result,
       })
     })
 
-    this.queue.on('failed', (job, error) => {
+    this.worker.on('failed', (job, error) => {
       logger.error('❌ Game action job failed', {
-        jobId: job.id,
+        jobId: job?.id,
         error:
           error instanceof Error
             ? { message: error.message, name: error.name, stack: error.stack }
@@ -96,14 +104,16 @@ export class GameActionWorker {
       })
     })
 
-    this.queue.on('stalled', (job) => {
-      logger.warn('⚠️ Game action job stalled', { jobId: job.id })
+    this.worker.on('error', (error) => {
+      logger.error('❌ GameActionWorker encountered an error', {
+        error: error instanceof Error ? error.message : error,
+      })
     })
 
     logger.info('✅ GameActionWorker initialized')
   }
 
-  private async processAiTurn(job: Bull.Job): Promise<ProcessGameActionResult> {
+  private async processAiTurn(job: Job): Promise<ProcessGameActionResult> {
     const { gameId, playerId, turnNumber, budgetOverrides } = job.data as {
       gameId: string
       playerId: string
@@ -114,7 +124,7 @@ export class GameActionWorker {
     const idKey = job.id !== undefined ? String(job.id) : `ai:${gameId}:${turnNumber}`
 
     const cached = await jobIdempotencyService.getProcessedJob<ProcessGameActionResult>(
-      this.queue.name,
+      this.queueName,
       idKey,
     )
     if (cached.exists && cached.value) {
@@ -133,20 +143,20 @@ export class GameActionWorker {
       // Validate this job still applies
       if (state.phase === 'finished') {
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
-        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
 
       if (state.turn !== turnNumber || state.currentPlayer !== playerId) {
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
-        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
 
       const current = state.players.find((p) => p.id === playerId)
       if (!current || !current.isAi) {
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
-        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
 
@@ -190,7 +200,7 @@ export class GameActionWorker {
       }
 
       const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
-      await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+      await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
       return result
     } catch (error) {
       logger.error('❌ Failed to process AI turn', {
@@ -475,14 +485,14 @@ export class GameActionWorker {
     }
   }
 
-  private async processGameAction(job: Bull.Job<GameActionJob>): Promise<ProcessGameActionResult> {
+  private async processGameAction(job: Job<GameActionJob>): Promise<ProcessGameActionResult> {
     const { gameId, playerId, action, socketId, idempotencyKey } = job.data
     const idKey =
       idempotencyKey ??
       (job.id !== undefined ? String(job.id) : `${gameId}:${playerId}:${action.type}`)
 
     const cached = await jobIdempotencyService.getProcessedJob<ProcessGameActionResult>(
-      this.queue.name,
+      this.queueName,
       idKey,
     )
     if (cached.exists && cached.value) {
@@ -495,7 +505,20 @@ export class GameActionWorker {
       return { ...cached.value, processed: false }
     }
 
+    let lockToken: string | null = null
+    const lockKey = `lock:game-actions:${gameId}`
+
     try {
+      // Serialize actions per game to avoid race conditions on rapid clicks
+      // Attempt to acquire quickly, with a short spin-wait window
+      const startWait = Date.now()
+      lockToken = await acquireLock(lockKey, 5000)
+      while (!lockToken) {
+        if (Date.now() - startWait > 1500) break
+        await new Promise((r) => setTimeout(r, 25))
+        lockToken = await acquireLock(lockKey, 5000)
+      }
+
       logger.debug('Processing game action', {
         gameId,
         playerId,
@@ -515,7 +538,7 @@ export class GameActionWorker {
           })
         }
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
-        await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+        await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
 
@@ -763,7 +786,7 @@ export class GameActionWorker {
         delta: delta || null,
         processed: true,
       }
-      await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+      await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
       return result
     } catch (error) {
       logger.error('❌ Failed to process game action', {
@@ -786,6 +809,14 @@ export class GameActionWorker {
       }
 
       throw error
+    } finally {
+      if (lockToken) {
+        try {
+          await releaseLock(lockKey, lockToken)
+        } catch {
+          // best-effort
+        }
+      }
     }
   }
 

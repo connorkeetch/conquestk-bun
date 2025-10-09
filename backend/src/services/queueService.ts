@@ -1,23 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import Bull from 'bull'
+import { type Job, type JobsOptions, Queue, QueueEvents } from 'bullmq'
 import type Redis from 'ioredis'
 import type { RedisOptions } from 'ioredis'
 import { getRedisClient } from '../config/redis'
 import type { GameAction } from '../types/game'
 import { logger } from '../utils/logger'
 
-type QueueInspectionOptions = {
-  excludeData?: boolean
-}
-
-interface WaitingJobSnapshot {
-  timestamp?: number
-}
-
-interface CompletedJobSnapshot {
-  finishedOn?: number
-  processedOn?: number
-}
+// Note: BullMQ sampling uses getJobs on states; no extra inspection types needed.
 
 interface FailedJobSnapshot {
   id?: string
@@ -27,24 +16,9 @@ interface FailedJobSnapshot {
   timestamp?: number
 }
 
-type InspectableQueue<JobData> = Bull.Queue<JobData> & {
-  getWaiting(
-    start?: number,
-    end?: number,
-    opts?: QueueInspectionOptions,
-  ): Promise<WaitingJobSnapshot[]>
-  getCompleted(
-    start?: number,
-    end?: number,
-    opts?: QueueInspectionOptions,
-  ): Promise<CompletedJobSnapshot[]>
-  getStalledCount(): Promise<number>
-  getFailed(
-    start?: number,
-    end?: number,
-    opts?: QueueInspectionOptions,
-  ): Promise<FailedJobSnapshot[]>
-}
+// BullMQ does not expose the same inspect helpers as Bull.
+// We'll use getJobs with specific states for sampling where needed.
+type InspectableQueue<JobData> = Queue<JobData>
 
 // Queue job types
 export interface GameActionJob {
@@ -138,9 +112,10 @@ export type QueueHealthResult = QueueHealthOperational | QueueHealthDisabled
 
 export class QueueService {
   private redis: Redis | null = null
-  private queues: Map<string, Bull.Queue> = new Map()
-  private deadLetterQueues: Map<string, Bull.Queue> = new Map()
+  private queues: Map<string, Queue> = new Map()
+  private deadLetterQueues: Map<string, Queue> = new Map()
   private queueDisplayNames: Map<string, string> = new Map()
+  private queueEvents: Map<string, QueueEvents> = new Map()
   private queueErrorState: Map<
     string,
     {
@@ -152,8 +127,8 @@ export class QueueService {
   private isInitialized = false
   private readonly queueReadyTimeoutMs = Number(process.env.QUEUE_READY_TIMEOUT_MS ?? 15000)
 
-  private resolveQueue<Key extends QueueConfigKey>(key: Key): Bull.Queue | null {
-    return (this.queues.get(key) as Bull.Queue | undefined) ?? null
+  private resolveQueue<Key extends QueueConfigKey>(key: Key): Queue | null {
+    return (this.queues.get(key) as Queue | undefined) ?? null
   }
 
   async initialize(): Promise<void> {
@@ -174,68 +149,40 @@ export class QueueService {
       const redisClient = this.redis
 
       const {
-        // Strip commandTimeout so Bull's blocking commands (e.g. BRPOP) don't trigger false timeouts
+        // Strip commandTimeout so BullMQ's blocking commands don't trigger false timeouts
         commandTimeout: _ignoredCommandTimeout,
         ...redisClientOptions
       } = redisClient.options as RedisOptions
 
-      const baseRedisOptions: RedisOptions = {
+      const _baseRedisOptions: RedisOptions = {
         ...redisClientOptions,
-        // Ensure Bull queue connections inherit the same resilience tuning as our main client
+        // Ensure BullMQ queue connections inherit the same resilience tuning as our main client
         enableReadyCheck: false,
         lazyConnect: false,
         maxRetriesPerRequest: null,
-        // Explicitly disable per-command timeouts for Bull-managed connections
+        // Explicitly disable per-command timeouts for BullMQ-managed connections
         commandTimeout: undefined,
       }
 
-      // Initialize all queues using dedicated duplicates of the centralized Redis connection
+      // Initialize all queues using the centralized Redis connection
       for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
-        const queue = new Bull(config.name, {
-          createClient: (type) => {
-            const client = redisClient.duplicate({
-              ...baseRedisOptions,
-              connectionName: `bull:${config.name}:${type}`,
-            })
-
-            client.on('error', (err) =>
-              logger.warn(
-                `Redis client error for ${config.name} (${type}): ${
-                  err instanceof Error ? err.message : err
-                }`,
-              ),
-            )
-
-            return client
+        const defaultJobOptions: JobsOptions = {
+          removeOnComplete: 10,
+          removeOnFail: 5,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
           },
-          defaultJobOptions: {
-            removeOnComplete: 10,
-            removeOnFail: 5,
-            attempts: 3,
-            backoff: {
-              type: 'exponential',
-              delay: 2000,
-            },
-          },
+        }
+
+        const queue = new Queue(config.name, {
+          connection: redisClient,
+          defaultJobOptions,
         })
 
-        const deadLetterQueue = new Bull(`${config.name}:dead-letter`, {
-          createClient: (type) => {
-            const client = redisClient.duplicate({
-              ...baseRedisOptions,
-              connectionName: `bull:${config.name}:dlq:${type}`,
-            })
-
-            client.on('error', (err) =>
-              logger.warn(
-                `Redis client error for ${config.name}:dead-letter (${type}): ${
-                  err instanceof Error ? err.message : err
-                }`,
-              ),
-            )
-
-            return client
-          },
+        const deadLetterQueue = new Queue(`${config.name}:dead-letter`, {
+          connection: redisClient,
           defaultJobOptions: {
             removeOnComplete: false,
             removeOnFail: false,
@@ -281,7 +228,7 @@ export class QueueService {
   }
 
   // Game Action Queue
-  async addGameAction(job: GameActionJob): Promise<Bull.Job<GameActionJob> | null> {
+  async addGameAction(job: GameActionJob): Promise<Job<GameActionJob> | null> {
     if (!this.redis || !this.isInitialized) {
       logger.warn('QueueService not available, skipping game action queue')
       return null
@@ -313,7 +260,7 @@ export class QueueService {
     if (!queue) return false
 
     try {
-      const job = await (queue as Bull.Queue).getJob(jobId)
+      const job = await queue.getJob(jobId)
       if (job) {
         await job.remove()
         return true
@@ -332,7 +279,7 @@ export class QueueService {
     job: GameActionJob,
     delayMs: number,
     options?: { idempotencyKey?: string; priority?: number },
-  ): Promise<Bull.Job<GameActionJob> | null> {
+  ): Promise<Job<GameActionJob> | null> {
     if (!this.redis || !this.isInitialized) {
       logger.warn('QueueService not available, skipping delayed game action')
       return null
@@ -358,7 +305,7 @@ export class QueueService {
   }
 
   // Game Cleanup Queue
-  async addGameCleanup(job: GameCleanupJob): Promise<Bull.Job<GameCleanupJob> | null> {
+  async addGameCleanup(job: GameCleanupJob): Promise<Job<GameCleanupJob> | null> {
     if (!this.redis || !this.isInitialized) {
       logger.warn('QueueService not available, skipping game cleanup queue')
       return null
@@ -385,7 +332,7 @@ export class QueueService {
     event: string
     gameId: string
     data: unknown
-  }): Promise<Bull.Job | null> {
+  }): Promise<Job | null> {
     if (!this.redis || !this.isInitialized) {
       return null
     }
@@ -405,15 +352,13 @@ export class QueueService {
 
     for (const [key, queue] of this.queues) {
       const inspectableQueue = queue as InspectableQueue<unknown>
-      const [jobCounts, isPaused, waitingSamples, completedSamples, stalledCount, failedSamples] =
-        await Promise.all([
-          queue.getJobCounts(),
-          queue.isPaused(),
-          inspectableQueue.getWaiting(0, 19, { excludeData: true }),
-          inspectableQueue.getCompleted(0, 9, { excludeData: true }),
-          inspectableQueue.getStalledCount(),
-          inspectableQueue.getFailed(0, 0, { excludeData: true }),
-        ])
+      const [jobCounts, isPaused, waitingJobs, completedJobs, failedJobs] = await Promise.all([
+        queue.getJobCounts('wait', 'active', 'completed', 'failed', 'delayed'),
+        queue.isPaused(),
+        inspectableQueue.getJobs(['wait'], 0, 19),
+        inspectableQueue.getJobs(['completed'], 0, 9),
+        inspectableQueue.getJobs(['failed'], 0, 0),
+      ])
 
       const deadLetterQueue = this.deadLetterQueues.get(key)
       let deadLetterCount = 0
@@ -425,17 +370,17 @@ export class QueueService {
         }, 0)
       }
 
-      const oldestWaiting = waitingSamples.reduce<number>((max, job) => {
-        if (typeof job.timestamp === 'number') {
-          return Math.max(max, now - job.timestamp)
+      const oldestWaiting = waitingJobs.reduce<number>((max, j) => {
+        if (typeof j.timestamp === 'number') {
+          return Math.max(max, now - j.timestamp)
         }
         return max
       }, 0)
 
-      const completedDurations = completedSamples
-        .map((job) => {
-          if (typeof job.finishedOn === 'number' && typeof job.processedOn === 'number') {
-            return job.finishedOn - job.processedOn
+      const completedDurations = completedJobs
+        .map((j) => {
+          if (typeof j.finishedOn === 'number' && typeof j.processedOn === 'number') {
+            return j.finishedOn - j.processedOn
           }
           return null
         })
@@ -449,11 +394,12 @@ export class QueueService {
             )
           : null
 
-      const lastFailedJob = failedSamples[0]
+      const lastFailedJob = failedJobs[0]
       const lastFailed = lastFailedJob
         ? {
             id: lastFailedJob.id ?? 'unknown',
-            reason: lastFailedJob.failedReason || 'Unknown failure',
+            reason:
+              (lastFailedJob as unknown as FailedJobSnapshot).failedReason || 'Unknown failure',
             failedAt: new Date(
               (lastFailedJob.finishedOn ?? lastFailedJob.processedOn ?? lastFailedJob.timestamp) ||
                 Date.now(),
@@ -465,9 +411,6 @@ export class QueueService {
       if (isPaused) {
         warnings.push('queue paused')
       }
-      if (stalledCount > 0) {
-        warnings.push(`${stalledCount} stalled job${stalledCount === 1 ? '' : 's'}`)
-      }
       if (deadLetterCount > 0) {
         warnings.push(`${deadLetterCount} dead-letter job${deadLetterCount === 1 ? '' : 's'}`)
       }
@@ -477,14 +420,14 @@ export class QueueService {
       }
 
       stats[key] = {
-        waiting: jobCounts.waiting,
-        active: jobCounts.active,
-        completed: jobCounts.completed,
-        failed: jobCounts.failed,
-        delayed: jobCounts.delayed,
+        waiting: Number(jobCounts.wait ?? jobCounts.waiting ?? 0),
+        active: Number(jobCounts.active ?? 0),
+        completed: Number(jobCounts.completed ?? 0),
+        failed: Number(jobCounts.failed ?? 0),
+        delayed: Number(jobCounts.delayed ?? 0),
         isPaused,
         deadLetter: deadLetterCount,
-        stalled: stalledCount,
+        stalled: 0,
         oldestWaitingMs: oldestWaiting > 0 ? oldestWaiting : null,
         avgProcessingMs,
         lastFailedJob: lastFailed,
@@ -506,32 +449,16 @@ export class QueueService {
     }
 
     try {
-      // Bull's getWorkers provides connected processors (may throw on older Redis versions)
-      const workers = await (
-        queue as Bull.Queue & {
-          getWorkers?: () => Promise<Array<{ name: string }>>
-        }
-      ).getWorkers?.()
-
-      if (Array.isArray(workers)) {
-        if (workers.length === 0) return false
-        // Heuristic: treat workers as active only if a job finished recently
-        try {
-          const inspectable = queue as unknown as InspectableQueue<unknown>
-          const completed = await inspectable.getCompleted(0, 1, { excludeData: true })
-          const last = Array.isArray(completed) && completed.length > 0 ? completed[0] : null
-          const finishedOn = (last?.finishedOn ?? last?.processedOn ?? 0) as number
-          if (!finishedOn) {
-            // No completion data yet; conservatively assume inactive to prefer inline path
-            return false
-          }
-          const RECENT_MS = 30_000
-          return Date.now() - finishedOn < RECENT_MS
-        } catch (_e) {
-          // If we cannot inspect, fall back to presence of workers
-          return true
-        }
+      // Heuristic: treat workers as active only if a job finished recently
+      const completed = await queue.getJobs(['completed'], 0, 1)
+      const last = Array.isArray(completed) && completed.length > 0 ? completed[0] : null
+      const finishedOn = (last?.finishedOn ?? last?.processedOn ?? 0) as number
+      if (!finishedOn) {
+        // No completion data yet; conservatively assume inactive to prefer inline path
+        return false
       }
+      const RECENT_MS = 30_000
+      return Date.now() - finishedOn < RECENT_MS
     } catch (error) {
       logger.warn('Failed to inspect queue workers', {
         queue: this.queueDisplayNames.get(queueName) ?? queueName,
@@ -628,10 +555,11 @@ export class QueueService {
     }
   }
 
-  private async waitForQueueReady(queue: Bull.Queue, name: string): Promise<void> {
-    const waitUntilReady = (queue as { waitUntilReady?: () => Promise<unknown> }).waitUntilReady
+  private async waitForQueueReady(queue: Queue, name: string): Promise<void> {
+    const waitUntilReady = (queue as unknown as { waitUntilReady?: () => Promise<unknown> })
+      .waitUntilReady
 
-    const readinessPromise = (waitUntilReady ? waitUntilReady.call(queue) : queue.isReady()).then(
+    const readinessPromise = (waitUntilReady ? waitUntilReady.call(queue) : Promise.resolve()).then(
       () => undefined,
     )
 
@@ -652,62 +580,82 @@ export class QueueService {
 
   private attachQueueEventHandlers(
     queueKey: QueueConfigKey,
-    queue: Bull.Queue,
-    deadLetterQueue: Bull.Queue,
+    queue: Queue,
+    deadLetterQueue: Queue,
   ): void {
-    queue.on('failed', async (job, error) => {
-      const attemptsMade = job.attemptsMade ?? 0
-      const maxAttempts =
-        typeof job.opts?.attempts === 'number' && job.opts.attempts > 0 ? job.opts.attempts : 1
+    // BullMQ does not emit job events on Queue directly; those are available via QueueEvents or Worker.
+    // Create QueueEvents listener for failed jobs so we can implement DLQ semantics globally.
+    try {
+      const events = new QueueEvents(queue.name, {
+        connection: (this.redis?.options ?? {}) as unknown as import('bullmq').ConnectionOptions,
+      })
 
-      if (attemptsMade >= maxAttempts) {
+      events.on('failed', async ({ jobId, failedReason }) => {
         try {
-          await this.moveToDeadLetter(queueKey, deadLetterQueue, job, error)
+          const job = jobId ? await queue.getJob(jobId) : null
+          if (!job) return
+          const attemptsMade = (job as Job).attemptsMade ?? 0
+          const opts = (job as Job).opts as JobsOptions | undefined
+          const maxAttempts =
+            typeof opts?.attempts === 'number' && opts.attempts > 0 ? opts.attempts : 1
+          if (attemptsMade >= maxAttempts) {
+            await this.moveToDeadLetter(queueKey, deadLetterQueue, job as Job, failedReason)
+          }
         } catch (deadLetterError) {
-          logger.error('❌ Failed to move job to dead-letter queue', {
+          logger.error('❌ Failed handling failed event for DLQ', {
             queue: queue.name,
-            jobId: job.id,
+            jobId,
             error: deadLetterError,
           })
         }
-      }
-    })
-
-    queue.on('stalled', (job) => {
-      logger.warn('⚠️ Detected stalled queue job', {
-        queue: queue.name,
-        jobId: job?.id,
       })
-    })
 
-    queue.on('error', (queueError) => {
-      const normalized = this.formatQueueError(queueError)
-      const { logNow, occurrences } = this.shouldLogQueueError(queue.name, normalized.message)
-
-      if (!logNow) {
-        logger.debug('Suppressed repetitive queue error', {
+      events.on('error', (err) => {
+        logger.warn('QueueEvents error', {
           queue: queue.name,
-          message: normalized.message,
+          error: err instanceof Error ? err.message : err,
+        })
+      })
+
+      this.queueEvents.set(queueKey, events)
+    } catch (e) {
+      logger.warn('Failed to attach QueueEvents for queue', {
+        queue: queue.name,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
+    // We keep error logging on the Queue instance if available.
+    ;(queue as unknown as { on?: (event: string, cb: (err: unknown) => void) => void }).on?.(
+      'error',
+      (queueError: unknown) => {
+        const normalized = this.formatQueueError(queueError)
+        const { logNow, occurrences } = this.shouldLogQueueError(queue.name, normalized.message)
+
+        if (!logNow) {
+          logger.debug('Suppressed repetitive queue error', {
+            queue: queue.name,
+            message: normalized.message,
+            occurrences,
+          })
+          return
+        }
+
+        logger.error('❌ Queue error detected', {
+          queue: queue.name,
+          ...normalized,
           occurrences,
         })
-        return
-      }
-
-      logger.error('❌ Queue error detected', {
-        queue: queue.name,
-        ...normalized,
-        occurrences,
-      })
-    })
+      },
+    )
   }
 
   private async moveToDeadLetter(
     queueKey: QueueConfigKey,
-    deadLetterQueue: Bull.Queue,
-    job: Bull.Job,
+    deadLetterQueue: Queue,
+    job: Job,
     error: unknown,
   ): Promise<void> {
-    const queueName = this.queueDisplayNames.get(queueKey) ?? job.queue?.name ?? String(queueKey)
+    const queueName = this.queueDisplayNames.get(queueKey) ?? String(queueKey)
     const payload: DeadLetterJobPayload = {
       originalQueue: queueName,
       jobId: job.id ?? null,
@@ -727,12 +675,10 @@ export class QueueService {
       attempts: 1,
       delay: 0,
       lifo: true,
-      timeout: undefined,
-      backoff: undefined,
     })
 
-    await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 'completed')
-    await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 'failed')
+    await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 1000, 'completed')
+    await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 1000, 'failed')
 
     logger.warn('Moved job to dead-letter queue', {
       queue: queueName,
@@ -747,8 +693,12 @@ export class QueueService {
 
     const activeQueues = Array.from(this.queues.values())
     const deadLetterQueues = Array.from(this.deadLetterQueues.values())
+    const events = Array.from(this.queueEvents.values())
 
-    await Promise.all([...activeQueues, ...deadLetterQueues].map((queue) => queue.close()))
+    await Promise.all([
+      ...[...activeQueues, ...deadLetterQueues].map((queue) => queue.close()),
+      ...events.map((ev) => ev.close()),
+    ])
 
     // Only disconnect if redis is available (it's managed by the central config)
     if (this.redis) {
@@ -798,7 +748,7 @@ export class QueueService {
     }
   }
 
-  private requireQueue(name: QueueConfigKey): Bull.Queue {
+  private requireQueue(name: QueueConfigKey): Queue {
     const queue = this.queues.get(name)
     if (!queue) {
       throw new Error(`Queue ${name} not found. Make sure initialize() was called first.`)
@@ -809,16 +759,16 @@ export class QueueService {
   // Return untyped queue here because the game-actions queue can carry
   // multiple job payload shapes (e.g., process-game-action, execute-ai-turn).
   // Call sites that add strongly-typed jobs should validate their own payloads.
-  getGameActionQueue(): Bull.Queue {
-    return this.requireQueue('gameActions') as Bull.Queue
+  getGameActionQueue(): Queue {
+    return this.requireQueue('gameActions') as Queue
   }
 
-  getCleanupQueue(): Bull.Queue<GameCleanupJob> {
-    return this.requireQueue('gameCleanup') as Bull.Queue<GameCleanupJob>
+  getCleanupQueue(): Queue<GameCleanupJob> {
+    return this.requireQueue('gameCleanup') as Queue<GameCleanupJob>
   }
 
-  getAnalyticsQueue(): Bull.Queue {
-    return this.requireQueue('analyticsEvents') as Bull.Queue
+  getAnalyticsQueue(): Queue {
+    return this.requireQueue('analyticsEvents') as Queue
   }
 }
 

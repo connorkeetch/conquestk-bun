@@ -168,7 +168,7 @@ risk-game/
 ### Engineering & tooling
 - End-to-end TypeScript across backend, frontend, and shared packages.
 - PostgreSQL-first data model with migrations, seeding scripts, and schema export utilities.
-- Redis integration for rate limiting, job queues (Bull), and socket scaling.
+- Redis integration for rate limiting, job queues (BullMQ), and socket scaling.
 - Automated linting, testing, and build commands wired through npm workspaces.
 
 ---

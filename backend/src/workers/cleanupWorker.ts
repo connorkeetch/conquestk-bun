@@ -1,4 +1,4 @@
-import type Bull from 'bull'
+import { type Job, Worker } from 'bullmq'
 import { CacheService } from '../services/cacheService'
 import { GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
@@ -38,12 +38,12 @@ interface PlayerStatsSnapshot {
 type CleanupWorkerDependencies = {
   gameService?: GameService
   cacheService?: CacheService
-  queue?: Bull.Queue<GameCleanupJob>
   idempotencyService?: JobIdempotencyService
 }
 
 export class CleanupWorker {
-  private queue: Bull.Queue<GameCleanupJob>
+  private worker: Worker | null = null
+  private queueName: string
   private gameService: GameService
   private cacheService: CacheService
   private idempotencyService: JobIdempotencyService
@@ -52,28 +52,36 @@ export class CleanupWorker {
   constructor(dependencies: CleanupWorkerDependencies = {}) {
     this.gameService = dependencies.gameService ?? new GameService()
     this.cacheService = dependencies.cacheService ?? new CacheService()
-    this.queue = dependencies.queue ?? queueService.getCleanupQueue()
+    this.queueName =
+      (dependencies as { queue?: { name?: string } })?.queue?.name ??
+      queueService.getCleanupQueue().name
     this.idempotencyService = dependencies.idempotencyService ?? jobIdempotencyService
     this.gameRoomService = new GameRoomService()
   }
 
   async initialize(): Promise<void> {
     // Process cleanup jobs
-    this.queue.process('cleanup-game', 2, async (job: Bull.Job<GameCleanupJob>) => {
-      return this.cleanupGame(job)
-    })
+    this.worker = new Worker(
+      this.queueName,
+      async (job: Job<GameCleanupJob>) => this.cleanupGame(job),
+      {
+        concurrency: 2,
+        connection: ((await import('../config/redis')).getRedisClient()?.options ??
+          {}) as unknown as import('bullmq').ConnectionOptions,
+      },
+    )
 
     // Job event handlers
-    this.queue.on('completed', (job, result) => {
+    this.worker.on('completed', (job, result) => {
       logger.info('🧹 Game cleanup job completed', {
         jobId: job.id,
         result,
       })
     })
 
-    this.queue.on('failed', (job, error) => {
+    this.worker.on('failed', (job, error) => {
       logger.error('❌ Game cleanup job failed', {
-        jobId: job.id,
+        jobId: job?.id,
         error,
       })
     })
@@ -99,12 +107,12 @@ export class CleanupWorker {
     }
   }
 
-  private async cleanupGame(job: Bull.Job<GameCleanupJob>): Promise<CleanupResult> {
+  private async cleanupGame(job: Job<GameCleanupJob>): Promise<CleanupResult> {
     const { gameId, reason, idempotencyKey } = job.data
     const idKey = idempotencyKey ?? (job.id !== undefined ? String(job.id) : gameId)
 
     const existing = await this.idempotencyService.getProcessedJob<CleanupResult>(
-      this.queue.name,
+      this.queueName,
       idKey,
     )
     if (existing.exists && existing.value) {
@@ -123,7 +131,7 @@ export class CleanupWorker {
       if (!gameState) {
         logger.info('Cleanup skipped because game state already absent', { gameId })
         const result: CleanupResult = { success: true, alreadyClean: true }
-        await this.idempotencyService.markProcessedJob(this.queue.name, idKey, result, 24 * 60 * 60)
+        await this.idempotencyService.markProcessedJob(this.queueName, idKey, result, 24 * 60 * 60)
         return result
       }
 
@@ -156,7 +164,7 @@ export class CleanupWorker {
         reason,
         cleanedAt: new Date().toISOString(),
       }
-      await this.idempotencyService.markProcessedJob(this.queue.name, idKey, result, 24 * 60 * 60)
+      await this.idempotencyService.markProcessedJob(this.queueName, idKey, result, 24 * 60 * 60)
       return result
     } catch (error) {
       logger.error('❌ Failed to cleanup game', {
@@ -165,7 +173,7 @@ export class CleanupWorker {
         error,
       })
       await this.idempotencyService
-        .clearProcessedJob(this.queue.name, idKey)
+        .clearProcessedJob(this.queueName, idKey)
         .catch((cleanupError) => {
           logger.warn('Failed to clear idempotency state after cleanup failure', {
             gameId,

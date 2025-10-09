@@ -86,4 +86,4 @@ Use this index to jump directly to the information you need.
 
 If a topic is missing, add a stub document in the appropriate folder and link it above. Leaving a TODO section is better than letting knowledge live only in Slack or memory.
 
-Looking for end-to-end or worker architecture details? See [reference/development.md](reference/development.md#playwright-smoke-tests) for the Playwright harness and [reference/architecture.md](reference/architecture.md#workers--queues) for Bull worker coverage.
+Looking for end-to-end or worker architecture details? See [reference/development.md](reference/development.md#playwright-smoke-tests) for the Playwright harness and [reference/architecture.md](reference/architecture.md#workers--queues) for BullMQ worker coverage.
