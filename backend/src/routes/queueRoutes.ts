@@ -37,23 +37,45 @@ router.get('/health', authenticateToken, async (req, res) => {
     if (!workerManager) {
       res.status(503).json({
         success: false,
+        status: 'not-initialized',
+        details: {
+          workers: { initialized: false },
+          queues: {},
+        },
         error: 'WorkerManager not initialized',
       })
       return
     }
-    const health = await workerManager.healthCheck()
-    const statusCode = health.status === 'healthy' ? 200 : 503
+
+    // Worker/manager perspective (summarized)
+    const wmHealth = await workerManager.healthCheck()
+
+    // Direct queue service perspective (adds redis ping and init flag)
+    const qsHealth = await queueService.healthCheck()
+
+    const statusCode = wmHealth.status === 'healthy' && qsHealth.status === 'healthy' ? 200 : 503
 
     res.status(statusCode).json({
-      success: health.status === 'healthy',
-      status: health.status,
-      details: health.details,
+      success: statusCode === 200,
+      status: wmHealth.status === 'healthy' && qsHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
+      details: {
+        workers: (wmHealth.details as { workers?: { initialized?: boolean } }).workers ?? {
+          initialized: false,
+        },
+        queues: (wmHealth.details as { queues?: Record<string, import('../services/queueService').QueueStats> })
+          .queues ?? {},
+        redis: (qsHealth.details as { redis?: string }).redis ?? 'UNKNOWN',
+        queueServiceInitialized: (qsHealth.details as { initialized?: boolean }).initialized ?? false,
+      },
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to evaluate queue health')
     res.status(500).json({
       success: false,
+      status: 'unhealthy',
       error: 'Failed to evaluate queue health',
+      timestamp: new Date().toISOString(),
     })
   }
 })
