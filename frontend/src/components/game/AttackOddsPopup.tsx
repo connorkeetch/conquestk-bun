@@ -183,7 +183,7 @@ export default function AttackOddsPopup({
         <div className="mt-2 flex items-center justify-end gap-2">
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn-outline btn-sm"
             onClick={(e) => {
               e.stopPropagation()
               onCancel()
