@@ -12,6 +12,11 @@ const api = axios.create({
   baseURL: API_URL,
 })
 
+type RawGameLogResponse = Record<string, unknown> & {
+  log?: Array<Record<string, unknown>>
+  stats?: Array<Record<string, unknown>>
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -145,16 +150,20 @@ export const gameService = {
     const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`, { params })
     return response.data.game
   },
-  async getGameLog(
-    roomId: string,
-  ): Promise<{ log: Array<Record<string, unknown>>; stats?: Array<Record<string, unknown>> }> {
-    const response = await api.get<{
+  async getGameLog(roomId: string): Promise<
+    Record<string, unknown> & {
       log: Array<Record<string, unknown>>
       stats?: Array<Record<string, unknown>>
-    }>(`/game/rooms/${roomId}/log`)
+    }
+  > {
+    const response = await api.get<RawGameLogResponse>(`/game/rooms/${roomId}/log`)
+    const raw = (response.data ?? {}) as RawGameLogResponse
+    const log = Array.isArray(raw.log) ? raw.log : []
+    const stats = Array.isArray(raw.stats) ? raw.stats : undefined
     return {
-      log: Array.isArray(response.data?.log) ? response.data.log : [],
-      stats: Array.isArray(response.data?.stats) ? response.data.stats : undefined,
+      ...raw,
+      log,
+      stats,
     }
   },
 
