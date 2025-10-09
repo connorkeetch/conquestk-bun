@@ -10,7 +10,7 @@ const _root = path.resolve(process.cwd(), '..') // start from frontend/, go to r
 const pub = path.resolve(process.cwd(), 'public')
 
 // Use the base brand artwork as the source
-const BRAND_SVG = path.join(pub, 'Conquest_K_Logo.svg')
+const BRAND_SVG = path.join(pub, 'conquest_k_logo.svg')
 const ICON_OUTS = [
   { file: 'icon-192-maskable.png', size: 192 },
   { file: 'icon-512-maskable.png', size: 512 },

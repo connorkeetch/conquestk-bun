@@ -6,6 +6,6 @@
   </defs>
   <!-- Transparent background. Zoom 1.25 and crop out bottom 1/4 (y=0). -->
   <g filter="url(#brandGlow)">
-    <image href="/Conquest_K_Logo.svg" x="-24" y="0" width="240" height="240" preserveAspectRatio="xMidYMid slice" />
+    <image href="/conquest_k_logo.svg" x="-24" y="0" width="240" height="240" preserveAspectRatio="xMidYMid slice" />
   </g>
 </svg>

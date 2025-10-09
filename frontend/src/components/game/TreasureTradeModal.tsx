@@ -238,7 +238,7 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
 
   const portalTarget = typeof document !== 'undefined' ? document.body : null
   const modal = (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[color:color-mix(in_srgb,var(--surface-1)_8%,black)] backdrop-blur-sm">
       <div className="panel w-full max-w-lg p-0 overflow-hidden" role="dialog" aria-modal="true">
         <div className="p-4 border-b border-border flex items-center justify-between">
           <h3 className="text-lg font-semibold flex items-center gap-2">

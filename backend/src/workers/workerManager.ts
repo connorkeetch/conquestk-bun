@@ -3,7 +3,6 @@ import { type QueueStats, queueService } from '../services/queueService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 import { createAnalyticsWorker } from './analyticsWorker'
-import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
 import { createGameActionWorker } from './gameActionWorker'
 import { createMaintenanceWorker, type MaintenanceWorker } from './maintenanceWorker'
@@ -30,7 +29,6 @@ export class WorkerManager {
 
       // Initialize all workers
       const gameActionWorker = createGameActionWorker(this.io)
-      const battleWorker = createBattleWorker(this.io)
       const cleanupWorker = createCleanupWorker()
       const mapAssetWorker = createMapAssetWorker()
       const analyticsWorker = createAnalyticsWorker()
@@ -38,7 +36,6 @@ export class WorkerManager {
 
       await Promise.all([
         gameActionWorker.initialize(),
-        battleWorker.initialize(),
         cleanupWorker.initialize(),
         mapAssetWorker.initialize(),
         maintenanceWorker.initialize(),

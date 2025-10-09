@@ -1707,7 +1707,7 @@ export default function GameRoom() {
 
       {/* Resign dialog */}
       {resignDialogOpen && currentRoom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--surface-1)_8%,black)] backdrop-blur-sm">
           <div
             ref={resignDialogRef}
             className="panel w-full max-w-sm space-y-4"
@@ -1758,7 +1758,7 @@ export default function GameRoom() {
       )}
 
       {joinDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--surface-1)_8%,black)] backdrop-blur-sm">
           <div
             ref={joinDialogRef}
             className="panel w-full max-w-md space-y-4"
@@ -2578,8 +2578,7 @@ export default function GameRoom() {
       {/* Drawer backdrop (chat) */}
       {currentGame && chatPanel?.zone === 'drawer' && (
         <button
-          className={`fixed inset-0 ${mobileDrawerOpen ? 'block' : 'hidden'}`}
-          style={{ background: 'rgba(0,0,0,0.5)' }}
+          className={`fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] ${mobileDrawerOpen ? 'block' : 'hidden'}`}
           onClick={() => setMobileDrawerOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') setMobileDrawerOpen(false)
@@ -2662,8 +2661,7 @@ export default function GameRoom() {
       {/* Drawer backdrop (stats) */}
       {currentGame && statsPanel?.zone === 'drawer' && (
         <button
-          className={`fixed inset-0 ${statsDrawerOpen ? 'block' : 'hidden'}`}
-          style={{ background: 'rgba(0,0,0,0.5)' }}
+          className={`fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] ${statsDrawerOpen ? 'block' : 'hidden'}`}
           onClick={() => setStatsDrawerOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') setStatsDrawerOpen(false)

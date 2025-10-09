@@ -4,7 +4,7 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 const pub = path.resolve(process.cwd(), 'public')
-const brandSvgPath = path.join(pub, 'Conquest_K_Logo.svg')
+const brandSvgPath = path.join(pub, 'conquest_k_logo.svg')
 const outPath = path.join(pub, 'og.png')
 
 const W = 1200

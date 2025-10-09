@@ -8,14 +8,9 @@ import { DeltaEmitter } from '../services/deltaEmitter'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService'
-import {
-  type BattleSimulationJob,
-  type GameActionJob,
-  queueService,
-} from '../services/queueService'
+import { type GameActionJob, queueService } from '../services/queueService'
 import { DeltaBuilder } from '../types/deltaUpdates'
 import type {
-  AttackAction,
   DeployAction,
   FortifyAction,
   GameAction,
@@ -552,49 +547,25 @@ export class GameActionWorker {
           break
 
         case 'attack': {
-          const attackAction = action as AttackAction
-          // For attacks, we queue a battle simulation
-          const attackingTerritoryState = currentState.board.find(
-            (territory) => territory.id === attackAction.payload?.fromTerritoryId,
-          )
-          const defendingArmies =
-            currentState.board.find(
-              (territory) => territory.id === attackAction.payload?.toTerritoryId,
-            )?.armies ?? 1
-          const attackingArmiesAvailable = Math.max(0, attackingTerritoryState?.armies ?? 0)
-          // Respect requested armies from client, capped by available
-          const requested = (attackAction.payload as { armies?: number } | undefined)?.armies
-          const attackingArmies = Math.max(
-            1,
-            Math.min(
-              attackingArmiesAvailable,
-              typeof requested === 'number' ? requested : attackingArmiesAvailable,
-            ),
-          )
-
-          const battleJob: BattleSimulationJob = {
-            gameId,
-            attackingTerritory: attackAction.payload?.fromTerritoryId ?? '',
-            defendingTerritory: attackAction.payload?.toTerritoryId ?? '',
-            // Use current territory armies for dice calculation (max dice derived later)
-            attackingArmies,
-            defendingArmies,
-            playerId,
-            idempotencyKey: `${idKey}:battle:${attackAction.payload?.fromTerritoryId ?? 'unknown'}:${attackAction.payload?.toTerritoryId ?? 'unknown'}`,
+          await this.recordMove(gameId, playerId, currentState.turn, 'attack', action.payload)
+          const updated = await this.gameService.processGameAction(action, playerId)
+          const last = updated.lastBattleResult
+          if (last) {
+            try {
+              const battleDelta: GameDelta = DeltaBuilder.battleResult(
+                gameId,
+                last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
+                updated.version,
+              )
+              const { emitFogFilteredDelta } = await import('../services/fogService')
+              await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
+            } catch (e) {
+              logger.debug('Failed to emit fog-filtered battle delta in worker attack', {
+                roomId: gameId,
+                error: e instanceof Error ? e.message : e,
+              })
+            }
           }
-
-          const moveId = await this.recordMove(
-            gameId,
-            playerId,
-            currentState.turn,
-            'attack',
-            action.payload,
-          )
-
-          const jobPayload = moveId ? { ...battleJob, moveId } : battleJob
-          await queueService.addBattleSimulation(jobPayload)
-
-          // Don't broadcast immediately for attacks - wait for battle result
           shouldBroadcast = false
           break
         }

@@ -88,6 +88,17 @@ export interface GameState {
     armies: number
     ts: number
   }>
+  /**
+   * Auditable, seeded RNG state for combat dice.
+   * Seed is recorded in the game log, and state advances per die roll.
+   */
+  combatRngSeed?: string
+  combatRngState?: {
+    a: number
+    b: number
+    c: number
+    d: number
+  }
 }
 
 export interface GamePlayer {

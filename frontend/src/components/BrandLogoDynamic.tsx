@@ -13,9 +13,9 @@ type Props = {
 }
 
 /**
- * Theme-aware wrapper around the new brand SVG (Conquest_K_Logo.svg).
+ * Theme-aware wrapper around the brand SVG.
  * - Crops to a square using preserveAspectRatio slice
- * - Adds a theme-aware background using CSS variables
+ * - Applies a theme-aware glow using CSS variable `--ck-glow` with a neutral fallback
  * - Keeps the original SVG artwork intact
  */
 export default function BrandLogoDynamic({
@@ -30,7 +30,7 @@ export default function BrandLogoDynamic({
   const w = width
   const h = height
   const titleId = React.useId()
-  const glowId = React.useId()
+  const _glowId = React.useId()
 
   return (
     <svg
@@ -41,16 +41,13 @@ export default function BrandLogoDynamic({
       role="img"
       aria-labelledby={titleId}
       className={className}
+      style={{
+        // Theme-aware glow using CSS variable; fall back to a neutral slate glow
+        filter: withGlow ? 'drop-shadow(0 0 8px var(--ck-glow, #cbd5e1))' : undefined,
+      }}
     >
       <title id={titleId}>{title}</title>
-      <defs>
-        {withGlow ? (
-          <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-            {/* neutral outer glow */}
-            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#cbd5e1" floodOpacity="0.85" />
-          </filter>
-        ) : null}
-      </defs>
+      <defs></defs>
 
       {(() => {
         const base = 192
@@ -59,9 +56,9 @@ export default function BrandLogoDynamic({
         const x = -extra / 2
         const y = -extra * yBias
         return (
-          <g filter={withGlow ? `url(#${glowId})` : undefined}>
+          <g>
             <image
-              href="/Conquest_K_Logo.svg"
+              href="/conquest_k_logo.svg"
               x={x}
               y={y}
               width={scaled}

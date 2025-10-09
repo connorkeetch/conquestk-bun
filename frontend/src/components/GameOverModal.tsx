@@ -118,7 +118,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--surface-1)_8%,black)] backdrop-blur-sm px-4 py-8">
       <div className="relative w-full max-w-5xl">
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-surface-1 shadow-2xl">
           <div
@@ -137,7 +137,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 style={{ background: headerBackground }}
               >
                 <div
-                  className="pointer-events-none absolute inset-0 bg-black/40"
+                  className="pointer-events-none absolute inset-0 bg-[color:color-mix(in_srgb,black_40%,transparent)]"
                   aria-hidden="true"
                 />
                 <div

@@ -966,6 +966,57 @@ router.get(
   },
 )
 
+// Get combat RNG seed for a game (auditing aid)
+router.get(
+  '/games/:gameId/seed',
+  requirePermission('games.view'),
+  param('gameId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { gameId } = req.params
+      const result = await dbQuery<{ game_log: unknown[] | null; game_data: unknown | null }>(
+        'SELECT game_log, game_data FROM game_states WHERE room_id = $1',
+        [gameId],
+      )
+      const row = result.rows?.[0]
+      let seed: string | null = null
+      let source: 'log' | 'state' | null = null
+
+      const logArr = Array.isArray(row?.game_log) ? (row?.game_log as unknown[]) : []
+      // Look for the most recent RNG entry in the log
+      for (let i = logArr.length - 1; i >= 0; i--) {
+        const entry = logArr[i] as Record<string, unknown>
+        if ((entry?.type as string) === 'RNG' && (entry?.scope as string) === 'combat') {
+          const s = entry?.seed
+          if (typeof s === 'string' && s.trim().length > 0) {
+            seed = s
+            source = 'log'
+            break
+          }
+        }
+      }
+
+      if (!seed) {
+        // Fallback to serialized state
+        const data = row?.game_data as Record<string, unknown> | null
+        const s = data && typeof data === 'object' ? (data.combatRngSeed as unknown) : null
+        if (typeof s === 'string' && s.trim().length > 0) {
+          seed = s
+          source = 'state'
+        }
+      }
+
+      res.json({ seed, source })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to get combat RNG seed', 500, {
+        gameId: req.params.gameId,
+      })
+      res.status(500).json({ error: 'Failed to get combat RNG seed' })
+    }
+  },
+)
+
 // Get latest full state snapshot
 router.get(
   '/games/:gameId/state',
