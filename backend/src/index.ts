@@ -1,5 +1,5 @@
 // IMPORTANT: Import Sentry instrumentation before anything else
-import './instrument'
+import './instrument.js'
 
 import * as Sentry from '@sentry/node'
 import dotenv from 'dotenv'
@@ -13,7 +13,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging')
   }
 }
 
-import { validateEnvironmentVariables } from './config/validateEnv'
+import { validateEnvironmentVariables } from './config/validateEnv.js'
 
 try {
   validateEnvironmentVariables()
@@ -24,103 +24,61 @@ try {
 // Import types first
 import type { NextFunction, Request, RequestHandler, Response, Router } from 'express'
 import type { Logger } from 'winston'
-import type { RedisClients } from './config/redis'
-import type { SuspiciousActivityTracker } from './middleware/rateLimiter'
-import { getErrorMessage, toKnownError } from './utils/errorHelpers'
-
-// Wrap all imports in try-catch to identify which one is failing
-let createServer: typeof import('node:http')['createServer']
-let path: typeof import('node:path')
-let cors: typeof import('cors')
-let express: typeof import('express')
-let helmet: typeof import('helmet')['default']
-let Server: typeof import('socket.io').Server
-let initDatabase: typeof import('./config/database').initDatabase
-let logStartupDiagnostics: typeof import('./debugStartup').logStartupDiagnostics
-let testDatabaseConnection: typeof import('./debugStartup').testDatabaseConnection
-let testMigrationFiles: typeof import('./debugStartup').testMigrationFiles
-let generalApiLimiter: RequestHandler
-let suspiciousActivityTracker: SuspiciousActivityTracker
-let adminRoutes: Router
-let adminQueuesRoutes: Router
-let authRoutes: Router
-let gameRoutes: Router
-let mapRoutes: Router
-let notificationRoutes: Router
-let profileRoutes: Router
-let skillsRoutes: Router
-let userRoutes: Router
-let messagesRoutes: Router
-let clanRoutes: Router
-let friendsRoutes: Router
-let leaderboardRoutes: Router
-let bullBoardRouterFactory: typeof import('./routes/bullBoard').default
-let initializeRedis: typeof import('./config/redis').initializeRedis
-let setupSocketHandlers: typeof import('./services/socketService').setupSocketHandlers
-let ensureTablesExist: typeof import('./utils/initTables').ensureTablesExist
-let logger: Logger
-let MigrationRunner: typeof import('./utils/migrationRunner').MigrationRunner
-let memoryDiagnosticsService: typeof import('./services/memoryDiagnosticsService').memoryDiagnosticsService
-
-try {
-  createServer = require('node:http').createServer
-  path = require('node:path')
-  cors = require('cors')
-  express = require('express')
-  helmet = require('helmet')
-  const socketIo = require('socket.io')
-  Server = socketIo.Server
-  const dbModule = require('./config/database')
-  initDatabase = dbModule.initDatabase
-  const redisModule = require('./config/redis') as typeof import('./config/redis')
-  initializeRedis = redisModule.initializeRedis
-  const debugModule = require('./debugStartup')
-  logStartupDiagnostics = debugModule.logStartupDiagnostics
-  testDatabaseConnection = debugModule.testDatabaseConnection
-  testMigrationFiles = debugModule.testMigrationFiles
-  const rateLimiterModule = require('./middleware/rateLimiter')
-  generalApiLimiter = rateLimiterModule.generalApiLimiter
-  suspiciousActivityTracker = rateLimiterModule.suspiciousActivityTracker
-  adminRoutes = require('./routes/admin').default
-  adminQueuesRoutes = require('./routes/adminQueues').default
-  authRoutes = require('./routes/auth').authRoutes
-  gameRoutes = require('./routes/game').gameRoutes
-  mapRoutes = require('./routes/maps').default
-  notificationRoutes = require('./routes/notifications').default
-  profileRoutes = require('./routes/profile').default
-  skillsRoutes = require('./routes/skills').default
-  userRoutes = require('./routes/users').default
-  messagesRoutes = require('./routes/messages').default
-  clanRoutes = require('./routes/clans').default
-  friendsRoutes = require('./routes/friends').default
-  leaderboardRoutes = require('./routes/leaderboard').default
-  bullBoardRouterFactory = require('./routes/bullBoard').default
-  setupSocketHandlers = require('./services/socketService').setupSocketHandlers
-  ensureTablesExist = require('./utils/initTables').ensureTablesExist
-  logger = require('./utils/logger').logger
-  memoryDiagnosticsService = require('./services/memoryDiagnosticsService').memoryDiagnosticsService
-
-  // Now that logger is available, use it for all subsequent logging
-  try {
-    MigrationRunner = require('./utils/migrationRunner').MigrationRunner
-    logger.debug('  ✓ MigrationRunner loaded')
-  } catch (e) {
-    logger.error('  ✗ Failed to load MigrationRunner:', e)
-    throw e
-  }
-  logger.info('✅ Utils loaded')
-} catch (error) {
-  const normalized = toKnownError(error)
-  const message = normalized.message || 'Unknown startup error'
-  process.stderr.write(`❌ Failed to initialize server: ${message}\n`)
-  if (normalized.stack) {
-    process.stderr.write(`${normalized.stack}\n`)
-  }
-  process.exit(1)
-}
+import type { RedisClients } from './config/redis.js'
+import type { SuspiciousActivityTracker } from './middleware/rateLimiter.js'
+import { getErrorMessage, toKnownError } from './utils/errorHelpers.js'
+import { createServer } from 'node:http'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import cors from 'cors'
+import express from 'express'
+import helmet from 'helmet'
+import { Server } from 'socket.io'
+import { initDatabase, getPool } from './config/database.js'
+import { initializeRedis } from './config/redis.js'
+import {
+  logStartupDiagnostics,
+  testDatabaseConnection,
+  testMigrationFiles,
+} from './debugStartup.js'
+import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter.js'
+import adminRoutes from './routes/admin.js'
+import adminQueuesRoutes from './routes/adminQueues.js'
+import { authRoutes } from './routes/auth.js'
+import { gameRoutes } from './routes/game.js'
+import mapRoutes from './routes/maps.js'
+import notificationRoutes from './routes/notifications.js'
+import profileRoutes from './routes/profile.js'
+import skillsRoutes from './routes/skills.js'
+import userRoutes from './routes/users.js'
+import messagesRoutes from './routes/messages.js'
+import clanRoutes from './routes/clans.js'
+import friendsRoutes from './routes/friends.js'
+import bullBoardRouterFactory from './routes/bullBoard.js'
+import { setupSocketHandlers } from './services/socketService.js'
+import { ensureTablesExist } from './utils/initTables.js'
+import { logger } from './utils/logger.js'
+import { MigrationRunner } from './utils/migrationRunner.js'
+import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js'
+import { createAdapter } from '@socket.io/redis-adapter'
+import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js'
+import mapWorkflowRoutes from './routes/mapWorkflow.js'
+import mapApprovalRoutes from './routes/mapApproval.js'
+import termsRoutes from './routes/terms.js'
+import mapStagingRoutes from './routes/mapStaging.js'
+import featureFlagsRoutes from './routes/featureFlags.js'
+import queueRoutes from './routes/queueRoutes.js'
+import performanceRoutes from './routes/performanceRoutes.js'
+import benchmarkRoutes from './routes/benchmarkRoutes.js'
+import { createPreferencesRouter } from './routes/preferences.js'
+import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js'
 
 const app = express()
 const server = createServer(app)
+
+// ESM-safe __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Trust proxy for Railway deployment - required for rate limiting behind reverse proxy
 // Set to 1 to trust first proxy (Railway's proxy)
@@ -192,7 +150,6 @@ initializeRedis()
     // Set up Socket.io Redis adapter only if clients are valid and connected
     if (pubClient && subClient) {
       try {
-        const { createAdapter } = require('@socket.io/redis-adapter')
         io.adapter(createAdapter(pubClient, subClient))
         logger.info('✅ Socket.io using Redis adapter for multi-server support')
       } catch (error) {
@@ -207,7 +164,7 @@ initializeRedis()
 
     // Enable Redis session store only if Redis is available
     if (redisClient) {
-      const { enableRedisSessionStore } = require('./middleware/session')
+      const { enableRedisSessionStore } = await import('./middleware/session.js')
       if (enableRedisSessionStore()) {
         logger.info('✅ Session storage upgraded to Redis')
       } else {
@@ -333,7 +290,6 @@ app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 
 // Initialize session middleware after app is created (starts with in-memory, upgrades to Redis later)
-const { createSessionMiddleware, sessionMiddleware } = require('./middleware/session')
 createSessionMiddleware() // Initialize the session system
 app.use(sessionMiddleware) // Use the wrapper that can handle Redis upgrades
 
@@ -374,15 +330,14 @@ app.use('/api/users', userRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/clans', clanRoutes)
 app.use('/api/friends', friendsRoutes)
-app.use('/api/leaderboard', leaderboardRoutes)
-app.use('/api/workflow', require('./routes/mapWorkflow').default)
-app.use('/api/map-approval', require('./routes/mapApproval').default)
-app.use('/api/terms', require('./routes/terms').default)
-app.use('/api/staging', require('./routes/mapStaging').default)
-app.use('/api/feature-flags', require('./routes/featureFlags').default)
-app.use('/api/queues', require('./routes/queueRoutes').default)
-app.use('/api/performance', require('./routes/performanceRoutes').default)
-app.use('/api/benchmark', require('./routes/benchmarkRoutes').default)
+app.use('/api/workflow', mapWorkflowRoutes)
+app.use('/api/map-approval', mapApprovalRoutes)
+app.use('/api/terms', termsRoutes)
+app.use('/api/staging', mapStagingRoutes)
+app.use('/api/feature-flags', featureFlagsRoutes)
+app.use('/api/queues', queueRoutes)
+app.use('/api/performance', performanceRoutes)
+app.use('/api/benchmark', benchmarkRoutes)
 // Mount Bull Board UI behind admin auth at /api/admin/queues/ui
 try {
   const bullBoardRouter = bullBoardRouterFactory()
@@ -392,7 +347,7 @@ try {
 }
 app.use(
   '/api/preferences',
-  require('./routes/preferences').createPreferencesRouter(require('./config/database').getPool()),
+  createPreferencesRouter(getPool()),
 )
 
 // Simple test endpoint that doesn't require database
@@ -416,7 +371,7 @@ app.get('/health', async (_req: Request, res: Response) => {
   let queueError = null
 
   try {
-    const { query } = await import('./config/database')
+    const { query } = await import('./config/database.js')
     await query('SELECT 1')
     databaseStatus = 'connected'
   } catch (error) {
@@ -426,7 +381,7 @@ app.get('/health', async (_req: Request, res: Response) => {
 
   // Check Redis health
   try {
-    const { checkRedisHealth } = await import('./config/redis')
+    const { checkRedisHealth } = await import('./config/redis.js')
     const redisHealth = await checkRedisHealth()
     redisStatus = redisHealth.healthy ? 'connected' : 'disconnected'
     if (!redisHealth.healthy) {
@@ -439,7 +394,7 @@ app.get('/health', async (_req: Request, res: Response) => {
 
   // Check queue system health
   try {
-    const { getWorkerManagerInstance } = await import('./workers/workerManager')
+    const { getWorkerManagerInstance } = await import('./workers/workerManager.js')
     const workerManagerInstance = getWorkerManagerInstance()
     if (workerManagerInstance) {
       const queueHealth = await workerManagerInstance.healthCheck()
@@ -484,7 +439,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   let queueError = null
 
   try {
-    const { query } = await import('./config/database')
+    const { query } = await import('./config/database.js')
     await query('SELECT 1')
     databaseStatus = 'connected'
   } catch (error) {
@@ -494,7 +449,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 
   // Check Redis health
   try {
-    const { checkRedisHealth } = await import('./config/redis')
+    const { checkRedisHealth } = await import('./config/redis.js')
     const redisHealth = await checkRedisHealth()
     redisStatus = redisHealth.healthy ? 'connected' : 'disconnected'
     if (!redisHealth.healthy) {
@@ -507,7 +462,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 
   // Check queue system health
   try {
-    const { getWorkerManagerInstance } = await import('./workers/workerManager')
+    const { getWorkerManagerInstance } = await import('./workers/workerManager.js')
     const workerManagerInstance = getWorkerManagerInstance()
     if (workerManagerInstance) {
       const queueHealth = await workerManagerInstance.healthCheck()
@@ -555,7 +510,7 @@ app.get('/debug/env', (_req: Request, res: Response) => {
 
 app.get('/debug/tables', async (_req: Request, res: Response) => {
   try {
-    const { query } = await import('./config/database')
+    const { query } = await import('./config/database.js')
 
     // Check if tables exist
     const tableCheck = await query(`
@@ -648,14 +603,18 @@ if (process.env.NODE_ENV !== 'production') {
 // Staging should behave exactly like production for testing
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
 if (isProductionLike) {
-  const fs = require('node:fs')
+  const fs = await import('node:fs')
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic import .default interop
+  const fsD: any = fs
+  const existsSync = (p: string) => (fsD.default?.existsSync ? fsD.default.existsSync(p) : (fs as any).existsSync(p))
+  const readdirSync = (p: string) => (fsD.default?.readdirSync ? fsD.default.readdirSync(p) : (fs as any).readdirSync(p))
   const frontendPath = path.join(__dirname, '../public')
 
   logger.debug(`📁 Setting up static file serving from: ${frontendPath}`)
-  logger.debug(`📁 Frontend path exists: ${fs.existsSync(frontendPath)}`)
+  logger.debug(`📁 Frontend path exists: ${existsSync(frontendPath)}`)
 
-  if (fs.existsSync(frontendPath)) {
-    const files = fs.readdirSync(frontendPath)
+  if (existsSync(frontendPath)) {
+    const files = readdirSync(frontendPath)
     logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`)
 
     const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'))
@@ -775,7 +734,7 @@ setupSocketHandlers(io)
 memoryDiagnosticsService.start()
 
 // WorkerManager will be created AND initialized after Redis is ready (see Redis initialization block above)
-import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager'
+import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js'
 
 async function startServer() {
   try {
@@ -834,13 +793,13 @@ async function startServer() {
             logger.info('🗄️  Database: PostgreSQL with migration tracking')
 
             // Ensure owner has admin privileges
-            const { ensureOwnerAdmin } = require('./scripts/ensureOwnerAdmin')
+            const { ensureOwnerAdmin } = await import('./scripts/ensureOwnerAdmin.js')
             await ensureOwnerAdmin()
 
             // Optionally enforce deploy accounts (owner + test users) on start
             if (process.env.RUN_DEPLOY_ACCOUNT_ENFORCEMENT_ON_START === 'true') {
               try {
-                const { ensureDeployAccounts } = await import('./scripts/ensureDeployAccounts')
+                const { ensureDeployAccounts } = await import('./scripts/ensureDeployAccounts.js')
                 logger.info('🔐 Enforcing deploy accounts (owner + tests)')
                 await ensureDeployAccounts()
               } catch (e) {
@@ -851,7 +810,7 @@ async function startServer() {
             // Optionally sync feature flags from code usage into DB
             if (process.env.SYNC_FEATURE_FLAGS_ON_START === 'true') {
               try {
-                const { spawnSync } = require('node:child_process')
+                const { spawnSync } = await import('node:child_process')
                 const scriptPath = path.join(__dirname, 'scripts', 'checkFeatureFlags.js')
                 logger.info('🏁 Syncing feature flags from code usage into DB')
                 const result = spawnSync(process.execPath, [scriptPath, '--apply'], {
@@ -872,7 +831,7 @@ async function startServer() {
 
             // Lightweight stale session sweeper
             try {
-              const { authTrackingService } = await import('./services/authTrackingService')
+              const { authTrackingService } = await import('./services/authTrackingService.js')
               const maxAgeHours = parseInt(process.env.SESSION_MAX_AGE_HOURS || '168', 10) // default 7 days
               const sweepMinutes = parseInt(process.env.SESSION_SWEEP_INTERVAL_MINUTES || '60', 10) // default hourly
 

@@ -1,24 +1,16 @@
 import { Router } from 'express'
-import { requireAdmin } from '../middleware/adminAuth'
-import { authenticateToken } from '../middleware/auth'
-import { profileService } from '../services/profileService'
-import type { ProfileResponse, ProfileUpdateRequest } from '../types/profile'
-import { asyncHandler } from '../utils/asyncHandler'
+import { requireAdmin } from '../middleware/adminAuth.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { profileService } from '../services/profileService.js'
+import type { ProfileUpdateRequest } from '../types/profile.js'
+import { asyncHandler } from '../utils/asyncHandler.js'
 
 const router = Router()
 
 // All profile routes require authentication
 router.use(authenticateToken)
 
-// GET /api/profile - Get complete user profile
-router.get(
-  '/',
-  asyncHandler(async (req, res) => {
-    const userId = req.userId
-    const profile = await profileService.getUserProfile(userId)
-    res.json(profile)
-  }),
-)
+// NOTE: GET /api/profile (root) removed in favor of /api/users/profile
 
 // PUT /api/profile - Update user profile
 router.put(
@@ -100,43 +92,8 @@ router.put(
   }),
 )
 
-// GET /api/profile/leaderboard - Get global leaderboard
-router.get(
-  '/leaderboard',
-  asyncHandler(async (req, res) => {
-    const limit = parseInt(req.query.limit as string, 10) || 100
-    const leaderboard = await profileService.getLeaderboard(limit)
-    res.json(leaderboard)
-  }),
-)
+// NOTE: GET /api/profile/leaderboard removed; use /api/skills/leaderboards/skill
 
-// GET /api/profile/:userId - Get another user's public profile
-router.get(
-  '/:userId',
-  asyncHandler(async (req, res) => {
-    const { userId } = req.params
-    const requesterId = req.userId
-
-    // Get basic profile info (respecting privacy settings)
-    const profileResponse: ProfileResponse = await profileService.getUserProfile(userId)
-
-    // Filter based on privacy settings
-    if (profileResponse.preferences.privacyLevel === 'private' && userId !== requesterId) {
-      return res.status(403).json({ error: 'Profile is private' })
-    }
-
-    // Remove sensitive information for other users
-    if (userId !== requesterId) {
-      const { preferences: _preferences, ...publicProfile } = profileResponse
-      // Only show limited data for non-friends
-      return res.json({
-        ...publicProfile,
-        recentGames: [],
-      })
-    }
-
-    return res.json(profileResponse)
-  }),
-)
+// NOTE: GET /api/profile/:userId removed; use /api/users/:username/profile
 
 export default router

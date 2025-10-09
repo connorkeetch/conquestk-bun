@@ -2,21 +2,22 @@ import type { GameDelta } from '@risk-game/shared/types'
 import * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
-import { query } from '../config/database'
-import { setupChatHandlers } from '../socket/chatHandlers'
-import { DeltaBuilder } from '../types/deltaUpdates'
-import type { GamePlayer, GameState, SerializedGameState, Territory } from '../types/game'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
-import { logger } from '../utils/logger'
-import { gameStateCache } from './cacheService'
-import { clanService } from './clanService'
-import { eloService, type PlayerRating } from './eloService'
-import { GameActionProcessor } from './gameActionProcessor'
-import { GameRoomService } from './gameRoomService'
-import { GameService } from './gameService'
-import { socketPayloadMetrics } from './metricsService'
-import { queueService } from './queueService'
-import { registerSocketServer } from './socketRegistry'
+import { query } from '../config/database.js'
+import { setupChatHandlers } from '../socket/chatHandlers.js'
+import { DeltaBuilder } from '../types/deltaUpdates.js'
+import type { GamePlayer, GameState, SerializedGameState, Territory } from '../types/game.js'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { logger } from '../utils/logger.js'
+import { gameStateCache } from './cacheService.js'
+import { clanService } from './clanService.js'
+import { eloService, type PlayerRating } from './eloService.js'
+import { GameActionProcessor } from './gameActionProcessor.js'
+import { GameRoomService } from './gameRoomService.js'
+import { GameService } from './gameService.js'
+import { GameLifecycleService } from './gameLifecycleService.js'
+import { socketPayloadMetrics } from './metricsService.js'
+import { queueService } from './queueService.js'
+import { registerSocketServer } from './socketRegistry.js'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -236,6 +237,8 @@ function serializeGameStateForClient(
     color: p.color,
     armies: p.armies,
     isEliminated: p.isEliminated,
+    // Include competitive rating for consistent CP display in clients
+    skillRating: (p as { skillRating?: number }).skillRating,
     teamId: p.teamId ?? undefined,
     treasures: p.treasures,
     territories: p.territories,
@@ -254,7 +257,7 @@ function serializeGameStateForClient(
     coordinates: t.coordinates,
   })) as Territory[]
 
-  const cfg = (s.gameConfig ?? ({} as unknown)) as import('../types/game').GameConfiguration
+  const cfg = (s.gameConfig ?? ({} as unknown)) as import('../types/game.js').GameConfiguration
   const gameConfig = {
     movementType: cfg?.movementType,
     allowTeamPlay: cfg?.allowTeamPlay,
@@ -276,6 +279,7 @@ function serializeGameStateForClient(
     kingOfTheHillState: (s as SerializedGameState).kingOfTheHillState,
     assassinationTargets: (s as SerializedGameState).assassinationTargets,
     cards: Array.isArray((s as SerializedGameState).cards) ? (s as SerializedGameState).cards : [],
+    movementTracking: (s as SerializedGameState).movementTracking,
   }
 
   // Include territory modifiers when present (convert Map to plain object)
@@ -353,8 +357,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   const gameService = new GameService()
   const gameRoomService = new GameRoomService()
   const gameActionProcessor = new GameActionProcessor(io)
-  const { GameLifecycleService } =
-    require('./gameLifecycleService') as typeof import('./gameLifecycleService')
   const lifecycleService = new GameLifecycleService()
 
   io.use((socket: AuthenticatedSocket, next) => {
@@ -610,7 +612,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                   updatedState.turn,
                   reinforcementArmies,
                 )
-                const { emitFogFilteredDelta } = await import('./fogService')
+                const { emitFogFilteredDelta } = await import('./fogService.js')
                 await emitFogFilteredDelta(
                   io as unknown as Server,
                   data.roomId,
@@ -828,6 +830,25 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             timestamp: Date.now(),
           } as import('@risk-game/shared/types').GameDelta,
         ])
+
+        // Also emit a consolidated fortify summary delta for UI/UX (parity with worker path)
+        try {
+          const fortifyDelta: import('@risk-game/shared/types').GameDelta = {
+            type: 'FORTIFY_RESULT',
+            roomId: data.roomId,
+            timestamp: Date.now(),
+            fromTerritoryId: data.fromTerritoryId,
+            toTerritoryId: data.toTerritoryId,
+            movedArmies: data.armies,
+            fromArmies: result.fromArmies,
+            toArmies: result.toArmies,
+            playerId: userId,
+          }
+          const { emitFogFilteredDelta } = await import('../services/fogService.js')
+          await emitFogFilteredDelta(io as unknown as import('socket.io').Server, data.roomId, fortifyDelta)
+        } catch {
+          // best-effort: fortify summary is optional
+        }
       }),
     )
 
@@ -955,8 +976,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             await lifecycleService.kickAndNeutralize(roomId, targetUserId)
           } else {
             // Replace with AI at chosen difficulty
-            const stateRaw = await (await import('./cacheService')).gameStateCache.getGameState<
-              import('../types/game').SerializedGameState
+            const stateRaw = await (await import('./cacheService.js')).gameStateCache.getGameState<
+              import('../types/game.js').SerializedGameState
             >(roomId)
             if (!stateRaw) throw new Error('Game state not found')
             const state = { ...stateRaw }
@@ -970,7 +991,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             // Persist to DB + cache for durability
             await gameService.saveSnapshot(
               roomId,
-              state as unknown as import('../types/game').SerializedGameState,
+              state as unknown as import('../types/game.js').SerializedGameState,
             )
             // Persist on room_players for visibility in room state
             await query(
@@ -1031,7 +1052,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         // Schedule timeout for the next player's turn
         if (result.turnAdvanced) {
           try {
-            const { GameLifecycleService } = await import('./gameLifecycleService')
+            const { GameLifecycleService } = await import('./gameLifecycleService.js')
             const lifecycleService = new GameLifecycleService()
             await lifecycleService.scheduleTurnTimeout(data.roomId)
           } catch (e) {

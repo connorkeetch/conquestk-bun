@@ -1,11 +1,12 @@
 import bcrypt from 'bcryptjs'
 import { type Request, type Response, Router } from 'express'
-import { query } from '../config/database'
-import { PREMIUM_COLOR_KEYS } from '../constants/premium'
-import { authenticateToken } from '../middleware/auth'
-import { profileService } from '../services/profileService'
-import { logger } from '../utils/logger'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { query } from '../config/database.js'
+import { RANKS, getRankForRating } from '@risk-game/shared/constants/ranks'
+import { PREMIUM_COLOR_KEYS } from '../constants/premium.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { profileService } from '../services/profileService.js'
+import { logger } from '../utils/logger.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 
@@ -91,33 +92,27 @@ const normalizePreferredColor = (color?: string | null): string => {
   return PLAYER_COLOR_DEFAULT
 }
 
-// The Conqueror's Path - Conquest rank system (mirrors frontend constants)
-const CONQUEST_RANKS = [
-  { name: 'Chieftain', minRating: 0, color: '#9CA3AF', insignia: '🛡️' },
-  { name: 'Warlord', minRating: 800, color: '#92400E', insignia: '⚔️' },
-  { name: 'Raider King', minRating: 1000, color: '#B22222', insignia: '⚓' },
-  { name: 'Sultan', minRating: 1200, color: '#10B981', insignia: '☪️' },
-  { name: 'Caesar', minRating: 1400, color: '#C0C0C0', insignia: '🦅' },
-  { name: 'Khan', minRating: 1600, color: '#9B111E', insignia: '🏹' },
-  { name: 'Emperor', minRating: 1800, color: '#2563EB', insignia: '👑' },
-  { name: 'The Great King', minRating: 2000, color: '#FFD700', insignia: '☀️' },
-  { name: 'Overlord', minRating: 2200, color: '#000000', insignia: '💀' },
-  {
-    name: 'Worldbreaker',
-    minRating: 2400,
-    color: 'linear-gradient(90deg, #EF4444, #F59E0B)',
-    insignia: '☄️',
-  },
-]
+// Rank visuals for API output; thresholds/names are centralized in shared RANKS
+const RANK_META: Record<string, { color: string; insignia: string }> = {
+  Chieftain: { color: '#9CA3AF', insignia: '🛡️' },
+  Warlord: { color: '#92400E', insignia: '⚔️' },
+  'Raider King': { color: '#B22222', insignia: '⚓' },
+  Sultan: { color: '#10B981', insignia: '☪️' },
+  Caesar: { color: '#C0C0C0', insignia: '🦅' },
+  Khan: { color: '#9B111E', insignia: '🏹' },
+  Emperor: { color: '#2563EB', insignia: '👑' },
+  'The Great King': { color: '#FFD700', insignia: '☀️' },
+  Overlord: { color: '#000000', insignia: '💀' },
+  Worldbreaker: { color: 'linear-gradient(90deg, #EF4444, #F59E0B)', insignia: '☄️' },
+}
 
-// Helper function to calculate conquest rank
 function getConquestRank(skillRating: number) {
-  for (let i = CONQUEST_RANKS.length - 1; i >= 0; i--) {
-    if (skillRating >= CONQUEST_RANKS[i].minRating) {
-      return CONQUEST_RANKS[i]
-    }
+  const rank = getRankForRating(skillRating)
+  return {
+    ...rank,
+    color: RANK_META[rank.name]?.color ?? '#9CA3AF',
+    insignia: RANK_META[rank.name]?.insignia ?? '🏅',
   }
-  return CONQUEST_RANKS[0] // Default to Chieftain
 }
 
 router.get('/:username/history', async (req: Request, res: Response) => {
@@ -192,8 +187,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     const user = result.rows[0]
     const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
-    const nextRank =
-      CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
+    const nextRank = RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
     const gamesPlayed = user.games_played || 0
     const wins = user.games_won || 0
     const recordedLosses: number | null = user.games_lost ?? null
@@ -271,8 +265,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     const user = result.rows[0]
     const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
-    const nextRank =
-      CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
+    const nextRank = RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
     const gamesPlayed = user.games_played || 0
     const wins = user.games_won || 0
     const recordedLosses: number | null = user.games_lost ?? null
@@ -409,7 +402,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     // Validate and accept tagline from the preselected list
     if (typeof tagline === 'string') {
-      const { isAllowedTagline } = require('../constants/profileTaglines') as {
+      const { isAllowedTagline } = await import('../constants/profileTaglines.js') as {
         isAllowedTagline: (v: unknown) => v is string
       }
       const trimmed = tagline.trim()

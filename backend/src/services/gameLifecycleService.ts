@@ -1,14 +1,14 @@
-import { getClient, query } from '../config/database'
-import { acquireLock, releaseLock } from '../config/redis'
-import type { GameConfiguration, GameState } from '../types/game'
-import type { GameLifecycleStatus, GameRoom } from '../types/gameRoom'
-import { logger } from '../utils/logger'
-import capitalGameService from './capitalGameService'
-import { GameRoomService } from './gameRoomService'
-import { GameService } from './gameService'
-import { mapService } from './mapService'
-import { queueService } from './queueService'
-import { tryGetSocketServer } from './socketRegistry'
+import { getClient, query } from '../config/database.js'
+import { acquireLock, releaseLock } from '../config/redis.js'
+import type { GameConfiguration, GameState } from '../types/game.js'
+import type { GameLifecycleStatus, GameRoom } from '../types/gameRoom.js'
+import { logger } from '../utils/logger.js'
+import capitalGameService from './capitalGameService.js'
+import { GameRoomService } from './gameRoomService.js'
+import { GameService } from './gameService.js'
+import { mapService } from './mapService.js'
+import { queueService } from './queueService.js'
+import { tryGetSocketServer } from './socketRegistry.js'
 
 interface ReadyPlayerRow {
   id: string
@@ -401,7 +401,7 @@ export class GameLifecycleService {
       // Also delete any partial game state that was created
       try {
         await query('DELETE FROM game_states WHERE room_id = $1', [roomId])
-        const { gameStateCache } = await import('./cacheService')
+        const { gameStateCache } = await import('./cacheService.js')
         await gameStateCache.deleteGameState(roomId)
       } catch (cleanupError) {
         logger.warn('Failed to cleanup partial game state after start failure', {
@@ -536,6 +536,11 @@ export class GameLifecycleService {
       return {
         userId: configUserId,
         username: matchingRoomPlayer?.username,
+        // Carry through skill rating from room roster when available for client display
+        skillRating:
+          typeof (matchingRoomPlayer as { skill_rating?: number })?.skill_rating === 'number'
+            ? (matchingRoomPlayer as { skill_rating?: number }).skill_rating
+            : undefined,
         teamId: normalizedTeamId,
         isAi: player.is_ai === true || matchingRoomPlayer?.isAi === true,
         aiDifficulty: normalizedDifficulty,
@@ -579,7 +584,7 @@ export class GameLifecycleService {
 
     // Inject Hidden Treasures configuration if provided at room creation (DB-backed)
     try {
-      const { normalizeTreasureConfig } = await import('../game/hiddenTreasures')
+      const { normalizeTreasureConfig } = await import('../game/hiddenTreasures.js')
       // Prefer DB value
       // biome-ignore lint/suspicious/noExplicitAny: room is a DTO
       const roomTreasure: any = (room as any)?.treasureConfig
@@ -587,7 +592,7 @@ export class GameLifecycleService {
         configOverrides.treasureConfig = normalizeTreasureConfig(roomTreasure)
       } else {
         // Backward compatibility: fallback to cache if set before migration
-        const { cacheService } = await import('./cacheService')
+        const { cacheService } = await import('./cacheService.js')
         const cached = await cacheService.get<Partial<GameConfiguration['treasureConfig']>>(
           `room:treasure-config:${roomId}`,
         )
@@ -668,9 +673,9 @@ export class GameLifecycleService {
 
     // Persist the latest snapshot from cache (capitals and other post-init changes included)
     try {
-      const { gameStateCache } = await import('./cacheService')
+      const { gameStateCache } = await import('./cacheService.js')
       const latest =
-        await gameStateCache.getGameState<import('../types/game').SerializedGameState>(roomId)
+        await gameStateCache.getGameState<import('../types/game.js').SerializedGameState>(roomId)
       if (latest) {
         await this.gameService.saveSnapshot(roomId, latest)
       } else {
@@ -741,7 +746,7 @@ export class GameLifecycleService {
       const serialized = this.toSerializableGameState(gameState)
       try {
         const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8')
-        const { socketPayloadMetrics } = await import('./metricsService')
+        const { socketPayloadMetrics } = await import('./metricsService.js')
         socketPayloadMetrics.record('game-update', bytes)
         if (socketPayloadMetrics.shouldLog('game-update')) {
           const stats = socketPayloadMetrics.snapshot('game-update')
@@ -902,7 +907,7 @@ export class GameLifecycleService {
 
     // Also populate Redis cache for fast access
     try {
-      const { gameStateCache } = await import('./cacheService')
+      const { gameStateCache } = await import('./cacheService.js')
       await gameStateCache.setGameState(roomId, serializable)
     } catch (error) {
       logger.warn('Failed to cache initial game state', {
@@ -1122,8 +1127,8 @@ export class GameLifecycleService {
   }
 
   private computeDefaultBudgetForDifficulty(
-    difficulty: import('../types/game').AIDifficulty,
-  ): Partial<import('../services/aiDecisionService').DecisionBudget> {
+    difficulty: import('../types/game.js').AIDifficulty,
+  ): Partial<import('../services/aiDecisionService.js').DecisionBudget> {
     switch (difficulty) {
       case 'recruit':
         return {
@@ -1308,7 +1313,7 @@ export class GameLifecycleService {
       try {
         const io = tryGetSocketServer()
         if (io) {
-          const { DeltaBuilder } = await import('../types/deltaUpdates')
+          const { DeltaBuilder } = await import('../types/deltaUpdates.js')
           const channel = `game:${roomId}`
           if (lastResult?.treasureAwarded) {
             io.to(channel).emit('game-delta', {

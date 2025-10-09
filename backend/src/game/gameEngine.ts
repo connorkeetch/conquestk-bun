@@ -1,7 +1,7 @@
-import { treasureMetrics } from '../services/metricsService'
+import { treasureMetrics } from '../services/metricsService.js'
 import territoryModifierService, {
   type GameTerritoryModifier,
-} from '../services/territoryModifierService'
+} from '../services/territoryModifierService.js'
 import type {
   AttackAction,
   BattleResult,
@@ -19,14 +19,14 @@ import type {
   Territory,
   TradeCardsAction,
   TreasureConfig,
-} from '../types/game'
+} from '../types/game.js'
 import {
   drawTreasure,
   ensureTreasureState,
   findRedeemableSets,
   normalizeTreasureConfig,
   redeemSet,
-} from './hiddenTreasures'
+} from './hiddenTreasures.js'
 
 export class GameEngine {
   // Cache modifiers per room to prevent memory leaks
@@ -105,6 +105,8 @@ export class GameEngine {
       isAi?: boolean
       aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null
       aiPersonalitySeed?: number | null
+      // Optional rating carried from lobby/DB for client display
+      skillRating?: number | null
     }>,
     gameConfig: GameConfiguration,
     mapOverrides: { territories: Territory[]; continentBonuses: ContinentBonus[] },
@@ -276,6 +278,7 @@ export class GameEngine {
       aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null
       aiPersonalitySeed?: number | null
       color?: string | null
+      skillRating?: number | null
     }>,
   ): GamePlayer[] {
     const fallbackPalette = [
@@ -371,6 +374,10 @@ export class GameEngine {
       territories: [],
       cards: [],
       isEliminated: false,
+      skillRating:
+        typeof player.skillRating === 'number' && Number.isFinite(player.skillRating)
+          ? Math.trunc(player.skillRating)
+          : undefined,
       teamId:
         typeof player.teamId === 'number' && !Number.isNaN(player.teamId) && player.teamId > 0
           ? player.teamId
@@ -1347,7 +1354,7 @@ export class GameEngine {
 
   private handleUndoFortify(
     gameState: GameState,
-    action: import('../types/game').UndoFortifyAction,
+    action: import('../types/game.js').UndoFortifyAction,
   ): GameState {
     if (!this.validateUndoFortify(gameState, action)) {
       throw new Error('Invalid undo fortify action')
@@ -1745,7 +1752,7 @@ export class GameEngine {
 
   private validateUndoFortify(
     gameState: GameState,
-    action: import('../types/game').UndoFortifyAction,
+    action: import('../types/game.js').UndoFortifyAction,
   ): boolean {
     // Must be in fortify phase
     if (gameState.phase !== 'fortify') return false

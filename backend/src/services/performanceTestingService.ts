@@ -1,9 +1,9 @@
 import axios from 'axios'
-import { logger } from '../utils/logger'
-import { databaseClusterService } from './databaseClusterService'
-import { performanceMonitorService } from './performanceMonitorService'
-import { redisClusterService } from './redisClusterService'
-import { scalingService } from './scalingService'
+import { logger } from '../utils/logger.js'
+import { databaseClusterService } from './databaseClusterService.js'
+import { performanceMonitorService } from './performanceMonitorService.js'
+import { redisClusterService } from './redisClusterService.js'
+import { scalingService } from './scalingService.js'
 
 interface LoadTestConfig {
   duration: number // seconds
@@ -111,7 +111,7 @@ export class PerformanceTestingService {
         { path: '/api/games', method: 'GET', weight: 3 },
         { path: '/api/games/:id', method: 'GET', weight: 2 },
         { path: '/api/users/me', method: 'GET', weight: 2 },
-        { path: '/api/leaderboard', method: 'GET', weight: 1 },
+        { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 1 },
       ],
     })
 
@@ -135,7 +135,7 @@ export class PerformanceTestingService {
           payload: { action: 'attack', from: 1, to: 2 },
         },
         { path: '/api/users/me', method: 'GET', weight: 3 },
-        { path: '/api/leaderboard', method: 'GET', weight: 2 },
+        { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 2 },
       ],
     })
 
@@ -147,7 +147,7 @@ export class PerformanceTestingService {
         { path: '/api/games/:id', method: 'GET', weight: 10 }, // Heavy DB reads
         { path: '/api/users/:id/stats', method: 'GET', weight: 5 },
         { path: '/api/games/:id/history', method: 'GET', weight: 3 },
-        { path: '/api/leaderboard', method: 'GET', weight: 2 },
+        { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 2 },
       ],
     })
 
@@ -157,7 +157,7 @@ export class PerformanceTestingService {
       rampUp: 15,
       endpoints: [
         { path: '/api/games', method: 'GET', weight: 8 }, // Should hit cache
-        { path: '/api/leaderboard', method: 'GET', weight: 5 },
+        { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 5 },
         { path: '/api/maps', method: 'GET', weight: 3 },
         { path: '/api/users/search?q=test', method: 'GET', weight: 2 },
       ],

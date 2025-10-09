@@ -41,7 +41,7 @@
 
 ### Competitive profile & ranking visuals
 - `SkillProgressBar` renders tier progress given a rating.【F:frontend/src/components/SkillProgressBar.tsx†L1-L96】 and `RatingChangeAnimation` animates CP gains/losses.【F:frontend/src/components/RatingChangeAnimation.tsx†L1-L66】 They are not imported anywhere.【97eeba†L1-L4】【1b02d5†L1-L4】
-- `LeaderboardsPage` is a standalone leaderboard screen built on `/api/skills/leaderboards/skill`.【F:frontend/src/pages/LeaderboardsPage.tsx†L1-L113】 The Community hub already consolidates leaderboard UI with tabbed sections over `/api/leaderboard`.【F:frontend/src/pages/CommunityPage.tsx†L1-L200】 No route still points at `LeaderboardsPage`.【466e26†L1-L2】 Remove it (and related links) to avoid duplicate navigation targets.
+- `LeaderboardsPage` is a standalone leaderboard screen built on `/api/skills/leaderboards/skill`.【F:frontend/src/pages/LeaderboardsPage.tsx†L1-L113】 The Community hub already consolidates leaderboard UI with tabbed sections over `/api/skills/leaderboards/skill`.【F:frontend/src/pages/CommunityPage.tsx†L1-L200】 No route still points at `LeaderboardsPage`.【466e26†L1-L2】 Remove it (and related links) to avoid duplicate navigation targets.
 
 If we want to reuse any of these visuals (e.g., for celebratory rank-up experiences), embed them into the active `ProfilePage` tabs which already house player stats and match history.【F:frontend/src/components/ProfilePage.tsx†L240-L320】 Otherwise delete the files.
 

@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import { query } from '../config/database'
-import { authenticateToken } from '../middleware/auth'
-import { eloService } from '../services/eloService'
-import { handleRouteError } from '../utils/routeErrorHandler'
+import { query } from '../config/database.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { eloService } from '../services/eloService.js'
+import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 
@@ -109,13 +109,22 @@ router.get('/leaderboards/skill', async (req, res) => {
     const leaderboard = await eloService.getLeaderboard(limit, offset)
 
     res.json({
-      leaderboard: leaderboard.map((entry, _index) => ({
-        rank: entry.rank_position,
-        userId: entry.user_id,
-        username: entry.username,
-        skillRating: entry.skill_rating,
-        tier: eloService.getSkillTier(entry.skill_rating).name,
-      })),
+      leaderboard: leaderboard.map((entry) => {
+        const wins = typeof entry.ranked_wins === 'number' ? entry.ranked_wins : 0
+        const losses = typeof entry.ranked_losses === 'number' ? entry.ranked_losses : 0
+        const gamesPlayed = wins + losses
+        return {
+          rank: entry.rank_position,
+          userId: entry.user_id,
+          username: entry.username,
+          skillRating: entry.skill_rating,
+          wins,
+          losses,
+          gamesPlayed,
+          winRate: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
+          tier: eloService.getSkillTier(entry.skill_rating).name,
+        }
+      }),
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to fetch leaderboard', 500, {

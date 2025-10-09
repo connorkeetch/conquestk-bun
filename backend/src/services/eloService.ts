@@ -1,4 +1,5 @@
 import type { PoolClient, QueryResultRow } from 'pg'
+import { RANKS } from '@risk-game/shared/constants/ranks'
 import type { DatabaseQueryResult } from '../config/database.js'
 import { query, transaction } from '../config/database.js'
 import { logger } from '../utils/logger.js'
@@ -44,20 +45,28 @@ interface LeaderboardRow extends QueryResultRow {
   username: string
   skill_rating: number
   rank_position: number
+  ranked_wins?: number | null
+  ranked_losses?: number | null
+}
+// Centralize tier thresholds using shared RANKS and attach icons/colors here (server-only)
+const TIER_META: Record<string, { icon: string; color: string }> = {
+  Chieftain: { icon: '🛡️', color: '#8B4513' },
+  Warlord: { icon: '⚔️', color: '#DC143C' },
+  'Raider King': { icon: '⚓', color: '#4682B4' },
+  Sultan: { icon: '☪️', color: '#228B22' },
+  Caesar: { icon: '🦅', color: '#FFD700' },
+  Khan: { icon: '🏹', color: '#FF8C00' },
+  Emperor: { icon: '👑', color: '#9370DB' },
+  'The Great King': { icon: '☀️', color: '#FF6347' },
+  Overlord: { icon: '💀', color: '#2F4F4F' },
+  Worldbreaker: { icon: '☄️', color: '#8B0000' },
 }
 
-export const SKILL_TIERS: SkillTier[] = [
-  { name: 'Chieftain', minRating: 0, maxRating: 599, icon: '🛡️', color: '#8B4513' },
-  { name: 'Warlord', minRating: 600, maxRating: 799, icon: '⚔️', color: '#DC143C' },
-  { name: 'Raider King', minRating: 800, maxRating: 999, icon: '⚓', color: '#4682B4' },
-  { name: 'Sultan', minRating: 1000, maxRating: 1199, icon: '☪️', color: '#228B22' },
-  { name: 'Caesar', minRating: 1200, maxRating: 1399, icon: '🦅', color: '#FFD700' },
-  { name: 'Khan', minRating: 1400, maxRating: 1599, icon: '🏹', color: '#FF8C00' },
-  { name: 'Emperor', minRating: 1600, maxRating: 1799, icon: '👑', color: '#9370DB' },
-  { name: 'The Great King', minRating: 1800, maxRating: 1999, icon: '☀️', color: '#FF6347' },
-  { name: 'Overlord', minRating: 2000, maxRating: 2199, icon: '💀', color: '#2F4F4F' },
-  { name: 'Worldbreaker', minRating: 2200, maxRating: 9999, icon: '☄️', color: '#8B0000' },
-]
+export const SKILL_TIERS: SkillTier[] = RANKS.map((r, i) => {
+  const nextMin = i < RANKS.length - 1 ? RANKS[i + 1].minRating : 10000
+  const meta = TIER_META[r.name] || { icon: '🏅', color: '#666' }
+  return { name: r.name, minRating: r.minRating, maxRating: nextMin - 1, icon: meta.icon, color: meta.color }
+})
 
 export class EloService {
   private calculateKFactor(
@@ -300,7 +309,9 @@ export class EloService {
           (entry.data ->> 'userId')::uuid AS user_id,
           entry.data ->> 'username' AS username,
           (entry.data ->> 'skillRating')::int AS skill_rating,
-          (entry.data ->> 'rank')::int AS rank_position
+          (entry.data ->> 'rank')::int AS rank_position,
+          COALESCE((entry.data ->> 'wins')::int, 0) AS ranked_wins,
+          COALESCE((entry.data ->> 'losses')::int, 0) AS ranked_losses
         FROM skill_leaderboard_cache cache,
         LATERAL jsonb_array_elements(cache.rankings) WITH ORDINALITY AS entry(data, ord)
         WHERE cache.period_type = 'all_time'
@@ -321,6 +332,8 @@ export class EloService {
           id as user_id,
           username,
           skill_rating,
+          ranked_wins,
+          ranked_losses,
           ROW_NUMBER() OVER (ORDER BY skill_rating DESC, created_at ASC) + $2 AS rank_position
         FROM users
         ORDER BY skill_rating DESC, created_at ASC
@@ -350,7 +363,7 @@ export class EloService {
 
     const leaderboard = await executeQuery<LeaderboardRow>(
       `
-        SELECT id as user_id, username, skill_rating,
+        SELECT id as user_id, username, skill_rating, ranked_wins, ranked_losses,
                ROW_NUMBER() OVER (ORDER BY skill_rating DESC, created_at ASC) AS rank_position
         FROM users
         ORDER BY skill_rating DESC, created_at ASC
@@ -362,6 +375,8 @@ export class EloService {
       userId: row.user_id,
       username: row.username,
       skillRating: row.skill_rating,
+      wins: row.ranked_wins ?? 0,
+      losses: row.ranked_losses ?? 0,
       rank: row.rank_position,
     }))
 

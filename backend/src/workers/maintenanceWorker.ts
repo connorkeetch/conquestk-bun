@@ -1,7 +1,7 @@
 import { type Job, Worker } from 'bullmq'
-import { maintenanceService } from '../services/maintenanceService'
-import { queueService } from '../services/queueService'
-import { logger } from '../utils/logger'
+import { maintenanceService } from '../services/maintenanceService.js'
+import { queueService } from '../services/queueService.js'
+import { logger } from '../utils/logger.js'
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 const DEFAULT_DAILY_MS = ONE_DAY_MS
@@ -37,6 +37,7 @@ function getMoveArchiveBatchSize(): number {
 
 export class MaintenanceWorker {
   private timer: NodeJS.Timeout | null = null
+  private leaderboardTimer: NodeJS.Timeout | null = null
   private worker: Worker | null = null
 
   async initialize(): Promise<void> {
@@ -52,15 +53,19 @@ export class MaintenanceWorker {
       moveArchiveBatchSize,
     })
 
-    // Schedule BullMQ Job Scheduler for periodic maintenance
+    // Schedule BullMQ Job Schedulers for periodic maintenance
     try {
       const queue = queueService.getMaintenanceQueue()
       await queue.upsertJobScheduler('maintenance:prune', {
         every: intervalMs,
       })
+      // Nightly (04:00 UTC) leaderboard cache refresh
+      await queue.upsertJobScheduler('maintenance:refresh-skill-leaderboard', {
+        cron: '0 4 * * *',
+      })
       // Create a worker to process scheduled maintenance jobs
       const Redis = (await import('ioredis')).default
-      const redis = (await import('../config/redis')).getRedisClient()
+      const redis = (await import('../config/redis.js')).getRedisClient()
       const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
       const connection = new Redis({
         ...baseOpts,
@@ -72,9 +77,16 @@ export class MaintenanceWorker {
       this.worker = new Worker(
         queue.name,
         async (job: Job) => {
-          if (job.name && job.name !== 'maintenance:prune') return null
-          await this.runOnce('interval')
-          return { ok: true }
+          switch (job.name) {
+            case 'maintenance:prune':
+              await this.runOnce('interval')
+              return { ok: true }
+            case 'maintenance:refresh-skill-leaderboard':
+              await maintenanceService.refreshSkillLeaderboardCache()
+              return { ok: true }
+            default:
+              return null
+          }
         },
         {
           connection,
@@ -92,6 +104,20 @@ export class MaintenanceWorker {
           })
         }, intervalMs)
       }
+      // Nightly fallback: 24h cadence starting one hour from now
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000
+      this.leaderboardTimer = setTimeout(() => {
+        maintenanceService
+          .refreshSkillLeaderboardCache()
+          .catch((error) => logger.warn('Failed to refresh leaderboard cache (fallback)', { error }))
+        this.leaderboardTimer = setInterval(() => {
+          maintenanceService
+            .refreshSkillLeaderboardCache()
+            .catch((error) =>
+              logger.warn('Failed to refresh leaderboard cache (interval fallback)', { error }),
+            )
+        }, ONE_DAY_MS) as unknown as NodeJS.Timeout
+      }, 60 * 60 * 1000) as unknown as NodeJS.Timeout
     }
 
     // Run once on startup (non-blocking)
@@ -133,6 +159,10 @@ export class MaintenanceWorker {
     if (this.timer) {
       clearInterval(this.timer)
       this.timer = null
+    }
+    if (this.leaderboardTimer) {
+      clearInterval(this.leaderboardTimer)
+      this.leaderboardTimer = null
     }
     if (this.worker) {
       // Close worker connection gracefully
