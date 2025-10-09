@@ -143,13 +143,16 @@ export default function ChatContainer({
         }
 
         const id = detail.conversation.id
+        const accessLevel = detail.membership.accessLevel ?? 'member'
         setResolvedConversationId(id)
         dispatch(messagesActions.setActiveConversationId(id))
         // Load the most recent 20 messages by default
         dispatch(loadConversationMessages({ conversationId: id, limit: 20 }))
         dispatch(refreshConversation(id))
-        dispatch(messagesActions.markReadOptimistic(id))
-        socketService.markConversationReadViaSocket(id)
+        if (accessLevel === 'member') {
+          dispatch(messagesActions.markReadOptimistic(id))
+          socketService.markConversationReadViaSocket(id)
+        }
       } catch (ensureError) {
         if (!cancelled) {
           setError(
@@ -178,13 +181,15 @@ export default function ChatContainer({
     }
   }, [rawMessages.length])
 
+  const isSpectator = conversation?.membership?.accessLevel === 'spectator'
+
   useEffect(() => {
-    if (!resolvedConversationId || rawMessages.length === 0) {
+    if (!resolvedConversationId || rawMessages.length === 0 || isSpectator) {
       return
     }
     dispatch(messagesActions.markReadOptimistic(resolvedConversationId))
     socketService.markConversationReadViaSocket(resolvedConversationId)
-  }, [dispatch, resolvedConversationId, rawMessages.length])
+  }, [dispatch, resolvedConversationId, rawMessages.length, isSpectator])
 
   const mutedIds = useAppSelector((s) => new Set(s.uiRoom.mutedUserIds ?? []))
   const displayMessages: DisplayMessage[] = useMemo(() => {

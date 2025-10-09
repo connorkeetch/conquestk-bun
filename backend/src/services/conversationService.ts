@@ -134,6 +134,25 @@ type ConversationMembershipRow = {
   joined_at: Date
 }
 
+type ConversationMembershipDetailRow = ConversationMembershipRow & {
+  is_muted: boolean | null
+  is_pinned: boolean | null
+  last_read_message_id: string | null
+  last_read_at: Date | null
+}
+
+type ConversationAccessLevel = 'member' | 'spectator'
+
+interface ResolveConversationAccessOptions {
+  allowSpectatorGameAccess?: boolean
+}
+
+interface ConversationAccessResult {
+  conversation: ConversationRecord
+  membership?: ConversationMembershipDetailRow
+  accessLevel: ConversationAccessLevel
+}
+
 type DirectMemberRow = {
   user_id: string
 }
@@ -1150,6 +1169,53 @@ const getConversationRow = async (conversationId: string): Promise<ConversationR
   return mapConversationRow(result.rows[0])
 }
 
+const resolveConversationAccess = async (
+  conversationId: string,
+  userId: string,
+  options: ResolveConversationAccessOptions = {},
+): Promise<ConversationAccessResult> => {
+  const conversation = await getConversationRow(conversationId)
+
+  const membershipResult = await query<ConversationMembershipDetailRow>(
+    `
+    SELECT role, shadow_muted, joined_at, is_muted, is_pinned, last_read_message_id, last_read_at
+    FROM conversation_members
+    WHERE conversation_id = $1 AND user_id = $2
+  `,
+    [conversationId, userId],
+  )
+
+  if (membershipResult.rows.length > 0) {
+    return {
+      conversation,
+      membership: membershipResult.rows[0],
+      accessLevel: 'member',
+    }
+  }
+
+  if (options.allowSpectatorGameAccess && conversation.kind === 'game') {
+    if (!conversation.gameId) {
+      throw new ConversationError('NOT_FOUND', 'Game conversation not linked to a room')
+    }
+
+    const privacyResult = await query<{ is_private: boolean | null }>(
+      'SELECT is_private FROM game_rooms WHERE id = $1',
+      [conversation.gameId],
+    )
+
+    const isPrivate = privacyResult.rows[0]?.is_private ?? true
+    if (!isPrivate) {
+      return {
+        conversation,
+        membership: undefined,
+        accessLevel: 'spectator',
+      }
+    }
+  }
+
+  throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation')
+}
+
 const getOtherDirectMember = async (
   conversationId: string,
   senderId: string,
@@ -1481,8 +1547,10 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
     throw new ConversationError('MESSAGE_TOO_LONG', 'Message exceeds the allowed length')
   }
 
-  const conversation = await getConversationRow(conversationId)
-  await ensureMembership(conversationId, senderId)
+  const access = await resolveConversationAccess(conversationId, senderId, {
+    allowSpectatorGameAccess: true,
+  })
+  const conversation = access.conversation
 
   if (conversation.kind === 'direct') {
     const otherMember = await getOtherDirectMember(conversationId, senderId)
@@ -1531,6 +1599,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
     ...(metadata ?? {}),
     ...(clientMessageId ? { clientMessageId } : {}),
     ...(senderName ? { senderName } : {}),
+    ...(access.accessLevel === 'spectator' ? { senderRole: 'spectator' } : {}),
   }
 
   const insertResult = await query<ConversationMessageRow>(
@@ -1544,15 +1613,17 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
 
   const message = mapMessageRow(insertResult.rows[0])
 
-  await query(
-    `
-    UPDATE conversation_members
-    SET last_read_message_id = $1,
-        last_read_at = NOW()
-    WHERE conversation_id = $2 AND user_id = $3
-  `,
-    [message.id, conversationId, senderId],
-  )
+  if (access.accessLevel === 'member') {
+    await query(
+      `
+      UPDATE conversation_members
+      SET last_read_message_id = $1,
+          last_read_at = NOW()
+      WHERE conversation_id = $2 AND user_id = $3
+    `,
+      [message.id, conversationId, senderId],
+    )
+  }
 
   emitConversationMessageEvent(descriptor, message)
 
@@ -1569,7 +1640,9 @@ export async function listMessages(
     throw new ConversationError('INVALID_PAGINATION', 'Limit must be between 1 and 100')
   }
 
-  await ensureMembership(conversationId, userId)
+  await resolveConversationAccess(conversationId, userId, {
+    allowSpectatorGameAccess: true,
+  })
 
   const params: Array<string | number> = [conversationId]
   let cursorClause = ''
@@ -1620,6 +1693,7 @@ export interface ConversationMembershipInfo {
   shadowMuted: boolean
   lastReadMessageId: string | null
   lastReadAt: Date | null
+  accessLevel: ConversationAccessLevel
 }
 
 export interface ConversationListEntry {
@@ -1641,6 +1715,14 @@ export interface ConversationListOptions {
 }
 
 export async function markConversationRead(conversationId: string, userId: string): Promise<void> {
+  const access = await resolveConversationAccess(conversationId, userId, {
+    allowSpectatorGameAccess: true,
+  })
+
+  if (access.accessLevel !== 'member') {
+    return
+  }
+
   const latestResult = await query<ConversationMessageRow>(
     `
     SELECT id, created_at
@@ -1678,31 +1760,31 @@ export interface ConversationDetailResult {
 export async function getConversationDetail(
   conversationId: string,
   userId: string,
+  options: ResolveConversationAccessOptions = {},
 ): Promise<ConversationDetailResult> {
-  const membershipResult = await query<
-    ConversationMembershipRow & {
-      last_read_message_id: string | null
-      last_read_at: Date | null
-      is_muted: boolean | null
-      is_pinned: boolean | null
-    }
-  >(
-    `
-    SELECT role, shadow_muted, joined_at, last_read_message_id, last_read_at, is_muted, is_pinned
-    FROM conversation_members
-    WHERE conversation_id = $1 AND user_id = $2
-  `,
-    [conversationId, userId],
-  )
+  const access = await resolveConversationAccess(conversationId, userId, options)
+  const descriptor = await buildConversationDescriptor(access.conversation)
 
-  if (membershipResult.rows.length === 0) {
-    throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation')
+  if (access.accessLevel === 'spectator') {
+    const membership: ConversationMembershipInfo = {
+      role: 'member',
+      joinedAt: new Date(),
+      isMuted: false,
+      isPinned: false,
+      shadowMuted: false,
+      lastReadMessageId: null,
+      lastReadAt: null,
+      accessLevel: 'spectator',
+    }
+
+    return {
+      conversation: descriptor,
+      membership,
+      unreadCount: 0,
+    }
   }
 
-  const record = await getConversationRow(conversationId)
-  const descriptor = await buildConversationDescriptor(record)
-
-  const membershipRow = membershipResult.rows[0]
+  const membershipRow = access.membership!
 
   const unreadResult = await query<{ count: number }>(
     `
@@ -1722,6 +1804,7 @@ export async function getConversationDetail(
     shadowMuted: membershipRow.shadow_muted ?? false,
     lastReadMessageId: membershipRow.last_read_message_id ?? null,
     lastReadAt: membershipRow.last_read_at ?? null,
+    accessLevel: 'member',
   }
 
   return {
@@ -1844,6 +1927,7 @@ export async function listConversationsForUser(
       shadowMuted: row.shadow_muted ?? false,
       lastReadMessageId: row.last_read_message_id ?? null,
       lastReadAt: row.last_read_at ?? null,
+      accessLevel: 'member',
     }
 
     const lastMessage = row.last_message_id

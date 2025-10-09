@@ -5,6 +5,7 @@ import {
   PREMIUM_GAME_LIMIT_MESSAGE,
   PREMIUM_UPSELL_ERROR_CODE,
 } from '../constants/premium'
+import { ensureGameConversation } from '../services/conversationService'
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
@@ -168,6 +169,16 @@ export class GameController {
       }
 
       await this.lifecycleService.refreshLifecycle(room.id)
+
+      try {
+        await ensureGameConversation(room.id)
+      } catch (chatError) {
+        logger.warn('Failed to initialize game chat after room creation', {
+          roomId: room.id,
+          hostId,
+          error: chatError instanceof Error ? chatError.message : chatError,
+        })
+      }
 
       const hydratedRoom = await this.gameRoomService.getRoomById(room.id)
 

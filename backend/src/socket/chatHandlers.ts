@@ -3,6 +3,7 @@ import {
   addMembersToConversation,
   ConversationError,
   type ConversationMessageRecord,
+  type ConversationDetailResult,
   type ConversationWithMembers,
   createGroupConversation,
   ensureDirectConversation,
@@ -34,10 +35,6 @@ import type {
   TypingEventResponse,
 } from '../types/shared'
 import { logger } from '../utils/logger'
-
-interface ConversationDetailWithMembership {
-  conversation: ConversationWithMembers
-}
 
 type SocketWithUser = Socket<ClientToServerEvents, ServerToClientEvents> & {
   userId?: string
@@ -190,10 +187,12 @@ const ensureConversationAccess = async (
   socket: SocketWithUser,
   conversationId: string,
   userId: string,
-): Promise<ConversationDetailWithMembership> => {
-  const detail = await getConversationDetail(conversationId, userId)
+): Promise<ConversationDetailResult> => {
+  const detail = await getConversationDetail(conversationId, userId, {
+    allowSpectatorGameAccess: true,
+  })
   await joinConversationRoom(socket, conversationId)
-  return { conversation: detail.conversation }
+  return detail
 }
 
 const ensureDirectConversationAccess = async (
@@ -279,9 +278,22 @@ const broadcastReceiptRead = async (
   conversationId: string,
   userId: string,
 ): Promise<ReceiptReadEventPayload> => {
-  await ensureConversationAccess(socket, conversationId, userId)
+  const detail = await ensureConversationAccess(socket, conversationId, userId)
+
+  if (detail.membership.accessLevel === 'spectator') {
+    const payload: ReceiptReadEventPayload = {
+      conversationId,
+      userId,
+      lastReadMessageId: null,
+      readAt: toIso(new Date()),
+    }
+    return payload
+  }
+
   await markConversationRead(conversationId, userId)
-  const refreshed = await getConversationDetail(conversationId, userId)
+  const refreshed = await getConversationDetail(conversationId, userId, {
+    allowSpectatorGameAccess: true,
+  })
 
   const payload: ReceiptReadEventPayload = {
     conversationId,
