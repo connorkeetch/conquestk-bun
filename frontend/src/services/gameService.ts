@@ -150,13 +150,18 @@ export const gameService = {
     const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`, { params })
     return response.data.game
   },
-  async getGameLog(roomId: string): Promise<
+  async getGameLog(
+    roomId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<
     Record<string, unknown> & {
       log: Array<Record<string, unknown>>
       stats?: Array<Record<string, unknown>>
     }
   > {
-    const response = await api.get<RawGameLogResponse>(`/game/rooms/${roomId}/log`)
+    const response = await api.get<RawGameLogResponse>(`/game/rooms/${roomId}/log`, {
+      signal: options?.signal,
+    })
     const raw = (response.data ?? {}) as RawGameLogResponse
     const log = Array.isArray(raw.log) ? raw.log : []
     const stats = Array.isArray(raw.stats) ? raw.stats : undefined
