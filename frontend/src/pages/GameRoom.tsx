@@ -197,6 +197,18 @@ export default function GameRoom() {
   const resignDialogTitleId = useId()
   const mobileDrawerId = useId()
   const statsDrawerId = useId()
+
+  // Drawer layout helpers
+  const chatPinned = Boolean(chatPanel?.zone === 'drawer' && chatPanel?.isPinned)
+  const statsPinned = Boolean(statsPanel?.zone === 'drawer' && statsPanel?.isPinned)
+  const chatOpen = Boolean(chatPanel?.zone === 'drawer' && (mobileDrawerOpen || chatPinned))
+  const statsOpen = Boolean(statsPanel?.zone === 'drawer' && (statsDrawerOpen || statsPinned))
+  const chatOverlayOpen = Boolean(chatPanel?.zone === 'drawer' && mobileDrawerOpen && !chatPinned)
+  const statsOverlayOpen = Boolean(statsPanel?.zone === 'drawer' && statsDrawerOpen && !statsPinned)
+  const bothPinned = chatPinned && statsPinned
+  // Wider default widths for better readability
+  const MAX_SINGLE_DRAWER_PX = 960
+  const MAX_PINNED_DRAWER_PX = 720
   // Gate treasure trade modal until turn-intro is dismissed
   const [turnIntroActive, setTurnIntroActive] = useState(false)
   useEffect(() => {
@@ -513,6 +525,13 @@ export default function GameRoom() {
       document.body.style.overflow = prev
     }
   }, [mobileDrawerOpen, statsDrawerOpen])
+
+  // Ensure overlay drawers never overlap: allow only one overlay at a time
+  useEffect(() => {
+    if (mobileDrawerOpen && statsDrawerOpen && !chatPinned && !statsPinned) {
+      setStatsDrawerOpen(false)
+    }
+  }, [mobileDrawerOpen, statsDrawerOpen, chatPinned, statsPinned])
   const replacementPendingUserId = useMemo(
     () =>
       (currentRoom as unknown as { replacementPendingUserId?: string | null })
@@ -2596,10 +2615,10 @@ export default function GameRoom() {
 
       {/* Mobile FAB - REMOVED: Now integrated into footer */}
 
-      {/* Drawer backdrop (chat) - hidden when pinned */}
-      {currentGame && chatPanel?.zone === 'drawer' && !chatPanel.isPinned && (
+      {/* Drawer backdrop (chat overlay only) */}
+      {currentGame && chatOverlayOpen && (
         <button
-          className={`fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] ${mobileDrawerOpen ? 'block' : 'hidden'}`}
+          className="fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] block"
           onClick={() => setMobileDrawerOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') setMobileDrawerOpen(false)
@@ -2613,14 +2632,20 @@ export default function GameRoom() {
       {currentGame && chatPanel?.zone === 'drawer' && (
         <div
           id={mobileDrawerId}
-          className={`fixed bottom-0 z-30 ${chatDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${mobileDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 z-30 ${chatDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${chatOpen ? 'translate-y-0' : 'translate-y-full'}`}
           style={{
-            height: mobileDrawerOpen ? `${chatDrawerResize.height}px` : undefined,
-            // Handle multiple pinned drawers side-by-side
-            left: statsDrawerOpen && statsPanel?.isPinned ? 'min(500px, 45%)' : '0',
-            right: statsDrawerOpen && statsPanel?.isPinned ? '0' : undefined,
-            width: statsDrawerOpen && statsPanel?.isPinned ? 'min(500px, 45%)' : 'min(600px, 100%)',
-            maxWidth: statsDrawerOpen && statsPanel?.isPinned ? undefined : '100%',
+            height: chatOpen ? `${chatDrawerResize.height}px` : undefined,
+            // Chat is anchored left; adjust width/offset based on pinned/overlay state
+            left: '0',
+            // Both pinned: equal split with a wider max
+            ...(bothPinned
+              ? { width: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
+              : // Stats pinned but chat not pinned: occupy remaining space to the left of stats
+                statsPinned && !chatPinned
+                ? { right: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
+                : // Chat alone (pinned or overlay): centered max width cap
+                  { width: `min(100%, ${MAX_SINGLE_DRAWER_PX}px)` }),
+            maxWidth: '100%',
             paddingBottom: 'calc(env(safe-area-inset-bottom) + 64px)', // Extra space for footer
           }}
           role="dialog"
@@ -2708,10 +2733,10 @@ export default function GameRoom() {
         </div>
       )}
 
-      {/* Drawer backdrop (stats) - hidden when pinned */}
-      {currentGame && statsPanel?.zone === 'drawer' && !statsPanel.isPinned && (
+      {/* Drawer backdrop (stats overlay only) */}
+      {currentGame && statsOverlayOpen && (
         <button
-          className={`fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] ${statsDrawerOpen ? 'block' : 'hidden'}`}
+          className="fixed inset-0 bg-[color:color-mix(in_srgb,black_50%,transparent)] block"
           onClick={() => setStatsDrawerOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') setStatsDrawerOpen(false)
@@ -2725,14 +2750,17 @@ export default function GameRoom() {
       {currentGame && statsPanel?.zone === 'drawer' && (
         <div
           id={statsDrawerId}
-          className={`fixed bottom-0 z-30 ${statsDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${statsDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`fixed bottom-0 z-30 ${statsDrawerResize.isDragging ? '' : 'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${statsOpen ? 'translate-y-0' : 'translate-y-full'}`}
           style={{
-            height: statsDrawerOpen ? `${statsDrawerResize.height}px` : undefined,
-            // Handle multiple pinned drawers side-by-side
-            left: mobileDrawerOpen && chatPanel?.isPinned ? 'min(500px, 45%)' : '0',
-            right: mobileDrawerOpen && chatPanel?.isPinned ? '0' : undefined,
-            width: mobileDrawerOpen && chatPanel?.isPinned ? 'min(500px, 45%)' : 'min(600px, 100%)',
-            maxWidth: mobileDrawerOpen && chatPanel?.isPinned ? undefined : '100%',
+            height: statsOpen ? `${statsDrawerResize.height}px` : undefined,
+            // Stats is anchored right; adjust width/offset based on pinned/overlay state
+            right: '0',
+            ...(bothPinned
+              ? { width: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
+              : chatPinned && !statsPinned
+                ? { left: `min(50%, ${MAX_PINNED_DRAWER_PX}px)` }
+                : { width: `min(100%, ${MAX_SINGLE_DRAWER_PX}px)` }),
+            maxWidth: '100%',
             paddingBottom: 'calc(env(safe-area-inset-bottom) + 64px)', // Extra space for footer
           }}
           role="dialog"
@@ -2868,7 +2896,14 @@ export default function GameRoom() {
       {/* Game Room Footer (mobile + desktop) */}
       {currentGame && (
         <GameRoomFooter
-          onChatClick={() => setMobileDrawerOpen((v) => !v)}
+          onChatClick={() =>
+            setMobileDrawerOpen((v) => {
+              const next = !v
+              // If opening chat overlay, ensure stats overlay is closed to avoid overlap
+              if (next && !statsPinned) setStatsDrawerOpen(false)
+              return next
+            })
+          }
           onChatHover={prefetchChatPanel}
           onSettingsClick={() => setSettingsModalOpen(true)}
           onStatsClick={() => {
