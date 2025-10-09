@@ -35,6 +35,7 @@ import type { RootState } from '../store'
 import AchievementsPanel from './profile/AchievementsPanel'
 import UserStats from './profile/UserStats'
 import { CONQUEST_RANKS, getConquestRank, getRankTierInfo } from './RankInsignia'
+import SkillProgressBar from './SkillProgressBar'
 
 type TabType = 'overview' | 'stats' | 'friends' | 'matches' | 'achievements'
 
@@ -753,7 +754,6 @@ const ProfilePage: React.FC = () => {
     rankAccentColor,
     rankHeaderAccentStyle,
     rankProgressFill,
-    rankProgress,
     ratingToNextRank,
     rankPrimaryHex,
     rankTierLabel,
@@ -1135,27 +1135,16 @@ const ProfilePage: React.FC = () => {
                 <p className="text-lg font-semibold text-white">{rankDetails.name}</p>
               </div>
             </div>
+            <SkillProgressBar
+              currentRating={profile.rank?.rating ?? profile.elo}
+              className="mt-6"
+            />
             {nextRank ? (
-              <div className="relative mt-4">
-                <div className="flex justify-between text-[11px] text-muted uppercase tracking-[0.3em] mb-1">
-                  <span>{profile.elo} CP</span>
-                  <span>{nextRank.minRating} CP</span>
-                </div>
-                <div className="h-2 rounded-full bg-surface-2/60 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${rankProgress}%`,
-                      background: rankProgressFill,
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-muted mt-2">
-                  {ratingToNextRank > 0
-                    ? `${ratingToNextRank} CP to reach ${nextRank.name}.`
-                    : `Promotion to ${nextRank.name} is imminent.`}
-                </p>
-              </div>
+              <p className="text-xs text-muted mt-3">
+                {ratingToNextRank > 0
+                  ? `${ratingToNextRank} CP to reach ${nextRank.name}.`
+                  : `Promotion to ${nextRank.name} is imminent.`}
+              </p>
             ) : (
               <p className="relative text-xs text-muted mt-4 leading-relaxed">
                 Legendary commander status secured.
