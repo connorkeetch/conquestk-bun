@@ -1240,7 +1240,7 @@ export class GameService {
     const turnAdvanced =
       updatedState.phase === 'finished' || updatedState.currentPlayer !== previousPlayerId
 
-    // Append TURN logs (END/MISSED for previous and TREASURE if any)
+    // Append TURN logs + per-turn stats snapshot for analytics
     if (turnAdvanced) {
       const now = new Date().toISOString()
       const entries: GameLogEntry[] = []
@@ -1261,39 +1261,28 @@ export class GameService {
           metal: treasureAwarded,
         })
       }
+
+      const stats = this.buildTurnStatsSnapshot(updatedState)
+
       try {
-        const job = await queueService.addAnalyticsEvent?.({
-          event: 'append_log',
-          gameId: roomId,
-          data: entries,
-        })
-        if (!job) {
+        const bulkJobs = [
+          { event: 'append_log', gameId: roomId, data: entries },
+          { event: 'append_turn_stats', gameId: roomId, data: stats },
+        ] as const
+        const added = await queueService.addAnalyticsEventsBulk?.(
+          bulkJobs as unknown as Array<{
+            event: string
+            gameId: string
+            data: unknown
+          }>,
+        )
+        if (!added) {
           // Queue unavailable: best-effort async write
           setImmediate(() => {
             this.appendLog(roomId, entries).catch(() => {
               /* no-op */
             })
           })
-        }
-      } catch {
-        setImmediate(() => {
-          this.appendLog(roomId, entries).catch(() => {
-            /* no-op */
-          })
-        })
-      }
-    }
-
-    // Append per-turn stats snapshot for analytics
-    if (turnAdvanced) {
-      try {
-        const stats = this.buildTurnStatsSnapshot(updatedState)
-        const job = await queueService.addAnalyticsEvent?.({
-          event: 'append_turn_stats',
-          gameId: roomId,
-          data: stats,
-        })
-        if (!job) {
           setImmediate(() => {
             this.appendTurnStats(roomId, stats).catch(() => {
               /* no-op */
@@ -1301,7 +1290,17 @@ export class GameService {
           })
         }
       } catch {
-        // swallow; non-critical
+        // Fallback to direct writes on any error
+        setImmediate(() => {
+          this.appendLog(roomId, entries).catch(() => {
+            /* no-op */
+          })
+        })
+        setImmediate(() => {
+          this.appendTurnStats(roomId, stats).catch(() => {
+            /* no-op */
+          })
+        })
       }
     }
 

@@ -58,7 +58,9 @@ export class AnalyticsWorker {
         // Dedicated Redis connection for BullMQ
         connection: (() => {
           const Redis = (require('ioredis') as typeof import('ioredis')).default
-          const redis = (require('../config/redis') as typeof import('../config/redis')).getRedisClient()
+          const redis = (
+            require('../config/redis') as typeof import('../config/redis')
+          ).getRedisClient()
           const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
           return new Redis({
             ...baseOpts,

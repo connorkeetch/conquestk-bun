@@ -1,6 +1,6 @@
 import express from 'express'
-import { authenticateToken } from '../middleware/auth'
 import { requireAdmin } from '../middleware/adminAuth'
+import { authenticateToken } from '../middleware/auth'
 import { type QueueStats, queueService } from '../services/queueService'
 import { handleRouteError } from '../utils/routeErrorHandler'
 import { getWorkerManagerInstance } from '../workers/workerManager'
@@ -134,20 +134,21 @@ router.get('/dlq/:queueName', authenticateToken, requireAdmin, async (req, res) 
     const { queueName } = req.params
     const offset = Number.parseInt(String(req.query.offset ?? '0'), 10) || 0
     const limit = Number.parseInt(String(req.query.limit ?? '50'), 10) || 50
-    const keyMap: Record<string, keyof typeof import('../services/queueService').queueService> = {}
     const key = (queueName || '').toLowerCase()
-    const keyToQueueKey = (name: string): import('../services/queueService').QueueHealthResult['details'] extends never
-      ? never
-      : 'gameActions' | 'gameCleanup' | 'analyticsEvents' | 'maintenance' | 'mapAssets' => {
+    const keyToQueueKey = (
+      name: string,
+    ): 'gameActions' | 'gameCleanup' | 'analyticsEvents' | 'maintenance' | 'mapAssets' => {
       if (name === 'game-actions' || name === 'gameactions' || name === 'game') return 'gameActions'
-      if (name === 'game-cleanup' || name === 'gamecleanup' || name === 'cleanup') return 'gameCleanup'
-      if (name === 'analytics-events' || name === 'analyticsevents' || name === 'analytics') return 'analyticsEvents'
+      if (name === 'game-cleanup' || name === 'gamecleanup' || name === 'cleanup')
+        return 'gameCleanup'
+      if (name === 'analytics-events' || name === 'analyticsevents' || name === 'analytics')
+        return 'analyticsEvents'
       if (name === 'maintenance' || name === 'maint') return 'maintenance'
       if (name === 'map-assets' || name === 'mapassets' || name === 'assets') return 'mapAssets'
       return 'gameActions'
     }
     const queueKey = keyToQueueKey(key)
-    const items = await queueService.listDeadLetters(queueKey as any, { offset, limit })
+    const items = await queueService.listDeadLetters(queueKey, { offset, limit })
     res.json({ success: true, data: items, pagination: { offset, limit } })
   } catch (error) {
     handleRouteError(error, req, 'Failed to list DLQ')
@@ -160,22 +161,67 @@ router.post('/dlq/:queueName/requeue/:id', authenticateToken, requireAdmin, asyn
   try {
     const { queueName, id } = req.params
     const key = (queueName || '').toLowerCase()
-    const keyToQueueKey = (name: string): 'gameActions' | 'gameCleanup' | 'analyticsEvents' | 'maintenance' | 'mapAssets' => {
+    const keyToQueueKey = (
+      name: string,
+    ): 'gameActions' | 'gameCleanup' | 'analyticsEvents' | 'maintenance' | 'mapAssets' => {
       if (name === 'game-actions' || name === 'gameactions' || name === 'game') return 'gameActions'
-      if (name === 'game-cleanup' || name === 'gamecleanup' || name === 'cleanup') return 'gameCleanup'
-      if (name === 'analytics-events' || name === 'analyticsevents' || name === 'analytics') return 'analyticsEvents'
+      if (name === 'game-cleanup' || name === 'gamecleanup' || name === 'cleanup')
+        return 'gameCleanup'
+      if (name === 'analytics-events' || name === 'analyticsevents' || name === 'analytics')
+        return 'analyticsEvents'
       if (name === 'maintenance' || name === 'maint') return 'maintenance'
       if (name === 'map-assets' || name === 'mapassets' || name === 'assets') return 'mapAssets'
       return 'gameActions'
     }
     const queueKey = keyToQueueKey(key)
-    const result = await queueService.requeueDeadLetter(queueKey as any, id)
+    const result = await queueService.requeueDeadLetter(queueKey, id)
     res.json({ success: result.requeued, newJobId: result.newJobId ?? null })
   } catch (error) {
     handleRouteError(error, req, 'Failed to requeue DLQ job')
     res.status(500).json({ success: false, error: 'Failed to requeue DLQ job' })
   }
 })
+
+// Dead-letter requeue for transient failures (admin)
+router.post(
+  '/dlq/:queueName/requeue-transient',
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { queueName } = req.params
+      const limit = Number.parseInt(String(req.query.limit ?? '50'), 10) || 50
+      const key = (queueName || '').toLowerCase()
+      const keyToQueueKey = (
+        name: string,
+      ): 'gameActions' | 'gameCleanup' | 'analyticsEvents' | 'maintenance' | 'mapAssets' => {
+        if (name === 'game-actions' || name === 'gameactions' || name === 'game')
+          return 'gameActions'
+        if (name === 'game-cleanup' || name === 'gamecleanup' || name === 'cleanup')
+          return 'gameCleanup'
+        if (name === 'analytics-events' || name === 'analyticsevents' || name === 'analytics')
+          return 'analyticsEvents'
+        if (name === 'maintenance' || name === 'maint') return 'maintenance'
+        if (name === 'map-assets' || name === 'mapassets' || name === 'assets') return 'mapAssets'
+        return 'gameActions'
+      }
+      const queueKey = keyToQueueKey(key)
+      const items = await queueService.listDeadLetters(queueKey, { offset: 0, limit })
+      const pattern = /ECONNRESET|ETIMEDOUT|timeout|Network|EAI_AGAIN/i
+      let requeued = 0
+      for (const it of items) {
+        if (pattern.test(it.failedReason)) {
+          const r = await queueService.requeueDeadLetter(queueKey, it.id)
+          if (r.requeued) requeued += 1
+        }
+      }
+      res.json({ success: true, requeued, scanned: items.length })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to requeue transient DLQ jobs')
+      res.status(500).json({ success: false, error: 'Failed to requeue transient DLQ jobs' })
+    }
+  },
+)
 
 // Queue management endpoints (admin only)
 const resolveQueueByParam = (name: string) => {
@@ -260,7 +306,12 @@ router.delete('/clear/:queueName', authenticateToken, requireAdmin, async (req, 
       queue.clean(0, 1000, state)
 
     if (type === 'all') {
-      await Promise.all([doClean('wait'), doClean('completed'), doClean('failed'), doClean('delayed')])
+      await Promise.all([
+        doClean('wait'),
+        doClean('completed'),
+        doClean('failed'),
+        doClean('delayed'),
+      ])
     } else if (['wait', 'completed', 'failed', 'delayed'].includes(type)) {
       await doClean(type as 'wait' | 'completed' | 'failed' | 'delayed')
     } else {
