@@ -196,15 +196,15 @@ export const RANK_COLORS = {
   OVERLORD: {
     base: '#000000', // Obsidian black
     glow: 'glow-rank-divine',
-    name: 'Obsidian',
+    name: 'Overlord',
     minElo: 2000,
-    maxElo: 2499,
+    maxElo: 2199,
   },
-  APOCALYPSE: {
+  WORLDBREAKER: {
     base: 'linear-gradient(90deg, #EF4444, #F59E0B)', // Fire gradient
     glow: 'glow-rank-divine',
-    name: 'Inferno',
-    minElo: 2500,
+    name: 'Worldbreaker',
+    minElo: 2200,
     maxElo: Infinity,
   },
 } as const

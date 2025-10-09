@@ -6,7 +6,7 @@ import { socketService } from '../services/socketService'
 import { store } from '../store'
 import { setGameState } from '../store/gameSlice'
 
-describe('socketService game-delta handling', () => {
+describe('socketService delta + events handling', () => {
   let handlers: Record<string, (payload: unknown) => void>
 
   beforeEach(() => {
@@ -107,5 +107,41 @@ describe('socketService game-delta handling', () => {
     const state = store.getState()
     expect(state.game.currentGame?.phase).toBe('reinforcement')
     expect(state.game.reinforcementArmies).toBe(5)
+  })
+
+  it('emits rank_update notification on ratingUpdate when rank changes (promotion)', () => {
+    const handler = handlers.ratingUpdate
+    expect(typeof handler).toBe('function')
+
+    const addSpy = vi.spyOn(notificationService, 'addNotification')
+
+    handler({
+      changes: [
+        { userId: 'u2', oldRating: 1199, newRating: 1200, change: 1 }, // Sultan -> Caesar
+      ],
+    })
+
+    expect(addSpy).toHaveBeenCalled()
+    const arg = (addSpy.mock.calls[0] ?? [])[0] as unknown as Record<string, unknown>
+    expect(arg.type).toBe('rank_update')
+    const meta = (arg.metadata ?? {}) as Record<string, unknown>
+    expect(meta.oldRank).toBe('Sultan')
+    expect(meta.newRank).toBe('Caesar')
+  })
+
+  it('does not emit rank_update when rating changes within same rank', () => {
+    const handler = handlers.ratingUpdate
+    expect(typeof handler).toBe('function')
+
+    const addSpy = vi.spyOn(notificationService, 'addNotification')
+    addSpy.mockClear()
+
+    handler({
+      changes: [
+        { userId: 'u2', oldRating: 1210, newRating: 1215, change: 5 }, // Caesar -> Caesar
+      ],
+    })
+
+    expect(addSpy).not.toHaveBeenCalled()
   })
 })

@@ -1959,29 +1959,30 @@ export default function GameRoom() {
                   >
                     <LazyPlayerStatsPanel
                       players={
-                        currentGame?.players ||
-                        (currentRoom?.players || []).map((pl) => {
-                          const rawColor =
-                            ((pl as { selected_color?: string | null }).selected_color as
-                              | string
-                              | null) ||
-                            ((pl.preferred_color as string | null) ?? null) ||
-                            '#9CA3AF'
-                          return {
-                            id: pl.userId || pl.id,
-                            userId: pl.userId || pl.id,
-                            username: pl.username,
-                            color: rawColor as unknown as PlayerColor,
-                            territories: [],
-                            armies: 0,
-                            cards: [],
-                            isEliminated: false,
-                            isAi: pl.isAi,
-                            aiDifficulty: pl.aiDifficulty ?? null,
-                            teamId: pl.teamId ?? undefined,
-                            treasures: [],
-                          }
-                        })
+                        currentGame?.players && currentGame.players.length > 0
+                          ? currentGame.players
+                          : (currentRoom?.players || []).map((pl) => {
+                              const rawColor =
+                                ((pl as { selected_color?: string | null }).selected_color as
+                                  | string
+                                  | null) ||
+                                ((pl.preferred_color as string | null) ?? null) ||
+                                '#9CA3AF'
+                              return {
+                                id: pl.userId || pl.id,
+                                userId: pl.userId || pl.id,
+                                username: pl.username,
+                                color: rawColor as unknown as PlayerColor,
+                                territories: [],
+                                armies: 0,
+                                cards: [],
+                                isEliminated: false,
+                                isAi: pl.isAi,
+                                aiDifficulty: pl.aiDifficulty ?? null,
+                                teamId: pl.teamId ?? undefined,
+                                treasures: [],
+                              }
+                            })
                       }
                       currentPlayerId={currentGame?.currentPlayer}
                       territories={
@@ -2304,29 +2305,30 @@ export default function GameRoom() {
                       >
                         <LazyPlayerStatsPanel
                           players={
-                            currentGame?.players ||
-                            (currentRoom?.players || []).map((pl) => {
-                              const rawColor =
-                                ((pl as { selected_color?: string | null }).selected_color as
-                                  | string
-                                  | null) ||
-                                ((pl.preferred_color as string | null) ?? null) ||
-                                '#9CA3AF'
-                              return {
-                                id: pl.userId || pl.id,
-                                userId: pl.userId || pl.id,
-                                username: pl.username,
-                                color: rawColor as unknown as PlayerColor,
-                                territories: [],
-                                armies: 0,
-                                cards: [],
-                                isEliminated: false,
-                                isAi: pl.isAi,
-                                aiDifficulty: pl.aiDifficulty ?? null,
-                                teamId: pl.teamId ?? undefined,
-                                treasures: [],
-                              }
-                            })
+                            currentGame?.players && currentGame.players.length > 0
+                              ? currentGame.players
+                              : (currentRoom?.players || []).map((pl) => {
+                                  const rawColor =
+                                    ((pl as { selected_color?: string | null }).selected_color as
+                                      | string
+                                      | null) ||
+                                    ((pl.preferred_color as string | null) ?? null) ||
+                                    '#9CA3AF'
+                                  return {
+                                    id: pl.userId || pl.id,
+                                    userId: pl.userId || pl.id,
+                                    username: pl.username,
+                                    color: rawColor as unknown as PlayerColor,
+                                    territories: [],
+                                    armies: 0,
+                                    cards: [],
+                                    isEliminated: false,
+                                    isAi: pl.isAi,
+                                    aiDifficulty: pl.aiDifficulty ?? null,
+                                    teamId: pl.teamId ?? undefined,
+                                    treasures: [],
+                                  }
+                                })
                           }
                           currentPlayerId={currentGame?.currentPlayer}
                           territories={
@@ -2475,29 +2477,30 @@ export default function GameRoom() {
                   >
                     <LazyPlayerStatsPanel
                       players={
-                        currentGame?.players ||
-                        (currentRoom?.players || []).map((pl) => {
-                          const rawColor =
-                            ((pl as { selected_color?: string | null }).selected_color as
-                              | string
-                              | null) ||
-                            ((pl.preferred_color as string | null) ?? null) ||
-                            '#9CA3AF'
-                          return {
-                            id: pl.userId || pl.id,
-                            userId: pl.userId || pl.id,
-                            username: pl.username,
-                            color: rawColor as unknown as PlayerColor,
-                            territories: [],
-                            armies: 0,
-                            cards: [],
-                            isEliminated: false,
-                            isAi: pl.isAi,
-                            aiDifficulty: pl.aiDifficulty ?? null,
-                            teamId: pl.teamId ?? undefined,
-                            treasures: [],
-                          }
-                        })
+                        currentGame?.players && currentGame.players.length > 0
+                          ? currentGame.players
+                          : (currentRoom?.players || []).map((pl) => {
+                              const rawColor =
+                                ((pl as { selected_color?: string | null }).selected_color as
+                                  | string
+                                  | null) ||
+                                ((pl.preferred_color as string | null) ?? null) ||
+                                '#9CA3AF'
+                              return {
+                                id: pl.userId || pl.id,
+                                userId: pl.userId || pl.id,
+                                username: pl.username,
+                                color: rawColor as unknown as PlayerColor,
+                                territories: [],
+                                armies: 0,
+                                cards: [],
+                                isEliminated: false,
+                                isAi: pl.isAi,
+                                aiDifficulty: pl.aiDifficulty ?? null,
+                                teamId: pl.teamId ?? undefined,
+                                treasures: [],
+                              }
+                            })
                       }
                       currentPlayerId={currentGame?.currentPlayer}
                       territories={
@@ -2793,7 +2796,32 @@ export default function GameRoom() {
                 }
               >
                 <LazyPlayerStatsPanel
-                  players={currentGame.players || []}
+                  players={
+                    currentGame.players && currentGame.players.length > 0
+                      ? currentGame.players
+                      : (currentRoom?.players || []).map((pl) => {
+                          const rawColor =
+                            ((pl as { selected_color?: string | null }).selected_color as
+                              | string
+                              | null) ||
+                            ((pl.preferred_color as string | null) ?? null) ||
+                            '#9CA3AF'
+                          return {
+                            id: pl.userId || pl.id,
+                            userId: pl.userId || pl.id,
+                            username: pl.username,
+                            color: rawColor as unknown as PlayerColor,
+                            territories: [],
+                            armies: 0,
+                            cards: [],
+                            isEliminated: false,
+                            isAi: pl.isAi,
+                            aiDifficulty: pl.aiDifficulty ?? null,
+                            teamId: pl.teamId ?? undefined,
+                            treasures: [],
+                          }
+                        })
+                  }
                   currentPlayerId={currentGame.currentPlayer}
                   territories={Object.fromEntries(
                     (currentGame.board || []).map((t) => [
