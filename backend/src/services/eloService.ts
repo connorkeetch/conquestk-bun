@@ -1,7 +1,7 @@
 import type { PoolClient, QueryResultRow } from 'pg'
-import type { DatabaseQueryResult } from '../config/database'
-import { query, transaction } from '../config/database'
-import { logger } from '../utils/logger'
+import type { DatabaseQueryResult } from '../config/database.js'
+import { query, transaction } from '../config/database.js'
+import { logger } from '../utils/logger.js'
 
 export interface PlayerRating {
   userId: string
@@ -240,12 +240,14 @@ export class EloService {
 
     changes.forEach((change, index) => {
       const baseIndex = index * 2
-      ratingCases.push(`WHEN id = $${baseIndex + 1} THEN $${baseIndex + 2}`)
+      // Explicitly cast parameter types to ensure Postgres resolves
+      // the CASE expression to integer for skill_rating updates.
+      ratingCases.push(`WHEN id = $${baseIndex + 1}::uuid THEN $${baseIndex + 2}::int`)
       values.push(change.userId, change.newRating)
     })
 
     const idPlaceholders = changes
-      .map((_, index) => `$${changes.length * 2 + index + 1}`)
+      .map((_, index) => `$${changes.length * 2 + index + 1}::uuid`)
       .join(', ')
 
     values.push(...changes.map((change) => change.userId))
