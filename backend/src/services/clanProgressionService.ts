@@ -163,8 +163,13 @@ class ClanProgressionService {
     client?: PoolClient,
   ): Promise<ClanProgressionRow | null> {
     const sql = 'SELECT total_xp, level FROM clans WHERE id = $1 FOR UPDATE'
-    const result = await query<ClanProgressionRow>(sql, [clanId], { client })
-    return result.rows[0] ?? null
+    const result = client
+      ? await client.query<ClanProgressionRow>(sql, [clanId])
+      : await query<ClanProgressionRow>(sql, [clanId])
+    const rows = Array.isArray((result as unknown as { rows?: unknown[] })?.rows)
+      ? ((result as unknown as { rows: ClanProgressionRow[] }).rows as ClanProgressionRow[])
+      : []
+    return rows[0] ?? null
   }
 
   private pickObjectiveTemplates(clanId: string, windowStart: Date): ObjectiveTemplate[] {
@@ -196,8 +201,13 @@ class ClanProgressionService {
       ${forUpdate ? 'FOR UPDATE' : ''}
     `
     const params = [clanId, now]
-    const result = await query<ClanObjectiveRow>(sql, params, { client })
-    return result.rows
+    const result = client
+      ? await client.query<ClanObjectiveRow>(sql, params)
+      : await query<ClanObjectiveRow>(sql, params)
+    const rows = Array.isArray((result as unknown as { rows?: unknown[] })?.rows)
+      ? ((result as unknown as { rows: ClanObjectiveRow[] }).rows as ClanObjectiveRow[])
+      : []
+    return rows
   }
 
   private getObjectiveWindow(now: Date): { start: Date; end: Date } {
@@ -231,8 +241,9 @@ class ClanProgressionService {
       const created: ClanObjective[] = []
 
       for (const template of templates) {
-        const insertResult = await query<ClanObjectiveRow>(
-          `
+        const insertResult = client
+          ? await client.query<ClanObjectiveRow>(
+              `
             INSERT INTO clan_objectives (
               clan_id,
               objective_type,
@@ -245,16 +256,38 @@ class ClanProgressionService {
             VALUES ($1, $2, $3, 0, $4, $5, $6::jsonb)
             RETURNING id, clan_id, objective_type, target_value, progress_value, start_at, end_at, reward
           `,
-          [
-            clanId,
-            template.objectiveType,
-            template.targetValue,
-            start,
-            end,
-            JSON.stringify(template.reward),
-          ],
-          { client },
-        )
+              [
+                clanId,
+                template.objectiveType,
+                template.targetValue,
+                start,
+                end,
+                JSON.stringify(template.reward),
+              ],
+            )
+          : await query<ClanObjectiveRow>(
+              `
+            INSERT INTO clan_objectives (
+              clan_id,
+              objective_type,
+              target_value,
+              progress_value,
+              start_at,
+              end_at,
+              reward
+            )
+            VALUES ($1, $2, $3, 0, $4, $5, $6::jsonb)
+            RETURNING id, clan_id, objective_type, target_value, progress_value, start_at, end_at, reward
+          `,
+              [
+                clanId,
+                template.objectiveType,
+                template.targetValue,
+                start,
+                end,
+                JSON.stringify(template.reward),
+              ],
+            )
         created.push(this.mapObjective(insertResult.rows[0]))
       }
 
@@ -325,11 +358,17 @@ class ClanProgressionService {
       const newProgress = Math.min(currentProgress + delta, targetValue)
       const completed = currentProgress < targetValue && newProgress >= targetValue
 
-      await query(
-        'UPDATE clan_objectives SET progress_value = $1 WHERE id = $2',
-        [newProgress, objective.id],
-        { client },
-      )
+      if (client) {
+        await client.query('UPDATE clan_objectives SET progress_value = $1 WHERE id = $2', [
+          newProgress,
+          objective.id,
+        ])
+      } else {
+        await query('UPDATE clan_objectives SET progress_value = $1 WHERE id = $2', [
+          newProgress,
+          objective.id,
+        ])
+      }
 
       updates.push({ objectiveId: objective.id, progressValue: newProgress, completed })
 
@@ -359,11 +398,15 @@ class ClanProgressionService {
         throw new ClanProgressionServiceError('CLAN_NOT_FOUND', 'Clan not found')
       }
 
-      const memberResult = await query(
-        `SELECT id, status FROM clan_members WHERE clan_id = $1 AND user_id = $2 FOR UPDATE`,
-        [options.clanId, options.userId],
-        { client },
-      )
+      const memberResult = client
+        ? await client.query(
+            `SELECT id, status FROM clan_members WHERE clan_id = $1 AND user_id = $2 FOR UPDATE`,
+            [options.clanId, options.userId],
+          )
+        : await query(
+            `SELECT id, status FROM clan_members WHERE clan_id = $1 AND user_id = $2 FOR UPDATE`,
+            [options.clanId, options.userId],
+          )
       const memberRow = memberResult.rows[0]
       if (!memberRow || memberRow.status !== 'active') {
         throw new ClanProgressionServiceError(
@@ -373,17 +416,29 @@ class ClanProgressionService {
       }
 
       if (xpGain > 0 || matchesPlayed > 0) {
-        await query(
-          `
+        if (client) {
+          await client.query(
+            `
             UPDATE clan_members
             SET contribution_xp = contribution_xp + $1,
                 contribution_matches = contribution_matches + $2,
                 last_active_at = $3
             WHERE id = $4
           `,
-          [xpGain, matchesPlayed, now, memberRow.id],
-          { client },
-        )
+            [xpGain, matchesPlayed, now, memberRow.id],
+          )
+        } else {
+          await query(
+            `
+            UPDATE clan_members
+            SET contribution_xp = contribution_xp + $1,
+                contribution_matches = contribution_matches + $2,
+                last_active_at = $3
+            WHERE id = $4
+          `,
+            [xpGain, matchesPlayed, now, memberRow.id],
+          )
+        }
       }
 
       const currentTotalXp =
@@ -394,11 +449,19 @@ class ClanProgressionService {
       const calculated = this.calculateLevelInternal(newTotalXp)
 
       if (xpGain > 0) {
-        await query(
-          'UPDATE clans SET total_xp = $1, level = $2 WHERE id = $3',
-          [newTotalXp, calculated.level, options.clanId],
-          { client },
-        )
+        if (client) {
+          await client.query('UPDATE clans SET total_xp = $1, level = $2 WHERE id = $3', [
+            newTotalXp,
+            calculated.level,
+            options.clanId,
+          ])
+        } else {
+          await query('UPDATE clans SET total_xp = $1, level = $2 WHERE id = $3', [
+            newTotalXp,
+            calculated.level,
+            options.clanId,
+          ])
+        }
       }
 
       const objectiveUpdates = await this.applyObjectiveProgress(options.clanId, {
