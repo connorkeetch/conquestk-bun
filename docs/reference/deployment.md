@@ -97,7 +97,7 @@ openssl rand -base64 32  # JWT and session secrets
 ## 📊 Monitoring
 
 ### Health Checks
-- Production: https://conquestk.com/health
+- Production: https://conquestk.com/api/health (behind proxy)
 - Staging: https://risk-game-production-9935.up.railway.app/health
 
 Response shape:
@@ -128,7 +128,7 @@ Errors are included only when a subsystem is degraded.
 
 ### Uptime Monitoring
 Configure UptimeRobot or similar:
-- Monitor `/health` endpoint
+- Monitor `/api/health` (prod) and `/health` (staging)
 - 5-minute intervals
 - Alert on 2+ consecutive failures
 
@@ -211,4 +211,4 @@ pg_dump "$DATABASE_URL" > ~/backups/conquestk-$(date +%Y%m%d-%H%M%S).sql
 
 ## 🧭 Operational Dashboards
 - `/api/performance/dashboard` surfaces live queue, Redis, and worker metrics (requires admin auth).
-- `/api/queue/health` exposes per-queue stats for manual verification during incidents.
+- `/api/queues/health` exposes per-queue stats for manual verification during incidents (auth required). See also `/api/queues/ping` (public).
