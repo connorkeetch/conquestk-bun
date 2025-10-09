@@ -11,14 +11,11 @@ import {
 import type React from 'react'
 import { useState } from 'react'
 import { RANK_COLORS } from '../constants/colors'
-import { FEATURE_FLAGS } from '../constants/featureFlags'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
 
 const TutorialPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     'basics' | 'gametypes' | 'strategy' | 'rankings' | 'editor' | 'options'
   >('basics')
-  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -869,8 +866,8 @@ const TutorialPage: React.FC = () => {
                 <li className="flex items-start gap-2">
                   <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
                   <span>
-                    <strong>Visibility:</strong> Set the match to Public, Private (invite code)
-                    {comingSoonUiEnabled ? ' or Tournament' : ''}
+                    <strong>Visibility:</strong> Set the match to Public, Private (invite code) or
+                    Tournament
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
