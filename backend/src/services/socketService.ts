@@ -1253,16 +1253,30 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         // Legacy 'phaseChanged' event removed in favor of unified 'game-delta'
 
         // Schedule timeout for the next player's turn
-        try {
-          const { GameLifecycleService } = await import('./gameLifecycleService')
-          const lifecycleService = new GameLifecycleService()
-          await lifecycleService.scheduleTurnTimeout(data.roomId)
-        } catch (e) {
-          logger.warn('Failed to schedule turn timeout after manual endTurn', {
-            roomId: data.roomId,
-            error: e instanceof Error ? e.message : e,
-          })
+        if (result.turnAdvanced) {
+          try {
+            const { GameLifecycleService } = await import('./gameLifecycleService')
+            const lifecycleService = new GameLifecycleService()
+            await lifecycleService.scheduleTurnTimeout(data.roomId)
+          } catch (e) {
+            logger.warn('Failed to schedule turn timeout after manual endTurn', {
+              roomId: data.roomId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
         }
+      }),
+    )
+
+    socket.on(
+      'turn:begin',
+      withErrorHandler(socket, 'turn:begin', async (data) => {
+        if (!data || !data.roomId) {
+          throw new Error('Invalid turn acknowledgement data')
+        }
+
+        const userId = requireUserId(socket)
+        await gameService.acknowledgeTurnStart(data.roomId, userId)
       }),
     )
 

@@ -110,9 +110,11 @@ type TurnLogEntry = {
   type: 'TURN'
   timestamp: string
   playerId: string
-  event: 'START' | 'END'
+  event: 'START' | 'END' | 'MISSED'
   reinforcementArmies?: number
   territoryCount?: number
+  turnNumber?: number
+  reason?: 'timeout'
 }
 
 type TreasureLogEntry = {
@@ -1048,7 +1050,11 @@ export class GameService {
     }
   }
 
-  async endTurn(roomId: string, userId: string, options?: { allowEarlyEnd?: boolean }) {
+  async endTurn(
+    roomId: string,
+    userId: string,
+    options?: { allowEarlyEnd?: boolean; endedByTimeout?: boolean },
+  ) {
     const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
     const gameState = this.hydrateGameState(cachedState)
@@ -1064,6 +1070,7 @@ export class GameService {
     }
 
     const previousPlayerId = gameState.currentPlayer
+    const previousTurnNumber = Math.max(1, Math.trunc(gameState.turn ?? 1))
     const previousPhase = gameState.phase
     // Keep snapshot of previous player's treasure hand to detect awards
     const previousPlayer = gameState.players.find((p) => p.id === previousPlayerId)
@@ -1150,32 +1157,28 @@ export class GameService {
       )
     }
 
-    // Append TURN logs (END for previous, TREASURE if any, then START for next)
-    // Offload analytics/logging to queue (fallback to async fire-and-forget)
-    {
+    const turnAdvanced =
+      updatedState.phase === 'finished' || updatedState.currentPlayer !== previousPlayerId
+
+    // Append TURN logs (END/MISSED for previous and TREASURE if any)
+    if (turnAdvanced) {
       const now = new Date().toISOString()
-      const entries: GameLogEntry[] = [
-        { type: 'TURN', timestamp: now, playerId: previousPlayerId, event: 'END' },
-      ]
+      const entries: GameLogEntry[] = []
+      const endEvent: TurnLogEntry = {
+        type: 'TURN',
+        timestamp: now,
+        playerId: previousPlayerId,
+        event: options?.endedByTimeout ? 'MISSED' : 'END',
+        turnNumber: previousTurnNumber,
+        ...(options?.endedByTimeout ? { reason: 'timeout' as const } : {}),
+      }
+      entries.push(endEvent)
       if (treasureAwarded) {
         entries.push({
           type: 'TREASURE',
           timestamp: now,
           userId: previousPlayerId,
           metal: treasureAwarded,
-        })
-      }
-      if (updatedState.phase === 'reinforcement') {
-        const territoryCount = updatedState.board.filter(
-          (t) => t.ownerId === updatedState.currentPlayer,
-        ).length
-        entries.push({
-          type: 'TURN',
-          timestamp: now,
-          playerId: updatedState.currentPlayer,
-          event: 'START',
-          reinforcementArmies,
-          territoryCount,
         })
       }
       try {
@@ -1202,22 +1205,24 @@ export class GameService {
     }
 
     // Append per-turn stats snapshot for analytics
-    try {
-      const stats = this.buildTurnStatsSnapshot(updatedState)
-      const job = await queueService.addAnalyticsEvent?.({
-        event: 'append_turn_stats',
-        gameId: roomId,
-        data: stats,
-      })
-      if (!job) {
-        setImmediate(() => {
-          this.appendTurnStats(roomId, stats).catch(() => {
-            /* no-op */
-          })
+    if (turnAdvanced) {
+      try {
+        const stats = this.buildTurnStatsSnapshot(updatedState)
+        const job = await queueService.addAnalyticsEvent?.({
+          event: 'append_turn_stats',
+          gameId: roomId,
+          data: stats,
         })
+        if (!job) {
+          setImmediate(() => {
+            this.appendTurnStats(roomId, stats).catch(() => {
+              /* no-op */
+            })
+          })
+        }
+      } catch {
+        // swallow; non-critical
       }
-    } catch {
-      // swallow; non-critical
     }
 
     // Finalize game if this transition ended it outside of battle flow
@@ -1283,6 +1288,7 @@ export class GameService {
       gameState: this.serializeGameState(updatedState),
       reinforcementArmies,
       treasureAwarded,
+      turnAdvanced,
     }
   }
 
@@ -1530,6 +1536,86 @@ export class GameService {
   async processEndTurn(gameId: string, playerId: string): Promise<{ id: string }> {
     const result = await this.endTurn(gameId, playerId)
     return { id: result.gameState.currentPlayer }
+  }
+
+  async acknowledgeTurnStart(
+    roomId: string,
+    userId: string,
+  ): Promise<{ logged: boolean; reinforcementArmies: number; turnNumber: number }> {
+    const state = await this.getGameState(roomId)
+    if (!state) throw new Error('Game not found')
+    if (state.currentPlayer !== userId) throw new Error('Not your turn')
+    if (state.phase === 'finished') {
+      return {
+        logged: false,
+        reinforcementArmies: 0,
+        turnNumber: Math.max(1, Math.trunc(state.turn ?? 1)),
+      }
+    }
+
+    const turnNumber = Math.max(1, Math.trunc(state.turn ?? 1))
+    const reinforcementArmies = this.gameEngine.calculateBaseReinforcementArmies(state, userId)
+    const territoryCount = state.board.filter((t) => t.ownerId === userId).length
+    let logged = false
+    let appendedEntry: TurnLogEntry | null = null
+    await transaction(async (client) => {
+      const existing = await client.query<{ game_log: GameLogEntry[] | null }>(
+        'SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE',
+        [roomId],
+      )
+      const current = Array.isArray(existing.rows[0]?.game_log)
+        ? (existing.rows[0]?.game_log as GameLogEntry[])
+        : []
+
+      const alreadyLogged = current.some((entry) => {
+        if (!entry || typeof entry !== 'object') return false
+        if ((entry as TurnLogEntry).type !== 'TURN') return false
+        const typed = entry as TurnLogEntry
+        return (
+          typed.event === 'START' &&
+          typed.playerId === userId &&
+          (typed.turnNumber ?? turnNumber) === turnNumber
+        )
+      })
+
+      if (alreadyLogged) {
+        return
+      }
+
+      const entry: TurnLogEntry = {
+        type: 'TURN',
+        timestamp: new Date().toISOString(),
+        playerId: userId,
+        event: 'START',
+        reinforcementArmies,
+        territoryCount,
+        turnNumber,
+      }
+
+      const updated = [...current, entry].slice(-500)
+      await client.query(
+        `INSERT INTO game_states (room_id, game_log, last_activity, game_phase, turn_number)
+         VALUES ($1, $2, NOW(), 'lobby', 1)
+         ON CONFLICT (room_id) DO UPDATE SET game_log = EXCLUDED.game_log, last_activity = NOW()`,
+        [roomId, JSON.stringify(updated)],
+      )
+      logged = true
+      appendedEntry = entry
+    })
+
+    if (logged && appendedEntry) {
+      try {
+        await queueService.addAnalyticsEvent?.({
+          event: 'append_log',
+          gameId: roomId,
+          data: [appendedEntry],
+        })
+      } catch {
+        // analytics queue is best-effort; ignore failures here
+      }
+    }
+
+    return { logged, reinforcementArmies, turnNumber }
   }
 
   async processGoBackToReinforcement(

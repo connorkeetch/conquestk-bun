@@ -588,7 +588,7 @@ type LogEntry =
       type: 'TURN'
       timestamp: string
       playerId: string
-      event: 'START' | 'END'
+      event: 'START' | 'END' | 'MISSED'
       reinforcementArmies?: number
       territoryCount?: number
     }

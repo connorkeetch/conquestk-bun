@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
+import { socketService } from '@/services/socketService'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 import { TurnTimer } from './TurnTimer'
 
@@ -140,6 +141,18 @@ export function YourTurnModal({ className = '' }: Props) {
     }, 180)
   }
 
+  const handleBegin = () => {
+    const roomId = game?.roomId
+    if (roomId) {
+      try {
+        socketService.beginTurn(roomId)
+      } catch {
+        // best effort
+      }
+    }
+    handleClose()
+  }
+
   if (!visible || !isMyTurn) return null
 
   const phaseLabel = game?.phase ? game.phase.charAt(0).toUpperCase() + game.phase.slice(1) : 'Turn'
@@ -181,7 +194,7 @@ export function YourTurnModal({ className = '' }: Props) {
             <button type="button" className="btn btn-secondary" onClick={handleClose}>
               Later
             </button>
-            <button type="button" className="btn btn-primary" onClick={handleClose}>
+            <button type="button" className="btn btn-primary" onClick={handleBegin}>
               Begin Turn
             </button>
           </div>
