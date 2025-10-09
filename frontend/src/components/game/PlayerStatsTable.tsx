@@ -149,13 +149,13 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                             type="button"
                             className="truncate text-[color:var(--text)] hover:underline text-left font-medium"
                             onClick={() => handleProfileClick(player.username)}
-                          title={
-                            player.isEliminated
-                              ? 'Eliminated'
-                              : gameFinished
-                                ? 'Winner'
-                                : `${player.username} (${skillRating} CP)`
-                          }
+                            title={
+                              player.isEliminated
+                                ? 'Eliminated'
+                                : gameFinished
+                                  ? 'Winner'
+                                  : `${player.username} (${skillRating} CP)`
+                            }
                           >
                             {player.isEliminated ? (
                               <>

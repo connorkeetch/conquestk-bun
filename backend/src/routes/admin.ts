@@ -1,6 +1,6 @@
 import { type NextFunction, type Request, type Response, Router } from 'express'
 import { body, param, query as queryParam, validationResult } from 'express-validator'
-import { query as dbQuery } from '../config/database'
+import { query as dbQuery, transaction } from '../config/database'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { adminService } from '../services/adminService'
@@ -1296,6 +1296,60 @@ router.post(
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to resume game',
       })
+    }
+  },
+)
+
+// Permanently delete a game and all associated data
+router.delete(
+  '/games/:gameId',
+  requirePermission('games.manage'),
+  logAdminActivity('game_delete'),
+  param('gameId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    const { gameId } = req.params
+
+    try {
+      // Run the deletion in a transaction to ensure consistency
+      const { deleted } = await transaction(async (client) => {
+        // Lock the game row to avoid race conditions
+        const exists = await dbQuery<{ id: string }>(
+          'SELECT id FROM game_rooms WHERE id = $1 FOR UPDATE',
+          [gameId],
+          { client },
+        )
+
+        if ((exists.rowCount ?? 0) === 0) {
+          return { deleted: false }
+        }
+
+        // rating_history references game_rooms without ON DELETE CASCADE
+        await dbQuery('DELETE FROM rating_history WHERE game_room_id = $1', [gameId], { client })
+
+        // Delete the game room itself; cascades will remove dependent rows
+        await dbQuery('DELETE FROM game_rooms WHERE id = $1', [gameId], { client })
+
+        return { deleted: true }
+      })
+
+      if (!deleted) {
+        res.status(404).json({ error: 'Game not found' })
+        return
+      }
+
+      // Best-effort: clear any cached state
+      try {
+        const { gameStateCache } = await import('../services/cacheService')
+        await gameStateCache.deleteGameState(gameId)
+      } catch (_e) {
+        // ignore cache errors; deletion already committed
+      }
+
+      res.json({ success: true, message: 'Game and related data deleted' })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to delete game', 500, { gameId })
+      res.status(500).json({ error: 'Failed to delete game' })
     }
   },
 )

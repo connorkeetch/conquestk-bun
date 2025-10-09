@@ -1799,7 +1799,10 @@ export default function GameRoom() {
                   try {
                     socketService.emit('player:resign', { roomId: currentRoom.id })
                     dispatch(
-                      addClientLog({ text: 'You resigned. Territories are now neutral.', roomId: currentRoom.id }),
+                      addClientLog({
+                        text: 'You resigned. Territories are now neutral.',
+                        roomId: currentRoom.id,
+                      }),
                     )
                     toast.success('Resigned')
                   } catch {

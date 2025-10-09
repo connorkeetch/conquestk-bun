@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { type AdminGame, adminService } from '../services/adminService'
 
 interface GameActionModal {
   game: AdminGame
   isOpen: boolean
-  action: 'spectate' | 'force_end' | 'adjust_settings' | 'pause' | 'resume'
+  action: 'spectate' | 'force_end' | 'adjust_settings' | 'pause' | 'resume' | 'delete'
 }
 
 export default function AdminGames() {
@@ -33,6 +33,8 @@ export default function AdminGames() {
   const [actionModal, setActionModal] = useState<GameActionModal | null>(null)
   const [actionNotes, setActionNotes] = useState('')
   const actionNotesId = 'admin-games-action-notes'
+  const confirmDeleteId = useId()
+  const [confirmText, setConfirmText] = useState('')
 
   const loadGames = useCallback(async () => {
     try {
@@ -101,11 +103,19 @@ export default function AdminGames() {
           // This would open a more complex modal for adjusting game settings
           alert('Game settings adjustment interface coming soon')
           break
+        case 'delete':
+          if (confirmText.trim().toUpperCase() !== 'DELETE') {
+            alert('Please type DELETE to confirm this action')
+            return
+          }
+          await adminService.deleteGame(actionModal.game.id)
+          break
       }
 
       await loadGames()
       setActionModal(null)
       setActionNotes('')
+      setConfirmText('')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unexpected error'
       alert(`Failed to ${actionModal.action.replace('_', ' ')} game: ${message}`)
@@ -115,11 +125,13 @@ export default function AdminGames() {
   const openActionModal = (game: AdminGame, action: GameActionModal['action']) => {
     setActionModal({ game, isOpen: true, action })
     setActionNotes('')
+    setConfirmText('')
   }
 
   const closeActionModal = () => {
     setActionModal(null)
     setActionNotes('')
+    setConfirmText('')
   }
 
   const getGameStatusColor = (status: string) => {
@@ -446,6 +458,13 @@ export default function AdminGames() {
                               🛑 Force End
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => openActionModal(game, 'delete')}
+                            className="bg-red-700 hover:bg-red-800 px-3 py-1 rounded text-sm"
+                          >
+                            🗑️ Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -500,6 +519,7 @@ export default function AdminGames() {
               {actionModal.action === 'pause' && '⏸️ Pause Game'}
               {actionModal.action === 'resume' && '▶️ Resume Game'}
               {actionModal.action === 'adjust_settings' && '⚙️ Adjust Game Settings'}
+              {actionModal.action === 'delete' && '🗑️ Delete Game (permanent)'}
             </h3>
 
             <div className="mb-4 p-4 bg-surface-2 rounded">
@@ -514,7 +534,7 @@ export default function AdminGames() {
               </div>
             </div>
 
-            {actionModal.action !== 'spectate' && (
+            {actionModal.action !== 'spectate' && actionModal.action !== 'delete' && (
               <div className="space-y-4">
                 <div>
                   <label htmlFor={actionNotesId} className="block text-sm font-medium mb-2">
@@ -536,6 +556,28 @@ export default function AdminGames() {
               </div>
             )}
 
+            {actionModal.action === 'delete' && (
+              <div className="space-y-4">
+                <div className="text-red-300 text-sm">
+                  This will permanently delete the game and all associated records (players, moves,
+                  states, snapshots, results, ratings). This action cannot be undone.
+                </div>
+                <div>
+                  <label htmlFor={confirmDeleteId} className="block text-sm font-medium mb-2">
+                    Type DELETE to confirm
+                  </label>
+                  <input
+                    id={confirmDeleteId}
+                    type="text"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
+                    placeholder="DELETE"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-2 mt-6">
               <button
                 type="button"
@@ -547,7 +589,10 @@ export default function AdminGames() {
               <button
                 type="button"
                 onClick={handleGameAction}
-                disabled={actionModal.action === 'force_end' && !actionNotes.trim()}
+                disabled={
+                  (actionModal.action === 'force_end' && !actionNotes.trim()) ||
+                  (actionModal.action === 'delete' && confirmText.trim().toUpperCase() !== 'DELETE')
+                }
                 className={`px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed ${
                   actionModal.action === 'spectate'
                     ? 'bg-primary hover:bg-primary'
@@ -557,7 +602,9 @@ export default function AdminGames() {
                         ? 'bg-orange-600 hover:bg-orange-700'
                         : actionModal.action === 'resume'
                           ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-gray-600 hover:bg-surface-2'
+                          : actionModal.action === 'delete'
+                            ? 'bg-red-700 hover:bg-red-800'
+                            : 'bg-gray-600 hover:bg-surface-2'
                 }`}
               >
                 {actionModal.action === 'spectate' && '👁️ Open Game (spectate)'}
@@ -565,6 +612,7 @@ export default function AdminGames() {
                 {actionModal.action === 'pause' && '⏸️ Pause Game'}
                 {actionModal.action === 'resume' && '▶️ Resume Game'}
                 {actionModal.action === 'adjust_settings' && '⚙️ Adjust Settings'}
+                {actionModal.action === 'delete' && '🗑️ Delete Game'}
               </button>
             </div>
           </div>

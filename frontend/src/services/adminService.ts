@@ -373,6 +373,10 @@ class AdminService {
     })
   }
 
+  async deleteGame(gameId: string): Promise<void> {
+    await apiClient.delete(`${this.baseUrl}/games/${gameId}`)
+  }
+
   // ============= SYSTEM ACTIONS =============
 
   async refreshCache(): Promise<void> {

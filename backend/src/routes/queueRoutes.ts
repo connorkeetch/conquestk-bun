@@ -57,15 +57,21 @@ router.get('/health', authenticateToken, async (req, res) => {
 
     res.status(statusCode).json({
       success: statusCode === 200,
-      status: wmHealth.status === 'healthy' && qsHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
+      status:
+        wmHealth.status === 'healthy' && qsHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
       details: {
         workers: (wmHealth.details as { workers?: { initialized?: boolean } }).workers ?? {
           initialized: false,
         },
-        queues: (wmHealth.details as { queues?: Record<string, import('../services/queueService').QueueStats> })
-          .queues ?? {},
+        queues:
+          (
+            wmHealth.details as {
+              queues?: Record<string, import('../services/queueService').QueueStats>
+            }
+          ).queues ?? {},
         redis: (qsHealth.details as { redis?: string }).redis ?? 'UNKNOWN',
-        queueServiceInitialized: (qsHealth.details as { initialized?: boolean }).initialized ?? false,
+        queueServiceInitialized:
+          (qsHealth.details as { initialized?: boolean }).initialized ?? false,
       },
       timestamp: new Date().toISOString(),
     })

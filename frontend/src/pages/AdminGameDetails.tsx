@@ -350,6 +350,16 @@ export default function AdminGameDetailsPage() {
     navigate('/admin/games')
   }
 
+  const handleDelete = async () => {
+    if (!details) return
+    const confirmText = window.prompt(
+      'Type DELETE to permanently remove this game and all related data:',
+    )
+    if (!confirmText || confirmText.toUpperCase().trim() !== 'DELETE') return
+    await adminService.deleteGame(details.id)
+    navigate('/admin/games')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-surface-1 text-white p-6">
@@ -419,6 +429,13 @@ export default function AdminGameDetailsPage() {
               🛑 Force End
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="bg-red-700 hover:bg-red-800 px-3 py-2 rounded"
+          >
+            🗑️ Delete
+          </button>
         </div>
 
         {/* Summary */}
