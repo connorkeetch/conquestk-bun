@@ -78,6 +78,8 @@ export interface CreateGameData {
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   turnTimerSeconds?: number
   timeBankSeconds?: number
+  // Host-selected color to use when auto-joining the newly created room
+  selectedColor?: string
 }
 
 export interface JoinGameResponse {

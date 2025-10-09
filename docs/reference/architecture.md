@@ -65,7 +65,7 @@ _Last updated: March 7, 2026_
 
 ## Data & Persistence
 - PostgreSQL migrations live in `backend/migrations` following the `NNN_description.sql` convention. `npm run migrate` applies them through the runner in `backend/src/scripts/runMigration.ts` / `backend/src/utils/migrationRunner.ts`.
-- Primary tables include `game_rooms`, `room_players`, `game_states`, `game_results`, `player_game_results`, `player_stats`, `game_moves`, map catalog tables (`maps`, `map_versions`, `map_territories`, `map_sectors`, `territory_adjacencies`), messaging tables (`conversations`, `conversation_messages`, `message_read_receipts`), and notification delivery (`notifications`, `web_push_subscriptions`).
+- Primary tables include `game_rooms`, `room_players`, `game_states`, `game_results`, `player_game_results`, `player_stats`, `game_moves`, archival tables like `game_move_archive`, map catalog tables (`maps`, `map_versions`, `map_territories`, `map_sectors`, `territory_adjacencies`), messaging tables (`conversations`, `conversation_messages`, `message_read_receipts`), and notification delivery (`notifications`, `web_push_subscriptions`).
 - Redis powers `gameStateCache`, modifier caching, socket presence, session storage, and Bull job queues.
 - Map assets store in R2/S3 via `mapStagingService.ts`; soft-deleted assets are reclaimed by the staging purge workflow (tracked in `map_asset_purge_runs`) once retention windows expire.
 

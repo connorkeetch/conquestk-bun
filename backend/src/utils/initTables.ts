@@ -95,6 +95,19 @@ async function createPostgreSQLTables(): Promise<void> {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
 
+    `CREATE TABLE IF NOT EXISTS game_move_archive (
+        id UUID PRIMARY KEY,
+        room_id UUID NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+        player_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        turn_number INTEGER NOT NULL,
+        move_type VARCHAR(50) NOT NULL,
+        move_data JSONB NOT NULL,
+        is_valid BOOLEAN NOT NULL DEFAULT TRUE,
+        validation_error TEXT,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        archived_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+
     `CREATE TABLE IF NOT EXISTS custom_maps (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
@@ -125,6 +138,12 @@ async function createPostgreSQLTables(): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_game_states_room_id ON game_states(room_id)',
     'CREATE INDEX IF NOT EXISTS idx_game_moves_game_state_id ON game_moves(game_state_id)',
     'CREATE INDEX IF NOT EXISTS idx_game_moves_player_id ON game_moves(player_id)',
+    'CREATE INDEX IF NOT EXISTS idx_game_move_archive_room_id ON game_move_archive(room_id)',
+    'CREATE INDEX IF NOT EXISTS idx_game_move_archive_player_id ON game_move_archive(player_id)',
+    'CREATE INDEX IF NOT EXISTS idx_game_move_archive_turn_number ON game_move_archive(turn_number)',
+    'CREATE INDEX IF NOT EXISTS idx_game_move_archive_move_type ON game_move_archive(move_type)',
+    'CREATE INDEX IF NOT EXISTS idx_game_move_archive_created_at ON game_move_archive(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_game_move_archive_archived_at ON game_move_archive(archived_at)',
     'CREATE INDEX IF NOT EXISTS idx_custom_maps_creator_id ON custom_maps(creator_id)',
     'CREATE INDEX IF NOT EXISTS idx_custom_maps_public ON custom_maps(is_public)',
     'CREATE INDEX IF NOT EXISTS idx_player_stats_user_id ON player_stats(user_id)',

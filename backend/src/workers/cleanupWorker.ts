@@ -248,6 +248,18 @@ export class CleanupWorker {
       })
     }
 
+    try {
+      const { archived } = await this.gameService.archiveGameMoves(gameId)
+      if (archived > 0) {
+        logger.info('Archived game moves during cleanup', { gameId, archived })
+      }
+    } catch (error) {
+      logger.warn('Failed to archive game moves during cleanup', {
+        gameId,
+        error,
+      })
+    }
+
     // Clean up any temporary files or resources
     await this.cleanupTempResources(gameId)
 

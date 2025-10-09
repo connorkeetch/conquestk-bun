@@ -213,6 +213,15 @@ export class ProfileService {
 
       const cardStatsResult = await client.query(
         `
+        WITH combined AS (
+          SELECT move_data
+          FROM game_moves
+          WHERE player_id = $1 AND move_type = 'trade_cards'
+          UNION ALL
+          SELECT move_data
+          FROM game_move_archive
+          WHERE player_id = $1 AND move_type = 'trade_cards'
+        )
         SELECT
           COUNT(*)::INTEGER AS trade_count,
           COALESCE(
@@ -229,8 +238,7 @@ export class ProfileService {
             ),
             0
           )::INTEGER AS card_count
-        FROM game_moves
-        WHERE player_id = $1 AND move_type = 'trade_cards'
+        FROM combined
       `,
         [userId],
       )

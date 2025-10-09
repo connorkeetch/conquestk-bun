@@ -877,9 +877,17 @@ router.get(
 
       const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ''
 
+      const combinedSource = `(
+        SELECT id, room_id, player_id, turn_number, move_type, move_data, is_valid, validation_error, created_at
+        FROM game_moves
+        UNION ALL
+        SELECT id, room_id, player_id, turn_number, move_type, move_data, is_valid, validation_error, created_at
+        FROM game_move_archive
+      )` as const
+
       const sql = `
         SELECT gm.id, gm.player_id, u.username as player_username, gm.turn_number, gm.move_type, gm.move_data, gm.is_valid, gm.validation_error, gm.created_at
-        FROM game_moves gm
+        FROM ${combinedSource} gm
         LEFT JOIN users u ON gm.player_id = u.id
         ${whereSql}
         ORDER BY ${orderBy}
@@ -889,7 +897,7 @@ router.get(
       const rowsRes = await dbQuery(sql, listParams)
 
       const countRes = await dbQuery(
-        `SELECT COUNT(*) as total FROM game_moves gm ${whereSql}`,
+        `SELECT COUNT(*) as total FROM ${combinedSource} gm ${whereSql}`,
         params,
       )
 

@@ -52,6 +52,7 @@ const REQUIRED_TABLES = [
   'room_players',
   'game_states',
   'game_moves',
+  'game_move_archive',
   'game_results',
   'player_game_results',
   'rating_history',
