@@ -266,6 +266,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         const raw = Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
         if (cancelled) return
         // Format to display entries; build newest-first
+        let sawGameEnd = false
         const formatted: LogEntry[] = []
         // We rely on current maps for names
         const toName = (id: string) => territoryName.get(id) || id
@@ -480,6 +481,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           }
           // Flush any pending battle aggregation before handling non-battle entries
           flushBf()
+          if (type === 'GAME_END') {
+            const winnerId = String((er.winner as string) || '')
+            const winnerName = nameOf(winnerId) || winnerId || 'Unknown'
+            formatted.push({ ts, text: `${winnerName} won the game.` })
+            formatted.push({ ts, text: 'Game finished.' })
+            sawGameEnd = true
+            continue
+          }
           if (type === 'ENGAGEMENT_SUMMARY') {
             // Server-provided summary: render a concise recap with odds if initial stacks present
             const attackerId = String((er.attackerId as string) || '')
@@ -581,6 +590,9 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               formatted.push({ ts, text: 'Game created.' })
             } else if (ev === 'STARTED') {
               formatted.push({ ts, text: 'Game started.' })
+            } else if (ev === 'COMPLETED') {
+              formatted.push({ ts, text: 'Game finished.' })
+              sawGameEnd = true
             }
             continue
           }
@@ -743,13 +755,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         }
         // Flush if last entries were a battle sequence
         if (bfAgg) flushBf()
-        // If the game has finished, append a concise end summary
+        // If the game has finished and there was no explicit GAME_END/LIFECYCLE COMPLETED in the log,
+        // append a concise end summary as a fallback
         try {
           const isComplete =
             (room?.status as string | undefined) === 'completed' ||
             (room?.status as string | undefined) === 'abandoned' ||
             game?.phase === 'finished'
-          if (isComplete) {
+          if (isComplete && !sawGameEnd) {
             const tsEnd = new Date()
             formatted.push({ ts: tsEnd, text: 'Game finished.' })
             const winners = game?.players?.filter((p) => !p.isEliminated) ?? []
@@ -852,19 +865,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         startedLoggedRef.current = true
         add('Game started.')
       } else if (payload.status === 'completed') {
-        // Prefer consistent phrasing with history backfill
-        add('Game finished.')
-        // Announce winners if the game state is available
-        try {
-          const current = game
-          const winners = current?.players?.filter((p) => !p.isEliminated) ?? []
-          if (winners.length > 0) {
-            const names = winners.map((p) => playerName.get(p.id) || p.username || p.id).join(', ')
-            add(`${names} won the game.`)
-          }
-        } catch {
-          /* ignore */
-        }
+        // No-op: rely on canonical GAME_END delta for finish + winner lines
       }
     }
 
@@ -1161,7 +1162,15 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         return
       }
       if (d.type === 'GAME_END') {
-        add('Game finished.')
+        const ge = d as import('@shared/types').GameEndDelta
+        try {
+          const ts = new Date(ge.timestamp)
+          const winnerName = playerName.get(ge.winner) || ge.winner
+          add(`${winnerName} won the game.`, ts)
+          add('Game finished.', ts)
+        } catch {
+          add('Game finished.')
+        }
         return
       }
       if (d.type === 'TERRITORY_UPDATE') {
@@ -1246,7 +1255,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     playerName,
     territoryName,
     game?.currentPlayer,
-    game?.players,
     redact,
     toSafeInt,
     playerColor,

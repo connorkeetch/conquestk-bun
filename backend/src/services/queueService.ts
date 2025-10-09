@@ -448,24 +448,45 @@ export class QueueService {
       return false
     }
 
+    const queueRealName = this.queueDisplayNames.get(queueName) ?? queueName
+
+    // Prefer heartbeat detection for precision
     try {
-      // Heuristic: treat workers as active only if a job finished recently
+      const prefix = `worker:hb:${queueRealName}:`
+      const hasHb = await this.scanForAnyKey(prefix)
+      if (hasHb) return true
+    } catch (_e) {
+      // Fall back to recent-completion heuristic
+    }
+
+    try {
       const completed = await queue.getJobs(['completed'], 0, 1)
       const last = Array.isArray(completed) && completed.length > 0 ? completed[0] : null
       const finishedOn = (last?.finishedOn ?? last?.processedOn ?? 0) as number
       if (!finishedOn) {
-        // No completion data yet; conservatively assume inactive to prefer inline path
         return false
       }
       const RECENT_MS = 30_000
       return Date.now() - finishedOn < RECENT_MS
     } catch (error) {
       logger.warn('Failed to inspect queue workers', {
-        queue: this.queueDisplayNames.get(queueName) ?? queueName,
+        queue: queueRealName,
         error: error instanceof Error ? error.message : error,
       })
+      return false
     }
+  }
 
+  private async scanForAnyKey(prefix: string): Promise<boolean> {
+    if (!this.redis) return false
+    let cursor = '0'
+    do {
+      // COUNT small to reduce blocking; MATCH by prefix
+      // eslint-disable-next-line no-await-in-loop
+      const [next, keys] = await this.redis.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 100)
+      if (Array.isArray(keys) && keys.length > 0) return true
+      cursor = next
+    } while (cursor !== '0')
     return false
   }
 
@@ -745,6 +766,71 @@ export class QueueService {
           initialized: this.isInitialized,
         },
       }
+    }
+  }
+
+  // Dead Letter Queue utilities (admin)
+  async listDeadLetters(
+    key: QueueConfigKey,
+    opts?: { offset?: number; limit?: number },
+  ): Promise<
+    Array<{
+      id: string
+      failedReason: string
+      failedAt: string
+      jobName: string
+      attemptsMade: number
+    }>
+  > {
+    const dlq = this.deadLetterQueues.get(key)
+    if (!dlq) return []
+    const offset = Math.max(0, Math.trunc(opts?.offset ?? 0))
+    const limit = Math.max(1, Math.min(200, Math.trunc(opts?.limit ?? 50)))
+    const end = offset + limit - 1
+    // DLQ jobs stay in 'wait' (no worker). Also include 'delayed' just in case.
+    const jobs = await dlq.getJobs(['wait', 'delayed'], offset, end)
+    return jobs
+      .map((j) => {
+        const data = j.data as Partial<DeadLetterJobPayload>
+        const failedAt = data?.failedAt || new Date().toISOString()
+        const failedReason = data?.failedReason || 'Unknown'
+        return {
+          id: String(j.id ?? ''),
+          failedReason,
+          failedAt: String(failedAt),
+          jobName: data?.jobName || 'unknown',
+          attemptsMade: typeof data?.attemptsMade === 'number' ? data.attemptsMade : 0,
+        }
+      })
+      .filter((row) => row.id.length > 0)
+  }
+
+  async requeueDeadLetter(
+    key: QueueConfigKey,
+    dlqJobId: string | number,
+  ): Promise<{ requeued: boolean; newJobId?: string | number }> {
+    const dlq = this.deadLetterQueues.get(key)
+    const queue = this.queues.get(key)
+    if (!dlq || !queue) return { requeued: false }
+    const job = await dlq.getJob(String(dlqJobId))
+    if (!job) return { requeued: false }
+    const payload = job.data as DeadLetterJobPayload
+    try {
+      const added = await queue.add(payload.jobName || 'requeued-job', payload.data, {
+        removeOnComplete: 10,
+        removeOnFail: 5,
+        attempts: 1,
+        priority: 1,
+      })
+      await job.remove()
+      return { requeued: true, newJobId: added.id }
+    } catch (e) {
+      logger.warn('Failed to requeue DLQ job', {
+        queue: queue.name,
+        dlqJobId,
+        error: e instanceof Error ? e.message : e,
+      })
+      return { requeued: false }
     }
   }
 

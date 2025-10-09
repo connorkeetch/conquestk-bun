@@ -3,6 +3,7 @@ import { GameEngine } from '../game/gameEngine'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures'
 import { loadMapForEngine } from '../game/mapLoader'
 import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans'
+import { DeltaBuilder } from '../types/deltaUpdates'
 import type {
   AIDifficulty,
   GameAction,
@@ -95,6 +96,13 @@ type EngagementSummaryLogEntry = {
   conquered: boolean
 }
 
+type GameEndLogEntry = {
+  type: 'GAME_END'
+  timestamp: string
+  winner: string
+  eliminatedPlayers: string[]
+}
+
 type FortifyLogEntry = {
   type: 'FORTIFY'
   timestamp: string
@@ -176,6 +184,7 @@ type GameLogEntry =
   | TreasureCashLogEntry
   | EngagementSummaryLogEntry
   | RngLogEntry
+  | GameEndLogEntry
 
 type PlayerRankingSummary = {
   userId: string
@@ -827,6 +836,30 @@ export class GameService {
         )
 
         if (finalization.archived) {
+          // Emit a canonical GAME_END delta to the room
+          try {
+            const io = tryGetSocketServer()
+            if (io) {
+              const winnerId =
+                finalization.playerRankings.find((r) => r.isWinner)?.userId ||
+                (serializedState.currentPlayer ?? '')
+              const eliminated = finalization.playerRankings
+                .filter((r) => r.eliminated)
+                .map((r) => r.userId)
+              const delta = DeltaBuilder.gameEnd(
+                roomId,
+                winnerId,
+                eliminated,
+                (serializedState as { version?: number }).version,
+              )
+              io.to(`game:${roomId}`).emit('game-delta', delta)
+            }
+          } catch (e) {
+            logger.warn('Failed to emit GAME_END delta after neutralize', {
+              roomId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
           await this.awardClanContributions(roomId, finalization.playerRankings)
           try {
             const { achievementService } = await import('./achievementService')
@@ -1296,6 +1329,30 @@ export class GameService {
 
         // Post-archive follow-ups (achievements, clan XP) mirror battle path
         if (finalization.archived) {
+          // Emit a canonical GAME_END delta to the room
+          try {
+            const io = tryGetSocketServer()
+            if (io) {
+              const winnerId =
+                finalization.playerRankings.find((r) => r.isWinner)?.userId ||
+                (updatedState.currentPlayer ?? '')
+              const eliminated = finalization.playerRankings
+                .filter((r) => r.eliminated)
+                .map((r) => r.userId)
+              const delta = DeltaBuilder.gameEnd(
+                roomId,
+                winnerId,
+                eliminated,
+                (finalSerialized as { version?: number }).version,
+              )
+              io.to(`game:${roomId}`).emit('game-delta', delta)
+            }
+          } catch (e) {
+            logger.warn('Failed to emit GAME_END delta on endTurn', {
+              roomId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
           await this.awardClanContributions(roomId, finalization.playerRankings)
           try {
             const { achievementService } = await import('./achievementService')
@@ -2152,6 +2209,30 @@ export class GameService {
       )
       battleMetrics.clearGame(gameId)
       if (finalization.archived) {
+        // Emit a canonical GAME_END delta to the room
+        try {
+          const io = tryGetSocketServer()
+          if (io) {
+            const winnerId =
+              finalization.playerRankings.find((r) => r.isWinner)?.userId ||
+              (serializedState.currentPlayer ?? '')
+            const eliminated = finalization.playerRankings
+              .filter((r) => r.eliminated)
+              .map((r) => r.userId)
+            const delta = DeltaBuilder.gameEnd(
+              gameId,
+              winnerId,
+              eliminated,
+              (serializedState as { version?: number }).version,
+            )
+            io.to(`game:${gameId}`).emit('game-delta', delta)
+          }
+        } catch (e) {
+          logger.warn('Failed to emit GAME_END delta after battle', {
+            gameId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
         await this.awardClanContributions(gameId, finalization.playerRankings)
         try {
           const { achievementService } = await import('./achievementService')
@@ -2827,6 +2908,24 @@ export class GameService {
           newRating: rc.newRating,
         }))
         await this.appendLog(gameId, ratingEntries)
+      }
+      // Always append a canonical GAME_END log entry for backfill
+      try {
+        const tsEnd = new Date().toISOString()
+        const eliminated = playerRankings.filter((r) => r.eliminated).map((r) => r.userId)
+        const winnerId = (winner?.userId ?? serializedState.currentPlayer ?? '') as string
+        const endEntry: GameEndLogEntry = {
+          type: 'GAME_END',
+          timestamp: tsEnd,
+          winner: winnerId,
+          eliminatedPlayers: eliminated,
+        }
+        await this.appendLog(gameId, [endEntry])
+      } catch (logErr) {
+        logger.warn('Failed to append GAME_END log', {
+          gameId,
+          error: logErr instanceof Error ? logErr.message : logErr,
+        })
       }
     } catch (e) {
       logger.warn('Failed to append rating change logs', {

@@ -10,6 +10,7 @@ import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService'
 import { type GameActionJob, queueService } from '../services/queueService'
+import { startWorkerHeartbeat } from '../services/workerHeartbeat'
 import { DeltaBuilder } from '../types/deltaUpdates'
 import type {
   DeployAction,
@@ -109,6 +110,9 @@ export class GameActionWorker {
         error: error instanceof Error ? error.message : error,
       })
     })
+
+    // Start worker heartbeat for precise health
+    startWorkerHeartbeat(this.queueName)
 
     logger.info('✅ GameActionWorker initialized')
   }

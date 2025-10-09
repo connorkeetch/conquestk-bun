@@ -1,6 +1,7 @@
 import { type Job, Worker } from 'bullmq'
 import { GameService } from '../services/gameService'
 import { queueService } from '../services/queueService'
+import { startWorkerHeartbeat } from '../services/workerHeartbeat'
 import { logger } from '../utils/logger'
 
 type AnalyticsJob = {
@@ -65,6 +66,8 @@ export class AnalyticsWorker {
         error: error instanceof Error ? error.message : error,
       })
     })
+
+    startWorkerHeartbeat(queueName)
 
     logger.info('✅ AnalyticsWorker initialized')
   }

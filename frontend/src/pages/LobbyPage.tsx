@@ -247,6 +247,8 @@ const LobbyPage: React.FC = () => {
     >
   >({})
   const [now, setNow] = useState<number>(() => Date.now())
+  // Prevent URL<->state sync ping-pong for My Games filter
+  const syncingFilterFromUrlRef = useRef(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [privateGameCode, setPrivateGameCode] = useState('')
@@ -602,6 +604,8 @@ const LobbyPage: React.FC = () => {
     const allowed = new Set(['all', 'active', 'lobby', 'completed'])
     const next = allowed.has(raw) ? (raw as 'all' | 'active' | 'lobby' | 'completed') : 'all'
     if (next !== myGamesFilter) {
+      // Mark that we are driving state from the URL to avoid write-back loop
+      syncingFilterFromUrlRef.current = true
       setMyGamesFilter(next)
     }
   }, [activeTab, filterParam, myGamesFilter])
@@ -609,12 +613,15 @@ const LobbyPage: React.FC = () => {
   // Reflect state back to the URL when it changes (state -> write-only URL)
   useEffect(() => {
     if (activeTab !== 'my-games') return
+    // If we just applied filter from URL, skip writing back once
+    if (syncingFilterFromUrlRef.current) {
+      syncingFilterFromUrlRef.current = false
+      return
+    }
     const current = filterParam
     if (current !== myGamesFilter) {
-      // Avoid depending on captured URLSearchParams identity
       const nextParams = new URLSearchParams(window.location.search)
       nextParams.set('filter', myGamesFilter)
-      // Use replace to avoid spamming history when toggling quickly
       setSearchParams(nextParams, { replace: true })
     }
   }, [myGamesFilter, activeTab, filterParam, setSearchParams])
@@ -1474,6 +1481,42 @@ const LobbyPage: React.FC = () => {
                             }
                             return sortDir === 'asc' ? cmp : -cmp
                           })
+
+                          // Desktop empty-state when no games match filter
+                          if (sorted.length === 0) {
+                            const colSpan =
+                              1 + // Name
+                              1 + // Players
+                              (visibleCols.mode ? 1 : 0) +
+                              (visibleCols.ranked ? 1 : 0) +
+                              1 + // Status
+                              (visibleCols.phase ? 1 : 0) +
+                              (visibleCols.queue ? 1 : 0) +
+                              (visibleCols.timer ? 1 : 0) +
+                              (myGamesFilter === 'completed' || visibleCols.winner ? 1 : 0) +
+                              (visibleCols.host ? 1 : 0) +
+                              (visibleCols.updated ? 1 : 0) +
+                              (visibleCols.privacy ? 1 : 0) +
+                              1 // Actions
+                            return (
+                              <tr>
+                                <td className="py-10 text-center text-muted" colSpan={colSpan}>
+                                  <div className="mb-3 text-lg text-[color:var(--heading)]">
+                                    {myGamesFilter === 'all'
+                                      ? 'No games to show'
+                                      : `No ${myGamesFilter} games`}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setMyGamesFilter('all')}
+                                    className="btn btn-secondary btn-sm"
+                                  >
+                                    Show All Games
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          }
 
                           return sorted.map((game) => {
                             const meta = myGamesMeta[game.id]

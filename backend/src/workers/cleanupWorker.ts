@@ -6,6 +6,7 @@ import type { JobIdempotencyService } from '../services/jobIdempotencyService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { type GameCleanupJob, queueService } from '../services/queueService'
 import territoryModifierService from '../services/territoryModifierService'
+import { startWorkerHeartbeat } from '../services/workerHeartbeat'
 import type { GameState } from '../types/game'
 import { logger } from '../utils/logger'
 
@@ -85,6 +86,8 @@ export class CleanupWorker {
         error,
       })
     })
+
+    startWorkerHeartbeat(this.queueName)
 
     // Schedule periodic cleanup for abandoned games
     setInterval(() => this.scheduleAbandonedGameCleanup(), 5 * 60 * 1000) // Every 5 minutes

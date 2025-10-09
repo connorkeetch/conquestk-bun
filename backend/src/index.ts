@@ -42,6 +42,7 @@ let testMigrationFiles: typeof import('./debugStartup').testMigrationFiles
 let generalApiLimiter: RequestHandler
 let suspiciousActivityTracker: SuspiciousActivityTracker
 let adminRoutes: Router
+let adminQueuesRoutes: Router
 let authRoutes: Router
 let gameRoutes: Router
 let mapRoutes: Router
@@ -53,6 +54,7 @@ let messagesRoutes: Router
 let clanRoutes: Router
 let friendsRoutes: Router
 let leaderboardRoutes: Router
+let bullBoardRouterFactory: typeof import('./routes/bullBoard').default
 let initializeRedis: typeof import('./config/redis').initializeRedis
 let setupSocketHandlers: typeof import('./services/socketService').setupSocketHandlers
 let ensureTablesExist: typeof import('./utils/initTables').ensureTablesExist
@@ -80,6 +82,7 @@ try {
   generalApiLimiter = rateLimiterModule.generalApiLimiter
   suspiciousActivityTracker = rateLimiterModule.suspiciousActivityTracker
   adminRoutes = require('./routes/admin').default
+  adminQueuesRoutes = require('./routes/adminQueues').default
   authRoutes = require('./routes/auth').authRoutes
   gameRoutes = require('./routes/game').gameRoutes
   mapRoutes = require('./routes/maps').default
@@ -91,6 +94,7 @@ try {
   clanRoutes = require('./routes/clans').default
   friendsRoutes = require('./routes/friends').default
   leaderboardRoutes = require('./routes/leaderboard').default
+  bullBoardRouterFactory = require('./routes/bullBoard').default
   setupSocketHandlers = require('./services/socketService').setupSocketHandlers
   ensureTablesExist = require('./utils/initTables').ensureTablesExist
   logger = require('./utils/logger').logger
@@ -356,6 +360,7 @@ app.use('/api/maps', mapRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/skills', skillsRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/admin/queues', adminQueuesRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/messages', messagesRoutes)
@@ -370,6 +375,13 @@ app.use('/api/feature-flags', require('./routes/featureFlags').default)
 app.use('/api/queues', require('./routes/queueRoutes').default)
 app.use('/api/performance', require('./routes/performanceRoutes').default)
 app.use('/api/benchmark', require('./routes/benchmarkRoutes').default)
+// Mount Bull Board UI behind admin auth at /admin/queues
+try {
+  const bullBoardRouter = bullBoardRouterFactory()
+  app.use(bullBoardRouter)
+} catch (_e) {
+  // If queues are not initialized yet, Bull Board will become available later after init
+}
 app.use(
   '/api/preferences',
   require('./routes/preferences').createPreferencesRouter(require('./config/database').getPool()),
