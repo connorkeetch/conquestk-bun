@@ -60,6 +60,8 @@ class SocketService {
   private lastReadEmitAt: Record<string, number> = {}
   private pendingRoomStateFetches = new Set<string>()
   private pendingConfirmTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+  private pendingAttackAcks: Map<string, ReturnType<typeof setTimeout>> = new Map()
+  private lastAttackEmitAt: Map<string, number> = new Map()
 
   connect() {
     // Reset any pending fetch tracking on a fresh connection attempt
@@ -181,7 +183,35 @@ class SocketService {
   }
 
   attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
-    this.socket?.emit('attack', { roomId, fromTerritoryId, toTerritoryId, armies })
+    const key = `${roomId}:${fromTerritoryId}->${toTerritoryId}`
+    const now = Date.now()
+    const lastAt = this.lastAttackEmitAt.get(key) ?? 0
+    const MIN_INTERVAL_MS = 120
+    if (now - lastAt < MIN_INTERVAL_MS) {
+      return
+    }
+    this.lastAttackEmitAt.set(key, now)
+
+    // Prevent spamming the same pair until ack arrives or timeout
+    if (this.pendingAttackAcks.has(key)) {
+      return
+    }
+
+    const clear = () => {
+      const t = this.pendingAttackAcks.get(key)
+      if (t) clearTimeout(t)
+      this.pendingAttackAcks.delete(key)
+    }
+
+    const fallback = setTimeout(() => {
+      // Clear inflight after 1s even if ack lost (convergence occurs via deltas)
+      this.pendingAttackAcks.delete(key)
+    }, 1000)
+    this.pendingAttackAcks.set(key, fallback)
+
+    this.socket?.emit('attack', { roomId, fromTerritoryId, toTerritoryId, armies }, () => {
+      clear()
+    })
   }
 
   checkCapitalAttack(roomId: string, targetTerritoryId: string) {
@@ -807,6 +837,46 @@ class SocketService {
       }
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
 
+      // Lightweight notification for users not on the Game Room screen
+      try {
+        if (payload.status === 'active' && payload.roomId) {
+          const key = `ui.gamestart.notified:${payload.roomId}`
+          const alreadyNotified = (() => {
+            try {
+              return sessionStorage.getItem(key) === '1'
+            } catch {
+              return false
+            }
+          })()
+          // Only notify if not currently viewing this room
+          const onThisRoomScreen = (() => {
+            try {
+              const path = window.location?.pathname || ''
+              return path.includes(`/room/${payload.roomId}`)
+            } catch {
+              return false
+            }
+          })()
+          if (!alreadyNotified && !onThisRoomScreen) {
+            notificationService.addNotification({
+              type: 'game_started',
+              title: 'Game started',
+              message: 'Your game is live — jump in!',
+              actionUrl: `/room/${payload.roomId}`,
+              actionLabel: 'Open game',
+              metadata: { gameId: payload.roomId },
+            })
+            try {
+              sessionStorage.setItem(key, '1')
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      } catch {
+        // best-effort only
+      }
+
       // Proactively fetch game state when lifecycle transitions to active/initializing
       try {
         const state = store.getState()
@@ -955,6 +1025,45 @@ class SocketService {
         : roomUpdateBase
 
       store.dispatch(updateRoom(roomUpdate))
+
+      // Lightweight notification for users not on the Game Room screen
+      try {
+        if (status === 'active' && roomId) {
+          const key = `ui.gamestart.notified:${roomId}`
+          const alreadyNotified = (() => {
+            try {
+              return sessionStorage.getItem(key) === '1'
+            } catch {
+              return false
+            }
+          })()
+          const onThisRoomScreen = (() => {
+            try {
+              const path = window.location?.pathname || ''
+              return path.includes(`/room/${roomId}`)
+            } catch {
+              return false
+            }
+          })()
+          if (!alreadyNotified && !onThisRoomScreen) {
+            notificationService.addNotification({
+              type: 'game_started',
+              title: 'Game started',
+              message: 'Your game is live — jump in!',
+              actionUrl: `/room/${roomId}`,
+              actionLabel: 'Open game',
+              metadata: { gameId: roomId },
+            })
+            try {
+              sessionStorage.setItem(key, '1')
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      } catch {
+        // best-effort only
+      }
     })
 
     // Map ping: show transient ping marker
