@@ -62,16 +62,26 @@ export class CleanupWorker {
 
   async initialize(): Promise<void> {
     // Process cleanup jobs
-    this.worker = new Worker(
-      this.queueName,
-      async (job: Job<GameCleanupJob>) => this.cleanupGame(job),
-      {
-        concurrency: 2,
-        // Use Redis client instance for BullMQ connection stability
-        connection: ((await import('../config/redis')).getRedisClient() ??
-          ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
-      },
-    )
+    {
+      const Redis = (await import('ioredis')).default
+      const redis = (await import('../config/redis')).getRedisClient()
+      const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+      const connection = new Redis({
+        ...baseOpts,
+        enableReadyCheck: false,
+        lazyConnect: false,
+        maxRetriesPerRequest: null,
+        commandTimeout: undefined,
+      })
+      this.worker = new Worker(
+        this.queueName,
+        async (job: Job<GameCleanupJob>) => this.cleanupGame(job),
+        {
+          concurrency: 2,
+          connection,
+        },
+      )
+    }
 
     // Job event handlers
     this.worker.on('completed', (job, result) => {

@@ -82,12 +82,22 @@ export class GameActionWorker {
       return null
     }
 
-    this.worker = new Worker(this.queueName, processJob, {
-      concurrency: 10,
-      // Use the actual Redis client instance to avoid issues with blocking commands/timeouts
-      connection: ((await import('../config/redis')).getRedisClient() ??
-        ({} as unknown)) as unknown as import('bullmq').ConnectionOptions,
-    })
+    {
+      const Redis = (await import('ioredis')).default
+      const redis = (await import('../config/redis')).getRedisClient()
+      const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+      const connection = new Redis({
+        ...baseOpts,
+        enableReadyCheck: false,
+        lazyConnect: false,
+        maxRetriesPerRequest: null,
+        commandTimeout: undefined,
+      })
+      this.worker = new Worker(this.queueName, processJob, {
+        concurrency: 10,
+        connection,
+      })
+    }
 
     this.worker.on('completed', (job, result) => {
       logger.info('✅ Game action job completed', {
