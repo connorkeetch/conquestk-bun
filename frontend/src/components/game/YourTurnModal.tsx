@@ -192,7 +192,7 @@ export function YourTurnModal({ className = '' }: Props) {
           </div>
           <div className="mt-5 flex items-center justify-end gap-2">
             <button type="button" className="btn btn-secondary" onClick={handleClose}>
-              Later
+              Sit and wait
             </button>
             <button type="button" className="btn btn-primary" onClick={handleBegin}>
               Begin Turn

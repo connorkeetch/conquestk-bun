@@ -13,6 +13,7 @@ const LazyGameOverModal = lazyWithRetry(async () => ({
 import { ConnectionBanner } from '@/components/game/ConnectionBanner'
 import { DiceResultsBar } from '@/components/game/DiceResultsBar'
 import GameRoomFooter from '@/components/game/GameRoomFooter'
+import { GameStartModal } from '@/components/game/GameStartModal'
 // Player stats modal removed; drawers are used on all devices
 import { PausedBanner } from '@/components/game/PausedBanner'
 import { ResyncBanner } from '@/components/game/ResyncBanner'
@@ -1671,6 +1672,7 @@ export default function GameRoom() {
       <ConnectionBanner />
       <PausedBanner />
       <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
+      <GameStartModal />
       <YourTurnModal />
 
       {joinError && (
