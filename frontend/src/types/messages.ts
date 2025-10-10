@@ -1,4 +1,4 @@
-import type { ConversationMemberEvent } from '@shared/types'
+import type { ConversationMemberEvent } from '@risk-game/shared'
 
 export type ConversationKind = 'direct' | 'group' | 'game' | 'team'
 

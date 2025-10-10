@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { BattleResultDelta, GameDelta } from '@shared/types'
+import type { BattleResultDelta, GameDelta } from '@risk-game/shared'
 import { gameService } from '../services/gameService'
 import type { BattleResult, GameState } from '../types/game'
 import { logger } from '../utils/logger'

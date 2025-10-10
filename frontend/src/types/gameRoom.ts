@@ -1,4 +1,4 @@
-import type { TreasureConfig } from '@shared/types'
+import type { TreasureConfig } from '@risk-game/shared'
 import type { AIDifficulty, GamePhase } from './game'
 
 export type GameLifecycleStatus =

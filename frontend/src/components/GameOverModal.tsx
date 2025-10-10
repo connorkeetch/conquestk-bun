@@ -1,4 +1,4 @@
-import { computeConquestProbability } from '@shared/utils/battleOdds'
+import { computeConquestProbability } from '@risk-game/shared/utils/battleOdds'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { gameService } from '@/services/gameService'

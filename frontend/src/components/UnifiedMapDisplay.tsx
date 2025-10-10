@@ -1,5 +1,5 @@
-import { computeConquestProbability } from '@shared/utils/battleOdds'
-import { computeRollOdds } from '@shared/utils/combatOdds'
+import { computeConquestProbability } from '@risk-game/shared/utils/battleOdds'
+import { computeRollOdds } from '@risk-game/shared/utils/combatOdds'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'

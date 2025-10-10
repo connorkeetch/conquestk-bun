@@ -1,4 +1,4 @@
-import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes';
+import { DEFAULT_THEME_ID, normalizeThemeId } from '../../../shared/types/themes';
 import { withClient } from '../config/database.js';
 import { validateBio } from '../utils/contentModeration.js';
 import { logger } from '../utils/logger.js';

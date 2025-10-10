@@ -1,4 +1,4 @@
-import type { TreasureConfig } from '@shared/types'
+import type { TreasureConfig } from '@risk-game/shared'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'

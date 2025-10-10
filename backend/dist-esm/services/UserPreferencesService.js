@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserPreferencesService = void 0;
-const themes_1 = require("@risk-game/shared/types/themes");
+const themes_1 = require("../shared/types/themes");
 const logger_js_1 = require("../utils/logger.js");
 class UserPreferencesService {
     constructor(pool) {

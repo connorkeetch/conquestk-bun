@@ -1,4 +1,4 @@
-import type { TreasureConfig, TreasureState } from '@shared/types'
+import type { TreasureConfig, TreasureState } from '@risk-game/shared'
 
 const CLASSIC_SEQUENCE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35]
 

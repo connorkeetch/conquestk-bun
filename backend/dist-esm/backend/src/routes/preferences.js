@@ -1,4 +1,4 @@
-import { normalizeThemeId } from '@risk-game/shared/types/themes';
+import { normalizeThemeId } from '../../../shared/types/themes';
 import { Router } from 'express';
 import { isPremiumColorChoice, isPremiumThemeId, normalizePremiumAwareColor, PREMIUM_COLOR_MESSAGE, PREMIUM_THEME_MESSAGE, PREMIUM_UPSELL_ERROR_CODE, } from '../constants/premium.js';
 import { authenticateToken } from '../middleware/auth.js';

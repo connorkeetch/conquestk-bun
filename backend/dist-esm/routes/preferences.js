@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createPreferencesRouter = createPreferencesRouter;
-const themes_1 = require("@risk-game/shared/types/themes");
+const themes_1 = require("../shared/types/themes");
 const express_1 = require("express");
 const premium_js_1 = require("../constants/premium.js");
 const auth_js_1 = require("../middleware/auth.js");

@@ -23,7 +23,7 @@ import type {
   Territory as SharedTerritory,
   TerritoryAbility,
   TradeCardsAction,
-} from '@shared/types'
+} from '@risk-game/shared'
 
 // Re-export shared types
 export type {

@@ -200,7 +200,7 @@ export declare class GameService {
     }): Promise<{
         gameState: SerializedGameState;
         reinforcementArmies: number;
-        treasureAwarded: import("@risk-game/shared/types/index.js").Metal | undefined;
+        treasureAwarded: import("../shared/types/index.js").Metal | undefined;
         turnAdvanced: boolean;
     }>;
     private isValidAction;

@@ -1,4 +1,4 @@
-import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications';
+import type { NotificationEvent, NotificationResult } from '../../../shared/types/notifications';
 export type NotificationChannelName = 'webpush' | 'slack' | 'discord' | (string & {});
 export interface NotificationChannel {
     name: NotificationChannelName;

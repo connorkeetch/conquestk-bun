@@ -1,4 +1,4 @@
-import type { TreasureConfig } from '@shared/types'
+import type { TreasureConfig } from '@risk-game/shared'
 import axios from 'axios'
 import type { AIDifficulty, GameState } from '../types/game'
 import type { GameRoom } from '../types/gameRoom'

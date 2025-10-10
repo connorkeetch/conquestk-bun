@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.profileService = exports.ProfileService = void 0;
-const themes_1 = require("@risk-game/shared/types/themes");
+const themes_1 = require("../shared/types/themes");
 const database_js_1 = require("../config/database.js");
 const contentModeration_js_1 = require("../utils/contentModeration.js");
 const logger_js_1 = require("../utils/logger.js");
