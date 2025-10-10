@@ -8,7 +8,7 @@ import type {
   PhaseChangeDelta,
   PlayerDelta as PlayerUpdateDelta,
   TerritoryDelta as TerritoryUpdateDelta,
-} from '@conquestk/shared/types'
+} from '@conquestk/shared/types/delta'
 
 /**
  * Delta builder utility for creating efficient updates
@@ -39,7 +39,7 @@ export const DeltaBuilder = {
         ...(normalizedOwner !== undefined ? { ownerId: normalizedOwner } : {}),
       },
       timestamp: Date.now(),
-      version,
+      ...(version !== undefined ? { version } : {}),
     }
   },
 
@@ -60,7 +60,7 @@ export const DeltaBuilder = {
       playerId,
       changes,
       timestamp: Date.now(),
-      version,
+      ...(version !== undefined ? { version } : {}),
     }
   },
 
@@ -83,10 +83,10 @@ export const DeltaBuilder = {
       roomId,
       phase,
       currentPlayer,
-      turn: safeTurn,
-      reinforcementArmies: safeReinforce,
+      ...(safeTurn !== undefined ? { turn: safeTurn } : {}),
+      ...(safeReinforce !== undefined ? { reinforcementArmies: safeReinforce } : {}),
       timestamp: Date.now(),
-      version,
+      ...(version !== undefined ? { version } : {}),
     }
   },
 
@@ -100,7 +100,7 @@ export const DeltaBuilder = {
       roomId,
       battleResult,
       timestamp: Date.now(),
-      version,
+      ...(version !== undefined ? { version } : {}),
     }
   },
 
@@ -116,7 +116,7 @@ export const DeltaBuilder = {
       winner,
       eliminatedPlayers,
       timestamp: Date.now(),
-      version,
+      ...(version !== undefined ? { version } : {}),
     }
   },
 } as const

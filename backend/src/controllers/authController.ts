@@ -185,9 +185,11 @@ export class AuthController {
         tokenPayload.sessionId = registrationSessionId
       }
 
-      const token = jwt.sign(tokenPayload, this.jwtSecret, {
-        expiresIn: this.tokenExpiration,
-      })
+      const signOptions: jwt.SignOptions = {}
+      if (this.tokenExpiration !== undefined) {
+        signOptions.expiresIn = this.tokenExpiration
+      }
+      const token = jwt.sign(tokenPayload, this.jwtSecret, signOptions)
 
       // Check if email verification is required
       const requiresEmailVerification =
@@ -357,9 +359,11 @@ export class AuthController {
         tokenPayload.sessionId = loginSessionId
       }
 
-      const token = jwt.sign(tokenPayload, this.jwtSecret, {
-        expiresIn: this.tokenExpiration,
-      })
+      const signOptions: jwt.SignOptions = {}
+      if (this.tokenExpiration !== undefined) {
+        signOptions.expiresIn = this.tokenExpiration
+      }
+      const token = jwt.sign(tokenPayload, this.jwtSecret, signOptions)
 
       // Extract premium flags from user row (not in base User type)
       const rawIsVip = (user as { is_vip?: boolean }).is_vip

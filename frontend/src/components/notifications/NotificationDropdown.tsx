@@ -80,13 +80,14 @@ export default function NotificationDropdown({
       const meta = (n.metadata ?? {}) as Record<string, unknown>
       const change = Number(meta.change)
       if (Number.isFinite(change)) {
-        ratingChangeModalService.open({
+        const payload: Parameters<typeof ratingChangeModalService.open>[0] = {
           change: Math.trunc(change as number),
-          oldRating: typeof meta.oldRating === 'number' ? (meta.oldRating as number) : undefined,
-          newRating: typeof meta.newRating === 'number' ? (meta.newRating as number) : undefined,
-          oldRank: typeof meta.oldRank === 'string' ? (meta.oldRank as string) : undefined,
-          newRank: typeof meta.newRank === 'string' ? (meta.newRank as string) : undefined,
-        })
+        }
+        if (typeof meta.oldRating === 'number') payload.oldRating = meta.oldRating
+        if (typeof meta.newRating === 'number') payload.newRating = meta.newRating
+        if (typeof meta.oldRank === 'string') payload.oldRank = meta.oldRank
+        if (typeof meta.newRank === 'string') payload.newRank = meta.newRank
+        ratingChangeModalService.open(payload)
       }
       // Auto-close the dropdown when opening the rating change overlay
       onClose()

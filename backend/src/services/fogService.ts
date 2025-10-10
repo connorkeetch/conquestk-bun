@@ -1,4 +1,4 @@
-import type { GameDelta } from '@conquestk/shared/types'
+import type { GameDelta } from '@conquestk/shared/types/delta'
 import type { Server } from 'socket.io'
 import type { GameState, SerializedGameState } from '../types/game.js'
 import { logger } from '../utils/logger.js'

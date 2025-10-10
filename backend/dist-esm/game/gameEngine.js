@@ -72,9 +72,9 @@ export class GameEngine {
             ownerId: null,
             armies: 0,
             adjacentTerritories: [...t.adjacentTerritories],
-            coordinates: t.coordinates ? { ...t.coordinates } : undefined,
-            isCapital: t.isCapital,
-            capitalOwnerId: t.capitalOwnerId ?? null,
+            ...(t.coordinates ? { coordinates: { ...t.coordinates } } : {}),
+            ...(typeof t.isCapital === 'boolean' ? { isCapital: t.isCapital } : {}),
+            ...(t.capitalOwnerId !== undefined ? { capitalOwnerId: t.capitalOwnerId ?? null } : {}),
         }));
         const players = this.createPlayers(playerConfigs);
         this.randomizePlayerOrder(players);
@@ -121,11 +121,11 @@ export class GameEngine {
             cards: [],
             gameConfig: hydratedConfig,
             movementTracking: {},
-            treasureState: treasureConfig.enabled ? ensureTreasureState() : undefined,
             mustCashInTreasures: false,
             conqueredDuringTurn: false,
-            assassinationTargets,
-            kingOfTheHillState,
+            ...(assassinationTargets ? { assassinationTargets } : {}),
+            ...(kingOfTheHillState ? { kingOfTheHillState } : {}),
+            ...(treasureConfig.enabled ? { treasureState: ensureTreasureState() } : {}),
         };
         this.prepareReinforcementPhase(gameState, treasureConfig);
         return gameState;
@@ -270,28 +270,34 @@ export class GameEngine {
             assigned.add(colorKey(fallback));
             return fallback;
         };
-        return playerConfigs.map((player, index) => ({
-            id: player.userId,
-            username: player.username || `Player ${index + 1}`,
-            color: resolveColor(player.color, index),
-            armies: this.calculateInitialArmies(playerConfigs.length),
-            territories: [],
-            cards: [],
-            isEliminated: false,
-            skillRating: typeof player.skillRating === 'number' && Number.isFinite(player.skillRating)
+        return playerConfigs.map((player, index) => {
+            const base = {
+                id: player.userId,
+                username: player.username || `Player ${index + 1}`,
+                color: resolveColor(player.color, index),
+                armies: this.calculateInitialArmies(playerConfigs.length),
+                territories: [],
+                cards: [],
+                isEliminated: false,
+                teamId: typeof player.teamId === 'number' && !Number.isNaN(player.teamId) && player.teamId > 0
+                    ? player.teamId
+                    : null,
+                isAi: player.isAi === true,
+                aiDifficulty: player.aiDifficulty ?? null,
+                aiPersonalitySeed: typeof player.aiPersonalitySeed === 'number' && Number.isFinite(player.aiPersonalitySeed)
+                    ? Math.trunc(player.aiPersonalitySeed)
+                    : (player.aiPersonalitySeed ?? null),
+                treasures: [],
+                mustCashInTreasures: false,
+            };
+            const maybeSkill = typeof player.skillRating === 'number' && Number.isFinite(player.skillRating)
                 ? Math.trunc(player.skillRating)
-                : undefined,
-            teamId: typeof player.teamId === 'number' && !Number.isNaN(player.teamId) && player.teamId > 0
-                ? player.teamId
-                : null,
-            isAi: player.isAi === true,
-            aiDifficulty: player.aiDifficulty ?? null,
-            aiPersonalitySeed: typeof player.aiPersonalitySeed === 'number' && Number.isFinite(player.aiPersonalitySeed)
-                ? Math.trunc(player.aiPersonalitySeed)
-                : (player.aiPersonalitySeed ?? null),
-            treasures: [],
-            mustCashInTreasures: false,
-        }));
+                : undefined;
+            return {
+                ...base,
+                ...(maybeSkill !== undefined ? { skillRating: maybeSkill } : {}),
+            };
+        });
     }
     calculateInitialArmies(playerCount) {
         const armyMap = {
@@ -554,10 +560,9 @@ export class GameEngine {
             previewTurns,
             neutralArmies: Math.max(1, config.neutralArmies ?? 8),
             rotationQueue: [...rotation.queue],
-            eligibleTerritoryIds: config.eligibleTerritoryIds
-                ? [...config.eligibleTerritoryIds]
-                : undefined,
-            lastScoreTurn: undefined,
+            ...(Array.isArray(config.eligibleTerritoryIds)
+                ? { eligibleTerritoryIds: [...config.eligibleTerritoryIds] }
+                : {}),
         };
     }
     handleKingOfTheHillRoundComplete(gameState) {
@@ -826,7 +831,7 @@ export class GameEngine {
                                 gameState.hasAttackedThisTurn = false;
                             }
                             gameState.resumePhaseAfterReinforcement = null;
-                            gameState.resumeHasAttackedAfterReinforcement = undefined;
+                            delete gameState.resumeHasAttackedAfterReinforcement;
                         }
                     }
                 }
@@ -1055,7 +1060,7 @@ export class GameEngine {
         }
         else if (previousPhase === 'reinforcement') {
             gameState.resumePhaseAfterReinforcement = null;
-            gameState.resumeHasAttackedAfterReinforcement = undefined;
+            delete gameState.resumeHasAttackedAfterReinforcement;
         }
         treasureMetrics.recordCash(treasureConfig, result.hasDiamond);
         this.updateCurrentPlayerCashRequirement(gameState, treasureConfig);
@@ -1067,9 +1072,9 @@ export class GameEngine {
                 gameState.phase = 'attack';
                 gameState.hasAttackedThisTurn = false;
                 gameState.reinforcementHistory = [];
-                gameState.reinforcementBaseline = undefined;
+                delete gameState.reinforcementBaseline;
                 gameState.resumePhaseAfterReinforcement = null;
-                gameState.resumeHasAttackedAfterReinforcement = undefined;
+                delete gameState.resumeHasAttackedAfterReinforcement;
                 break;
             case 'attack':
                 gameState.phase = 'fortify';
@@ -1103,7 +1108,7 @@ export class GameEngine {
         }
         gameState.currentPlayer = gameState.players[nextPlayerIndex].id;
         gameState.hasAttackedThisTurn = false;
-        gameState.lastBattleResult = undefined;
+        delete gameState.lastBattleResult;
         const firstActivePlayerIndex = gameState.players.findIndex((p) => !p.isEliminated);
         if (nextPlayerIndex === firstActivePlayerIndex) {
             this.handleKingOfTheHillRoundComplete(gameState);
@@ -1138,7 +1143,7 @@ export class GameEngine {
         }
         this.refreshReinforcementTracking(gameState);
         gameState.resumePhaseAfterReinforcement = null;
-        gameState.resumeHasAttackedAfterReinforcement = undefined;
+        delete gameState.resumeHasAttackedAfterReinforcement;
         if (treasureConfig.enabled) {
             gameState.treasureState = ensureTreasureState(gameState.treasureState);
             if (currentPlayer) {
@@ -1146,7 +1151,7 @@ export class GameEngine {
             }
         }
         else {
-            gameState.treasureState = undefined;
+            delete gameState.treasureState;
         }
         this.updateCurrentPlayerCashRequirement(gameState, treasureConfig);
         gameState.conqueredDuringTurn = false;

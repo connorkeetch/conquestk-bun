@@ -103,6 +103,7 @@ const corsOptions = {
 };
 const io = new Server(server, {
     cors: corsOptions,
+    connectionStateRecovery: {},
 });
 initializeRedis()
     .then(async (redisClients) => {
@@ -505,72 +506,75 @@ if (process.env.NODE_ENV !== 'production') {
 }
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
 if (isProductionLike) {
-    const fsNs = (await import('node:fs'));
-    const fsModule = 'default' in fsNs ? fsNs.default : fsNs;
-    const { existsSync, readdirSync } = fsModule;
-    const frontendPath = path.join(__dirname, '../public');
-    logger.debug(`📁 Setting up static file serving from: ${frontendPath}`);
-    logger.debug(`📁 Frontend path exists: ${existsSync(frontendPath)}`);
-    if (existsSync(frontendPath)) {
-        const files = readdirSync(frontendPath);
-        logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`);
-        const indexExists = fsModule.existsSync(path.join(frontendPath, 'index.html'));
-        logger.debug(`📁 index.html exists: ${indexExists}`);
-    }
-    app.use(express.static(frontendPath, {
-        maxAge: 0,
-        setHeaders: (res, filePath) => {
-            logger.debug(`📦 Serving static file: ${filePath}`);
-            const relativePath = path.relative(frontendPath, filePath);
-            if (relativePath === 'index.html') {
-                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-                res.setHeader('Pragma', 'no-cache');
-                res.setHeader('Expires', '0');
-            }
-            else if (relativePath === 'sw.js') {
-                res.setHeader('Cache-Control', 'no-cache');
-            }
-            else if (relativePath.startsWith('assets/')) {
-                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-            }
-            else {
-                res.setHeader('Cache-Control', 'public, max-age=86400');
-            }
-            if (filePath.endsWith('.js')) {
-                res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
-            }
-            else if (filePath.endsWith('.css')) {
-                res.setHeader('Content-Type', 'text/css; charset=UTF-8');
-            }
-            else if (filePath.endsWith('.json')) {
-                res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-            }
-        },
-        index: false,
-    }));
-    app.get('/', (_req, res) => {
-        const indexPath = path.join(frontendPath, 'index.html');
-        return res.sendFile(indexPath, (err) => {
-            if (err) {
-                logger.error(`Failed to serve index.html for root path`, { error: err.message });
-                res.status(500).send('Error serving page');
-            }
-        });
-    });
-    app.use((req, res, next) => {
-        if (req.path.startsWith('/api') ||
-            req.path.startsWith('/assets') ||
-            req.path.startsWith('/uploads')) {
-            return next();
+    ;
+    (async () => {
+        const fsNs = (await import('node:fs'));
+        const fsModule = 'default' in fsNs ? fsNs.default : fsNs;
+        const { existsSync, readdirSync } = fsModule;
+        const frontendPath = path.join(__dirname, '../public');
+        logger.debug(`📁 Setting up static file serving from: ${frontendPath}`);
+        logger.debug(`📁 Frontend path exists: ${existsSync(frontendPath)}`);
+        if (existsSync(frontendPath)) {
+            const files = readdirSync(frontendPath);
+            logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`);
+            const indexExists = fsModule.existsSync(path.join(frontendPath, 'index.html'));
+            logger.debug(`📁 index.html exists: ${indexExists}`);
         }
-        const indexPath = path.join(frontendPath, 'index.html');
-        return res.sendFile(indexPath, (err) => {
-            if (err) {
-                logger.error(`Failed to serve index.html`, { path: req.path, error: err.message });
-                res.status(500).send('Error serving page');
-            }
+        app.use(express.static(frontendPath, {
+            maxAge: 0,
+            setHeaders: (res, filePath) => {
+                logger.debug(`📦 Serving static file: ${filePath}`);
+                const relativePath = path.relative(frontendPath, filePath);
+                if (relativePath === 'index.html') {
+                    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                    res.setHeader('Pragma', 'no-cache');
+                    res.setHeader('Expires', '0');
+                }
+                else if (relativePath === 'sw.js') {
+                    res.setHeader('Cache-Control', 'no-cache');
+                }
+                else if (relativePath.startsWith('assets/')) {
+                    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+                }
+                else {
+                    res.setHeader('Cache-Control', 'public, max-age=86400');
+                }
+                if (filePath.endsWith('.js')) {
+                    res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+                }
+                else if (filePath.endsWith('.css')) {
+                    res.setHeader('Content-Type', 'text/css; charset=UTF-8');
+                }
+                else if (filePath.endsWith('.json')) {
+                    res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+                }
+            },
+            index: false,
+        }));
+        app.get('/', (_req, res) => {
+            const indexPath = path.join(frontendPath, 'index.html');
+            return res.sendFile(indexPath, (err) => {
+                if (err) {
+                    logger.error(`Failed to serve index.html for root path`, { error: err.message });
+                    res.status(500).send('Error serving page');
+                }
+            });
         });
-    });
+        app.use((req, res, next) => {
+            if (req.path.startsWith('/api') ||
+                req.path.startsWith('/assets') ||
+                req.path.startsWith('/uploads')) {
+                return next();
+            }
+            const indexPath = path.join(frontendPath, 'index.html');
+            return res.sendFile(indexPath, (err) => {
+                if (err) {
+                    logger.error(`Failed to serve index.html`, { path: req.path, error: err.message });
+                    res.status(500).send('Error serving page');
+                }
+            });
+        });
+    })().catch((e) => logger.warn('Static frontend setup failed', getErrorMessage(e)));
 }
 Sentry.setupExpressErrorHandler(app);
 app.use((err, _req, res, _next) => {

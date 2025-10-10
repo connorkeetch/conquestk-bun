@@ -1,4 +1,4 @@
-import type { GameDelta } from '@conquestk/shared/types'
+import type { GameDelta } from '@conquestk/shared/types/delta'
 import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
 import { query } from '../config/database.js'
@@ -86,12 +86,12 @@ export class GameActionWorker {
       const Redis = (await import('ioredis')).default
       const redis = (await import('../config/redis.js')).getRedisClient()
       const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+      const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts
       const connection = new Redis({
-        ...baseOpts,
+        ...withoutCommandTimeout,
         enableReadyCheck: false,
         lazyConnect: false,
         maxRetriesPerRequest: null,
-        commandTimeout: undefined,
       })
       this.worker = new Worker(this.queueName, processJob, {
         concurrency: 10,
@@ -177,14 +177,16 @@ export class GameActionWorker {
 
       const difficulty = current.aiDifficulty ?? 'recruit'
       const baseBudget = this.computeBudgetForDifficulty(difficulty)
+      const computedReadableDelay =
+        typeof process.env.AI_READABLE_DELAY_MS === 'string'
+          ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
+          : budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs
       const effectiveBudget: DecisionBudget = {
         ...baseBudget,
         ...(budgetOverrides || {}),
-        // Allow override via env for quick tuning
-        readableDelayMs:
-          typeof process.env.AI_READABLE_DELAY_MS === 'string'
-            ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
-            : (budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs),
+        ...(computedReadableDelay !== undefined
+          ? { readableDelayMs: computedReadableDelay }
+          : {}),
       }
 
       const streamEnabled = (process.env.AI_STREAM_ACTIONS ?? 'true').toLowerCase() !== 'false'
@@ -305,10 +307,10 @@ export class GameActionWorker {
             const last = updated.lastBattleResult
             if (last) {
               try {
-                const battleDelta: import('@conquestk/shared/types').GameDelta =
+              const battleDelta: import('@conquestk/shared/types/delta').GameDelta =
                   DeltaBuilder.battleResult(
                     gameId,
-                    last as unknown as import('@conquestk/shared/types').BattleResultDelta['battleResult'],
+                    last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
                     updated.version,
                   )
                 const { emitFogFilteredDelta } = await import('../services/fogService.js')
@@ -383,13 +385,16 @@ export class GameActionWorker {
               )
               await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
               if (updated.phase !== prevPhase) {
-                await this.deltaEmitter.emitPhaseChange(gameId, {
+              await this.deltaEmitter.emitPhaseChange(
+                gameId,
+                {
                   phase: updated.phase,
                   currentPlayer: updated.currentPlayer,
                   turn: updated.turn,
                   reinforcementArmies: Number(postBank),
-                  version: updated.version,
-                })
+                  ...(updated.version !== undefined ? { version: updated.version } : {}),
+                },
+              )
               }
             } catch {
               // Fallback to snapshot
@@ -458,7 +463,7 @@ export class GameActionWorker {
     aiTurnMetrics.recordTurn({
       difficulty,
       fallbackUsed: usedFallback,
-      fallbackReason,
+      ...(fallbackReason ? { fallbackReason } : {}),
       thinkTimeMs: Date.now() - start,
       plannedActions: actions.length,
       appliedActions: applied,
@@ -595,7 +600,7 @@ export class GameActionWorker {
             try {
               const battleDelta: GameDelta = DeltaBuilder.battleResult(
                 gameId,
-                last as unknown as import('@conquestk/shared/types').BattleResultDelta['battleResult'],
+                last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
                 updated.version,
               )
               // Attach concise territory updates so clients immediately reflect armies/ownership
@@ -612,7 +617,9 @@ export class GameActionWorker {
                   last.toTerritory.id,
                   {
                     armies: last.toTerritory.armies,
-                    ownerId: last.toTerritory.ownerId ?? undefined,
+                    ...(last.toTerritory.ownerId !== undefined
+                      ? { ownerId: last.toTerritory.ownerId }
+                      : {}),
                   },
                   updated.version,
                 ),
@@ -655,7 +662,7 @@ export class GameActionWorker {
             payload.armies,
           )
           try {
-            const updates: import('@conquestk/shared/types').GameDelta[] = [
+            const updates: import('@conquestk/shared/types/delta').GameDelta[] = [
               DeltaBuilder.territoryUpdate(gameId, payload.fromTerritoryId, {
                 armies: transfer.fromArmies,
               }),
@@ -734,30 +741,29 @@ export class GameActionWorker {
               } catch {
                 /* ignore */
               }
-              await this.gameService.appendLog(gameId, [
-                {
-                  type: 'TREASURE_CASH',
-                  timestamp: new Date().toISOString(),
-                  playerId,
-                  troops: gained,
-                  // Include card names when derivable from submitted indices
-                  cards: cardNames && cardNames.length === 3 ? cardNames : undefined,
-                  cardCount: Array.isArray(
-                    (action as { payload?: { cards?: unknown[] } }).payload?.cards,
+              const baseLog: Record<string, unknown> = {
+                type: 'TREASURE_CASH',
+                timestamp: new Date().toISOString(),
+                playerId,
+                troops: gained,
+              }
+              const maybeCards = cardNames && cardNames.length === 3 ? cardNames : undefined
+              const cardsLen = Array.isArray(
+                (action as { payload?: { cards?: unknown[] } }).payload?.cards,
+              )
+                ? (action as { payload?: { cards?: unknown[] } }).payload?.cards?.length
+                : Array.isArray(
+                      (action as { payload?: { treasureSet?: unknown[] } }).payload?.treasureSet,
                   )
-                    ? ((action as { payload?: { cards?: unknown[] } }).payload?.cards?.length ??
-                      undefined)
-                    : Array.isArray(
-                          (action as { payload?: { treasureSet?: unknown[] } }).payload
-                            ?.treasureSet,
-                        )
-                      ? (
-                          (action as { payload?: { treasureSet?: unknown[] } }).payload
-                            ?.treasureSet as unknown[]
-                        ).length
-                      : undefined,
-                },
-              ])
+                  ? ((action as { payload?: { treasureSet?: unknown[] } }).payload
+                      ?.treasureSet as unknown[]).length
+                  : undefined
+              const fullLog = {
+                ...baseLog,
+                ...(maybeCards ? { cards: maybeCards } : {}),
+                ...(typeof cardsLen === 'number' ? { cardCount: cardsLen } : {}),
+              }
+              await this.gameService.appendLog(gameId, [fullLog as any])
             }
           } catch (logErr) {
             logger.debug('Skipped appending treasure cash log', {
@@ -775,7 +781,7 @@ export class GameActionWorker {
                 ? postPlayer?.mustCashInTreasures
                 : undefined
             const { emitFogFilteredDelta } = await import('../services/fogService.js')
-            const playerDelta = DeltaBuilder.playerUpdate(
+              const playerDelta = DeltaBuilder.playerUpdate(
               gameId,
               playerId,
               {
@@ -788,13 +794,14 @@ export class GameActionWorker {
 
             // If phase changed (commonly to reinforcement), emit phase change with bank as reinforcementArmies
             if (newPhase !== currentState.phase) {
-              await this.deltaEmitter.emitPhaseChange(gameId, {
+              const payload = {
                 phase: newPhase,
                 currentPlayer: serialized?.currentPlayer ?? playerId,
                 turn: serialized?.turn ?? currentState.turn,
                 reinforcementArmies: Number(postBank),
-                version,
-              })
+                ...(version !== undefined ? { version } : {}),
+              }
+              await this.deltaEmitter.emitPhaseChange(gameId, payload)
             }
           } catch (_e) {
             // Fallback: if delta emission fails, send a full snapshot to avoid desync
@@ -974,7 +981,7 @@ export class GameActionWorker {
 
     // Emit a consolidated fortify result delta for logging/UX purposes
     try {
-      const fortifyDelta: import('@conquestk/shared/types').GameDelta = {
+              const fortifyDelta: import('@conquestk/shared/types/delta').GameDelta = {
         type: 'FORTIFY_RESULT',
         roomId: gameId,
         timestamp: Date.now(),
@@ -1003,13 +1010,20 @@ export class GameActionWorker {
     // Emit treasure awarded (if any) before phase change for UX parity
     try {
       if (result.treasureAwarded) {
-        this.io.to(`game:${gameId}`).emit('game-delta', {
+        const delta: Partial<import('@conquestk/shared/types/delta').TreasureAwardedDelta> & {
+          type: 'TREASURE_AWARDED'
+          roomId: string
+          timestamp: number
+          userId: string
+          metal: import('@conquestk/shared/types').Metal
+        } = {
           type: 'TREASURE_AWARDED',
           roomId: gameId,
           timestamp: Date.now(),
           userId: playerId,
           metal: result.treasureAwarded,
-        } as import('@conquestk/shared/types').GameDelta)
+        }
+        this.io.to(`game:${gameId}`).emit('game-delta', delta)
       }
     } catch (_e) {
       // best-effort

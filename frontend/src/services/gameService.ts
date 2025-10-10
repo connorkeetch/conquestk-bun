@@ -1,5 +1,5 @@
 import type { TreasureConfig } from '@conquestk/shared'
-import axios from 'axios'
+import axios, { type AxiosRequestConfig } from 'axios'
 import type { AIDifficulty, GameState } from '../types/game'
 import type { GameRoom } from '../types/gameRoom'
 
@@ -159,16 +159,17 @@ export const gameService = {
       stats?: Array<Record<string, unknown>>
     }
   > {
-    const response = await api.get<RawGameLogResponse>(`/game/rooms/${roomId}/log`, {
-      signal: options?.signal,
-    })
+    const cfg: AxiosRequestConfig | undefined = options?.signal
+      ? { signal: options.signal }
+      : undefined
+    const response = await api.get<RawGameLogResponse>(`/game/rooms/${roomId}/log`, cfg)
     const raw = (response.data ?? {}) as RawGameLogResponse
     const log = Array.isArray(raw.log) ? raw.log : []
     const stats = Array.isArray(raw.stats) ? raw.stats : undefined
     return {
       ...raw,
       log,
-      stats,
+      ...(stats ? { stats } : {}),
     }
   },
 

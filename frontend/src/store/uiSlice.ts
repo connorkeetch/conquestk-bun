@@ -16,9 +16,6 @@ export interface UIState {
 const initialState: UIState = {
   inboxOpen: false,
   phase: 'idle',
-  selectedId: undefined,
-  targetId: undefined,
-  hoverId: undefined,
   eligibleIds: [],
 }
 
@@ -41,26 +38,29 @@ const uiSlice = createSlice({
       state.phase = action.payload
     },
     setSelected(state, action: PayloadAction<string | undefined>) {
-      state.selectedId = action.payload
+      if (typeof action.payload === 'string') state.selectedId = action.payload
+      else delete state.selectedId
       if (!action.payload) {
-        state.targetId = undefined
+        delete state.targetId
         state.eligibleIds = []
       }
     },
     setTarget(state, action: PayloadAction<string | undefined>) {
-      state.targetId = action.payload
+      if (typeof action.payload === 'string') state.targetId = action.payload
+      else delete state.targetId
     },
     setHover(state, action: PayloadAction<string | undefined>) {
-      state.hoverId = action.payload
+      if (typeof action.payload === 'string') state.hoverId = action.payload
+      else delete state.hoverId
     },
     setEligible(state, action: PayloadAction<string[]>) {
       // Maintain incoming order (e.g., proximity-precomputed elsewhere)
       state.eligibleIds = Array.isArray(action.payload) ? action.payload.slice() : []
     },
     clearInteraction(state) {
-      state.selectedId = undefined
-      state.targetId = undefined
-      state.hoverId = undefined
+      delete state.selectedId
+      delete state.targetId
+      delete state.hoverId
       state.eligibleIds = []
       state.phase = 'idle'
     },

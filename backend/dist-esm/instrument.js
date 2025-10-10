@@ -9,7 +9,9 @@ if (process.env.SENTRY_DSN) {
         dsn: process.env.SENTRY_DSN,
         environment: process.env.NODE_ENV || 'development',
         tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-        release: process.env.npm_package_version,
+        ...(process.env.npm_package_version
+            ? { release: process.env.npm_package_version }
+            : {}),
         sendDefaultPii: process.env.NODE_ENV !== 'production',
         profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
         beforeSend(event, hint) {

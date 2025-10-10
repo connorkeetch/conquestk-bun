@@ -18,7 +18,7 @@ export default function MessageInput({
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const typingTimeoutRef = useRef<number | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const profanityFilter = useAppSelector((s) => Boolean(s.settings?.chat?.profanityFilter))
@@ -32,12 +32,12 @@ export default function MessageInput({
 
     // Clear previous timeout
     if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
+      window.clearTimeout(typingTimeoutRef.current)
     }
 
     // Set new timeout to stop typing indicator
     if (message.length > 0) {
-      typingTimeoutRef.current = setTimeout(() => {
+      typingTimeoutRef.current = window.setTimeout(() => {
         setIsTyping(false)
         onTyping?.(false)
       }, 1000)
@@ -48,7 +48,7 @@ export default function MessageInput({
 
     return () => {
       if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
+        window.clearTimeout(typingTimeoutRef.current)
       }
     }
   }, [message, isTyping, onTyping])

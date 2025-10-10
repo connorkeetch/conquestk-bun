@@ -1,4 +1,4 @@
-import type { GameDelta } from '@conquestk/shared/types'
+import type { GameDelta } from '@conquestk/shared/types/delta'
 import * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
@@ -239,7 +239,11 @@ function serializeGameStateForClient(
     isEliminated: p.isEliminated,
     // Include competitive rating for consistent CP display in clients
     skillRating: (p as { skillRating?: number }).skillRating,
-    teamId: p.teamId ?? undefined,
+    ...(p.teamId === null
+      ? { teamId: null }
+      : typeof p.teamId === 'number'
+        ? { teamId: p.teamId }
+        : {}),
     treasures: p.treasures,
     territories: p.territories,
     cards: p.cards,
@@ -254,7 +258,7 @@ function serializeGameStateForClient(
     continent: t.continent,
     isCapital: t.isCapital,
     capitalOwnerId: t.capitalOwnerId,
-    coordinates: t.coordinates,
+    ...(t.coordinates ? { coordinates: t.coordinates } : {}),
   })) as Territory[]
 
   const cfg = (s.gameConfig ?? ({} as unknown)) as import('../types/game.js').GameConfiguration
@@ -276,24 +280,33 @@ function serializeGameStateForClient(
     players,
     board,
     gameConfig: gameConfig as unknown as SerializedGameState['gameConfig'],
-    kingOfTheHillState: (s as SerializedGameState).kingOfTheHillState,
-    assassinationTargets: (s as SerializedGameState).assassinationTargets,
-    cards: Array.isArray((s as SerializedGameState).cards) ? (s as SerializedGameState).cards : [],
-    movementTracking: (s as SerializedGameState).movementTracking,
+    ...( (s as SerializedGameState).kingOfTheHillState
+      ? { kingOfTheHillState: (s as SerializedGameState).kingOfTheHillState }
+      : {}),
+    ...( (s as SerializedGameState).assassinationTargets
+      ? { assassinationTargets: (s as SerializedGameState).assassinationTargets }
+      : {}),
+    cards: Array.isArray((s as unknown as SerializedGameState).cards)
+      ? (s as unknown as SerializedGameState).cards
+      : [],
+    ...( (s as unknown as SerializedGameState).movementTracking
+      ? { movementTracking: (s as unknown as SerializedGameState).movementTracking }
+      : {}),
   }
 
   // Include territory modifiers when present (convert Map to plain object)
-  const territoryModifiers = (s as GameState).territoryModifiers
-  if (territoryModifiers instanceof Map) {
+  const territoryModifiersAny = (state as unknown as { territoryModifiers?: unknown })
+    .territoryModifiers
+  if (territoryModifiersAny instanceof Map) {
     const obj = Object.fromEntries(
-      territoryModifiers.entries(),
+      territoryModifiersAny.entries(),
     ) as SerializedGameState['territoryModifiers']
     return { ...base, territoryModifiers: obj }
   }
-  if (territoryModifiers) {
+  if (territoryModifiersAny && !(territoryModifiersAny instanceof Map)) {
     return {
       ...base,
-      territoryModifiers: territoryModifiers as SerializedGameState['territoryModifiers'],
+      territoryModifiers: territoryModifiersAny as SerializedGameState['territoryModifiers'],
     }
   }
   return base
@@ -467,7 +480,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         const player = await gameRoomService.getPlayer(normalizedRoomId, userId)
         const isAi = player?.isAi === true
-        const normalizedPlayer = {
+        const basePlayer = {
           id: player?.id ?? player?.userId ?? userId,
           userId: player?.userId ?? userId,
           aiPlayerId: player?.aiPlayerId ?? null,
@@ -475,12 +488,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
           isReady: player?.isReady === undefined ? isAi : Boolean(player.isReady),
           readyAt: player?.readyAt instanceof Date ? player.readyAt.toISOString() : null,
-          teamId:
-            typeof player?.teamId === 'number'
-              ? player.teamId
-              : player?.teamId === null
-                ? null
-                : undefined,
           isAi,
           aiDifficulty: player?.aiDifficulty ?? null,
           aiPersonalitySeed:
@@ -491,6 +498,14 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             typeof player?.selected_color === 'string' && player.selected_color.length > 0
               ? player.selected_color
               : null,
+        }
+        const normalizedPlayer = {
+          ...basePlayer,
+          ...(typeof player?.teamId === 'number'
+            ? { teamId: player.teamId }
+            : player?.teamId === null
+              ? { teamId: null }
+              : {}),
         }
 
         socket.to(channel).emit('player-joined', {
@@ -693,7 +708,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             socket.id,
           )
           if (typeof ack === 'function') {
-            ack({ ok: true, queued: outcome.mode === 'queued', version: outcome.result?.version })
+            ack({
+              ok: true,
+              queued: outcome.mode === 'queued',
+              ...(outcome.result?.version !== undefined
+                ? { version: outcome.result.version }
+                : {}),
+            })
           }
         },
       ),
@@ -879,7 +900,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             roomId: data.roomId,
             timestamp: Date.now(),
             text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
-            playerId: socket.userId,
+            ...(socket.userId ? { playerId: socket.userId } : {}),
           })
         } catch {
           // best-effort: logging may fail or socket registry unavailable
