@@ -37,5 +37,15 @@
     "src/components/game/TreasureTradeModal.tsx",
     "src/components/game/PlayersLegend.tsx",
     "src/components/game/TreasureHud.tsx"
+    ,
+    "src/components/navigation/PrimaryNav.tsx",
+    "src/components/Header.tsx",
+    "src/components/InstallPrompt.tsx",
+    "src/components/PWAUpdatePrompt.tsx",
+    "src/components/TermsModal.tsx",
+    "src/components/SettingsModal.tsx",
+    "src/components/ActiveGamesDropdown.tsx"
+    ,
+    "src/strict-shims/virtual-pwa-register-react.d.ts"
   ]
 }
