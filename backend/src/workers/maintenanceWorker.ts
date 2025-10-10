@@ -53,49 +53,66 @@ export class MaintenanceWorker {
       moveArchiveBatchSize,
     })
 
-    // Schedule BullMQ Job Schedulers for periodic maintenance
-    try {
-      const queue = queueService.getMaintenanceQueue()
-      await queue.upsertJobScheduler('maintenance:prune', {
-        every: intervalMs,
-      })
-      // Nightly (04:00 UTC) leaderboard cache refresh
-      await queue.upsertJobScheduler(
-        'maintenance:refresh-skill-leaderboard',
-        { cron: '0 4 * * *' } as any,
-      )
-      // Create a worker to process scheduled maintenance jobs
-      const Redis = (await import('ioredis')).default
-      const redis = (await import('../config/redis.js')).getRedisClient()
-      const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
-      const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts
-      const connection = new Redis({
-        ...withoutCommandTimeout,
-        enableReadyCheck: false,
-        lazyConnect: false,
-        maxRetriesPerRequest: null,
-      })
-      this.worker = new Worker(
-        queue.name,
-        async (job: Job) => {
-          switch (job.name) {
-            case 'maintenance:prune':
-              await this.runOnce('interval')
-              return { ok: true }
-            case 'maintenance:refresh-skill-leaderboard':
-              await maintenanceService.refreshSkillLeaderboardCache()
-              return { ok: true }
-            default:
-              return null
-          }
-        },
-        {
-          connection,
-        },
-      )
-    } catch (e) {
-      logger.warn('Failed to initialize maintenance scheduler; falling back to setInterval', {
-        error: e instanceof Error ? e.message : e,
+    // Schedule BullMQ Job Schedulers for periodic maintenance (with retries)
+    const retryDelays = [500, 1500, 3000]
+    let initialized = false
+    let lastError: unknown = null
+    for (let attempt = 1; attempt <= retryDelays.length; attempt++) {
+      try {
+        const queue = queueService.getMaintenanceQueue()
+        await queue.upsertJobScheduler('maintenance:prune', { every: intervalMs })
+        await queue.upsertJobScheduler('maintenance:refresh-skill-leaderboard', {
+          cron: '0 4 * * *',
+        } as any)
+
+        const Redis = (await import('ioredis')).default
+        const redis = (await import('../config/redis.js')).getRedisClient()
+        const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+        const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts
+        const connection = new Redis({
+          ...withoutCommandTimeout,
+          enableReadyCheck: false,
+          lazyConnect: false,
+          maxRetriesPerRequest: null,
+          connectionName: 'maintenance-worker',
+        })
+        this.worker = new Worker(
+          queue.name,
+          async (job: Job) => {
+            switch (job.name) {
+              case 'maintenance:prune':
+                await this.runOnce('interval')
+                return { ok: true }
+              case 'maintenance:refresh-skill-leaderboard':
+                await maintenanceService.refreshSkillLeaderboardCache()
+                return { ok: true }
+              default:
+                return null
+            }
+          },
+          { connection },
+        )
+
+        logger.info('✅ Maintenance scheduler and worker initialized', { attempt })
+        initialized = true
+        break
+      } catch (e) {
+        lastError = e
+        if (attempt < retryDelays.length) {
+          const delay = retryDelays[attempt - 1]
+          logger.warn(
+            `Failed to initialize maintenance scheduler (attempt ${attempt}/${retryDelays.length}), retrying in ${delay}ms`,
+            { error: e instanceof Error ? e.message : e },
+          )
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => setTimeout(r, delay))
+        }
+      }
+    }
+
+    if (!initialized) {
+      logger.warn('Failed to initialize maintenance scheduler after retries; falling back to setInterval', {
+        error: lastError instanceof Error ? lastError.message : lastError,
       })
       // Fallback interval
       if (intervalMs > 0) {
