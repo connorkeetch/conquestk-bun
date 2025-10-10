@@ -12,8 +12,12 @@ import { startWorkerHeartbeat } from '../services/workerHeartbeat.js';
 import { DeltaBuilder } from '../types/deltaUpdates.js';
 import { logger } from '../utils/logger.js';
 export class GameActionWorker {
+    worker = null;
+    queueName;
+    gameService;
+    deltaEmitter;
+    io;
     constructor(io) {
-        this.worker = null;
         this.gameService = new GameService();
         this.deltaEmitter = new DeltaEmitter(io);
         this.io = io;
@@ -383,7 +387,7 @@ export class GameActionWorker {
                 };
             case 'commander':
                 return {
-                    maxThinkTimeMs: 10000,
+                    maxThinkTimeMs: 10_000,
                     maxPlannedActions: 10,
                     readableDelayMs: 300,
                     maxAttackChains: 6,
@@ -392,7 +396,7 @@ export class GameActionWorker {
                 };
             default:
                 return {
-                    maxThinkTimeMs: 15000,
+                    maxThinkTimeMs: 15_000,
                     maxPlannedActions: 16,
                     readableDelayMs: 300,
                     maxAttackChains: 999,

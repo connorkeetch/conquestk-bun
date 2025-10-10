@@ -8,8 +8,13 @@ import territoryModifierService from '../services/territoryModifierService.js';
 import { startWorkerHeartbeat } from '../services/workerHeartbeat.js';
 import { logger } from '../utils/logger.js';
 export class CleanupWorker {
+    worker = null;
+    queueName;
+    gameService;
+    cacheService;
+    idempotencyService;
+    gameRoomService;
     constructor(dependencies = {}) {
-        this.worker = null;
         this.gameService = dependencies.gameService ?? new GameService();
         this.cacheService = dependencies.cacheService ?? new CacheService();
         this.queueName =

@@ -5,6 +5,7 @@ import { tryGetSocketServer } from './socketRegistry.js';
 export const MAX_MESSAGE_LENGTH = 2000;
 export const MAX_GROUP_MEMBERS = 50;
 export class ConversationError extends Error {
+    code;
     constructor(code, message) {
         super(message);
         this.name = 'ConversationError';

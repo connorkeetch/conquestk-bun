@@ -86,6 +86,7 @@ export async function listPendingRequests(userId) {
     };
 }
 export class FriendshipError extends Error {
+    code;
     constructor(code, message) {
         super(message);
         this.name = 'FriendshipError';

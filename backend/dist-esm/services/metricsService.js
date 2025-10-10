@@ -1,8 +1,9 @@
 import { logger } from '../utils/logger.js';
 class CounterMetric {
+    name;
+    values = new Map();
     constructor(name) {
         this.name = name;
-        this.values = new Map();
     }
     inc(labels = {}, value = 1) {
         const key = this.serializeLabels(labels);
@@ -63,15 +64,13 @@ class GaugeMetric extends CounterMetric {
     }
 }
 class BattleMetrics {
-    constructor() {
-        this.battleApplyCounter = new CounterMetric('battle_applied_total');
-        this.battleApplyFailureCounter = new CounterMetric('battle_apply_failures_total');
-        this.battleStateDivergenceGauge = new GaugeMetric('battle_state_divergence');
-        this.failureTimestamps = [];
-        this.failureWindowMs = 60000;
-        this.failureThreshold = Number(process.env.BATTLE_APPLY_FAILURE_ALERT_THRESHOLD ?? '3');
-        this.lastAlertAt = 0;
-    }
+    battleApplyCounter = new CounterMetric('battle_applied_total');
+    battleApplyFailureCounter = new CounterMetric('battle_apply_failures_total');
+    battleStateDivergenceGauge = new GaugeMetric('battle_state_divergence');
+    failureTimestamps = [];
+    failureWindowMs = 60_000;
+    failureThreshold = Number(process.env.BATTLE_APPLY_FAILURE_ALERT_THRESHOLD ?? '3');
+    lastAlertAt = 0;
     recordApply(gameId, status, divergence) {
         this.battleApplyCounter.inc({ status });
         this.battleStateDivergenceGauge.set(divergence, { gameId });
@@ -107,11 +106,9 @@ class BattleMetrics {
 }
 export const battleMetrics = new BattleMetrics();
 class TreasureMetrics {
-    constructor() {
-        this.drawCounter = new CounterMetric('treasure_drawn_total');
-        this.cashCounter = new CounterMetric('treasure_cashed_total');
-        this.modeCounter = new CounterMetric('treasure_mode_total');
-    }
+    drawCounter = new CounterMetric('treasure_drawn_total');
+    cashCounter = new CounterMetric('treasure_cashed_total');
+    modeCounter = new CounterMetric('treasure_mode_total');
     recordMode(config) {
         const mode = config.payoutMode ?? 'classic';
         const enabled = config.enabled ? 'enabled' : 'disabled';
@@ -142,10 +139,11 @@ class TreasureMetrics {
 }
 export const treasureMetrics = new TreasureMetrics();
 class RollingWindowStats {
+    windowByKey = new Map();
+    maxSize;
+    lastLogAt = new Map();
+    counts = new Map();
     constructor(maxSize = 200) {
-        this.windowByKey = new Map();
-        this.lastLogAt = new Map();
-        this.counts = new Map();
         this.maxSize = Math.max(1, maxSize);
     }
     record(key, value) {
@@ -190,10 +188,8 @@ class RollingWindowStats {
     }
 }
 class SocketPayloadMetrics {
-    constructor() {
-        this.gauge = new GaugeMetric('socket_payload_bytes');
-        this.window = new RollingWindowStats(300);
-    }
+    gauge = new GaugeMetric('socket_payload_bytes');
+    window = new RollingWindowStats(300);
     record(event, bytes) {
         if (Number.isFinite(bytes) && bytes >= 0) {
             this.gauge.set(bytes, { event });
@@ -209,13 +205,11 @@ class SocketPayloadMetrics {
 }
 export const socketPayloadMetrics = new SocketPayloadMetrics();
 class AITurnMetrics {
-    constructor() {
-        this.turnCounter = new CounterMetric('ai_turns_total');
-        this.fallbackCounter = new CounterMetric('ai_turn_fallback_total');
-        this.thinkTimeGauge = new GaugeMetric('ai_turn_think_time_ms');
-        this.plannedActionsGauge = new GaugeMetric('ai_turn_actions_planned');
-        this.appliedActionsGauge = new GaugeMetric('ai_turn_actions_applied');
-    }
+    turnCounter = new CounterMetric('ai_turns_total');
+    fallbackCounter = new CounterMetric('ai_turn_fallback_total');
+    thinkTimeGauge = new GaugeMetric('ai_turn_think_time_ms');
+    plannedActionsGauge = new GaugeMetric('ai_turn_actions_planned');
+    appliedActionsGauge = new GaugeMetric('ai_turn_actions_applied');
     recordTurn(record) {
         const { difficulty, fallbackUsed, fallbackReason, thinkTimeMs, plannedActions, appliedActions, } = record;
         const baseLabels = { difficulty };
@@ -253,10 +247,8 @@ class AITurnMetrics {
 }
 export const aiTurnMetrics = new AITurnMetrics();
 class AssassinationMetrics {
-    constructor() {
-        this.assignmentCounter = new CounterMetric('assassination_assignment_total');
-        this.eliminationCounter = new CounterMetric('assassination_elimination_total');
-    }
+    assignmentCounter = new CounterMetric('assassination_assignment_total');
+    eliminationCounter = new CounterMetric('assassination_elimination_total');
     recordAssignments(gameId, assignments, turnNumber = 0) {
         for (const [hunterId, targetId] of Object.entries(assignments)) {
             if (!hunterId || !targetId)

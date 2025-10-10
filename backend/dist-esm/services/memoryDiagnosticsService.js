@@ -5,10 +5,16 @@ import { getErrorMessage } from '../utils/errorHelpers.js';
 import { logger } from '../utils/logger.js';
 const MB = 1024 * 1024;
 class MemoryDiagnosticsService {
+    intervalMs;
+    growthThresholdBytes;
+    minSamples;
+    alertCooldownMs;
+    historySize;
+    snapshotDirectory;
+    samples = [];
+    monitorInterval = null;
+    lastAlertAt = 0;
     constructor(options = {}) {
-        this.samples = [];
-        this.monitorInterval = null;
-        this.lastAlertAt = 0;
         this.intervalMs = Math.max(5000, options.intervalMs ?? this.readNumberEnv('MEMORY_MONITOR_INTERVAL_MS', 15000));
         this.growthThresholdBytes =
             (options.growthThresholdMb ?? this.readNumberEnv('MEMORY_MONITOR_GROWTH_THRESHOLD_MB', 120)) *

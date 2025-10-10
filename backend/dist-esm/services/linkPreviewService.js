@@ -1,11 +1,9 @@
 import ogs from 'open-graph-scraper';
 import { logger } from '../utils/logger.js';
 class LinkPreviewService {
-    constructor() {
-        this.cache = new Map();
-        this.CACHE_TTL = 24 * 60 * 60 * 1000;
-        this.cacheTimestamps = new Map();
-    }
+    cache = new Map();
+    CACHE_TTL = 24 * 60 * 60 * 1000;
+    cacheTimestamps = new Map();
     async extractLinks(text) {
         const urlRegex = /(https?:\/\/[^\s]+)/gi;
         const matches = text.match(urlRegex) || [];

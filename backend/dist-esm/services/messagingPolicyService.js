@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS = {
     showOnlineStatus: true,
 };
 export class MessagingPolicyError extends Error {
+    code;
     constructor(code, message) {
         super(message);
         this.code = code;

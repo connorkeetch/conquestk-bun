@@ -3,9 +3,7 @@ import { logger } from '../utils/logger.js';
 const DEFAULT_TTL_SECONDS = 60 * 60;
 const IN_MEMORY_MAX_SIZE = 5000;
 export class JobIdempotencyService {
-    constructor() {
-        this.inMemoryStore = new Map();
-    }
+    inMemoryStore = new Map();
     buildKey(queueName, jobKey) {
         return `queue:idempotency:${queueName}:${jobKey}`;
     }

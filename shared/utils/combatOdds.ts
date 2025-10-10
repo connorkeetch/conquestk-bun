@@ -33,7 +33,9 @@ function compareHighest(att: number[], def: number[]) {
   let attackerLosses = 0
   let defenderLosses = 0
   for (let i = 0; i < pairs; i++) {
-    if (a[i] > d[i]) defenderLosses++
+    const av = a[i]!
+    const dv = d[i]!
+    if (av > dv) defenderLosses++
     else attackerLosses++
   }
   return { attackerLosses, defenderLosses }

@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
-import path from 'node:path'
+import path, { dirname } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import dotenv from 'dotenv'
 
 // Load environment variables
@@ -8,6 +9,8 @@ dotenv.config()
 import { query } from '../config/database.js'
 
 async function runMigrations() {
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = dirname(__filename)
   const migrationsDir = path.join(__dirname, '../../migrations')
 
   try {
@@ -69,8 +72,13 @@ async function runMigrations() {
 }
 
 // Run migrations if called directly
-if (require.main === module) {
-  runMigrations().then(() => process.exit(0))
+try {
+  const entryUrl = pathToFileURL(process.argv[1]).href
+  if (import.meta.url === entryUrl) {
+    runMigrations().then(() => process.exit(0))
+  }
+} catch {
+  // ignore if argv[1] is unavailable
 }
 
 export default runMigrations

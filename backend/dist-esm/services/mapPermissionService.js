@@ -1,24 +1,22 @@
 import { query } from '../config/database.js';
 export class MapPermissionError extends Error {
+    status = 403;
+    code = 'MAP_PERMISSION_DENIED';
     constructor(message = 'You do not have permission to edit this map') {
         super(message);
-        this.status = 403;
-        this.code = 'MAP_PERMISSION_DENIED';
         Object.setPrototypeOf(this, new.target.prototype);
     }
 }
 export class MapNotFoundError extends Error {
+    status = 404;
+    code = 'MAP_NOT_FOUND';
     constructor(message = 'Map not found') {
         super(message);
-        this.status = 404;
-        this.code = 'MAP_NOT_FOUND';
         Object.setPrototypeOf(this, new.target.prototype);
     }
 }
 class MapPermissionService {
-    constructor() {
-        this.editableRoles = new Set(['editor', 'owner']);
-    }
+    editableRoles = new Set(['editor', 'owner']);
     async getMapEditorContext(mapId, actor) {
         const result = await query('SELECT creator_id FROM maps WHERE id = $1', [mapId]);
         if (!result.rows[0]) {

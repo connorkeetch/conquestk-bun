@@ -2,9 +2,9 @@ import { Resend } from 'resend';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
 class EmailService {
+    resend = null;
+    emailEnabled = false;
     constructor() {
-        this.resend = null;
-        this.emailEnabled = false;
         this.initialize();
     }
     initialize() {

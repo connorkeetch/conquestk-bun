@@ -3,6 +3,9 @@ import { DeltaEmitter } from './deltaEmitter.js';
 import { GameService } from './gameService.js';
 import { queueService } from './queueService.js';
 export class GameActionProcessor {
+    gameService;
+    deltaEmitter;
+    io;
     constructor(io) {
         this.gameService = new GameService();
         this.deltaEmitter = new DeltaEmitter(io);

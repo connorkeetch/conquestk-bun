@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { logger } from './logger.js';
 let cachedMapUploadsDir = null;
 let cachedStagingDir = null;
@@ -13,6 +14,8 @@ const ensureDirectory = (dirPath) => {
 export const getMapUploadsDir = () => {
     if (cachedMapUploadsDir)
         return cachedMapUploadsDir;
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     const uploadsRoot = path.join(__dirname, '../../uploads');
     const mapsDir = path.join(uploadsRoot, 'maps');
     cachedMapUploadsDir = ensureDirectory(mapsDir);

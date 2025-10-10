@@ -4,9 +4,7 @@ import { join } from 'node:path';
 import { query } from '../config/database.js';
 import { logger } from './logger.js';
 export class MigrationTracker {
-    constructor() {
-        this.trackingTableExists = false;
-    }
+    trackingTableExists = false;
     resolveStatus(status) {
         if (status === 'completed' || status === 'failed' || status === 'rolled_back') {
             return status;

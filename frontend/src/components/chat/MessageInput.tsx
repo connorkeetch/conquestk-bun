@@ -1,5 +1,5 @@
 import EmojiPicker, { type EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react'
-import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useAppSelector } from '@/hooks/redux'
 
 interface MessageInputProps {
@@ -96,7 +96,10 @@ export default function MessageInput({
     inputRef.current?.focus()
   }
 
-  // Close emoji picker when clicking outside
+  // Close emoji picker when clicking outside using Effect Event
+  const closeEmojiPicker = useEffectEvent(() => {
+    setShowEmojiPicker(false)
+  })
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -104,14 +107,12 @@ export default function MessageInput({
         emojiButtonRef.current &&
         !emojiButtonRef.current.contains(e.target as Node)
       ) {
-        // Check if click is inside emoji picker
         const emojiPicker = document.querySelector('.EmojiPickerReact')
         if (emojiPicker && !emojiPicker.contains(e.target as Node)) {
-          setShowEmojiPicker(false)
+          closeEmojiPicker()
         }
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showEmojiPicker])

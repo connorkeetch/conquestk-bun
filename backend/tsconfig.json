@@ -1,19 +1,31 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    // Environment
+    "target": "ESNext",
     "module": "NodeNext",
-    "lib": ["ES2020", "DOM"],
+    "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "types": ["node"],
+
+    // Outputs / Layout (typecheck-only here)
     "outDir": "./dist",
     "rootDir": "../",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
     "declaration": false,
     "declarationMap": false,
     "sourceMap": true,
     "noEmit": true,
+
+    // Recommended strictness
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+
+    // Compatibility & hygiene
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "removeComments": true,
     "noImplicitAny": true,
     "useUnknownInCatchVariables": false,
@@ -22,8 +34,8 @@
     "noImplicitThis": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "NodeNext",
-    "isolatedModules": true,
+
+    // Paths
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"],

@@ -4,10 +4,8 @@ import { queueService } from '../services/queueService.js';
 import { logger } from '../utils/logger.js';
 const DEFAULT_INTERVAL_MS = Number(process.env.MAP_ASSET_PURGE_INTERVAL_MS ?? 15 * 60 * 1000);
 export class MapAssetWorker {
-    constructor() {
-        this.timer = null;
-        this.worker = null;
-    }
+    timer = null;
+    worker = null;
     async initialize() {
         logger.info('🧹 Initializing MapAssetWorker', {
             intervalMs: DEFAULT_INTERVAL_MS,

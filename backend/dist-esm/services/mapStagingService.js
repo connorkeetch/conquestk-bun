@@ -6,14 +6,12 @@ import { logger } from '../utils/logger.js';
 import { adminService } from './adminService.js';
 import notificationService from './notificationService.js';
 export class MapStagingService {
-    constructor() {
-        this.MAX_FILE_SIZE = 10 * 1024 * 1024;
-        this.ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        this.NON_ADMIN_QUOTA = 5;
-        this.PURGE_BATCH_SIZE = Number(process.env.MAP_ASSET_PURGE_BATCH_SIZE ?? 100);
-        this.PURGE_MIN_AGE_MINUTES = Number(process.env.MAP_ASSET_PURGE_MIN_AGE_MINUTES ?? 60);
-        this.DELETION_ALERT_THRESHOLD = Number(process.env.MAP_ASSET_PURGE_ALERT_THRESHOLD ?? 3);
-    }
+    MAX_FILE_SIZE = 10 * 1024 * 1024;
+    ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    NON_ADMIN_QUOTA = 5;
+    PURGE_BATCH_SIZE = Number(process.env.MAP_ASSET_PURGE_BATCH_SIZE ?? 100);
+    PURGE_MIN_AGE_MINUTES = Number(process.env.MAP_ASSET_PURGE_MIN_AGE_MINUTES ?? 60);
+    DELETION_ALERT_THRESHOLD = Number(process.env.MAP_ASSET_PURGE_ALERT_THRESHOLD ?? 3);
     buildStorageKey(filename) {
         return `maps/staging/${filename}`;
     }

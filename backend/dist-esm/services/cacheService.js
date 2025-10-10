@@ -1,10 +1,8 @@
 import { getRedisClient } from '../config/redis.js';
 import { logger } from '../utils/logger.js';
 export class CacheService {
-    constructor() {
-        this.redisClient = getRedisClient();
-        this.inMemoryCache = new Map();
-    }
+    redisClient = getRedisClient();
+    inMemoryCache = new Map();
     async get(key) {
         if (this.redisClient) {
             try {
@@ -114,11 +112,9 @@ export class CacheService {
 }
 export const cacheService = new CacheService();
 export class GameStateCache {
-    constructor() {
-        this.cache = new CacheService();
-        this.DEFAULT_TTL = 3600;
-        this.INACTIVE_TTL = 86400;
-    }
+    cache = new CacheService();
+    DEFAULT_TTL = 3600;
+    INACTIVE_TTL = 86400;
     async getGameState(gameId) {
         return this.cache.get(`game:state:${gameId}`);
     }
@@ -143,10 +139,8 @@ export class GameStateCache {
     }
 }
 export class UserCache {
-    constructor() {
-        this.cache = new CacheService();
-        this.TTL = 600;
-    }
+    cache = new CacheService();
+    TTL = 600;
     async getUser(userId) {
         return this.cache.get(`user:${userId}`);
     }
@@ -164,10 +158,8 @@ export class UserCache {
     }
 }
 export class LeaderboardCache {
-    constructor() {
-        this.cache = new CacheService();
-        this.TTL = 300;
-    }
+    cache = new CacheService();
+    TTL = 300;
     async getLeaderboard(page = 1) {
         return this.cache.get(`leaderboard:page:${page}`);
     }
@@ -179,10 +171,8 @@ export class LeaderboardCache {
     }
 }
 export class MapCache {
-    constructor() {
-        this.cache = new CacheService();
-        this.TTL = 3600;
-    }
+    cache = new CacheService();
+    TTL = 3600;
     async getMap(mapId) {
         return this.cache.get(`map:${mapId}`);
     }
@@ -197,12 +187,9 @@ export class MapCache {
     }
 }
 export class TerritoryModifierCache extends CacheService {
-    constructor() {
-        super(...arguments);
-        this.CACHE_PREFIX = 'territory_modifiers';
-        this.TEMPLATES_KEY = 'modifier_templates';
-        this.DEFAULT_TTL = 1800;
-    }
+    CACHE_PREFIX = 'territory_modifiers';
+    TEMPLATES_KEY = 'modifier_templates';
+    DEFAULT_TTL = 1800;
     async getTemplates() {
         return this.get(`${this.CACHE_PREFIX}:${this.TEMPLATES_KEY}`);
     }

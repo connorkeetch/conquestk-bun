@@ -3,9 +3,7 @@ import { logger } from '../utils/logger.js';
 import { gameStateCache } from './cacheService.js';
 import { mapService } from './mapService.js';
 export class CapitalGameService {
-    constructor() {
-        this.gameStates = new Map();
-    }
+    gameStates = new Map();
     normalizeTerritoryId(value) {
         return typeof value === 'number' ? value.toString() : value;
     }

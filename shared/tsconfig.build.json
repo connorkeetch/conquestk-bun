@@ -6,9 +6,10 @@
     "declarationMap": true,
     "outDir": "dist",
     "rootDir": ".",
-    "module": "ES2020",
-    "target": "ES2020",
-    "moduleResolution": "node"
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "node",
+    "moduleDetection": "force"
   },
   "include": ["types/**/*.ts", "constants/**/*.ts", "utils/**/*.ts"],
   "exclude": ["dist", "node_modules"]

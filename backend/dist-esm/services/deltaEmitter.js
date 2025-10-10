@@ -1,8 +1,9 @@
 import { DeltaBuilder } from '../types/deltaUpdates.js';
 import { logger } from '../utils/logger.js';
 export class DeltaEmitter {
+    io;
+    emitFogFilteredDelta = null;
     constructor(io) {
-        this.emitFogFilteredDelta = null;
         this.io = io;
     }
     async getEmitter() {

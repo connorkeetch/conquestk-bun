@@ -31,7 +31,11 @@ export function logStartupDiagnostics() {
   logger.info(`  Platform: ${process.platform}`)
   logger.info(`  Architecture: ${process.arch}`)
   logger.info(`  Current directory: ${process.cwd()}`)
-  logger.info(`  Script directory: ${__dirname}`)
+  {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
+    logger.info(`  Script directory: ${__dirname}`)
+  }
   logger.info(
     `  Memory: ${JSON.stringify({
       rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,

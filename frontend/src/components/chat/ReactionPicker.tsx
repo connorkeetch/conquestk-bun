@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 
 interface ReactionPickerProps {
   onReact: (emoji: string) => void
@@ -12,28 +12,30 @@ export default function ReactionPicker({ onReact, onClose, position }: ReactionP
   const pickerRef = useRef<HTMLDivElement>(null)
 
   // Close on click outside
+  const onOutside = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        onClose()
+        onOutside()
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [onClose])
+  }, [])
 
   // Close on Escape key
+  const onEscape = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
+      if (e.key === 'Escape') onEscape()
     }
-
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [onClose])
+  }, [])
 
   const handleReaction = (emoji: string) => {
     onReact(emoji)
