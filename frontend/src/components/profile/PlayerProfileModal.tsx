@@ -126,7 +126,12 @@ export default function PlayerProfileModal({
 
   const rank = profile ? getConquestRank(profile.elo) : null
   const rankTierInfo = profile
-    ? getRankTierInfo({ minRating: profile.rank?.minRating, rating: profile.elo })
+    ? getRankTierInfo({
+        rating: profile.elo,
+        ...(typeof profile.rank?.minRating === 'number'
+          ? { minRating: profile.rank.minRating }
+          : {}),
+      })
     : null
   const rankSegmentsFilled = rankTierInfo ? Math.min(rankTierInfo.index + 1, rankTierInfo.total) : 0
   const rankBarColor = profile?.rank?.color ?? rank?.color ?? 'var(--color-primary)'

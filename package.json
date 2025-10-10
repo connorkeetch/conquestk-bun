@@ -44,7 +44,10 @@
     "generate:odds": "node scripts/generateCombatOutcomes.js",
     "codemod:esm:check": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src",
     "codemod:esm:apply": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src --apply",
-    "scan:requires": "node scripts/codemods/scan-requires.mjs --target backend/src"
+    "scan:requires": "node scripts/codemods/scan-requires.mjs --target backend/src",
+    "odds:build": "cd shared/wasm-odds && npm run build",
+    "odds:test": "cd shared/wasm-odds && npm run build && npm run test:rs && npm run test:ts && cd ../../ && vitest run -w 1 -c tests/vitest.odds.config.ts",
+    "odds:bench": "cd shared/wasm-odds && npm run build && npm run bench:rs && node scripts/bench-odds.js"
   },
   "repository": {
     "type": "git",
@@ -69,12 +72,14 @@
     "@biomejs/biome": "2.2.5",
     "@playwright/test": "^1.55.1",
     "@types/node": "^24.5.2",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "vitest": "^2.1.3"
   },
   "workspaces": [
     "frontend",
     "backend",
-    "shared"
+    "shared",
+    "shared/wasm-odds"
   ],
   "overrides": {
     "simple-swizzle": "0.2.2",

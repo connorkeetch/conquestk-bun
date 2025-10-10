@@ -24,7 +24,11 @@ export default function GameLogPanelWrapper({
       isEditingLayout={isEditingLayout}
     >
       <div className="h-full max-h-[56vh] md:max-h-[48vh] lg:max-h-[38vh] xl:max-h-[32vh] 2xl:max-h-[28vh] min-h-0 overflow-hidden flex flex-col">
-        <GameLogPanel gameId={gameId} className="h-full" onFocus={onLogFocus} />
+        <GameLogPanel
+          gameId={gameId}
+          className="h-full"
+          {...(onLogFocus ? { onFocus: onLogFocus } : {})}
+        />
       </div>
     </ResizablePanel>
   )

@@ -63,7 +63,7 @@ export default function PanelContainer({
         canClose={canClose}
         onTogglePin={handleTogglePin}
         onToggleMinimize={handleToggleMinimize}
-        onClose={onClose}
+        {...(onClose ? { onClose } : {})}
         isEditingLayout={isEditingLayout}
       />
 

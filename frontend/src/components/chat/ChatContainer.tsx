@@ -2,8 +2,8 @@ import type { ChatConversationType } from '@shared/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
-import { useAppDispatch, useAppSelector } from '../../hooks/redux'
-import { socketService } from '../../services/socketService'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { socketService } from '@/services/socketService'
 import {
   ensureDirectConversation,
   ensureGameConversation,

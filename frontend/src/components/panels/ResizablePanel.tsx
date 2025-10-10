@@ -99,9 +99,9 @@ export default function ResizablePanel({
         icon={icon}
         canMinimize={canMinimize}
         canClose={canClose}
-        onClose={onClose}
         className="flex-1"
         isEditingLayout={isEditingLayout}
+        {...(onClose ? { onClose } : {})}
       >
         {children}
       </PanelContainer>

@@ -7,6 +7,7 @@
     "paths": {
       "@/services/socketService": ["src/strict-shims/socketServiceShim.ts"],
       "@/hooks/redux": ["src/strict-shims/reduxHooksShim.ts"],
+      "@shared/*": ["../shared/*"],
       "@/*": ["src/*"]
     }
   },
@@ -17,6 +18,24 @@
     "src/types/messages.ts",
     "src/components/messages/**/*",
     "src/store/gameSlice.ts",
-    "src/store/roomSlice.ts"
+    "src/store/roomSlice.ts",
+    "src/components/chat/**/*",
+    "src/components/panels/**/*",
+    "src/components/ui/**/*"
+    ,
+    "src/components/game/ConnectionBanner.tsx",
+    "src/components/game/TurnTimer.tsx",
+    "src/components/game/GameRoomFooter.tsx",
+    "src/components/game/DiceResultsBar.tsx",
+    "src/components/game/GameStartModal.tsx",
+    "src/components/game/YourTurnModal.tsx",
+    "src/components/game/PausedBanner.tsx",
+    "src/components/game/ContinentControlPanel.tsx",
+    "src/components/game/AssassinationContract.tsx",
+    "src/components/game/ConquestTransferPopup.tsx",
+    "src/components/game/KingOfTheHillPanel.tsx",
+    "src/components/game/TreasureTradeModal.tsx",
+    "src/components/game/PlayersLegend.tsx",
+    "src/components/game/TreasureHud.tsx"
   ]
 }

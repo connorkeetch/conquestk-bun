@@ -10,6 +10,14 @@
       "types": "./types/index.d.ts",
       "default": "./dist/types/index.js"
     },
+    "./odds": {
+      "types": "./odds/index.ts",
+      "default": "./dist/odds/index.js"
+    },
+    "./odds/*": {
+      "types": "./odds/*.ts",
+      "default": "./dist/odds/*.js"
+    },
     "./types": {
       "types": "./types/index.d.ts",
       "default": "./dist/types/index.js"
@@ -35,5 +43,8 @@
   },
   "devDependencies": {
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@conquestk/wasm-odds": "*"
   }
 }

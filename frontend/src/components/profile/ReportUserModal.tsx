@@ -70,10 +70,11 @@ export default function ReportUserModal({
     setSubmitting(true)
     setError(null)
     try {
-      await reportService.reportUser(reportedUserId, {
-        reason,
-        description: details.trim().slice(0, 4000) || undefined,
-      })
+      const desc = details.trim().slice(0, 4000)
+      await reportService.reportUser(
+        reportedUserId,
+        desc.length > 0 ? { reason, description: desc } : { reason },
+      )
       setSubmitted(true)
       setTimeout(() => onClose(), 900)
     } catch (_e) {

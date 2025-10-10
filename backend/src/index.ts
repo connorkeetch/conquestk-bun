@@ -56,6 +56,7 @@ import bullBoardRouterFactory from './routes/bullBoard.js'
 import { setupSocketHandlers } from './services/socketService.js'
 import { ensureTablesExist } from './utils/initTables.js'
 import { logger } from './utils/logger.js'
+import { setEngine as setOddsEngine, setLogger as setOddsLogger } from '@conquestk/shared/odds'
 import { MigrationRunner } from './utils/migrationRunner.js'
 import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js'
 import { createAdapter } from '@socket.io/redis-streams-adapter'
@@ -141,6 +142,21 @@ const io = new Server(server, {
   // Enable connection state recovery for client resilience on brief disconnects
   connectionStateRecovery: {},
 })
+
+// Configure odds engine (TS/WASM/SHADOW) based on environment
+try {
+  const oddsEnv = (process.env.ODDS_ENGINE || 'ts').toLowerCase()
+  if (oddsEnv === 'ts' || oddsEnv === 'wasm' || oddsEnv === 'shadow') {
+    setOddsEngine(oddsEnv as 'ts' | 'wasm' | 'shadow')
+    setOddsLogger((entry) => logger.info('odds', entry as Record<string, unknown>))
+    logger.info('🔧 Odds engine configured', { engine: oddsEnv })
+  } else {
+    setOddsEngine('ts')
+    logger.warn('Unrecognized ODDS_ENGINE; defaulting to ts', { value: oddsEnv })
+  }
+} catch (e) {
+  logger.warn('Failed to configure odds engine; using defaults', { error: (e as Error)?.message })
+}
 
 // Initialize Redis asynchronously and set up adapter if successful
 initializeRedis()

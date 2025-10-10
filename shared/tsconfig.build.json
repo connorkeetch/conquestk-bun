@@ -11,6 +11,6 @@
     "moduleResolution": "node",
     "moduleDetection": "force"
   },
-  "include": ["types/**/*.ts", "constants/**/*.ts", "utils/**/*.ts"],
+  "include": ["types/**/*.ts", "constants/**/*.ts", "utils/**/*.ts", "odds/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

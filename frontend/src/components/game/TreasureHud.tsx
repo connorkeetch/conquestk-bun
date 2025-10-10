@@ -16,7 +16,10 @@ export function TreasureHud({ variant = 'header' }: Props) {
   const userId = useAppSelector((s) => s.auth.user?.id)
   const room = useAppSelector((s) => s.room.currentRoom)
 
-  const me = useMemo(() => game?.players.find((p) => p.id === userId), [game?.players, userId])
+  const me = useMemo(
+    () => game?.players.find((p: { id: string }) => p.id === userId),
+    [game?.players, userId],
+  )
   const hand = (me?.treasures ?? []) as string[]
   const mustCashIn = Boolean(game?.mustCashInTreasures)
   const isMyTurn = Boolean(userId && game?.currentPlayer === userId)
