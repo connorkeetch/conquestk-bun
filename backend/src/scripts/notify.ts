@@ -3,7 +3,7 @@ import type {
   NotificationCallToAction,
   NotificationEvent,
   NotificationSeverity,
-} from '@risk-game/shared/types/notifications'
+} from '@conquestk/shared/types/notifications'
 import { notificationDispatcher } from '../services/NotificationDispatcher.js'
 import { logger } from '../utils/logger.js'
 

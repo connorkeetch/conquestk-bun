@@ -27,9 +27,9 @@
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"],
-      "@risk-game/shared/types": ["../shared/types/index.d.ts"],
-      "@risk-game/shared/types/*": ["../shared/types/*"],
-      "@risk-game/shared/*": ["../shared/dist/*"]
+      "@conquestk/shared/types": ["../shared/types/index.d.ts"],
+      "@conquestk/shared/types/*": ["../shared/types/*"],
+      "@conquestk/shared/*": ["../shared/dist/*"]
     }
   },
   "include": ["src/**/*", "src/types/**/*.d.ts"],

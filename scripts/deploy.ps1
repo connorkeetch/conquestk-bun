@@ -40,7 +40,7 @@ function Deploy-Staging {
     git push origin dev
     
     Write-Host "✅ Staging deployment triggered!" -ForegroundColor Green
-    Write-Host "🔗 Check: https://risk-game-production-9935.up.railway.app" -ForegroundColor Cyan
+    Write-Host "🔗 Check: https://dev.conquestk.com" -ForegroundColor Cyan
     Write-Host "📊 Monitor: https://railway.app/dashboard" -ForegroundColor Gray
 }
 

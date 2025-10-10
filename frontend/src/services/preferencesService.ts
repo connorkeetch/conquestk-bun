@@ -1,4 +1,4 @@
-import { normalizeThemeId, type ThemeId } from '@risk-game/shared/types/themes'
+import { normalizeThemeId, type ThemeId } from '@conquestk/shared/types/themes'
 import { logger } from '@/utils/logger'
 import api from './api'
 

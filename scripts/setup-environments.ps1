@@ -42,7 +42,7 @@ FRONTEND_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173
 
 # Local PostgreSQL
-DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/risk_game_local
+DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/conquestk_local
 
 # Development Secrets (use strong values locally)
 JWT_SECRET=local-dev-jwt-secret-change-in-production
@@ -83,12 +83,12 @@ function Show-RailwayInstructions {
     
     Write-Host "`n2️⃣ Create separate services:" -ForegroundColor Yellow
     Write-Host "   Production Service:"
-    Write-Host "   - Name: risk-game-prod"
+    Write-Host "   - Name: conquestk-prod"
     Write-Host "   - Branch: main"
     Write-Host "   - Domain: conquestk.com"
     
     Write-Host "`n   Development Service:"
-    Write-Host "   - Name: risk-game-dev"
+    Write-Host "   - Name: conquestk-dev"
     Write-Host "   - Branch: dev"
     Write-Host "   - Domain: dev.conquestk.com (or use Railway's generated domain)"
     

@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals'
-import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
+import type { NotificationEvent, NotificationResult } from '@conquestk/shared/types/notifications'
 
 type DispatchFn = (event: NotificationEvent) => Promise<NotificationResult[]>
 

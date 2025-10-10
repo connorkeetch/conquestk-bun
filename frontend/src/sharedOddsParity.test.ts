@@ -1,4 +1,4 @@
-import { computeRollOdds } from '@risk-game/shared/utils/combatOdds'
+import { computeRollOdds } from '@conquestk/shared/utils/combatOdds'
 import { describe, expect, it } from 'vitest'
 
 describe('shared combat odds parity', () => {

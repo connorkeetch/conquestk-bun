@@ -1,4 +1,4 @@
-import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
+import type { NotificationEvent, NotificationResult } from '@conquestk/shared/types/notifications'
 import { logger } from '../../utils/logger.js'
 import type { NotificationChannel } from '../NotificationDispatcher.js'
 import notificationService, { type NotificationPayload } from '../notificationService.js'

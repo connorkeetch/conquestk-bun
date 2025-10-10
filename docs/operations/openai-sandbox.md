@@ -12,9 +12,9 @@ npm install
 npm run build:shared
 ```
 
-> `ts-node` looks for the compiled `@risk-game/shared` package at runtime. If you
+> `ts-node` looks for the compiled `@conquestk/shared` package at runtime. If you
 > skip `npm run build:shared`, backend startup fails with
-> `Cannot find module '@risk-game/shared/dist/types/themes.js'`.
+> `Cannot find module '@conquestk/shared/dist/types/themes.js'`.
 
 ## 2. Provision PostgreSQL locally
 
@@ -27,7 +27,7 @@ sudo apt-get update
 sudo apt-get install -y postgresql
 sudo pg_ctlcluster 16 main start
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'localpassword123';"
-sudo -u postgres psql -c "CREATE DATABASE risk_game_local;"
+sudo -u postgres psql -c "CREATE DATABASE conquestk_local;"
 ```
 
 These commands:
@@ -47,7 +47,7 @@ cp .env.example .env
 Edit `backend/.env` and ensure it contains the sandbox‑friendly connection string:
 
 ```
-DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/risk_game_local
+DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/conquestk_local
 ```
 
 If you ever run the project outside the sandbox, swap the value for your Railway
@@ -58,7 +58,7 @@ URL (managed in the Railway dashboard). Production/staging never load a `.env` f
 1. **Bootstrap from the baseline** (creates all core tables and constraints):
 
    ```bash
-   sudo -u postgres psql -d risk_game_local \
+   sudo -u postgres psql -d conquestk_local \
      -f backend/migrations/001_baseline_schema.sql
    ```
 

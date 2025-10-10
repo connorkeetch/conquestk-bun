@@ -1,4 +1,4 @@
-import type { GameDelta } from '@risk-game/shared/types'
+import type { GameDelta } from '@conquestk/shared/types'
 import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
 import { query } from '../config/database.js'
@@ -305,10 +305,10 @@ export class GameActionWorker {
             const last = updated.lastBattleResult
             if (last) {
               try {
-                const battleDelta: import('@risk-game/shared/types').GameDelta =
+                const battleDelta: import('@conquestk/shared/types').GameDelta =
                   DeltaBuilder.battleResult(
                     gameId,
-                    last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
+                    last as unknown as import('@conquestk/shared/types').BattleResultDelta['battleResult'],
                     updated.version,
                   )
                 const { emitFogFilteredDelta } = await import('../services/fogService.js')
@@ -595,7 +595,7 @@ export class GameActionWorker {
             try {
               const battleDelta: GameDelta = DeltaBuilder.battleResult(
                 gameId,
-                last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
+                last as unknown as import('@conquestk/shared/types').BattleResultDelta['battleResult'],
                 updated.version,
               )
               // Attach concise territory updates so clients immediately reflect armies/ownership
@@ -655,7 +655,7 @@ export class GameActionWorker {
             payload.armies,
           )
           try {
-            const updates: import('@risk-game/shared/types').GameDelta[] = [
+            const updates: import('@conquestk/shared/types').GameDelta[] = [
               DeltaBuilder.territoryUpdate(gameId, payload.fromTerritoryId, {
                 armies: transfer.fromArmies,
               }),
@@ -974,7 +974,7 @@ export class GameActionWorker {
 
     // Emit a consolidated fortify result delta for logging/UX purposes
     try {
-      const fortifyDelta: import('@risk-game/shared/types').GameDelta = {
+      const fortifyDelta: import('@conquestk/shared/types').GameDelta = {
         type: 'FORTIFY_RESULT',
         roomId: gameId,
         timestamp: Date.now(),
@@ -1009,7 +1009,7 @@ export class GameActionWorker {
           timestamp: Date.now(),
           userId: playerId,
           metal: result.treasureAwarded,
-        } as import('@risk-game/shared/types').GameDelta)
+        } as import('@conquestk/shared/types').GameDelta)
       }
     } catch (_e) {
       // best-effort

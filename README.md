@@ -48,8 +48,8 @@ community-built maps, and rich administrative tooling.
 ### Installation
 
 ```bash
-git clone https://github.com/connorkeetch/risk-game.git
-cd risk-game
+git clone https://github.com/connorkeetch/conquestk.git
+cd conquestk
 npm install
 npm run setup
 ```
@@ -69,7 +69,7 @@ npm run setup
 
 - Using Docker (recommended):
   ```bash
-  docker-compose up -d   # starts PostgreSQL (risk_game_local) and Redis
+  docker-compose up -d   # starts PostgreSQL (conquestk_local) and Redis
   cd backend && npm run migrate
   ```
 
@@ -78,10 +78,10 @@ npm run setup
   # Ensure Postgres is installed and running
   # Create user password and database (example shown for Linux/WSL)
   sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'localpassword123';"
-  sudo -u postgres createdb risk_game_local
+  sudo -u postgres createdb conquestk_local
 
   # In backend/.env set:
-  # DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/risk_game_local
+  # DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/conquestk_local
   cd backend && npm run migrate
   ```
 
@@ -134,7 +134,7 @@ npm run check:services:start  # Try to start via Docker Compose if not running
 ## 🧱 Project structure
 
 ```
-risk-game/
+conquestk/
 ├── backend/             # Express + Socket.io API, game engine, migrations, scripts
 ├── frontend/            # React 19 app (Vite, Redux Toolkit, Tailwind v4)
 ├── shared/              # Shared TypeScript types and utilities

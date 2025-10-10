@@ -310,7 +310,7 @@ REDIS_URL=redis://localhost:6379
   }
 
   async run() {
-    this.log('🎮 Risk Game Development Setup Check', 'info')
+    this.log('🎮 ConquestK Development Setup Check', 'info')
     this.log('Checking your development environment...\n', 'info')
 
     await this.checkDependencies()

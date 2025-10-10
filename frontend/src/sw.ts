@@ -131,7 +131,7 @@ self.addEventListener('push', (event: PushEvent) => {
   try {
     notificationData = event.data.json() as Partial<PushPayload>
   } catch {
-    notificationData = { title: 'Risk Game', body: event.data.text() }
+    notificationData = { title: 'ConquestK', body: event.data.text() }
   }
 
   const payloadData =
@@ -157,7 +157,7 @@ self.addEventListener('push', (event: PushEvent) => {
     icon: notificationData.icon || '/icon-192.png',
     badge: notificationData.badge || '/icon-192.png',
     data: mergedData,
-    tag: notificationData.tag || 'risk-game-notification',
+    tag: notificationData.tag || 'conquestk-notification',
   }
 
   // Pass through action buttons if provided by payload
@@ -172,7 +172,7 @@ self.addEventListener('push', (event: PushEvent) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(notificationData.title || 'Risk Game Notification', options),
+    self.registration.showNotification(notificationData.title || 'ConquestK Notification', options),
   )
 })
 

@@ -27,7 +27,7 @@
  * 3. /frontend/src/pages/Settings.tsx - Preferred color selection
  * 4. /frontend/src/components/ProfilePage.tsx - Avatar backgrounds
  * 5. /frontend/src/pages/GameRoom.tsx - Active game player colors
- * 6. /frontend/src/components/RiskGameBoard.tsx - Game board rendering
+ * 6. /frontend/src/components/ConquestKBoard.tsx - Game board rendering
  * 7. /frontend/src/app.css - CSS variables for Tailwind (lines 110-122)
  * 8. /frontend/src/store/settingsSlice.ts - Default preferred color
  *
@@ -219,14 +219,19 @@ export const getPlayerColor = (index: number): string => {
 
 export type PremiumColorKey = keyof typeof PREMIUM_PLAYER_COLORS
 
-type PremiumColorDefinition = (typeof PREMIUM_PLAYER_COLORS)[PremiumColorKey]
-
-export interface PremiumColorMeta extends PremiumColorDefinition {
-  key: PremiumColorKey
+// Common shape for premium color entries across the map
+type PremiumColorDefinition = {
+  solid: string
+  outline?: string
+  effect?: string
+  gradient?: string
+  description?: string
 }
 
-export const getPremiumPlayerColor = (key: PremiumColorKey) => {
-  return PREMIUM_PLAYER_COLORS[key]
+export type PremiumColorMeta = PremiumColorDefinition & { key: PremiumColorKey }
+
+export const getPremiumPlayerColor = (key: PremiumColorKey): PremiumColorDefinition => {
+  return (PREMIUM_PLAYER_COLORS as Record<PremiumColorKey, PremiumColorDefinition>)[key]
 }
 
 export const getPremiumColorMeta = (
@@ -237,7 +242,9 @@ export const getPremiumColorMeta = (
   const str = String(color).trim()
   if (!str) return undefined
 
-  const byKey = PREMIUM_PLAYER_COLORS[str as PremiumColorKey]
+  const byKey = (PREMIUM_PLAYER_COLORS as Record<PremiumColorKey, PremiumColorDefinition>)[
+    str as PremiumColorKey
+  ]
   if (byKey) {
     return { key: str as PremiumColorKey, ...byKey }
   }

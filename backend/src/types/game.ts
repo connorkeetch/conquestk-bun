@@ -6,7 +6,7 @@ import type {
   SectorBonus,
   TreasureConfig,
   TreasureState,
-} from '@risk-game/shared/types'
+} from '@conquestk/shared/types'
 
 export type {
   AIDifficulty,
@@ -15,7 +15,7 @@ export type {
   Metal,
   TreasureConfig,
   TreasureState,
-} from '@risk-game/shared/types'
+} from '@conquestk/shared/types'
 
 export type GamePhase = 'reinforcement' | 'attack' | 'fortify' | 'finished'
 

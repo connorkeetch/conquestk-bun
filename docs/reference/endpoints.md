@@ -90,7 +90,7 @@ curl -sS https://conquestk.com/api/health | jq
 curl -sS https://conquestk.com/api/queues/ping | jq
 
 # Staging
-curl -sS https://risk-game-production-9935.up.railway.app/health | jq
+curl -sS https://dev.conquestk.com/health | jq
 
 # Local
 curl -sS http://localhost:5001/health | jq

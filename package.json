@@ -1,5 +1,5 @@
 {
-  "name": "risk-game",
+  "name": "conquestk",
   "version": "1.0.0",
   "description": "A full-stack Risk-like multiplayer board game",
   "main": "index.js",
@@ -46,7 +46,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/username/risk-game.git"
+    "url": "git+https://github.com/username/conquestk.git"
   },
   "keywords": [
     "risk",

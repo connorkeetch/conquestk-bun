@@ -1,4 +1,4 @@
-import type { TreasureConfig } from '@risk-game/shared'
+import type { TreasureConfig } from '@conquestk/shared'
 
 export const getFogDescription = (mode?: string | null) => {
   switch (mode) {

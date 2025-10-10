@@ -5,7 +5,7 @@ import type {
   PhaseChangeDelta,
   SystemMessageDelta,
   TreasureAwardedDelta,
-} from '@risk-game/shared'
+} from '@conquestk/shared'
 import { computeConquestProbability } from '@shared/utils/battleOdds'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'

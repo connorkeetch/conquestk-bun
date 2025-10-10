@@ -603,7 +603,7 @@ setupSocketHandlers(io);
 memoryDiagnosticsService.start();
 async function startServer() {
     try {
-        logger.info('🚀 Starting Risk Game server...');
+        logger.info('🚀 Starting ConquestK server...');
         logStartupDiagnostics();
         const portNumber = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
         server.listen(portNumber, '0.0.0.0', () => {

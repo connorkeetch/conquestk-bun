@@ -1,4 +1,4 @@
-import { normalizeThemeId, type ThemeId } from '@risk-game/shared/types/themes'
+import { normalizeThemeId, type ThemeId } from '@conquestk/shared/types/themes'
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'

@@ -1,5 +1,5 @@
-import type { ThemeId } from '@risk-game/shared/types/themes'
-import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
+import type { ThemeId } from '@conquestk/shared/types/themes'
+import { DEFAULT_THEME_ID, normalizeThemeId } from '@conquestk/shared/types/themes'
 import type { Pool } from 'pg'
 import { logger } from '../utils/logger.js'
 

@@ -404,11 +404,11 @@ export class GameActionProcessor {
     const last = updated.lastBattleResult
     if (last) {
       try {
-        const battleDelta: import('@risk-game/shared/types').GameDelta = (
+        const battleDelta: import('@conquestk/shared/types').GameDelta = (
           await import('../types/deltaUpdates.js')
         ).DeltaBuilder.battleResult(
           gameId,
-          last as unknown as import('@risk-game/shared/types').BattleResultDelta['battleResult'],
+          last as unknown as import('@conquestk/shared/types').BattleResultDelta['battleResult'],
           updated.version,
         )
         // Attach concise territory updates so clients immediately reflect armies/ownership
@@ -508,7 +508,7 @@ export class GameActionProcessor {
             timestamp: Date.now(),
             userId: playerId,
             metal: result.treasureAwarded,
-          } as import('@risk-game/shared/types').GameDelta)
+          } as import('@conquestk/shared/types').GameDelta)
         }
       }
     } catch {

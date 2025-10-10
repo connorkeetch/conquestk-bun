@@ -26,7 +26,7 @@ export function buildFrontendUrl(req: Request, path: string): string {
     return joinUrl('https://conquestk.com', path)
   }
   if (process.env.NODE_ENV === 'staging') {
-    return joinUrl('https://risk-game-production-9935.up.railway.app', path)
+    return joinUrl('https://dev.conquestk.com', path)
   }
   return joinUrl('http://localhost:5173', path)
 }

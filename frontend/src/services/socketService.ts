@@ -12,7 +12,7 @@ import type {
   ReceiptReadAck,
   ServerToClientEvents,
   TerritoryDelta,
-} from '@risk-game/shared'
+} from '@conquestk/shared'
 import { toast } from 'react-hot-toast'
 import { io, type Socket } from 'socket.io-client'
 import { getConquestRank } from '@/components/RankInsignia'
@@ -234,7 +234,7 @@ class SocketService {
       action: {
         type: 'transfer_conquest',
         roomId,
-        playerId: this.userId ?? '',
+        playerId: (store.getState().auth.user?.id as string | undefined) ?? '',
         payload: { fromTerritoryId, toTerritoryId, armies },
       } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
     })

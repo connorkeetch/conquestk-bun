@@ -1,5 +1,5 @@
 import type { PoolClient, QueryResultRow } from 'pg'
-import { RANKS } from '@risk-game/shared/constants/ranks'
+import { RANKS } from '@conquestk/shared/constants/ranks'
 import type { DatabaseQueryResult } from '../config/database.js'
 import { query, transaction } from '../config/database.js'
 import { logger } from '../utils/logger.js'

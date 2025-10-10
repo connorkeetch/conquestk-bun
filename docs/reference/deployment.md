@@ -11,7 +11,7 @@ git merge dev
 git push origin main  # GitHub Actions builds, tests, then triggers Railway via webhook
 ```
 
-### Staging Deploy (risk-game-production-9935.up.railway.app)
+### Staging Deploy (dev.conquestk.com)
 ```bash
 git checkout dev
 git push origin dev  # GitHub Actions builds, tests, then triggers Railway via webhook
@@ -83,8 +83,8 @@ DISCORD_WEBHOOK_URL=[Discord webhook]
 ### Staging Environment Differences
 ```bash
 NODE_ENV=staging
-CORS_ORIGIN=https://risk-game-production-9935.up.railway.app
-FRONTEND_URL=https://risk-game-production-9935.up.railway.app
+CORS_ORIGIN=https://dev.conquestk.com
+FRONTEND_URL=https://dev.conquestk.com
 ```
 
 > If `FRONTEND_URL` is unset, the backend falls back to the incoming request origin. Always set it explicitly for production and staging so verification/password reset emails generate correct links.
@@ -98,7 +98,7 @@ openssl rand -base64 32  # JWT and session secrets
 
 ### Health Checks
 - Production: https://conquestk.com/api/health (behind proxy)
-- Staging: https://risk-game-production-9935.up.railway.app/health
+- Staging: https://dev.conquestk.com/health
 
 Response shape:
 ```json

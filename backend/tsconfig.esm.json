@@ -23,7 +23,7 @@
     "rootDir": "../",
     "baseUrl": "./",
     "paths": {
-      "@risk-game/shared/*": ["../shared/*"],
+      "@conquestk/shared/*": ["../shared/*"],
       "@/*": ["src/*"]
     }
   }

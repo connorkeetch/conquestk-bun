@@ -1,4 +1,4 @@
-import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
+import { DEFAULT_THEME_ID, normalizeThemeId } from '@conquestk/shared/types/themes'
 import type { QueryResultRow } from 'pg'
 import { withClient } from '../config/database.js'
 import type {

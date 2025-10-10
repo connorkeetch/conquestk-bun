@@ -4,9 +4,9 @@
 services:
   postgres:
     image: postgres:17
-    container_name: risk-game-postgres
+    container_name: conquestk-postgres
     environment:
-      POSTGRES_DB: risk_game_local
+      POSTGRES_DB: conquestk_local
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: localpassword123
     ports:
@@ -21,7 +21,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: risk-game-redis
+    container_name: conquestk-redis
     ports:
       - "6379:6379"
     volumes:
@@ -34,9 +34,9 @@ services:
 
 volumes:
   postgres_data:
-    name: risk-game-postgres-data
+    name: conquestk-postgres-data
   redis_data:
-    name: risk-game-redis-data
+    name: conquestk-redis-data
 # Usage:
 # 1. Start services: docker-compose up -d
 # 2. Stop services: docker-compose down
