@@ -55,21 +55,25 @@ export function DiceResultsBar() {
     // Prefer stable ids captured at roll time so colors don't flip post-conquest
     const attackerId = (() => {
       if (last.attackerId) return last.attackerId
-      const t = game.board?.find((tt) => tt.id === last.fromId)
+      const t = game.board?.find((tt: { id: string; ownerId?: string | null }) => tt.id === last.fromId)
       return t?.ownerId ?? game.currentPlayer ?? null
     })()
 
     const defenderId = (() => {
       if (last.defenderId) return last.defenderId
-      const t = game.board?.find((tt) => tt.id === last.toId)
+      const t = game.board?.find((tt: { id: string; ownerId?: string | null }) => tt.id === last.toId)
       const owner = t?.ownerId ?? null
       // If owner matches attacker (e.g., after conquest or hidden defender), avoid attacker color
       if (owner && owner === attackerId) return null
       return owner
     })()
 
-    const aPlayer = attackerId ? game.players.find((p) => p.id === attackerId) : undefined
-    const dPlayer = defenderId ? game.players.find((p) => p.id === defenderId) : undefined
+    const aPlayer = attackerId
+      ? game.players.find((p: { id: string; color: string }) => p.id === attackerId)
+      : undefined
+    const dPlayer = defenderId
+      ? game.players.find((p: { id: string; color: string }) => p.id === defenderId)
+      : undefined
 
     const aColor = aPlayer ? getColorValue(aPlayer.color) : neutralGrey
     const dColor = dPlayer ? getColorValue(dPlayer.color) : neutralGrey
@@ -94,7 +98,7 @@ export function DiceResultsBar() {
   if (phase === 'reinforcement') {
     // Prefer server-reconciled spent; fallback to client placement history within this session
     const spentFromHistory = placementHistory.reduce(
-      (sum, p) => sum + Math.max(0, p.armies || 0),
+      (sum: number, p: { armies?: number }) => sum + Math.max(0, p.armies || 0),
       0,
     )
     const spent = placementServerSpent > 0 ? placementServerSpent : spentFromHistory
@@ -201,7 +205,7 @@ export function DiceResultsBar() {
                 value={v}
                 color={attacker.color}
                 glow={pairs[i]?.winner === 'A'}
-                effect={attacker.effect}
+                {...(attacker.effect ? { effect: attacker.effect } : {})}
                 pureWhite={attacker.pureWhite}
               />
             ))}
@@ -220,7 +224,7 @@ export function DiceResultsBar() {
                 value={v}
                 color={defender.color}
                 glow={pairs[i]?.winner === 'D'}
-                effect={defender.effect}
+                {...(defender.effect ? { effect: defender.effect } : {})}
                 pureWhite={defender.pureWhite}
               />
             ))}

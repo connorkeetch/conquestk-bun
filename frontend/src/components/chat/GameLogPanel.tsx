@@ -10,10 +10,10 @@ import { computeConquestProbability } from '@shared/utils/battleOdds'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
-import { useAppSelector } from '../../hooks/redux'
+import { useAppSelector } from '@/hooks/redux'
 import { gameService } from '../../services/gameService'
 import { deriveRoundMarkers, isParticipantInRoom } from '@/utils/gameLog'
-import { socketService } from '../../services/socketService'
+import { socketService } from '@/services/socketService'
 
 type Props = {
   gameId: string
@@ -427,30 +427,31 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               (bfAgg.defenderId || undefined) === (defenderId || undefined)
             if (!same) {
               flushBf()
+              const maybeInitFrom =
+                typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number'
+                  ? Math.trunc((er as { initialFromArmies?: number }).initialFromArmies as number)
+                  : undefined
+              const maybeInitTo =
+                typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number'
+                  ? Math.trunc((er as { initialToArmies?: number }).initialToArmies as number)
+                  : undefined
               bfAgg = {
                 attackerId,
-                defenderId,
                 fromId,
                 toId,
                 from,
                 to,
                 attackerName,
-                defenderName,
                 killed: 0,
                 lost: 0,
                 conquered: false,
-                movedArmies: undefined,
                 eliminated: [],
                 tsStart: ts,
                 tsLast: ts,
-                initFrom:
-                  typeof (er as { initialFromArmies?: unknown }).initialFromArmies === 'number'
-                    ? Math.trunc((er as { initialFromArmies?: number }).initialFromArmies as number)
-                    : undefined,
-                initTo:
-                  typeof (er as { initialToArmies?: unknown }).initialToArmies === 'number'
-                    ? Math.trunc((er as { initialToArmies?: number }).initialToArmies as number)
-                    : undefined,
+                ...(defenderId ? { defenderId } : {}),
+                ...(defenderName ? { defenderName } : {}),
+                ...(typeof maybeInitFrom === 'number' ? { initFrom: maybeInitFrom } : {}),
+                ...(typeof maybeInitTo === 'number' ? { initTo: maybeInitTo } : {}),
               }
             }
             // Update aggregate
@@ -461,7 +462,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               if (conquered) {
                 bfAgg.conquered = true
                 const moved = toSafeInt(er.movedArmies, 0)
-                bfAgg.movedArmies = moved > 0 ? moved : undefined
+                if (moved > 0) bfAgg.movedArmies = moved
                 const eliminated = Array.isArray(
                   (er as { eliminatedPlayers?: unknown[] }).eliminatedPlayers,
                 )
@@ -850,14 +851,22 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         // De-dup by identical text within 2 seconds across client + persisted logs
         const existing: { ts: Date; text: string }[] = [
           ...prev,
-          ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text })),
+          ...((clientLogs as Array<{ ts: string | number | Date; text: string }>)).map((l) => ({
+            ts: new Date(l.ts),
+            text: l.text,
+          })),
         ]
         const windowMs = 2000
         const dup = existing.some(
           (e) => e.text === text && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
         )
         if (dup) return prev
-        return [{ ts: targetTs, text, focusTerritories }, ...prev].slice(0, 500)
+        const base = { ts: targetTs, text }
+        const withFocus =
+          focusTerritories && focusTerritories.length > 0
+            ? { ...base, focusTerritories }
+            : base
+        return [withFocus as LogEntry, ...prev].slice(0, 500)
       })
     }
 
@@ -872,7 +881,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         // De-dup by identical text within 2 seconds across client + persisted logs
         const existing: { ts: Date; text: string }[] = [
           ...prev,
-          ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text })),
+          ...((clientLogs as Array<{ ts: string | number | Date; text: string }>)).map((l) => ({
+            ts: new Date(l.ts),
+            text: l.text,
+          })),
         ]
         const windowMs = 2000
         const dup = existing.some(
@@ -880,7 +892,12 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             e.text === textFallback && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
         )
         if (dup) return prev
-        return [{ ts: targetTs, text: textFallback, rich, focusTerritories }, ...prev].slice(0, 500)
+        const base = { ts: targetTs, text: textFallback, rich }
+        const withFocus =
+          focusTerritories && focusTerritories.length > 0
+            ? { ...base, focusTerritories }
+            : base
+        return [withFocus as LogEntry, ...prev].slice(0, 500)
       })
     }
 
@@ -938,7 +955,12 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         // Before updating, compute round change
         const activePlayers = (() => {
           try {
-            return Math.max(1, (game?.players || []).filter((p) => !p.isEliminated).length)
+            return Math.max(
+              1,
+              ((game?.players || []) as Array<{ isEliminated?: boolean }>).filter(
+                (p) => !p.isEliminated,
+              ).length,
+            )
           } catch {
             return Math.max(1, (game?.players || []).length || 1)
           }
@@ -1067,22 +1089,21 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         })()
         aggRef.current = {
           attackerId,
-          defenderId,
           fromId,
           toId,
           fromName,
           toName,
           attackerName,
-          defenderName,
           initFrom,
           initTo,
           totalKilled: 0,
           totalLost: 0,
           conquered: false,
-          movedArmies: undefined,
           eliminated: [],
           startTs: new Date(delta.timestamp),
           lastTs: new Date(delta.timestamp),
+          ...(defenderId ? { defenderId } : {}),
+          ...(defenderName ? { defenderName } : {}),
         }
       }
 
@@ -1331,7 +1352,9 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           <div className="space-y-3">
             {(
               [
-                ...clientLogs.map((l) => ({ ts: new Date(l.ts), text: l.text }) as LogEntry),
+                ...((clientLogs as Array<{ ts: string | number | Date; text: string }>)).map(
+                  (l) => ({ ts: new Date(l.ts), text: l.text } as LogEntry),
+                ),
                 ...entries,
               ] as LogEntry[]
             )

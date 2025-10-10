@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '../../hooks/redux'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import {
   ensureGameConversation,
   ensureTeamConversation,
@@ -204,7 +204,11 @@ export default function TabbedGameChat({
         ) : activeTabData.type === 'options' ? (
           <GameOptionsPanel className="h-full" />
         ) : (
-          <GameLogPanel gameId={gameId} className="h-full" onFocus={onLogFocus} />
+          <GameLogPanel
+            gameId={gameId}
+            className="h-full"
+            {...(onLogFocus ? { onFocus: onLogFocus } : {})}
+          />
         )}
       </div>
     </div>

@@ -15,7 +15,10 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
   const game = useAppSelector((s) => s.game.currentGame)
   const userId = useAppSelector((s) => s.auth.user?.id)
 
-  const me = useMemo(() => game?.players.find((p) => p.id === userId), [game?.players, userId])
+  const me = useMemo(
+    () => game?.players.find((p: { id: string }) => p.id === userId),
+    [game?.players, userId],
+  )
   const hand = (me?.treasures ?? []) as string[]
   const treasureConfig = useAppSelector((s) => s.room.currentRoom?.treasureConfig) as
     | ({ payoutMode?: string; fixedValue?: number; diamondSetBonus?: number } & Record<

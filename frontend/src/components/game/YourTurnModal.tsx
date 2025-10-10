@@ -37,7 +37,9 @@ export function YourTurnModal({ className = '' }: Props) {
 
   const myColor = useMemo(() => {
     if (!userId || !game) return '#DC2626'
-    const me = game.players.find((p) => (p.userId ?? p.id) === userId)
+    const me = game.players.find(
+      (p: { userId?: string; id: string; color: string }) => (p.userId ?? p.id) === userId,
+    )
     const val = me ? getColorValue(me.color) : '#DC2626'
     const hex = isGradientValue(val) ? (extractFirstHexColor(val) ?? '#DC2626') : val
     return hex

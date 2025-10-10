@@ -2,7 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from 'react-hot-toast'
 import { API_URL } from '@/config'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
-import { socketService } from '../services/socketService'
+import { socketService } from '@/services/socketService'
 import type { GameState, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import {
@@ -39,18 +39,34 @@ export const handleTerritoryClick = createAsyncThunk(
 
     switch (currentGame.phase) {
       case 'reinforcement':
-        await typedDispatch(handleReinforcementClick({ territoryId, territory, selectedTerritory }))
+        await typedDispatch(
+          handleReinforcementClick({
+            territoryId,
+            ...(territory ? { territory } : {}),
+            selectedTerritory,
+          }),
+        )
         return
 
       case 'attack':
         await typedDispatch(
-          handleAttackClick({ territoryId, territory, selectedTerritory, validTargets }),
+          handleAttackClick({
+            territoryId,
+            ...(territory ? { territory } : {}),
+            selectedTerritory,
+            validTargets,
+          }),
         )
         return
 
       case 'fortify':
         await typedDispatch(
-          handleFortifyClick({ territoryId, territory, selectedTerritory, validTargets }),
+          handleFortifyClick({
+            territoryId,
+            ...(territory ? { territory } : {}),
+            selectedTerritory,
+            validTargets,
+          }),
         )
         return
 

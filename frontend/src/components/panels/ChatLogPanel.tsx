@@ -46,9 +46,9 @@ export default function ChatLogPanel({
           <LazyTabbedGameChat
             gameId={gameId}
             currentUserId={currentUserId}
-            userTeamId={userTeamId}
             className="flex-1 h-full max-h-[70vh]"
-            onLogFocus={onLogFocus}
+            {...(userTeamId !== undefined ? { userTeamId } : {})}
+            {...(onLogFocus ? { onLogFocus } : {})}
           />
         </Suspense>
       </div>
