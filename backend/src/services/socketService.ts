@@ -280,11 +280,11 @@ function serializeGameStateForClient(
     players,
     board,
     gameConfig: gameConfig as unknown as SerializedGameState['gameConfig'],
-    ...( (s as SerializedGameState).kingOfTheHillState
-      ? { kingOfTheHillState: (s as SerializedGameState).kingOfTheHillState }
+    ...( (s as unknown as SerializedGameState).kingOfTheHillState
+      ? { kingOfTheHillState: (s as unknown as SerializedGameState).kingOfTheHillState }
       : {}),
-    ...( (s as SerializedGameState).assassinationTargets
-      ? { assassinationTargets: (s as SerializedGameState).assassinationTargets }
+    ...( (s as unknown as SerializedGameState).assassinationTargets
+      ? { assassinationTargets: (s as unknown as SerializedGameState).assassinationTargets }
       : {}),
     cards: Array.isArray((s as unknown as SerializedGameState).cards)
       ? (s as unknown as SerializedGameState).cards
