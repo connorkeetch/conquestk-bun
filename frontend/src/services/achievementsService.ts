@@ -45,7 +45,10 @@ const normalizeIcon = (obj: Partial<Achievement | UserAchievement>): string | un
 
 export const achievementsService = {
   async getMyAchievements(signal?: AbortSignal): Promise<AchievementsResponse> {
-    const res = await apiClient.get('/profile/achievements', { signal })
+    const res = await apiClient.get(
+      '/profile/achievements',
+      ...(signal ? ([{ signal }] as const) : ([{}] as const)),
+    )
     const data = (res.data || {}) as Partial<AchievementsResponse>
     const unlocked = Array.isArray(data.unlocked) ? data.unlocked : []
     const available = Array.isArray(data.available) ? data.available : []

@@ -77,7 +77,7 @@ export const GameErrorBoundary: React.FC<GameErrorBoundaryProps> = ({ children, 
       key={resetKey}
       level="page"
       onError={handleError}
-      fallback={<GameErrorFallback gameId={gameId} resetError={resetError} />}
+      fallback={<GameErrorFallback {...(gameId ? { gameId } : {})} resetError={resetError} />}
     >
       {children}
     </ErrorBoundary>

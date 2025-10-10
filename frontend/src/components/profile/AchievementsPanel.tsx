@@ -91,7 +91,7 @@ const AchievementsPanel: React.FC<Props> = ({ className = '' }) => {
         }`}
       >
         <div className="shrink-0">
-          <BadgeIcon icon={icon} name={name} />
+          <BadgeIcon name={name} {...(icon ? { icon } : {})} />
         </div>
         <div className="flex-1 text-left">
           <div className="flex items-center gap-2">
