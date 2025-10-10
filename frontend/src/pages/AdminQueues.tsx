@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { adminService } from '../services/adminService'
+import { apiClient } from '../services/api'
 
 type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
 
@@ -101,14 +102,25 @@ export default function AdminQueues() {
         icon="📥"
         actions={
           <div className="flex items-center gap-2">
-            <a
-              href="/api/admin/queues/ui"
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  // Ask backend to set a short-lived HttpOnly cookie for the UI path
+                  await apiClient.post('/admin/queues/ui/grant')
+                  window.open('/api/admin/queues/ui', '_blank', 'noopener')
+                } catch (e) {
+                  alert(
+                    e instanceof Error
+                      ? e.message
+                      : 'Failed to prepare access for Bull Board',
+                  )
+                }
+              }}
               className="px-3 py-2 text-sm rounded bg-purple-600 hover:brightness-110"
             >
               Open Bull Board
-            </a>
+            </button>
             <button
               type="button"
               className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80"
