@@ -1,4 +1,4 @@
-import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { query } from '../config/database.js';
 import { clanService } from '../services/clanService.js';
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js';
@@ -93,6 +93,7 @@ export const authenticateToken = async (req, res, next) => {
         next();
     }
     catch (error) {
+        const { TokenExpiredError } = jwt;
         if (error instanceof TokenExpiredError) {
             logger.info('Token verification failed: token expired', {
                 path: req.path,

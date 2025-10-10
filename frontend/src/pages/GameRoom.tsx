@@ -1,5 +1,5 @@
 import type { TreasureConfig } from '@conquestk/shared'
-import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Activity, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'
 // Lazy-load heavy modals to trim initial bundle
@@ -2939,7 +2939,12 @@ export default function GameRoom() {
 
       {/* Settings Modal */}
       <Suspense fallback={null}>
-        <LazySettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+        <Activity mode={settingsModalOpen ? 'visible' : 'hidden'}>
+          <LazySettingsModal
+            isOpen={settingsModalOpen}
+            onClose={() => setSettingsModalOpen(false)}
+          />
+        </Activity>
       </Suspense>
 
       {/* Game Room Footer (mobile + desktop) */}

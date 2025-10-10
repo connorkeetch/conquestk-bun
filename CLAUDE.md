@@ -8,16 +8,16 @@
 
 ## Project snapshot
 - ConquestK is a Risk-inspired strategy game with an Express/Node backend (`backend/`), a React 19 + Redux Toolkit frontend (`frontend/`), and shared types/utilities in `shared/`.
-- Local development expects Node.js 22.12+, npm 10+, access to PostgreSQL, and Redis for socket scaling and sessions.
+- Local development expects Node.js 24+, npm 10+, access to PostgreSQL, and Redis for socket scaling and sessions.
 - Backend routes live under `backend/src/routes`, with services in `backend/src/services`. Frontend pages are in `frontend/src/pages` with reusable components in `frontend/src/components`.
 
 ## Architecture & stack
 - Frontend: React 19, TypeScript, Redux Toolkit, Vite 7, Tailwind CSS v4, socket.io client.
-- Backend: Node.js 22+, Express 5, TypeScript, Socket.io, PostgreSQL (Railway-hosted), Redis, BullMQ for background work.
+- Backend: Node.js 24+, Express 5, TypeScript, Socket.io, PostgreSQL (Railway-hosted), Redis, BullMQ for background work.
 - Testing: Vitest on the frontend, Jest on the backend. Biome handles linting/formatting (2 spaces, single quotes in TS, double quotes in JSX).
 
 ## Tooling requirements
-- Node.js `>=22.12.0` and npm `>=10.0.0` (enforced via `engines` across packages).
+- Node.js `>=24.0.0` and npm `>=10.0.0` (enforced via `engines` across packages).
 - PostgreSQL reachable at `localhost:5432` (or the Railway connection string) and Redis at `localhost:6379` for local dev.
 - pnpm/yarn are unsupported; use npm workspaces starting from repository root.
 

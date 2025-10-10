@@ -66,7 +66,7 @@ Add `backend/src/services/channels/`:
 
 > **Slack bot deferment:** A richer Slack bot channel (chat.postMessage + OAuth) remains a Phase 3+ enhancement. The webhook channel already covers our launch requirements, so we removed the separate bot implementation from the near-term scope.
 
-Outbound HTTP calls should use native `fetch` (Node 22+) or `node-fetch`, include retries with jittered exponential backoff (up to three attempts), respect `Retry-After` on 429s, and implement a circuit breaker per channel (`open` after N failures, half-open after cooldown). Log with `logger.child({ channel, eventId, type, severity })`.
+Outbound HTTP calls should use native `fetch` (Node 24+) or `node-fetch`, include retries with jittered exponential backoff (up to three attempts), respect `Retry-After` on 429s, and implement a circuit breaker per channel (`open` after N failures, half-open after cooldown). Log with `logger.child({ channel, eventId, type, severity })`).
 
 ### 4. Configuration & Secrets
 Configuration is environment-driven (Railway + local `.env.*`). Secrets should live in `backend/.env.local` (ignored by git) during development and in Railway/production secrets for deployed environments. Example variables:

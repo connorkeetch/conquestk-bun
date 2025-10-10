@@ -38,8 +38,8 @@
     "howler": "^2.2.4",
     "lucide-react": "0.545.0",
     "preline": "^3.2.3",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "react-hook-form": "^7.63.0",
     "react-hot-toast": "^2.6.0",
     "react-markdown": "^10.1.0",
@@ -67,7 +67,7 @@
     "vitest": "3.2.4"
   },
   "engines": {
-    "node": ">=22.11.0",
+    "node": ">=24.0.0",
     "npm": ">=10.0.0"
   }
 }

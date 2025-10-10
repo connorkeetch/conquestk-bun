@@ -3,18 +3,18 @@
   "version": "1.0.0",
   "description": "Shared types for ConquestK",
   "main": "dist/types/index.js",
-  "types": "types/index.ts",
+  "types": "types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./types/index.ts",
+      "types": "./types/index.d.ts",
       "default": "./dist/types/index.js"
     },
     "./types": {
-      "types": "./types/index.ts",
+      "types": "./types/index.d.ts",
       "default": "./dist/types/index.js"
     },
     "./types/*": {
-      "types": "./types/*.ts",
+      "types": "./types/*.d.ts",
       "default": "./dist/types/*.js"
     },
     "./constants/*": {

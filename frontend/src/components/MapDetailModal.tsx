@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import type { FullMapData } from '../services/mapService'
 import { mapService } from '../services/mapService'
 import UnifiedMapDisplay from './UnifiedMapDisplay'
@@ -45,26 +45,22 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
     })
   }, [isOpen, mapId])
 
+  const onEscape = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
+    if (!isOpen) return
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
-      }
+      if (event.key === 'Escape') onEscape()
     }
-
     window.addEventListener('keydown', handleKeyDown)
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = originalOverflow
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   const handleBackdropClick = useCallback(() => {
     onClose()

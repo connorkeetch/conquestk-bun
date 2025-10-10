@@ -34,7 +34,8 @@ export interface PlayerDelta extends DeltaBase {
   }
 }
 
-import type { GamePhase } from './index'
+// Local copies to avoid circular type imports from './index' when used as a package
+export type GamePhase = 'reinforcement' | 'attack' | 'fortify' | 'finished'
 
 export interface PhaseChangeDelta extends DeltaBase {
   type: 'PHASE_CHANGE'
@@ -88,7 +89,7 @@ export interface FortifyResultDelta extends DeltaBase {
   playerId: string
 }
 
-import type { Metal } from './index'
+export type Metal = 'bronze' | 'silver' | 'gold' | 'diamond'
 
 export interface TreasureAwardedDelta extends DeltaBase {
   type: 'TREASURE_AWARDED'

@@ -187,7 +187,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     const user = result.rows[0]
     const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
-    const nextRank = RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
+    const nextRank = RANKS.find((candidate: { minRating: number }) => candidate.minRating > rank.minRating) ?? null
     const gamesPlayed = user.games_played || 0
     const wins = user.games_won || 0
     const recordedLosses: number | null = user.games_lost ?? null
@@ -265,7 +265,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     const user = result.rows[0]
     const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
-    const nextRank = RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
+    const nextRank = RANKS.find((candidate: { minRating: number }) => candidate.minRating > rank.minRating) ?? null
     const gamesPlayed = user.games_played || 0
     const wins = user.games_won || 0
     const recordedLosses: number | null = user.games_lost ?? null

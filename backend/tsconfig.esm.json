@@ -10,11 +10,13 @@
     "rootDir": "./src",
     "baseUrl": "./",
     "paths": {
-      "@conquestk/shared/*": ["../shared/*"],
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@conquestk/shared/types": ["../shared/types/index.d.ts"],
+      "@conquestk/shared/types/*": ["../shared/types/*.d.ts"],
+      "@conquestk/shared/*": ["../shared/dist/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/types/**/*.d.ts"],
   "exclude": [
     "node_modules",
     "dist",

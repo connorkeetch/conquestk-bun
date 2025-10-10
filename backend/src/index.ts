@@ -22,10 +22,8 @@ try {
 }
 
 // Import types first
-import type { NextFunction, Request, RequestHandler, Response, Router } from 'express'
-import type { Logger } from 'winston'
+import type { NextFunction, Request, Response } from 'express'
 import type { RedisClients } from './config/redis.js'
-import type { SuspiciousActivityTracker } from './middleware/rateLimiter.js'
 import { getErrorMessage, toKnownError } from './utils/errorHelpers.js'
 import { createServer } from 'node:http'
 import path from 'node:path'
@@ -345,10 +343,7 @@ try {
 } catch (_e) {
   // If queues are not initialized yet, Bull Board will become available later after init
 }
-app.use(
-  '/api/preferences',
-  createPreferencesRouter(getPool()),
-)
+app.use('/api/preferences', createPreferencesRouter(getPool()))
 
 // Simple test endpoint that doesn't require database
 app.get('/test', (_req: Request, res: Response) => {
@@ -603,11 +598,12 @@ if (process.env.NODE_ENV !== 'production') {
 // Staging should behave exactly like production for testing
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
 if (isProductionLike) {
-  const fs = await import('node:fs')
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic import .default interop
-  const fsD: any = fs
-  const existsSync = (p: string) => (fsD.default?.existsSync ? fsD.default.existsSync(p) : (fs as any).existsSync(p))
-  const readdirSync = (p: string) => (fsD.default?.readdirSync ? fsD.default.readdirSync(p) : (fs as any).readdirSync(p))
+  const fsNs = (await import('node:fs')) as unknown as
+    | typeof import('node:fs')
+    | { default: typeof import('node:fs') }
+
+  const fsModule: typeof import('node:fs') = 'default' in fsNs ? fsNs.default : fsNs
+  const { existsSync, readdirSync } = fsModule
   const frontendPath = path.join(__dirname, '../public')
 
   logger.debug(`📁 Setting up static file serving from: ${frontendPath}`)
@@ -617,7 +613,7 @@ if (isProductionLike) {
     const files = readdirSync(frontendPath)
     logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`)
 
-    const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'))
+    const indexExists = fsModule.existsSync(path.join(frontendPath, 'index.html'))
     logger.debug(`📁 index.html exists: ${indexExists}`)
   }
 

@@ -1,5 +1,5 @@
 import { Bell, MessageSquare } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Activity, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 import { getColorValue, PLAYER_COLORS, type PlayerColor } from '@/constants/colors'
@@ -580,7 +580,9 @@ export default function Header() {
         </div>
       </div>
 
-      <InboxDrawer isOpen={inboxOpen} onClose={() => dispatch(closeInbox())} />
+      <Activity mode={inboxOpen ? 'visible' : 'hidden'}>
+        <InboxDrawer isOpen={inboxOpen} onClose={() => dispatch(closeInbox())} />
+      </Activity>
     </>
   )
 }

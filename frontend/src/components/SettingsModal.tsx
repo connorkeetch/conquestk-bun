@@ -1,6 +1,6 @@
 import { normalizeThemeId } from '@conquestk/shared/types/themes'
 import type React from 'react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 import { applyTheme, storeTheme, THEMES } from '../config/themes.config'
 import type { PlayerColor } from '../constants/colors'
 import {
@@ -46,40 +46,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [isMuted, setIsMuted] = useState(() => audioService.isMutedState())
 
   // Handle keyboard shortcuts and escape key
+  const onEscape = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
+    if (!isOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
-      }
+      if (event.key === 'Escape') onEscape()
     }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'hidden'
-    }
-
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   // Handle clicking outside modal
+  const onOutsideClick = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
+    if (!isOpen) return
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose()
+        onOutsideClick()
       }
     }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
+    document.addEventListener('mousedown', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   if (!isOpen) return null
 
