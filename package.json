@@ -39,7 +39,10 @@
     "check:services": "node scripts/ensure-services.js",
     "check:services:start": "node scripts/ensure-services.js --start",
     "setup:env": "node scripts/setup-environments.js",
-    "generate:odds": "node scripts/generateCombatOutcomes.js"
+    "generate:odds": "node scripts/generateCombatOutcomes.js",
+    "codemod:esm:check": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src",
+    "codemod:esm:apply": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src --apply",
+    "scan:requires": "node scripts/codemods/scan-requires.mjs --target backend/src"
   },
   "repository": {
     "type": "git",
@@ -80,6 +83,3 @@
     "uuid": "11.1.0"
   }
 }
-    "codemod:esm:check": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src",
-    "codemod:esm:apply": "node scripts/codemods/ensure-import-extensions.mjs --target backend/src --apply",
-    "scan:requires": "node scripts/codemods/scan-requires.mjs --target backend/src",

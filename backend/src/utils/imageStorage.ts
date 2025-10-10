@@ -1,5 +1,5 @@
 import path from 'node:path'
-import sizeOf from 'image-size'
+import { imageSize } from 'image-size'
 import { getPublicAssetUrl, uploadAsset } from './assetStorage.js'
 import { logger } from './logger.js'
 
@@ -70,7 +70,7 @@ export const storeImageBuffer = async (
   let width = 800
   let height = 600
   try {
-    const dimensions = sizeOf(buffer)
+    const dimensions = imageSize(buffer)
     width = dimensions.width ?? width
     height = dimensions.height ?? height
   } catch (dimensionError) {

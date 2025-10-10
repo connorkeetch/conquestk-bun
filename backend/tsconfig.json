@@ -4,15 +4,16 @@
     "module": "NodeNext",
     "lib": ["ES2020", "DOM"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "../",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
+    "declarationMap": false,
     "sourceMap": true,
+    "noEmit": true,
     "removeComments": true,
     "noImplicitAny": true,
     "useUnknownInCatchVariables": false,
@@ -25,7 +26,10 @@
     "isolatedModules": true,
     "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@risk-game/shared/types": ["../shared/types/index.d.ts"],
+      "@risk-game/shared/types/*": ["../shared/types/*"],
+      "@risk-game/shared/*": ["../shared/dist/*"]
     }
   },
   "include": ["src/**/*", "src/types/**/*.d.ts"],

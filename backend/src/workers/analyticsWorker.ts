@@ -1,10 +1,11 @@
 import { type Job, Worker } from 'bullmq'
-import Redis, { type RedisOptions } from 'ioredis'
+import type { RedisOptions } from 'ioredis'
 import { getRedisClient } from '../config/redis.js'
 import { GameService } from '../services/gameService.js'
 import { queueService } from '../services/queueService.js'
 import { startWorkerHeartbeat } from '../services/workerHeartbeat.js'
 import { logger } from '../utils/logger.js'
+import { createRedisFromOptions } from '../utils/redisFactory.js'
 
 type AnalyticsJob = {
   event: 'append_log' | 'append_turn_stats'
@@ -61,7 +62,7 @@ export class AnalyticsWorker {
         connection: (() => {
           const redis = getRedisClient()
           const baseOpts = (redis?.options ?? {}) as RedisOptions
-          return new Redis({
+          return createRedisFromOptions({
             ...baseOpts,
             enableReadyCheck: false,
             lazyConnect: false,

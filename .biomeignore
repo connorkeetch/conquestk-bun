@@ -1,5 +1,11 @@
 **/node_modules/**
 **/dist/**
+backend/dist-esm/**
+backend/public/**
+frontend/dist/**
+shared/dist/**
+**/*.d.ts
+**/*.map
 **/.git/**
 **/build/**
 **/*.min.js

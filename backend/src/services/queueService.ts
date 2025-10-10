@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { type Job, type JobsOptions, Queue, QueueEvents } from 'bullmq'
-import Redis, { type RedisOptions } from 'ioredis'
+import type { Redis as IORedis, RedisOptions } from 'ioredis'
 import { getRedisClient } from '../config/redis.js'
 import type { GameAction } from '../types/game.js'
 import { logger } from '../utils/logger.js'
+import { createRedisFromOptions } from '../utils/redisFactory.js'
 
 // Note: BullMQ sampling uses getJobs on states; no extra inspection types needed.
 
@@ -126,7 +127,7 @@ type QueueHealthOperational = {
 export type QueueHealthResult = QueueHealthOperational | QueueHealthDisabled
 
 export class QueueService {
-  private redis: Redis | null = null
+  private redis: IORedis | null = null
   private queues: Map<string, Queue> = new Map()
   private deadLetterQueues: Map<string, Queue> = new Map()
   private queueDisplayNames: Map<string, string> = new Map()
@@ -677,8 +678,8 @@ export class QueueService {
     // BullMQ does not emit job events on Queue directly; those are available via QueueEvents or Worker.
     // Create QueueEvents listener for failed jobs so we can implement DLQ semantics globally.
     try {
-      const baseOpts = (this.redis?.options ?? {}) as import('ioredis').RedisOptions
-      const eventsConn = new Redis({
+      const baseOpts = (this.redis?.options ?? {}) as RedisOptions
+      const eventsConn = createRedisFromOptions({
         ...baseOpts,
         enableReadyCheck: false,
         lazyConnect: false,
