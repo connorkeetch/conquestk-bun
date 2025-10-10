@@ -209,7 +209,11 @@ class SocketService {
     }, 1000)
     this.pendingAttackAcks.set(key, fallback)
 
-    this.socket?.emit('attack', { roomId, fromTerritoryId, toTerritoryId, armies }, () => {
+    const attackPayload =
+      typeof armies === 'number'
+        ? { roomId, fromTerritoryId, toTerritoryId, armies }
+        : { roomId, fromTerritoryId, toTerritoryId }
+    this.socket?.emit('attack', attackPayload as Parameters<ClientToServerEvents['attack']>[0], () => {
       clear()
     })
   }
@@ -360,27 +364,29 @@ class SocketService {
 
       const normalizedPlayer: RoomPlayer = {
         id: payload.player.id,
-        userId: payload.player.userId ?? undefined,
-        aiPlayerId: payload.player.aiPlayerId ?? undefined,
+        ...(payload.player.userId !== undefined
+          ? { userId: payload.player.userId ?? null }
+          : {}),
+        ...(payload.player.aiPlayerId !== undefined
+          ? { aiPlayerId: payload.player.aiPlayerId ?? null }
+          : {}),
         username: payload.player.username,
         joinedAt: payload.player.joinedAt,
         isReady: payload.player.isReady,
         readyAt: payload.player.readyAt,
-        teamId:
-          payload.player.teamId === null
-            ? null
-            : payload.player.teamId === undefined
-              ? undefined
-              : payload.player.teamId,
+        ...(payload.player.teamId !== undefined
+          ? { teamId: payload.player.teamId }
+          : {}),
         isAi: payload.player.isAi,
-        aiDifficulty: payload.player.aiDifficulty ?? undefined,
-        aiPersonalitySeed:
-          payload.player.aiPersonalitySeed === null ||
-          payload.player.aiPersonalitySeed === undefined
-            ? (payload.player.aiPersonalitySeed ?? undefined)
-            : payload.player.aiPersonalitySeed,
-        selected_color:
-          (payload.player as { selectedColor?: string | null }).selectedColor ?? undefined,
+        ...(payload.player.aiDifficulty !== undefined
+          ? { aiDifficulty: payload.player.aiDifficulty }
+          : {}),
+        ...(payload.player.aiPersonalitySeed !== undefined
+          ? { aiPersonalitySeed: payload.player.aiPersonalitySeed }
+          : {}),
+        ...(typeof (payload.player as { selectedColor?: string | null }).selectedColor !== 'undefined'
+          ? { selected_color: (payload.player as { selectedColor?: string | null }).selectedColor ?? null }
+          : {}),
       }
 
       store.dispatch(
@@ -402,8 +408,8 @@ class SocketService {
         removePlayerFromRoom({
           roomId: payload.roomId,
           playerSlotId: payload.playerSlotId,
-          userId: payload.userId ?? undefined,
-          aiPlayerId: payload.aiPlayerId ?? undefined,
+          ...(payload.userId !== undefined ? { userId: payload.userId ?? null } : {}),
+          ...(payload.aiPlayerId !== undefined ? { aiPlayerId: payload.aiPlayerId ?? null } : {}),
         }),
       )
     })
@@ -476,7 +482,7 @@ class SocketService {
             title: "It's your turn!",
             message: `It's your turn - ${payload.phase} phase`,
             read: false,
-            actionUrl: `/room/${payload.roomId}`,
+            ...(payload.roomId ? { actionUrl: `/room/${payload.roomId}` } : {}),
             actionLabel: 'Go to game',
             metadata: {
               gameId: payload.roomId,
@@ -508,8 +514,8 @@ class SocketService {
             recordBattleResult({
               fromId: br.fromTerritory.id,
               toId: br.toTerritory.id,
-              attackerId: br.attackerId ?? undefined,
-              defenderId: br.defenderId ?? undefined,
+              ...(br.attackerId !== undefined ? { attackerId: br.attackerId ?? null } : {}),
+              ...(br.defenderId !== undefined ? { defenderId: br.defenderId ?? null } : {}),
               attackerDice: Array.isArray(br.attackerDice) ? br.attackerDice : [],
               defenderDice: Array.isArray(br.defenderDice) ? br.defenderDice : [],
               attackerLosses: br.attackerLosses ?? 0,
@@ -829,14 +835,17 @@ class SocketService {
       const lifecyclePayload: RoomLifecyclePayload = {
         roomId: payload.roomId,
         status: payload.status,
-        lifecyclePhase: payload.lifecyclePhase,
-        turnNumber: payload.turnNumber,
+        ...(payload.lifecyclePhase !== undefined ? { lifecyclePhase: payload.lifecyclePhase } : {}),
+        ...(typeof payload.turnNumber === 'number' ? { turnNumber: payload.turnNumber } : {}),
         currentTurnUserId: payload.currentTurnUserId,
         turnExpiresAt: payload.turnExpiresAt,
-        timeBankSecondsRemaining:
-          // Cast to the superset type that includes optional field from shared types
-          (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
-            .timeBankSecondsRemaining,
+        ...(typeof (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
+          .timeBankSecondsRemaining !== 'undefined'
+          ? {
+              timeBankSecondsRemaining: (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
+                .timeBankSecondsRemaining ?? null,
+            }
+          : {}),
         readyCheckStartedAt: payload.readyCheckStartedAt,
         statusMessage:
           typeof (payload as Record<string, unknown>).statusMessage === 'string'
@@ -848,10 +857,9 @@ class SocketService {
           (payload as Record<string, unknown>).statusMessageLevel === 'info'
             ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
             : undefined,
-        usingTimeBank:
-          typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
-            ? ((payload as Record<string, unknown>).usingTimeBank as boolean)
-            : undefined,
+        ...(typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
+          ? { usingTimeBank: (payload as Record<string, unknown>).usingTimeBank as boolean }
+          : {}),
         replacementPendingUserId:
           typeof (payload as Record<string, unknown>).replacementPendingUserId === 'string'
             ? ((payload as Record<string, unknown>).replacementPendingUserId as string)
@@ -966,8 +974,10 @@ class SocketService {
       const lifecyclePayload: RoomLifecyclePayload = {
         roomId,
         status,
-        lifecyclePhase: payload.lifecyclePhase as GameRoom['lifecyclePhase'] | undefined,
-        turnNumber: typeof payload.turnNumber === 'number' ? payload.turnNumber : undefined,
+        ...(payload.lifecyclePhase !== undefined
+          ? { lifecyclePhase: payload.lifecyclePhase as GameRoom['lifecyclePhase'] }
+          : {}),
+        ...(typeof payload.turnNumber === 'number' ? { turnNumber: payload.turnNumber } : {}),
         currentTurnUserId:
           typeof payload.currentTurnUserId === 'string'
             ? payload.currentTurnUserId
@@ -975,8 +985,13 @@ class SocketService {
               ? null
               : undefined,
         turnExpiresAt: typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
-        timeBankSecondsRemaining: (payload as Parameters<ServerToClientEvents['room-update']>[0])
-          .timeBankSecondsRemaining,
+        ...(typeof (payload as Parameters<ServerToClientEvents['room-update']>[0])
+          .timeBankSecondsRemaining !== 'undefined'
+          ? {
+              timeBankSecondsRemaining: (payload as Parameters<ServerToClientEvents['room-update']>[0])
+                .timeBankSecondsRemaining ?? null,
+            }
+          : {}),
         readyCheckStartedAt:
           typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
         statusMessage:
@@ -989,10 +1004,9 @@ class SocketService {
           (payload as Record<string, unknown>).statusMessageLevel === 'info'
             ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
             : undefined,
-        usingTimeBank:
-          typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
-            ? ((payload as Record<string, unknown>).usingTimeBank as boolean)
-            : undefined,
+        ...(typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
+          ? { usingTimeBank: (payload as Record<string, unknown>).usingTimeBank as boolean }
+          : {}),
         replacementPendingUserId:
           typeof (payload as Record<string, unknown>).replacementPendingUserId === 'string'
             ? ((payload as Record<string, unknown>).replacementPendingUserId as string)
@@ -1019,11 +1033,21 @@ class SocketService {
       const roomUpdateBase: Partial<GameRoom> = {
         id: roomId,
         status,
-        lifecyclePhase: lifecyclePayload.lifecyclePhase,
-        turnNumber: lifecyclePayload.turnNumber,
-        currentTurnUserId: lifecyclePayload.currentTurnUserId ?? undefined,
-        turnExpiresAt: lifecyclePayload.turnExpiresAt ?? undefined,
-        readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt ?? undefined,
+        ...(lifecyclePayload.lifecyclePhase !== undefined
+          ? { lifecyclePhase: lifecyclePayload.lifecyclePhase }
+          : {}),
+        ...(lifecyclePayload.turnNumber !== undefined
+          ? { turnNumber: lifecyclePayload.turnNumber }
+          : {}),
+        ...(lifecyclePayload.currentTurnUserId !== undefined
+          ? { currentTurnUserId: lifecyclePayload.currentTurnUserId ?? null }
+          : {}),
+        ...(lifecyclePayload.turnExpiresAt !== undefined
+          ? { turnExpiresAt: lifecyclePayload.turnExpiresAt }
+          : {}),
+        ...(lifecyclePayload.readyCheckStartedAt !== undefined
+          ? { readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt }
+          : {}),
         ...(lifecyclePayload.statusMessage !== undefined
           ? {
               statusMessage: lifecyclePayload.statusMessage ?? null,
