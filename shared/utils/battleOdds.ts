@@ -1,4 +1,4 @@
-import { computeRollOdds } from './combatOdds'
+import { computeRollOdds } from './combatOdds.js'
 
 // Optional precomputed lookup table; can be injected at runtime by frontend
 let precomputed: number[][] | null = null

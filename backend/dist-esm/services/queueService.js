@@ -466,8 +466,10 @@ export class QueueService {
     attachQueueEventHandlers(queueKey, queue, deadLetterQueue) {
         try {
             const baseOpts = (this.redis?.options ?? {});
+            const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts;
             const eventsConn = createRedisFromOptions({
-                ...baseOpts,
+                ...withoutCommandTimeout,
+                connectionName: `queue-events:${queue.name}`,
                 enableReadyCheck: false,
                 lazyConnect: false,
                 maxRetriesPerRequest: null,
@@ -498,9 +500,20 @@ export class QueueService {
                 }
             });
             events.on('error', (err) => {
+                const normalized = this.formatQueueError(err);
+                const { logNow, occurrences } = this.shouldLogQueueError(`${queue.name}:events`, normalized.message);
+                if (!logNow) {
+                    logger.debug('Suppressed repetitive queue events error', {
+                        queue: queue.name,
+                        message: normalized.message,
+                        occurrences,
+                    });
+                    return;
+                }
                 logger.warn('QueueEvents error', {
                     queue: queue.name,
-                    error: err instanceof Error ? err.message : err,
+                    ...normalized,
+                    occurrences,
                 });
             });
             this.queueEvents.set(queueKey, events);

@@ -58,3 +58,15 @@ The CI job installs Rust + wasm-pack and runs `npm run odds:test` on Linux. Benc
 - Behavior: forces odds engine to `shadow`, runs N randomized battles, counts divergences via odds facade logger, then restores previous engine.
 - Metrics: updates `odds_shadow_checked_total`, `odds_shadow_divergence_total`, and `odds_shadow_divergence_rate` (gauge) labeled by environment and kind=`battle`.
 - Response: `{ trials, divergences, divergenceRate, durationMs, opsPerSec, range }`
+
+## Nightly Scheduled Verification (optional)
+
+- Implemented as a BullMQ job under the Maintenance worker.
+- Enable via environment variables:
+  - `ODDS_SHADOW_SCHEDULED=true` (enable nightly run)
+  - `ODDS_SHADOW_CRON="30 3 * * *"` (cron schedule; default 03:30 daily)
+  - `ODDS_SHADOW_TRIALS=100000` (number of battles)
+  - `ODDS_SHADOW_ATT_MIN=5`, `ODDS_SHADOW_ATT_MAX=40`
+  - `ODDS_SHADOW_DEF_MIN=5`, `ODDS_SHADOW_DEF_MAX=35`
+  - `ODDS_SHADOW_SEED_HI=0xA1B2C3D4`, `ODDS_SHADOW_SEED_LO=0x0F1E2D3C`
+- Metrics updated after each run: `odds_shadow_*` as above.

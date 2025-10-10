@@ -45,6 +45,6 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@conquestk/wasm-odds": "*"
+    "@conquestk/wasm-odds": "file:./wasm-odds"
   }
 }

@@ -1,9 +1,10 @@
 import type { BattleResult, StepResult, MonteCarloResult } from '@conquestk/wasm-odds/types'
 import { loadWasm } from '@conquestk/wasm-odds'
 
-let apiPromise: Promise<ReturnType<typeof loadWasm>> | null = null
+type WasmApi = Awaited<ReturnType<typeof loadWasm>>
+let apiPromise: Promise<WasmApi> | null = null
 
-async function getApi() {
+async function getApi(): Promise<WasmApi> {
   if (!apiPromise) apiPromise = loadWasm()
   return apiPromise
 }

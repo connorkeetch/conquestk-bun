@@ -5,13 +5,13 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "wasm:build": "wasm-pack build --release --target bundler --out-dir ../pkg crate && wasm-pack build --release --target nodejs --out-dir ../pkg-node crate",
     "build:ts": "tsc -p tsconfig.json",
-    "wasm:build": "wasm-pack build --release --target bundler --out-dir pkg crate",
     "wasm:build:dev": "wasm-pack build --dev --target bundler --out-dir pkg crate",
     "test:rs": "cd crate && cargo test",
     "bench:rs": "cd crate && cargo bench",
-    "test:ts": "vitest run -w 1",
-    "build": "npm run build:ts && npm run wasm:build"
+    "test:ts": "vitest run",
+    "build": "npm run wasm:build && npm run build:ts"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "typescript": "^5.9.2",
-    "vitest": "^2.1.3"
+    "vitest": "3.2.4"
   },
   "keywords": [
     "risk",
