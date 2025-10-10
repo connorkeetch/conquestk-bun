@@ -964,16 +964,21 @@ router.post(
         isAdmin: Boolean(req.user?.isAdmin),
       })
       const bodyWithSectors = req.body as unknown as { sectorId?: string; continentId?: string }
-      const territory = await mapService.createTerritory({
+      const baseTerritory = {
         mapId: req.params.mapId,
         territoryId: req.body.territoryId,
         name: req.body.name,
-        sectorId: bodyWithSectors.sectorId ?? bodyWithSectors.continentId,
         boundaryCoords: req.body.boundaryCoords,
         armyPosition: req.body.armyPosition,
         abilityTypeId: req.body.abilityTypeId,
         startingOwnerSlot: req.body.startingOwnerSlot,
         startingArmies: req.body.startingArmies,
+      }
+      const territory = await mapService.createTerritory({
+        ...baseTerritory,
+        ...(bodyWithSectors.sectorId || bodyWithSectors.continentId
+          ? { sectorId: (bodyWithSectors.sectorId ?? bodyWithSectors.continentId) as string }
+          : {}),
       })
 
       return res.status(201).json(territory)
