@@ -28,7 +28,7 @@
     "paths": {
       "@/*": ["src/*"],
       "@conquestk/shared/types": ["../shared/types/index.d.ts"],
-      "@conquestk/shared/types/*": ["../shared/types/*"],
+      "@conquestk/shared/types/*": ["../shared/types/*.d.ts"],
       "@conquestk/shared/*": ["../shared/dist/*"]
     }
   },

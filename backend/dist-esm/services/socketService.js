@@ -522,22 +522,6 @@ export function setupSocketHandlers(io) {
                 isCapital,
             });
         }));
-        socket.on('transferConquestArmies', withErrorHandler(socket, 'transferConquestArmies', async (data) => {
-            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'transferConquestArmies', prefer: 'game-action (future: transfer_conquest)' });
-            if (!data ||
-                !data.roomId ||
-                !data.fromTerritoryId ||
-                !data.toTerritoryId ||
-                typeof data.armies !== 'number') {
-                throw new Error('Invalid conquest transfer data');
-            }
-            const userId = requireUserId(socket);
-            const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId);
-            if (!hasAccess) {
-                throw new Error('Unauthorized: You are not a member of this game');
-            }
-            await gameActionProcessor.processTransferConquest(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies, socket.id);
-        }));
         socket.on('fortify', withErrorHandler(socket, 'fortify', async (data) => {
             logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'fortify', prefer: 'game-action' });
             if (!data ||

@@ -3,7 +3,7 @@
 <div align="center">
 
 [![Live Demo](https://img.shields.io/badge/live-conquestk.com-blue)](https://conquestk.com)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-green)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D24.0-green)](https://nodejs.org)
 [![React](https://img.shields.io/badge/react-19.1-blue)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/typescript-5.9-blue)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-MIT-purple)](LICENSE)
@@ -39,7 +39,7 @@ community-built maps, and rich administrative tooling.
 
 ### Prerequisites
 
-- Node.js **22.12** or newer
+- Node.js **24** or newer
 - npm **10** or newer
 - PostgreSQL **14+**
 - Redis **6+** (recommended for sessions, rate limiting, and Socket.io scaling)

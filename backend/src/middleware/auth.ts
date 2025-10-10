@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
-import jwt, { TokenExpiredError } from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 import { query } from '../config/database.js'
 import { clanService } from '../services/clanService.js'
 import type { RequestUser } from '../types/express.js'
@@ -147,6 +147,9 @@ export const authenticateToken: RequestHandler = async (
 
     next()
   } catch (error) {
+    const { TokenExpiredError } = jwt as unknown as {
+      TokenExpiredError: new (...args: unknown[]) => Error
+    }
     if (error instanceof TokenExpiredError) {
       logger.info('Token verification failed: token expired', {
         path: req.path,

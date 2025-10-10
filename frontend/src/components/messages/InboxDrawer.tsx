@@ -1,5 +1,5 @@
 import { Loader2, X } from 'lucide-react'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from 'react'
 import MessageInput from '@/components/chat/MessageInput'
 import MessageList, { type DisplayMessage } from '@/components/chat/MessageList'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
@@ -199,13 +199,18 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     }
   }, [searchQuery, isOpen, currentUserId])
 
-  // Close on ESC
+  // Close on ESC using Effect Event to always see latest onClose without retriggering the effect
+  const onEscape = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
     if (!isOpen) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onEscape()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   const sortedConversations = useMemo(() => {
     return [...conversations].sort(

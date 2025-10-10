@@ -155,7 +155,7 @@ npm run notify -- \
 ## 🔄 CI/CD Pipeline
 
 GitHub Actions (`.github/workflows/deploy.yml`) runs on pushes and pull requests targeting `dev` or `main`:
-1. `typecheck` job (Node 22.12) runs `npm ci` + `npm run typecheck`.
+1. `typecheck` job (Node 24.x) runs `npm ci` + `npm run typecheck`.
 2. `lint` job runs Biome once typecheck passes.
 3. `unit-tests` job spins up PostgreSQL 17 and runs Jest + Vitest.
 4. `build` job compiles all workspaces.

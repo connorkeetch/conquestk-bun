@@ -4,7 +4,7 @@ _Last updated: March 7, 2026_
 
 ## Stack Overview
 - **Frontend:** React 19 + Vite 7 + Redux Toolkit + Tailwind CSS v4, written in TypeScript (`frontend/`).
-- **Backend:** Node.js 22.12 on Express 5 with Socket.io, BullMQ, and PostgreSQL, also TypeScript-first (`backend/`).
+- **Backend:** Node.js 24 on Express 5 with Socket.io, BullMQ, and PostgreSQL, also TypeScript-first (`backend/`).
 - **Shared package:** Common types and helpers are built from `shared/` and consumed by both runtime targets.
 - **Data stores:** PostgreSQL (authoritative persistence), Redis (session cache, socket fan-out, BullMQ queues), and Cloudflare R2/S3-compatible object storage for map and media assets.
 - **Tooling:** npm workspaces, Biome for lint/format, Vitest (frontend) + Jest (backend) + Playwright smoke tests.

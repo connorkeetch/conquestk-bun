@@ -505,17 +505,16 @@ if (process.env.NODE_ENV !== 'production') {
 }
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
 if (isProductionLike) {
-    const fs = await import('node:fs');
-    const fsD = fs;
-    const existsSync = (p) => (fsD.default?.existsSync ? fsD.default.existsSync(p) : fs.existsSync(p));
-    const readdirSync = (p) => (fsD.default?.readdirSync ? fsD.default.readdirSync(p) : fs.readdirSync(p));
+    const fsNs = (await import('node:fs'));
+    const fsModule = 'default' in fsNs ? fsNs.default : fsNs;
+    const { existsSync, readdirSync } = fsModule;
     const frontendPath = path.join(__dirname, '../public');
     logger.debug(`📁 Setting up static file serving from: ${frontendPath}`);
     logger.debug(`📁 Frontend path exists: ${existsSync(frontendPath)}`);
     if (existsSync(frontendPath)) {
         const files = readdirSync(frontendPath);
         logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`);
-        const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'));
+        const indexExists = fsModule.existsSync(path.join(frontendPath, 'index.html'));
         logger.debug(`📁 index.html exists: ${indexExists}`);
     }
     app.use(express.static(frontendPath, {

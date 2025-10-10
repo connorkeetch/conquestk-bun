@@ -7,7 +7,7 @@ on:
     branches: [main, dev]
 
 env:
-  NODE_VERSION: '22.12.0'
+  NODE_VERSION: '24.x'
 
 jobs:
   typecheck:
