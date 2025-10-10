@@ -387,12 +387,26 @@ class OddsMetrics {
   private readonly checkedCounter = new CounterMetric('odds_shadow_checked_total')
   private readonly divergenceCounter = new CounterMetric('odds_shadow_divergence_total')
   private readonly divergenceRateGauge = new GaugeMetric('odds_shadow_divergence_rate')
+  private history: Array<{
+    ts: number
+    environment: string
+    kind: string
+    checked: number
+    divergences: number
+    rate: number
+  }> = []
 
   recordBatch(environment: string, kind: string, checked: number, divergences: number) {
     this.checkedCounter.inc({ environment, kind }, checked)
     if (divergences > 0) this.divergenceCounter.inc({ environment, kind }, divergences)
     const rate = checked > 0 ? divergences / checked : 0
     this.divergenceRateGauge.set(rate, { environment, kind })
+
+    // Append to history and prune to 24h
+    const now = Date.now()
+    this.history.push({ ts: now, environment, kind, checked, divergences, rate })
+    const cutoff = now - 24 * 60 * 60 * 1000
+    this.history = this.history.filter((p) => p.ts >= cutoff)
   }
 
   snapshot() {
@@ -403,6 +417,11 @@ class OddsMetrics {
       ],
       gauges: this.divergenceRateGauge.snapshot(),
     }
+  }
+
+  getHistory(hours = 24) {
+    const cutoff = Date.now() - Math.max(1, hours) * 60 * 60 * 1000
+    return this.history.filter((p) => p.ts >= cutoff)
   }
 }
 

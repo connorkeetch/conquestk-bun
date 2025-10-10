@@ -146,6 +146,7 @@ export interface SystemStatus {
 
 class AdminService {
   private baseUrl = '/admin'
+  private performanceUrl = '/performance'
 
   // ============= ADMIN INFO =============
 
@@ -413,6 +414,20 @@ class AdminService {
     timestamp: string
   }> {
     const response = await apiClient.get(`/queues/stats`)
+    return response.data?.data ?? response.data
+  }
+
+  // ============= ODDS METRICS (Performance) =============
+  async getOddsHistory(hours = 24): Promise<{
+    points: Array<{ ts: number; environment: string; kind: string; checked: number; divergences: number; rate: number }>
+    snapshot: {
+      counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
+      gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
+    }
+  }> {
+    const response = await apiClient.get(`${this.performanceUrl}/metrics/odds-history`, {
+      params: { hours },
+    })
     return response.data?.data ?? response.data
   }
 

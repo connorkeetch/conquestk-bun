@@ -69,6 +69,10 @@ export default function AdminDashboard() {
   const [editDependencies, setEditDependencies] = useState('')
   const [editReason, setEditReason] = useState('')
   const [savingFlag, setSavingFlag] = useState(false)
+  const [oddsHistory, setOddsHistory] = useState<{
+    points: Array<{ ts: number; environment: string; kind: string; checked: number; divergences: number; rate: number }>
+    snapshot: { counters: Array<{ metric: string; labels: Record<string, string>; value: number }>; gauges: Array<{ metric: string; labels: Record<string, string>; value: number }> }
+  } | null>(null)
 
   const fetchActivityLogs = useCallback(async () => {
     try {
@@ -93,15 +97,17 @@ export default function AdminDashboard() {
         }
         setError(null)
 
-        const [statusData, adminData, featureFlagData] = await Promise.all([
+        const [statusData, adminData, featureFlagData, oddsData] = await Promise.all([
           adminService.getSystemStatus(),
           adminService.getAdminInfo(),
           adminService.getFeatureFlags(),
+          adminService.getOddsHistory(24),
         ])
 
         setSystemStatus(statusData)
         setAdminInfo(adminData)
         setFeatureFlags(featureFlagData ?? [])
+        setOddsHistory(oddsData)
         await fetchActivityLogs()
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to load dashboard data'
@@ -323,7 +329,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
           <div className="glass-box">
             <div className="flex items-center justify-between">
               <div>
@@ -342,6 +348,38 @@ export default function AdminDashboard() {
               <div>
                 VIP: {formatCount(databaseStats?.vipUsers)} · Premium:{' '}
                 {formatCount(databaseStats?.premiumUsers)}
+              </div>
+            </div>
+          </div>
+
+          {/* Odds Divergence (last 24h) */}
+          <div className="glass-box">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-purple-400">
+                  {(() => {
+                    const latest = oddsHistory?.points?.[oddsHistory.points.length - 1]
+                    const pct = latest ? (latest.rate * 100).toFixed(3) : '—'
+                    return `${pct}%`
+                  })()}
+                </div>
+                <div className="text-sm text-muted">Odds Divergence (24h)</div>
+              </div>
+              <div className="text-3xl">🎲</div>
+            </div>
+            <div className="mt-3 text-xs text-muted space-y-1">
+              <div>
+                Checks: {oddsHistory?.points?.reduce((acc, p) => acc + (p.checked || 0), 0) ?? 0}
+              </div>
+              <div>
+                Divergences: {oddsHistory?.points?.reduce((acc, p) => acc + (p.divergences || 0), 0) ?? 0}
+              </div>
+              <div>
+                Last run:{' '}
+                {(() => {
+                  const ts = oddsHistory?.points?.[oddsHistory.points.length - 1]?.ts
+                  return ts ? new Date(ts).toLocaleString() : '—'
+                })()}
               </div>
             </div>
           </div>

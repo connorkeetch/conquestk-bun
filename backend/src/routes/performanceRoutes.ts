@@ -7,6 +7,7 @@ import { redisClusterService } from '../services/redisClusterService.js'
 import { getErrorMessage } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
+import { oddsMetrics } from '../services/metricsService.js'
 
 type ServiceHealthResult = {
   status: string
@@ -74,6 +75,25 @@ router.get('/metrics/history', authenticateToken, async (req, res) => {
     })
   } catch (error) {
     sendFailure(req, res, error, 'Failed to load metrics history')
+  }
+})
+
+// Odds engine shadow metrics history (last N hours)
+router.get('/metrics/odds-history', authenticateToken, async (req, res) => {
+  try {
+    const hours = parseInt((req.query.hours as string) || '24', 10)
+    const points = oddsMetrics.getHistory(Number.isFinite(hours) ? hours : 24)
+    const snapshot = oddsMetrics.snapshot()
+    res.json({
+      success: true,
+      data: {
+        points,
+        snapshot,
+      },
+      meta: { hours: Number.isFinite(hours) ? hours : 24, count: points.length },
+    })
+  } catch (error) {
+    sendFailure(req, res, error, 'Failed to load odds metrics history')
   }
 })
 
