@@ -160,8 +160,8 @@ router.post('/admin/purge', authenticateToken, requireAdmin, async (req, res) =>
             return;
         }
         const summary = await mapStagingService.purgeDeletedImages({
-            batchSize,
-            minAgeMinutes,
+            ...(typeof batchSize === 'number' ? { batchSize } : {}),
+            ...(typeof minAgeMinutes === 'number' ? { minAgeMinutes } : {}),
         });
         res.json({ success: true, summary });
     }

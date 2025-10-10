@@ -10,7 +10,6 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist"
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "pkg", "crate/target", "dist"]
+  "include": ["index.ts", "types.ts"],
+  "exclude": ["node_modules", "pkg", "crate/target", "dist", "tests"]
 }
-

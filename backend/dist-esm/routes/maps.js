@@ -363,7 +363,6 @@ router.get('/my-maps', authenticateToken, async (req, res) => {
     try {
         const filters = {
             creator: req.userId,
-            isPublic: undefined,
             sortBy: req.query.sortBy,
             sortOrder: req.query.sortOrder,
             limit: req.query.limit ? parseInt(req.query.limit, 10) : 50,
@@ -401,7 +400,6 @@ router.get('/my/maps', authenticateToken, async (req, res) => {
     try {
         const filters = {
             creator: req.userId,
-            isPublic: undefined,
             sortBy: req.query.sortBy,
             sortOrder: req.query.sortOrder,
             limit: req.query.limit ? parseInt(req.query.limit, 10) : 20,
@@ -687,7 +685,7 @@ router.put('/:mapId', authenticateToken, upload.single('image'), validateUpdateM
             }
         }
         const map = await mapService.updateMap(req.params.mapId, userId, updates, {
-            isAdmin: req.user?.isAdmin,
+            isAdmin: Boolean(req.user?.isAdmin),
             allowCollaborator: true,
         });
         return res.json(map);
@@ -709,7 +707,7 @@ router.delete('/:mapId', authenticateToken, param('mapId').isUUID().withMessage(
         return res.status(401).json({ error: 'Authentication required' });
     }
     try {
-        await mapService.deleteMap(req.params.mapId, userId, { isAdmin: req.user?.isAdmin });
+        await mapService.deleteMap(req.params.mapId, userId, { isAdmin: Boolean(req.user?.isAdmin) });
         return res.json({ message: 'Map deleted successfully' });
     }
     catch (error) {
@@ -731,7 +729,7 @@ router.post('/:mapId/sectors', authenticateToken, validateCreateSector, checkVal
     try {
         await mapPermissionService.assertCanEditMap(req.params.mapId, {
             userId,
-            isAdmin: req.user?.isAdmin,
+            isAdmin: Boolean(req.user?.isAdmin),
         });
         const sector = await mapService.createSector(req.params.mapId, req.body.name, req.body.bonusArmies, req.body.color);
         return res.status(201).json(sector);
@@ -768,19 +766,24 @@ router.post('/:mapId/territories', authenticateToken, validateCreateTerritory, c
     try {
         await mapPermissionService.assertCanEditMap(req.params.mapId, {
             userId,
-            isAdmin: req.user?.isAdmin,
+            isAdmin: Boolean(req.user?.isAdmin),
         });
         const bodyWithSectors = req.body;
-        const territory = await mapService.createTerritory({
+        const baseTerritory = {
             mapId: req.params.mapId,
             territoryId: req.body.territoryId,
             name: req.body.name,
-            sectorId: bodyWithSectors.sectorId ?? bodyWithSectors.continentId,
             boundaryCoords: req.body.boundaryCoords,
             armyPosition: req.body.armyPosition,
             abilityTypeId: req.body.abilityTypeId,
             startingOwnerSlot: req.body.startingOwnerSlot,
             startingArmies: req.body.startingArmies,
+        };
+        const territory = await mapService.createTerritory({
+            ...baseTerritory,
+            ...(bodyWithSectors.sectorId || bodyWithSectors.continentId
+                ? { sectorId: (bodyWithSectors.sectorId ?? bodyWithSectors.continentId) }
+                : {}),
         });
         return res.status(201).json(territory);
     }
@@ -801,7 +804,7 @@ router.post('/adjacencies', authenticateToken, validateCreateAdjacency, checkVal
         return res.status(401).json({ error: 'Authentication required' });
     }
     try {
-        await mapPermissionService.assertCanEditTerritories([req.body.fromTerritoryId, req.body.toTerritoryId], { userId, isAdmin: req.user?.isAdmin });
+        await mapPermissionService.assertCanEditTerritories([req.body.fromTerritoryId, req.body.toTerritoryId], { userId, isAdmin: Boolean(req.user?.isAdmin) });
         const adjacency = await mapService.createAdjacency({
             fromTerritoryId: req.body.fromTerritoryId,
             toTerritoryId: req.body.toTerritoryId,
@@ -841,7 +844,7 @@ router.post('/:mapId/generate-capitals', authenticateToken, param('mapId').isUUI
         }
         await mapPermissionService.assertCanEditMap(mapId, {
             userId,
-            isAdmin: req.user?.isAdmin,
+            isAdmin: Boolean(req.user?.isAdmin),
         });
         const capitalService = new CapitalGeneratorService(getPool());
         const capitals = await capitalService.generateCapitalsForMap(mapId);
@@ -880,7 +883,7 @@ router.patch('/:mapId/capitals/:playerCount', authenticateToken, param('mapId').
         const playerCountNum = parseInt(playerCount, 10);
         await mapPermissionService.assertCanEditMap(mapId, {
             userId,
-            isAdmin: req.user?.isAdmin,
+            isAdmin: Boolean(req.user?.isAdmin),
         });
         if (territoryIds.length !== playerCountNum) {
             return res.status(400).json({
@@ -921,7 +924,7 @@ router.get('/:mapId/capitals', param('mapId').isUUID().withMessage('Invalid map 
             }
             const context = await mapPermissionService.getMapEditorContext(mapId, {
                 userId,
-                isAdmin: req.user?.isAdmin,
+                isAdmin: Boolean(req.user?.isAdmin),
             });
             const canView = context.canEdit || context.collaboratorRole !== undefined;
             if (!canView) {

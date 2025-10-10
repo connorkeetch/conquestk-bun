@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { setEngine, setLogger, simulateBattle } from '../shared/odds/index.js'
+import { setEngine, setLogger, simulateBattle } from '@conquestk/shared/odds'
 
 describe('shadow mode parity (TS vs WASM)', () => {
   it('no divergences across 10k random seeds/battles', async () => {
@@ -18,4 +18,3 @@ describe('shadow mode parity (TS vs WASM)', () => {
     expect(divergences.length).toBe(0)
   }, 120000)
 })
-

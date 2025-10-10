@@ -291,4 +291,26 @@ class AssassinationMetrics {
     }
 }
 export const assassinationMetrics = new AssassinationMetrics();
+class OddsMetrics {
+    checkedCounter = new CounterMetric('odds_shadow_checked_total');
+    divergenceCounter = new CounterMetric('odds_shadow_divergence_total');
+    divergenceRateGauge = new GaugeMetric('odds_shadow_divergence_rate');
+    recordBatch(environment, kind, checked, divergences) {
+        this.checkedCounter.inc({ environment, kind }, checked);
+        if (divergences > 0)
+            this.divergenceCounter.inc({ environment, kind }, divergences);
+        const rate = checked > 0 ? divergences / checked : 0;
+        this.divergenceRateGauge.set(rate, { environment, kind });
+    }
+    snapshot() {
+        return {
+            counters: [
+                ...this.checkedCounter.snapshot(),
+                ...this.divergenceCounter.snapshot(),
+            ],
+            gauges: this.divergenceRateGauge.snapshot(),
+        };
+    }
+}
+export const oddsMetrics = new OddsMetrics();
 //# sourceMappingURL=metricsService.js.map
