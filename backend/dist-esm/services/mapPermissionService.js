@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.mapPermissionService = exports.MapNotFoundError = exports.MapPermissionError = void 0;
-const database_js_1 = require("../config/database.js");
-class MapPermissionError extends Error {
+import { query } from '../config/database.js';
+export class MapPermissionError extends Error {
     constructor(message = 'You do not have permission to edit this map') {
         super(message);
         this.status = 403;
@@ -10,8 +7,7 @@ class MapPermissionError extends Error {
         Object.setPrototypeOf(this, new.target.prototype);
     }
 }
-exports.MapPermissionError = MapPermissionError;
-class MapNotFoundError extends Error {
+export class MapNotFoundError extends Error {
     constructor(message = 'Map not found') {
         super(message);
         this.status = 404;
@@ -19,13 +15,12 @@ class MapNotFoundError extends Error {
         Object.setPrototypeOf(this, new.target.prototype);
     }
 }
-exports.MapNotFoundError = MapNotFoundError;
 class MapPermissionService {
     constructor() {
         this.editableRoles = new Set(['editor', 'owner']);
     }
     async getMapEditorContext(mapId, actor) {
-        const result = await (0, database_js_1.query)('SELECT creator_id FROM maps WHERE id = $1', [mapId]);
+        const result = await query('SELECT creator_id FROM maps WHERE id = $1', [mapId]);
         if (!result.rows[0]) {
             return {
                 mapId,
@@ -41,7 +36,7 @@ class MapPermissionService {
         const isCreator = Boolean(userId && creatorId === userId);
         let collaboratorRole;
         if (!isAdmin && !isCreator && userId) {
-            const collaborator = await (0, database_js_1.query)(`SELECT role FROM map_collaborators WHERE map_id = $1 AND user_id = $2`, [mapId, userId]);
+            const collaborator = await query(`SELECT role FROM map_collaborators WHERE map_id = $1 AND user_id = $2`, [mapId, userId]);
             if (collaborator.rows[0]?.role) {
                 collaboratorRole = collaborator.rows[0].role;
             }
@@ -82,7 +77,7 @@ class MapPermissionService {
         if (territoryIds.length === 0) {
             throw new MapNotFoundError('No territories provided');
         }
-        const territoryResult = await (0, database_js_1.query)(`SELECT map_id FROM map_territories WHERE id = ANY($1::uuid[])`, [territoryIds]);
+        const territoryResult = await query(`SELECT map_id FROM map_territories WHERE id = ANY($1::uuid[])`, [territoryIds]);
         if (territoryResult.rows.length === 0) {
             throw new MapNotFoundError('Territories not found');
         }
@@ -98,5 +93,5 @@ class MapPermissionService {
         return { mapId, context };
     }
 }
-exports.mapPermissionService = new MapPermissionService();
+export const mapPermissionService = new MapPermissionService();
 //# sourceMappingURL=mapPermissionService.js.map

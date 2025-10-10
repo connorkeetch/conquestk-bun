@@ -1,27 +1,24 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GameController = void 0;
-const database_js_1 = require("../config/database.js");
-const premium_js_1 = require("../constants/premium.js");
-const conversationService_js_1 = require("../services/conversationService.js");
-const gameLifecycleService_js_1 = require("../services/gameLifecycleService.js");
-const gameRoomService_js_1 = require("../services/gameRoomService.js");
-const gameService_js_1 = require("../services/gameService.js");
-const queueService_js_1 = require("../services/queueService.js");
-const socketRegistry_js_1 = require("../services/socketRegistry.js");
-const logger_js_1 = require("../utils/logger.js");
-class GameController {
+import { query } from '../config/database.js';
+import { PREMIUM_COLOR_MESSAGE, PREMIUM_GAME_LIMIT_MESSAGE, PREMIUM_UPSELL_ERROR_CODE, } from '../constants/premium.js';
+import { ensureGameConversation } from '../services/conversationService.js';
+import { GameLifecycleService } from '../services/gameLifecycleService.js';
+import { GameRoomService } from '../services/gameRoomService.js';
+import { GameService } from '../services/gameService.js';
+import { queueService } from '../services/queueService.js';
+import { tryGetSocketServer } from '../services/socketRegistry.js';
+import { logger } from '../utils/logger.js';
+export class GameController {
     constructor() {
-        this.gameRoomService = new gameRoomService_js_1.GameRoomService();
-        this.lifecycleService = new gameLifecycleService_js_1.GameLifecycleService();
-        this.gameService = new gameService_js_1.GameService();
+        this.gameRoomService = new GameRoomService();
+        this.lifecycleService = new GameLifecycleService();
+        this.gameService = new GameService();
         this.getRooms = async (_req, res) => {
             try {
                 const rooms = await this.gameRoomService.getActiveRooms();
                 return res.json({ rooms });
             }
             catch (error) {
-                logger_js_1.logger.error('Get rooms error:', error);
+                logger.error('Get rooms error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -118,7 +115,7 @@ class GameController {
                     });
                 }
                 catch (joinError) {
-                    logger_js_1.logger.warn('Host auto-join failed after room creation', {
+                    logger.warn('Host auto-join failed after room creation', {
                         roomId: room.id,
                         hostId,
                         error: joinError instanceof Error ? joinError.message : joinError,
@@ -126,10 +123,10 @@ class GameController {
                 }
                 await this.lifecycleService.refreshLifecycle(room.id);
                 try {
-                    await (0, conversationService_js_1.ensureGameConversation)(room.id);
+                    await ensureGameConversation(room.id);
                 }
                 catch (chatError) {
-                    logger_js_1.logger.warn('Failed to initialize game chat after room creation', {
+                    logger.warn('Failed to initialize game chat after room creation', {
                         roomId: room.id,
                         hostId,
                         error: chatError instanceof Error ? chatError.message : chatError,
@@ -139,7 +136,7 @@ class GameController {
                 return res.status(201).json({ room: hydratedRoom ?? room });
             }
             catch (error) {
-                logger_js_1.logger.error('Create room error:', error);
+                logger.error('Create room error:', error);
                 if (error instanceof Error &&
                     (error.message.includes('teams is not valid') ||
                         error.message.includes('Invalid number of teams') ||
@@ -147,8 +144,8 @@ class GameController {
                         error.message.includes('Team play'))) {
                     return res.status(400).json({ message: error.message });
                 }
-                if (error instanceof Error && error.message === premium_js_1.PREMIUM_GAME_LIMIT_MESSAGE) {
-                    return res.status(403).json({ code: premium_js_1.PREMIUM_UPSELL_ERROR_CODE, message: error.message });
+                if (error instanceof Error && error.message === PREMIUM_GAME_LIMIT_MESSAGE) {
+                    return res.status(403).json({ code: PREMIUM_UPSELL_ERROR_CODE, message: error.message });
                 }
                 return res.status(500).json({ message: 'Internal server error' });
             }
@@ -176,7 +173,7 @@ class GameController {
                     (typeof req.body?.idempotencyKey === 'string'
                         ? req.body.idempotencyKey
                         : undefined);
-                const job = await queueService_js_1.queueService.addGameAction({
+                const job = await queueService.addGameAction({
                     gameId: roomId,
                     playerId: userId,
                     action,
@@ -190,7 +187,7 @@ class GameController {
                     return res.status(200).json({ ok: true, queued: false });
                 }
                 catch (inlineError) {
-                    logger_js_1.logger.warn('Inline action processing failed', {
+                    logger.warn('Inline action processing failed', {
                         roomId,
                         userId,
                         error: inlineError instanceof Error ? inlineError.message : inlineError,
@@ -199,7 +196,7 @@ class GameController {
                 }
             }
             catch (error) {
-                logger_js_1.logger.error('submitAction error:', error);
+                logger.error('submitAction error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -219,7 +216,7 @@ class GameController {
                 }
                 const result = await this.gameService.transferConquestArmies(roomId, userId, fromTerritoryId, toTerritoryId, armies);
                 try {
-                    const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+                    const io = tryGetSocketServer();
                     if (io) {
                         io.to(`game:${roomId}`).emit('game-update', result.gameState);
                     }
@@ -229,7 +226,7 @@ class GameController {
                 return res.status(200).json({ ok: true });
             }
             catch (error) {
-                logger_js_1.logger.error('transferConquest error:', error);
+                logger.error('transferConquest error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -259,7 +256,7 @@ class GameController {
                 return res.json({ room });
             }
             catch (error) {
-                logger_js_1.logger.error('Update team assignment error:', error);
+                logger.error('Update team assignment error:', error);
                 if (error instanceof Error) {
                     if (error.message === 'Room not found' || error.message.includes('not part')) {
                         return res.status(404).json({ message: error.message });
@@ -290,7 +287,7 @@ class GameController {
                 return res.json({ lifecycle });
             }
             catch (error) {
-                logger_js_1.logger.error('Set ready state error:', error);
+                logger.error('Set ready state error:', error);
                 if (error instanceof Error && error.message === 'Game already started') {
                     return res.status(409).json({ message: error.message });
                 }
@@ -330,7 +327,7 @@ class GameController {
                 return res.json({ ...result, room });
             }
             catch (error) {
-                logger_js_1.logger.error('Join room error:', error);
+                logger.error('Join room error:', error);
                 if (error instanceof Error) {
                     if (error.message.includes('Color already taken')) {
                         return res.status(409).json({ message: error.message });
@@ -341,9 +338,9 @@ class GameController {
                     if (error.message.includes('Room not found')) {
                         return res.status(404).json({ message: error.message });
                     }
-                    if (error.message === premium_js_1.PREMIUM_GAME_LIMIT_MESSAGE ||
-                        error.message === premium_js_1.PREMIUM_COLOR_MESSAGE) {
-                        return res.status(403).json({ code: premium_js_1.PREMIUM_UPSELL_ERROR_CODE, message: error.message });
+                    if (error.message === PREMIUM_GAME_LIMIT_MESSAGE ||
+                        error.message === PREMIUM_COLOR_MESSAGE) {
+                        return res.status(403).json({ code: PREMIUM_UPSELL_ERROR_CODE, message: error.message });
                     }
                 }
                 return res.status(500).json({ message: 'Internal server error' });
@@ -362,7 +359,7 @@ class GameController {
                 return res.json({ message: 'Left room successfully' });
             }
             catch (error) {
-                logger_js_1.logger.error('Leave room error:', error);
+                logger.error('Leave room error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -379,7 +376,7 @@ class GameController {
                 return res.json({ message: 'Room closed' });
             }
             catch (error) {
-                logger_js_1.logger.error('Close room error:', error);
+                logger.error('Close room error:', error);
                 if (error instanceof Error) {
                     if (error.message === 'Room not found') {
                         return res.status(404).json({ message: error.message });
@@ -443,7 +440,7 @@ class GameController {
                 return res.json({ room });
             }
             catch (error) {
-                logger_js_1.logger.error('Update AI opponents error:', error);
+                logger.error('Update AI opponents error:', error);
                 if (error instanceof Error) {
                     if (error.message === 'Room not found') {
                         return res.status(404).json({ message: error.message });
@@ -472,7 +469,7 @@ class GameController {
                 return res.json({ room });
             }
             catch (error) {
-                logger_js_1.logger.error('Get room details error:', error);
+                logger.error('Get room details error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -499,7 +496,7 @@ class GameController {
                 const isParticipant = room.hostId === userId || (await this.gameRoomService.isPlayerInRoom(roomId, userId));
                 let gameState = await this.gameService.getGameState(roomId);
                 if (!gameState) {
-                    logger_js_1.logger.info('Room state request before initialization', {
+                    logger.info('Room state request before initialization', {
                         roomId,
                         userId,
                         isParticipant,
@@ -514,7 +511,7 @@ class GameController {
                                 ...gameState,
                                 board: gameState.board.map((t) => ({ ...t, ownerId: null, armies: 0 })),
                             };
-                            logger_js_1.logger.info('Applied non-participant FoW masking', { roomId, userId });
+                            logger.info('Applied non-participant FoW masking', { roomId, userId });
                         }
                         else {
                             const owned = new Set(gameState.board.filter((t) => t.ownerId === userId).map((t) => t.id));
@@ -533,7 +530,7 @@ class GameController {
                     }
                 }
                 catch (maskError) {
-                    logger_js_1.logger.warn('Fog-of-war masking failed; returning unmasked state fallback', {
+                    logger.warn('Fog-of-war masking failed; returning unmasked state fallback', {
                         roomId,
                         userId,
                         error: maskError instanceof Error ? maskError.message : String(maskError),
@@ -542,7 +539,7 @@ class GameController {
                 return res.json({ game: gameState });
             }
             catch (error) {
-                logger_js_1.logger.error('Get room state error:', error);
+                logger.error('Get room state error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -559,11 +556,11 @@ class GameController {
                 let winnerNameMap = new Map();
                 if (winnerIds.length > 0) {
                     try {
-                        const result = await (0, database_js_1.query)('SELECT id, username FROM users WHERE id = ANY($1)', [winnerIds]);
+                        const result = await query('SELECT id, username FROM users WHERE id = ANY($1)', [winnerIds]);
                         winnerNameMap = new Map(result.rows.map((r) => [r.id, r.username]));
                     }
                     catch (err) {
-                        logger_js_1.logger.warn('Failed to resolve winner usernames for my-games payload', {
+                        logger.warn('Failed to resolve winner usernames for my-games payload', {
                             error: err instanceof Error ? err.message : String(err),
                         });
                     }
@@ -589,7 +586,7 @@ class GameController {
                 return res.json({ games: formattedGames });
             }
             catch (error) {
-                logger_js_1.logger.error('Get my games error:', error);
+                logger.error('Get my games error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -679,7 +676,7 @@ class GameController {
                 return res.json({ meta });
             }
             catch (error) {
-                logger_js_1.logger.error('Get my games meta error:', error);
+                logger.error('Get my games meta error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -699,7 +696,7 @@ class GameController {
                     this.gameService.getBattleLog(roomId),
                     (async () => {
                         try {
-                            const result = await (0, database_js_1.query)('SELECT turn_stats FROM game_states WHERE room_id = $1', [roomId]);
+                            const result = await query('SELECT turn_stats FROM game_states WHERE room_id = $1', [roomId]);
                             const list = result.rows[0]?.turn_stats;
                             return Array.isArray(list) ? list : [];
                         }
@@ -710,7 +707,7 @@ class GameController {
                 ]);
                 let ratingChanges = {};
                 try {
-                    const rc = await (0, database_js_1.query)('SELECT user_id, rating_change FROM player_game_results WHERE room_id = $1', [roomId]);
+                    const rc = await query('SELECT user_id, rating_change FROM player_game_results WHERE room_id = $1', [roomId]);
                     const map = {};
                     for (const row of rc.rows) {
                         const pid = row.user_id;
@@ -751,11 +748,10 @@ class GameController {
                 return res.json({ log, stats, ratingChanges });
             }
             catch (error) {
-                logger_js_1.logger.error('Get room log error:', error);
+                logger.error('Get room log error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
     }
 }
-exports.GameController = GameController;
 //# sourceMappingURL=gameController.js.map

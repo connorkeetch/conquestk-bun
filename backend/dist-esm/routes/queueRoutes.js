@@ -1,18 +1,13 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const adminAuth_js_1 = require("../middleware/adminAuth.js");
-const auth_js_1 = require("../middleware/auth.js");
-const queueService_js_1 = require("../services/queueService.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const workerManager_js_1 = require("../workers/workerManager.js");
-const router = express_1.default.Router();
-router.get('/stats', auth_js_1.authenticateToken, async (req, res) => {
+import express from 'express';
+import { requireAdmin } from '../middleware/adminAuth.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { queueService } from '../services/queueService.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+import { getWorkerManagerInstance } from '../workers/workerManager.js';
+const router = express.Router();
+router.get('/stats', authenticateToken, async (req, res) => {
     try {
-        const workerManager = (0, workerManager_js_1.getWorkerManagerInstance)();
+        const workerManager = getWorkerManagerInstance();
         if (!workerManager) {
             res.status(503).json({
                 success: false,
@@ -27,16 +22,16 @@ router.get('/stats', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load queue stats');
+        handleRouteError(error, req, 'Failed to load queue stats');
         res.status(500).json({
             success: false,
             error: 'Failed to load queue statistics',
         });
     }
 });
-router.get('/health', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/health', authenticateToken, async (req, res) => {
     try {
-        const workerManager = (0, workerManager_js_1.getWorkerManagerInstance)();
+        const workerManager = getWorkerManagerInstance();
         if (!workerManager) {
             res.status(503).json({
                 success: false,
@@ -50,7 +45,7 @@ router.get('/health', auth_js_1.authenticateToken, async (req, res) => {
             return;
         }
         const wmHealth = await workerManager.healthCheck();
-        const qsHealth = await queueService_js_1.queueService.healthCheck();
+        const qsHealth = await queueService.healthCheck();
         const statusCode = wmHealth.status === 'healthy' && qsHealth.status === 'healthy' ? 200 : 503;
         res.status(statusCode).json({
             success: statusCode === 200,
@@ -67,7 +62,7 @@ router.get('/health', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to evaluate queue health');
+        handleRouteError(error, req, 'Failed to evaluate queue health');
         res.status(500).json({
             success: false,
             status: 'unhealthy',
@@ -76,9 +71,9 @@ router.get('/health', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
 });
-router.get('/dashboard', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
-        const workerManager = (0, workerManager_js_1.getWorkerManagerInstance)();
+        const workerManager = getWorkerManagerInstance();
         if (!workerManager) {
             res.status(503).json({
                 success: false,
@@ -86,7 +81,7 @@ router.get('/dashboard', auth_js_1.authenticateToken, async (req, res) => {
             });
             return;
         }
-        const stats = await queueService_js_1.queueService.getQueueStats();
+        const stats = await queueService.getQueueStats();
         const health = await workerManager.healthCheck();
         const queueList = Object.values(stats);
         const dashboard = {
@@ -108,14 +103,14 @@ router.get('/dashboard', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load queue dashboard');
+        handleRouteError(error, req, 'Failed to load queue dashboard');
         res.status(500).json({
             success: false,
             error: 'Failed to load queue dashboard',
         });
     }
 });
-router.get('/dlq/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.requireAdmin, async (req, res) => {
+router.get('/dlq/:queueName', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { queueName } = req.params;
         const offset = Number.parseInt(String(req.query.offset ?? '0'), 10) || 0;
@@ -135,15 +130,15 @@ router.get('/dlq/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.requir
             return 'gameActions';
         };
         const queueKey = keyToQueueKey(key);
-        const items = await queueService_js_1.queueService.listDeadLetters(queueKey, { offset, limit });
+        const items = await queueService.listDeadLetters(queueKey, { offset, limit });
         res.json({ success: true, data: items, pagination: { offset, limit } });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to list DLQ');
+        handleRouteError(error, req, 'Failed to list DLQ');
         res.status(500).json({ success: false, error: 'Failed to list DLQ' });
     }
 });
-router.post('/dlq/:queueName/requeue/:id', auth_js_1.authenticateToken, adminAuth_js_1.requireAdmin, async (req, res) => {
+router.post('/dlq/:queueName/requeue/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { queueName, id } = req.params;
         const key = (queueName || '').toLowerCase();
@@ -161,15 +156,15 @@ router.post('/dlq/:queueName/requeue/:id', auth_js_1.authenticateToken, adminAut
             return 'gameActions';
         };
         const queueKey = keyToQueueKey(key);
-        const result = await queueService_js_1.queueService.requeueDeadLetter(queueKey, id);
+        const result = await queueService.requeueDeadLetter(queueKey, id);
         res.json({ success: result.requeued, newJobId: result.newJobId ?? null });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to requeue DLQ job');
+        handleRouteError(error, req, 'Failed to requeue DLQ job');
         res.status(500).json({ success: false, error: 'Failed to requeue DLQ job' });
     }
 });
-router.post('/dlq/:queueName/requeue-transient', auth_js_1.authenticateToken, adminAuth_js_1.requireAdmin, async (req, res) => {
+router.post('/dlq/:queueName/requeue-transient', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { queueName } = req.params;
         const limit = Number.parseInt(String(req.query.limit ?? '50'), 10) || 50;
@@ -188,12 +183,12 @@ router.post('/dlq/:queueName/requeue-transient', auth_js_1.authenticateToken, ad
             return 'gameActions';
         };
         const queueKey = keyToQueueKey(key);
-        const items = await queueService_js_1.queueService.listDeadLetters(queueKey, { offset: 0, limit });
+        const items = await queueService.listDeadLetters(queueKey, { offset: 0, limit });
         const pattern = /ECONNRESET|ETIMEDOUT|timeout|Network|EAI_AGAIN/i;
         let requeued = 0;
         for (const it of items) {
             if (pattern.test(it.failedReason)) {
-                const r = await queueService_js_1.queueService.requeueDeadLetter(queueKey, it.id);
+                const r = await queueService.requeueDeadLetter(queueKey, it.id);
                 if (r.requeued)
                     requeued += 1;
             }
@@ -201,30 +196,30 @@ router.post('/dlq/:queueName/requeue-transient', auth_js_1.authenticateToken, ad
         res.json({ success: true, requeued, scanned: items.length });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to requeue transient DLQ jobs');
+        handleRouteError(error, req, 'Failed to requeue transient DLQ jobs');
         res.status(500).json({ success: false, error: 'Failed to requeue transient DLQ jobs' });
     }
 });
 const resolveQueueByParam = (name) => {
     const key = name.toLowerCase();
     if (key === 'game-actions' || key === 'gameactions' || key === 'game') {
-        return queueService_js_1.queueService.getGameActionQueue();
+        return queueService.getGameActionQueue();
     }
     if (key === 'game-cleanup' || key === 'gamecleanup' || key === 'cleanup') {
-        return queueService_js_1.queueService.getCleanupQueue();
+        return queueService.getCleanupQueue();
     }
     if (key === 'analytics-events' || key === 'analyticsevents' || key === 'analytics') {
-        return queueService_js_1.queueService.getAnalyticsQueue();
+        return queueService.getAnalyticsQueue();
     }
     if (key === 'maintenance' || key === 'maint') {
-        return queueService_js_1.queueService.getMaintenanceQueue();
+        return queueService.getMaintenanceQueue();
     }
     if (key === 'map-assets' || key === 'mapassets' || key === 'assets') {
-        return queueService_js_1.queueService.getMapAssetQueue();
+        return queueService.getMapAssetQueue();
     }
     return null;
 };
-router.post('/pause/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.requireAdmin, async (req, res) => {
+router.post('/pause/:queueName', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { queueName } = req.params;
         const queue = resolveQueueByParam(queueName);
@@ -239,7 +234,7 @@ router.post('/pause/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.req
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to pause queue', 500, {
+        handleRouteError(error, req, 'Failed to pause queue', 500, {
             queueName: req.params.queueName,
         });
         res.status(500).json({
@@ -248,7 +243,7 @@ router.post('/pause/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.req
         });
     }
 });
-router.post('/resume/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.requireAdmin, async (req, res) => {
+router.post('/resume/:queueName', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { queueName } = req.params;
         const queue = resolveQueueByParam(queueName);
@@ -263,7 +258,7 @@ router.post('/resume/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.re
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to resume queue', 500, {
+        handleRouteError(error, req, 'Failed to resume queue', 500, {
             queueName: req.params.queueName,
         });
         res.status(500).json({
@@ -272,7 +267,7 @@ router.post('/resume/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.re
         });
     }
 });
-router.delete('/clear/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.requireAdmin, async (req, res) => {
+router.delete('/clear/:queueName', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { queueName } = req.params;
         const type = String(req.query.type || 'all').toLowerCase();
@@ -303,7 +298,7 @@ router.delete('/clear/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.r
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to clear queue', 500, {
+        handleRouteError(error, req, 'Failed to clear queue', 500, {
             queueName: req.params.queueName,
             type: req.query.type,
         });
@@ -315,7 +310,7 @@ router.delete('/clear/:queueName', auth_js_1.authenticateToken, adminAuth_js_1.r
 });
 router.get('/ping', async (req, res) => {
     try {
-        const workerManager = (0, workerManager_js_1.getWorkerManagerInstance)();
+        const workerManager = getWorkerManagerInstance();
         if (!workerManager) {
             res.json({
                 status: 'not-initialized',
@@ -330,12 +325,12 @@ router.get('/ping', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Queue ping failed', 503);
+        handleRouteError(error, req, 'Queue ping failed', 503);
         res.status(503).json({
             status: 'unhealthy',
             error: 'Queue service unavailable',
         });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=queueRoutes.js.map

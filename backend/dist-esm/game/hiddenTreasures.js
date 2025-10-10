@@ -1,12 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.clampDiamondsPercent = exports.getDefaultTreasureConfig = void 0;
-exports.normalizeTreasureConfig = normalizeTreasureConfig;
-exports.drawTreasure = drawTreasure;
-exports.getPayout = getPayout;
-exports.findRedeemableSets = findRedeemableSets;
-exports.redeemSet = redeemSet;
-exports.ensureTreasureState = ensureTreasureState;
 const CLASSIC_SEQUENCE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35];
 const DEFAULT_CONFIG = {
     enabled: true,
@@ -16,9 +7,8 @@ const DEFAULT_CONFIG = {
     handCap: 5,
     diamondSetBonus: 3,
 };
-const getDefaultTreasureConfig = () => ({ ...DEFAULT_CONFIG });
-exports.getDefaultTreasureConfig = getDefaultTreasureConfig;
-const clampDiamondsPercent = (value) => {
+export const getDefaultTreasureConfig = () => ({ ...DEFAULT_CONFIG });
+export const clampDiamondsPercent = (value) => {
     if (!Number.isFinite(value))
         return DEFAULT_CONFIG.diamondsPercent;
     if (value <= 0)
@@ -27,13 +17,12 @@ const clampDiamondsPercent = (value) => {
         return 1;
     return value;
 };
-exports.clampDiamondsPercent = clampDiamondsPercent;
-function normalizeTreasureConfig(config) {
+export function normalizeTreasureConfig(config) {
     const merged = {
         ...DEFAULT_CONFIG,
         ...(config ?? {}),
     };
-    merged.diamondsPercent = (0, exports.clampDiamondsPercent)(typeof merged.diamondsPercent === 'number'
+    merged.diamondsPercent = clampDiamondsPercent(typeof merged.diamondsPercent === 'number'
         ? merged.diamondsPercent
         : DEFAULT_CONFIG.diamondsPercent);
     if (merged.payoutMode === 'fixed') {
@@ -51,7 +40,7 @@ function normalizeTreasureConfig(config) {
     merged.diamondSetBonus = Math.max(0, Math.trunc(merged.diamondSetBonus));
     return merged;
 }
-function drawTreasure(config) {
+export function drawTreasure(config) {
     const roll = Math.random();
     if (roll < config.diamondsPercent) {
         return 'diamond';
@@ -67,7 +56,7 @@ function drawTreasure(config) {
     }
     return 'gold';
 }
-function getPayout(state, config) {
+export function getPayout(state, config) {
     const nextIndex = state.nextPayoutIndex;
     let amount = 0;
     switch (config.payoutMode) {
@@ -130,7 +119,7 @@ function classifySet(metals) {
     }
     return null;
 }
-function findRedeemableSets(hand) {
+export function findRedeemableSets(hand) {
     const matches = [];
     for (let i = 0; i < hand.length - 2; i++) {
         for (let j = i + 1; j < hand.length - 1; j++) {
@@ -150,7 +139,7 @@ function findRedeemableSets(hand) {
     }
     return matches;
 }
-function redeemSet(hand, indices, config, state) {
+export function redeemSet(hand, indices, config, state) {
     const sorted = [...indices].sort((a, b) => a - b);
     if (new Set(sorted).size !== 3) {
         throw new Error('Treasure indices must be unique');
@@ -175,7 +164,7 @@ function redeemSet(hand, indices, config, state) {
         pattern,
     };
 }
-function ensureTreasureState(state) {
+export function ensureTreasureState(state) {
     if (!state) {
         return {
             totalSetsCashed: 0,

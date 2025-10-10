@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.clanProgressionService = exports.ClanProgressionServiceError = void 0;
-const database_js_1 = require("../config/database.js");
-const clanActivityService_js_1 = require("./clanActivityService.js");
+import { query, transaction } from '../config/database.js';
+import { logClanActivity } from './clanActivityService.js';
 const OBJECTIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_OBJECTIVE_POOL = [
     {
@@ -29,13 +26,12 @@ const DEFAULT_OBJECTIVE_POOL = [
 const clamp = (value, min, max) => {
     return Math.min(Math.max(value, min), max);
 };
-class ClanProgressionServiceError extends Error {
+export class ClanProgressionServiceError extends Error {
     constructor(code, message) {
         super(message);
         this.code = code;
     }
 }
-exports.ClanProgressionServiceError = ClanProgressionServiceError;
 class ClanProgressionService {
     getLevelIncrement(level) {
         const base = 1000;
@@ -100,7 +96,7 @@ class ClanProgressionService {
         const sql = 'SELECT total_xp, level FROM clans WHERE id = $1 FOR UPDATE';
         const result = client
             ? await client.query(sql, [clanId])
-            : await (0, database_js_1.query)(sql, [clanId]);
+            : await query(sql, [clanId]);
         const rows = Array.isArray(result?.rows)
             ? result.rows
             : [];
@@ -129,7 +125,7 @@ class ClanProgressionService {
         const params = [clanId, now];
         const result = client
             ? await client.query(sql, params)
-            : await (0, database_js_1.query)(sql, params);
+            : await query(sql, params);
         const rows = Array.isArray(result?.rows)
             ? result.rows
             : [];
@@ -143,7 +139,7 @@ class ClanProgressionService {
     }
     async getProgressionSummary(clanId) {
         const sql = 'SELECT total_xp FROM clans WHERE id = $1';
-        const result = await (0, database_js_1.query)(sql, [clanId]);
+        const result = await query(sql, [clanId]);
         const row = result.rows[0];
         if (!row) {
             throw new ClanProgressionServiceError('CLAN_NOT_FOUND', 'Clan not found');
@@ -152,7 +148,7 @@ class ClanProgressionService {
         return this.mapProgression(clanId, totalXp);
     }
     async ensureWeeklyObjectives(clanId, now = new Date()) {
-        return (0, database_js_1.transaction)(async (client) => {
+        return transaction(async (client) => {
             const active = await this.getActiveObjectivesInternal(clanId, now, client);
             if (active.length > 0) {
                 return active.map((objective) => this.mapObjective(objective));
@@ -182,7 +178,7 @@ class ClanProgressionService {
                         end,
                         JSON.stringify(template.reward),
                     ])
-                    : await (0, database_js_1.query)(`
+                    : await query(`
             INSERT INTO clan_objectives (
               clan_id,
               objective_type,
@@ -204,7 +200,7 @@ class ClanProgressionService {
                     ]);
                 created.push(this.mapObjective(insertResult.rows[0]));
             }
-            await (0, clanActivityService_js_1.logClanActivity)({
+            await logClanActivity({
                 clanId,
                 actionType: 'clan_objectives_rotated',
                 metadata: {
@@ -255,14 +251,14 @@ class ClanProgressionService {
                 ]);
             }
             else {
-                await (0, database_js_1.query)('UPDATE clan_objectives SET progress_value = $1 WHERE id = $2', [
+                await query('UPDATE clan_objectives SET progress_value = $1 WHERE id = $2', [
                     newProgress,
                     objective.id,
                 ]);
             }
             updates.push({ objectiveId: objective.id, progressValue: newProgress, completed });
             if (completed) {
-                await (0, clanActivityService_js_1.logClanActivity)({
+                await logClanActivity({
                     clanId,
                     actionType: 'clan_objective_completed',
                     targetId: objective.id,
@@ -278,14 +274,14 @@ class ClanProgressionService {
         const xpGain = Math.max(0, Math.floor(options.xp));
         const matchesPlayed = Math.max(0, options.matchesPlayed ?? 0);
         const matchesWon = Math.max(0, options.matchesWon ?? 0);
-        return (0, database_js_1.transaction)(async (client) => {
+        return transaction(async (client) => {
             const progressionRow = await this.getProgressionRow(options.clanId, client);
             if (!progressionRow) {
                 throw new ClanProgressionServiceError('CLAN_NOT_FOUND', 'Clan not found');
             }
             const memberResult = client
                 ? await client.query(`SELECT id, status FROM clan_members WHERE clan_id = $1 AND user_id = $2 FOR UPDATE`, [options.clanId, options.userId])
-                : await (0, database_js_1.query)(`SELECT id, status FROM clan_members WHERE clan_id = $1 AND user_id = $2 FOR UPDATE`, [options.clanId, options.userId]);
+                : await query(`SELECT id, status FROM clan_members WHERE clan_id = $1 AND user_id = $2 FOR UPDATE`, [options.clanId, options.userId]);
             const memberRow = memberResult.rows[0];
             if (!memberRow || memberRow.status !== 'active') {
                 throw new ClanProgressionServiceError('MEMBER_NOT_ACTIVE', 'User is not an active clan member');
@@ -301,7 +297,7 @@ class ClanProgressionService {
           `, [xpGain, matchesPlayed, now, memberRow.id]);
                 }
                 else {
-                    await (0, database_js_1.query)(`
+                    await query(`
             UPDATE clan_members
             SET contribution_xp = contribution_xp + $1,
                 contribution_matches = contribution_matches + $2,
@@ -324,7 +320,7 @@ class ClanProgressionService {
                     ]);
                 }
                 else {
-                    await (0, database_js_1.query)('UPDATE clans SET total_xp = $1, level = $2 WHERE id = $3', [
+                    await query('UPDATE clans SET total_xp = $1, level = $2 WHERE id = $3', [
                         newTotalXp,
                         calculated.level,
                         options.clanId,
@@ -339,7 +335,7 @@ class ClanProgressionService {
                 client,
             });
             if (xpGain > 0) {
-                await (0, clanActivityService_js_1.logClanActivity)({
+                await logClanActivity({
                     clanId: options.clanId,
                     actorUserId: options.actorUserId ?? options.userId,
                     actionType: 'clan_xp_awarded',
@@ -357,7 +353,7 @@ class ClanProgressionService {
                 : Number(progressionRow.level ?? 1);
             const leveledUp = calculated.level > previousLevel;
             if (leveledUp) {
-                await (0, clanActivityService_js_1.logClanActivity)({
+                await logClanActivity({
                     clanId: options.clanId,
                     actionType: 'clan_level_up',
                     metadata: { fromLevel: previousLevel, toLevel: calculated.level },
@@ -375,5 +371,5 @@ class ClanProgressionService {
         });
     }
 }
-exports.clanProgressionService = new ClanProgressionService();
+export const clanProgressionService = new ClanProgressionService();
 //# sourceMappingURL=clanProgressionService.js.map

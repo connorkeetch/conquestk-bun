@@ -1,9 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildFrontendUrl = buildFrontendUrl;
-exports.resolveAssetUrl = resolveAssetUrl;
-const assetStorage_js_1 = require("./assetStorage.js");
-function buildFrontendUrl(req, path) {
+import { getPublicAssetUrl } from './assetStorage.js';
+export function buildFrontendUrl(req, path) {
     const configured = process.env.FRONTEND_URL?.trim();
     if (configured) {
         return joinUrl(configured, path);
@@ -17,7 +13,7 @@ function buildFrontendUrl(req, path) {
         return joinUrl('https://conquestk.com', path);
     }
     if (process.env.NODE_ENV === 'staging') {
-        return joinUrl('https://risk-game-production-9935.up.railway.app', path);
+        return joinUrl('https://dev.conquestk.com', path);
     }
     return joinUrl('http://localhost:5173', path);
 }
@@ -26,7 +22,7 @@ function joinUrl(base, path) {
     const cleanedPath = path.startsWith('/') ? path : `/${path}`;
     return `${cleanedBase}${cleanedPath}`;
 }
-function resolveAssetUrl(req, value) {
+export function resolveAssetUrl(req, value) {
     if (!value)
         return null;
     const url = value.trim();
@@ -43,7 +39,7 @@ function resolveAssetUrl(req, value) {
         return url;
     }
     try {
-        return (0, assetStorage_js_1.getPublicAssetUrl)(url);
+        return getPublicAssetUrl(url);
     }
     catch {
         return url;

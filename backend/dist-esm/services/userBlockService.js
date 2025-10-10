@@ -1,24 +1,17 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createBlock = createBlock;
-exports.removeBlock = removeBlock;
-exports.isBlocked = isBlocked;
-exports.getBlocksForUser = getBlocksForUser;
-exports.getBlockRecords = getBlockRecords;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 const mapRow = (row) => ({
     id: row.id,
     blockerId: row.blocker_id,
     blockedId: row.blocked_id,
     createdAt: row.created_at,
 });
-async function createBlock(blockerId, blockedId) {
+export async function createBlock(blockerId, blockedId) {
     if (blockerId === blockedId) {
         throw new Error('Cannot block yourself');
     }
     try {
-        const insertResult = await (0, database_js_1.query)(`
+        const insertResult = await query(`
       INSERT INTO user_blocks (blocker_id, blocked_id)
       VALUES ($1, $2)
       ON CONFLICT (blocker_id, blocked_id) DO UPDATE
@@ -28,30 +21,30 @@ async function createBlock(blockerId, blockedId) {
         if (insertResult.rows.length > 0) {
             return mapRow(insertResult.rows[0]);
         }
-        const existingResult = await (0, database_js_1.query)('SELECT * FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2', [blockerId, blockedId]);
+        const existingResult = await query('SELECT * FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2', [blockerId, blockedId]);
         if (existingResult.rows.length === 0) {
             throw new Error('Failed to create block');
         }
         return mapRow(existingResult.rows[0]);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to create user block', { blockerId, blockedId, error });
+        logger.error('Failed to create user block', { blockerId, blockedId, error });
         throw error;
     }
 }
-async function removeBlock(blockerId, blockedId) {
+export async function removeBlock(blockerId, blockedId) {
     try {
-        const result = await (0, database_js_1.query)('DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2 RETURNING id', [blockerId, blockedId]);
+        const result = await query('DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2 RETURNING id', [blockerId, blockedId]);
         return (result.rowCount ?? 0) > 0;
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to remove user block', { blockerId, blockedId, error });
+        logger.error('Failed to remove user block', { blockerId, blockedId, error });
         throw error;
     }
 }
-async function isBlocked(userA, userB) {
+export async function isBlocked(userA, userB) {
     try {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 1
       FROM user_blocks
       WHERE (blocker_id = $1 AND blocked_id = $2)
@@ -61,13 +54,13 @@ async function isBlocked(userA, userB) {
         return (result.rowCount ?? 0) > 0;
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to check block status', { userA, userB, error });
+        logger.error('Failed to check block status', { userA, userB, error });
         throw error;
     }
 }
-async function getBlocksForUser(userId) {
+export async function getBlocksForUser(userId) {
     try {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT *
       FROM user_blocks
       WHERE blocker_id = $1
@@ -76,11 +69,11 @@ async function getBlocksForUser(userId) {
         return result.rows.map(mapRow);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to fetch user blocks', { userId, error });
+        logger.error('Failed to fetch user blocks', { userId, error });
         throw error;
     }
 }
-async function getBlockRecords(options) {
+export async function getBlockRecords(options) {
     const { limit = 100, offset = 0, blockerId, blockedId } = options;
     const conditions = [];
     const params = [];
@@ -98,7 +91,7 @@ async function getBlockRecords(options) {
     const offsetPosition = params.length;
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     try {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT *
       FROM user_blocks
       ${whereClause}
@@ -109,7 +102,7 @@ async function getBlockRecords(options) {
         return result.rows.map(mapRow);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to fetch block records', { options, error });
+        logger.error('Failed to fetch block records', { options, error });
         throw error;
     }
 }

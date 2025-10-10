@@ -1,19 +1,12 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.computeVisibilityMask = computeVisibilityMask;
-exports.emitFogFilteredDelta = emitFogFilteredDelta;
-exports.filterFullStateForViewer = filterFullStateForViewer;
-exports.filterStateForPlanner = filterStateForPlanner;
-exports.emitRevealSnapshot = emitRevealSnapshot;
-const logger_js_1 = require("../utils/logger.js");
-const gameService_js_1 = require("./gameService.js");
-const metricsService_js_1 = require("./metricsService.js");
+import { logger } from '../utils/logger.js';
+import { GameService } from './gameService.js';
+import { socketPayloadMetrics } from './metricsService.js';
 const ROOM_PREFIX = 'game:';
 function getViewerTeamId(state, viewerId) {
     const p = state.players.find((pl) => pl.id === viewerId);
     return p?.teamId ?? null;
 }
-function computeVisibilityMask(state, viewerId) {
+export function computeVisibilityMask(state, viewerId) {
     const allowTeam = state.gameConfig?.allowTeamPlay === true;
     const viewerTeam = allowTeam ? getViewerTeamId(state, viewerId) : null;
     const owned = new Set();
@@ -85,7 +78,7 @@ function filterDeltaForMask(delta, mask) {
     }
     return delta;
 }
-async function emitFogFilteredDelta(io, roomId, delta, state) {
+export async function emitFogFilteredDelta(io, roomId, delta, state) {
     const channel = `${ROOM_PREFIX}${roomId}`;
     let sockets;
     try {
@@ -94,18 +87,18 @@ async function emitFogFilteredDelta(io, roomId, delta, state) {
     catch {
         try {
             const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8');
-            metricsService_js_1.socketPayloadMetrics.record('game-delta', bytes);
+            socketPayloadMetrics.record('game-delta', bytes);
         }
         catch {
         }
         io.to(channel).emit('game-delta', delta);
         return;
     }
-    const gameState = state ?? (await new gameService_js_1.GameService().getGameState(roomId));
+    const gameState = state ?? (await new GameService().getGameState(roomId));
     if (!gameState) {
         try {
             const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8');
-            metricsService_js_1.socketPayloadMetrics.record('game-delta', bytes);
+            socketPayloadMetrics.record('game-delta', bytes);
         }
         catch {
         }
@@ -117,7 +110,7 @@ async function emitFogFilteredDelta(io, roomId, delta, state) {
     if (fogMode === 'off') {
         try {
             const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8');
-            metricsService_js_1.socketPayloadMetrics.record('game-delta', bytes);
+            socketPayloadMetrics.record('game-delta', bytes);
         }
         catch {
         }
@@ -129,7 +122,7 @@ async function emitFogFilteredDelta(io, roomId, delta, state) {
         if (!viewerId) {
             try {
                 const bytes = Buffer.byteLength(JSON.stringify(delta), 'utf8');
-                metricsService_js_1.socketPayloadMetrics.record('game-delta', bytes);
+                socketPayloadMetrics.record('game-delta', bytes);
             }
             catch {
             }
@@ -141,7 +134,7 @@ async function emitFogFilteredDelta(io, roomId, delta, state) {
         if (filtered) {
             try {
                 const bytes = Buffer.byteLength(JSON.stringify(filtered), 'utf8');
-                metricsService_js_1.socketPayloadMetrics.record('game-delta', bytes);
+                socketPayloadMetrics.record('game-delta', bytes);
             }
             catch {
             }
@@ -149,7 +142,7 @@ async function emitFogFilteredDelta(io, roomId, delta, state) {
         }
     }
 }
-function filterFullStateForViewer(state, viewerId) {
+export function filterFullStateForViewer(state, viewerId) {
     const fogMode = state.gameConfig?.fogOfWar;
     const fogEnabled = fogMode && fogMode !== 'off';
     if (!fogEnabled)
@@ -160,7 +153,7 @@ function filterFullStateForViewer(state, viewerId) {
         board: state.board.map((t) => (mask.has(t.id) ? t : { ...t, ownerId: null, armies: 0 })),
     };
 }
-function filterStateForPlanner(state, viewerId) {
+export function filterStateForPlanner(state, viewerId) {
     return filterFullStateForViewer(state, viewerId);
 }
 function serializeForClient(state) {
@@ -171,7 +164,7 @@ function serializeForClient(state) {
     }
     return state;
 }
-async function emitRevealSnapshot(io, roomId, viewerId, state) {
+export async function emitRevealSnapshot(io, roomId, viewerId, state) {
     const channel = `${ROOM_PREFIX}${roomId}`;
     let sockets;
     try {
@@ -183,18 +176,18 @@ async function emitRevealSnapshot(io, roomId, viewerId, state) {
     const target = sockets.find((s) => s.data?.userId === viewerId);
     if (!target)
         return;
-    const gameState = state ?? (await new gameService_js_1.GameService().getGameState(roomId));
+    const gameState = state ?? (await new GameService().getGameState(roomId));
     if (!gameState)
         return;
     const filtered = filterFullStateForViewer(gameState, viewerId);
     const serialized = serializeForClient(filtered);
     try {
         const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8');
-        metricsService_js_1.socketPayloadMetrics.record('game-update', bytes);
-        if (metricsService_js_1.socketPayloadMetrics.shouldLog('game-update')) {
-            const stats = metricsService_js_1.socketPayloadMetrics.snapshot('game-update');
+        socketPayloadMetrics.record('game-update', bytes);
+        if (socketPayloadMetrics.shouldLog('game-update')) {
+            const stats = socketPayloadMetrics.snapshot('game-update');
             if (stats) {
-                logger_js_1.logger.info('Socket payload stats', {
+                logger.info('Socket payload stats', {
                     event: 'game-update',
                     windowCount: stats.count,
                     p50Bytes: stats.p50,

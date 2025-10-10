@@ -1,54 +1,18 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateDatabaseSchema = validateDatabaseSchema;
-const node_fs_1 = require("node:fs");
-const path = __importStar(require("node:path"));
-const dotenv = __importStar(require("dotenv"));
+import { existsSync, promises as fsPromises } from 'node:fs';
+import * as path from 'node:path';
+import * as dotenv from 'dotenv';
 const envCandidates = ['../../.env.local', '../../.env'];
 for (const candidate of envCandidates) {
     const candidatePath = path.join(__dirname, candidate);
-    if ((0, node_fs_1.existsSync)(candidatePath)) {
+    if (existsSync(candidatePath)) {
         dotenv.config({ path: candidatePath });
         break;
     }
 }
 dotenv.config();
-const database_js_1 = require("../config/database.js");
-const errorHelpers_js_1 = require("../utils/errorHelpers.js");
-const logger_js_1 = require("../utils/logger.js");
+import { query } from '../config/database.js';
+import { getErrorMessage } from '../utils/errorHelpers.js';
+import { logger } from '../utils/logger.js';
 const REQUIRED_TABLES = [
     'achievements',
     'admin_activity_logs',
@@ -174,10 +138,10 @@ function parseCliOptions() {
 }
 async function checkTable(tableName) {
     try {
-        const result = await (0, database_js_1.query)(`SELECT COUNT(*) as count FROM information_schema.tables 
+        const result = await query(`SELECT COUNT(*) as count FROM information_schema.tables 
        WHERE table_schema = 'public' AND table_name = $1`, [tableName]);
         if (result.rows[0].count > 0) {
-            const countResult = await (0, database_js_1.query)(`SELECT COUNT(*) as count FROM ${tableName}`);
+            const countResult = await query(`SELECT COUNT(*) as count FROM ${tableName}`);
             return {
                 table: tableName,
                 exists: true,
@@ -193,7 +157,7 @@ async function checkTable(tableName) {
         return {
             table: tableName,
             exists: false,
-            error: (0, errorHelpers_js_1.getErrorMessage)(error),
+            error: getErrorMessage(error),
         };
     }
 }
@@ -207,89 +171,89 @@ async function checkRequiredColumns() {
     ];
     for (const check of criticalColumns) {
         try {
-            const result = await (0, database_js_1.query)(`SELECT column_name FROM information_schema.columns 
+            const result = await query(`SELECT column_name FROM information_schema.columns 
          WHERE table_name = $1 AND table_schema = 'public'`, [check.table]);
             const existingColumns = result.rows.map((r) => r.column_name);
             const missingColumns = check.columns.filter((col) => !existingColumns.includes(col));
             if (missingColumns.length > 0) {
-                logger_js_1.logger.warn(`⚠️  Table ${check.table} missing columns: ${missingColumns.join(', ')}`);
+                logger.warn(`⚠️  Table ${check.table} missing columns: ${missingColumns.join(', ')}`);
             }
         }
         catch (error) {
-            logger_js_1.logger.error(`❌ Error checking columns for ${check.table}:`, error);
+            logger.error(`❌ Error checking columns for ${check.table}:`, error);
         }
     }
 }
 async function checkMigrationStatus() {
     try {
-        const cols = await (0, database_js_1.query)(`SELECT column_name FROM information_schema.columns WHERE table_name = 'schema_migrations' AND table_schema = 'public'`);
+        const cols = await query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'schema_migrations' AND table_schema = 'public'`);
         const names = new Set(cols.rows.map((r) => r.column_name));
         if (names.has('version') && names.has('applied_at')) {
-            const result = await (0, database_js_1.query)(`SELECT version, applied_at FROM schema_migrations ORDER BY version DESC LIMIT 5`);
-            logger_js_1.logger.info('📋 Recent migrations (legacy tracker):');
+            const result = await query(`SELECT version, applied_at FROM schema_migrations ORDER BY version DESC LIMIT 5`);
+            logger.info('📋 Recent migrations (legacy tracker):');
             for (const row of result.rows) {
-                logger_js_1.logger.info(`  - ${row.version} @ ${new Date(row.applied_at).toLocaleString()}`);
+                logger.info(`  - ${row.version} @ ${new Date(row.applied_at).toLocaleString()}`);
             }
             return;
         }
-        const modern = await (0, database_js_1.query)(`SELECT filename, executed_at, status FROM schema_migrations ORDER BY executed_at DESC NULLS LAST, filename DESC LIMIT 5`);
-        logger_js_1.logger.info('📋 Recent migrations (modern tracker / baseline):');
+        const modern = await query(`SELECT filename, executed_at, status FROM schema_migrations ORDER BY executed_at DESC NULLS LAST, filename DESC LIMIT 5`);
+        logger.info('📋 Recent migrations (modern tracker / baseline):');
         for (const row of modern.rows) {
-            logger_js_1.logger.info(`  - ${row.filename} @ ${row.executed_at ? new Date(row.executed_at).toLocaleString() : 'N/A'}${row.status ? ` [${row.status}]` : ''}`);
+            logger.info(`  - ${row.filename} @ ${row.executed_at ? new Date(row.executed_at).toLocaleString() : 'N/A'}${row.status ? ` [${row.status}]` : ''}`);
         }
     }
     catch (_error) {
-        logger_js_1.logger.warn('⚠️  Could not check migration status');
+        logger.warn('⚠️  Could not check migration status');
     }
 }
-async function validateDatabaseSchema() {
-    logger_js_1.logger.info('🔍 Validating database schema...');
-    logger_js_1.logger.info('========================================');
+export async function validateDatabaseSchema() {
+    logger.info('🔍 Validating database schema...');
+    logger.info('========================================');
     const results = [];
     let hasErrors = false;
-    logger_js_1.logger.info('📊 Checking required tables...');
+    logger.info('📊 Checking required tables...');
     for (const table of REQUIRED_TABLES) {
         const result = await checkTable(table);
         results.push(result);
         if (!result.exists) {
-            logger_js_1.logger.error(`❌ MISSING: ${table}`);
+            logger.error(`❌ MISSING: ${table}`);
             hasErrors = true;
         }
         else {
-            logger_js_1.logger.info(`✅ ${table} (${result.rowCount} rows)`);
+            logger.info(`✅ ${table} (${result.rowCount} rows)`);
         }
     }
-    logger_js_1.logger.info('\n📊 Checking optional tables...');
+    logger.info('\n📊 Checking optional tables...');
     for (const table of OPTIONAL_TABLES) {
         const result = await checkTable(table);
         if (result.exists) {
-            logger_js_1.logger.info(`✅ ${table} (${result.rowCount} rows)`);
+            logger.info(`✅ ${table} (${result.rowCount} rows)`);
         }
         else {
-            logger_js_1.logger.info(`⭕ ${table} (not present - optional)`);
+            logger.info(`⭕ ${table} (not present - optional)`);
         }
     }
-    logger_js_1.logger.info('\n📊 Checking critical columns...');
+    logger.info('\n📊 Checking critical columns...');
     await checkRequiredColumns();
-    logger_js_1.logger.info('\n📊 Migration status:');
+    logger.info('\n📊 Migration status:');
     await checkMigrationStatus();
-    logger_js_1.logger.info('\n========================================');
+    logger.info('\n========================================');
     const missingTables = results.filter((r) => !r.exists);
     const existingTables = results.filter((r) => r.exists);
-    logger_js_1.logger.info(`📈 Schema validation summary:`);
-    logger_js_1.logger.info(`  ✅ Tables present: ${existingTables.length}/${REQUIRED_TABLES.length}`);
-    logger_js_1.logger.info(`  ❌ Tables missing: ${missingTables.length}`);
-    logger_js_1.logger.info('\nℹ️ Baseline migrations: This project maintains a single baseline SQL file for fresh databases, plus incremental migrations as needed. If you recently switched to the baseline-only approach, ensure old migration files are removed in your repo after generating the baseline.');
+    logger.info(`📈 Schema validation summary:`);
+    logger.info(`  ✅ Tables present: ${existingTables.length}/${REQUIRED_TABLES.length}`);
+    logger.info(`  ❌ Tables missing: ${missingTables.length}`);
+    logger.info('\nℹ️ Baseline migrations: This project maintains a single baseline SQL file for fresh databases, plus incremental migrations as needed. If you recently switched to the baseline-only approach, ensure old migration files are removed in your repo after generating the baseline.');
     if (missingTables.length > 0) {
-        logger_js_1.logger.error('\n⚠️  Missing tables:');
+        logger.error('\n⚠️  Missing tables:');
         for (const table of missingTables) {
-            logger_js_1.logger.error(`  - ${table.table}`);
+            logger.error(`  - ${table.table}`);
         }
-        logger_js_1.logger.error('\n💡 Run migrations to create missing tables:');
-        logger_js_1.logger.error('   cd backend && npm run migrate');
+        logger.error('\n💡 Run migrations to create missing tables:');
+        logger.error('   cd backend && npm run migrate');
     }
     else {
-        logger_js_1.logger.info('\n✅ All required tables are present!');
+        logger.info('\n✅ All required tables are present!');
     }
     return !hasErrors;
 }
@@ -357,7 +321,7 @@ function extractPostgresVersion(rawVersion) {
     return rawVersion;
 }
 async function getSchemaMetadata() {
-    const result = await (0, database_js_1.query)(`SELECT current_database() AS database, current_schema() AS schema, version() AS version`);
+    const result = await query(`SELECT current_database() AS database, current_schema() AS schema, version() AS version`);
     const row = result.rows[0];
     return {
         database: row.database,
@@ -366,7 +330,7 @@ async function getSchemaMetadata() {
     };
 }
 async function getEnumTypes() {
-    const result = await (0, database_js_1.query)(`SELECT t.typname AS enum_type, e.enumlabel AS enum_label, e.enumsortorder
+    const result = await query(`SELECT t.typname AS enum_type, e.enumlabel AS enum_label, e.enumsortorder
        FROM pg_type t
        JOIN pg_enum e ON t.oid = e.enumtypid
        JOIN pg_namespace n ON n.oid = t.typnamespace
@@ -381,7 +345,7 @@ async function getEnumTypes() {
     return Array.from(byType.entries()).map(([name, values]) => ({ name, values }));
 }
 async function getTriggers() {
-    const result = await (0, database_js_1.query)(`SELECT t.tgname AS trigger_name, c.relname AS table_name, pg_get_triggerdef(t.oid, true) AS definition
+    const result = await query(`SELECT t.tgname AS trigger_name, c.relname AS table_name, pg_get_triggerdef(t.oid, true) AS definition
        FROM pg_trigger t
        JOIN pg_class c ON t.tgrelid = c.oid
        JOIN pg_namespace n ON c.relnamespace = n.oid
@@ -395,7 +359,7 @@ async function getTriggers() {
     }));
 }
 async function getTableNames() {
-    const result = await (0, database_js_1.query)(`SELECT table_name
+    const result = await query(`SELECT table_name
        FROM information_schema.tables
       WHERE table_schema = 'public'
         AND table_type = 'BASE TABLE'
@@ -403,7 +367,7 @@ async function getTableNames() {
     return result.rows.map((row) => row.table_name);
 }
 async function getColumnsForTable(tableName) {
-    const result = await (0, database_js_1.query)(`SELECT column_name, data_type, udt_name, is_nullable, column_default,
+    const result = await query(`SELECT column_name, data_type, udt_name, is_nullable, column_default,
             character_maximum_length, numeric_precision, numeric_scale, datetime_precision
        FROM information_schema.columns
       WHERE table_schema = 'public'
@@ -417,7 +381,7 @@ async function getColumnsForTable(tableName) {
     }));
 }
 async function getConstraintDetails(tableName) {
-    const result = await (0, database_js_1.query)(`SELECT tc.constraint_name, tc.constraint_type, kcu.column_name,
+    const result = await query(`SELECT tc.constraint_name, tc.constraint_type, kcu.column_name,
             ccu.table_name AS foreign_table_name,
             ccu.column_name AS foreign_column_name,
             rc.update_rule, rc.delete_rule
@@ -483,7 +447,7 @@ async function getConstraintDetails(tableName) {
     };
 }
 async function getCheckConstraints(tableName) {
-    const result = await (0, database_js_1.query)(`SELECT con.conname AS name, pg_get_constraintdef(con.oid, true) AS definition
+    const result = await query(`SELECT con.conname AS name, pg_get_constraintdef(con.oid, true) AS definition
        FROM pg_constraint con
        JOIN pg_class rel ON con.conrelid = rel.oid
        JOIN pg_namespace nsp ON rel.relnamespace = nsp.oid
@@ -497,7 +461,7 @@ async function getCheckConstraints(tableName) {
     }));
 }
 async function getIndexesForTable(tableName) {
-    const result = await (0, database_js_1.query)(`SELECT indexname, indexdef
+    const result = await query(`SELECT indexname, indexdef
        FROM pg_indexes
       WHERE schemaname = 'public'
         AND tablename = $1
@@ -509,12 +473,12 @@ async function getIndexesForTable(tableName) {
 }
 async function getRowCountForTable(tableName) {
     try {
-        const result = await (0, database_js_1.query)(`SELECT COUNT(*)::bigint AS count FROM ${quoteIdentifier('public')}.${quoteIdentifier(tableName)}`);
+        const result = await query(`SELECT COUNT(*)::bigint AS count FROM ${quoteIdentifier('public')}.${quoteIdentifier(tableName)}`);
         const value = result.rows[0]?.count;
         return value ? Number.parseInt(value, 10) : null;
     }
     catch (error) {
-        logger_js_1.logger.warn(`⚠️  Unable to count rows for ${tableName}: ${(0, errorHelpers_js_1.getErrorMessage)(error)}`);
+        logger.warn(`⚠️  Unable to count rows for ${tableName}: ${getErrorMessage(error)}`);
         return null;
     }
 }
@@ -609,7 +573,7 @@ async function exportSchemaCatalog(options) {
     const resolvedOutputPath = path.isAbsolute(options.outputPath)
         ? options.outputPath
         : path.resolve(process.cwd(), options.outputPath);
-    logger_js_1.logger.info(`📝 Exporting database schema to ${resolvedOutputPath}`);
+    logger.info(`📝 Exporting database schema to ${resolvedOutputPath}`);
     const [metadata, tables, enums, triggers] = await Promise.all([
         getSchemaMetadata(),
         getTableInfos(options.includeRowCounts),
@@ -699,9 +663,9 @@ async function exportSchemaCatalog(options) {
         }
         lines.push('');
     }
-    await node_fs_1.promises.mkdir(path.dirname(resolvedOutputPath), { recursive: true });
-    await node_fs_1.promises.writeFile(resolvedOutputPath, `${lines.join('\n')}\n`, 'utf8');
-    logger_js_1.logger.info(`✅ Schema catalog written to ${resolvedOutputPath}`);
+    await fsPromises.mkdir(path.dirname(resolvedOutputPath), { recursive: true });
+    await fsPromises.writeFile(resolvedOutputPath, `${lines.join('\n')}\n`, 'utf8');
+    logger.info(`✅ Schema catalog written to ${resolvedOutputPath}`);
 }
 async function main() {
     const options = parseCliOptions();
@@ -709,10 +673,10 @@ async function main() {
     if (!options.skipValidation) {
         validationPassed = await validateDatabaseSchema();
         if (validationPassed) {
-            logger_js_1.logger.info('✅ Database schema is valid');
+            logger.info('✅ Database schema is valid');
         }
         else {
-            logger_js_1.logger.error('❌ Database schema validation failed');
+            logger.error('❌ Database schema validation failed');
         }
     }
     if (options.exportPath) {
@@ -728,7 +692,7 @@ async function main() {
 }
 if (require.main === module) {
     main().catch((error) => {
-        logger_js_1.logger.error('❌ Schema validation error:', error);
+        logger.error('❌ Schema validation error:', error);
         process.exitCode = 1;
     });
 }

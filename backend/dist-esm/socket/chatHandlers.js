@@ -1,12 +1,6 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.setupChatHandlers = void 0;
-const conversationService_js_1 = require("../services/conversationService.js");
-const notificationService_js_1 = __importDefault(require("../services/notificationService.js"));
-const logger_js_1 = require("../utils/logger.js");
+import { addMembersToConversation, ConversationError, createGroupConversation, ensureDirectConversation, getConversationDetail, markConversationRead, removeConversationMember, sendMessage as sendConversationMessage, setConversationArchived, updateConversationMemberRole, } from '../services/conversationService.js';
+import notificationService from '../services/notificationService.js';
+import { logger } from '../utils/logger.js';
 const toIso = (value) => {
     if (value instanceof Date) {
         return value.toISOString();
@@ -82,8 +76,8 @@ const getUserInfo = async (userId) => {
 };
 const sendDMNotification = async (recipientId, senderId, senderUsername, message) => {
     const preview = message.length > 140 ? `${message.substring(0, 137)}...` : message;
-    const sendPush = await notificationService_js_1.default.shouldSendDMPush(recipientId);
-    await notificationService_js_1.default.createInAppNotification(recipientId, {
+    const sendPush = await notificationService.shouldSendDMPush(recipientId);
+    await notificationService.createInAppNotification(recipientId, {
         type: 'chat_message',
         title: `New message from ${senderUsername}`,
         message: preview || 'You received a new message',
@@ -113,14 +107,14 @@ const maybeSendDirectMessageNotification = async (conversation, senderId, body) 
     await sendDMNotification(partnerId, senderId, senderInfo.username, body);
 };
 const ensureConversationAccess = async (socket, conversationId, userId) => {
-    const detail = await (0, conversationService_js_1.getConversationDetail)(conversationId, userId, {
+    const detail = await getConversationDetail(conversationId, userId, {
         allowSpectatorGameAccess: true,
     });
     await joinConversationRoom(socket, conversationId);
     return detail;
 };
 const ensureDirectConversationAccess = async (socket, userId, partnerId) => {
-    const conversation = await (0, conversationService_js_1.ensureDirectConversation)(userId, partnerId);
+    const conversation = await ensureDirectConversation(userId, partnerId);
     await joinConversationRoom(socket, conversation.id);
     return conversation;
 };
@@ -132,14 +126,14 @@ const sanitizeMetadata = (metadata) => {
         return undefined;
     }
     if (typeof metadata !== 'object' || Array.isArray(metadata)) {
-        throw new conversationService_js_1.ConversationError('INVALID_METADATA', 'metadata must be an object when provided');
+        throw new ConversationError('INVALID_METADATA', 'metadata must be an object when provided');
     }
     return metadata;
 };
 const sendConversationMessageForUser = async (socket, options) => {
     const trimmed = options.body.trim();
     if (!trimmed) {
-        throw new conversationService_js_1.ConversationError('EMPTY_MESSAGE', 'Message cannot be empty');
+        throw new ConversationError('EMPTY_MESSAGE', 'Message cannot be empty');
     }
     let descriptor;
     if (options.descriptor) {
@@ -149,7 +143,7 @@ const sendConversationMessageForUser = async (socket, options) => {
         const detail = await ensureConversationAccess(socket, options.conversationId, options.userId);
         descriptor = detail.conversation;
     }
-    const message = await (0, conversationService_js_1.sendMessage)({
+    const message = await sendConversationMessage({
         conversationId: descriptor.id,
         senderId: options.userId,
         body: trimmed,
@@ -181,8 +175,8 @@ const broadcastReceiptRead = async (io, socket, conversationId, userId) => {
         };
         return payload;
     }
-    await (0, conversationService_js_1.markConversationRead)(conversationId, userId);
-    const refreshed = await (0, conversationService_js_1.getConversationDetail)(conversationId, userId, {
+    await markConversationRead(conversationId, userId);
+    const refreshed = await getConversationDetail(conversationId, userId, {
         allowSpectatorGameAccess: true,
     });
     const payload = {
@@ -252,7 +246,7 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         const addedMembers = [];
         for (const memberId of additions) {
             try {
-                const members = await (0, conversationService_js_1.addMembersToConversation)({
+                const members = await addMembersToConversation({
                     actorId,
                     conversationId,
                     memberIds: [memberId],
@@ -262,11 +256,11 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
                 }
             }
             catch (error) {
-                if (error instanceof conversationService_js_1.ConversationError) {
+                if (error instanceof ConversationError) {
                     errors.push({ type: 'add', userId: memberId, code: error.code, error: error.message });
                 }
                 else {
-                    logger_js_1.logger.error('Failed to add conversation member', { error });
+                    logger.error('Failed to add conversation member', { error });
                     errors.push({
                         type: 'add',
                         userId: memberId,
@@ -279,7 +273,7 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         const removedMembers = [];
         for (const removeId of removals) {
             try {
-                await (0, conversationService_js_1.removeConversationMember)({
+                await removeConversationMember({
                     actorId,
                     conversationId,
                     targetUserId: removeId,
@@ -287,11 +281,11 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
                 removedMembers.push(removeId);
             }
             catch (error) {
-                if (error instanceof conversationService_js_1.ConversationError) {
+                if (error instanceof ConversationError) {
                     errors.push({ type: 'remove', userId: removeId, code: error.code, error: error.message });
                 }
                 else {
-                    logger_js_1.logger.error('Failed to remove conversation member', { error });
+                    logger.error('Failed to remove conversation member', { error });
                     errors.push({
                         type: 'remove',
                         userId: removeId,
@@ -304,7 +298,7 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         const roleResults = [];
         for (const update of roleUpdates) {
             try {
-                const updated = await (0, conversationService_js_1.updateConversationMemberRole)({
+                const updated = await updateConversationMemberRole({
                     actorId,
                     conversationId,
                     targetUserId: update.userId,
@@ -313,7 +307,7 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
                 roleResults.push({ userId: updated.userId, role: updated.role });
             }
             catch (error) {
-                if (error instanceof conversationService_js_1.ConversationError) {
+                if (error instanceof ConversationError) {
                     errors.push({
                         type: 'role',
                         userId: update.userId,
@@ -322,7 +316,7 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
                     });
                 }
                 else {
-                    logger_js_1.logger.error('Failed to update conversation member role', { error });
+                    logger.error('Failed to update conversation member role', { error });
                     errors.push({
                         type: 'role',
                         userId: update.userId,
@@ -336,7 +330,7 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         let conversationSummary;
         if (typeof payload.archive === 'boolean') {
             try {
-                const descriptor = await (0, conversationService_js_1.setConversationArchived)({
+                const descriptor = await setConversationArchived({
                     actorId,
                     conversationId,
                     archived: payload.archive,
@@ -345,11 +339,11 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
                 conversationSummary = mapConversationToSummary(descriptor);
             }
             catch (error) {
-                if (error instanceof conversationService_js_1.ConversationError) {
+                if (error instanceof ConversationError) {
                     errors.push({ type: 'archive', code: error.code, error: error.message });
                 }
                 else {
-                    logger_js_1.logger.error('Failed to update conversation archive state', { error });
+                    logger.error('Failed to update conversation archive state', { error });
                     errors.push({
                         type: 'archive',
                         code: 'UNKNOWN_ERROR',
@@ -360,12 +354,12 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         }
         if (!conversationSummary) {
             try {
-                const detail = await (0, conversationService_js_1.getConversationDetail)(conversationId, actorId);
+                const detail = await getConversationDetail(conversationId, actorId);
                 conversationSummary = mapConversationToSummary(detail.conversation);
                 archivedState = detail.conversation.isArchived;
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to refresh conversation summary after update', {
+                logger.warn('Failed to refresh conversation summary after update', {
                     conversationId,
                     error,
                 });
@@ -382,10 +376,10 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             return ackError(callback, mapConversationError(error));
         }
-        logger_js_1.logger.error('conversation.members.update handler failed', { error });
+        logger.error('conversation.members.update handler failed', { error });
         ackError(callback, {
             ok: false,
             error: 'Failed to update members',
@@ -393,7 +387,7 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         });
     }
 };
-const setupChatHandlers = (io, socket) => {
+export const setupChatHandlers = (io, socket) => {
     const requireUserId = () => {
         const { userId } = socket;
         if (!userId) {
@@ -440,10 +434,10 @@ const setupChatHandlers = (io, socket) => {
             });
         }
         catch (error) {
-            if (error instanceof conversationService_js_1.ConversationError) {
+            if (error instanceof ConversationError) {
                 return ackError(callback, mapConversationError(error));
             }
-            logger_js_1.logger.error('message.send handler failed', { error });
+            logger.error('message.send handler failed', { error });
             ackError(callback, {
                 ok: false,
                 error: 'Failed to send message',
@@ -467,10 +461,10 @@ const setupChatHandlers = (io, socket) => {
             ackSuccess(callback, { ok: true });
         }
         catch (error) {
-            if (error instanceof conversationService_js_1.ConversationError) {
+            if (error instanceof ConversationError) {
                 return ackError(callback, mapConversationError(error));
             }
-            logger_js_1.logger.error('receipt.read handler failed', { error });
+            logger.error('receipt.read handler failed', { error });
             ackError(callback, { ok: false, error: 'Failed to mark read', code: 'UNKNOWN_ERROR' });
         }
     });
@@ -486,7 +480,7 @@ const setupChatHandlers = (io, socket) => {
             await broadcastTypingEvent(io, socket, data.conversationId, userId, 'start');
         }
         catch (error) {
-            logger_js_1.logger.error('typing.start handler failed', { error });
+            logger.error('typing.start handler failed', { error });
         }
     });
     socket.on('typing.stop', async (data) => {
@@ -501,7 +495,7 @@ const setupChatHandlers = (io, socket) => {
             await broadcastTypingEvent(io, socket, data.conversationId, userId, 'stop');
         }
         catch (error) {
-            logger_js_1.logger.error('typing.stop handler failed', { error });
+            logger.error('typing.stop handler failed', { error });
         }
     });
     socket.on('conversation.create', async (data, callback) => {
@@ -536,7 +530,7 @@ const setupChatHandlers = (io, socket) => {
                     });
                 }
                 const metadata = sanitizeMetadata(data.metadata);
-                conversation = await (0, conversationService_js_1.createGroupConversation)({
+                conversation = await createGroupConversation({
                     creatorId: userId,
                     title: typeof data.title === 'string' ? data.title : undefined,
                     memberIds: data.memberIds,
@@ -550,10 +544,10 @@ const setupChatHandlers = (io, socket) => {
             });
         }
         catch (error) {
-            if (error instanceof conversationService_js_1.ConversationError) {
+            if (error instanceof ConversationError) {
                 return ackError(callback, mapConversationError(error));
             }
-            logger_js_1.logger.error('conversation.create handler failed', { error });
+            logger.error('conversation.create handler failed', { error });
             ackError(callback, {
                 ok: false,
                 error: 'Failed to create conversation',
@@ -568,5 +562,4 @@ const setupChatHandlers = (io, socket) => {
         await handleConversationMembersUpdate(io, socket, userId, payload, callback);
     });
 };
-exports.setupChatHandlers = setupChatHandlers;
 //# sourceMappingURL=chatHandlers.js.map

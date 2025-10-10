@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.authTrackingService = void 0;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 class AuthTrackingService {
     parseUserAgentLite(userAgent) {
         if (!userAgent)
@@ -49,7 +46,7 @@ class AuthTrackingService {
     }
     async recordAuthEvent({ userId, eventType, sessionId, ipAddress, userAgent, metadata, }) {
         try {
-            await (0, database_js_1.query)(`INSERT INTO events (user_id, session_id, event_type, event_data, ip_address, user_agent)
+            await query(`INSERT INTO events (user_id, session_id, event_type, event_data, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6)`, [
                 userId,
                 sessionId ?? null,
@@ -60,7 +57,7 @@ class AuthTrackingService {
             ]);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to record auth event', {
+            logger.warn('Failed to record auth event', {
                 context: 'authTrackingService.recordAuthEvent',
                 error,
                 userId,
@@ -73,7 +70,7 @@ class AuthTrackingService {
             const effectiveDeviceInfo = deviceInfo && Object.keys(deviceInfo).length > 0
                 ? deviceInfo
                 : this.parseUserAgentLite(userAgent);
-            const result = await (0, database_js_1.query)(`INSERT INTO user_sessions (user_id, ip_address, user_agent, device_info, session_data)
+            const result = await query(`INSERT INTO user_sessions (user_id, ip_address, user_agent, device_info, session_data)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id`, [
                 userId,
@@ -85,7 +82,7 @@ class AuthTrackingService {
             return result.rows[0]?.id ?? null;
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to create user session record', {
+            logger.warn('Failed to create user session record', {
                 context: 'authTrackingService.startUserSession',
                 error,
                 userId,
@@ -95,13 +92,13 @@ class AuthTrackingService {
     }
     async endUserSession(sessionId) {
         try {
-            await (0, database_js_1.query)(`UPDATE user_sessions
+            await query(`UPDATE user_sessions
          SET ended_at = CURRENT_TIMESTAMP,
              duration_seconds = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - started_at))::integer
          WHERE id = $1 AND ended_at IS NULL`, [sessionId]);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to close user session record', {
+            logger.warn('Failed to close user session record', {
                 context: 'authTrackingService.endUserSession',
                 error,
                 sessionId,
@@ -111,7 +108,7 @@ class AuthTrackingService {
     async closeStaleSessions(maxAgeHours) {
         const hours = Number.isFinite(maxAgeHours) && maxAgeHours > 0 ? maxAgeHours : 168;
         try {
-            const result = await (0, database_js_1.query)(`UPDATE user_sessions
+            const result = await query(`UPDATE user_sessions
          SET ended_at = CURRENT_TIMESTAMP,
              duration_seconds = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - started_at))::integer
          WHERE ended_at IS NULL
@@ -119,12 +116,12 @@ class AuthTrackingService {
          RETURNING id`, [String(hours)]);
             const closed = result.rows.length;
             if (closed > 0) {
-                logger_js_1.logger.info('Closed stale user sessions', { count: closed, maxAgeHours: hours });
+                logger.info('Closed stale user sessions', { count: closed, maxAgeHours: hours });
             }
             return closed;
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to close stale user sessions', {
+            logger.warn('Failed to close stale user sessions', {
                 context: 'authTrackingService.closeStaleSessions',
                 error,
                 maxAgeHours: hours,
@@ -133,5 +130,5 @@ class AuthTrackingService {
         }
     }
 }
-exports.authTrackingService = new AuthTrackingService();
+export const authTrackingService = new AuthTrackingService();
 //# sourceMappingURL=authTrackingService.js.map

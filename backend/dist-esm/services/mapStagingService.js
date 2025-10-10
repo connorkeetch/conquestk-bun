@@ -1,50 +1,11 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.mapStagingService = exports.MapStagingService = void 0;
-const path = __importStar(require("node:path"));
-const sharp_1 = __importDefault(require("sharp"));
-const database_js_1 = require("../config/database.js");
-const assetStorage_js_1 = require("../utils/assetStorage.js");
-const logger_js_1 = require("../utils/logger.js");
-const adminService_js_1 = require("./adminService.js");
-const notificationService_js_1 = __importDefault(require("./notificationService.js"));
-class MapStagingService {
+import * as path from 'node:path';
+import sharp from 'sharp';
+import { query } from '../config/database.js';
+import { assetExists, deleteAsset, uploadAsset } from '../utils/assetStorage.js';
+import { logger } from '../utils/logger.js';
+import { adminService } from './adminService.js';
+import notificationService from './notificationService.js';
+export class MapStagingService {
     constructor() {
         this.MAX_FILE_SIZE = 10 * 1024 * 1024;
         this.ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -58,12 +19,12 @@ class MapStagingService {
     }
     async checkUserQuota(userId) {
         try {
-            const userResult = await (0, database_js_1.query)('SELECT is_admin FROM users WHERE id = $1', [userId]);
+            const userResult = await query('SELECT is_admin FROM users WHERE id = $1', [userId]);
             const isAdmin = userResult.rows[0]?.is_admin;
             if (isAdmin) {
                 return { canUpload: true, remaining: -1 };
             }
-            const countResult = await (0, database_js_1.query)(`SELECT COUNT(*) as total FROM (
+            const countResult = await query(`SELECT COUNT(*) as total FROM (
           SELECT id FROM map_images_staging 
           WHERE user_id = $1 AND is_deleted = FALSE
           UNION ALL
@@ -85,7 +46,7 @@ class MapStagingService {
             return { canUpload: true, remaining };
         }
         catch (error) {
-            logger_js_1.logger.error('Error checking user quota:', error);
+            logger.error('Error checking user quota:', error);
             return { canUpload: false, remaining: 0, reason: 'Error checking quota' };
         }
     }
@@ -105,24 +66,24 @@ class MapStagingService {
             const randomString = Math.random().toString(36).substring(7);
             const extension = path.extname(file.originalname);
             const filename = `map-${timestamp}-${randomString}${extension}`;
-            const metadata = await (0, sharp_1.default)(file.buffer).metadata();
+            const metadata = await sharp(file.buffer).metadata();
             if (!metadata.width || !metadata.height) {
                 throw new Error('Could not determine image dimensions');
             }
             let processedBuffer = file.buffer;
             if (metadata.width > 2000 || metadata.height > 2000) {
-                processedBuffer = await (0, sharp_1.default)(file.buffer)
+                processedBuffer = await sharp(file.buffer)
                     .resize(2000, 2000, { fit: 'inside', withoutEnlargement: true })
                     .toBuffer();
             }
             const storageKey = this.buildStorageKey(filename);
-            const uploadResult = await (0, assetStorage_js_1.uploadAsset)({
+            const uploadResult = await uploadAsset({
                 key: storageKey,
                 body: processedBuffer,
                 contentType: file.mimetype,
                 cacheControl: 'public, max-age=3600',
             });
-            const result = await (0, database_js_1.query)(`INSERT INTO map_images_staging 
+            const result = await query(`INSERT INTO map_images_staging 
          (user_id, filename, original_filename, file_url, file_size, 
           width, height, mime_type, upload_status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -140,25 +101,25 @@ class MapStagingService {
             return result.rows[0];
         }
         catch (error) {
-            logger_js_1.logger.error('Error uploading image:', error);
+            logger.error('Error uploading image:', error);
             throw error;
         }
     }
     async getUserStagingImages(userId) {
         try {
-            const result = await (0, database_js_1.query)(`SELECT * FROM map_images_staging 
+            const result = await query(`SELECT * FROM map_images_staging 
          WHERE user_id = $1 AND is_deleted = FALSE
          ORDER BY created_at DESC`, [userId]);
             return result.rows;
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching staging images:', error);
+            logger.error('Error fetching staging images:', error);
             throw error;
         }
     }
     async getAllStagingImages() {
         try {
-            const result = await (0, database_js_1.query)(`SELECT mis.*, u.username 
+            const result = await query(`SELECT mis.*, u.username 
          FROM map_images_staging mis
          LEFT JOIN users u ON mis.user_id = u.id
          WHERE mis.is_deleted = FALSE
@@ -166,17 +127,17 @@ class MapStagingService {
             return result.rows;
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching all staging images:', error);
+            logger.error('Error fetching all staging images:', error);
             throw error;
         }
     }
     async notifyDeletionFailure(image, errorMessage) {
         try {
-            const adminIds = await adminService_js_1.adminService.getActiveAdminUserIds();
+            const adminIds = await adminService.getActiveAdminUserIds();
             if (adminIds.length === 0) {
                 return;
             }
-            await Promise.allSettled(adminIds.map((adminId) => notificationService_js_1.default.createInAppNotification(adminId, {
+            await Promise.allSettled(adminIds.map((adminId) => notificationService.createInAppNotification(adminId, {
                 type: 'system',
                 title: 'Map asset purge failed',
                 message: `Failed to remove staging asset ${image.filename}. Manual intervention may be required.`,
@@ -190,14 +151,14 @@ class MapStagingService {
             })));
         }
         catch (notifyError) {
-            logger_js_1.logger.error('Failed to notify admins about purge failure', notifyError);
+            logger.error('Failed to notify admins about purge failure', notifyError);
         }
     }
     async deleteStagingImage(userId, imageId, isAdmin = false) {
         try {
             const ownershipCheck = isAdmin ? '' : 'AND user_id = $2';
             const params = isAdmin ? [imageId] : [imageId, userId];
-            const result = await (0, database_js_1.query)(`UPDATE map_images_staging 
+            const result = await query(`UPDATE map_images_staging 
          SET is_deleted = TRUE,
              deleted_at = CURRENT_TIMESTAMP,
              deletion_attempts = 0,
@@ -210,7 +171,7 @@ class MapStagingService {
             }
         }
         catch (error) {
-            logger_js_1.logger.error('Error deleting staging image:', error);
+            logger.error('Error deleting staging image:', error);
             throw error;
         }
     }
@@ -225,7 +186,7 @@ class MapStagingService {
             throw new Error('minAgeMinutes must be zero or greater');
         }
         const startedAt = new Date();
-        const candidatesResult = await (0, database_js_1.query)(`
+        const candidatesResult = await query(`
         SELECT *
         FROM map_images_staging
         WHERE is_deleted = TRUE
@@ -256,10 +217,10 @@ class MapStagingService {
                 continue;
             }
             try {
-                await (0, assetStorage_js_1.deleteAsset)(storageKey);
+                await deleteAsset(storageKey);
                 purgedCount += 1;
                 bytesPurged += fileSize;
-                await (0, database_js_1.query)(`
+                await query(`
             UPDATE map_images_staging
             SET purged_at = NOW(),
                 deletion_attempts = $2,
@@ -271,7 +232,7 @@ class MapStagingService {
             catch (error) {
                 failedCount += 1;
                 const message = error instanceof Error ? error.message : String(error);
-                await (0, database_js_1.query)(`
+                await query(`
             UPDATE map_images_staging
             SET deletion_attempts = $2,
                 last_deletion_attempt = NOW(),
@@ -285,14 +246,14 @@ class MapStagingService {
                         filename: fileName,
                     }, message);
                 }
-                logger_js_1.logger.warn('Failed to purge staging image', {
+                logger.warn('Failed to purge staging image', {
                     imageId: row.id,
                     filename: fileName,
                     error: message,
                 });
             }
         }
-        await (0, database_js_1.query)(`
+        await query(`
         INSERT INTO map_asset_purge_runs (
           run_type,
           processed_count,
@@ -319,8 +280,8 @@ class MapStagingService {
             }),
         ]);
         try {
-            await (0, database_js_1.query)(`DELETE FROM map_asset_purge_runs WHERE started_at < NOW() - INTERVAL '5 days'`);
-            await (0, database_js_1.query)(`
+            await query(`DELETE FROM map_asset_purge_runs WHERE started_at < NOW() - INTERVAL '5 days'`);
+            await query(`
           WITH ranked AS (
             SELECT id, ROW_NUMBER() OVER (ORDER BY started_at DESC) AS rn
             FROM map_asset_purge_runs
@@ -340,7 +301,7 @@ class MapStagingService {
         };
     }
     async reclaimStagingImage(adminId, imageId) {
-        const result = await (0, database_js_1.query)('SELECT * FROM map_images_staging WHERE id = $1', [
+        const result = await query('SELECT * FROM map_images_staging WHERE id = $1', [
             imageId,
         ]);
         const row = result.rows[0];
@@ -353,11 +314,11 @@ class MapStagingService {
         }
         const fileName = row.filename ?? row.filename;
         const storageKey = this.buildStorageKey(fileName);
-        const exists = await (0, assetStorage_js_1.assetExists)(storageKey);
+        const exists = await assetExists(storageKey);
         if (!exists) {
             throw new Error('The original file has already been purged and cannot be reclaimed');
         }
-        const updated = await (0, database_js_1.query)(`
+        const updated = await query(`
         UPDATE map_images_staging
         SET is_deleted = FALSE,
             deleted_at = NULL,
@@ -369,7 +330,7 @@ class MapStagingService {
         WHERE id = $1
         RETURNING *
       `, [imageId]);
-        logger_js_1.logger.info('Staging image reclaimed', {
+        logger.info('Staging image reclaimed', {
             imageId,
             adminId,
             filename: fileName,
@@ -377,7 +338,7 @@ class MapStagingService {
         return updated.rows[0];
     }
     async getRecentPurgeRuns(limit = 20) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         SELECT * FROM map_asset_purge_runs
         WHERE run_type = 'staging'
         ORDER BY started_at DESC
@@ -387,7 +348,7 @@ class MapStagingService {
     }
     async getUserQuotaSummary(userId) {
         try {
-            const userResult = await (0, database_js_1.query)('SELECT is_admin FROM users WHERE id = $1', [userId]);
+            const userResult = await query('SELECT is_admin FROM users WHERE id = $1', [userId]);
             const isAdmin = userResult.rows[0]?.is_admin;
             if (isAdmin) {
                 return {
@@ -401,10 +362,10 @@ class MapStagingService {
                     remaining: null,
                 };
             }
-            const stagingResult = await (0, database_js_1.query)('SELECT COUNT(*) as count FROM map_images_staging WHERE user_id = $1 AND is_deleted = FALSE', [userId]);
-            const draftsResult = await (0, database_js_1.query)(`SELECT COUNT(*) as count FROM map_drafts 
+            const stagingResult = await query('SELECT COUNT(*) as count FROM map_images_staging WHERE user_id = $1 AND is_deleted = FALSE', [userId]);
+            const draftsResult = await query(`SELECT COUNT(*) as count FROM map_drafts 
          WHERE user_id = $1 AND draft_status != 'submitted'`, [userId]);
-            const submissionsResult = await (0, database_js_1.query)(`SELECT COUNT(*) as count FROM map_submissions 
+            const submissionsResult = await query(`SELECT COUNT(*) as count FROM map_submissions 
          WHERE user_id = $1 AND review_status = 'pending'`, [userId]);
             const stagingImages = parseInt(stagingResult.rows[0]?.count || '0', 10);
             const drafts = parseInt(draftsResult.rows[0]?.count || '0', 10);
@@ -422,11 +383,10 @@ class MapStagingService {
             };
         }
         catch (error) {
-            logger_js_1.logger.error('Error getting quota summary:', error);
+            logger.error('Error getting quota summary:', error);
             throw error;
         }
     }
 }
-exports.MapStagingService = MapStagingService;
-exports.mapStagingService = new MapStagingService();
+export const mapStagingService = new MapStagingService();
 //# sourceMappingURL=mapStagingService.js.map

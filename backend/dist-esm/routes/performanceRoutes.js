@@ -1,29 +1,24 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const auth_js_1 = require("../middleware/auth.js");
-const cdnService_js_1 = require("../services/cdnService.js");
-const databaseClusterService_js_1 = require("../services/databaseClusterService.js");
-const performanceMonitorService_js_1 = require("../services/performanceMonitorService.js");
-const redisClusterService_js_1 = require("../services/redisClusterService.js");
-const errorHelpers_js_1 = require("../utils/errorHelpers.js");
-const logger_js_1 = require("../utils/logger.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const router = express_1.default.Router();
+import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import { cdnService } from '../services/cdnService.js';
+import { databaseClusterService } from '../services/databaseClusterService.js';
+import { performanceMonitorService } from '../services/performanceMonitorService.js';
+import { redisClusterService } from '../services/redisClusterService.js';
+import { getErrorMessage } from '../utils/errorHelpers.js';
+import { logger } from '../utils/logger.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+const router = express.Router();
 const sendFailure = (req, res, error, logMessage, status = 500) => {
     const clientError = error instanceof Error ? error.message : logMessage;
-    (0, routeErrorHandler_js_1.handleRouteError)(error, req, logMessage, status, { clientError });
+    handleRouteError(error, req, logMessage, status, { clientError });
     res.status(status).json({
         success: false,
         error: clientError,
     });
 };
-router.get('/dashboard', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
-        const dashboard = performanceMonitorService_js_1.performanceMonitorService.getDashboardData();
+        const dashboard = performanceMonitorService.getDashboardData();
         res.json({
             success: true,
             data: dashboard,
@@ -33,9 +28,9 @@ router.get('/dashboard', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to load performance dashboard');
     }
 });
-router.get('/metrics', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/metrics', authenticateToken, async (req, res) => {
     try {
-        const current = performanceMonitorService_js_1.performanceMonitorService.getCurrentMetrics();
+        const current = performanceMonitorService.getCurrentMetrics();
         res.json({
             success: true,
             data: current,
@@ -45,10 +40,10 @@ router.get('/metrics', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to load current metrics');
     }
 });
-router.get('/metrics/history', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/metrics/history', authenticateToken, async (req, res) => {
     try {
         const hours = parseInt(req.query.hours, 10) || 1;
-        const history = performanceMonitorService_js_1.performanceMonitorService.getMetricsHistory(hours);
+        const history = performanceMonitorService.getMetricsHistory(hours);
         res.json({
             success: true,
             data: history,
@@ -62,12 +57,12 @@ router.get('/metrics/history', auth_js_1.authenticateToken, async (req, res) => 
         sendFailure(req, res, error, 'Failed to load metrics history');
     }
 });
-router.get('/alerts', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/alerts', authenticateToken, async (req, res) => {
     try {
         const activeOnly = req.query.active === 'true';
         const alerts = activeOnly
-            ? performanceMonitorService_js_1.performanceMonitorService.getActiveAlerts()
-            : performanceMonitorService_js_1.performanceMonitorService.getAllAlerts();
+            ? performanceMonitorService.getActiveAlerts()
+            : performanceMonitorService.getAllAlerts();
         res.json({
             success: true,
             data: alerts,
@@ -77,10 +72,10 @@ router.get('/alerts', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to load performance alerts');
     }
 });
-router.post('/alerts/:alertId/resolve', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
     try {
         const { alertId } = req.params;
-        const resolved = performanceMonitorService_js_1.performanceMonitorService.resolveAlert(alertId);
+        const resolved = performanceMonitorService.resolveAlert(alertId);
         res.json({
             success: resolved,
             message: resolved ? 'Alert resolved' : 'Alert not found',
@@ -90,17 +85,17 @@ router.post('/alerts/:alertId/resolve', auth_js_1.authenticateToken, async (req,
         sendFailure(req, res, error, 'Failed to resolve alert');
     }
 });
-router.get('/health/detailed', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/health/detailed', authenticateToken, async (req, res) => {
     try {
         const [performanceHealth, redisHealth, databaseHealth, cdnHealth] = await Promise.allSettled([
-            performanceMonitorService_js_1.performanceMonitorService.healthCheck(),
-            redisClusterService_js_1.redisClusterService.healthCheck(),
-            databaseClusterService_js_1.databaseClusterService.healthCheck(),
-            cdnService_js_1.cdnService.healthCheck(),
+            performanceMonitorService.healthCheck(),
+            redisClusterService.healthCheck(),
+            databaseClusterService.healthCheck(),
+            cdnService.healthCheck(),
         ]);
         const extractResult = (result) => result.status === 'fulfilled'
             ? result.value
-            : { status: 'error', error: (0, errorHelpers_js_1.getErrorMessage)(result.reason) };
+            : { status: 'error', error: getErrorMessage(result.reason) };
         const health = {
             performance: extractResult(performanceHealth),
             redis: extractResult(redisHealth),
@@ -123,9 +118,9 @@ router.get('/health/detailed', auth_js_1.authenticateToken, async (req, res) => 
         sendFailure(req, res, error, 'Failed to load detailed health status');
     }
 });
-router.get('/cache/stats', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/cache/stats', authenticateToken, async (req, res) => {
     try {
-        const stats = redisClusterService_js_1.redisClusterService.getMetrics();
+        const stats = redisClusterService.getMetrics();
         res.json({
             success: true,
             data: stats,
@@ -135,7 +130,7 @@ router.get('/cache/stats', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to load cache stats');
     }
 });
-router.post('/cache/clear', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/cache/clear', authenticateToken, async (req, res) => {
     try {
         const { pattern } = req.body;
         if (!pattern) {
@@ -145,7 +140,7 @@ router.post('/cache/clear', auth_js_1.authenticateToken, async (req, res) => {
             });
             return;
         }
-        const cleared = await redisClusterService_js_1.redisClusterService.deletePattern(pattern);
+        const cleared = await redisClusterService.deletePattern(pattern);
         res.json({
             success: true,
             data: { cleared },
@@ -156,9 +151,9 @@ router.post('/cache/clear', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to clear cache keys');
     }
 });
-router.get('/database/stats', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/database/stats', authenticateToken, async (req, res) => {
     try {
-        const stats = databaseClusterService_js_1.databaseClusterService.getMetrics();
+        const stats = databaseClusterService.getMetrics();
         res.json({
             success: true,
             data: stats,
@@ -168,9 +163,9 @@ router.get('/database/stats', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to load database stats');
     }
 });
-router.get('/cdn/stats', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/cdn/stats', authenticateToken, async (req, res) => {
     try {
-        const stats = cdnService_js_1.cdnService.getMetrics();
+        const stats = cdnService.getMetrics();
         res.json({
             success: true,
             data: stats,
@@ -180,10 +175,10 @@ router.get('/cdn/stats', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to load CDN stats');
     }
 });
-router.post('/cdn/purge', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/cdn/purge', authenticateToken, async (req, res) => {
     try {
         const { paths = [], tags = [] } = req.body;
-        const purged = await cdnService_js_1.cdnService.purgeCache(paths, tags);
+        const purged = await cdnService.purgeCache(paths, tags);
         res.json({
             success: purged,
             message: purged ? 'CDN cache purged successfully' : 'Failed to purge CDN cache',
@@ -194,12 +189,12 @@ router.post('/cdn/purge', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to purge CDN cache');
     }
 });
-router.post('/test/load', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/test/load', authenticateToken, async (req, res) => {
     try {
         const { duration = 60, concurrency = 10, endpoint = '/api/health', } = req.body;
         const testId = `load-test-${Date.now()}`;
         setTimeout(() => {
-            logger_js_1.logger.info(`Load test ${testId} completed`);
+            logger.info(`Load test ${testId} completed`);
         }, duration * 1000);
         res.json({
             success: true,
@@ -217,9 +212,9 @@ router.post('/test/load', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to start load test');
     }
 });
-router.get('/optimization/recommendations', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/optimization/recommendations', authenticateToken, async (req, res) => {
     try {
-        const current = performanceMonitorService_js_1.performanceMonitorService.getCurrentMetrics();
+        const current = performanceMonitorService.getCurrentMetrics();
         const recommendations = [];
         if (current) {
             if (current.cache.hitRate < 90) {
@@ -273,13 +268,13 @@ router.get('/optimization/recommendations', auth_js_1.authenticateToken, async (
         sendFailure(req, res, error, 'Failed to generate optimization recommendations');
     }
 });
-router.get('/report', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/report', authenticateToken, async (req, res) => {
     try {
         const hours = parseInt(req.query.hours, 10) || 24;
         const format = req.query.format || 'json';
-        const dashboard = performanceMonitorService_js_1.performanceMonitorService.getDashboardData();
-        const history = performanceMonitorService_js_1.performanceMonitorService.getMetricsHistory(hours);
-        const alerts = performanceMonitorService_js_1.performanceMonitorService.getAllAlerts();
+        const dashboard = performanceMonitorService.getDashboardData();
+        const history = performanceMonitorService.getMetricsHistory(hours);
+        const alerts = performanceMonitorService.getAllAlerts();
         const report = {
             generated: new Date().toISOString(),
             period: `${hours} hours`,
@@ -312,5 +307,5 @@ router.get('/report', auth_js_1.authenticateToken, async (req, res) => {
         sendFailure(req, res, error, 'Failed to generate performance report');
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=performanceRoutes.js.map

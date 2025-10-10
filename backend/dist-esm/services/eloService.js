@@ -1,21 +1,24 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.eloService = exports.EloService = exports.SKILL_TIERS = void 0;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-exports.SKILL_TIERS = [
-    { name: 'Chieftain', minRating: 0, maxRating: 599, icon: '🛡️', color: '#8B4513' },
-    { name: 'Warlord', minRating: 600, maxRating: 799, icon: '⚔️', color: '#DC143C' },
-    { name: 'Raider King', minRating: 800, maxRating: 999, icon: '⚓', color: '#4682B4' },
-    { name: 'Sultan', minRating: 1000, maxRating: 1199, icon: '☪️', color: '#228B22' },
-    { name: 'Caesar', minRating: 1200, maxRating: 1399, icon: '🦅', color: '#FFD700' },
-    { name: 'Khan', minRating: 1400, maxRating: 1599, icon: '🏹', color: '#FF8C00' },
-    { name: 'Emperor', minRating: 1600, maxRating: 1799, icon: '👑', color: '#9370DB' },
-    { name: 'The Great King', minRating: 1800, maxRating: 1999, icon: '☀️', color: '#FF6347' },
-    { name: 'Overlord', minRating: 2000, maxRating: 2199, icon: '💀', color: '#2F4F4F' },
-    { name: 'Worldbreaker', minRating: 2200, maxRating: 9999, icon: '☄️', color: '#8B0000' },
-];
-class EloService {
+import { RANKS } from '@conquestk/shared/constants/ranks';
+import { query, transaction } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+const TIER_META = {
+    Chieftain: { icon: '🛡️', color: '#8B4513' },
+    Warlord: { icon: '⚔️', color: '#DC143C' },
+    'Raider King': { icon: '⚓', color: '#4682B4' },
+    Sultan: { icon: '☪️', color: '#228B22' },
+    Caesar: { icon: '🦅', color: '#FFD700' },
+    Khan: { icon: '🏹', color: '#FF8C00' },
+    Emperor: { icon: '👑', color: '#9370DB' },
+    'The Great King': { icon: '☀️', color: '#FF6347' },
+    Overlord: { icon: '💀', color: '#2F4F4F' },
+    Worldbreaker: { icon: '☄️', color: '#8B0000' },
+};
+export const SKILL_TIERS = RANKS.map((r, i) => {
+    const nextMin = i < RANKS.length - 1 ? RANKS[i + 1].minRating : 10000;
+    const meta = TIER_META[r.name] || { icon: '🏅', color: '#666' };
+    return { name: r.name, minRating: r.minRating, maxRating: nextMin - 1, icon: meta.icon, color: meta.color };
+});
+export class EloService {
     calculateKFactor(gamesPlayed, currentRating, numberOfPlayers) {
         let baseK;
         if (gamesPlayed < 30) {
@@ -90,7 +93,7 @@ class EloService {
             await this.bulkInsertRatingHistory(dbClient, gameId, changes);
             await this.bulkUpdateUserRatings(dbClient, changes);
         };
-        logger_js_1.logger.info('Persisting rating changes for ranked game', {
+        logger.info('Persisting rating changes for ranked game', {
             gameId,
             players: changes.length,
             updates: changes.map((change) => ({
@@ -105,16 +108,16 @@ class EloService {
                 await persist(client);
             }
             else {
-                await (0, database_js_1.transaction)(async (dbClient) => {
+                await transaction(async (dbClient) => {
                     await persist(dbClient);
                 });
             }
-            logger_js_1.logger.info('Finished persisting rating changes for ranked game', {
+            logger.info('Finished persisting rating changes for ranked game', {
                 gameId,
             });
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to persist rating changes for ranked game', {
+            logger.error('Failed to persist rating changes for ranked game', {
                 gameId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -164,14 +167,14 @@ class EloService {
       `, values);
     }
     getSkillTier(rating) {
-        return (exports.SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) ||
-            exports.SKILL_TIERS[0]);
+        return (SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) ||
+            SKILL_TIERS[0]);
     }
     canJoinRankedGame(playerRating, gameAvgRating, maxSkillGap = 500) {
         return Math.abs(playerRating - gameAvgRating) <= maxSkillGap;
     }
     async getRatingHistory(userId, limit = 30) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         SELECT *
         FROM rating_history
         WHERE user_id = $1
@@ -181,12 +184,14 @@ class EloService {
         return result.rows;
     }
     async getLeaderboard(limit = 100, offset = 0) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         SELECT
           (entry.data ->> 'userId')::uuid AS user_id,
           entry.data ->> 'username' AS username,
           (entry.data ->> 'skillRating')::int AS skill_rating,
-          (entry.data ->> 'rank')::int AS rank_position
+          (entry.data ->> 'rank')::int AS rank_position,
+          COALESCE((entry.data ->> 'wins')::int, 0) AS ranked_wins,
+          COALESCE((entry.data ->> 'losses')::int, 0) AS ranked_losses
         FROM skill_leaderboard_cache cache,
         LATERAL jsonb_array_elements(cache.rankings) WITH ORDINALITY AS entry(data, ord)
         WHERE cache.period_type = 'all_time'
@@ -196,11 +201,13 @@ class EloService {
         if ((result.rowCount ?? 0) > 0) {
             return result.rows;
         }
-        const fallback = await (0, database_js_1.query)(`
+        const fallback = await query(`
         SELECT
           id as user_id,
           username,
           skill_rating,
+          ranked_wins,
+          ranked_losses,
           ROW_NUMBER() OVER (ORDER BY skill_rating DESC, created_at ASC) + $2 AS rank_position
         FROM users
         ORDER BY skill_rating DESC, created_at ASC
@@ -217,10 +224,10 @@ class EloService {
                     rowCount: result.rowCount ?? null,
                 };
             }
-            return (0, database_js_1.query)(sql, params);
+            return query(sql, params);
         };
         const leaderboard = await executeQuery(`
-        SELECT id as user_id, username, skill_rating,
+        SELECT id as user_id, username, skill_rating, ranked_wins, ranked_losses,
                ROW_NUMBER() OVER (ORDER BY skill_rating DESC, created_at ASC) AS rank_position
         FROM users
         ORDER BY skill_rating DESC, created_at ASC
@@ -230,6 +237,8 @@ class EloService {
             userId: row.user_id,
             username: row.username,
             skillRating: row.skill_rating,
+            wins: row.ranked_wins ?? 0,
+            losses: row.ranked_losses ?? 0,
             rank: row.rank_position,
         }));
         await executeQuery(`
@@ -245,6 +254,5 @@ class EloService {
       `, ['all_time', '1970-01-01', '9999-12-31', JSON.stringify(rankings)]);
     }
 }
-exports.EloService = EloService;
-exports.eloService = new EloService();
+export const eloService = new EloService();
 //# sourceMappingURL=eloService.js.map

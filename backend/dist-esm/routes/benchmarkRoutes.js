@@ -1,17 +1,12 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const auth_js_1 = require("../middleware/auth.js");
-const performanceTestingService_js_1 = require("../services/performanceTestingService.js");
-const logger_js_1 = require("../utils/logger.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const router = express_1.default.Router();
-router.get('/scenarios', auth_js_1.authenticateToken, async (req, res) => {
+import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import { performanceTestingService } from '../services/performanceTestingService.js';
+import { logger } from '../utils/logger.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+const router = express.Router();
+router.get('/scenarios', authenticateToken, async (req, res) => {
     try {
-        const scenarios = performanceTestingService_js_1.performanceTestingService.getTestScenarios();
+        const scenarios = performanceTestingService.getTestScenarios();
         res.json({
             success: true,
             data: scenarios,
@@ -22,17 +17,17 @@ router.get('/scenarios', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load benchmark scenarios');
+        handleRouteError(error, req, 'Failed to load benchmark scenarios');
         res.status(500).json({
             success: false,
             error: 'Failed to load benchmark scenarios',
         });
     }
 });
-router.post('/load-test/:scenario', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/load-test/:scenario', authenticateToken, async (req, res) => {
     try {
         const { scenario } = req.params;
-        const scenarios = performanceTestingService_js_1.performanceTestingService.getTestScenarios();
+        const scenarios = performanceTestingService.getTestScenarios();
         if (!scenarios.includes(scenario)) {
             res.status(400).json({
                 success: false,
@@ -40,11 +35,11 @@ router.post('/load-test/:scenario', auth_js_1.authenticateToken, async (req, res
             });
             return;
         }
-        const testPromise = performanceTestingService_js_1.performanceTestingService.runLoadTest(scenario);
+        const testPromise = performanceTestingService.runLoadTest(scenario);
         const testId = `load-test-${scenario}-${Date.now()}`;
         testPromise
             .then((result) => {
-            logger_js_1.logger.info('📊 Load test completed', {
+            logger.info('📊 Load test completed', {
                 testId: result.testId,
                 scenario,
                 successRate: (result.results.successfulRequests / result.results.totalRequests) * 100,
@@ -52,7 +47,7 @@ router.post('/load-test/:scenario', auth_js_1.authenticateToken, async (req, res
             });
         })
             .catch((error) => {
-            logger_js_1.logger.error('❌ Load test failed', { testId, scenario, error: error.message });
+            logger.error('❌ Load test failed', { testId, scenario, error: error.message });
         });
         res.json({
             success: true,
@@ -65,7 +60,7 @@ router.post('/load-test/:scenario', auth_js_1.authenticateToken, async (req, res
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to start load test', 500, {
+        handleRouteError(error, req, 'Failed to start load test', 500, {
             scenario: req.params.scenario,
         });
         res.status(500).json({
@@ -74,7 +69,7 @@ router.post('/load-test/:scenario', auth_js_1.authenticateToken, async (req, res
         });
     }
 });
-router.post('/game-scenario', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/game-scenario', authenticateToken, async (req, res) => {
     try {
         const { players = 50, gameCount = 10, actionsPerMinute = 30, duration = 300, scenario = 'peak_load', } = req.body;
         if (players > 1000 || duration > 3600) {
@@ -91,11 +86,11 @@ router.post('/game-scenario', auth_js_1.authenticateToken, async (req, res) => {
             duration,
             scenario: scenario,
         };
-        const testPromise = performanceTestingService_js_1.performanceTestingService.runGameScenarioTest(config);
+        const testPromise = performanceTestingService.runGameScenarioTest(config);
         const testId = `game-scenario-${scenario}-${Date.now()}`;
         testPromise
             .then((result) => {
-            logger_js_1.logger.info('🎮 Game scenario test completed', {
+            logger.info('🎮 Game scenario test completed', {
                 testId: result.testId,
                 scenario,
                 players,
@@ -103,7 +98,7 @@ router.post('/game-scenario', auth_js_1.authenticateToken, async (req, res) => {
             });
         })
             .catch((error) => {
-            logger_js_1.logger.error('❌ Game scenario test failed', { testId, scenario, error: error.message });
+            logger.error('❌ Game scenario test failed', { testId, scenario, error: error.message });
         });
         res.json({
             success: true,
@@ -116,14 +111,14 @@ router.post('/game-scenario', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to start game scenario test', 500);
+        handleRouteError(error, req, 'Failed to start game scenario test', 500);
         res.status(500).json({
             success: false,
             error: 'Failed to start game scenario test',
         });
     }
 });
-router.post('/stress-test', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/stress-test', authenticateToken, async (req, res) => {
     try {
         const { maxConcurrency = 500 } = req.body;
         if (maxConcurrency > 2000) {
@@ -133,11 +128,11 @@ router.post('/stress-test', auth_js_1.authenticateToken, async (req, res) => {
             });
             return;
         }
-        const testPromise = performanceTestingService_js_1.performanceTestingService.runStressTest(maxConcurrency);
+        const testPromise = performanceTestingService.runStressTest(maxConcurrency);
         const testId = `stress-test-${Date.now()}`;
         testPromise
             .then((result) => {
-            logger_js_1.logger.info('💥 Stress test completed', {
+            logger.info('💥 Stress test completed', {
                 testId: result.testId,
                 maxConcurrency,
                 breakingPoint: result.breakingPoint.maxConcurrentUsers,
@@ -145,7 +140,7 @@ router.post('/stress-test', auth_js_1.authenticateToken, async (req, res) => {
             });
         })
             .catch((error) => {
-            logger_js_1.logger.error('❌ Stress test failed', { testId, error: error.message });
+            logger.error('❌ Stress test failed', { testId, error: error.message });
         });
         res.json({
             success: true,
@@ -158,17 +153,17 @@ router.post('/stress-test', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to start stress test', 500);
+        handleRouteError(error, req, 'Failed to start stress test', 500);
         res.status(500).json({
             success: false,
             error: 'Failed to start stress test',
         });
     }
 });
-router.get('/status', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/status', authenticateToken, async (req, res) => {
     try {
-        const activeTests = performanceTestingService_js_1.performanceTestingService.getActiveTests();
-        const recentHistory = performanceTestingService_js_1.performanceTestingService.getBenchmarkHistory(10);
+        const activeTests = performanceTestingService.getActiveTests();
+        const recentHistory = performanceTestingService.getBenchmarkHistory(10);
         res.json({
             success: true,
             data: {
@@ -197,17 +192,17 @@ router.get('/status', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load benchmark status');
+        handleRouteError(error, req, 'Failed to load benchmark status');
         res.status(500).json({
             success: false,
             error: 'Failed to load benchmark status',
         });
     }
 });
-router.get('/results/:testId', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/results/:testId', authenticateToken, async (req, res) => {
     try {
         const { testId } = req.params;
-        const history = performanceTestingService_js_1.performanceTestingService.getBenchmarkHistory();
+        const history = performanceTestingService.getBenchmarkHistory();
         const testResult = history.find((test) => test.testId === testId);
         if (!testResult) {
             res.status(404).json({
@@ -222,7 +217,7 @@ router.get('/results/:testId', auth_js_1.authenticateToken, async (req, res) => 
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load benchmark result', 500, {
+        handleRouteError(error, req, 'Failed to load benchmark result', 500, {
             testId: req.params.testId,
         });
         res.status(500).json({
@@ -231,10 +226,10 @@ router.get('/results/:testId', auth_js_1.authenticateToken, async (req, res) => 
         });
     }
 });
-router.post('/stop/:testId', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/stop/:testId', authenticateToken, async (req, res) => {
     try {
         const { testId } = req.params;
-        const stopped = await performanceTestingService_js_1.performanceTestingService.stopTest(testId);
+        const stopped = await performanceTestingService.stopTest(testId);
         if (!stopped) {
             res.status(404).json({
                 success: false,
@@ -248,7 +243,7 @@ router.post('/stop/:testId', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to stop benchmark test', 500, {
+        handleRouteError(error, req, 'Failed to stop benchmark test', 500, {
             testId: req.params.testId,
         });
         res.status(500).json({
@@ -257,10 +252,10 @@ router.post('/stop/:testId', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
 });
-router.get('/history', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/history', authenticateToken, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 50;
-        const history = performanceTestingService_js_1.performanceTestingService.getBenchmarkHistory(limit);
+        const history = performanceTestingService.getBenchmarkHistory(limit);
         res.json({
             success: true,
             data: history,
@@ -271,7 +266,7 @@ router.get('/history', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load benchmark history', 500, {
+        handleRouteError(error, req, 'Failed to load benchmark history', 500, {
             limit: req.query.limit,
         });
         res.status(500).json({
@@ -280,9 +275,9 @@ router.get('/history', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
 });
-router.get('/report', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/report', authenticateToken, async (req, res) => {
     try {
-        const report = performanceTestingService_js_1.performanceTestingService.generateBenchmarkReport();
+        const report = performanceTestingService.generateBenchmarkReport();
         res.json({
             success: true,
             data: report,
@@ -293,14 +288,14 @@ router.get('/report', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to generate benchmark report');
+        handleRouteError(error, req, 'Failed to generate benchmark report');
         res.status(500).json({
             success: false,
             error: 'Failed to generate benchmark report',
         });
     }
 });
-router.post('/quick-test', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/quick-test', authenticateToken, async (req, res) => {
     try {
         const { endpoints = ['/health'], duration = 60, concurrency = 10 } = req.body;
         if (concurrency > 100 || duration > 300) {
@@ -320,7 +315,7 @@ router.post('/quick-test', auth_js_1.authenticateToken, async (req, res) => {
                 weight: 1,
             })),
         };
-        const testResult = await performanceTestingService_js_1.performanceTestingService.runLoadTest('quick-test-custom');
+        const testResult = await performanceTestingService.runLoadTest('quick-test-custom');
         res.json({
             success: true,
             data: {
@@ -338,20 +333,20 @@ router.post('/quick-test', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to run quick benchmark');
+        handleRouteError(error, req, 'Failed to run quick benchmark');
         res.status(500).json({
             success: false,
             error: 'Failed to run quick benchmark',
         });
     }
 });
-router.get('/baseline', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/baseline', authenticateToken, async (req, res) => {
     try {
         const baselineTests = ['api_health_check', 'cache_performance'];
         const results = [];
         for (const scenario of baselineTests) {
             try {
-                const result = await performanceTestingService_js_1.performanceTestingService.runLoadTest(scenario);
+                const result = await performanceTestingService.runLoadTest(scenario);
                 results.push({
                     scenario,
                     avgResponseTime: result.results.avgResponseTime,
@@ -360,7 +355,7 @@ router.get('/baseline', auth_js_1.authenticateToken, async (req, res) => {
                 });
             }
             catch (error) {
-                logger_js_1.logger.warn(`Baseline test ${scenario} failed:`, error);
+                logger.warn(`Baseline test ${scenario} failed:`, error);
                 results.push({
                     scenario,
                     error: error.message,
@@ -381,12 +376,12 @@ router.get('/baseline', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to run baseline benchmarks');
+        handleRouteError(error, req, 'Failed to run baseline benchmarks');
         res.status(500).json({
             success: false,
             error: 'Failed to run baseline benchmarks',
         });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=benchmarkRoutes.js.map

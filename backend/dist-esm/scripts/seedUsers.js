@@ -1,12 +1,6 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.seedUsers = seedUsers;
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
+import bcrypt from 'bcryptjs';
+import { initDatabase, query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 const TEST_USERS = [
     {
         username: 'testuser1',
@@ -41,27 +35,27 @@ const TEST_USERS = [
 ];
 async function seedUsers() {
     try {
-        logger_js_1.logger.info('🌱 Starting user seeding...');
-        await (0, database_js_1.initDatabase)();
-        const existingUsers = await (0, database_js_1.query)('SELECT username, email FROM users');
+        logger.info('🌱 Starting user seeding...');
+        await initDatabase();
+        const existingUsers = await query('SELECT username, email FROM users');
         const existingEmails = new Set(existingUsers.rows.map((user) => user.email));
         const existingUsernames = new Set(existingUsers.rows.map((user) => user.username));
-        logger_js_1.logger.info(`📊 Found ${existingUsers.rows.length} existing users`);
+        logger.info(`📊 Found ${existingUsers.rows.length} existing users`);
         let created = 0;
         let skipped = 0;
         for (const user of TEST_USERS) {
             if (existingEmails.has(user.email) || existingUsernames.has(user.username)) {
-                logger_js_1.logger.info(`⏭️  Skipping ${user.username} - already exists`);
+                logger.info(`⏭️  Skipping ${user.username} - already exists`);
                 skipped++;
                 continue;
             }
-            const hashedPassword = await bcryptjs_1.default.hash(user.password, 10);
-            await (0, database_js_1.query)(`INSERT INTO users (username, email, password_hash) 
+            const hashedPassword = await bcrypt.hash(user.password, 10);
+            await query(`INSERT INTO users (username, email, password_hash) 
          VALUES ($1, $2, $3)`, [user.username, user.email, hashedPassword]);
-            logger_js_1.logger.info(`✅ Created user: ${user.username} (${user.description})`);
+            logger.info(`✅ Created user: ${user.username} (${user.description})`);
             created++;
         }
-        logger_js_1.logger.info(`
+        logger.info(`
 🎉 Seeding complete!
    - Created: ${created} users
    - Skipped: ${skipped} users (already existed)
@@ -72,11 +66,12 @@ ${TEST_USERS.map((u) => `   - ${u.username} / ${u.password} (${u.email})`).join(
         process.exit(0);
     }
     catch (error) {
-        logger_js_1.logger.error('❌ Seeding failed:', error);
+        logger.error('❌ Seeding failed:', error);
         process.exit(1);
     }
 }
 if (require.main === module) {
     seedUsers();
 }
+export { seedUsers };
 //# sourceMappingURL=seedUsers.js.map

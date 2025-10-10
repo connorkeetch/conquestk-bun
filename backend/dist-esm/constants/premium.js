@@ -1,9 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.PREMIUM_ACTIVE_STATUS_VALUES = exports.PREMIUM_UPSELL_ERROR_CODE = exports.PREMIUM_GENERAL_MESSAGE = exports.PREMIUM_COLOR_MESSAGE = exports.PREMIUM_THEME_MESSAGE = exports.PREMIUM_GAME_LIMIT_MESSAGE = exports.PREMIUM_GAME_LIMIT = exports.PREMIUM_COLOR_KEYS = exports.PREMIUM_THEME_IDS = void 0;
-exports.isPremiumThemeId = isPremiumThemeId;
-exports.isPremiumColorChoice = isPremiumColorChoice;
-exports.normalizePremiumAwareColor = normalizePremiumAwareColor;
 const PREMIUM_THEME_ID_LIST = [
     'retrospace',
     'frontier',
@@ -11,7 +5,7 @@ const PREMIUM_THEME_ID_LIST = [
     'halloween',
     'cutlers-cheese',
 ];
-exports.PREMIUM_THEME_IDS = new Set(PREMIUM_THEME_ID_LIST);
+export const PREMIUM_THEME_IDS = new Set(PREMIUM_THEME_ID_LIST);
 const PREMIUM_COLOR_KEY_LIST = [
     'MidnightBlack',
     'PureWhite',
@@ -19,17 +13,17 @@ const PREMIUM_COLOR_KEY_LIST = [
     'NeonGreen',
     'Dragonfire',
 ];
-exports.PREMIUM_COLOR_KEYS = new Set(PREMIUM_COLOR_KEY_LIST);
+export const PREMIUM_COLOR_KEYS = new Set(PREMIUM_COLOR_KEY_LIST);
 const PREMIUM_COLOR_KEY_NORMALIZED = new Set(PREMIUM_COLOR_KEY_LIST.map((key) => key.toLowerCase()));
 const PREMIUM_COLOR_HEX_VALUES = new Set(['#000000', '#FFFFFF', '#DFAF37', '#39FF14', '#FB923C']);
 const PREMIUM_COLOR_GRADIENTS = new Set(['linear-gradient(45deg,#dc2626,#fb923c,#fde047)']);
-exports.PREMIUM_GAME_LIMIT = 5;
-exports.PREMIUM_GAME_LIMIT_MESSAGE = 'Free players can only participate in up to 5 active or pending games. Upgrade to Premium to unlock more slots.';
-exports.PREMIUM_THEME_MESSAGE = 'Premium themes are reserved for Premium members. Upgrade to unlock this theme.';
-exports.PREMIUM_COLOR_MESSAGE = 'Premium player colors are reserved for Premium members. Upgrade to unlock these colors.';
-exports.PREMIUM_GENERAL_MESSAGE = 'This feature is reserved for Premium members. Upgrade to unlock it.';
-exports.PREMIUM_UPSELL_ERROR_CODE = 'PREMIUM_REQUIRED';
-exports.PREMIUM_ACTIVE_STATUS_VALUES = [
+export const PREMIUM_GAME_LIMIT = 5;
+export const PREMIUM_GAME_LIMIT_MESSAGE = 'Free players can only participate in up to 5 active or pending games. Upgrade to Premium to unlock more slots.';
+export const PREMIUM_THEME_MESSAGE = 'Premium themes are reserved for Premium members. Upgrade to unlock this theme.';
+export const PREMIUM_COLOR_MESSAGE = 'Premium player colors are reserved for Premium members. Upgrade to unlock these colors.';
+export const PREMIUM_GENERAL_MESSAGE = 'This feature is reserved for Premium members. Upgrade to unlock it.';
+export const PREMIUM_UPSELL_ERROR_CODE = 'PREMIUM_REQUIRED';
+export const PREMIUM_ACTIVE_STATUS_VALUES = [
     'lobby',
     'waiting',
     'starting',
@@ -38,13 +32,13 @@ exports.PREMIUM_ACTIVE_STATUS_VALUES = [
     'in_progress',
     'pending',
 ];
-function isPremiumThemeId(themeId) {
+export function isPremiumThemeId(themeId) {
     if (typeof themeId !== 'string') {
         return false;
     }
-    return exports.PREMIUM_THEME_IDS.has(themeId);
+    return PREMIUM_THEME_IDS.has(themeId);
 }
-function isPremiumColorChoice(value) {
+export function isPremiumColorChoice(value) {
     if (typeof value !== 'string') {
         return false;
     }
@@ -52,7 +46,7 @@ function isPremiumColorChoice(value) {
     if (trimmed.length === 0) {
         return false;
     }
-    if (exports.PREMIUM_COLOR_KEYS.has(trimmed)) {
+    if (PREMIUM_COLOR_KEYS.has(trimmed)) {
         return true;
     }
     const lower = trimmed.toLowerCase();
@@ -68,7 +62,7 @@ function isPremiumColorChoice(value) {
     }
     return false;
 }
-function normalizePremiumAwareColor(value) {
+export function normalizePremiumAwareColor(value) {
     if (typeof value !== 'string') {
         return null;
     }

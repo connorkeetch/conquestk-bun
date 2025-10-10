@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MapApprovalService = void 0;
-const database_js_1 = require("../config/database.js");
-const adminService_js_1 = require("./adminService.js");
-const notificationService_js_1 = __importDefault(require("./notificationService.js"));
-class MapApprovalService {
+import { query } from '../config/database.js';
+import { adminService } from './adminService.js';
+import notificationService from './notificationService.js';
+export class MapApprovalService {
     static async createVersion(mapId, userId, versionData) {
         const currentVersion = await MapApprovalService.getCurrentVersion(mapId);
         let major = 1;
@@ -34,7 +28,7 @@ class MapApprovalService {
         }
         const versionNumber = `${major}.${minor}.${patch}`;
         const draftStatusId = await MapApprovalService.getStatusId('draft');
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       INSERT INTO map_versions (
         map_id, version_number, version_major, version_minor, version_patch,
         status_id, name, description, image_url, image_width, image_height,
@@ -62,7 +56,7 @@ class MapApprovalService {
         return MapApprovalService.getVersionById(result.rows[0]?.id || '1');
     }
     static async getCurrentVersion(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT v.*, s.name as status_name, s.color as status_color
       FROM map_versions v
       JOIN map_status s ON v.status_id = s.id
@@ -71,7 +65,7 @@ class MapApprovalService {
         return result.rows[0] || null;
     }
     static async getVersionById(versionId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT v.*, s.name as status_name, s.color as status_color
       FROM map_versions v
       JOIN map_status s ON v.status_id = s.id
@@ -83,7 +77,7 @@ class MapApprovalService {
         return result.rows[0];
     }
     static async getVersionHistory(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT v.*, s.name as status_name, s.color as status_color
       FROM map_versions v
       JOIN map_status s ON v.status_id = s.id
@@ -94,7 +88,7 @@ class MapApprovalService {
     }
     static async setCurrentVersion(versionId) {
         const _version = await MapApprovalService.getVersionById(versionId);
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_versions SET is_current = 1 WHERE id = $1
     `, [versionId]);
     }
@@ -105,10 +99,10 @@ class MapApprovalService {
             throw new Error('Only draft versions can be submitted for approval');
         }
         const submittedStatusId = await MapApprovalService.getStatusId('submitted');
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_versions SET status_id = $1 WHERE id = $2
     `, [submittedStatusId, versionId]);
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       INSERT INTO map_approval_requests (
         version_id, requester_id, submission_notes, priority_level
       ) VALUES ($1, $2, $3, $4)
@@ -116,7 +110,7 @@ class MapApprovalService {
         return MapApprovalService.getApprovalRequestById(result.rows[0]?.id || '1');
     }
     static async getApprovalRequestById(requestId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT * FROM map_approval_requests WHERE id = $1
     `, [requestId]);
         if (!result.rows[0]) {
@@ -125,7 +119,7 @@ class MapApprovalService {
         return result.rows[0];
     }
     static async getPendingApprovalRequests() {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT ar.*, v.name as version_name, v.version_number,
              u.username as requester_username
       FROM map_approval_requests ar
@@ -139,18 +133,18 @@ class MapApprovalService {
     static async assignReviewer(requestId, actorId, moderatorId, auditContext) {
         const requestBefore = await MapApprovalService.getApprovalRequestById(requestId);
         const versionBefore = await MapApprovalService.getVersionById(requestBefore.versionId);
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_approval_requests 
       SET assigned_moderator_id = $1, review_started_at = CURRENT_TIMESTAMP
       WHERE id = $2
     `, [moderatorId, requestId]);
         const underReviewStatusId = await MapApprovalService.getStatusId('under_review');
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_versions SET status_id = $1 WHERE id = $2
     `, [underReviewStatusId, requestBefore.versionId]);
         const requestAfter = await MapApprovalService.getApprovalRequestById(requestId);
         const versionAfter = await MapApprovalService.getVersionById(requestBefore.versionId);
-        await notificationService_js_1.default.createInAppNotification(moderatorId, {
+        await notificationService.createInAppNotification(moderatorId, {
             type: 'map_review',
             title: 'Map assigned for review',
             message: `"${versionAfter.name}" is ready for your review.`,
@@ -159,7 +153,7 @@ class MapApprovalService {
             actionLabel: 'Open review',
             sendPush: false,
         });
-        await adminService_js_1.adminService.logAdminAction(actorId, 'map_reviewer_assigned', {
+        await adminService.logAdminAction(actorId, 'map_reviewer_assigned', {
             requestId,
             assignedModeratorId: moderatorId,
             before: {
@@ -176,13 +170,13 @@ class MapApprovalService {
     }
     static async unassignReviewer(requestId, actorId, auditContext) {
         const requestBefore = await MapApprovalService.getApprovalRequestById(requestId);
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_approval_requests 
       SET assigned_moderator_id = NULL, review_started_at = NULL
       WHERE id = $1
     `, [requestId]);
         const requestAfter = await MapApprovalService.getApprovalRequestById(requestId);
-        await adminService_js_1.adminService.logAdminAction(actorId, 'map_reviewer_unassigned', {
+        await adminService.logAdminAction(actorId, 'map_reviewer_unassigned', {
             requestId,
             before: {
                 assignedModeratorId: requestBefore.assignedModeratorId,
@@ -195,7 +189,7 @@ class MapApprovalService {
         }, 'map_approval_request', requestId, auditContext?.ipAddress, auditContext?.userAgent);
     }
     static async getReviewCriteria() {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT * FROM map_review_criteria 
       ORDER BY category, check_order
     `);
@@ -206,7 +200,7 @@ class MapApprovalService {
         const versionBefore = await MapApprovalService.getVersionById(requestBefore.versionId);
         const mapSnapshotBefore = await MapApprovalService.fetchMapSnapshot(versionBefore.mapId);
         for (const result of results) {
-            await (0, database_js_1.query)(`
+            await query(`
         INSERT INTO map_review_results (
           approval_request_id,
           criteria_id,
@@ -221,7 +215,7 @@ class MapApprovalService {
           updated_at = CURRENT_TIMESTAMP
       `, [requestId, result.criteriaId, moderatorId, result.status, result.reviewerNotes ?? null]);
         }
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_approval_requests 
       SET decision = $1, moderator_feedback = $2, review_completed_at = CURRENT_TIMESTAMP
       WHERE id = $3
@@ -241,12 +235,12 @@ class MapApprovalService {
             default:
                 throw new Error('Invalid decision');
         }
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_versions SET status_id = $1 WHERE id = $2
     `, [newStatusId, request.versionId]);
         await MapApprovalService.recordModerationAction(request.versionId, moderatorId, decision, moderatorFeedback, { reviewResults: results });
         const version = await MapApprovalService.getVersionById(request.versionId);
-        const mapInfo = await (0, database_js_1.query)('SELECT creator_id, name FROM maps WHERE id = $1', [version.mapId]);
+        const mapInfo = await query('SELECT creator_id, name FROM maps WHERE id = $1', [version.mapId]);
         const creatorId = mapInfo.rows?.[0]?.creator_id;
         const mapName = mapInfo.rows?.[0]?.name ?? 'Your map';
         const baseData = {
@@ -293,7 +287,7 @@ class MapApprovalService {
                     pushTitle = 'ℹ️ Map review updated';
                     pushBody = `Review updated for "${mapName}".`;
             }
-            await notificationService_js_1.default.createInAppNotification(creatorId, {
+            await notificationService.createInAppNotification(creatorId, {
                 type,
                 title,
                 message,
@@ -315,7 +309,7 @@ class MapApprovalService {
         const requestAfter = await MapApprovalService.getApprovalRequestById(requestId);
         const versionAfter = await MapApprovalService.getVersionById(request.versionId);
         const mapSnapshotAfter = await MapApprovalService.fetchMapSnapshot(versionAfter.mapId);
-        await adminService_js_1.adminService.logAdminAction(moderatorId, decision === 'approved'
+        await adminService.logAdminAction(moderatorId, decision === 'approved'
             ? 'map_review_approved'
             : decision === 'rejected'
                 ? 'map_review_rejected'
@@ -337,7 +331,7 @@ class MapApprovalService {
         }, 'map', versionAfter.mapId, auditContext?.ipAddress, auditContext?.userAgent);
     }
     static async getReviewResults(requestId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT rr.*, rc.name as criteria_name, rc.description as criteria_description,
              rc.category as criteria_category, rc.is_required
       FROM map_review_results rr
@@ -355,7 +349,7 @@ class MapApprovalService {
             throw new Error('Only approved versions can be published');
         }
         const publishedStatusId = await MapApprovalService.getStatusId('published');
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE map_versions 
       SET status_id = $1, published_at = CURRENT_TIMESTAMP 
       WHERE id = $2
@@ -364,7 +358,7 @@ class MapApprovalService {
         await MapApprovalService.recordModerationAction(versionId, moderatorId, 'publish', 'Published to public');
         const versionAfter = await MapApprovalService.getVersionById(versionId);
         const mapSnapshotAfter = await MapApprovalService.fetchMapSnapshot(version.mapId);
-        await adminService_js_1.adminService.logAdminAction(moderatorId, 'map_review_published', {
+        await adminService.logAdminAction(moderatorId, 'map_review_published', {
             versionId,
             before: {
                 version,
@@ -379,12 +373,12 @@ class MapApprovalService {
     static async archiveMap(mapId, moderatorId, reason, auditContext) {
         const beforeSnapshot = await MapApprovalService.fetchMapSnapshot(mapId);
         const archivedStatusId = await MapApprovalService.getStatusId('archived');
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE maps SET status_id = $1 WHERE id = $2
     `, [archivedStatusId, mapId]);
         await MapApprovalService.recordModerationAction(mapId, moderatorId, 'archive', reason);
         const afterSnapshot = await MapApprovalService.fetchMapSnapshot(mapId);
-        await adminService_js_1.adminService.logAdminAction(moderatorId, 'map_review_archived', {
+        await adminService.logAdminAction(moderatorId, 'map_review_archived', {
             mapId,
             reason,
             before: beforeSnapshot,
@@ -392,7 +386,7 @@ class MapApprovalService {
         }, 'map', mapId, auditContext?.ipAddress, auditContext?.userAgent);
     }
     static async getStatusId(statusName) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT id FROM map_status WHERE name = $1
     `, [statusName]);
         if (!result.rows[0]) {
@@ -401,14 +395,14 @@ class MapApprovalService {
         return result.rows[0].id;
     }
     static async recordModerationAction(mapId, moderatorId, actionType, reason, details, versionId) {
-        await (0, database_js_1.query)(`
+        await query(`
       INSERT INTO map_moderation_actions 
       (map_id, version_id, moderator_id, action_type, reason, details)
       VALUES ($1, $2, $3, $4, $5, $6)
     `, [mapId, versionId, moderatorId, actionType, reason, details ? JSON.stringify(details) : null]);
     }
     static async getMapModerationHistory(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT ma.*, u.username as moderator_username
       FROM map_moderation_actions ma
       JOIN users u ON ma.moderator_id = u.id
@@ -418,7 +412,7 @@ class MapApprovalService {
         return result.rows;
     }
     static async fetchMapSnapshot(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 
         status_id,
         status,
@@ -435,7 +429,7 @@ class MapApprovalService {
         return result.rows[0] ?? null;
     }
     static async getApprovalStats() {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT
         COUNT(*) as total_requests,
         SUM(CASE WHEN decision = 'approved' THEN 1 ELSE 0 END) as approved,
@@ -451,6 +445,5 @@ class MapApprovalService {
         return result.rows[0];
     }
 }
-exports.MapApprovalService = MapApprovalService;
-exports.default = MapApprovalService;
+export default MapApprovalService;
 //# sourceMappingURL=mapApprovalService.js.map

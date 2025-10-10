@@ -1,11 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.CapitalGameService = void 0;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-const cacheService_js_1 = require("./cacheService.js");
-const mapService_js_1 = require("./mapService.js");
-class CapitalGameService {
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+import { gameStateCache } from './cacheService.js';
+import { mapService } from './mapService.js';
+export class CapitalGameService {
     constructor() {
         this.gameStates = new Map();
     }
@@ -37,26 +34,26 @@ class CapitalGameService {
     }
     async getCachedGameState(gameId) {
         try {
-            const state = await cacheService_js_1.gameStateCache.getGameState(gameId);
+            const state = await gameStateCache.getGameState(gameId);
             return state;
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to load game state from cache for capitals', { gameId, error });
+            logger.error('Failed to load game state from cache for capitals', { gameId, error });
             return null;
         }
     }
     persistCapitalState(gameId, cachedState, state) {
         cachedState.capitalAssignments = Object.fromEntries(state.capitals.entries());
-        cacheService_js_1.gameStateCache.setGameState(gameId, cachedState).catch((error) => {
-            logger_js_1.logger.error('Failed to persist capital assignments to cache', { gameId, error });
+        gameStateCache.setGameState(gameId, cachedState).catch((error) => {
+            logger.error('Failed to persist capital assignments to cache', { gameId, error });
         });
     }
     async initializeCapitals(gameId, playerCount, mapId) {
         try {
-            const map = await mapService_js_1.mapService.getMap(mapId);
+            const map = await mapService.getMap(mapId);
             const capitalAssignments = map?.capitalTerritories?.[playerCount.toString()];
             if (!capitalAssignments || capitalAssignments.length !== playerCount) {
-                logger_js_1.logger.warn('Capital configuration missing or invalid for map', {
+                logger.warn('Capital configuration missing or invalid for map', {
                     mapId,
                     playerCount,
                 });
@@ -64,7 +61,7 @@ class CapitalGameService {
             }
             const cachedState = await this.getCachedGameState(gameId);
             if (!cachedState) {
-                logger_js_1.logger.warn('Cannot initialize capitals without an active game state', { gameId });
+                logger.warn('Cannot initialize capitals without an active game state', { gameId });
                 return;
             }
             const state = this.getOrCreateState(gameId, cachedState);
@@ -86,14 +83,14 @@ class CapitalGameService {
                 }
             });
             this.persistCapitalState(gameId, cachedState, state);
-            logger_js_1.logger.info('Capitals initialized for game', {
+            logger.info('Capitals initialized for game', {
                 gameId,
                 playerCount,
                 mapId,
             });
         }
         catch (error) {
-            logger_js_1.logger.error('Error initializing capitals:', error);
+            logger.error('Error initializing capitals:', error);
             throw error;
         }
     }
@@ -148,12 +145,12 @@ class CapitalGameService {
                 state.capitals.set(attackerId, defenderCapital);
             }
             this.persistCapitalState(gameId, cachedState, state);
-            await (0, database_js_1.query)(`
+            await query(`
         INSERT INTO capital_eliminations 
           (game_id, eliminated_player_id, conqueror_player_id, capital_territory_id, territories_gained, troops_gained)
         VALUES ($1, $2, $3, $4, $5, $6)
       `, [gameId, defenderId, attackerId, defenderCapital, territoryIds.length, totalTroops]).catch((error) => {
-                logger_js_1.logger.warn('Failed to insert capital elimination record', { gameId, error });
+                logger.warn('Failed to insert capital elimination record', { gameId, error });
             });
             result.capitalElimination = {
                 eliminatedPlayer: defenderId,
@@ -161,7 +158,7 @@ class CapitalGameService {
                 troopsGained: totalTroops,
             };
             this.emitCapitalElimination(gameId, result);
-            logger_js_1.logger.info('Capital elimination processed', {
+            logger.info('Capital elimination processed', {
                 gameId,
                 attackerId,
                 defenderId,
@@ -169,7 +166,7 @@ class CapitalGameService {
             });
         }
         catch (error) {
-            logger_js_1.logger.error('Error processing capital elimination:', error);
+            logger.error('Error processing capital elimination:', error);
             throw error;
         }
         return result;
@@ -185,7 +182,7 @@ class CapitalGameService {
             return;
         const defenderCapital = state.capitals.get(defenderId);
         if (defenderCapital === normalizedTerritoryId) {
-            logger_js_1.logger.debug('Capital under attack', {
+            logger.debug('Capital under attack', {
                 gameId,
                 defenderId,
                 territoryId: normalizedTerritoryId,
@@ -221,6 +218,5 @@ class CapitalGameService {
         this.gameStates.delete(gameId);
     }
 }
-exports.CapitalGameService = CapitalGameService;
-exports.default = new CapitalGameService();
+export default new CapitalGameService();
 //# sourceMappingURL=capitalGameService.js.map

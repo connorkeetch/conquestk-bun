@@ -1,14 +1,8 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.queueService = exports.QueueService = void 0;
-const node_crypto_1 = require("node:crypto");
-const bullmq_1 = require("bullmq");
-const ioredis_1 = __importDefault(require("ioredis"));
-const redis_js_1 = require("../config/redis.js");
-const logger_js_1 = require("../utils/logger.js");
+import { randomUUID } from 'node:crypto';
+import { Queue, QueueEvents } from 'bullmq';
+import { getRedisClient } from '../config/redis.js';
+import { logger } from '../utils/logger.js';
+import { createRedisFromOptions } from '../utils/redisFactory.js';
 const QUEUE_LATENCY_WARNING_MS = 2 * 60 * 1000;
 const DEAD_LETTER_TTL_SECONDS = 7 * 24 * 60 * 60;
 const QUEUE_CONFIGS = {
@@ -38,7 +32,7 @@ const QUEUE_CONFIGS = {
         priority: 'low',
     },
 };
-class QueueService {
+export class QueueService {
     constructor() {
         this.redis = null;
         this.queues = new Map();
@@ -58,12 +52,12 @@ class QueueService {
         if (this.isInitialized)
             return;
         try {
-            this.redis = (0, redis_js_1.getRedisClient)();
+            this.redis = getRedisClient();
             if (!this.redis) {
-                logger_js_1.logger.warn('Redis not available, QueueService will be disabled');
+                logger.warn('Redis not available, QueueService will be disabled');
                 return;
             }
-            logger_js_1.logger.info('QueueService using centralized Redis client with Railway network support');
+            logger.info('QueueService using centralized Redis client with Railway network support');
             const redisClient = this.redis;
             const { commandTimeout: _ignoredCommandTimeout, ..._redisClientOptions } = redisClient.options;
             const bullPrefix = process.env.BULL_PREFIX?.trim() || 'bull';
@@ -81,12 +75,12 @@ class QueueService {
                         attempts: 3,
                         backoff: { type: 'exponential', delay: 2000 },
                     };
-                const queue = new bullmq_1.Queue(config.name, {
+                const queue = new Queue(config.name, {
                     connection: redisClient,
                     prefix: bullPrefix,
                     defaultJobOptions,
                 });
-                const deadLetterQueue = new bullmq_1.Queue(`${config.name}-dead-letter`, {
+                const deadLetterQueue = new Queue(`${config.name}-dead-letter`, {
                     connection: redisClient,
                     prefix: bullPrefix,
                     defaultJobOptions: {
@@ -108,22 +102,22 @@ class QueueService {
                 }
                 catch (queueReadyError) {
                     const formatted = this.formatQueueError(queueReadyError);
-                    logger_js_1.logger.error('❌ Queue failed to become ready', {
+                    logger.error('❌ Queue failed to become ready', {
                         queue: config.name,
                         ...formatted,
                     });
                     throw queueReadyError;
                 }
-                logger_js_1.logger.info(`✅ Queue initialized: ${config.name}`);
+                logger.info(`✅ Queue initialized: ${config.name}`);
             }
             this.isInitialized = true;
             this.eventCountersSince = new Date().toISOString();
-            logger_js_1.logger.info('✅ QueueService initialized successfully');
+            logger.info('✅ QueueService initialized successfully');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to initialize QueueService:', error);
+            logger.error('❌ Failed to initialize QueueService:', error);
             if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-                logger_js_1.logger.warn('QueueService initialization failed but continuing without queues');
+                logger.warn('QueueService initialization failed but continuing without queues');
             }
             else {
                 throw error;
@@ -132,13 +126,13 @@ class QueueService {
     }
     async addGameAction(job) {
         if (!this.redis || !this.isInitialized) {
-            logger_js_1.logger.warn('QueueService not available, skipping game action queue');
+            logger.warn('QueueService not available, skipping game action queue');
             return null;
         }
         const queue = this.resolveQueue('gameActions');
         if (!queue)
             throw new Error('Game actions queue not initialized');
-        const idempotencyKey = job.idempotencyKey ?? (0, node_crypto_1.randomUUID)();
+        const idempotencyKey = job.idempotencyKey ?? randomUUID();
         const payload = {
             ...job,
             idempotencyKey,
@@ -164,7 +158,7 @@ class QueueService {
             }
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to remove game action job', {
+            logger.warn('Failed to remove game action job', {
                 jobId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -173,13 +167,13 @@ class QueueService {
     }
     async addDelayedGameAction(job, delayMs, options) {
         if (!this.redis || !this.isInitialized) {
-            logger_js_1.logger.warn('QueueService not available, skipping delayed game action');
+            logger.warn('QueueService not available, skipping delayed game action');
             return null;
         }
         const queue = this.resolveQueue('gameActions');
         if (!queue)
             throw new Error('Game actions queue not initialized');
-        const idempotencyKey = options?.idempotencyKey ?? job.idempotencyKey ?? (0, node_crypto_1.randomUUID)();
+        const idempotencyKey = options?.idempotencyKey ?? job.idempotencyKey ?? randomUUID();
         const payload = {
             ...job,
             idempotencyKey,
@@ -195,7 +189,7 @@ class QueueService {
     }
     async addGameCleanup(job) {
         if (!this.redis || !this.isInitialized) {
-            logger_js_1.logger.warn('QueueService not available, skipping game cleanup queue');
+            logger.warn('QueueService not available, skipping game cleanup queue');
             return null;
         }
         const queue = this.resolveQueue('gameCleanup');
@@ -226,7 +220,7 @@ class QueueService {
             return true;
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to change delay for game action job', {
+            logger.warn('Failed to change delay for game action job', {
                 jobId,
                 delayMs,
                 error: e instanceof Error ? e.message : e,
@@ -259,7 +253,7 @@ class QueueService {
             return added.map((j) => ({ id: j.id, name: j.name }));
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to add analytics events in bulk', {
+            logger.warn('Failed to add analytics events in bulk', {
                 count: jobs.length,
                 error: e instanceof Error ? e.message : e,
             });
@@ -377,7 +371,7 @@ class QueueService {
             return Date.now() - finishedOn < RECENT_MS;
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to inspect queue workers', {
+            logger.warn('Failed to inspect queue workers', {
                 queue: queueRealName,
                 error: error instanceof Error ? error.message : error,
             });
@@ -402,6 +396,7 @@ class QueueService {
                 return 10;
             case 'attack':
             case 'fortify':
+            case 'transfer_conquest':
                 return 7;
             case 'deploy':
                 return 5;
@@ -473,7 +468,7 @@ class QueueService {
     attachQueueEventHandlers(queueKey, queue, deadLetterQueue) {
         try {
             const baseOpts = (this.redis?.options ?? {});
-            const eventsConn = new ioredis_1.default({
+            const eventsConn = createRedisFromOptions({
                 ...baseOpts,
                 enableReadyCheck: false,
                 lazyConnect: false,
@@ -481,7 +476,7 @@ class QueueService {
                 commandTimeout: undefined,
             });
             const bullPrefix = process.env.BULL_PREFIX?.trim() || 'bull';
-            const events = new bullmq_1.QueueEvents(queue.name, {
+            const events = new QueueEvents(queue.name, {
                 connection: eventsConn,
                 prefix: bullPrefix,
             });
@@ -498,7 +493,7 @@ class QueueService {
                     }
                 }
                 catch (deadLetterError) {
-                    logger_js_1.logger.error('❌ Failed handling failed event for DLQ', {
+                    logger.error('❌ Failed handling failed event for DLQ', {
                         queue: queue.name,
                         jobId,
                         error: deadLetterError,
@@ -506,7 +501,7 @@ class QueueService {
                 }
             });
             events.on('error', (err) => {
-                logger_js_1.logger.warn('QueueEvents error', {
+                logger.warn('QueueEvents error', {
                     queue: queue.name,
                     error: err instanceof Error ? err.message : err,
                 });
@@ -514,7 +509,7 @@ class QueueService {
             this.queueEvents.set(queueKey, events);
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to attach QueueEvents for queue', {
+            logger.warn('Failed to attach QueueEvents for queue', {
                 queue: queue.name,
                 error: e instanceof Error ? e.message : e,
             });
@@ -524,14 +519,14 @@ class QueueService {
             const normalized = this.formatQueueError(queueError);
             const { logNow, occurrences } = this.shouldLogQueueError(queue.name, normalized.message);
             if (!logNow) {
-                logger_js_1.logger.debug('Suppressed repetitive queue error', {
+                logger.debug('Suppressed repetitive queue error', {
                     queue: queue.name,
                     message: normalized.message,
                     occurrences,
                 });
                 return;
             }
-            logger_js_1.logger.error('❌ Queue error detected', {
+            logger.error('❌ Queue error detected', {
                 queue: queue.name,
                 ...normalized,
                 occurrences,
@@ -551,7 +546,7 @@ class QueueService {
             stacktrace: job.stacktrace,
         };
         await deadLetterQueue.add('dead-letter', payload, {
-            jobId: `${job.id ?? (0, node_crypto_1.randomUUID)()}::${Date.now()}`,
+            jobId: `${job.id ?? randomUUID()}::${Date.now()}`,
             removeOnComplete: false,
             removeOnFail: false,
             attempts: 1,
@@ -560,14 +555,14 @@ class QueueService {
         });
         await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 1000, 'completed');
         await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 1000, 'failed');
-        logger_js_1.logger.warn('Moved job to dead-letter queue', {
+        logger.warn('Moved job to dead-letter queue', {
             queue: queueName,
             jobId: job.id,
             attemptsMade: job.attemptsMade,
         });
     }
     async shutdown() {
-        logger_js_1.logger.info('🔄 Shutting down QueueService...');
+        logger.info('🔄 Shutting down QueueService...');
         const activeQueues = Array.from(this.queues.values());
         const deadLetterQueues = Array.from(this.deadLetterQueues.values());
         const events = Array.from(this.queueEvents.values());
@@ -576,10 +571,10 @@ class QueueService {
             ...events.map((ev) => ev.close()),
         ]);
         if (this.redis) {
-            logger_js_1.logger.info('QueueService shutdown - Redis connection managed by central config');
+            logger.info('QueueService shutdown - Redis connection managed by central config');
         }
         this.isInitialized = false;
-        logger_js_1.logger.info('✅ QueueService shutdown complete');
+        logger.info('✅ QueueService shutdown complete');
     }
     async healthCheck() {
         try {
@@ -605,7 +600,7 @@ class QueueService {
             };
         }
         catch (error) {
-            logger_js_1.logger.error('❌ QueueService health check failed', error);
+            logger.error('❌ QueueService health check failed', error);
             return {
                 status: 'unhealthy',
                 details: {
@@ -659,7 +654,7 @@ class QueueService {
             return { requeued: true, newJobId: added.id };
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to requeue DLQ job', {
+            logger.warn('Failed to requeue DLQ job', {
                 queue: queue.name,
                 dlqJobId,
                 error: e instanceof Error ? e.message : e,
@@ -690,6 +685,5 @@ class QueueService {
         return this.requireQueue('mapAssets');
     }
 }
-exports.QueueService = QueueService;
-exports.queueService = new QueueService();
+export const queueService = new QueueService();
 //# sourceMappingURL=queueService.js.map

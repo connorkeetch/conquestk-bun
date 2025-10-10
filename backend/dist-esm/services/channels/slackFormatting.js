@@ -1,6 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatSlackWebhookPayload = formatSlackWebhookPayload;
 const severityEmojis = {
     info: 'ℹ️',
     warning: '⚠️',
@@ -11,7 +8,7 @@ const severityLabels = {
     warning: 'Warning',
     critical: 'Critical',
 };
-function formatSlackWebhookPayload(event) {
+export function formatSlackWebhookPayload(event) {
     const emoji = severityEmojis[event.severity] ?? '';
     const severityLabel = severityLabels[event.severity] ?? event.severity;
     const title = truncate(`${emoji ? `${emoji} ` : ''}${event.title}`.trim(), 150);

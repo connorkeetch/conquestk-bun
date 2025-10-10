@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserPreferencesService = void 0;
-const themes_1 = require("../shared/types/themes");
-const logger_js_1 = require("../utils/logger.js");
-class UserPreferencesService {
+import { DEFAULT_THEME_ID, normalizeThemeId } from '../shared/types/themes';
+import { logger } from '../utils/logger.js';
+export class UserPreferencesService {
     constructor(pool) {
         this.pool = pool;
     }
@@ -84,11 +81,11 @@ class UserPreferencesService {
             const updatedPreferences = result.rows[0];
             return {
                 ...updatedPreferences,
-                theme: (0, themes_1.normalizeThemeId)(updatedPreferences.theme),
+                theme: normalizeThemeId(updatedPreferences.theme),
             };
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error fetching user preferences', { userId, error });
+            logger.error('❌ Error fetching user preferences', { userId, error });
             return null;
         }
     }
@@ -99,7 +96,7 @@ class UserPreferencesService {
             let paramIndex = 1;
             if (preferences.theme !== undefined) {
                 updates.push(`theme = $${paramIndex++}`);
-                values.push((0, themes_1.normalizeThemeId)(preferences.theme));
+                values.push(normalizeThemeId(preferences.theme));
             }
             if (preferences.soundEnabled !== undefined) {
                 updates.push(`sound_enabled = $${paramIndex++}`);
@@ -165,11 +162,11 @@ class UserPreferencesService {
             const createdPreferences = result.rows[0];
             return {
                 ...createdPreferences,
-                theme: (0, themes_1.normalizeThemeId)(createdPreferences.theme),
+                theme: normalizeThemeId(createdPreferences.theme),
             };
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error updating user preferences', {
+            logger.error('❌ Error updating user preferences', {
                 userId,
                 preferences,
                 error,
@@ -179,15 +176,15 @@ class UserPreferencesService {
     }
     async updateTheme(userId, theme) {
         try {
-            const normalizedTheme = (0, themes_1.normalizeThemeId)(theme);
+            const normalizedTheme = normalizeThemeId(theme);
             const result = await this.updatePreferences(userId, { theme: normalizedTheme });
             if (!result) {
                 return null;
             }
-            return (0, themes_1.normalizeThemeId)(result.theme);
+            return normalizeThemeId(result.theme);
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error updating theme preference', {
+            logger.error('❌ Error updating theme preference', {
                 userId,
                 theme,
                 error,
@@ -199,7 +196,7 @@ class UserPreferencesService {
         try {
             const defaults = {
                 userId,
-                theme: (0, themes_1.normalizeThemeId)(overrides.theme ?? themes_1.DEFAULT_THEME_ID),
+                theme: normalizeThemeId(overrides.theme ?? DEFAULT_THEME_ID),
                 soundEnabled: overrides.soundEnabled ?? true,
                 musicEnabled: overrides.musicEnabled ?? true,
                 notificationEnabled: overrides.notificationEnabled ?? true,
@@ -259,18 +256,18 @@ class UserPreferencesService {
             const createdPreferences = result.rows[0];
             return {
                 ...createdPreferences,
-                theme: (0, themes_1.normalizeThemeId)(createdPreferences.theme),
+                theme: normalizeThemeId(createdPreferences.theme),
             };
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error creating default preferences', {
+            logger.error('❌ Error creating default preferences', {
                 userId,
                 overrides,
                 error,
             });
             return {
                 userId,
-                theme: (0, themes_1.normalizeThemeId)(overrides.theme ?? themes_1.DEFAULT_THEME_ID),
+                theme: normalizeThemeId(overrides.theme ?? DEFAULT_THEME_ID),
                 soundEnabled: overrides.soundEnabled ?? true,
                 musicEnabled: overrides.musicEnabled ?? true,
                 notificationEnabled: overrides.notificationEnabled ?? true,
@@ -285,5 +282,4 @@ class UserPreferencesService {
         }
     }
 }
-exports.UserPreferencesService = UserPreferencesService;
 //# sourceMappingURL=UserPreferencesService.js.map

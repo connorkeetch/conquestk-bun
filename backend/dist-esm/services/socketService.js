@@ -1,55 +1,17 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSocketLatencyMetrics = getSocketLatencyMetrics;
-exports.setupSocketHandlers = setupSocketHandlers;
-const jwt = __importStar(require("jsonwebtoken"));
-const database_js_1 = require("../config/database.js");
-const chatHandlers_js_1 = require("../socket/chatHandlers.js");
-const deltaUpdates_js_1 = require("../types/deltaUpdates.js");
-const logger_js_1 = require("../utils/logger.js");
-const cacheService_js_1 = require("./cacheService.js");
-const clanService_js_1 = require("./clanService.js");
-const eloService_js_1 = require("./eloService.js");
-const gameActionProcessor_js_1 = require("./gameActionProcessor.js");
-const gameRoomService_js_1 = require("./gameRoomService.js");
-const gameService_js_1 = require("./gameService.js");
-const gameLifecycleService_js_1 = require("./gameLifecycleService.js");
-const metricsService_js_1 = require("./metricsService.js");
-const queueService_js_1 = require("./queueService.js");
-const socketRegistry_js_1 = require("./socketRegistry.js");
+import * as jwt from 'jsonwebtoken';
+import { query } from '../config/database.js';
+import { setupChatHandlers } from '../socket/chatHandlers.js';
+import { logger } from '../utils/logger.js';
+import { gameStateCache } from './cacheService.js';
+import { clanService } from './clanService.js';
+import { eloService } from './eloService.js';
+import { GameActionProcessor } from './gameActionProcessor.js';
+import { GameRoomService } from './gameRoomService.js';
+import { GameService } from './gameService.js';
+import { GameLifecycleService } from './gameLifecycleService.js';
+import { socketPayloadMetrics } from './metricsService.js';
+import { queueService } from './queueService.js';
+import { registerSocketServer } from './socketRegistry.js';
 const socketLatencies = new Map();
 function calculateP95(samples) {
     if (samples.length === 0)
@@ -58,7 +20,7 @@ function calculateP95(samples) {
     const index = Math.ceil(sorted.length * 0.95) - 1;
     return sorted[index] || 0;
 }
-function getSocketLatencyMetrics() {
+export function getSocketLatencyMetrics() {
     const allSamples = [];
     for (const samples of socketLatencies.values()) {
         allSamples.push(...samples);
@@ -102,11 +64,11 @@ function computePayloadBytes(data) {
 }
 function emitGameUpdateToRoom(io, channel, payload) {
     const bytes = computePayloadBytes(payload);
-    metricsService_js_1.socketPayloadMetrics.record('game-update', bytes);
-    if (metricsService_js_1.socketPayloadMetrics.shouldLog('game-update')) {
-        const stats = metricsService_js_1.socketPayloadMetrics.snapshot('game-update');
+    socketPayloadMetrics.record('game-update', bytes);
+    if (socketPayloadMetrics.shouldLog('game-update')) {
+        const stats = socketPayloadMetrics.snapshot('game-update');
         if (stats) {
-            logger_js_1.logger.info('Socket payload stats', {
+            logger.info('Socket payload stats', {
                 event: 'game-update',
                 windowCount: stats.count,
                 p50Bytes: stats.p50,
@@ -120,11 +82,11 @@ function emitGameUpdateToRoom(io, channel, payload) {
 function emitGameDeltaBatchToRoom(io, channel, deltas) {
     try {
         const bytes = computePayloadBytes(deltas);
-        metricsService_js_1.socketPayloadMetrics.record('game-delta', bytes);
-        if (metricsService_js_1.socketPayloadMetrics.shouldLog('game-delta')) {
-            const stats = metricsService_js_1.socketPayloadMetrics.snapshot('game-delta');
+        socketPayloadMetrics.record('game-delta', bytes);
+        if (socketPayloadMetrics.shouldLog('game-delta')) {
+            const stats = socketPayloadMetrics.snapshot('game-delta');
             if (stats) {
-                logger_js_1.logger.info('Socket payload stats', {
+                logger.info('Socket payload stats', {
                     event: 'game-delta',
                     windowCount: stats.count,
                     p50Bytes: stats.p50,
@@ -140,11 +102,11 @@ function emitGameDeltaBatchToRoom(io, channel, deltas) {
 }
 function emitGameUpdateToSocket(socket, payload) {
     const bytes = computePayloadBytes(payload);
-    metricsService_js_1.socketPayloadMetrics.record('game-update', bytes);
-    if (metricsService_js_1.socketPayloadMetrics.shouldLog('game-update')) {
-        const stats = metricsService_js_1.socketPayloadMetrics.snapshot('game-update');
+    socketPayloadMetrics.record('game-update', bytes);
+    if (socketPayloadMetrics.shouldLog('game-update')) {
+        const stats = socketPayloadMetrics.snapshot('game-update');
         if (stats) {
-            logger_js_1.logger.info('Socket payload stats', {
+            logger.info('Socket payload stats', {
                 event: 'game-update',
                 windowCount: stats.count,
                 p50Bytes: stats.p50,
@@ -268,7 +230,7 @@ function handleSocketError(socket, eventName, error) {
     const isActualError = error instanceof Error;
     const errorMessage = isActualError ? error.message : String(error);
     const errorStack = isActualError ? error.stack : undefined;
-    logger_js_1.logger.error(`Socket error in ${eventName}:`, {
+    logger.error(`Socket error in ${eventName}:`, {
         error: errorMessage,
         stack: errorStack,
         isError: isActualError,
@@ -294,12 +256,12 @@ function withErrorHandler(socket, eventName, handler) {
         }
     };
 }
-function setupSocketHandlers(io) {
-    (0, socketRegistry_js_1.registerSocketServer)(io);
-    const gameService = new gameService_js_1.GameService();
-    const gameRoomService = new gameRoomService_js_1.GameRoomService();
-    const gameActionProcessor = new gameActionProcessor_js_1.GameActionProcessor(io);
-    const lifecycleService = new gameLifecycleService_js_1.GameLifecycleService();
+export function setupSocketHandlers(io) {
+    registerSocketServer(io);
+    const gameService = new GameService();
+    const gameRoomService = new GameRoomService();
+    const gameActionProcessor = new GameActionProcessor(io);
+    const lifecycleService = new GameLifecycleService();
     io.use((socket, next) => {
         const token = socket.handshake.auth.token;
         if (!token) {
@@ -307,7 +269,7 @@ function setupSocketHandlers(io) {
         }
         const jwtSecret = process.env.JWT_SECRET;
         if (!jwtSecret) {
-            logger_js_1.logger.error('FATAL: JWT_SECRET environment variable is not set');
+            logger.error('FATAL: JWT_SECRET environment variable is not set');
             return next(new Error('Server configuration error'));
         }
         try {
@@ -327,7 +289,7 @@ function setupSocketHandlers(io) {
         }
     });
     io.on('connection', (socket) => {
-        logger_js_1.logger.info(`User ${socket.userId} connected`);
+        logger.info(`User ${socket.userId} connected`);
         if (socket.userId) {
             socketLatencies.set(socket.userId, []);
             socket.lastPingTime = Date.now();
@@ -336,7 +298,7 @@ function setupSocketHandlers(io) {
             socket.join(`user:${socket.userId}`);
             void (async () => {
                 try {
-                    const membership = await clanService_js_1.clanService.getActiveMembership(socket.userId);
+                    const membership = await clanService.getActiveMembership(socket.userId);
                     if (membership?.clanId) {
                         const clanRoom = `clan:${membership.clanId}`;
                         await socket.join(clanRoom);
@@ -344,14 +306,14 @@ function setupSocketHandlers(io) {
                     }
                 }
                 catch (error) {
-                    logger_js_1.logger.warn('Failed to join clan room for user', {
+                    logger.warn('Failed to join clan room for user', {
                         userId: socket.userId,
                         error: error instanceof Error ? error.message : error,
                     });
                 }
             })();
         }
-        (0, chatHandlers_js_1.setupChatHandlers)(io, socket);
+        setupChatHandlers(io, socket);
         socket.on('join-room', withErrorHandler(socket, 'join-room', async (roomId) => {
             if (!roomId || typeof roomId !== 'string') {
                 throw new Error('Invalid room ID');
@@ -404,7 +366,7 @@ function setupSocketHandlers(io) {
                 roomId: normalizedRoomId,
                 player: normalizedPlayer,
             });
-            const cachedState = await cacheService_js_1.gameStateCache.getGameState(normalizedRoomId);
+            const cachedState = await gameStateCache.getGameState(normalizedRoomId);
             let serializedState = serializeGameStateForClient(cachedState);
             if (!serializedState) {
                 const freshState = await gameService.getGameState(normalizedRoomId);
@@ -423,7 +385,7 @@ function setupSocketHandlers(io) {
                     emitGameUpdateToSocket(socket, finalState);
                 }
             }
-            logger_js_1.logger.info(`User ${userId} subscribed to game channel ${channel}`);
+            logger.info(`User ${userId} subscribed to game channel ${channel}`);
         }));
         socket.on('leave-room', withErrorHandler(socket, 'leave-room', async (roomId) => {
             if (!roomId || typeof roomId !== 'string') {
@@ -450,7 +412,7 @@ function setupSocketHandlers(io) {
                 aiPlayerId: player?.aiPlayerId ?? null,
                 isAi: player?.isAi === true,
             });
-            logger_js_1.logger.info(`User ${userId} left game channel ${channel}`);
+            logger.info(`User ${userId} left game channel ${channel}`);
         }));
         socket.on('game-action', withErrorHandler(socket, 'game-action', async (data) => {
             if (!data || !data.roomId || !data.action) {
@@ -459,41 +421,53 @@ function setupSocketHandlers(io) {
             const userId = requireUserId(socket);
             const channel = getGameChannel(data.roomId);
             const normalizedAction = { ...data.action, roomId: data.roomId, playerId: userId };
-            const job = await queueService_js_1.queueService.addGameAction({
+            const job = await queueService.addGameAction({
                 gameId: data.roomId,
                 playerId: userId,
                 action: normalizedAction,
                 socketId: socket.id,
             });
             if (job) {
-                logger_js_1.logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
+                logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
                     jobId: job.id,
                     playerId: userId,
                 });
             }
             else {
-                logger_js_1.logger.info(`Processed game action directly (no queue): ${normalizedAction.type} for game ${data.roomId}`, {
-                    playerId: userId,
-                });
+                logger.info(`Processing game action inline (no queue): ${normalizedAction.type} for game ${data.roomId}`, { playerId: userId });
                 try {
-                    const updatedState = await gameService.processGameAction(normalizedAction, userId);
-                    const serialized = serializeGameStateForClient(updatedState);
-                    if (serialized) {
-                        emitGameUpdateToRoom(io, channel, serialized);
-                    }
-                    if (normalizedAction.type === 'go_back_to_reinforcement') {
-                        try {
-                            const currentPlayer = updatedState.players.find((p) => p.id === userId);
-                            const reinforcementArmies = Math.max(0, currentPlayer?.armies ?? 0);
-                            const phaseDelta = deltaUpdates_js_1.DeltaBuilder.phaseChange(data.roomId, updatedState.phase, updatedState.currentPlayer, updatedState.turn, reinforcementArmies);
-                            const { emitFogFilteredDelta } = await import('./fogService.js');
-                            await emitFogFilteredDelta(io, data.roomId, phaseDelta, updatedState);
+                    switch (normalizedAction.type) {
+                        case 'deploy': {
+                            await gameActionProcessor.processDeployment(data.roomId, userId, normalizedAction.payload.territoryId, normalizedAction.payload.armies, socket.id);
+                            break;
                         }
-                        catch (emitError) {
-                            logger_js_1.logger.warn('Failed to emit go-back delta inline', {
-                                roomId: data.roomId,
-                                error: emitError instanceof Error ? emitError.message : emitError,
-                            });
+                        case 'attack': {
+                            await gameActionProcessor.processAttack(data.roomId, userId, normalizedAction.payload.fromTerritoryId, normalizedAction.payload.toTerritoryId, normalizedAction.payload?.armies, socket.id);
+                            break;
+                        }
+                        case 'fortify': {
+                            await gameActionProcessor.processFortify(data.roomId, userId, normalizedAction.payload.fromTerritoryId, normalizedAction.payload.toTerritoryId, normalizedAction.payload.armies, socket.id);
+                            break;
+                        }
+                        case 'end_turn': {
+                            await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id);
+                            break;
+                        }
+                        case 'go_back_to_reinforcement': {
+                            await gameActionProcessor.processGoBack(data.roomId, userId, socket.id);
+                            break;
+                        }
+                        case 'transfer_conquest': {
+                            await gameActionProcessor.processTransferConquest(data.roomId, userId, normalizedAction.payload.fromTerritoryId, normalizedAction.payload.toTerritoryId, normalizedAction.payload.armies, socket.id);
+                            break;
+                        }
+                        default: {
+                            const updatedState = await gameService.processGameAction(normalizedAction, userId);
+                            const serialized = serializeGameStateForClient(updatedState);
+                            if (serialized) {
+                                emitGameUpdateToRoom(io, channel, serialized);
+                            }
+                            break;
                         }
                     }
                 }
@@ -503,6 +477,7 @@ function setupSocketHandlers(io) {
             }
         }));
         socket.on('deployArmies', withErrorHandler(socket, 'deployArmies', async (data, ack) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'deployArmies', prefer: 'game-action' });
             if (!data || !data.roomId || !data.territoryId || typeof data.armies !== 'number') {
                 throw new Error('Invalid deployment data');
             }
@@ -517,6 +492,7 @@ function setupSocketHandlers(io) {
             }
         }));
         socket.on('attack', withErrorHandler(socket, 'attack', async (data, ack) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'attack', prefer: 'game-action' });
             if (!data || !data.roomId || !data.fromTerritoryId || !data.toTerritoryId) {
                 throw new Error('Invalid attack data');
             }
@@ -547,6 +523,7 @@ function setupSocketHandlers(io) {
             });
         }));
         socket.on('transferConquestArmies', withErrorHandler(socket, 'transferConquestArmies', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'transferConquestArmies', prefer: 'game-action (future: transfer_conquest)' });
             if (!data ||
                 !data.roomId ||
                 !data.fromTerritoryId ||
@@ -559,26 +536,10 @@ function setupSocketHandlers(io) {
             if (!hasAccess) {
                 throw new Error('Unauthorized: You are not a member of this game');
             }
-            const transferResult = await gameService.transferConquestArmies(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies);
-            const channel = getGameChannel(data.roomId);
-            emitGameDeltaBatchToRoom(io, channel, [
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.fromTerritoryId,
-                    changes: { armies: transferResult.fromArmies },
-                    timestamp: Date.now(),
-                },
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.toTerritoryId,
-                    changes: { armies: transferResult.toArmies },
-                    timestamp: Date.now(),
-                },
-            ]);
+            await gameActionProcessor.processTransferConquest(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies, socket.id);
         }));
         socket.on('fortify', withErrorHandler(socket, 'fortify', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'fortify', prefer: 'game-action' });
             if (!data ||
                 !data.roomId ||
                 !data.fromTerritoryId ||
@@ -591,43 +552,10 @@ function setupSocketHandlers(io) {
             if (!hasAccess) {
                 throw new Error('Unauthorized: You are not a member of this game');
             }
-            const result = await gameService.fortify(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies);
-            const channel = getGameChannel(data.roomId);
-            emitGameDeltaBatchToRoom(io, channel, [
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.fromTerritoryId,
-                    changes: { armies: result.fromArmies },
-                    timestamp: Date.now(),
-                },
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.toTerritoryId,
-                    changes: { armies: result.toArmies },
-                    timestamp: Date.now(),
-                },
-            ]);
-            try {
-                const fortifyDelta = {
-                    type: 'FORTIFY_RESULT',
-                    roomId: data.roomId,
-                    timestamp: Date.now(),
-                    fromTerritoryId: data.fromTerritoryId,
-                    toTerritoryId: data.toTerritoryId,
-                    movedArmies: data.armies,
-                    fromArmies: result.fromArmies,
-                    toArmies: result.toArmies,
-                    playerId: userId,
-                };
-                const { emitFogFilteredDelta } = await import('../services/fogService.js');
-                await emitFogFilteredDelta(io, data.roomId, fortifyDelta);
-            }
-            catch {
-            }
+            await gameActionProcessor.processFortify(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies, socket.id);
         }));
         socket.on('undoFortify', withErrorHandler(socket, 'undoFortify', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'undoFortify', prefer: 'game-action' });
             if (!data || !data.roomId) {
                 throw new Error('Invalid undo fortify data');
             }
@@ -636,7 +564,7 @@ function setupSocketHandlers(io) {
             if (!hasAccess) {
                 throw new Error('Unauthorized: You are not a member of this game');
             }
-            const job = await queueService_js_1.queueService.addGameAction({
+            const job = await queueService.addGameAction({
                 gameId: data.roomId,
                 playerId: userId,
                 action: {
@@ -648,7 +576,7 @@ function setupSocketHandlers(io) {
                 socketId: socket.id,
             });
             if (job) {
-                logger_js_1.logger.info(`Queued undo fortify for game ${data.roomId}`, {
+                logger.info(`Queued undo fortify for game ${data.roomId}`, {
                     jobId: job.id,
                 });
             }
@@ -660,7 +588,7 @@ function setupSocketHandlers(io) {
                     payload: undefined,
                 }, userId);
                 const channel = getGameChannel(data.roomId);
-                const serialized = await cacheService_js_1.gameStateCache.getGameState(data.roomId);
+                const serialized = await gameStateCache.getGameState(data.roomId);
                 if (serialized) {
                     emitGameUpdateToRoom(io, channel, serialized);
                 }
@@ -675,7 +603,7 @@ function setupSocketHandlers(io) {
                 throw new Error('Not a member of this game');
             await lifecycleService.kickAndNeutralize(data.roomId, userId);
             const channel = getGameChannel(data.roomId);
-            const cached = await cacheService_js_1.gameStateCache.getGameState(data.roomId);
+            const cached = await gameStateCache.getGameState(data.roomId);
             const serialized = serializeGameStateForClient(cached);
             if (serialized) {
                 emitGameUpdateToRoom(io, channel, serialized);
@@ -692,7 +620,7 @@ function setupSocketHandlers(io) {
             catch {
             }
             await lifecycleService.refreshLifecycle(data.roomId);
-            logger_js_1.logger.info(`User ${userId} resigned from room ${data.roomId}`);
+            logger.info(`User ${userId} resigned from room ${data.roomId}`);
         }));
         socket.on('host:replacement', withErrorHandler(socket, 'host:replacement', async (data) => {
             const userId = requireUserId(socket);
@@ -708,7 +636,7 @@ function setupSocketHandlers(io) {
                 .replacementPendingUserId;
             if (!pending || pending !== targetUserId)
                 throw new Error('No pending replacement for user');
-            await (0, database_js_1.query)(`UPDATE game_rooms SET replacement_pending_user_id = NULL WHERE id = $1`, [
+            await query(`UPDATE game_rooms SET replacement_pending_user_id = NULL WHERE id = $1`, [
                 roomId,
             ]);
             if (choice === 'neutral') {
@@ -728,7 +656,7 @@ function setupSocketHandlers(io) {
                     aiDifficulty: aiDifficulty ?? 'recruit',
                 };
                 await gameService.saveSnapshot(roomId, state);
-                await (0, database_js_1.query)(`UPDATE room_players SET is_ai = TRUE, ai_difficulty = COALESCE($3, 'recruit') WHERE room_id = $1 AND user_id = $2`, [roomId, targetUserId, aiDifficulty ?? null]);
+                await query(`UPDATE room_players SET is_ai = TRUE, ai_difficulty = COALESCE($3, 'recruit') WHERE room_id = $1 AND user_id = $2`, [roomId, targetUserId, aiDifficulty ?? null]);
             }
             await lifecycleService.refreshLifecycle(roomId);
             const freshState = await gameService.getGameState(roomId);
@@ -741,36 +669,12 @@ function setupSocketHandlers(io) {
             }
         }));
         socket.on('endTurn', withErrorHandler(socket, 'endTurn', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'endTurn', prefer: 'game-action' });
             if (!data || !data.roomId) {
                 throw new Error('Invalid end turn data');
             }
             const userId = requireUserId(socket);
-            const result = await gameService.endTurn(data.roomId, userId);
-            const channel = getGameChannel(data.roomId);
-            if (result.treasureAwarded) {
-                io.to(channel).emit('game-delta', {
-                    type: 'TREASURE_AWARDED',
-                    roomId: data.roomId,
-                    timestamp: Date.now(),
-                    userId,
-                    metal: result.treasureAwarded,
-                });
-            }
-            const phaseDelta = deltaUpdates_js_1.DeltaBuilder.phaseChange(data.roomId, result.gameState.phase, result.gameState.currentPlayer, result.gameState.turn, result.reinforcementArmies);
-            io.to(channel).emit('game-delta', phaseDelta);
-            if (result.turnAdvanced) {
-                try {
-                    const { GameLifecycleService } = await import('./gameLifecycleService.js');
-                    const lifecycleService = new GameLifecycleService();
-                    await lifecycleService.scheduleTurnTimeout(data.roomId);
-                }
-                catch (e) {
-                    logger_js_1.logger.warn('Failed to schedule turn timeout after manual endTurn', {
-                        roomId: data.roomId,
-                        error: e instanceof Error ? e.message : e,
-                    });
-                }
-            }
+            await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id);
         }));
         socket.on('turn:begin', withErrorHandler(socket, 'turn:begin', async (data) => {
             if (!data || !data.roomId) {
@@ -780,6 +684,7 @@ function setupSocketHandlers(io) {
             await gameService.acknowledgeTurnStart(data.roomId, userId);
         }));
         socket.on('goBackToReinforcement', withErrorHandler(socket, 'goBackToReinforcement', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'goBackToReinforcement', prefer: 'game-action' });
             if (!data || !data.roomId) {
                 throw new Error('Invalid go-back data');
             }
@@ -822,7 +727,7 @@ function setupSocketHandlers(io) {
                 if (!userId) {
                     return;
                 }
-                logger_js_1.logger.info(`User ${userId} disconnected`);
+                logger.info(`User ${userId} disconnected`);
                 socketLatencies.delete(userId);
                 const gameRooms = socket.joinedGameRooms ?? new Set();
                 for (const roomId of gameRooms) {
@@ -836,13 +741,13 @@ function setupSocketHandlers(io) {
                 socket.joinedGameRooms?.clear();
             }
             catch (error) {
-                logger_js_1.logger.error('Disconnect handler error:', error);
+                logger.error('Disconnect handler error:', error);
             }
         });
     });
     async function _handleRankedGameEnd(io, roomId, gameState) {
         try {
-            const roomResult = await (0, database_js_1.query)(`SELECT is_ranked FROM game_rooms WHERE id = $1`, [roomId]);
+            const roomResult = await query(`SELECT is_ranked FROM game_rooms WHERE id = $1`, [roomId]);
             if (!roomResult.rows[0]?.is_ranked) {
                 return;
             }
@@ -867,7 +772,7 @@ function setupSocketHandlers(io) {
           FROM users 
           WHERE id IN (${placeholders})
         `;
-                const userResults = await (0, database_js_1.query)(bulkUserQuery, playerIds);
+                const userResults = await query(bulkUserQuery, playerIds);
                 const userDataMap = new Map();
                 userResults.rows.forEach((row) => {
                     userDataMap.set(row.id, row);
@@ -886,8 +791,8 @@ function setupSocketHandlers(io) {
                 });
             }
             if (playerRatings.length >= 3) {
-                const ratingChanges = eloService_js_1.eloService.calculateRatingChanges(playerRatings);
-                await eloService_js_1.eloService.applyRatingChanges(roomId, ratingChanges);
+                const ratingChanges = eloService.calculateRatingChanges(playerRatings);
+                await eloService.applyRatingChanges(roomId, ratingChanges);
                 const channel = getGameChannel(roomId);
                 io.to(channel).emit('ratingUpdate', {
                     changes: ratingChanges.map((change) => ({
@@ -896,19 +801,19 @@ function setupSocketHandlers(io) {
                         oldRating: change.oldRating,
                         newRating: change.newRating,
                         change: change.change,
-                        tier: eloService_js_1.eloService.getSkillTier(change.newRating).name,
+                        tier: eloService.getSkillTier(change.newRating).name,
                     })),
                 });
-                await (0, database_js_1.query)(`
+                await query(`
           UPDATE game_rooms 
           SET status = 'completed' 
           WHERE id = $1
         `, [roomId]);
-                logger_js_1.logger.info(`Ranked game ${roomId} completed, ELO ratings updated`);
+                logger.info(`Ranked game ${roomId} completed, ELO ratings updated`);
             }
         }
         catch (error) {
-            logger_js_1.logger.error('Error handling ranked game end:', error);
+            logger.error('Error handling ranked game end:', error);
         }
     }
 }

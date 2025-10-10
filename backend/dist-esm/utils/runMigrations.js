@@ -1,37 +1,32 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const promises_1 = __importDefault(require("node:fs/promises"));
-const node_path_1 = __importDefault(require("node:path"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
-const database_js_1 = require("../config/database.js");
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import dotenv from 'dotenv';
+dotenv.config();
+import { query } from '../config/database.js';
 async function runMigrations() {
-    const migrationsDir = node_path_1.default.join(__dirname, '../../migrations');
+    const migrationsDir = path.join(__dirname, '../../migrations');
     try {
-        await (0, database_js_1.query)(`
+        await query(`
       CREATE TABLE IF NOT EXISTS migrations (
         id SERIAL PRIMARY KEY,
         filename VARCHAR(255) NOT NULL UNIQUE,
         executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-        const files = await promises_1.default.readdir(migrationsDir);
+        const files = await fs.readdir(migrationsDir);
         const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort();
-        const executed = await (0, database_js_1.query)('SELECT filename FROM migrations');
+        const executed = await query('SELECT filename FROM migrations');
         const executedFiles = new Set(executed.rows.map((r) => r.filename));
         for (const file of sqlFiles) {
             if (!executedFiles.has(file)) {
-                const sqlContent = await promises_1.default.readFile(node_path_1.default.join(migrationsDir, file), 'utf-8');
+                const sqlContent = await fs.readFile(path.join(migrationsDir, file), 'utf-8');
                 const statements = sqlContent
                     .split(';')
                     .map((s) => s.trim())
                     .filter((s) => s.length > 0);
                 for (const statement of statements) {
                     try {
-                        await (0, database_js_1.query)(statement);
+                        await query(statement);
                     }
                     catch (error) {
                         if (error instanceof Error) {
@@ -46,7 +41,7 @@ async function runMigrations() {
                         throw error;
                     }
                 }
-                await (0, database_js_1.query)('INSERT INTO migrations (filename) VALUES ($1)', [file]);
+                await query('INSERT INTO migrations (filename) VALUES ($1)', [file]);
             }
         }
     }
@@ -57,5 +52,5 @@ async function runMigrations() {
 if (require.main === module) {
     runMigrations().then(() => process.exit(0));
 }
-exports.default = runMigrations;
+export default runMigrations;
 //# sourceMappingURL=runMigrations.js.map

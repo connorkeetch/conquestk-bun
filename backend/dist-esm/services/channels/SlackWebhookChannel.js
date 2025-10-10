@@ -1,15 +1,12 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.SlackWebhookChannel = void 0;
-const logger_js_1 = require("../../utils/logger.js");
-const slackFormatting_js_1 = require("./slackFormatting.js");
+import { logger } from '../../utils/logger.js';
+import { formatSlackWebhookPayload } from './slackFormatting.js';
 const DEFAULT_FAILURE_THRESHOLD = 5;
 const DEFAULT_COOLDOWN_MS = 60000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 500;
 const JITTER_MS = 250;
-const channelLogger = logger_js_1.logger.child({ channel: 'slack' });
-class SlackWebhookChannel {
+const channelLogger = logger.child({ channel: 'slack' });
+export class SlackWebhookChannel {
     constructor(options) {
         this.name = 'slack';
         this.consecutiveFailures = 0;
@@ -204,7 +201,7 @@ class SlackWebhookChannel {
         return { ok: false, error: 'Exceeded retry attempts' };
     }
     buildPayload(event, channel) {
-        const base = (0, slackFormatting_js_1.formatSlackWebhookPayload)(event);
+        const base = formatSlackWebhookPayload(event);
         return {
             ...base,
             ...(channel ? { channel } : {}),
@@ -253,7 +250,6 @@ class SlackWebhookChannel {
         return exponential + jitter;
     }
 }
-exports.SlackWebhookChannel = SlackWebhookChannel;
 function splitCsv(value) {
     if (!value) {
         return [];

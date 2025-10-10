@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminService = exports.AdminService = void 0;
 const uuidValidate = (value) => {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 };
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-const featureFlagService_js_1 = require("./featureFlagService.js");
+import { getClient, query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+import { featureFlagService } from './featureFlagService.js';
 const domainPermissionMap = {
     users: ['users.*', 'user_management', 'system_admin'],
     admin: ['admin.*', 'system_admin'],
@@ -17,13 +14,13 @@ const domainPermissionMap = {
     reports: ['reports.*', 'reports', 'system_admin'],
     maps: ['maps.*', 'map_approval', 'content_moderation', 'system_admin'],
 };
-class AdminService {
+export class AdminService {
     async isAdmin(userId) {
-        const userResult = await (0, database_js_1.query)(`SELECT is_admin FROM users WHERE id = $1`, [userId]);
+        const userResult = await query(`SELECT is_admin FROM users WHERE id = $1`, [userId]);
         if (userResult.rows[0]?.is_admin) {
             return true;
         }
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 1 FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
       WHERE uar.user_id = $1 
@@ -33,7 +30,7 @@ class AdminService {
         return result.rows.length > 0;
     }
     async hasPermission(userId, permission) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT ar.permissions, ar.is_super_admin FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
       WHERE uar.user_id = $1 
@@ -80,12 +77,12 @@ class AdminService {
     }
     async getActiveAdminUserIds() {
         const ids = new Set();
-        const explicitAdmins = await (0, database_js_1.query)('SELECT id FROM users WHERE is_admin = TRUE');
+        const explicitAdmins = await query('SELECT id FROM users WHERE is_admin = TRUE');
         explicitAdmins.rows.forEach((row) => {
             if (row.id)
                 ids.add(row.id);
         });
-        const roleAdmins = await (0, database_js_1.query)(`
+        const roleAdmins = await query(`
       SELECT DISTINCT user_id FROM user_admin_roles
       WHERE (is_active IS NULL OR is_active = TRUE)
         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
@@ -97,7 +94,7 @@ class AdminService {
         return Array.from(ids);
     }
     async getUserAdminInfo(userId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 
         uar.user_id, uar.role_id, ar.name as role_name, ar.permissions,
         uar.assigned_by, uar.assigned_at, uar.expires_at, uar.is_active
@@ -123,11 +120,11 @@ class AdminService {
             whereClause = 'WHERE u.username ILIKE $1 OR u.email ILIKE $2';
             params.push(`%${search}%`, `%${search}%`);
         }
-        const countResult = await (0, database_js_1.query)(`SELECT COUNT(*) as total FROM users u ${whereClause}`, params);
+        const countResult = await query(`SELECT COUNT(*) as total FROM users u ${whereClause}`, params);
         const total = countResult.rows[0].total;
         params.push(limit, offset);
         const limitOffset = search ? '$3 OFFSET $4' : '$1 OFFSET $2';
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 
         u.id, 
         u.username, 
@@ -196,7 +193,7 @@ class AdminService {
         return { users, total };
     }
     async updateUserStatus(targetUserId, adminUserId, status, reason, expiresAt) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await client.query('BEGIN');
             await client.query(`
@@ -229,21 +226,21 @@ class AdminService {
     async resetUserPassword(targetUserId, adminUserId, newPassword) {
         const bcrypt = await import('bcryptjs');
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await (0, database_js_1.query)('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, targetUserId]);
+        await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, targetUserId]);
         await this.logAdminAction(adminUserId, 'password_reset', {
             targetUserId,
         }, 'user', targetUserId);
     }
     async updateUserVipStatus(targetUserId, adminUserId, isVip, reason) {
         if (isVip) {
-            await (0, database_js_1.query)('SELECT grant_vip_status($1, $2, $3) as ok', [
+            await query('SELECT grant_vip_status($1, $2, $3) as ok', [
                 targetUserId,
                 adminUserId,
                 reason ?? null,
             ]);
         }
         else {
-            await (0, database_js_1.query)('SELECT revoke_vip_status($1) as ok', [targetUserId]);
+            await query('SELECT revoke_vip_status($1) as ok', [targetUserId]);
         }
         await this.logAdminAction(adminUserId, 'vip_status_change', {
             targetUserId,
@@ -254,12 +251,12 @@ class AdminService {
     async updateUserAdminStatus(targetUserId, adminUserId, isAdmin) {
         if (isAdmin) {
             let roleId;
-            const roleRes = await (0, database_js_1.query)(`SELECT id FROM admin_roles WHERE name = 'super_admin' LIMIT 1`);
+            const roleRes = await query(`SELECT id FROM admin_roles WHERE name = 'super_admin' LIMIT 1`);
             if (roleRes.rows[0]?.id) {
                 roleId = roleRes.rows[0].id;
             }
             else {
-                const createRes = await (0, database_js_1.query)(`INSERT INTO admin_roles (name, description, permissions, is_super_admin)
+                const createRes = await query(`INSERT INTO admin_roles (name, description, permissions, is_super_admin)
            VALUES ('super_admin', 'Full system access', ARRAY['*'], true)
            RETURNING id`);
                 roleId = createRes.rows[0].id;
@@ -269,7 +266,7 @@ class AdminService {
             await this.assignAdminRole(targetUserId, roleId, adminUserId);
         }
         else {
-            const roleRes = await (0, database_js_1.query)(`SELECT id FROM admin_roles WHERE name = 'super_admin' LIMIT 1`);
+            const roleRes = await query(`SELECT id FROM admin_roles WHERE name = 'super_admin' LIMIT 1`);
             if (roleRes.rows[0]?.id) {
                 await this.removeAdminRole(targetUserId, roleRes.rows[0].id, adminUserId);
             }
@@ -280,7 +277,7 @@ class AdminService {
         }, 'user', targetUserId);
     }
     async updateUserPremiumTier(targetUserId, adminUserId, tier, expiresAt) {
-        await (0, database_js_1.query)('UPDATE users SET premium_tier = $1, premium_expires_at = $2 WHERE id = $3', [
+        await query('UPDATE users SET premium_tier = $1, premium_expires_at = $2 WHERE id = $3', [
             tier,
             expiresAt?.toISOString() || null,
             targetUserId,
@@ -292,7 +289,7 @@ class AdminService {
         }, 'user', targetUserId);
     }
     async assignAdminRole(targetUserId, roleId, adminUserId, expiresAt) {
-        await (0, database_js_1.query)(`
+        await query(`
       INSERT INTO user_admin_roles (user_id, role_id, assigned_by, expires_at)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (user_id, role_id) DO UPDATE SET
@@ -307,7 +304,7 @@ class AdminService {
         }, 'user', targetUserId);
     }
     async removeAdminRole(targetUserId, roleId, adminUserId) {
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE user_admin_roles 
       SET is_active = FALSE 
       WHERE user_id = $1 AND role_id = $2
@@ -318,11 +315,11 @@ class AdminService {
         }, 'user', targetUserId);
     }
     async getContentApprovalQueue(limit = 50, offset = 0) {
-        const countResult = await (0, database_js_1.query)(`
+        const countResult = await query(`
       SELECT COUNT(*) as total FROM user_reports WHERE status = 'pending'
     `);
         const total = countResult.rows[0].total;
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 
         ur.id,
         ur.reporter_id,
@@ -353,7 +350,7 @@ class AdminService {
         };
     }
     async approveContent(queueId, adminUserId, notes) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await client.query('BEGIN');
             const reportRow = await client.query(`SELECT reported_user_id, reporter_id FROM user_reports WHERE id = $1 FOR UPDATE`, [queueId]);
@@ -380,7 +377,7 @@ class AdminService {
         }
     }
     async rejectContent(queueId, adminUserId, reason) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await client.query('BEGIN');
             const reportRow = await client.query(`SELECT reported_user_id, reporter_id FROM user_reports WHERE id = $1 FOR UPDATE`, [queueId]);
@@ -408,7 +405,7 @@ class AdminService {
     }
     async getFeatureFlags() {
         try {
-            const flags = await featureFlagService_js_1.featureFlagService.listFlags();
+            const flags = await featureFlagService.listFlags();
             return flags.map((flag) => {
                 const targetCriteria = typeof flag.target_criteria === 'string'
                     ? this.safeJsonParse(flag.target_criteria, {})
@@ -431,7 +428,7 @@ class AdminService {
             });
         }
         catch (error) {
-            logger_js_1.logger.warn('Error fetching feature flags:', error);
+            logger.warn('Error fetching feature flags:', error);
             return [];
         }
     }
@@ -446,7 +443,7 @@ class AdminService {
         }
     }
     async toggleFeatureFlag(flagName, enabled, adminUserId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       UPDATE feature_flags
       SET is_enabled = $1,
           rollout_percentage = CASE WHEN $1 THEN 100 ELSE 0 END,
@@ -457,7 +454,7 @@ class AdminService {
         if (result.rowCount === 0) {
             return false;
         }
-        featureFlagService_js_1.featureFlagService.clearCache();
+        featureFlagService.clearCache();
         await this.logAdminAction(adminUserId, 'feature_flag_toggle', {
             flagName,
             enabled,
@@ -481,7 +478,7 @@ class AdminService {
         if (updates.dependencies !== undefined) {
             mappedUpdates.dependencies = updates.dependencies;
         }
-        const updatedFlag = await featureFlagService_js_1.featureFlagService.updateFlag(flagName, mappedUpdates, adminUserId, reason);
+        const updatedFlag = await featureFlagService.updateFlag(flagName, mappedUpdates, adminUserId, reason);
         if (!updatedFlag) {
             return null;
         }
@@ -494,9 +491,9 @@ class AdminService {
         return normalizedFlag;
     }
     async getUserFeatureFlagAssignments(userId) {
-        const flags = await featureFlagService_js_1.featureFlagService.listFlags();
-        const overrides = await featureFlagService_js_1.featureFlagService.listUserOverrides(userId);
-        const userResult = await (0, database_js_1.query)(`SELECT id, username, is_admin, is_vip, premium_tier, is_beta_user
+        const flags = await featureFlagService.listFlags();
+        const overrides = await featureFlagService.listUserOverrides(userId);
+        const userResult = await query(`SELECT id, username, is_admin, is_vip, premium_tier, is_beta_user
        FROM users WHERE id = $1`, [userId]);
         const userRow = userResult.rows[0];
         const userContext = userRow
@@ -518,10 +515,10 @@ class AdminService {
             let effectiveValue = null;
             if (userContext) {
                 try {
-                    effectiveValue = await featureFlagService_js_1.featureFlagService.evaluateFlagByName(flag.flag_name, userContext);
+                    effectiveValue = await featureFlagService.evaluateFlagByName(flag.flag_name, userContext);
                 }
                 catch (error) {
-                    logger_js_1.logger.warn('Failed to evaluate feature flag for user', {
+                    logger.warn('Failed to evaluate feature flag for user', {
                         userId,
                         flagName: flag.flag_name,
                         error,
@@ -543,7 +540,7 @@ class AdminService {
         return assignments.sort((a, b) => a.flagName.localeCompare(b.flagName));
     }
     async setUserFeatureFlagOverride(targetUserId, flagName, enabled, adminUserId) {
-        await featureFlagService_js_1.featureFlagService.setUserOverride(targetUserId, flagName, enabled);
+        await featureFlagService.setUserOverride(targetUserId, flagName, enabled);
         await this.logAdminAction(adminUserId, 'feature_flag_user_override_set', {
             targetUserId,
             flagName,
@@ -551,7 +548,7 @@ class AdminService {
         }, 'user', targetUserId);
     }
     async clearUserFeatureFlagOverride(targetUserId, flagName, adminUserId) {
-        await featureFlagService_js_1.featureFlagService.clearUserOverride(targetUserId, flagName);
+        await featureFlagService.clearUserOverride(targetUserId, flagName);
         await this.logAdminAction(adminUserId, 'feature_flag_user_override_cleared', {
             targetUserId,
             flagName,
@@ -563,7 +560,7 @@ class AdminService {
         const actionPayload = targetId && !targetIdIsValidUuid
             ? { ...actionDetails, targetIdentifier: targetId }
             : actionDetails;
-        await (0, database_js_1.query)(`
+        await query(`
       INSERT INTO admin_activity_logs 
       (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -578,7 +575,7 @@ class AdminService {
         ]);
     }
     async logUserActivity(userId, actionType, actionDetails, ipAddress, userAgent) {
-        await (0, database_js_1.query)(`
+        await query(`
       INSERT INTO user_activity_logs 
       (user_id, action_type, action_details, ip_address, user_agent)
       VALUES ($1, $2, $3, $4, $5)
@@ -591,7 +588,7 @@ class AdminService {
         ]);
     }
     async getAdminActivityLogs(limit = 100, offset = 0) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 
         aal.*,
         u.username as admin_username,
@@ -621,6 +618,5 @@ class AdminService {
         });
     }
 }
-exports.AdminService = AdminService;
-exports.adminService = new AdminService();
+export const adminService = new AdminService();
 //# sourceMappingURL=adminService.js.map

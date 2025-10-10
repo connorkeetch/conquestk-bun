@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.DeltaBuilder = void 0;
-exports.DeltaBuilder = {
+export const DeltaBuilder = {
     territoryUpdate(roomId, territoryId, changes, version) {
         const normalizedArmies = typeof changes.armies === 'number' && Number.isFinite(changes.armies)
             ? Math.max(0, Math.trunc(changes.armies))

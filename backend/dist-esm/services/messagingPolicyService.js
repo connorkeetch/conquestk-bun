@@ -1,26 +1,18 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MessagingPolicyError = void 0;
-exports.getMessagingSettings = getMessagingSettings;
-exports.assertCanStartDirectConversation = assertCanStartDirectConversation;
-exports.assertCanSendDirectMessage = assertCanSendDirectMessage;
-exports.assertCanInviteToGroup = assertCanInviteToGroup;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-const userBlockService_js_1 = require("./userBlockService.js");
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+import { isBlocked } from './userBlockService.js';
 const DEFAULT_SETTINGS = {
     dmPolicy: 'everyone',
     allowGroupInvites: true,
     showOnlineStatus: true,
 };
-class MessagingPolicyError extends Error {
+export class MessagingPolicyError extends Error {
     constructor(code, message) {
         super(message);
         this.code = code;
         this.name = 'MessagingPolicyError';
     }
 }
-exports.MessagingPolicyError = MessagingPolicyError;
 const mapSettingsRow = (row) => {
     if (!row) {
         return { ...DEFAULT_SETTINGS };
@@ -31,20 +23,20 @@ const mapSettingsRow = (row) => {
         showOnlineStatus: row.show_online_status !== false,
     };
 };
-async function getMessagingSettings(userId) {
+export async function getMessagingSettings(userId) {
     try {
-        const result = await (0, database_js_1.query)(`SELECT dm_policy, allow_group_invites, show_online_status
+        const result = await query(`SELECT dm_policy, allow_group_invites, show_online_status
        FROM user_messaging_settings
        WHERE user_id = $1`, [userId]);
         return mapSettingsRow(result.rows[0]);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to load messaging settings', { userId, error });
+        logger.error('Failed to load messaging settings', { userId, error });
         return { ...DEFAULT_SETTINGS };
     }
 }
 async function areFriends(userA, userB) {
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT 1
     FROM friendships
     WHERE status = 'accepted'
@@ -53,11 +45,11 @@ async function areFriends(userA, userB) {
   `, [userA, userB]);
     return (result.rowCount ?? 0) > 0;
 }
-async function assertCanStartDirectConversation(initiatorId, targetUserId) {
+export async function assertCanStartDirectConversation(initiatorId, targetUserId) {
     if (initiatorId === targetUserId) {
         throw new MessagingPolicyError('INVALID_TARGET', 'Cannot message yourself');
     }
-    if (await (0, userBlockService_js_1.isBlocked)(initiatorId, targetUserId)) {
+    if (await isBlocked(initiatorId, targetUserId)) {
         throw new MessagingPolicyError('BLOCKED', 'Messaging is blocked between these users');
     }
     const targetSettings = await getMessagingSettings(targetUserId);
@@ -71,11 +63,11 @@ async function assertCanStartDirectConversation(initiatorId, targetUserId) {
         }
     }
 }
-async function assertCanSendDirectMessage(senderId, recipientId) {
+export async function assertCanSendDirectMessage(senderId, recipientId) {
     await assertCanStartDirectConversation(senderId, recipientId);
 }
-async function assertCanInviteToGroup(inviterId, invitedUserId) {
-    if (await (0, userBlockService_js_1.isBlocked)(inviterId, invitedUserId)) {
+export async function assertCanInviteToGroup(inviterId, invitedUserId) {
+    if (await isBlocked(inviterId, invitedUserId)) {
         throw new MessagingPolicyError('BLOCKED', 'Cannot invite a blocked user');
     }
     const settings = await getMessagingSettings(invitedUserId);

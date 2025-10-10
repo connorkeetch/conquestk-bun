@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.assassinationMetrics = exports.aiTurnMetrics = exports.socketPayloadMetrics = exports.treasureMetrics = exports.battleMetrics = void 0;
-const logger_js_1 = require("../utils/logger.js");
+import { logger } from '../utils/logger.js';
 class CounterMetric {
     constructor(name) {
         this.name = name;
@@ -87,7 +84,7 @@ class BattleMetrics {
         if (this.failureTimestamps.length >= this.failureThreshold &&
             now - this.lastAlertAt > this.failureWindowMs) {
             this.lastAlertAt = now;
-            logger_js_1.logger.error('Battle persistence failures exceeded threshold', {
+            logger.error('Battle persistence failures exceeded threshold', {
                 failuresLastMinute: this.failureTimestamps.length,
                 threshold: this.failureThreshold,
                 reason,
@@ -108,7 +105,7 @@ class BattleMetrics {
         };
     }
 }
-exports.battleMetrics = new BattleMetrics();
+export const battleMetrics = new BattleMetrics();
 class TreasureMetrics {
     constructor() {
         this.drawCounter = new CounterMetric('treasure_drawn_total');
@@ -143,7 +140,7 @@ class TreasureMetrics {
         };
     }
 }
-exports.treasureMetrics = new TreasureMetrics();
+export const treasureMetrics = new TreasureMetrics();
 class RollingWindowStats {
     constructor(maxSize = 200) {
         this.windowByKey = new Map();
@@ -210,7 +207,7 @@ class SocketPayloadMetrics {
         return this.window.shouldLog(event);
     }
 }
-exports.socketPayloadMetrics = new SocketPayloadMetrics();
+export const socketPayloadMetrics = new SocketPayloadMetrics();
 class AITurnMetrics {
     constructor() {
         this.turnCounter = new CounterMetric('ai_turns_total');
@@ -254,7 +251,7 @@ class AITurnMetrics {
         };
     }
 }
-exports.aiTurnMetrics = new AITurnMetrics();
+export const aiTurnMetrics = new AITurnMetrics();
 class AssassinationMetrics {
     constructor() {
         this.assignmentCounter = new CounterMetric('assassination_assignment_total');
@@ -301,5 +298,5 @@ class AssassinationMetrics {
         };
     }
 }
-exports.assassinationMetrics = new AssassinationMetrics();
+export const assassinationMetrics = new AssassinationMetrics();
 //# sourceMappingURL=metricsService.js.map

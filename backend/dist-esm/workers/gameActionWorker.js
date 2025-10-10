@@ -1,26 +1,23 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createGameActionWorker = exports.GameActionWorker = void 0;
-const bullmq_1 = require("bullmq");
-const database_js_1 = require("../config/database.js");
-const redis_js_1 = require("../config/redis.js");
-const aiDecisionService_js_1 = require("../services/aiDecisionService.js");
-const cacheService_js_1 = require("../services/cacheService.js");
-const deltaEmitter_js_1 = require("../services/deltaEmitter.js");
-const gameService_js_1 = require("../services/gameService.js");
-const jobIdempotencyService_js_1 = require("../services/jobIdempotencyService.js");
-const metricsService_js_1 = require("../services/metricsService.js");
-const queueService_js_1 = require("../services/queueService.js");
-const workerHeartbeat_js_1 = require("../services/workerHeartbeat.js");
-const deltaUpdates_js_1 = require("../types/deltaUpdates.js");
-const logger_js_1 = require("../utils/logger.js");
-class GameActionWorker {
+import { Worker } from 'bullmq';
+import { query } from '../config/database.js';
+import { acquireLock, releaseLock } from '../config/redis.js';
+import { aiDecisionService } from '../services/aiDecisionService.js';
+import { gameStateCache } from '../services/cacheService.js';
+import { DeltaEmitter } from '../services/deltaEmitter.js';
+import { GameService } from '../services/gameService.js';
+import { jobIdempotencyService } from '../services/jobIdempotencyService.js';
+import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService.js';
+import { queueService } from '../services/queueService.js';
+import { startWorkerHeartbeat } from '../services/workerHeartbeat.js';
+import { DeltaBuilder } from '../types/deltaUpdates.js';
+import { logger } from '../utils/logger.js';
+export class GameActionWorker {
     constructor(io) {
         this.worker = null;
-        this.gameService = new gameService_js_1.GameService();
-        this.deltaEmitter = new deltaEmitter_js_1.DeltaEmitter(io);
+        this.gameService = new GameService();
+        this.deltaEmitter = new DeltaEmitter(io);
         this.io = io;
-        this.queueName = queueService_js_1.queueService.getGameActionQueue().name;
+        this.queueName = queueService.getGameActionQueue().name;
     }
     computePayloadBytes(data) {
         try {
@@ -33,11 +30,11 @@ class GameActionWorker {
     }
     emitGameUpdate(channel, payload) {
         const bytes = this.computePayloadBytes(payload);
-        metricsService_js_1.socketPayloadMetrics.record('game-update', bytes);
-        if (metricsService_js_1.socketPayloadMetrics.shouldLog('game-update')) {
-            const stats = metricsService_js_1.socketPayloadMetrics.snapshot('game-update');
+        socketPayloadMetrics.record('game-update', bytes);
+        if (socketPayloadMetrics.shouldLog('game-update')) {
+            const stats = socketPayloadMetrics.snapshot('game-update');
             if (stats) {
-                logger_js_1.logger.info('Socket payload stats', {
+                logger.info('Socket payload stats', {
                     event: 'game-update',
                     windowCount: stats.count,
                     p50Bytes: stats.p50,
@@ -56,7 +53,7 @@ class GameActionWorker {
             if (job.name === 'execute-ai-turn') {
                 return this.processAiTurn(job);
             }
-            logger_js_1.logger.warn('Received unknown job for game-actions queue', { name: job.name, id: job.id });
+            logger.warn('Received unknown job for game-actions queue', { name: job.name, id: job.id });
             return null;
         };
         {
@@ -70,19 +67,19 @@ class GameActionWorker {
                 maxRetriesPerRequest: null,
                 commandTimeout: undefined,
             });
-            this.worker = new bullmq_1.Worker(this.queueName, processJob, {
+            this.worker = new Worker(this.queueName, processJob, {
                 concurrency: 10,
                 connection,
             });
         }
         this.worker.on('completed', (job, result) => {
-            logger_js_1.logger.info('✅ Game action job completed', {
+            logger.info('✅ Game action job completed', {
                 jobId: job.id,
                 result,
             });
         });
         this.worker.on('failed', (job, error) => {
-            logger_js_1.logger.error('❌ Game action job failed', {
+            logger.error('❌ Game action job failed', {
                 jobId: job?.id,
                 error: error instanceof Error
                     ? { message: error.message, name: error.name, stack: error.stack }
@@ -90,19 +87,19 @@ class GameActionWorker {
             });
         });
         this.worker.on('error', (error) => {
-            logger_js_1.logger.error('❌ GameActionWorker encountered an error', {
+            logger.error('❌ GameActionWorker encountered an error', {
                 error: error instanceof Error ? error.message : error,
             });
         });
-        (0, workerHeartbeat_js_1.startWorkerHeartbeat)(this.queueName);
-        logger_js_1.logger.info('✅ GameActionWorker initialized');
+        startWorkerHeartbeat(this.queueName);
+        logger.info('✅ GameActionWorker initialized');
     }
     async processAiTurn(job) {
         const { gameId, playerId, turnNumber, budgetOverrides } = job.data;
         const idKey = job.id !== undefined ? String(job.id) : `ai:${gameId}:${turnNumber}`;
-        const cached = await jobIdempotencyService_js_1.jobIdempotencyService.getProcessedJob(this.queueName, idKey);
+        const cached = await jobIdempotencyService.getProcessedJob(this.queueName, idKey);
         if (cached.exists && cached.value) {
-            logger_js_1.logger.info('♻️ Skipping already processed AI turn job', {
+            logger.info('♻️ Skipping already processed AI turn job', {
                 gameId,
                 playerId,
                 jobId: job.id,
@@ -115,18 +112,18 @@ class GameActionWorker {
                 throw new Error('Game not found');
             if (state.phase === 'finished') {
                 const result = { success: true, delta: null, processed: true };
-                await jobIdempotencyService_js_1.jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
+                await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
                 return result;
             }
             if (state.turn !== turnNumber || state.currentPlayer !== playerId) {
                 const result = { success: true, delta: null, processed: true };
-                await jobIdempotencyService_js_1.jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
+                await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
                 return result;
             }
             const current = state.players.find((p) => p.id === playerId);
             if (!current || !current.isAi) {
                 const result = { success: true, delta: null, processed: true };
-                await jobIdempotencyService_js_1.jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
+                await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
                 return result;
             }
             const difficulty = current.aiDifficulty ?? 'recruit';
@@ -144,7 +141,7 @@ class GameActionWorker {
             }
             else {
                 await this.gameService.executeAiTurn(gameId, effectiveBudget);
-                const serialized = await cacheService_js_1.gameStateCache.getGameState(gameId);
+                const serialized = await gameStateCache.getGameState(gameId);
                 if (serialized) {
                     this.emitGameUpdate(`game:${gameId}`, serialized);
                 }
@@ -156,17 +153,17 @@ class GameActionWorker {
                 await lifecycle.scheduleAiTurn(gameId);
             }
             catch (e) {
-                logger_js_1.logger.warn('Failed to schedule lifecycle after AI turn', {
+                logger.warn('Failed to schedule lifecycle after AI turn', {
                     roomId: gameId,
                     error: e instanceof Error ? e.message : e,
                 });
             }
             const result = { success: true, delta: null, processed: true };
-            await jobIdempotencyService_js_1.jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
+            await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
             return result;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to process AI turn', {
+            logger.error('❌ Failed to process AI turn', {
                 gameId,
                 playerId,
                 error,
@@ -186,7 +183,7 @@ class GameActionWorker {
         if (!aiPlayer) {
             return;
         }
-        const plan = await aiDecisionService_js_1.aiDecisionService.chooseAction({
+        const plan = await aiDecisionService.chooseAction({
             gameState: state,
             player: aiPlayer,
             difficulty,
@@ -236,7 +233,7 @@ class GameActionWorker {
                         const last = updated.lastBattleResult;
                         if (last) {
                             try {
-                                const battleDelta = deltaUpdates_js_1.DeltaBuilder.battleResult(gameId, last, updated.version);
+                                const battleDelta = DeltaBuilder.battleResult(gameId, last, updated.version);
                                 const { emitFogFilteredDelta } = await import('../services/fogService.js');
                                 await emitFogFilteredDelta(this.io, gameId, battleDelta);
                             }
@@ -259,7 +256,7 @@ class GameActionWorker {
                                         const player2 = latest.players.find((p) => p.id === playerId);
                                         if (!player2)
                                             break;
-                                        const replanned = await aiDecisionService_js_1.aiDecisionService.chooseAction({
+                                        const replanned = await aiDecisionService.chooseAction({
                                             gameState: latest,
                                             player: player2,
                                             difficulty,
@@ -290,7 +287,7 @@ class GameActionWorker {
                                 ? postPlayer?.mustCashInTreasures
                                 : undefined;
                             const { emitFogFilteredDelta } = await import('../services/fogService.js');
-                            const playerDelta = deltaUpdates_js_1.DeltaBuilder.playerUpdate(gameId, playerId, {
+                            const playerDelta = DeltaBuilder.playerUpdate(gameId, playerId, {
                                 armies: Number(postBank),
                                 ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}),
                             }, updated.version);
@@ -307,7 +304,7 @@ class GameActionWorker {
                         }
                         catch {
                             try {
-                                const serialized = await cacheService_js_1.gameStateCache.getGameState(gameId);
+                                const serialized = await gameStateCache.getGameState(gameId);
                                 if (serialized)
                                     this.emitGameUpdate(`game:${gameId}`, serialized);
                             }
@@ -319,7 +316,7 @@ class GameActionWorker {
                     default: {
                         await this.gameService.processGameAction(action, playerId);
                         try {
-                            const serialized = await cacheService_js_1.gameStateCache.getGameState(gameId);
+                            const serialized = await gameStateCache.getGameState(gameId);
                             if (serialized) {
                                 this.emitGameUpdate(`game:${gameId}`, serialized);
                             }
@@ -340,7 +337,7 @@ class GameActionWorker {
         if (applied < actions.length) {
             const latest = await this.gameService.getGameState(gameId);
             if (latest && latest.currentPlayer === playerId) {
-                const fb = aiDecisionService_js_1.aiDecisionService.buildFallbackPlan(latest, playerId);
+                const fb = aiDecisionService.buildFallbackPlan(latest, playerId);
                 const tail = fb.slice(0, 1);
                 for (const a of tail) {
                     try {
@@ -364,7 +361,7 @@ class GameActionWorker {
                 }
             }
         }
-        metricsService_js_1.aiTurnMetrics.recordTurn({
+        aiTurnMetrics.recordTurn({
             difficulty,
             fallbackUsed: usedFallback,
             fallbackReason,
@@ -408,9 +405,9 @@ class GameActionWorker {
         const { gameId, playerId, action, socketId, idempotencyKey } = job.data;
         const idKey = idempotencyKey ??
             (job.id !== undefined ? String(job.id) : `${gameId}:${playerId}:${action.type}`);
-        const cached = await jobIdempotencyService_js_1.jobIdempotencyService.getProcessedJob(this.queueName, idKey);
+        const cached = await jobIdempotencyService.getProcessedJob(this.queueName, idKey);
         if (cached.exists && cached.value) {
-            logger_js_1.logger.info('♻️ Skipping already processed game action job', {
+            logger.info('♻️ Skipping already processed game action job', {
                 gameId,
                 playerId,
                 actionType: action.type,
@@ -422,14 +419,14 @@ class GameActionWorker {
         const lockKey = `lock:game-actions:${gameId}`;
         try {
             const startWait = Date.now();
-            lockToken = await (0, redis_js_1.acquireLock)(lockKey, 5000);
+            lockToken = await acquireLock(lockKey, 5000);
             while (!lockToken) {
                 if (Date.now() - startWait > 1500)
                     break;
                 await new Promise((r) => setTimeout(r, 25));
-                lockToken = await (0, redis_js_1.acquireLock)(lockKey, 5000);
+                lockToken = await acquireLock(lockKey, 5000);
             }
-            logger_js_1.logger.debug('Processing game action', {
+            logger.debug('Processing game action', {
                 gameId,
                 playerId,
                 actionType: action.type,
@@ -441,13 +438,13 @@ class GameActionWorker {
                     await lifecycle.handleTurnTimeout(gameId);
                 }
                 catch (e) {
-                    logger_js_1.logger.warn('Turn timeout handling failed', {
+                    logger.warn('Turn timeout handling failed', {
                         roomId: gameId,
                         error: e instanceof Error ? e.message : e,
                     });
                 }
                 const result = { success: true, delta: null, processed: true };
-                await jobIdempotencyService_js_1.jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
+                await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
                 return result;
             }
             const currentState = await this.gameService.getGameState(gameId);
@@ -476,10 +473,10 @@ class GameActionWorker {
                     const last = updated.lastBattleResult;
                     if (last) {
                         try {
-                            const battleDelta = deltaUpdates_js_1.DeltaBuilder.battleResult(gameId, last, updated.version);
+                            const battleDelta = DeltaBuilder.battleResult(gameId, last, updated.version);
                             battleDelta.changes = [
-                                deltaUpdates_js_1.DeltaBuilder.territoryUpdate(gameId, last.fromTerritory.id, { armies: last.fromTerritory.armies }, updated.version),
-                                deltaUpdates_js_1.DeltaBuilder.territoryUpdate(gameId, last.toTerritory.id, {
+                                DeltaBuilder.territoryUpdate(gameId, last.fromTerritory.id, { armies: last.fromTerritory.armies }, updated.version),
+                                DeltaBuilder.territoryUpdate(gameId, last.toTerritory.id, {
                                     armies: last.toTerritory.armies,
                                     ownerId: last.toTerritory.ownerId ?? undefined,
                                 }, updated.version),
@@ -488,7 +485,7 @@ class GameActionWorker {
                             await emitFogFilteredDelta(this.io, gameId, battleDelta);
                         }
                         catch (e) {
-                            logger_js_1.logger.debug('Failed to emit fog-filtered battle delta in worker attack', {
+                            logger.debug('Failed to emit fog-filtered battle delta in worker attack', {
                                 roomId: gameId,
                                 error: e instanceof Error ? e.message : e,
                             });
@@ -506,6 +503,29 @@ class GameActionWorker {
                     await this.recordMove(gameId, playerId, currentState.turn, 'end_turn', {});
                     break;
                 }
+                case 'transfer_conquest': {
+                    const payload = action.payload;
+                    const transfer = await this.gameService.transferConquestArmies(gameId, playerId, payload.fromTerritoryId, payload.toTerritoryId, payload.armies);
+                    try {
+                        const updates = [
+                            DeltaBuilder.territoryUpdate(gameId, payload.fromTerritoryId, {
+                                armies: transfer.fromArmies,
+                            }),
+                            DeltaBuilder.territoryUpdate(gameId, payload.toTerritoryId, {
+                                armies: transfer.toArmies,
+                            }),
+                        ];
+                        const { emitFogFilteredDelta } = await import('../services/fogService.js');
+                        for (const d of updates) {
+                            await emitFogFilteredDelta(this.io, gameId, d);
+                        }
+                    }
+                    catch {
+                    }
+                    await this.recordMove(gameId, playerId, currentState.turn, 'transfer_conquest', payload);
+                    shouldBroadcast = false;
+                    break;
+                }
                 case 'trade_cards': {
                     try {
                         const payload = action
@@ -521,7 +541,7 @@ class GameActionWorker {
                         await this.recordMove(gameId, playerId, currentState.turn, 'trade_cards', moveData);
                     }
                     catch (e) {
-                        logger_js_1.logger.debug('Skipped logging trade_cards move', {
+                        logger.debug('Skipped logging trade_cards move', {
                             roomId: gameId,
                             playerId,
                             error: e instanceof Error ? e.message : e,
@@ -529,7 +549,7 @@ class GameActionWorker {
                     }
                     const prevBank = currentState.players.find((p) => p.id === playerId)?.armies ?? 0;
                     await this.gameService.processGameAction(action, playerId);
-                    const serialized = await cacheService_js_1.gameStateCache.getGameState(gameId);
+                    const serialized = await gameStateCache.getGameState(gameId);
                     const newPhase = serialized?.phase ?? currentState.phase;
                     const version = serialized?.version;
                     try {
@@ -575,7 +595,7 @@ class GameActionWorker {
                         }
                     }
                     catch (logErr) {
-                        logger_js_1.logger.debug('Skipped appending treasure cash log', {
+                        logger.debug('Skipped appending treasure cash log', {
                             roomId: gameId,
                             playerId,
                             error: logErr instanceof Error ? logErr.message : logErr,
@@ -588,7 +608,7 @@ class GameActionWorker {
                             ? postPlayer?.mustCashInTreasures
                             : undefined;
                         const { emitFogFilteredDelta } = await import('../services/fogService.js');
-                        const playerDelta = deltaUpdates_js_1.DeltaBuilder.playerUpdate(gameId, playerId, {
+                        const playerDelta = DeltaBuilder.playerUpdate(gameId, playerId, {
                             armies: Number(postBank),
                             ...(mustCash !== undefined ? { mustCashInTreasures: mustCash } : {}),
                         }, version);
@@ -622,7 +642,7 @@ class GameActionWorker {
                 case 'undo_fortify': {
                     await this.gameService.processGameAction({ type: 'undo_fortify', roomId: gameId, playerId }, playerId);
                     await this.recordMove(gameId, playerId, currentState.turn, 'undo_fortify', {});
-                    const serialized = await cacheService_js_1.gameStateCache.getGameState(gameId);
+                    const serialized = await gameStateCache.getGameState(gameId);
                     if (serialized) {
                         this.emitGameUpdate(`game:${gameId}`, serialized);
                     }
@@ -643,11 +663,11 @@ class GameActionWorker {
                 delta: delta || null,
                 processed: true,
             };
-            await jobIdempotencyService_js_1.jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
+            await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60);
             return result;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to process game action', {
+            logger.error('❌ Failed to process game action', {
                 gameId,
                 playerId,
                 actionType: action.type,
@@ -667,7 +687,7 @@ class GameActionWorker {
         finally {
             if (lockToken) {
                 try {
-                    await (0, redis_js_1.releaseLock)(lockKey, lockToken);
+                    await releaseLock(lockKey, lockToken);
                 }
                 catch {
                 }
@@ -686,15 +706,15 @@ class GameActionWorker {
     }
     async recordMove(gameId, playerId, turnNumber, moveType, payload) {
         try {
-            const result = await (0, database_js_1.query)(`INSERT INTO game_moves (room_id, player_id, turn_number, move_type, move_data)
+            const result = await query(`INSERT INTO game_moves (room_id, player_id, turn_number, move_type, move_data)
          VALUES ($1, $2, $3, $4, $5::jsonb)
          RETURNING id`, [gameId, playerId, turnNumber, moveType, JSON.stringify(payload || {})]);
             const moveId = result.rows[0]?.id ?? null;
-            logger_js_1.logger.debug('Recorded game move', { gameId, playerId, turnNumber, moveType, moveId });
+            logger.debug('Recorded game move', { gameId, playerId, turnNumber, moveType, moveId });
             return moveId;
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to record game move', {
+            logger.warn('Failed to record game move', {
                 gameId,
                 playerId,
                 turnNumber,
@@ -712,7 +732,7 @@ class GameActionWorker {
             playerId,
         });
         await this.deltaEmitter.emitDeploymentDeltas(gameId, playerId, territoryId, result);
-        return deltaUpdates_js_1.DeltaBuilder.territoryUpdate(gameId, territoryId, {
+        return DeltaBuilder.territoryUpdate(gameId, territoryId, {
             armies: result.armies,
         });
     }
@@ -743,12 +763,25 @@ class GameActionWorker {
         }
         catch (_e) {
         }
-        return deltaUpdates_js_1.DeltaBuilder.territoryUpdate(gameId, toTerritoryId, {
+        return DeltaBuilder.territoryUpdate(gameId, toTerritoryId, {
             armies: result.toArmies,
         });
     }
     async processEndTurn(gameId, playerId) {
-        const nextPlayer = await this.gameService.processEndTurn(gameId, playerId);
+        const result = await this.gameService.endTurn(gameId, playerId);
+        try {
+            if (result.treasureAwarded) {
+                this.io.to(`game:${gameId}`).emit('game-delta', {
+                    type: 'TREASURE_AWARDED',
+                    roomId: gameId,
+                    timestamp: Date.now(),
+                    userId: playerId,
+                    metal: result.treasureAwarded,
+                });
+            }
+        }
+        catch (_e) {
+        }
         try {
             const { GameLifecycleService } = await import('../services/gameLifecycleService.js');
             const lifecycle = new GameLifecycleService();
@@ -756,21 +789,19 @@ class GameActionWorker {
             await lifecycle.scheduleAiTurn(gameId);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to schedule turn timeout for next player', {
+            logger.warn('Failed to schedule turn timeout for next player', {
                 roomId: gameId,
                 error: error instanceof Error ? error.message : error,
             });
         }
-        return deltaUpdates_js_1.DeltaBuilder.phaseChange(gameId, 'reinforcement', nextPlayer.id, 0, 0);
+        return DeltaBuilder.phaseChange(gameId, result.gameState.phase, result.gameState.currentPlayer, result.gameState.turn, result.reinforcementArmies);
     }
     async processPhaseChange(gameId, playerId, action) {
         const phase = (action.payload?.phase ??
             'reinforcement');
         await this.gameService.processPhaseChange(gameId, playerId, phase);
-        return deltaUpdates_js_1.DeltaBuilder.phaseChange(gameId, phase, playerId, 0, 0);
+        return DeltaBuilder.phaseChange(gameId, phase, playerId, 0, 0);
     }
 }
-exports.GameActionWorker = GameActionWorker;
-const createGameActionWorker = (io) => new GameActionWorker(io);
-exports.createGameActionWorker = createGameActionWorker;
+export const createGameActionWorker = (io) => new GameActionWorker(io);
 //# sourceMappingURL=gameActionWorker.js.map

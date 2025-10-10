@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.featureFlagService = exports.FeatureFlagService = void 0;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 const PREMIUM_TIER_RANK = {
     free: 0,
     premium: 1,
@@ -10,7 +7,7 @@ const PREMIUM_TIER_RANK = {
     enterprise: 3,
 };
 const normalizeTier = (tier) => (tier || 'free').toLowerCase();
-class FeatureFlagService {
+export class FeatureFlagService {
     constructor() {
         this.flagCache = new Map();
         this.cacheExpiry = 60000;
@@ -119,13 +116,13 @@ class FeatureFlagService {
     }
     async getUserOverride(userId, flagName) {
         try {
-            const result = await (0, database_js_1.query)('SELECT is_enabled FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2', [userId, flagName]);
+            const result = await query('SELECT is_enabled FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2', [userId, flagName]);
             if (result.rows.length > 0) {
                 return result.rows[0].is_enabled;
             }
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error fetching user override', {
+            logger.error('❌ Error fetching user override', {
                 userId,
                 flagName,
                 error,
@@ -139,7 +136,7 @@ class FeatureFlagService {
             return Array.from(this.flagCache.values());
         }
         try {
-            const result = await (0, database_js_1.query)('SELECT * FROM feature_flags');
+            const result = await query('SELECT * FROM feature_flags');
             const flags = result.rows;
             this.flagCache.clear();
             for (const flag of flags) {
@@ -149,7 +146,7 @@ class FeatureFlagService {
             return flags;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error fetching feature flags', { error });
+            logger.error('❌ Error fetching feature flags', { error });
             return [];
         }
     }
@@ -193,13 +190,13 @@ class FeatureFlagService {
             }
             updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
             values.push(flagName);
-            const result = await (0, database_js_1.query)(`UPDATE feature_flags SET ${updateFields.join(', ')} 
+            const result = await query(`UPDATE feature_flags SET ${updateFields.join(', ')} 
          WHERE flag_name = $${paramCount} RETURNING *`, values);
             if (result.rows.length > 0) {
                 this.flagCache.clear();
                 this.lastCacheUpdate = 0;
                 if (reason) {
-                    await (0, database_js_1.query)(`UPDATE feature_flag_audit 
+                    await query(`UPDATE feature_flag_audit 
              SET reason = $1 
              WHERE flag_name = $2 AND changed_by = $3
              ORDER BY created_at DESC LIMIT 1`, [reason, flagName, changedBy]);
@@ -208,7 +205,7 @@ class FeatureFlagService {
             }
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error updating feature flag', {
+            logger.error('❌ Error updating feature flag', {
                 flagName,
                 updates,
                 changedBy,
@@ -219,13 +216,13 @@ class FeatureFlagService {
     }
     async setUserOverride(userId, flagName, enabled) {
         try {
-            await (0, database_js_1.query)(`INSERT INTO user_feature_flags (user_id, flag_name, is_enabled) 
+            await query(`INSERT INTO user_feature_flags (user_id, flag_name, is_enabled) 
          VALUES ($1, $2, $3) 
          ON CONFLICT (user_id, flag_name) 
          DO UPDATE SET is_enabled = $3, assigned_at = CURRENT_TIMESTAMP`, [userId, flagName, enabled]);
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error setting user override', {
+            logger.error('❌ Error setting user override', {
                 userId,
                 flagName,
                 enabled,
@@ -235,13 +232,13 @@ class FeatureFlagService {
     }
     async clearUserOverride(userId, flagName) {
         try {
-            await (0, database_js_1.query)('DELETE FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2', [
+            await query('DELETE FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2', [
                 userId,
                 flagName,
             ]);
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error clearing user override', {
+            logger.error('❌ Error clearing user override', {
                 userId,
                 flagName,
                 error,
@@ -250,11 +247,11 @@ class FeatureFlagService {
     }
     async listUserOverrides(userId) {
         try {
-            const result = await (0, database_js_1.query)('SELECT flag_name, is_enabled FROM user_feature_flags WHERE user_id = $1', [userId]);
+            const result = await query('SELECT flag_name, is_enabled FROM user_feature_flags WHERE user_id = $1', [userId]);
             return new Map(result.rows.map((row) => [row.flag_name, row.is_enabled]));
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error fetching user overrides', {
+            logger.error('❌ Error fetching user overrides', {
                 userId,
                 error,
             });
@@ -275,11 +272,11 @@ class FeatureFlagService {
             }
             queryStr += ` ORDER BY fa.created_at DESC LIMIT $${values.length + 1}`;
             values.push(limit);
-            const result = await (0, database_js_1.query)(queryStr, values);
+            const result = await query(queryStr, values);
             return result.rows;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error fetching feature flag audit log', {
+            logger.error('❌ Error fetching feature flag audit log', {
                 flagName,
                 limit,
                 error,
@@ -292,6 +289,5 @@ class FeatureFlagService {
         this.lastCacheUpdate = 0;
     }
 }
-exports.FeatureFlagService = FeatureFlagService;
-exports.featureFlagService = FeatureFlagService.getInstance();
+export const featureFlagService = FeatureFlagService.getInstance();
 //# sourceMappingURL=featureFlagService.js.map

@@ -1,30 +1,24 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GameLifecycleService = void 0;
-const database_js_1 = require("../config/database.js");
-const redis_js_1 = require("../config/redis.js");
-const logger_js_1 = require("../utils/logger.js");
-const capitalGameService_js_1 = __importDefault(require("./capitalGameService.js"));
-const gameRoomService_js_1 = require("./gameRoomService.js");
-const gameService_js_1 = require("./gameService.js");
-const mapService_js_1 = require("./mapService.js");
-const queueService_js_1 = require("./queueService.js");
-const socketRegistry_js_1 = require("./socketRegistry.js");
-class GameLifecycleService {
+import { getClient, query } from '../config/database.js';
+import { acquireLock, releaseLock } from '../config/redis.js';
+import { logger } from '../utils/logger.js';
+import capitalGameService from './capitalGameService.js';
+import { GameRoomService } from './gameRoomService.js';
+import { GameService } from './gameService.js';
+import { mapService } from './mapService.js';
+import { queueService } from './queueService.js';
+import { tryGetSocketServer } from './socketRegistry.js';
+export class GameLifecycleService {
     constructor() {
-        this.gameRoomService = new gameRoomService_js_1.GameRoomService();
-        this.gameService = new gameService_js_1.GameService();
+        this.gameRoomService = new GameRoomService();
+        this.gameService = new GameService();
     }
     async setReadyState(roomId, userId, ready) {
         const lockKey = `lock:game:ready:${roomId}`;
-        const lockToken = await (0, redis_js_1.acquireLock)(lockKey, 5000);
+        const lockToken = await acquireLock(lockKey, 5000);
         if (!lockToken) {
             throw new Error('Failed to acquire lock, another operation in progress');
         }
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         let shouldStart = false;
         let players = [];
         let turnTimer = 60;
@@ -84,7 +78,7 @@ class GameLifecycleService {
                 }
                 else {
                     try {
-                        const validation = await mapService_js_1.mapService.validateMapPlayable(mapId);
+                        const validation = await mapService.validateMapPlayable(mapId);
                         if (!validation.isValid) {
                             statusMessage = `Selected map failed validation: ${validation.errors.join('; ')}`;
                         }
@@ -128,18 +122,18 @@ class GameLifecycleService {
         }
         finally {
             client.release();
-            await (0, redis_js_1.releaseLock)(lockKey, lockToken);
+            await releaseLock(lockKey, lockToken);
         }
         if (shouldStart) {
             try {
                 await this.startGame(roomId, players, turnTimer);
             }
             catch (error) {
-                logger_js_1.logger.error('Failed to start game after ready-check', {
+                logger.error('Failed to start game after ready-check', {
                     roomId,
                     error: error instanceof Error ? error.message : error,
                 });
-                await (0, database_js_1.query)(`
+                await query(`
           UPDATE game_rooms
           SET status = 'lobby',
               ready_check_started_at = NULL,
@@ -171,12 +165,12 @@ class GameLifecycleService {
     }
     async maybeAutoStart(roomId) {
         const lockKey = `lock:game:ready:${roomId}`;
-        const lockToken = await (0, redis_js_1.acquireLock)(lockKey, 5000);
+        const lockToken = await acquireLock(lockKey, 5000);
         if (!lockToken) {
-            logger_js_1.logger.warn('Failed to acquire lifecycle lock for auto-start', { roomId });
+            logger.warn('Failed to acquire lifecycle lock for auto-start', { roomId });
             return false;
         }
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         let shouldStart = false;
         let players = [];
         let turnTimer = 60;
@@ -219,7 +213,7 @@ class GameLifecycleService {
                     }
                     else {
                         try {
-                            const validation = await mapService_js_1.mapService.validateMapPlayable(mapId);
+                            const validation = await mapService.validateMapPlayable(mapId);
                             if (!validation.isValid) {
                                 statusMessage = `Selected map failed validation: ${validation.errors.join('; ')}`;
                             }
@@ -245,7 +239,7 @@ class GameLifecycleService {
         }
         catch (error) {
             await client.query('ROLLBACK');
-            logger_js_1.logger.error('Auto-start lifecycle transaction failed', {
+            logger.error('Auto-start lifecycle transaction failed', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -253,7 +247,7 @@ class GameLifecycleService {
         }
         finally {
             client.release();
-            await (0, redis_js_1.releaseLock)(lockKey, lockToken);
+            await releaseLock(lockKey, lockToken);
         }
         if (!shouldStart) {
             if (statusMessage) {
@@ -273,13 +267,13 @@ class GameLifecycleService {
             await this.startGame(roomId, players, turnTimer);
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to auto-start game', {
+            logger.error('Failed to auto-start game', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
                 stack: error instanceof Error ? error.stack : undefined,
                 playerCount: players.length,
             });
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE game_rooms
         SET status = 'lobby',
             ready_check_started_at = NULL,
@@ -289,12 +283,12 @@ class GameLifecycleService {
         WHERE id = $1
       `, [roomId]);
             try {
-                await (0, database_js_1.query)('DELETE FROM game_states WHERE room_id = $1', [roomId]);
+                await query('DELETE FROM game_states WHERE room_id = $1', [roomId]);
                 const { gameStateCache } = await import('./cacheService.js');
                 await gameStateCache.deleteGameState(roomId);
             }
             catch (cleanupError) {
-                logger_js_1.logger.warn('Failed to cleanup partial game state after start failure', {
+                logger.warn('Failed to cleanup partial game state after start failure', {
                     roomId,
                     error: cleanupError instanceof Error ? cleanupError.message : cleanupError,
                 });
@@ -459,7 +453,7 @@ class GameLifecycleService {
         }
         catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
-            logger_js_1.logger.error('Failed to initialize game state', {
+            logger.error('Failed to initialize game state', {
                 roomId,
                 mapId: room?.mapId,
                 playerCount: players.length,
@@ -474,20 +468,20 @@ class GameLifecycleService {
         FROM game_rooms gr
         WHERE rp.room_id = gr.id AND rp.room_id = $1
       `;
-            await (0, database_js_1.query)(initQuery, [roomId]);
+            await query(initQuery, [roomId]);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to initialize time bank for room', {
+            logger.warn('Failed to initialize time bank for room', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
             });
         }
         if ((room?.gameMode === 'capitals' || configOverrides.gameMode === 'capitals') && room?.mapId) {
             try {
-                await capitalGameService_js_1.default.initializeCapitals(roomId, players.length, room.mapId);
+                await capitalGameService.initializeCapitals(roomId, players.length, room.mapId);
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to initialize capitals; continuing without capitals', {
+                logger.warn('Failed to initialize capitals; continuing without capitals', {
                     roomId,
                     mapId: room?.mapId,
                     error: error instanceof Error ? error.message : error,
@@ -511,7 +505,7 @@ class GameLifecycleService {
             }
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to persist game state to database', {
+            logger.error('Failed to persist game state to database', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -526,12 +520,12 @@ class GameLifecycleService {
             ]);
         }
         catch (err) {
-            logger_js_1.logger.warn('Failed to append lifecycle logs', {
+            logger.warn('Failed to append lifecycle logs', {
                 roomId,
                 error: err instanceof Error ? err.message : err,
             });
         }
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE game_rooms
       SET status = 'active',
           turn_number = $2,
@@ -542,7 +536,7 @@ class GameLifecycleService {
           started_at = COALESCE(started_at, NOW())
       WHERE id = $1
     `, [roomId, gameState.turn, gameState.currentPlayer, turnTimer]);
-        await (0, database_js_1.query)('UPDATE room_players SET is_ready = FALSE, ready_at = NULL WHERE room_id = $1', [
+        await query('UPDATE room_players SET is_ready = FALSE, ready_at = NULL WHERE room_id = $1', [
             roomId,
         ]);
         const snapshot = await this.getLifecycleSnapshot(roomId);
@@ -552,12 +546,12 @@ class GameLifecycleService {
             await this.gameService.appendTurnStats(roomId, stats);
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to append initial turn stats snapshot', {
+            logger.warn('Failed to append initial turn stats snapshot', {
                 roomId,
                 error: e instanceof Error ? e.message : e,
             });
         }
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (io) {
             const serialized = this.toSerializableGameState(gameState);
             try {
@@ -567,7 +561,7 @@ class GameLifecycleService {
                 if (socketPayloadMetrics.shouldLog('game-update')) {
                     const stats = socketPayloadMetrics.snapshot('game-update');
                     if (stats) {
-                        logger_js_1.logger.info('Socket payload stats', {
+                        logger.info('Socket payload stats', {
                             event: 'game-update',
                             windowCount: stats.count,
                             p50Bytes: stats.p50,
@@ -587,7 +581,7 @@ class GameLifecycleService {
         await this.scheduleAiTurn(roomId);
     }
     async broadcastLifecycle(snapshot) {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io || !snapshot.room) {
             return;
         }
@@ -676,43 +670,7 @@ class GameLifecycleService {
     }
     async persistGameState(roomId, gameState) {
         const serializable = this.toSerializableGameState(gameState);
-        try {
-            await (0, database_js_1.query)(`
-        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
-        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
-        ON CONFLICT (room_id) DO UPDATE
-        SET game_data = EXCLUDED.game_data,
-            turn_number = EXCLUDED.turn_number,
-            current_player_id = EXCLUDED.current_player_id,
-            game_phase = EXCLUDED.game_phase,
-            last_activity = NOW()
-      `, [
-                roomId,
-                JSON.stringify(serializable),
-                Math.max(1, Number(gameState.turn ?? 1)),
-                gameState.currentPlayer,
-                gameState.phase ?? 'deployment',
-            ]);
-        }
-        catch (error) {
-            logger_js_1.logger.error('Failed to persist initial game state to database', {
-                roomId,
-                phase: gameState.phase,
-                turn: gameState.turn,
-                error: error instanceof Error ? error.message : error,
-            });
-            throw error;
-        }
-        try {
-            const { gameStateCache } = await import('./cacheService.js');
-            await gameStateCache.setGameState(roomId, serializable);
-        }
-        catch (error) {
-            logger_js_1.logger.warn('Failed to cache initial game state', {
-                roomId,
-                error: error instanceof Error ? error.message : error,
-            });
-        }
+        await this.gameService.saveSnapshot(roomId, serializable);
     }
     toSerializableGameState(gameState) {
         return {
@@ -764,13 +722,13 @@ class GameLifecycleService {
                 return;
             }
             try {
-                await (0, database_js_1.query)(`UPDATE game_rooms
+                await query(`UPDATE game_rooms
              SET turn_expires_at = NOW() + ($2 * INTERVAL '1 second'),
                  using_time_bank = $3
            WHERE id = $1`, [roomId, seconds, options?.usingTimeBank === true]);
             }
             catch (e) {
-                logger_js_1.logger.warn('Failed to persist turn timeout window', {
+                logger.warn('Failed to persist turn timeout window', {
                     roomId,
                     usingTimeBank: options?.usingTimeBank === true,
                     error: e instanceof Error ? e.message : e,
@@ -778,10 +736,10 @@ class GameLifecycleService {
             }
             const turnNumber = room?.turnNumber ?? 0;
             const idKey = `turn-timeout:${roomId}:turn:${turnNumber}`;
-            const changed = await queueService_js_1.queueService.changeDelayedGameActionDelay(idKey, seconds * 1000);
+            const changed = await queueService.changeDelayedGameActionDelay(idKey, seconds * 1000);
             const job = changed
                 ? null
-                : await queueService_js_1.queueService.addDelayedGameAction({
+                : await queueService.addDelayedGameAction({
                     gameId: roomId,
                     playerId: currentTurnUserId,
                     action: { type: 'end_turn', playerId: currentTurnUserId, roomId },
@@ -803,13 +761,13 @@ class GameLifecycleService {
                         timer.unref();
                     }
                     GameLifecycleService.localTurnTimeouts.set(roomId, timer);
-                    logger_js_1.logger.info('Scheduled local (dev) turn timeout fallback', {
+                    logger.info('Scheduled local (dev) turn timeout fallback', {
                         roomId,
                         seconds,
                     });
                 }
                 catch (e) {
-                    logger_js_1.logger.warn('Failed to schedule local dev fallback timer', {
+                    logger.warn('Failed to schedule local dev fallback timer', {
                         roomId,
                         error: e instanceof Error ? e.message : e,
                     });
@@ -825,7 +783,7 @@ class GameLifecycleService {
             await this.refreshLifecycle(roomId);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to schedule turn timeout', {
+            logger.warn('Failed to schedule turn timeout', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -841,12 +799,12 @@ class GameLifecycleService {
                 return;
             const idKey = `ai-turn:${roomId}:turn:${state.turn}`;
             try {
-                await queueService_js_1.queueService.removeGameActionJob(idKey);
+                await queueService.removeGameActionJob(idKey);
             }
             catch {
             }
             const delay = Math.max(0, Math.trunc(options?.delayMs ?? 300));
-            const queue = queueService_js_1.queueService.getGameActionQueue();
+            const queue = queueService.getGameActionQueue();
             await queue.add('execute-ai-turn', {
                 gameId: roomId,
                 playerId: current.id,
@@ -862,7 +820,7 @@ class GameLifecycleService {
                 priority: 7,
             });
             try {
-                const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+                const io = tryGetSocketServer();
                 if (io) {
                     io.to(`game:${roomId}`).emit('game-delta', {
                         type: 'SYSTEM_MESSAGE',
@@ -877,7 +835,7 @@ class GameLifecycleService {
             }
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to schedule AI turn', {
+            logger.warn('Failed to schedule AI turn', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -913,7 +871,7 @@ class GameLifecycleService {
         }
     }
     async handleTurnTimeout(roomId) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         let strikes = 0;
         let targetUserId = null;
         let consumedBankSeconds = 0;
@@ -993,7 +951,7 @@ class GameLifecycleService {
         }
         catch (error) {
             await client.query('ROLLBACK');
-            logger_js_1.logger.error('Error handling turn timeout', error);
+            logger.error('Error handling turn timeout', error);
             return;
         }
         finally {
@@ -1023,7 +981,7 @@ class GameLifecycleService {
                 }
             }
             try {
-                const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+                const io = tryGetSocketServer();
                 if (io) {
                     const { DeltaBuilder } = await import('../types/deltaUpdates.js');
                     const channel = `game:${roomId}`;
@@ -1044,14 +1002,14 @@ class GameLifecycleService {
                 }
             }
             catch (ee) {
-                logger_js_1.logger.warn('Failed to emit deltas after timeout skip', {
+                logger.warn('Failed to emit deltas after timeout skip', {
                     roomId,
                     error: ee instanceof Error ? ee.message : ee,
                 });
             }
         }
         catch (error) {
-            logger_js_1.logger.warn('Turn timeout: endTurn failed', {
+            logger.warn('Turn timeout: endTurn failed', {
                 roomId,
                 targetUserId,
                 error: error instanceof Error ? error.message : error,
@@ -1061,13 +1019,13 @@ class GameLifecycleService {
         if (strikes >= 3 && targetUserId) {
             try {
                 neutralizeOutcome = await this.kickAndNeutralize(roomId, targetUserId);
-                await (0, database_js_1.query)(`UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`, [
+                await query(`UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`, [
                     roomId,
                     targetUserId,
                 ]);
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to neutralize kicked player after strikes', {
+                logger.warn('Failed to neutralize kicked player after strikes', {
                     roomId,
                     targetUserId,
                     error: error instanceof Error ? error.message : error,
@@ -1082,7 +1040,7 @@ class GameLifecycleService {
                 await this.refreshLifecycle(roomId);
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to refresh lifecycle after timeout game end', {
+                logger.warn('Failed to refresh lifecycle after timeout game end', {
                     roomId,
                     error: error instanceof Error ? error.message : error,
                 });
@@ -1093,13 +1051,12 @@ class GameLifecycleService {
     }
     async kickAndNeutralize(roomId, userId) {
         const result = await this.gameService.neutralizePlayerAndResolve(roomId, userId);
-        await (0, database_js_1.query)(`UPDATE room_players
+        await query(`UPDATE room_players
          SET is_kicked = TRUE,
              elimination_reason = 'timeout'
        WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
         return result;
     }
 }
-exports.GameLifecycleService = GameLifecycleService;
 GameLifecycleService.localTurnTimeouts = new Map();
 //# sourceMappingURL=gameLifecycleService.js.map

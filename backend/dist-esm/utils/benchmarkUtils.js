@@ -1,14 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_BENCHMARKS = void 0;
-exports.calculatePerformanceGrade = calculatePerformanceGrade;
-exports.comparePerformance = comparePerformance;
-exports.generatePerformanceReport = generatePerformanceReport;
-exports.runAutomatedBenchmarks = runAutomatedBenchmarks;
-exports.checkSLACompliance = checkSLACompliance;
-const performanceTestingService_js_1 = require("../services/performanceTestingService.js");
-const logger_js_1 = require("../utils/logger.js");
-exports.DEFAULT_BENCHMARKS = {
+import { performanceTestingService } from '../services/performanceTestingService.js';
+import { logger } from '../utils/logger.js';
+export const DEFAULT_BENCHMARKS = {
     responseTime: {
         excellent: 100,
         good: 300,
@@ -34,7 +26,7 @@ exports.DEFAULT_BENCHMARKS = {
         poor: 95.0,
     },
 };
-function calculatePerformanceGrade(responseTime, throughput, errorRate, availability = 100, thresholds = exports.DEFAULT_BENCHMARKS) {
+export function calculatePerformanceGrade(responseTime, throughput, errorRate, availability = 100, thresholds = DEFAULT_BENCHMARKS) {
     const responseTimeGrade = gradeResponseTime(responseTime, thresholds.responseTime);
     const throughputGrade = gradeThroughput(throughput, thresholds.throughput);
     const errorRateGrade = gradeErrorRate(errorRate, thresholds.errorRate);
@@ -140,7 +132,7 @@ function scoreToGrade(score) {
         return 'D';
     return 'F';
 }
-function comparePerformance(baseline, current) {
+export function comparePerformance(baseline, current) {
     const responseTime = calculateMetricChange(current.avgResponseTime, baseline.avgResponseTime, false);
     const throughput = calculateMetricChange(current.requestsPerSecond, baseline.requestsPerSecond, true);
     const errorRate = calculateMetricChange(current.errorRate, baseline.errorRate, false);
@@ -169,7 +161,7 @@ function calculateMetricChange(currentValue, baselineValue, higherIsBetter) {
         improvement: higherIsBetter ? percentChange > 0 : percentChange < 0,
     };
 }
-function generatePerformanceReport(testResults) {
+export function generatePerformanceReport(testResults) {
     if (testResults.length === 0) {
         return {
             summary: {
@@ -207,13 +199,13 @@ function generatePerformanceReport(testResults) {
     const avgResponseTime = testGrades.reduce((sum, test) => sum + test.responseTime, 0) / testGrades.length;
     const avgThroughput = testGrades.reduce((sum, test) => sum + test.throughput, 0) / testGrades.length;
     const avgErrorRate = testGrades.reduce((sum, test) => sum + test.errorRate, 0) / testGrades.length;
-    if (avgResponseTime > exports.DEFAULT_BENCHMARKS.responseTime.fair) {
+    if (avgResponseTime > DEFAULT_BENCHMARKS.responseTime.fair) {
         needsImprovement.push('Response Time');
     }
-    if (avgThroughput < exports.DEFAULT_BENCHMARKS.throughput.fair) {
+    if (avgThroughput < DEFAULT_BENCHMARKS.throughput.fair) {
         needsImprovement.push('Throughput');
     }
-    if (avgErrorRate > exports.DEFAULT_BENCHMARKS.errorRate.fair) {
+    if (avgErrorRate > DEFAULT_BENCHMARKS.errorRate.fair) {
         needsImprovement.push('Error Rate');
     }
     const trends = { improving: [], degrading: [], stable: [] };
@@ -284,28 +276,28 @@ function generatePerformanceReport(testResults) {
         recommendations,
     };
 }
-async function runAutomatedBenchmarks() {
+export async function runAutomatedBenchmarks() {
     try {
-        logger_js_1.logger.info('🤖 Running automated performance benchmarks...');
+        logger.info('🤖 Running automated performance benchmarks...');
         const criticalScenarios = ['api_health_check', 'api_standard_load', 'cache_performance'];
         const results = [];
         for (const scenario of criticalScenarios) {
             try {
-                const result = await performanceTestingService_js_1.performanceTestingService.runLoadTest(scenario);
+                const result = await performanceTestingService.runLoadTest(scenario);
                 results.push({
                     testId: result.testId,
                     timestamp: result.timestamp,
                     results: result.results,
                     bottlenecks: result.bottlenecks,
                 });
-                logger_js_1.logger.info(`✅ Automated benchmark completed: ${scenario}`, {
+                logger.info(`✅ Automated benchmark completed: ${scenario}`, {
                     avgResponseTime: result.results.avgResponseTime,
                     requestsPerSecond: result.results.requestsPerSecond,
                     successRate: (result.results.successfulRequests / result.results.totalRequests) * 100,
                 });
             }
             catch (error) {
-                logger_js_1.logger.error(`❌ Automated benchmark failed: ${scenario}`, error);
+                logger.error(`❌ Automated benchmark failed: ${scenario}`, error);
                 results.push({
                     testId: `${scenario}-failed-${Date.now()}`,
                     timestamp: Date.now(),
@@ -333,7 +325,7 @@ async function runAutomatedBenchmarks() {
             }
         }
         const report = generatePerformanceReport(results);
-        logger_js_1.logger.info('📊 Automated benchmark summary', {
+        logger.info('📊 Automated benchmark summary', {
             totalTests: results.length,
             averageGrade: report.summary.averageGrade,
             needsImprovement: report.summary.needsImprovement,
@@ -345,7 +337,7 @@ async function runAutomatedBenchmarks() {
         };
     }
     catch (error) {
-        logger_js_1.logger.error('❌ Automated benchmarks failed:', error);
+        logger.error('❌ Automated benchmarks failed:', error);
         const failureReport = generatePerformanceReport([]);
         const errorMessage = error instanceof Error ? error.message : String(error);
         failureReport.error = errorMessage;
@@ -360,7 +352,7 @@ async function runAutomatedBenchmarks() {
         };
     }
 }
-function checkSLACompliance(testResults, slaThresholds) {
+export function checkSLACompliance(testResults, slaThresholds) {
     if (testResults.length === 0) {
         return {
             compliant: false,

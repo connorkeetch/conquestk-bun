@@ -1,12 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_path_1 = __importDefault(require("node:path"));
-const dotenv_1 = __importDefault(require("dotenv"));
-const logger_js_1 = require("../utils/logger.js");
-dotenv_1.default.config({ path: node_path_1.default.resolve(process.cwd(), '.env') });
+import path from 'node:path';
+import dotenv from 'dotenv';
+import { logger } from '../utils/logger.js';
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const parseArgs = () => {
     const opts = {};
     const args = process.argv.slice(2);
@@ -35,7 +30,7 @@ async function run() {
     const oldPrefix = (opts.old || (endpoint && bucket ? `${endpoint}/${bucket}` : '')).replace(/\/$/, '');
     const newPrefix = (opts.new || publicBase || '').replace(/\/$/, '');
     if (!oldPrefix || !newPrefix) {
-        logger_js_1.logger.error('Missing prefixes. Provide --old and --new, or set ASSET_ENDPOINT/ASSET_BUCKET and PUBLIC_ASSET_BASE_URL in .env');
+        logger.error('Missing prefixes. Provide --old and --new, or set ASSET_ENDPOINT/ASSET_BUCKET and PUBLIC_ASSET_BASE_URL in .env');
         process.exit(1);
     }
     const tables = opts.tables && opts.tables.length > 0 ? opts.tables : ['maps', 'map_drafts'];
@@ -45,22 +40,22 @@ async function run() {
         const countResult = await query(`SELECT COUNT(*) AS total FROM ${table} WHERE ${where}`, [like]);
         const total = parseInt(countResult.rows[0]?.total || '0', 10);
         if (total === 0) {
-            logger_js_1.logger.info(`No rows to update in ${table}`);
+            logger.info(`No rows to update in ${table}`);
             continue;
         }
-        logger_js_1.logger.info(`Preparing to update ${total} row(s) in ${table}`);
+        logger.info(`Preparing to update ${total} row(s) in ${table}`);
         if (opts.dry) {
-            logger_js_1.logger.info(`DRY RUN: Skipping update in ${table}`);
+            logger.info(`DRY RUN: Skipping update in ${table}`);
             continue;
         }
         const update = await query(`UPDATE ${table} SET image_url = REPLACE(image_url, $1, $2) WHERE image_url LIKE $3`, [oldPrefix, newPrefix, like]);
-        logger_js_1.logger.info(`Updated ${update.rowCount || 0} row(s) in ${table}`);
+        logger.info(`Updated ${update.rowCount || 0} row(s) in ${table}`);
     }
 }
 run()
     .then(() => process.exit(0))
     .catch((err) => {
-    logger_js_1.logger.error('Error fixing image URLs', err);
+    logger.error('Error fixing image URLs', err);
     process.exit(1);
 });
 //# sourceMappingURL=fixMapImageUrls.js.map

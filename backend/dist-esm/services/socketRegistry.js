@@ -1,19 +1,14 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.registerSocketServer = registerSocketServer;
-exports.getSocketServer = getSocketServer;
-exports.tryGetSocketServer = tryGetSocketServer;
 let ioInstance = null;
-function registerSocketServer(io) {
+export function registerSocketServer(io) {
     ioInstance = io;
 }
-function getSocketServer() {
+export function getSocketServer() {
     if (!ioInstance) {
         throw new Error('Socket server not initialized');
     }
     return ioInstance;
 }
-function tryGetSocketServer() {
+export function tryGetSocketServer() {
     return ioInstance;
 }
 //# sourceMappingURL=socketRegistry.js.map

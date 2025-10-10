@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.isAllowedTagline = exports.PROFILE_TAGLINES = exports.DEFAULT_TAGLINE = void 0;
-exports.DEFAULT_TAGLINE = 'Commander of the Conquest Realms';
-exports.PROFILE_TAGLINES = [
+export const DEFAULT_TAGLINE = 'Commander of the Conquest Realms';
+export const PROFILE_TAGLINES = [
     'The Conqueror of Realms',
     'High Warlord of the Iron Banner',
     'Keeper of the Eternal Throne',
@@ -55,6 +52,5 @@ exports.PROFILE_TAGLINES = [
     'Archduke of Overconfidence',
     'The Eternal Runner-Up',
 ];
-const isAllowedTagline = (value) => typeof value === 'string' && exports.PROFILE_TAGLINES.includes(value);
-exports.isAllowedTagline = isAllowedTagline;
+export const isAllowedTagline = (value) => typeof value === 'string' && PROFILE_TAGLINES.includes(value);
 //# sourceMappingURL=profileTaglines.js.map

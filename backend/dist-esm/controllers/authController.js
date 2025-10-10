@@ -1,28 +1,22 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuthController = void 0;
-const themes_1 = require("../shared/types/themes");
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const premium_js_1 = require("../constants/premium.js");
-const adminService_js_1 = require("../services/adminService.js");
-const authTrackingService_js_1 = require("../services/authTrackingService.js");
-const emailService_js_1 = __importDefault(require("../services/emailService.js"));
-const userService_js_1 = require("../services/userService.js");
-const errorHelpers_js_1 = require("../utils/errorHelpers.js");
-const logger_js_1 = require("../utils/logger.js");
-class AuthController {
+import { DEFAULT_THEME_ID, normalizeThemeId } from '../shared/types/themes';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { isPremiumColorChoice, isPremiumThemeId, normalizePremiumAwareColor, PREMIUM_COLOR_MESSAGE, PREMIUM_THEME_MESSAGE, PREMIUM_UPSELL_ERROR_CODE, } from '../constants/premium.js';
+import { adminService } from '../services/adminService.js';
+import { authTrackingService } from '../services/authTrackingService.js';
+import emailService from '../services/emailService.js';
+import { UserService } from '../services/userService.js';
+import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js';
+import { logger } from '../utils/logger.js';
+export class AuthController {
     constructor() {
-        this.userService = new userService_js_1.UserService();
+        this.userService = new UserService();
         this.tokenExpiration = process.env.JWT_EXPIRES_IN ??
             '7d';
         this.jwtSecret = (() => {
             const secret = process.env.JWT_SECRET;
             if (!secret) {
-                logger_js_1.logger.error('FATAL: JWT_SECRET environment variable is not set');
+                logger.error('FATAL: JWT_SECRET environment variable is not set');
                 throw new Error('JWT_SECRET must be configured');
             }
             return secret;
@@ -30,7 +24,7 @@ class AuthController {
         this.register = async (req, res) => {
             try {
                 const { username, email, password } = req.body;
-                logger_js_1.logger.info('Registration attempt:', { username, email });
+                logger.info('Registration attempt:', { username, email });
                 const existingUserByEmail = await this.userService.findByEmail(email);
                 if (existingUserByEmail) {
                     return res.status(400).json({
@@ -47,34 +41,34 @@ class AuthController {
                         field: 'username',
                     });
                 }
-                const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+                const hashedPassword = await bcrypt.hash(password, 10);
                 let verificationToken = null;
                 let _verificationSentAt = null;
-                if (emailService_js_1.default.isEnabled()) {
-                    verificationToken = emailService_js_1.default.generateVerificationToken();
+                if (emailService.isEnabled()) {
+                    verificationToken = emailService.generateVerificationToken();
                     _verificationSentAt = new Date();
                 }
                 let user;
                 try {
-                    logger_js_1.logger.info('Creating user with data:', {
+                    logger.info('Creating user with data:', {
                         username,
                         email,
                         hasVerificationToken: !!verificationToken,
-                        emailServiceEnabled: emailService_js_1.default.isEnabled(),
+                        emailServiceEnabled: emailService.isEnabled(),
                     });
                     user = await this.userService.create({
                         username,
                         email,
                         password: hashedPassword,
                         verification_token: verificationToken,
-                        email_verified: !emailService_js_1.default.isEnabled(),
+                        email_verified: !emailService.isEnabled(),
                     });
-                    logger_js_1.logger.info('User created successfully:', { userId: user.id, username: user.username });
+                    logger.info('User created successfully:', { userId: user.id, username: user.username });
                 }
                 catch (createError) {
-                    const normalizedError = (0, errorHelpers_js_1.toKnownError)(createError);
-                    logger_js_1.logger.error('Failed to create user in database:', normalizedError);
-                    logger_js_1.logger.error('Error details:', {
+                    const normalizedError = toKnownError(createError);
+                    logger.error('Failed to create user in database:', normalizedError);
+                    logger.error('Error details:', {
                         message: normalizedError.message,
                         code: normalizedError.code,
                         detail: 'detail' in normalizedError ? normalizedError.detail : undefined,
@@ -94,11 +88,11 @@ class AuthController {
                         technicalDetails: errorMessage,
                     });
                 }
-                if (emailService_js_1.default.isEnabled() && verificationToken) {
+                if (emailService.isEnabled() && verificationToken) {
                     try {
                         const { buildFrontendUrl } = await import('../utils/url.js');
                         const verificationLink = buildFrontendUrl(req, `/verify-email/${verificationToken}`);
-                        await emailService_js_1.default.sendVerificationEmail({
+                        await emailService.sendVerificationEmail({
                             username,
                             email,
                             verificationLink,
@@ -111,12 +105,12 @@ class AuthController {
                         });
                     }
                     catch (emailError) {
-                        logger_js_1.logger.error('Failed to send verification email:', (0, errorHelpers_js_1.toKnownError)(emailError));
+                        logger.error('Failed to send verification email:', toKnownError(emailError));
                     }
                 }
                 const ipAddress = req.ip ?? null;
                 const userAgent = req.get('user-agent') ?? null;
-                const registrationSessionId = await authTrackingService_js_1.authTrackingService.startUserSession({
+                const registrationSessionId = await authTrackingService.startUserSession({
                     userId: user.id,
                     ipAddress,
                     userAgent,
@@ -124,7 +118,7 @@ class AuthController {
                         context: 'registration',
                     },
                 });
-                await authTrackingService_js_1.authTrackingService.recordAuthEvent({
+                await authTrackingService.recordAuthEvent({
                     userId: user.id,
                     eventType: 'user_registration',
                     sessionId: registrationSessionId,
@@ -134,7 +128,7 @@ class AuthController {
                         source: 'registration',
                     },
                 });
-                await authTrackingService_js_1.authTrackingService.recordAuthEvent({
+                await authTrackingService.recordAuthEvent({
                     userId: user.id,
                     eventType: 'user_login',
                     sessionId: registrationSessionId,
@@ -151,11 +145,11 @@ class AuthController {
                 if (registrationSessionId) {
                     tokenPayload.sessionId = registrationSessionId;
                 }
-                const token = jsonwebtoken_1.default.sign(tokenPayload, this.jwtSecret, {
+                const token = jwt.sign(tokenPayload, this.jwtSecret, {
                     expiresIn: this.tokenExpiration,
                 });
-                const requiresEmailVerification = emailService_js_1.default.isEnabled() && process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
-                const isAdmin = await adminService_js_1.adminService.isAdmin(user.id);
+                const requiresEmailVerification = emailService.isEnabled() && process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+                const isAdmin = await adminService.isAdmin(user.id);
                 return res.status(201).json({
                     message: requiresEmailVerification
                         ? 'Account created! Please check your email to verify your account.'
@@ -170,13 +164,13 @@ class AuthController {
                     },
                     requiresEmailVerification,
                     requiresVerification: requiresEmailVerification,
-                    emailSent: !!(emailService_js_1.default.isEnabled() && verificationToken),
+                    emailSent: !!(emailService.isEnabled() && verificationToken),
                 });
             }
             catch (error) {
-                const normalizedError = (0, errorHelpers_js_1.toKnownError)(error);
-                logger_js_1.logger.error('Registration error:', normalizedError);
-                logger_js_1.logger.error('Full error details:', {
+                const normalizedError = toKnownError(error);
+                logger.error('Registration error:', normalizedError);
+                logger.error('Full error details:', {
                     message: normalizedError.message,
                     stack: normalizedError.stack,
                     code: normalizedError.code,
@@ -210,7 +204,7 @@ class AuthController {
                         field: 'identifier',
                     });
                 }
-                const validPassword = await bcryptjs_1.default.compare(password, user.password_hash);
+                const validPassword = await bcrypt.compare(password, user.password_hash);
                 if (!validPassword) {
                     return res.status(401).json({
                         error: 'Authentication failed',
@@ -254,17 +248,17 @@ class AuthController {
                     const preferencesResult = await query(`SELECT theme FROM user_preferences WHERE user_id = $1`, [user.id]);
                     if (preferencesResult.rows[0]) {
                         preferences = {
-                            theme: (0, themes_1.normalizeThemeId)(preferencesResult.rows[0].theme ?? themes_1.DEFAULT_THEME_ID),
+                            theme: normalizeThemeId(preferencesResult.rows[0].theme ?? DEFAULT_THEME_ID),
                         };
                     }
                 }
                 catch (preferencesError) {
-                    logger_js_1.logger.warn('Could not load user preferences on login:', (0, errorHelpers_js_1.getErrorMessage)(preferencesError));
+                    logger.warn('Could not load user preferences on login:', getErrorMessage(preferencesError));
                 }
-                const isAdmin = await adminService_js_1.adminService.isAdmin(user.id);
+                const isAdmin = await adminService.isAdmin(user.id);
                 const ipAddress = req.ip ?? null;
                 const userAgent = req.get('user-agent') ?? null;
-                const loginSessionId = await authTrackingService_js_1.authTrackingService.startUserSession({
+                const loginSessionId = await authTrackingService.startUserSession({
                     userId: user.id,
                     ipAddress,
                     userAgent,
@@ -273,7 +267,7 @@ class AuthController {
                         method: isEmail ? 'email' : 'username',
                     },
                 });
-                await authTrackingService_js_1.authTrackingService.recordAuthEvent({
+                await authTrackingService.recordAuthEvent({
                     userId: user.id,
                     eventType: 'user_login',
                     sessionId: loginSessionId,
@@ -290,7 +284,7 @@ class AuthController {
                 if (loginSessionId) {
                     tokenPayload.sessionId = loginSessionId;
                 }
-                const token = jsonwebtoken_1.default.sign(tokenPayload, this.jwtSecret, {
+                const token = jwt.sign(tokenPayload, this.jwtSecret, {
                     expiresIn: this.tokenExpiration,
                 });
                 const rawIsVip = user.is_vip;
@@ -314,7 +308,7 @@ class AuthController {
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Login error:', error);
+                logger.error('Login error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -328,9 +322,9 @@ class AuthController {
                 const ipAddress = req.ip ?? null;
                 const userAgent = req.get('user-agent') ?? null;
                 if (sessionId) {
-                    await authTrackingService_js_1.authTrackingService.endUserSession(sessionId);
+                    await authTrackingService.endUserSession(sessionId);
                 }
-                await authTrackingService_js_1.authTrackingService.recordAuthEvent({
+                await authTrackingService.recordAuthEvent({
                     userId,
                     eventType: 'user_logout',
                     sessionId,
@@ -340,7 +334,7 @@ class AuthController {
                 return res.json({ message: 'Logout successful' });
             }
             catch (error) {
-                logger_js_1.logger.error('Logout error:', (0, errorHelpers_js_1.toKnownError)(error));
+                logger.error('Logout error:', toKnownError(error));
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -351,7 +345,7 @@ class AuthController {
                 if (!user) {
                     return res.status(404).json({ message: 'User not found' });
                 }
-                const isAdmin = await adminService_js_1.adminService.isAdmin(userId);
+                const isAdmin = await adminService.isAdmin(userId);
                 let settings = null;
                 try {
                     const { query } = await import('../config/database.js');
@@ -361,7 +355,7 @@ class AuthController {
                     settings = settingsResult.rows[0] || null;
                 }
                 catch (settingsError) {
-                    logger_js_1.logger.warn('Could not load user settings:', settingsError);
+                    logger.warn('Could not load user settings:', settingsError);
                 }
                 let preferences = null;
                 try {
@@ -371,7 +365,7 @@ class AuthController {
            FROM user_preferences WHERE user_id = $1`, [userId]);
                     if (preferencesResult.rows[0]) {
                         preferences = {
-                            theme: (0, themes_1.normalizeThemeId)(preferencesResult.rows[0].theme ?? themes_1.DEFAULT_THEME_ID),
+                            theme: normalizeThemeId(preferencesResult.rows[0].theme ?? DEFAULT_THEME_ID),
                             soundEnabled: preferencesResult.rows[0].sound_enabled,
                             musicEnabled: preferencesResult.rows[0].music_enabled,
                             notificationEnabled: preferencesResult.rows[0].notification_enabled,
@@ -384,7 +378,7 @@ class AuthController {
                     }
                 }
                 catch (preferencesError) {
-                    logger_js_1.logger.warn('Could not load user preferences:', (0, errorHelpers_js_1.getErrorMessage)(preferencesError));
+                    logger.warn('Could not load user preferences:', getErrorMessage(preferencesError));
                 }
                 return res.json({
                     user: {
@@ -402,7 +396,7 @@ class AuthController {
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Get profile error:', error);
+                logger.error('Get profile error:', error);
                 return res.status(500).json({ message: 'Internal server error' });
             }
         };
@@ -418,7 +412,7 @@ class AuthController {
                 }
                 const verificationLog = await this.userService.getEmailVerificationLogByToken(token);
                 if (!verificationLog) {
-                    logger_js_1.logger.warn('Verification token missing audit log entry', {
+                    logger.warn('Verification token missing audit log entry', {
                         userId: user.id,
                     });
                     return res.status(404).json({
@@ -444,7 +438,7 @@ class AuthController {
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Email verification error:', error);
+                logger.error('Email verification error:', error);
                 return res.status(500).json({
                     error: 'Verification failed',
                     message: 'An error occurred during email verification',
@@ -473,17 +467,17 @@ class AuthController {
                         message: 'Please wait before requesting another password reset',
                     });
                 }
-                const resetToken = emailService_js_1.default.generateVerificationToken();
+                const resetToken = emailService.generateVerificationToken();
                 const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
                 await this.userService.createPasswordResetToken({
                     user_id: user.id,
                     token: resetToken,
                     expires_at: expiresAt,
                 });
-                if (emailService_js_1.default.isEnabled()) {
+                if (emailService.isEnabled()) {
                     const { buildFrontendUrl } = await import('../utils/url.js');
                     const resetLink = buildFrontendUrl(req, `/reset-password/${resetToken}`);
-                    await emailService_js_1.default.sendPasswordResetEmail({
+                    await emailService.sendPasswordResetEmail({
                         username: user.username,
                         email: user.email,
                         resetLink,
@@ -495,7 +489,7 @@ class AuthController {
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Forgot password error:', (0, errorHelpers_js_1.toKnownError)(error));
+                logger.error('Forgot password error:', toKnownError(error));
                 return res.status(500).json({
                     error: 'Request failed',
                     message: 'Unable to process password reset request',
@@ -530,7 +524,7 @@ class AuthController {
                         message: 'This reset link has already been used',
                     });
                 }
-                const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+                const hashedPassword = await bcrypt.hash(password, 10);
                 await this.userService.updatePassword(resetToken.user_id, hashedPassword);
                 await this.userService.markPasswordResetTokenUsed(token);
                 return res.json({
@@ -538,7 +532,7 @@ class AuthController {
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Reset password error:', (0, errorHelpers_js_1.toKnownError)(error));
+                logger.error('Reset password error:', toKnownError(error));
                 return res.status(500).json({
                     error: 'Reset failed',
                     message: 'Unable to reset password',
@@ -567,12 +561,12 @@ class AuthController {
                         message: 'Please wait before requesting another verification email',
                     });
                 }
-                const verificationToken = emailService_js_1.default.generateVerificationToken();
+                const verificationToken = emailService.generateVerificationToken();
                 await this.userService.updateVerificationToken(user.id, verificationToken);
-                if (emailService_js_1.default.isEnabled()) {
+                if (emailService.isEnabled()) {
                     const { buildFrontendUrl } = await import('../utils/url.js');
                     const verificationLink = buildFrontendUrl(req, `/verify-email/${verificationToken}`);
-                    await emailService_js_1.default.sendVerificationEmail({
+                    await emailService.sendVerificationEmail({
                         username: user.username,
                         email: user.email,
                         verificationLink,
@@ -589,7 +583,7 @@ class AuthController {
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Resend verification error:', (0, errorHelpers_js_1.toKnownError)(error));
+                logger.error('Resend verification error:', toKnownError(error));
                 return res.status(500).json({
                     error: 'Request failed',
                     message: 'Unable to send verification email',
@@ -619,21 +613,21 @@ class AuthController {
                         message: 'User account not found',
                     });
                 }
-                const validPassword = await bcryptjs_1.default.compare(currentPassword, user.password_hash);
+                const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
                 if (!validPassword) {
                     return res.status(401).json({
                         error: 'Invalid password',
                         message: 'Current password is incorrect',
                     });
                 }
-                const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
+                const hashedPassword = await bcrypt.hash(newPassword, 10);
                 await this.userService.updatePassword(userId, hashedPassword);
                 return res.json({
                     message: 'Password changed successfully',
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Change password error:', (0, errorHelpers_js_1.toKnownError)(error));
+                logger.error('Change password error:', toKnownError(error));
                 return res.status(500).json({
                     error: 'Request failed',
                     message: 'Unable to change password',
@@ -666,20 +660,20 @@ class AuthController {
                 }
                 const hasPremium = resolvedHasPremium === true;
                 const hasThemeUpdate = typeof settings.theme === 'string';
-                const normalizedTheme = hasThemeUpdate ? (0, themes_1.normalizeThemeId)(settings.theme) : null;
-                if (normalizedTheme && !hasPremium && (0, premium_js_1.isPremiumThemeId)(normalizedTheme)) {
+                const normalizedTheme = hasThemeUpdate ? normalizeThemeId(settings.theme) : null;
+                if (normalizedTheme && !hasPremium && isPremiumThemeId(normalizedTheme)) {
                     return res.status(403).json({
-                        error: premium_js_1.PREMIUM_UPSELL_ERROR_CODE,
-                        message: premium_js_1.PREMIUM_THEME_MESSAGE,
+                        error: PREMIUM_UPSELL_ERROR_CODE,
+                        message: PREMIUM_THEME_MESSAGE,
                     });
                 }
-                const normalizedPreferredColor = (0, premium_js_1.normalizePremiumAwareColor)(settings.preferredColor);
+                const normalizedPreferredColor = normalizePremiumAwareColor(settings.preferredColor);
                 if (normalizedPreferredColor &&
                     !hasPremium &&
-                    (0, premium_js_1.isPremiumColorChoice)(normalizedPreferredColor)) {
+                    isPremiumColorChoice(normalizedPreferredColor)) {
                     return res.status(403).json({
-                        error: premium_js_1.PREMIUM_UPSELL_ERROR_CODE,
-                        message: premium_js_1.PREMIUM_COLOR_MESSAGE,
+                        error: PREMIUM_UPSELL_ERROR_CODE,
+                        message: PREMIUM_COLOR_MESSAGE,
                     });
                 }
                 const preferredColorForStorage = normalizedPreferredColor ?? '#DC2626';
@@ -720,15 +714,15 @@ class AuthController {
                     preferredColorForStorage,
                     dmBrowserPref,
                     dmEmailPref,
-                    themes_1.DEFAULT_THEME_ID,
+                    DEFAULT_THEME_ID,
                 ]);
-                logger_js_1.logger.info('User settings updated:', { userId, settings: Object.keys(settings) });
+                logger.info('User settings updated:', { userId, settings: Object.keys(settings) });
                 const persistedSettings = (result.rows[0] ?? {});
                 if (persistedSettings && typeof persistedSettings.theme === 'string') {
-                    persistedSettings.theme = (0, themes_1.normalizeThemeId)(persistedSettings.theme);
+                    persistedSettings.theme = normalizeThemeId(persistedSettings.theme);
                 }
                 else {
-                    persistedSettings.theme = themes_1.DEFAULT_THEME_ID;
+                    persistedSettings.theme = DEFAULT_THEME_ID;
                 }
                 return res.json({
                     message: 'Settings updated successfully',
@@ -736,7 +730,7 @@ class AuthController {
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Update settings error:', (0, errorHelpers_js_1.toKnownError)(error));
+                logger.error('Update settings error:', toKnownError(error));
                 return res.status(500).json({
                     error: 'Request failed',
                     message: 'Unable to update settings',
@@ -754,13 +748,13 @@ class AuthController {
                     });
                 }
                 await this.userService.deleteUser(userId);
-                logger_js_1.logger.info('User account deleted:', { userId, username: user.username });
+                logger.info('User account deleted:', { userId, username: user.username });
                 return res.json({
                     message: 'Account deleted successfully',
                 });
             }
             catch (error) {
-                logger_js_1.logger.error('Delete account error:', (0, errorHelpers_js_1.toKnownError)(error));
+                logger.error('Delete account error:', toKnownError(error));
                 return res.status(500).json({
                     error: 'Request failed',
                     message: 'Unable to delete account',
@@ -769,5 +763,4 @@ class AuthController {
         };
     }
 }
-exports.AuthController = AuthController;
 //# sourceMappingURL=authController.js.map

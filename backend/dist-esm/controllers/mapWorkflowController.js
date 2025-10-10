@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MapWorkflowController = void 0;
-const mapPermissionService_js_1 = require("../services/mapPermissionService.js");
-const mapWorkflowService_js_1 = __importDefault(require("../services/mapWorkflowService.js"));
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-class MapWorkflowController {
+import { MapNotFoundError, MapPermissionError, mapPermissionService, } from '../services/mapPermissionService.js';
+import mapWorkflowService from '../services/mapWorkflowService.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+export class MapWorkflowController {
     async saveDraft(req, res) {
         try {
             const userId = req.userId;
@@ -15,14 +9,14 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const draftData = req.body;
-            const draft = await mapWorkflowService_js_1.default.saveDraft(userId, draftData);
+            const draft = await mapWorkflowService.saveDraft(userId, draftData);
             return res.json({
                 success: true,
                 draft,
             });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to save draft');
+            handleRouteError(error, req, 'Failed to save draft');
             return res.status(500).json({
                 error: 'Failed to save draft',
                 message: 'An error occurred while saving your draft',
@@ -35,14 +29,14 @@ class MapWorkflowController {
             if (!userId) {
                 return res.status(401).json({ error: 'Authentication required' });
             }
-            const drafts = await mapWorkflowService_js_1.default.getUserDrafts(userId);
+            const drafts = await mapWorkflowService.getUserDrafts(userId);
             return res.json({
                 success: true,
                 drafts,
             });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch drafts');
+            handleRouteError(error, req, 'Failed to fetch drafts');
             return res.status(500).json({
                 error: 'Failed to fetch drafts',
                 message: 'An error occurred while fetching your drafts',
@@ -56,14 +50,14 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { draftId } = req.params;
-            const draft = await mapWorkflowService_js_1.default.getDraftById(draftId, userId);
+            const draft = await mapWorkflowService.getDraftById(draftId, userId);
             if (!draft) {
                 return res.status(404).json({ error: 'Draft not found' });
             }
             return res.json({ success: true, draft });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch draft', 500, {
+            handleRouteError(error, req, 'Failed to fetch draft', 500, {
                 draftId: req.params.draftId,
             });
             return res.status(500).json({
@@ -79,11 +73,11 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { draftId } = req.params;
-            const map = await mapWorkflowService_js_1.default.publishDraft(draftId, userId);
+            const map = await mapWorkflowService.publishDraft(draftId, userId);
             return res.json({ success: true, map });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to publish draft', 500, {
+            handleRouteError(error, req, 'Failed to publish draft', 500, {
                 draftId: req.params.draftId,
             });
             return res.status(500).json({
@@ -99,7 +93,7 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { mapId } = req.params;
-            await mapWorkflowService_js_1.default.submitForReview(mapId, userId, {
+            await mapWorkflowService.submitForReview(mapId, userId, {
                 isAdmin: req.user?.isAdmin,
             });
             return res.json({
@@ -108,13 +102,13 @@ class MapWorkflowController {
             });
         }
         catch (error) {
-            if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+            if (error instanceof MapPermissionError) {
                 return res.status(403).json({ error: error.message });
             }
-            if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+            if (error instanceof MapNotFoundError) {
                 return res.status(404).json({ error: error.message });
             }
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to submit map for review', 500, {
+            handleRouteError(error, req, 'Failed to submit map for review', 500, {
                 mapId: req.params.mapId,
             });
             return res.status(500).json({
@@ -129,14 +123,14 @@ class MapWorkflowController {
             if (!userId) {
                 return res.status(401).json({ error: 'Authentication required' });
             }
-            const reviews = await mapWorkflowService_js_1.default.getPendingReviews();
+            const reviews = await mapWorkflowService.getPendingReviews();
             return res.json({
                 success: true,
                 reviews,
             });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch pending reviews');
+            handleRouteError(error, req, 'Failed to fetch pending reviews');
             return res.status(500).json({
                 error: 'Failed to fetch reviews',
                 message: 'An error occurred while fetching pending reviews',
@@ -151,7 +145,7 @@ class MapWorkflowController {
             }
             const { mapId } = req.params;
             const { notes } = req.body;
-            await mapWorkflowService_js_1.default.approveMap(mapId, adminId, {
+            await mapWorkflowService.approveMap(mapId, adminId, {
                 notes: notes ?? undefined,
                 auditContext: {
                     ipAddress: req.ip,
@@ -164,10 +158,10 @@ class MapWorkflowController {
             });
         }
         catch (error) {
-            if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+            if (error instanceof MapNotFoundError) {
                 return res.status(404).json({ error: error.message });
             }
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to approve map', 500, {
+            handleRouteError(error, req, 'Failed to approve map', 500, {
                 mapId: req.params.mapId,
             });
             return res.status(500).json({
@@ -190,7 +184,7 @@ class MapWorkflowController {
                     message: 'Rejection reason is required',
                 });
             }
-            await mapWorkflowService_js_1.default.rejectMap(mapId, adminId, {
+            await mapWorkflowService.rejectMap(mapId, adminId, {
                 reason,
                 auditContext: {
                     ipAddress: req.ip,
@@ -203,10 +197,10 @@ class MapWorkflowController {
             });
         }
         catch (error) {
-            if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+            if (error instanceof MapNotFoundError) {
                 return res.status(404).json({ error: error.message });
             }
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to reject map', 500, {
+            handleRouteError(error, req, 'Failed to reject map', 500, {
                 mapId: req.params.mapId,
             });
             return res.status(500).json({
@@ -222,14 +216,14 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { unreadOnly } = req.query;
-            const notifications = await mapWorkflowService_js_1.default.getAdminNotifications(adminId, unreadOnly === 'true');
+            const notifications = await mapWorkflowService.getAdminNotifications(adminId, unreadOnly === 'true');
             return res.json({
                 success: true,
                 notifications,
             });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch map workflow notifications');
+            handleRouteError(error, req, 'Failed to fetch map workflow notifications');
             return res.status(500).json({
                 error: 'Failed to fetch notifications',
                 message: 'An error occurred while fetching notifications',
@@ -243,14 +237,14 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { notificationId } = req.params;
-            await mapWorkflowService_js_1.default.markNotificationRead(notificationId, adminId);
+            await mapWorkflowService.markNotificationRead(notificationId, adminId);
             return res.json({
                 success: true,
                 message: 'Notification marked as read',
             });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update notification', 500, {
+            handleRouteError(error, req, 'Failed to update notification', 500, {
                 notificationId: req.params.notificationId,
             });
             return res.status(500).json({
@@ -266,7 +260,7 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { mapId } = req.params;
-            await mapWorkflowService_js_1.default.archiveMap(mapId, adminId, {
+            await mapWorkflowService.archiveMap(mapId, adminId, {
                 auditContext: {
                     ipAddress: req.ip,
                     userAgent: req.get('User-Agent') ?? undefined,
@@ -278,10 +272,10 @@ class MapWorkflowController {
             });
         }
         catch (error) {
-            if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+            if (error instanceof MapNotFoundError) {
                 return res.status(404).json({ error: error.message });
             }
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to archive map', 500, {
+            handleRouteError(error, req, 'Failed to archive map', 500, {
                 mapId: req.params.mapId,
             });
             return res.status(500).json({
@@ -297,7 +291,7 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { mapId } = req.params;
-            const result = await mapWorkflowService_js_1.default.toggleFeatured(mapId, adminId, {
+            const result = await mapWorkflowService.toggleFeatured(mapId, adminId, {
                 auditContext: {
                     ipAddress: req.ip,
                     userAgent: req.get('User-Agent') ?? undefined,
@@ -309,10 +303,10 @@ class MapWorkflowController {
             });
         }
         catch (error) {
-            if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+            if (error instanceof MapNotFoundError) {
                 return res.status(404).json({ error: error.message });
             }
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update map featured status', 500, {
+            handleRouteError(error, req, 'Failed to update map featured status', 500, {
                 mapId: req.params.mapId,
             });
             return res.status(500).json({
@@ -335,14 +329,14 @@ class MapWorkflowController {
                     message: `Status must be one of: ${validStatuses.join(', ')}`,
                 });
             }
-            const maps = await mapWorkflowService_js_1.default.getMapsByStatus(status);
+            const maps = await mapWorkflowService.getMapsByStatus(status);
             return res.json({
                 success: true,
                 maps,
             });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch maps by status', 500, {
+            handleRouteError(error, req, 'Failed to fetch maps by status', 500, {
                 status: req.params.status,
             });
             return res.status(500).json({
@@ -358,7 +352,7 @@ class MapWorkflowController {
                 return res.status(401).json({ error: 'Authentication required' });
             }
             const { mapId } = req.params;
-            const context = await mapPermissionService_js_1.mapPermissionService.getMapEditorContext(mapId, {
+            const context = await mapPermissionService.getMapEditorContext(mapId, {
                 userId,
                 isAdmin: req.user?.isAdmin,
             });
@@ -370,14 +364,14 @@ class MapWorkflowController {
                     .status(403)
                     .json({ error: 'You do not have permission to view this map history' });
             }
-            const history = await mapWorkflowService_js_1.default.getMapHistory(mapId);
+            const history = await mapWorkflowService.getMapHistory(mapId);
             return res.json({
                 success: true,
                 history,
             });
         }
         catch (error) {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch map history', 500, {
+            handleRouteError(error, req, 'Failed to fetch map history', 500, {
                 mapId: req.params.mapId,
             });
             return res.status(500).json({
@@ -387,5 +381,4 @@ class MapWorkflowController {
         }
     }
 }
-exports.MapWorkflowController = MapWorkflowController;
 //# sourceMappingURL=mapWorkflowController.js.map

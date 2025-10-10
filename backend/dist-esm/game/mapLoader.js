@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.loadMapForEngine = loadMapForEngine;
-const mapService_js_1 = require("../services/mapService.js");
-async function loadMapForEngine(mapId) {
-    const full = await mapService_js_1.mapService.getMapWithFullData(mapId);
+import { mapService } from '../services/mapService.js';
+export async function loadMapForEngine(mapId) {
+    const full = await mapService.getMapWithFullData(mapId);
     if (!full) {
         throw new Error(`Map not found: ${mapId}`);
     }

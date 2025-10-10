@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.CapitalGeneratorService = void 0;
-const logger_js_1 = require("../utils/logger.js");
-class CapitalGeneratorService {
+import { logger } from '../utils/logger.js';
+export class CapitalGeneratorService {
     constructor(db) {
         this.db = db;
     }
@@ -16,7 +13,7 @@ class CapitalGeneratorService {
             const graph = this.buildAdjacencyGraph(territories, adjacencies);
             const connectedComponents = this.findConnectedComponents(territories, graph);
             if (connectedComponents.length > 1) {
-                logger_js_1.logger.warn('Map has disconnected components; using largest component', {
+                logger.warn('Map has disconnected components; using largest component', {
                     mapId,
                     componentCount: connectedComponents.length,
                 });
@@ -27,14 +24,14 @@ class CapitalGeneratorService {
             const capitalAssignments = {};
             for (let playerCount = 2; playerCount <= 12; playerCount++) {
                 if (territories.length < playerCount) {
-                    logger_js_1.logger.info('Skipping capital generation due to insufficient territories', {
+                    logger.info('Skipping capital generation due to insufficient territories', {
                         mapId,
                         playerCount,
                         territoryCount: territories.length,
                     });
                     continue;
                 }
-                logger_js_1.logger.info('Generating capitals for player count', {
+                logger.info('Generating capitals for player count', {
                     mapId,
                     playerCount,
                 });
@@ -43,7 +40,7 @@ class CapitalGeneratorService {
             return capitalAssignments;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error generating capitals for map', { mapId, error });
+            logger.error('❌ Error generating capitals for map', { mapId, error });
             throw error;
         }
     }
@@ -52,7 +49,7 @@ class CapitalGeneratorService {
         const territoryIds = territories.map((t) => t.id);
         const centerTerr = this.findMostCentralTerritory(territories, graph);
         capitals.push(centerTerr);
-        logger_js_1.logger.debug('Selected first capital (most central territory)', {
+        logger.debug('Selected first capital (most central territory)', {
             centerTerritoryId: centerTerr,
             centerTerritoryName: territories.find((t) => t.id === centerTerr)?.name,
         });
@@ -71,7 +68,7 @@ class CapitalGeneratorService {
             if (bestCandidate) {
                 capitals.push(bestCandidate);
                 const territory = territories.find((t) => t.id === bestCandidate);
-                logger_js_1.logger.debug('Selected additional capital candidate', {
+                logger.debug('Selected additional capital candidate', {
                     position: capitals.length,
                     territoryId: territory?.id,
                     territoryName: territory?.name,
@@ -79,7 +76,7 @@ class CapitalGeneratorService {
                 });
             }
             else {
-                logger_js_1.logger.warn('Could not find additional capital; using fallback selection', {
+                logger.warn('Could not find additional capital; using fallback selection', {
                     desiredCount: count,
                 });
                 const remaining = territoryIds.filter((id) => !capitals.includes(id));
@@ -103,7 +100,7 @@ class CapitalGeneratorService {
                 bestTerritory = territory.id;
             }
         }
-        logger_js_1.logger.debug('Identified most central territory', {
+        logger.debug('Identified most central territory', {
             territoryId: bestTerritory,
             territoryName: territories.find((t) => t.id === bestTerritory)?.name,
         });
@@ -245,5 +242,4 @@ class CapitalGeneratorService {
         await this.db.query('UPDATE maps SET capital_assignments = $1, capital_metadata = $2 WHERE id = $3', [JSON.stringify(capitals), JSON.stringify(metadata), mapId]);
     }
 }
-exports.CapitalGeneratorService = CapitalGeneratorService;
 //# sourceMappingURL=capitalGeneratorService.js.map

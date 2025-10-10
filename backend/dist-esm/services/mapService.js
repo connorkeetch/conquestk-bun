@@ -1,11 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.mapService = exports.MapService = void 0;
-const database_js_1 = require("../config/database.js");
-const assetStorage_js_1 = require("../utils/assetStorage.js");
-const logger_js_1 = require("../utils/logger.js");
-const mapPermissionService_js_1 = require("./mapPermissionService.js");
-class MapService {
+import { getClient, query } from '../config/database.js';
+import { deleteAsset, extractStorageKeyFromUrl, getPublicAssetUrl } from '../utils/assetStorage.js';
+import { logger } from '../utils/logger.js';
+import { MapNotFoundError, mapPermissionService } from './mapPermissionService.js';
+export class MapService {
     coerceNumber(value, fallback = 0) {
         if (typeof value === 'number' && Number.isFinite(value)) {
             return value;
@@ -50,7 +47,7 @@ class MapService {
         return input;
     }
     async createMap(userId, mapData) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             const hasMetadataColumn = true;
             const mapQuery = hasMetadataColumn
@@ -100,7 +97,7 @@ class MapService {
             if (mapData.metadata) {
                 await this.synchronizeMapStructure(client, map.id, mapData.metadata);
             }
-            logger_js_1.logger.info(`Created new map: ${map.name} (${map.id}) with metadata:`, {
+            logger.info(`Created new map: ${map.name} (${map.id}) with metadata:`, {
                 hasMetadata: !!mapData.metadata,
                 territories: mapData.metadata?.territories?.length || 0,
                 sectors: mapData.metadata?.sectors?.length || 0,
@@ -109,7 +106,7 @@ class MapService {
         }
         catch (error) {
             if (error instanceof Error && error.message.includes('metadata')) {
-                logger_js_1.logger.warn('Metadata column not found, creating map without metadata');
+                logger.warn('Metadata column not found, creating map without metadata');
                 const mapResult = await client.query(`
           INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, status)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -127,7 +124,7 @@ class MapService {
                     'pending_review',
                 ]);
                 const map = mapResult.rows[0];
-                logger_js_1.logger.info(`Created new map without metadata: ${map.name} (${map.id})`);
+                logger.info(`Created new map without metadata: ${map.name} (${map.id})`);
                 return this.formatMapFromDb(map);
             }
             throw error;
@@ -311,14 +308,14 @@ class MapService {
             }
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to synchronize map structure from metadata', {
+            logger.warn('Failed to synchronize map structure from metadata', {
                 mapId,
                 error,
             });
         }
     }
     async updateMapContentFromMetadata(mapId, metadata) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await this.synchronizeMapStructure(client, mapId, metadata);
         }
@@ -419,7 +416,7 @@ class MapService {
             await client.query('DELETE FROM map_territory_modifiers WHERE map_id = $1 AND territory_id = $2', [mapId, territoryKey]);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to clear existing territory modifier mapping', {
+            logger.warn('Failed to clear existing territory modifier mapping', {
                 mapId,
                 territoryKey,
                 error,
@@ -458,7 +455,7 @@ class MapService {
             return;
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to persist territory modifier for map', {
+            logger.warn('Failed to persist territory modifier for map', {
                 mapId,
                 territoryKey,
                 error,
@@ -466,7 +463,7 @@ class MapService {
         }
     }
     async getMap(mapId) {
-        const result = await (0, database_js_1.query)('SELECT * FROM maps WHERE id = $1', [mapId]);
+        const result = await query('SELECT * FROM maps WHERE id = $1', [mapId]);
         return result.rows.length > 0 ? this.formatMapFromDb(result.rows[0]) : null;
     }
     async getMapWithFullData(mapId) {
@@ -482,12 +479,12 @@ class MapService {
     }
     async updateCapitalTerritories(mapId, userId, capitalTerritories, options = {}) {
         try {
-            await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, { userId, isAdmin: options.isAdmin }, { allowCollaborator: true });
+            await mapPermissionService.assertCanEditMap(mapId, { userId, isAdmin: options.isAdmin }, { allowCollaborator: true });
             const validationResult = await this.validateCapitalTerritories(mapId, capitalTerritories);
             if (!validationResult.valid) {
                 throw new Error(`Invalid capital configuration: ${validationResult.error}`);
             }
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         UPDATE maps 
         SET capital_territories = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
@@ -495,13 +492,13 @@ class MapService {
             return (result.rowCount ?? 0) > 0;
         }
         catch (error) {
-            logger_js_1.logger.error('Error updating capital territories:', error);
+            logger.error('Error updating capital territories:', error);
             throw error;
         }
     }
     async validateCapitalTerritories(mapId, capitalTerritories) {
         try {
-            const territoriesResult = await (0, database_js_1.query)(`
+            const territoriesResult = await query(`
         SELECT id, adjacencies FROM map_territories 
         WHERE map_id = $1
       `, [mapId]);
@@ -542,14 +539,14 @@ class MapService {
             return { valid: true };
         }
         catch (error) {
-            logger_js_1.logger.error('Error validating capital territories:', error);
+            logger.error('Error validating capital territories:', error);
             return { valid: false, error: 'Validation failed' };
         }
     }
     async updateMap(mapId, userId, updates, options = {}) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
-            await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, { userId, isAdmin: options.isAdmin }, { allowCollaborator: options.allowCollaborator ?? true });
+            await mapPermissionService.assertCanEditMap(mapId, { userId, isAdmin: options.isAdmin }, { allowCollaborator: options.allowCollaborator ?? true });
             const updateFields = [];
             const updateValues = [];
             let paramCount = 0;
@@ -599,20 +596,20 @@ class MapService {
         }
     }
     async deleteMap(mapId, userId, options = {}) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
-            await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, { userId, isAdmin: options.isAdmin }, { allowCollaborator: false });
+            await mapPermissionService.assertCanEditMap(mapId, { userId, isAdmin: options.isAdmin }, { allowCollaborator: false });
             const preResult = await client.query('SELECT image_url FROM maps WHERE id = $1', [mapId]);
             const imageUrl = preResult.rows[0]?.image_url ?? null;
             const result = await client.query('DELETE FROM maps WHERE id = $1', [mapId]);
-            logger_js_1.logger.info(`Deleted map ${mapId} by user ${userId}`);
+            logger.info(`Deleted map ${mapId} by user ${userId}`);
             if ((result.rowCount || 0) === 0) {
-                throw new mapPermissionService_js_1.MapNotFoundError();
+                throw new MapNotFoundError();
             }
             if (imageUrl) {
-                const storageKey = (0, assetStorage_js_1.extractStorageKeyFromUrl)(imageUrl);
+                const storageKey = extractStorageKeyFromUrl(imageUrl);
                 if (storageKey) {
-                    const canonicalUrl = (0, assetStorage_js_1.getPublicAssetUrl)(storageKey);
+                    const canonicalUrl = getPublicAssetUrl(storageKey);
                     const suffix = `/${storageKey}`;
                     const mapsRef = await client.query(`SELECT 1 FROM maps WHERE id <> $1 AND (image_url = $2 OR image_url LIKE $3) LIMIT 1`, [mapId, canonicalUrl, `%${suffix}`]);
                     let referencedElsewhere = mapsRef.rows.length > 0;
@@ -622,19 +619,19 @@ class MapService {
                             referencedElsewhere = draftsRef.rows.length > 0;
                         }
                         catch (e) {
-                            logger_js_1.logger?.warn?.('Skipping draft reference check during asset cleanup', { error: e });
+                            logger?.warn?.('Skipping draft reference check during asset cleanup', { error: e });
                         }
                     }
                     if (!referencedElsewhere) {
                         try {
-                            await (0, assetStorage_js_1.deleteAsset)(storageKey);
-                            logger_js_1.logger.info('Deleted map image asset from storage', {
+                            await deleteAsset(storageKey);
+                            logger.info('Deleted map image asset from storage', {
                                 mapId,
                                 storageKey,
                             });
                         }
                         catch (err) {
-                            logger_js_1.logger.warn('Failed to delete map image asset (non-fatal)', {
+                            logger.warn('Failed to delete map image asset (non-fatal)', {
                                 mapId,
                                 storageKey,
                                 error: err,
@@ -642,7 +639,7 @@ class MapService {
                         }
                     }
                     else {
-                        logger_js_1.logger.info('Retained map image asset; still referenced elsewhere', {
+                        logger.info('Retained map image asset; still referenced elsewhere', {
                             mapId,
                             storageKey,
                         });
@@ -702,14 +699,14 @@ class MapService {
         const orderBy = this.buildOrderByClause(filters.sortBy, filters.sortOrder);
         const limit = filters.limit || 20;
         const offset = filters.offset || 0;
-        const countResult = await (0, database_js_1.query)(`SELECT COUNT(*) as total FROM maps ${whereClause}`, [
+        const countResult = await query(`SELECT COUNT(*) as total FROM maps ${whereClause}`, [
             ...queryParams,
         ]);
         const total = countResult.rows[0].total;
         const baseParamCount = queryParams.length;
         const limitPlaceholder = `$${baseParamCount + 1}`;
         const offsetPlaceholder = `$${baseParamCount + 2}`;
-        const mapsResult = await (0, database_js_1.query)(`
+        const mapsResult = await query(`
       SELECT * FROM maps ${whereClause} ${orderBy} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}
     `, [...queryParams, limit, offset]);
         const maps = mapsResult.rows.map((row) => this.formatMapFromDb(row));
@@ -717,7 +714,7 @@ class MapService {
         return { maps, total, hasMore };
     }
     async createTerritory(territoryData) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             const result = await client.query(`
         INSERT INTO map_territories (
@@ -741,13 +738,13 @@ class MapService {
         }
     }
     async getMapTerritories(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT * FROM map_territories WHERE map_id = $1 ORDER BY name
     `, [mapId]);
         return result.rows.map((row) => this.formatTerritoryFromDb(row));
     }
     async updateTerritory(territoryId, updates) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             const updateFields = [];
             const updateValues = [];
@@ -788,7 +785,7 @@ class MapService {
         }
     }
     async createSector(mapId, name, bonusArmies, color) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             const result = await client.query(`
         INSERT INTO map_sectors (map_id, name, bonus_troops, color)
@@ -803,11 +800,11 @@ class MapService {
         }
     }
     async getMapSectors(mapId) {
-        const result = await (0, database_js_1.query)('SELECT * FROM map_sectors WHERE map_id = $1 ORDER BY name', [mapId]);
+        const result = await query('SELECT * FROM map_sectors WHERE map_id = $1 ORDER BY name', [mapId]);
         return result.rows.map((row) => this.formatSectorFromDb(row));
     }
     async getMapSectorBonuses(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 
         ms.id,
         ms.name,
@@ -827,7 +824,7 @@ class MapService {
         }));
     }
     async createAdjacency(adjacencyData) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             const lookup = await client.query(`SELECT id, name, map_id FROM map_territories WHERE id = ANY($1::uuid[])`, [
                 [adjacencyData.fromTerritoryId, adjacencyData.toTerritoryId],
@@ -870,7 +867,7 @@ class MapService {
         }
     }
     async getMapAdjacencies(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT 
         ta.id,
         ta.map_id,
@@ -947,7 +944,7 @@ class MapService {
         return { isValid: errors.length === 0, errors };
     }
     async getGameModes() {
-        const result = await (0, database_js_1.query)('SELECT * FROM game_modes ORDER BY is_default DESC, name');
+        const result = await query('SELECT * FROM game_modes ORDER BY is_default DESC, name');
         return result.rows.map((row) => ({
             id: row.id,
             name: row.name,
@@ -958,7 +955,7 @@ class MapService {
         }));
     }
     async getTerritoryAbilityTypes() {
-        const result = await (0, database_js_1.query)('SELECT * FROM territory_ability_types ORDER BY name');
+        const result = await query('SELECT * FROM territory_ability_types ORDER BY name');
         return result.rows.map((row) => ({
             id: row.id,
             name: row.name,
@@ -969,7 +966,7 @@ class MapService {
         }));
     }
     async rateMap(mapId, userId, rating, review) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await client.query('BEGIN');
             const result = await client.query(`
@@ -1051,7 +1048,7 @@ class MapService {
                 return JSON.parse(json);
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to parse JSON:', { json, error });
+                logger.warn('Failed to parse JSON:', { json, error });
                 return defaultValue;
             }
         }
@@ -1214,6 +1211,5 @@ class MapService {
     `, [mapId, mapId, mapId]);
     }
 }
-exports.MapService = MapService;
-exports.mapService = new MapService();
+export const mapService = new MapService();
 //# sourceMappingURL=mapService.js.map

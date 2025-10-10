@@ -1,10 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.profileService = exports.ProfileService = void 0;
-const themes_1 = require("../shared/types/themes");
-const database_js_1 = require("../config/database.js");
-const contentModeration_js_1 = require("../utils/contentModeration.js");
-const logger_js_1 = require("../utils/logger.js");
+import { DEFAULT_THEME_ID, normalizeThemeId } from '../shared/types/themes';
+import { withClient } from '../config/database.js';
+import { validateBio } from '../utils/contentModeration.js';
+import { logger } from '../utils/logger.js';
 const mapGameHistoryRow = (row) => ({
     gameId: row.game_id,
     gameName: row.game_name ?? null,
@@ -19,9 +16,9 @@ const mapGameHistoryRow = (row) => ({
     startedAt: row.started_at ?? null,
     endedAt: row.ended_at ?? null,
 });
-class ProfileService {
+export class ProfileService {
     async getUserProfile(userId) {
-        return await (0, database_js_1.withClient)(async (client) => {
+        return await withClient(async (client) => {
             const profileResult = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
             const statsResult = await client.query('SELECT * FROM player_stats WHERE user_id = $1', [
                 userId,
@@ -57,7 +54,7 @@ class ProfileService {
         });
     }
     async updateProfile(userId, updates) {
-        await (0, database_js_1.withClient)(async (client) => {
+        await withClient(async (client) => {
             const updateClauses = [];
             const values = [];
             let paramIndex = 0;
@@ -67,9 +64,9 @@ class ProfileService {
             }
             if (updates.bio !== undefined) {
                 const input = typeof updates.bio === 'string' ? updates.bio : '';
-                const { ok, sanitized, error } = (0, contentModeration_js_1.validateBio)(input);
+                const { ok, sanitized, error } = validateBio(input);
                 if (!ok) {
-                    logger_js_1.logger.warn('Bio update rejected by moderation', { userId, reason: error });
+                    logger.warn('Bio update rejected by moderation', { userId, reason: error });
                     const err = new Error(error || 'Invalid bio');
                     err.status = 400;
                     err.statusCode = 400;
@@ -97,7 +94,7 @@ class ProfileService {
         return updatedProfile.profile;
     }
     async getUserStats(userId) {
-        return await (0, database_js_1.withClient)(async (client) => {
+        return await withClient(async (client) => {
             const overallResult = await client.query('SELECT * FROM player_stats WHERE user_id = $1', [
                 userId,
             ]);
@@ -271,7 +268,7 @@ class ProfileService {
         });
     }
     async getAchievements(userId) {
-        return await (0, database_js_1.withClient)(async (client) => {
+        return await withClient(async (client) => {
             const unlockedResult = await client.query(`
         SELECT ua.*, a.name, a.description, a.icon AS icon, a.category, a.points, a.rarity
         FROM user_achievements ua
@@ -291,7 +288,7 @@ class ProfileService {
         });
     }
     async unlockAchievement(userId, achievementId) {
-        return await (0, database_js_1.withClient)(async (client) => {
+        return await withClient(async (client) => {
             const existing = await client.query('SELECT * FROM user_achievements WHERE user_id = $1 AND achievement_id = $2', [userId, achievementId]);
             if (existing.rows.length > 0) {
                 return existing.rows[0];
@@ -308,13 +305,13 @@ class ProfileService {
       `, [userId, achievementId]);
             const preferences = result.rows[0];
             if (preferences && typeof preferences.theme === 'string') {
-                preferences.theme = (0, themes_1.normalizeThemeId)(preferences.theme);
+                preferences.theme = normalizeThemeId(preferences.theme);
             }
             return preferences;
         });
     }
     async getGameHistory(userId, limit = 50, offset = 0) {
-        return await (0, database_js_1.withClient)(async (client) => {
+        return await withClient(async (client) => {
             const result = await client.query(`
         SELECT
           gr.id as game_id,
@@ -335,7 +332,7 @@ class ProfileService {
         });
     }
     async updatePreferences(userId, preferences) {
-        return await (0, database_js_1.withClient)(async (client) => {
+        return await withClient(async (client) => {
             const updateFields = [];
             const values = [];
             let paramCount = 0;
@@ -344,7 +341,7 @@ class ProfileService {
                     updateFields.push(`${this.camelToSnake(key)} = $${++paramCount}`);
                     const value = preferences[key];
                     if (key === 'theme' && typeof value === 'string') {
-                        values.push((0, themes_1.normalizeThemeId)(value));
+                        values.push(normalizeThemeId(value));
                     }
                     else {
                         values.push(value);
@@ -369,13 +366,13 @@ class ProfileService {
             return {
                 ...updatedPreferences,
                 theme: typeof updatedPreferences.theme === 'string'
-                    ? (0, themes_1.normalizeThemeId)(updatedPreferences.theme)
-                    : themes_1.DEFAULT_THEME_ID,
+                    ? normalizeThemeId(updatedPreferences.theme)
+                    : DEFAULT_THEME_ID,
             };
         });
     }
     async getLeaderboard(limit = 100) {
-        return await (0, database_js_1.withClient)(async (client) => {
+        return await withClient(async (client) => {
             const result = await client.query(`
         SELECT 
           u.id as user_id,
@@ -444,7 +441,7 @@ class ProfileService {
     createDefaultPreferences(userId) {
         return {
             userId,
-            theme: themes_1.DEFAULT_THEME_ID,
+            theme: DEFAULT_THEME_ID,
             language: 'en',
             timezone: 'UTC',
             notificationsEnabled: true,
@@ -466,6 +463,5 @@ class ProfileService {
         return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
     }
 }
-exports.ProfileService = ProfileService;
-exports.profileService = new ProfileService();
+export const profileService = new ProfileService();
 //# sourceMappingURL=profileService.js.map

@@ -1,25 +1,22 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ensureTablesExist = ensureTablesExist;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("./logger.js");
-async function ensureTablesExist() {
+import { query } from '../config/database.js';
+import { logger } from './logger.js';
+export async function ensureTablesExist() {
     try {
-        logger_js_1.logger.info('🔧 Checking if database tables exist...');
-        const _result = await (0, database_js_1.query)('SELECT 1 FROM users LIMIT 1');
-        logger_js_1.logger.info('✅ Database tables already exist');
+        logger.info('🔧 Checking if database tables exist...');
+        const _result = await query('SELECT 1 FROM users LIMIT 1');
+        logger.info('✅ Database tables already exist');
         return;
     }
     catch (_error) {
-        logger_js_1.logger.warn('⚠️  Tables not found, creating them now...');
+        logger.warn('⚠️  Tables not found, creating them now...');
         try {
             await createPostgreSQLTables();
-            logger_js_1.logger.info('✅ Successfully created all PostgreSQL tables');
-            await (0, database_js_1.query)('SELECT 1 FROM users LIMIT 1');
-            logger_js_1.logger.info('✅ Table creation verified');
+            logger.info('✅ Successfully created all PostgreSQL tables');
+            await query('SELECT 1 FROM users LIMIT 1');
+            logger.info('✅ Table creation verified');
         }
         catch (createError) {
-            logger_js_1.logger.error('❌ Failed to create tables:', createError);
+            logger.error('❌ Failed to create tables:', createError);
             throw new Error(`Database table creation failed: ${createError}`);
         }
     }
@@ -174,21 +171,21 @@ async function createPostgreSQLTables() {
     ];
     for (const statement of statements) {
         try {
-            await (0, database_js_1.query)(statement);
-            logger_js_1.logger.debug(`✅ Executed: ${statement.substring(0, 50)}...`);
+            await query(statement);
+            logger.debug(`✅ Executed: ${statement.substring(0, 50)}...`);
         }
         catch (error) {
             if (error instanceof Error) {
                 if (error.message.includes('already exists') || error.message.includes('duplicate')) {
-                    logger_js_1.logger.debug(`⏭️  Skipped duplicate: ${statement.substring(0, 50)}...`);
+                    logger.debug(`⏭️  Skipped duplicate: ${statement.substring(0, 50)}...`);
                 }
                 else {
-                    logger_js_1.logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`);
+                    logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`);
                     throw error;
                 }
             }
             else {
-                logger_js_1.logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`);
+                logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`);
                 throw error;
             }
         }

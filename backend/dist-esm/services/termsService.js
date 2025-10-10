@@ -1,25 +1,22 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.termsService = exports.TermsService = void 0;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-class TermsService {
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+export class TermsService {
     async hasAcceptedTerms(userId, featureType) {
         try {
             const currentVersion = this.getCurrentVersion(featureType);
-            const result = await (0, database_js_1.query)(`SELECT * FROM user_terms_acceptance 
+            const result = await query(`SELECT * FROM user_terms_acceptance 
          WHERE user_id = $1 AND feature_type = $2 AND terms_version = $3`, [userId, featureType, currentVersion]);
             return result.rows.length > 0;
         }
         catch (error) {
-            logger_js_1.logger.error('Error checking terms acceptance:', error);
+            logger.error('Error checking terms acceptance:', error);
             return false;
         }
     }
     async acceptTerms(userId, featureType, ipAddress, userAgent) {
         try {
             const currentVersion = this.getCurrentVersion(featureType);
-            const result = await (0, database_js_1.query)(`INSERT INTO user_terms_acceptance 
+            const result = await query(`INSERT INTO user_terms_acceptance 
          (user_id, feature_type, terms_version, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (user_id, feature_type, terms_version) 
@@ -28,19 +25,19 @@ class TermsService {
             return result.rows[0];
         }
         catch (error) {
-            logger_js_1.logger.error('Error accepting terms:', error);
+            logger.error('Error accepting terms:', error);
             throw error;
         }
     }
     async getUserTermsHistory(userId) {
         try {
-            const result = await (0, database_js_1.query)(`SELECT * FROM user_terms_acceptance 
+            const result = await query(`SELECT * FROM user_terms_acceptance 
          WHERE user_id = $1
          ORDER BY accepted_at DESC`, [userId]);
             return result.rows;
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching terms history:', error);
+            logger.error('Error fetching terms history:', error);
             throw error;
         }
     }
@@ -111,11 +108,10 @@ class TermsService {
         return terms[featureType] || terms.general;
     }
 }
-exports.TermsService = TermsService;
 TermsService.CURRENT_VERSIONS = {
     map_editor: '1.0',
     tournament: '1.0',
     general: '1.0',
 };
-exports.termsService = new TermsService();
+export const termsService = new TermsService();
 //# sourceMappingURL=termsService.js.map

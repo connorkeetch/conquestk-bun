@@ -1,24 +1,18 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAnalyticsWorker = exports.AnalyticsWorker = void 0;
-const bullmq_1 = require("bullmq");
-const ioredis_1 = __importDefault(require("ioredis"));
-const redis_js_1 = require("../config/redis.js");
-const gameService_js_1 = require("../services/gameService.js");
-const queueService_js_1 = require("../services/queueService.js");
-const workerHeartbeat_js_1 = require("../services/workerHeartbeat.js");
-const logger_js_1 = require("../utils/logger.js");
-class AnalyticsWorker {
+import { Worker } from 'bullmq';
+import { getRedisClient } from '../config/redis.js';
+import { GameService } from '../services/gameService.js';
+import { queueService } from '../services/queueService.js';
+import { startWorkerHeartbeat } from '../services/workerHeartbeat.js';
+import { logger } from '../utils/logger.js';
+import { createRedisFromOptions } from '../utils/redisFactory.js';
+export class AnalyticsWorker {
     constructor() {
         this.worker = null;
-        this.gameService = new gameService_js_1.GameService();
+        this.gameService = new GameService();
     }
     async initialize() {
-        const queueName = queueService_js_1.queueService.getAnalyticsQueue().name;
-        this.worker = new bullmq_1.Worker(queueName, async (job) => {
+        const queueName = queueService.getAnalyticsQueue().name;
+        this.worker = new Worker(queueName, async (job) => {
             const { event, gameId, data } = job.data;
             try {
                 if (event === 'append_log') {
@@ -29,11 +23,11 @@ class AnalyticsWorker {
                     await this.gameService.appendTurnStats(gameId, data);
                 }
                 else {
-                    logger_js_1.logger.warn('Unknown analytics event', { event });
+                    logger.warn('Unknown analytics event', { event });
                 }
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to process analytics-event', {
+                logger.warn('Failed to process analytics-event', {
                     event,
                     gameId,
                     error: error instanceof Error ? error.message : error,
@@ -47,9 +41,9 @@ class AnalyticsWorker {
                 duration: 1000,
             },
             connection: (() => {
-                const redis = (0, redis_js_1.getRedisClient)();
+                const redis = getRedisClient();
                 const baseOpts = (redis?.options ?? {});
-                return new ioredis_1.default({
+                return createRedisFromOptions({
                     ...baseOpts,
                     enableReadyCheck: false,
                     lazyConnect: false,
@@ -59,19 +53,17 @@ class AnalyticsWorker {
             })(),
         });
         this.worker.on('completed', (job) => {
-            logger_js_1.logger.debug('📈 Analytics job completed', { jobId: job.id });
+            logger.debug('📈 Analytics job completed', { jobId: job.id });
         });
         this.worker.on('failed', (job, error) => {
-            logger_js_1.logger.warn('📉 Analytics job failed', {
+            logger.warn('📉 Analytics job failed', {
                 jobId: job?.id,
                 error: error instanceof Error ? error.message : error,
             });
         });
-        (0, workerHeartbeat_js_1.startWorkerHeartbeat)(queueName);
-        logger_js_1.logger.info('✅ AnalyticsWorker initialized');
+        startWorkerHeartbeat(queueName);
+        logger.info('✅ AnalyticsWorker initialized');
     }
 }
-exports.AnalyticsWorker = AnalyticsWorker;
-const createAnalyticsWorker = () => new AnalyticsWorker();
-exports.createAnalyticsWorker = createAnalyticsWorker;
+export const createAnalyticsWorker = () => new AnalyticsWorker();
 //# sourceMappingURL=analyticsWorker.js.map

@@ -1,148 +1,65 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-require("./instrument.js");
-const Sentry = __importStar(require("@sentry/node"));
-const dotenv_1 = __importDefault(require("dotenv"));
+import './instrument.js';
+import * as Sentry from '@sentry/node';
+import dotenv from 'dotenv';
 if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
-    const result = dotenv_1.default.config();
+    const result = dotenv.config();
     if (result.error) {
         throw result.error;
     }
 }
-const validateEnv_js_1 = require("./config/validateEnv.js");
+import { validateEnvironmentVariables } from './config/validateEnv.js';
 try {
-    (0, validateEnv_js_1.validateEnvironmentVariables)();
+    validateEnvironmentVariables();
 }
 catch (_error) {
     process.exit(1);
 }
-const errorHelpers_js_1 = require("./utils/errorHelpers.js");
-let createServer;
-let path;
-let cors;
-let express;
-let helmet;
-let Server;
-let initDatabase;
-let logStartupDiagnostics;
-let testDatabaseConnection;
-let testMigrationFiles;
-let generalApiLimiter;
-let suspiciousActivityTracker;
-let adminRoutes;
-let adminQueuesRoutes;
-let authRoutes;
-let gameRoutes;
-let mapRoutes;
-let notificationRoutes;
-let profileRoutes;
-let skillsRoutes;
-let userRoutes;
-let messagesRoutes;
-let clanRoutes;
-let friendsRoutes;
-let leaderboardRoutes;
-let bullBoardRouterFactory;
-let initializeRedis;
-let setupSocketHandlers;
-let ensureTablesExist;
-let logger;
-let MigrationRunner;
-let memoryDiagnosticsService;
-try {
-    createServer = require('node:http').createServer;
-    path = require('node:path');
-    cors = require('cors');
-    express = require('express');
-    helmet = require('helmet');
-    const socketIo = require('socket.io');
-    Server = socketIo.Server;
-    const dbModule = require('./config/database');
-    initDatabase = dbModule.initDatabase;
-    const redisModule = require('./config/redis');
-    initializeRedis = redisModule.initializeRedis;
-    const debugModule = require('./debugStartup');
-    logStartupDiagnostics = debugModule.logStartupDiagnostics;
-    testDatabaseConnection = debugModule.testDatabaseConnection;
-    testMigrationFiles = debugModule.testMigrationFiles;
-    const rateLimiterModule = require('./middleware/rateLimiter');
-    generalApiLimiter = rateLimiterModule.generalApiLimiter;
-    suspiciousActivityTracker = rateLimiterModule.suspiciousActivityTracker;
-    adminRoutes = require('./routes/admin').default;
-    adminQueuesRoutes = require('./routes/adminQueues').default;
-    authRoutes = require('./routes/auth').authRoutes;
-    gameRoutes = require('./routes/game').gameRoutes;
-    mapRoutes = require('./routes/maps').default;
-    notificationRoutes = require('./routes/notifications').default;
-    profileRoutes = require('./routes/profile').default;
-    skillsRoutes = require('./routes/skills').default;
-    userRoutes = require('./routes/users').default;
-    messagesRoutes = require('./routes/messages').default;
-    clanRoutes = require('./routes/clans').default;
-    friendsRoutes = require('./routes/friends').default;
-    leaderboardRoutes = require('./routes/leaderboard').default;
-    bullBoardRouterFactory = require('./routes/bullBoard').default;
-    setupSocketHandlers = require('./services/socketService').setupSocketHandlers;
-    ensureTablesExist = require('./utils/initTables').ensureTablesExist;
-    logger = require('./utils/logger').logger;
-    memoryDiagnosticsService = require('./services/memoryDiagnosticsService').memoryDiagnosticsService;
-    try {
-        MigrationRunner = require('./utils/migrationRunner').MigrationRunner;
-        logger.debug('  ✓ MigrationRunner loaded');
-    }
-    catch (e) {
-        logger.error('  ✗ Failed to load MigrationRunner:', e);
-        throw e;
-    }
-    logger.info('✅ Utils loaded');
-}
-catch (error) {
-    const normalized = (0, errorHelpers_js_1.toKnownError)(error);
-    const message = normalized.message || 'Unknown startup error';
-    process.stderr.write(`❌ Failed to initialize server: ${message}\n`);
-    if (normalized.stack) {
-        process.stderr.write(`${normalized.stack}\n`);
-    }
-    process.exit(1);
-}
+import { getErrorMessage, toKnownError } from './utils/errorHelpers.js';
+import { createServer } from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import { Server } from 'socket.io';
+import { initDatabase, getPool } from './config/database.js';
+import { initializeRedis } from './config/redis.js';
+import { logStartupDiagnostics, testDatabaseConnection, testMigrationFiles, } from './debugStartup.js';
+import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter.js';
+import adminRoutes from './routes/admin.js';
+import adminQueuesRoutes from './routes/adminQueues.js';
+import { authRoutes } from './routes/auth.js';
+import { gameRoutes } from './routes/game.js';
+import mapRoutes from './routes/maps.js';
+import notificationRoutes from './routes/notifications.js';
+import profileRoutes from './routes/profile.js';
+import skillsRoutes from './routes/skills.js';
+import userRoutes from './routes/users.js';
+import messagesRoutes from './routes/messages.js';
+import clanRoutes from './routes/clans.js';
+import friendsRoutes from './routes/friends.js';
+import bullBoardRouterFactory from './routes/bullBoard.js';
+import { setupSocketHandlers } from './services/socketService.js';
+import { ensureTablesExist } from './utils/initTables.js';
+import { logger } from './utils/logger.js';
+import { MigrationRunner } from './utils/migrationRunner.js';
+import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js';
+import mapWorkflowRoutes from './routes/mapWorkflow.js';
+import mapApprovalRoutes from './routes/mapApproval.js';
+import termsRoutes from './routes/terms.js';
+import mapStagingRoutes from './routes/mapStaging.js';
+import featureFlagsRoutes from './routes/featureFlags.js';
+import queueRoutes from './routes/queueRoutes.js';
+import performanceRoutes from './routes/performanceRoutes.js';
+import benchmarkRoutes from './routes/benchmarkRoutes.js';
+import { createPreferencesRouter } from './routes/preferences.js';
+import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js';
 const app = express();
 const server = createServer(app);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
     try {
@@ -192,19 +109,18 @@ initializeRedis()
     const { pubClient, subClient, redisClient } = redisClients;
     if (pubClient && subClient) {
         try {
-            const { createAdapter } = require('@socket.io/redis-adapter');
             io.adapter(createAdapter(pubClient, subClient));
             logger.info('✅ Socket.io using Redis adapter for multi-server support');
         }
         catch (error) {
-            logger.warn('⚠️ Failed to create Redis adapter, using in-memory adapter:', (0, errorHelpers_js_1.getErrorMessage)(error));
+            logger.warn('⚠️ Failed to create Redis adapter, using in-memory adapter:', getErrorMessage(error));
         }
     }
     else {
         logger.warn('⚠️ Socket.io using in-memory adapter (single server only)');
     }
     if (redisClient) {
-        const { enableRedisSessionStore } = require('./middleware/session');
+        const { enableRedisSessionStore } = await import('./middleware/session.js');
         if (enableRedisSessionStore()) {
             logger.info('✅ Session storage upgraded to Redis');
         }
@@ -215,8 +131,8 @@ initializeRedis()
     else {
         logger.warn('⚠️ Using in-memory session store (Redis not available)');
     }
-    const workerManager = (0, workerManager_js_1.createWorkerManager)(io);
-    (0, workerManager_js_1.setWorkerManagerInstance)(workerManager);
+    const workerManager = createWorkerManager(io);
+    setWorkerManagerInstance(workerManager);
     try {
         await workerManager.initialize();
         logger.info('✅ WorkerManager created and initialized after Redis connection');
@@ -226,24 +142,24 @@ initializeRedis()
             logger.info('✅ Bull Board mounted at /api/admin/queues/ui');
         }
         catch (e) {
-            logger.warn('⚠️ Failed to mount Bull Board after init:', (0, errorHelpers_js_1.getErrorMessage)(e));
+            logger.warn('⚠️ Failed to mount Bull Board after init:', getErrorMessage(e));
         }
     }
     catch (error) {
-        logger.error('❌ Failed to initialize WorkerManager after Redis:', (0, errorHelpers_js_1.getErrorMessage)(error));
+        logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error));
     }
 })
     .catch((err) => {
-    logger.warn('⚠️ Redis initialization failed, using in-memory adapters:', (0, errorHelpers_js_1.getErrorMessage)(err));
-    const workerManager = (0, workerManager_js_1.createWorkerManager)(io);
-    (0, workerManager_js_1.setWorkerManagerInstance)(workerManager);
+    logger.warn('⚠️ Redis initialization failed, using in-memory adapters:', getErrorMessage(err));
+    const workerManager = createWorkerManager(io);
+    setWorkerManagerInstance(workerManager);
     workerManager
         .initialize()
         .then(() => {
         logger.info('✅ WorkerManager initialized without Redis (degraded mode)');
     })
         .catch((error) => {
-        logger.error('❌ Failed to initialize WorkerManager in degraded mode:', (0, errorHelpers_js_1.getErrorMessage)(error));
+        logger.error('❌ Failed to initialize WorkerManager in degraded mode:', getErrorMessage(error));
     });
 });
 const PORT = process.env.PORT || 5001;
@@ -313,7 +229,6 @@ app.use(helmet({
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-const { createSessionMiddleware, sessionMiddleware } = require('./middleware/session');
 createSessionMiddleware();
 app.use(sessionMiddleware);
 app.use(suspiciousActivityTracker.middleware());
@@ -343,22 +258,21 @@ app.use('/api/users', userRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/clans', clanRoutes);
 app.use('/api/friends', friendsRoutes);
-app.use('/api/leaderboard', leaderboardRoutes);
-app.use('/api/workflow', require('./routes/mapWorkflow').default);
-app.use('/api/map-approval', require('./routes/mapApproval').default);
-app.use('/api/terms', require('./routes/terms').default);
-app.use('/api/staging', require('./routes/mapStaging').default);
-app.use('/api/feature-flags', require('./routes/featureFlags').default);
-app.use('/api/queues', require('./routes/queueRoutes').default);
-app.use('/api/performance', require('./routes/performanceRoutes').default);
-app.use('/api/benchmark', require('./routes/benchmarkRoutes').default);
+app.use('/api/workflow', mapWorkflowRoutes);
+app.use('/api/map-approval', mapApprovalRoutes);
+app.use('/api/terms', termsRoutes);
+app.use('/api/staging', mapStagingRoutes);
+app.use('/api/feature-flags', featureFlagsRoutes);
+app.use('/api/queues', queueRoutes);
+app.use('/api/performance', performanceRoutes);
+app.use('/api/benchmark', benchmarkRoutes);
 try {
     const bullBoardRouter = bullBoardRouterFactory();
     app.use(bullBoardRouter);
 }
 catch (_e) {
 }
-app.use('/api/preferences', require('./routes/preferences').createPreferencesRouter(require('./config/database').getPool()));
+app.use('/api/preferences', createPreferencesRouter(getPool()));
 app.get('/test', (_req, res) => {
     res.json({
         message: 'Server is running!',
@@ -591,12 +505,15 @@ if (process.env.NODE_ENV !== 'production') {
 }
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
 if (isProductionLike) {
-    const fs = require('node:fs');
+    const fs = await import('node:fs');
+    const fsD = fs;
+    const existsSync = (p) => (fsD.default?.existsSync ? fsD.default.existsSync(p) : fs.existsSync(p));
+    const readdirSync = (p) => (fsD.default?.readdirSync ? fsD.default.readdirSync(p) : fs.readdirSync(p));
     const frontendPath = path.join(__dirname, '../public');
     logger.debug(`📁 Setting up static file serving from: ${frontendPath}`);
-    logger.debug(`📁 Frontend path exists: ${fs.existsSync(frontendPath)}`);
-    if (fs.existsSync(frontendPath)) {
-        const files = fs.readdirSync(frontendPath);
+    logger.debug(`📁 Frontend path exists: ${existsSync(frontendPath)}`);
+    if (existsSync(frontendPath)) {
+        const files = readdirSync(frontendPath);
         logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`);
         const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'));
         logger.debug(`📁 index.html exists: ${indexExists}`);
@@ -658,7 +575,7 @@ if (isProductionLike) {
 }
 Sentry.setupExpressErrorHandler(app);
 app.use((err, _req, res, _next) => {
-    const normalizedError = (0, errorHelpers_js_1.toKnownError)(err);
+    const normalizedError = toKnownError(err);
     const sentryResponse = res;
     const sentryId = sentryResponse.sentry;
     logger.error('Application error:', {
@@ -684,10 +601,9 @@ app.use((err, _req, res, _next) => {
 });
 setupSocketHandlers(io);
 memoryDiagnosticsService.start();
-const workerManager_js_1 = require("./workers/workerManager.js");
 async function startServer() {
     try {
-        logger.info('🚀 Starting Risk Game server...');
+        logger.info('🚀 Starting ConquestK server...');
         logStartupDiagnostics();
         const portNumber = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
         server.listen(portNumber, '0.0.0.0', () => {
@@ -719,7 +635,7 @@ async function startServer() {
                         }
                         logger.info('✅ All migrations completed and schema validated');
                         logger.info('🗄️  Database: PostgreSQL with migration tracking');
-                        const { ensureOwnerAdmin } = require('./scripts/ensureOwnerAdmin');
+                        const { ensureOwnerAdmin } = await import('./scripts/ensureOwnerAdmin.js');
                         await ensureOwnerAdmin();
                         if (process.env.RUN_DEPLOY_ACCOUNT_ENFORCEMENT_ON_START === 'true') {
                             try {
@@ -728,12 +644,12 @@ async function startServer() {
                                 await ensureDeployAccounts();
                             }
                             catch (e) {
-                                logger.warn('Failed to enforce deploy accounts on start:', (0, errorHelpers_js_1.getErrorMessage)(e));
+                                logger.warn('Failed to enforce deploy accounts on start:', getErrorMessage(e));
                             }
                         }
                         if (process.env.SYNC_FEATURE_FLAGS_ON_START === 'true') {
                             try {
-                                const { spawnSync } = require('node:child_process');
+                                const { spawnSync } = await import('node:child_process');
                                 const scriptPath = path.join(__dirname, 'scripts', 'checkFeatureFlags.js');
                                 logger.info('🏁 Syncing feature flags from code usage into DB');
                                 const result = spawnSync(process.execPath, [scriptPath, '--apply'], {
@@ -748,7 +664,7 @@ async function startServer() {
                                 }
                             }
                             catch (e) {
-                                logger.warn('Failed to sync feature flags on start:', (0, errorHelpers_js_1.getErrorMessage)(e));
+                                logger.warn('Failed to sync feature flags on start:', getErrorMessage(e));
                             }
                         }
                         try {
@@ -759,7 +675,7 @@ async function startServer() {
                             setInterval(() => {
                                 authTrackingService
                                     .closeStaleSessions(maxAgeHours)
-                                    .catch((e) => logger.warn('Stale session sweep failed', (0, errorHelpers_js_1.getErrorMessage)(e)));
+                                    .catch((e) => logger.warn('Stale session sweep failed', getErrorMessage(e)));
                             }, Math.max(1, sweepMinutes) * 60 * 1000);
                             logger.info('🧹 Stale session sweeper enabled', {
                                 maxAgeHours,
@@ -767,7 +683,7 @@ async function startServer() {
                             });
                         }
                         catch (e) {
-                            logger.warn('Failed to initialize stale session sweeper', (0, errorHelpers_js_1.getErrorMessage)(e));
+                            logger.warn('Failed to initialize stale session sweeper', getErrorMessage(e));
                         }
                         if (process.env.NODE_ENV === 'production') {
                             logger.info('🌐 Production deployment ready at https://conquestk.com');
@@ -781,7 +697,7 @@ async function startServer() {
                     }
                 }
                 catch (dbError) {
-                    const normalizedDbError = (0, errorHelpers_js_1.toKnownError)(dbError);
+                    const normalizedDbError = toKnownError(dbError);
                     logger.error('❌ Database initialization failed:', normalizedDbError);
                     logger.error(`  Error type: ${normalizedDbError.constructor.name}`);
                     logger.error(`  Error message: ${normalizedDbError.message}`);

@@ -1,16 +1,11 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_crypto_1 = require("node:crypto");
-const node_fs_1 = __importDefault(require("node:fs"));
-const node_os_1 = __importDefault(require("node:os"));
-const node_path_1 = __importDefault(require("node:path"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config({ path: node_path_1.default.resolve(process.cwd(), '.env') });
-const imageStorage_js_1 = require("../utils/imageStorage.js");
-const logger_js_1 = require("../utils/logger.js");
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage.js';
+import { logger } from '../utils/logger.js';
 const parseArgs = () => {
     const opts = {};
     const args = process.argv.slice(2);
@@ -35,7 +30,7 @@ const parseArgs = () => {
     }
     return opts;
 };
-const ensurePath = (p) => (node_path_1.default.isAbsolute(p) ? p : node_path_1.default.resolve(process.cwd(), p));
+const ensurePath = (p) => (path.isAbsolute(p) ? p : path.resolve(process.cwd(), p));
 const listCandidateJsonFiles = (root) => {
     const out = [];
     const scan = (dir, depth) => {
@@ -43,13 +38,13 @@ const listCandidateJsonFiles = (root) => {
             return;
         let entries = [];
         try {
-            entries = node_fs_1.default.readdirSync(dir, { withFileTypes: true });
+            entries = fs.readdirSync(dir, { withFileTypes: true });
         }
         catch {
             return;
         }
         for (const e of entries) {
-            const full = node_path_1.default.join(dir, e.name);
+            const full = path.join(dir, e.name);
             if (e.isDirectory()) {
                 scan(full, depth + 1);
             }
@@ -60,8 +55,8 @@ const listCandidateJsonFiles = (root) => {
     };
     scan(root, 0);
     return out.sort((a, b) => {
-        const aIsMap = node_path_1.default.basename(a).toLowerCase() === 'map.json';
-        const bIsMap = node_path_1.default.basename(b).toLowerCase() === 'map.json';
+        const aIsMap = path.basename(a).toLowerCase() === 'map.json';
+        const bIsMap = path.basename(b).toLowerCase() === 'map.json';
         if (aIsMap && !bIsMap)
             return -1;
         if (!aIsMap && bIsMap)
@@ -90,22 +85,22 @@ const slug = (name) => name
     .replace(/^-+|-+$/g, '') || 'map';
 const findImageFile = (folder, preferred) => {
     if (preferred) {
-        const candidate = node_path_1.default.join(folder, preferred);
-        if (node_fs_1.default.existsSync(candidate)) {
-            return { filePath: candidate, mimeType: extToMime(node_path_1.default.extname(candidate)) };
+        const candidate = path.join(folder, preferred);
+        if (fs.existsSync(candidate)) {
+            return { filePath: candidate, mimeType: extToMime(path.extname(candidate)) };
         }
     }
     const names = ['background.png', 'background.jpg', 'background.jpeg', 'background.webp'];
     for (const n of names) {
-        const candidate = node_path_1.default.join(folder, n);
-        if (node_fs_1.default.existsSync(candidate)) {
-            return { filePath: candidate, mimeType: extToMime(node_path_1.default.extname(candidate)) };
+        const candidate = path.join(folder, n);
+        if (fs.existsSync(candidate)) {
+            return { filePath: candidate, mimeType: extToMime(path.extname(candidate)) };
         }
     }
-    for (const file of node_fs_1.default.readdirSync(folder)) {
+    for (const file of fs.readdirSync(folder)) {
         if (/\.(png|jpe?g|webp|gif)$/i.test(file)) {
-            const candidate = node_path_1.default.join(folder, file);
-            return { filePath: candidate, mimeType: extToMime(node_path_1.default.extname(candidate)) };
+            const candidate = path.join(folder, file);
+            return { filePath: candidate, mimeType: extToMime(path.extname(candidate)) };
         }
     }
     return null;
@@ -146,14 +141,14 @@ const normalizeImageUrl = (url) => {
 async function extractZip(zipPath) {
     try {
         const AdmZip = (await import('adm-zip')).default;
-        const tempDir = node_path_1.default.join(node_os_1.default.tmpdir(), `maps-import-${(0, node_crypto_1.randomUUID)()}`);
-        node_fs_1.default.mkdirSync(tempDir, { recursive: true });
+        const tempDir = path.join(os.tmpdir(), `maps-import-${randomUUID()}`);
+        fs.mkdirSync(tempDir, { recursive: true });
         const zip = new AdmZip(zipPath);
         zip.extractAllTo(tempDir, true);
         return tempDir;
     }
     catch (err) {
-        logger_js_1.logger.error('Failed to load/extract zip. Install adm-zip or extract manually and use --dir.', err);
+        logger.error('Failed to load/extract zip. Install adm-zip or extract manually and use --dir.', err);
         throw new Error('adm-zip not installed. Run: cd backend && npm i adm-zip');
     }
 }
@@ -162,10 +157,10 @@ async function run() {
     let userId;
     if (!opts.dryRun) {
         userId = await resolveCreatorUserId(opts.userId || process.env.IMPORT_USER_ID);
-        logger_js_1.logger.info(`Using creator user: ${userId}`);
+        logger.info(`Using creator user: ${userId}`);
     }
     else {
-        logger_js_1.logger.info('Dry run: skipping user lookup and database writes');
+        logger.info('Dry run: skipping user lookup and database writes');
     }
     let workingRoot;
     if (opts.dirPath) {
@@ -173,25 +168,25 @@ async function run() {
     }
     else if (opts.zipPath) {
         const zipAbs = ensurePath(opts.zipPath);
-        if (!node_fs_1.default.existsSync(zipAbs))
+        if (!fs.existsSync(zipAbs))
             throw new Error(`Zip not found: ${zipAbs}`);
         workingRoot = await extractZip(zipAbs);
     }
     else {
-        const defaultZip = node_path_1.default.resolve(process.cwd(), '../../maps-package.zip');
-        if (!node_fs_1.default.existsSync(defaultZip))
+        const defaultZip = path.resolve(process.cwd(), '../../maps-package.zip');
+        if (!fs.existsSync(defaultZip))
             throw new Error('Provide --zip <file> or --dir <folder>');
         workingRoot = await extractZip(defaultZip);
     }
     const jsonFiles = listCandidateJsonFiles(workingRoot);
     if (jsonFiles.length === 0) {
-        logger_js_1.logger.warn('No map JSON files found in the package');
+        logger.warn('No map JSON files found in the package');
         return;
     }
     for (const jsonPath of jsonFiles) {
-        const folder = node_path_1.default.dirname(jsonPath);
+        const folder = path.dirname(jsonPath);
         try {
-            const raw = node_fs_1.default.readFileSync(jsonPath, 'utf8');
+            const raw = fs.readFileSync(jsonPath, 'utf8');
             const data = JSON.parse(raw);
             if (!data.name || typeof data.name !== 'string')
                 throw new Error('map.json missing name');
@@ -202,7 +197,7 @@ async function run() {
             const existingMap = await query('SELECT id FROM maps WHERE LOWER(name) = LOWER($1) LIMIT 1', [data.name.trim()]);
             const existingDraft = await query("SELECT id FROM map_drafts WHERE LOWER(name) = LOWER($1) AND draft_status != 'submitted' LIMIT 1", [data.name.trim()]);
             if (existingMap.rows[0]?.id || existingDraft.rows[0]?.id) {
-                logger_js_1.logger.info('⏭️  Skipping existing map by name', {
+                logger.info('⏭️  Skipping existing map by name', {
                     name: data.name,
                     existingMapId: existingMap.rows[0]?.id,
                     existingDraftId: existingDraft.rows[0]?.id,
@@ -217,7 +212,7 @@ async function run() {
             if (data.image && typeof data.image.data === 'string') {
                 const match = data.image.data.match(/^data:[^;]+;base64,(.*)$/);
                 const base64 = match ? match[1] : data.image.data;
-                const info = await (0, imageStorage_js_1.storeBase64Image)(base64, {
+                const info = await storeBase64Image(base64, {
                     mimeType: data.image.mimeType || 'image/png',
                     preferredFilename: data.imageFilename || 'background.png',
                     subdirectory: subdir,
@@ -230,10 +225,10 @@ async function run() {
                 const found = findImageFile(folder, data.imageFilename);
                 if (!found)
                     throw new Error('No image found in folder');
-                const buffer = node_fs_1.default.readFileSync(found.filePath);
-                const info = await (0, imageStorage_js_1.storeImageBuffer)(buffer, {
+                const buffer = fs.readFileSync(found.filePath);
+                const info = await storeImageBuffer(buffer, {
                     mimeType: found.mimeType,
-                    preferredFilename: node_path_1.default.basename(found.filePath),
+                    preferredFilename: path.basename(found.filePath),
                     subdirectory: subdir,
                 });
                 imageUrl = normalizeImageUrl(info.relativeUrl);
@@ -269,13 +264,13 @@ async function run() {
                         ? data.height
                         : imageHeight,
             };
-            const csvTerritories = node_fs_1.default.readdirSync(folder).find((f) => /^territories_.*\.csv$/i.test(f));
-            const csvAdj = node_fs_1.default.readdirSync(folder).find((f) => /^adjacencies_.*\.csv$/i.test(f));
-            const csvRegions = node_fs_1.default.readdirSync(folder).find((f) => /^regions_.*\.csv$/i.test(f));
-            const csvBonuses = node_fs_1.default.readdirSync(folder).find((f) => /^bonuses_.*\.csv$/i.test(f));
-            const csvCapitals = node_fs_1.default.readdirSync(folder).find((f) => /^capitals_.*\.csv$/i.test(f));
+            const csvTerritories = fs.readdirSync(folder).find((f) => /^territories_.*\.csv$/i.test(f));
+            const csvAdj = fs.readdirSync(folder).find((f) => /^adjacencies_.*\.csv$/i.test(f));
+            const csvRegions = fs.readdirSync(folder).find((f) => /^regions_.*\.csv$/i.test(f));
+            const csvBonuses = fs.readdirSync(folder).find((f) => /^bonuses_.*\.csv$/i.test(f));
+            const csvCapitals = fs.readdirSync(folder).find((f) => /^capitals_.*\.csv$/i.test(f));
             const parseCsv = (filePath) => {
-                const text = node_fs_1.default.readFileSync(filePath, 'utf8');
+                const text = fs.readFileSync(filePath, 'utf8');
                 return text
                     .replace(/\r\n/g, '\n')
                     .replace(/\r/g, '\n')
@@ -284,7 +279,7 @@ async function run() {
                     .map((l) => l.split(',').map((s) => s.trim()));
             };
             if (csvTerritories) {
-                const rows = parseCsv(node_path_1.default.join(folder, csvTerritories));
+                const rows = parseCsv(path.join(folder, csvTerritories));
                 const header = rows.shift() || [];
                 const idxId = header.findIndex((h) => h.toLowerCase().includes('territory'));
                 const idxName = header.findIndex((h) => h.toLowerCase() === 'name');
@@ -301,7 +296,7 @@ async function run() {
                 metadata.territories = territories;
             }
             if (csvAdj) {
-                const rows = parseCsv(node_path_1.default.join(folder, csvAdj));
+                const rows = parseCsv(path.join(folder, csvAdj));
                 const header = rows.shift() || [];
                 const idxFrom = header.findIndex((h) => h.toLowerCase() === 'source' || h.toLowerCase() === 'from');
                 const idxTo = header.findIndex((h) => h.toLowerCase() === 'target' || h.toLowerCase() === 'to');
@@ -311,15 +306,15 @@ async function run() {
                 metadata.adjacencies = adjs;
             }
             if (csvRegions && csvBonuses) {
-                const regRows = parseCsv(node_path_1.default.join(folder, csvRegions));
-                const bonusRows = parseCsv(node_path_1.default.join(folder, csvBonuses));
+                const regRows = parseCsv(path.join(folder, csvRegions));
+                const bonusRows = parseCsv(path.join(folder, csvBonuses));
                 if (regRows.length > 1) {
                 }
                 if (bonusRows.length > 1) {
                 }
             }
             if (csvCapitals) {
-                const capRows = parseCsv(node_path_1.default.join(folder, csvCapitals));
+                const capRows = parseCsv(path.join(folder, csvCapitals));
                 if (capRows.length > 1) {
                     const ids = capRows
                         .slice(1)
@@ -404,7 +399,7 @@ async function run() {
             metadata.territories = normTerritories;
             metadata.adjacencies = normAdjacencies;
             if (opts.dryRun) {
-                logger_js_1.logger.info(`DRY RUN: would import "${data.name}" from ${folder}`);
+                logger.info(`DRY RUN: would import "${data.name}" from ${folder}`);
                 continue;
             }
             if (opts.forceDraft) {
@@ -422,7 +417,7 @@ async function run() {
                     isPublic: false,
                     tags: Array.isArray(data.tags) ? data.tags : [],
                 });
-                logger_js_1.logger.info(`📝 Saved draft: ${data.name} (${draft.id})`);
+                logger.info(`📝 Saved draft: ${data.name} (${draft.id})`);
                 continue;
             }
             try {
@@ -446,13 +441,13 @@ async function run() {
                         height: metadata.height,
                     },
                 });
-                logger_js_1.logger.info(`✅ Imported map: ${created.name} (${created.id})`);
+                logger.info(`✅ Imported map: ${created.name} (${created.id})`);
                 try {
                     const { query } = (await import('../config/database.js'));
                     const t = await query('SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1', [created.id]);
                     const c = await query('SELECT COUNT(*) AS c FROM map_sectors WHERE map_id = $1', [created.id]);
                     const a = await query('SELECT COUNT(*) AS c FROM territory_adjacencies WHERE map_id = $1', [created.id]);
-                    logger_js_1.logger.info('📊 Inserted rows', {
+                    logger.info('📊 Inserted rows', {
                         mapId: created.id,
                         territories: parseInt(t.rows[0]?.c || '0', 10),
                         sectors: parseInt(c.rows[0]?.c || '0', 10),
@@ -460,7 +455,7 @@ async function run() {
                     });
                 }
                 catch (countErr) {
-                    logger_js_1.logger.warn('Could not fetch row counts after import', { error: countErr });
+                    logger.warn('Could not fetch row counts after import', { error: countErr });
                 }
                 if (opts.approve) {
                     try {
@@ -469,10 +464,10 @@ async function run() {
                         await mapWorkflowService.approveMap(created.id, adminId, {
                             notes: 'Auto-approved by import script',
                         });
-                        logger_js_1.logger.info(`🔓 Approved map: ${created.name} (${created.id})`);
+                        logger.info(`🔓 Approved map: ${created.name} (${created.id})`);
                     }
                     catch (approveErr) {
-                        logger_js_1.logger.warn('Failed to auto-approve map (skipping)', {
+                        logger.warn('Failed to auto-approve map (skipping)', {
                             mapId: created.id,
                             error: approveErr,
                         });
@@ -495,7 +490,7 @@ async function run() {
                         isPublic: false,
                         tags: Array.isArray(data.tags) ? data.tags : [],
                     });
-                    logger_js_1.logger.info(`📝 Saved draft: ${data.name} (${draft.id})`);
+                    logger.info(`📝 Saved draft: ${data.name} (${draft.id})`);
                 }
                 else {
                     throw createErr;
@@ -503,7 +498,7 @@ async function run() {
             }
         }
         catch (err) {
-            logger_js_1.logger.error(`❌ Failed to process ${jsonPath}`, { error: err });
+            logger.error(`❌ Failed to process ${jsonPath}`, { error: err });
         }
     }
     try {
@@ -517,28 +512,28 @@ async function run() {
             const mapsToUpdate = await query(`SELECT COUNT(*) AS total FROM maps WHERE image_url LIKE $1`, [like]);
             const mapsCount = parseInt(mapsToUpdate.rows[0]?.total || '0', 10);
             if (mapsCount > 0) {
-                logger_js_1.logger.info(`Post-import: updating ${mapsCount} map image URL(s) to ${publicBase}`);
+                logger.info(`Post-import: updating ${mapsCount} map image URL(s) to ${publicBase}`);
                 await query(`UPDATE maps SET image_url = REPLACE(image_url, $1, $2) WHERE image_url LIKE $3`, [oldPrefix, publicBase, like]);
             }
             const draftsToUpdate = await query(`SELECT COUNT(*) AS total FROM map_drafts WHERE image_url LIKE $1`, [like]);
             const draftsCount = parseInt(draftsToUpdate.rows[0]?.total || '0', 10);
             if (draftsCount > 0) {
-                logger_js_1.logger.info(`Post-import: updating ${draftsCount} draft image URL(s) to ${publicBase}`);
+                logger.info(`Post-import: updating ${draftsCount} draft image URL(s) to ${publicBase}`);
                 await query(`UPDATE map_drafts SET image_url = REPLACE(image_url, $1, $2) WHERE image_url LIKE $3`, [oldPrefix, publicBase, like]);
             }
         }
         else {
-            logger_js_1.logger.info('Post-import URL normalization skipped: ensure ASSET_ENDPOINT, ASSET_BUCKET, and PUBLIC_ASSET_BASE_URL are set to auto-rewrite raw R2 URLs to CDN');
+            logger.info('Post-import URL normalization skipped: ensure ASSET_ENDPOINT, ASSET_BUCKET, and PUBLIC_ASSET_BASE_URL are set to auto-rewrite raw R2 URLs to CDN');
         }
     }
     catch (normErr) {
-        logger_js_1.logger.warn('Post-import image URL normalization failed (non-critical):', normErr);
+        logger.warn('Post-import image URL normalization failed (non-critical):', normErr);
     }
 }
 run()
     .then(() => process.exit(0))
     .catch((err) => {
-    logger_js_1.logger.error('Import job failed', err);
+    logger.error('Import job failed', err);
     process.exit(1);
 });
 //# sourceMappingURL=importMapsPackage.js.map

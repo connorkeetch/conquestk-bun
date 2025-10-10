@@ -1,11 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.jobIdempotencyService = exports.JobIdempotencyService = void 0;
-const redis_js_1 = require("../config/redis.js");
-const logger_js_1 = require("../utils/logger.js");
+import { getRedisClient } from '../config/redis.js';
+import { logger } from '../utils/logger.js';
 const DEFAULT_TTL_SECONDS = 60 * 60;
 const IN_MEMORY_MAX_SIZE = 5000;
-class JobIdempotencyService {
+export class JobIdempotencyService {
     constructor() {
         this.inMemoryStore = new Map();
     }
@@ -13,7 +10,7 @@ class JobIdempotencyService {
         return `queue:idempotency:${queueName}:${jobKey}`;
     }
     getRedis() {
-        return (0, redis_js_1.getRedisClient)();
+        return getRedisClient();
     }
     cleanupInMemoryStore() {
         if (this.inMemoryStore.size === 0)
@@ -51,7 +48,7 @@ class JobIdempotencyService {
                         : { exists: true };
                 }
                 catch (parseError) {
-                    logger_js_1.logger.warn('Failed to parse idempotency payload from Redis', {
+                    logger.warn('Failed to parse idempotency payload from Redis', {
                         queueName,
                         jobKey,
                         error: parseError instanceof Error ? parseError.message : parseError,
@@ -60,7 +57,7 @@ class JobIdempotencyService {
                 }
             }
             catch (error) {
-                logger_js_1.logger.error('Redis error while reading job idempotency state', {
+                logger.error('Redis error while reading job idempotency state', {
                     queueName,
                     jobKey,
                     error,
@@ -85,7 +82,7 @@ class JobIdempotencyService {
                 : { exists: true };
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to parse in-memory idempotency payload', {
+            logger.warn('Failed to parse in-memory idempotency payload', {
                 queueName,
                 jobKey,
                 error,
@@ -105,7 +102,7 @@ class JobIdempotencyService {
                 return;
             }
             catch (error) {
-                logger_js_1.logger.error('Redis error while writing job idempotency state, falling back to memory', {
+                logger.error('Redis error while writing job idempotency state, falling back to memory', {
                     queueName,
                     jobKey,
                     error,
@@ -126,7 +123,7 @@ class JobIdempotencyService {
                 await redis.del(storageKey);
             }
             catch (error) {
-                logger_js_1.logger.error('Redis error while clearing job idempotency state', {
+                logger.error('Redis error while clearing job idempotency state', {
                     queueName,
                     jobKey,
                     error,
@@ -136,6 +133,5 @@ class JobIdempotencyService {
         this.inMemoryStore.delete(storageKey);
     }
 }
-exports.JobIdempotencyService = JobIdempotencyService;
-exports.jobIdempotencyService = new JobIdempotencyService();
+export const jobIdempotencyService = new JobIdempotencyService();
 //# sourceMappingURL=jobIdempotencyService.js.map

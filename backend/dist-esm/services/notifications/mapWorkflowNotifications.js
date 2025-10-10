@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildMapWorkflowNotification = buildMapWorkflowNotification;
-function buildMapWorkflowNotification(input) {
+export function buildMapWorkflowNotification(input) {
     const titlePrefix = input.status === 'approved' ? 'Map approved' : 'Map changes needed';
     const severity = input.status === 'approved' ? 'info' : 'warning';
     const body = input.status === 'approved'

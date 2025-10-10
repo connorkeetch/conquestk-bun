@@ -1,16 +1,12 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.clanService = exports.ClanService = exports.ClanServiceError = void 0;
-const database_js_1 = require("../config/database.js");
-const clanActivityService_js_1 = require("./clanActivityService.js");
-const clanProgressionService_js_1 = require("./clanProgressionService.js");
-class ClanServiceError extends Error {
+import { query, transaction } from '../config/database.js';
+import { logClanActivity } from './clanActivityService.js';
+import { clanProgressionService } from './clanProgressionService.js';
+export class ClanServiceError extends Error {
     constructor(code, message) {
         super(message);
         this.code = code;
     }
 }
-exports.ClanServiceError = ClanServiceError;
 const DEFAULT_ROLE_DEFINITIONS = [
     {
         name: 'Leader',
@@ -65,7 +61,7 @@ const DEFAULT_ROLE_DEFINITIONS = [
         displayOrder: 3,
     },
 ];
-class ClanService {
+export class ClanService {
     normalizeName(name) {
         const trimmed = name.trim();
         if (trimmed.length < 3) {
@@ -253,7 +249,7 @@ class ClanService {
     async listClans(filters = {}) {
         const values = [];
         const sql = this.buildListQuery(filters, values);
-        const result = await (0, database_js_1.query)(sql, values);
+        const result = await query(sql, values);
         const limit = Math.min(Math.max(filters.limit ?? 20, 1), 50);
         const rows = result.rows.slice(0, limit);
         const clans = rows.map((row) => this.mapClan(row));
@@ -275,12 +271,12 @@ class ClanService {
       WHERE c.slug = $1 AND c.deleted_at IS NULL
       GROUP BY c.id, u.username
     `;
-        const clanResult = await (0, database_js_1.query)(sql, [slug]);
+        const clanResult = await query(sql, [slug]);
         const row = clanResult.rows[0];
         if (!row) {
             return null;
         }
-        const membersResult = await (0, database_js_1.query)(`
+        const membersResult = await query(`
         SELECT
           m.id,
           m.clan_id,
@@ -303,14 +299,14 @@ class ClanService {
         WHERE m.clan_id = $1
         ORDER BY COALESCE(r.hierarchy_rank, 0) DESC, m.joined_at ASC
       `, [row.id]);
-        const announcementsResult = await (0, database_js_1.query)(`
+        const announcementsResult = await query(`
         SELECT id, clan_id, author_user_id, title, body_markdown, pinned, created_at, updated_at, expires_at
         FROM clan_announcements
         WHERE clan_id = $1
         ORDER BY pinned DESC, created_at DESC
         LIMIT 5
       `, [row.id]);
-        const activityResult = await (0, database_js_1.query)(`
+        const activityResult = await query(`
         SELECT
           a.id,
           a.clan_id,
@@ -328,8 +324,8 @@ class ClanService {
       `, [row.id]);
         const clan = this.mapClan(row);
         const [progression, activeObjectives] = await Promise.all([
-            clanProgressionService_js_1.clanProgressionService.getProgressionSummary(row.id),
-            clanProgressionService_js_1.clanProgressionService.ensureWeeklyObjectives(row.id),
+            clanProgressionService.getProgressionSummary(row.id),
+            clanProgressionService.ensureWeeklyObjectives(row.id),
         ]);
         return {
             ...clan,
@@ -345,7 +341,7 @@ class ClanService {
         };
     }
     async getClanById(clanId) {
-        const result = await (0, database_js_1.query)('SELECT * FROM clans WHERE id = $1 AND deleted_at IS NULL', [clanId]);
+        const result = await query('SELECT * FROM clans WHERE id = $1 AND deleted_at IS NULL', [clanId]);
         const row = result.rows[0];
         if (!row) {
             return null;
@@ -357,7 +353,7 @@ class ClanService {
         const tag = this.normalizeTag(payload.tag);
         const recruitmentPolicy = this.normalizeRecruitmentPolicy(payload.recruitmentPolicy);
         const slugBase = this.normalizeSlugBase(name);
-        const clanRow = await (0, database_js_1.transaction)(async (client) => {
+        const clanRow = await transaction(async (client) => {
             const membershipCheck = await client.query(`SELECT clan_id FROM clan_members WHERE user_id = $1 AND status = 'active' LIMIT 1`, [ownerUserId]);
             const activeMembershipCount = membershipCheck.rowCount ?? 0;
             if (activeMembershipCount > 0) {
@@ -427,7 +423,7 @@ class ClanService {
           INSERT INTO clan_members (clan_id, user_id, role_id, status)
           VALUES ($1, $2, $3, 'active')
         `, [clanId, ownerUserId, leaderRoleId]);
-            await (0, clanActivityService_js_1.logClanActivity)({
+            await logClanActivity({
                 clanId,
                 actorUserId: ownerUserId,
                 actionType: 'clan_created',
@@ -452,11 +448,11 @@ class ClanService {
             const result = await client.query(sql, [clanId, roleName]);
             return result.rows[0]?.id ?? null;
         }
-        const result = await (0, database_js_1.query)(sql, [clanId, roleName]);
+        const result = await query(sql, [clanId, roleName]);
         return result.rows[0]?.id ?? null;
     }
     async getActiveMembership(userId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         SELECT
           m.clan_id,
           c.slug AS clan_slug,
@@ -512,7 +508,7 @@ class ClanService {
         if (normalizedIds.length === 0) {
             return new Map();
         }
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         SELECT
           m.user_id,
           m.clan_id,
@@ -541,6 +537,5 @@ class ClanService {
         return membershipMap;
     }
 }
-exports.ClanService = ClanService;
-exports.clanService = new ClanService();
+export const clanService = new ClanService();
 //# sourceMappingURL=clanService.js.map

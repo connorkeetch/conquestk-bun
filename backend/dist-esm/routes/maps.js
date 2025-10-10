@@ -1,25 +1,20 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const express_validator_1 = require("express-validator");
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const multer_1 = __importDefault(require("multer"));
-const database_js_1 = require("../config/database.js");
-const auth_js_1 = require("../middleware/auth.js");
-const capitalGeneratorService_js_1 = require("../services/capitalGeneratorService.js");
-const mapPermissionService_js_1 = require("../services/mapPermissionService.js");
-const mapService_js_1 = require("../services/mapService.js");
-const imageStorage_js_1 = require("../utils/imageStorage.js");
-const logger_js_1 = require("../utils/logger.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const tagParser_js_1 = require("../utils/tagParser.js");
-const url_js_1 = require("../utils/url.js");
-const router = (0, express_1.Router)();
-const upload = (0, multer_1.default)({
-    storage: multer_1.default.memoryStorage(),
+import { Router } from 'express';
+import { body, param, validationResult } from 'express-validator';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import { getPool } from '../config/database.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { CapitalGeneratorService } from '../services/capitalGeneratorService.js';
+import { MapNotFoundError, MapPermissionError, mapPermissionService, } from '../services/mapPermissionService.js';
+import { mapService } from '../services/mapService.js';
+import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage.js';
+import { logger } from '../utils/logger.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+import { parseJsonField, parseTags } from '../utils/tagParser.js';
+import { resolveAssetUrl } from '../utils/url.js';
+const router = Router();
+const upload = multer({
+    storage: multer.memoryStorage(),
     limits: {
         fileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10),
         files: 1,
@@ -33,23 +28,23 @@ const upload = (0, multer_1.default)({
         if (hasValidExtension && hasValidMimeType) {
             return cb(null, true);
         }
-        logger_js_1.logger.warn(`File upload rejected: ${file.originalname} (${file.mimetype})`);
+        logger.warn(`File upload rejected: ${file.originalname} (${file.mimetype})`);
         cb(new Error('Only JPEG, PNG, GIF, and WebP images are allowed'));
     },
 });
 const validateCreateMap = [
-    (0, express_validator_1.body)('name').isLength({ min: 1, max: 100 }).withMessage('Map name must be 1-100 characters'),
-    (0, express_validator_1.body)('description')
+    body('name').isLength({ min: 1, max: 100 }).withMessage('Map name must be 1-100 characters'),
+    body('description')
         .optional()
         .isLength({ max: 500 })
         .withMessage('Description must be under 500 characters'),
-    (0, express_validator_1.body)('isPublic')
+    body('isPublic')
         .optional()
         .custom((value) => {
         return value === true || value === false || value === 'true' || value === 'false';
     })
         .withMessage('isPublic must be boolean or "true"/"false" string'),
-    (0, express_validator_1.body)('tags')
+    body('tags')
         .optional()
         .custom((value) => {
         if (Array.isArray(value))
@@ -66,7 +61,7 @@ const validateCreateMap = [
         return false;
     })
         .withMessage('Tags must be an array or valid JSON array string'),
-    (0, express_validator_1.body)('metadata')
+    body('metadata')
         .optional()
         .custom((value) => {
         if (typeof value === 'object' && value !== null)
@@ -85,69 +80,69 @@ const validateCreateMap = [
         .withMessage('Metadata must be a valid JSON object or string'),
 ];
 const validateUpdateMap = [
-    (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'),
-    (0, express_validator_1.body)('name')
+    param('mapId').isUUID().withMessage('Invalid map ID'),
+    body('name')
         .optional()
         .isLength({ min: 1, max: 100 })
         .withMessage('Map name must be 1-100 characters'),
-    (0, express_validator_1.body)('description')
+    body('description')
         .optional()
         .isLength({ max: 500 })
         .withMessage('Description must be under 500 characters'),
-    (0, express_validator_1.body)('isPublic').optional().isBoolean().withMessage('isPublic must be boolean'),
-    (0, express_validator_1.body)('tags').optional().isArray().withMessage('Tags must be an array'),
+    body('isPublic').optional().isBoolean().withMessage('isPublic must be boolean'),
+    body('tags').optional().isArray().withMessage('Tags must be an array'),
 ];
 const validateCreateTerritory = [
-    (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'),
-    (0, express_validator_1.body)('territoryId')
+    param('mapId').isUUID().withMessage('Invalid map ID'),
+    body('territoryId')
         .isLength({ min: 1, max: 50 })
         .withMessage('Territory ID must be 1-50 characters'),
-    (0, express_validator_1.body)('name')
+    body('name')
         .isLength({ min: 1, max: 100 })
         .withMessage('Territory name must be 1-100 characters'),
-    (0, express_validator_1.body)('boundaryCoords')
+    body('boundaryCoords')
         .isArray({ min: 3 })
         .withMessage('Must have at least 3 boundary coordinates'),
-    (0, express_validator_1.body)('armyPosition').isObject().withMessage('Army position must be an object'),
-    (0, express_validator_1.body)('armyPosition.x')
+    body('armyPosition').isObject().withMessage('Army position must be an object'),
+    body('armyPosition.x')
         .isInt({ min: 0 })
         .withMessage('Army position X must be a positive integer'),
-    (0, express_validator_1.body)('armyPosition.y')
+    body('armyPosition.y')
         .isInt({ min: 0 })
         .withMessage('Army position Y must be a positive integer'),
 ];
 const validateCreateSector = [
-    (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'),
-    (0, express_validator_1.body)('name').isLength({ min: 1, max: 100 }).withMessage('Sector name must be 1-100 characters'),
-    (0, express_validator_1.body)('bonusArmies').isInt({ min: 0, max: 20 }).withMessage('Bonus armies must be 0-20'),
-    (0, express_validator_1.body)('color').optional().isHexColor().withMessage('Color must be a valid hex color'),
+    param('mapId').isUUID().withMessage('Invalid map ID'),
+    body('name').isLength({ min: 1, max: 100 }).withMessage('Sector name must be 1-100 characters'),
+    body('bonusArmies').isInt({ min: 0, max: 20 }).withMessage('Bonus armies must be 0-20'),
+    body('color').optional().isHexColor().withMessage('Color must be a valid hex color'),
 ];
 const validateCreateAdjacency = [
-    (0, express_validator_1.body)('fromTerritoryId').isUUID().withMessage('Invalid from territory ID'),
-    (0, express_validator_1.body)('toTerritoryId').isUUID().withMessage('Invalid to territory ID'),
-    (0, express_validator_1.body)('connectionType')
+    body('fromTerritoryId').isUUID().withMessage('Invalid from territory ID'),
+    body('toTerritoryId').isUUID().withMessage('Invalid to territory ID'),
+    body('connectionType')
         .optional()
         .isIn(['land', 'sea', 'air', 'tunnel', 'special'])
         .withMessage('Invalid connection type'),
-    (0, express_validator_1.body)('isBidirectional').optional().isBoolean().withMessage('isBidirectional must be boolean'),
+    body('isBidirectional').optional().isBoolean().withMessage('isBidirectional must be boolean'),
 ];
 const validateRating = [
-    (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'),
-    (0, express_validator_1.body)('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be 1-5'),
-    (0, express_validator_1.body)('review')
+    param('mapId').isUUID().withMessage('Invalid map ID'),
+    body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be 1-5'),
+    body('review')
         .optional()
         .isLength({ max: 1000 })
         .withMessage('Review must be under 1000 characters'),
 ];
 const checkValidation = (req, res, next) => {
-    const errors = (0, express_validator_1.validationResult)(req);
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ error: 'Validation failed', details: errors.array() });
     }
     return next();
 };
 const handleMulterError = (error, _req, res, next) => {
-    if (error instanceof multer_1.default.MulterError) {
+    if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             res.status(400).json({ error: 'Image file is too large. Maximum size is 10MB.' });
             return;
@@ -167,7 +162,7 @@ const handleMulterError = (error, _req, res, next) => {
 };
 router.get('/available-for-game', async (req, res) => {
     try {
-        const pool = await (0, database_js_1.getPool)();
+        const pool = await getPool();
         let includeVipMaps = false;
         const authHeader = req.headers.authorization;
         if (authHeader?.startsWith('Bearer ')) {
@@ -175,7 +170,7 @@ router.get('/available-for-game', async (req, res) => {
             const jwtSecret = process.env.JWT_SECRET;
             if (jwtSecret) {
                 try {
-                    const decoded = jsonwebtoken_1.default.verify(token, jwtSecret);
+                    const decoded = jwt.verify(token, jwtSecret);
                     const userId = typeof decoded === 'object' ? decoded.userId : undefined;
                     if (userId) {
                         const userResult = await pool.query('SELECT is_admin, is_vip FROM users WHERE id = $1 LIMIT 1', [userId]);
@@ -226,7 +221,7 @@ router.get('/available-for-game', async (req, res) => {
     `;
         const result = await pool.query(query);
         const maps = result.rows.map((row) => {
-            const imageUrl = (0, url_js_1.resolveAssetUrl)(req, row.image_url);
+            const imageUrl = resolveAssetUrl(req, row.image_url);
             return {
                 id: row.id,
                 name: row.name,
@@ -256,13 +251,13 @@ router.get('/available-for-game', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch available maps');
+        handleRouteError(error, req, 'Failed to fetch available maps');
         return res.status(500).json({ error: 'Failed to fetch available maps' });
     }
 });
 router.get('/', async (req, res) => {
     try {
-        const pool = await (0, database_js_1.getPool)();
+        const pool = await getPool();
         const isPublic = req.query.isPublic !== 'false';
         const status = req.query.status || 'approved';
         const sortBy = req.query.sortBy || 'popularity';
@@ -329,7 +324,7 @@ router.get('/', async (req, res) => {
             id: row.id,
             name: row.name,
             description: row.description || '',
-            imageUrl: (0, url_js_1.resolveAssetUrl)(req, row.image_url),
+            imageUrl: resolveAssetUrl(req, row.image_url),
             creatorId: row.creator_id,
             creatorName: row.creator_name || 'Unknown',
             minPlayers: row.min_players || 2,
@@ -360,11 +355,11 @@ router.get('/', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch maps');
+        handleRouteError(error, req, 'Failed to fetch maps');
         return res.status(500).json({ error: 'Failed to fetch maps' });
     }
 });
-router.get('/my-maps', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/my-maps', authenticateToken, async (req, res) => {
     try {
         const filters = {
             creator: req.userId,
@@ -374,8 +369,8 @@ router.get('/my-maps', auth_js_1.authenticateToken, async (req, res) => {
             limit: req.query.limit ? parseInt(req.query.limit, 10) : 50,
             offset: req.query.offset ? parseInt(req.query.offset, 10) : 0,
         };
-        const result = await mapService_js_1.mapService.searchMaps(filters);
-        const pool = await (0, database_js_1.getPool)();
+        const result = await mapService.searchMaps(filters);
+        const pool = await getPool();
         const mapIds = result.maps.map((m) => m.id);
         let statusMap = null;
         if (mapIds.length > 0) {
@@ -388,7 +383,7 @@ router.get('/my-maps', auth_js_1.authenticateToken, async (req, res) => {
             statusMap = new Map(statusResult.rows.map((r) => [r.id, r.status]));
         }
         const maps = result.maps.map((map) => {
-            const resolvedImageUrl = (0, url_js_1.resolveAssetUrl)(req, map.imageUrl);
+            const resolvedImageUrl = resolveAssetUrl(req, map.imageUrl);
             return {
                 ...map,
                 imageUrl: resolvedImageUrl || map.imageUrl,
@@ -398,11 +393,11 @@ router.get('/my-maps', auth_js_1.authenticateToken, async (req, res) => {
         return res.json(maps);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch user maps');
+        handleRouteError(error, req, 'Failed to fetch user maps');
         return res.status(500).json({ error: 'Failed to fetch user maps' });
     }
 });
-router.get('/my/maps', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/my/maps', authenticateToken, async (req, res) => {
     try {
         const filters = {
             creator: req.userId,
@@ -412,17 +407,17 @@ router.get('/my/maps', auth_js_1.authenticateToken, async (req, res) => {
             limit: req.query.limit ? parseInt(req.query.limit, 10) : 20,
             offset: req.query.offset ? parseInt(req.query.offset, 10) : 0,
         };
-        const result = await mapService_js_1.mapService.searchMaps(filters);
+        const result = await mapService.searchMaps(filters);
         return res.json(result);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch user maps');
+        handleRouteError(error, req, 'Failed to fetch user maps');
         return res.status(500).json({ error: 'Failed to fetch user maps' });
     }
 });
-router.get('/:mapId', (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
+router.get('/:mapId', param('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
     try {
-        const mapData = await mapService_js_1.mapService.getMapWithFullData(req.params.mapId);
+        const mapData = await mapService.getMapWithFullData(req.params.mapId);
         if (!mapData) {
             return res.status(404).json({ error: 'Map not found' });
         }
@@ -432,20 +427,20 @@ router.get('/:mapId', (0, express_validator_1.param)('mapId').isUUID().withMessa
         return res.json(mapData);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch map', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to fetch map', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to fetch map' });
     }
 });
-router.get('/:mapId/validate', auth_js_1.authenticateToken, (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
+router.get('/:mapId/validate', authenticateToken, param('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
     try {
         const mapId = req.params.mapId;
-        const map = await mapService_js_1.mapService.getMap(mapId);
+        const map = await mapService.getMap(mapId);
         if (!map) {
             return res.status(404).json({ error: 'Map not found' });
         }
         if (!map.isPublic) {
             try {
-                await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, { userId: req.userId }, {
+                await mapPermissionService.assertCanEditMap(mapId, { userId: req.userId }, {
                     allowCollaborator: true,
                 });
             }
@@ -453,37 +448,37 @@ router.get('/:mapId/validate', auth_js_1.authenticateToken, (0, express_validato
                 return res.status(403).json({ error: 'Access denied' });
             }
         }
-        const result = await mapService_js_1.mapService.validateMapPlayable(mapId);
+        const result = await mapService.validateMapPlayable(mapId);
         return res.json(result);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to validate map', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to validate map', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to validate map' });
     }
 });
 router.get('/game-modes/list', async (_req, res) => {
     try {
-        const gameModes = await mapService_js_1.mapService.getGameModes();
+        const gameModes = await mapService.getGameModes();
         return res.json(gameModes);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, _req, 'Failed to fetch game modes');
+        handleRouteError(error, _req, 'Failed to fetch game modes');
         return res.status(500).json({ error: 'Failed to fetch game modes' });
     }
 });
 router.get('/abilities/list', async (_req, res) => {
     try {
-        const abilities = await mapService_js_1.mapService.getTerritoryAbilityTypes();
+        const abilities = await mapService.getTerritoryAbilityTypes();
         return res.json(abilities);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, _req, 'Failed to fetch territory abilities');
+        handleRouteError(error, _req, 'Failed to fetch territory abilities');
         return res.status(500).json({ error: 'Failed to fetch territory abilities' });
     }
 });
-router.post('/json', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/json', authenticateToken, async (req, res) => {
     try {
-        logger_js_1.logger.info('Creating map with JSON data:', {
+        logger.info('Creating map with JSON data:', {
             name: req.body.name,
             hasImage: !!req.body.image,
             hasMetadata: !!req.body.metadata,
@@ -492,7 +487,7 @@ router.post('/json', auth_js_1.authenticateToken, async (req, res) => {
             headers: req.headers['content-type'],
         });
         let tags = [];
-        logger_js_1.logger.info('Tags received:', {
+        logger.info('Tags received:', {
             tags: req.body.tags,
             type: typeof req.body.tags,
             isArray: Array.isArray(req.body.tags),
@@ -539,7 +534,7 @@ router.post('/json', auth_js_1.authenticateToken, async (req, res) => {
                 const imageData = req.body.image.data;
                 const mimeType = req.body.image.mimeType || 'image/png';
                 const filename = req.body.image.filename || `map-${Date.now()}.png`;
-                const storedImage = await (0, imageStorage_js_1.storeBase64Image)(imageData, {
+                const storedImage = await storeBase64Image(imageData, {
                     mimeType,
                     preferredFilename: filename,
                 });
@@ -548,7 +543,7 @@ router.post('/json', auth_js_1.authenticateToken, async (req, res) => {
                 mapData.imageHeight = storedImage.height;
             }
             catch (imageError) {
-                logger_js_1.logger.error('Failed to process base64 image:', imageError);
+                logger.error('Failed to process base64 image:', imageError);
                 return res.status(400).json({
                     error: 'Failed to process image',
                     message: 'The image data could not be processed',
@@ -558,15 +553,15 @@ router.post('/json', auth_js_1.authenticateToken, async (req, res) => {
         if (req.body.metadata) {
             mapData.metadata = req.body.metadata;
         }
-        const map = await mapService_js_1.mapService.createMap(req.userId, mapData);
-        logger_js_1.logger.info('Map created successfully:', {
+        const map = await mapService.createMap(req.userId, mapData);
+        logger.info('Map created successfully:', {
             mapId: map.id,
             name: map.name,
         });
         return res.status(201).json(map);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create map', 500, { endpoint: '/api/maps/json' });
+        handleRouteError(error, req, 'Failed to create map', 500, { endpoint: '/api/maps/json' });
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         if (errorMessage.includes('duplicate key')) {
             return res.status(400).json({
@@ -589,9 +584,9 @@ router.post('/json', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
 });
-router.post('/', auth_js_1.authenticateToken, upload.single('image'), handleMulterError, validateCreateMap, checkValidation, async (req, res) => {
+router.post('/', authenticateToken, upload.single('image'), handleMulterError, validateCreateMap, checkValidation, async (req, res) => {
     try {
-        logger_js_1.logger.info('Creating map with data:', {
+        logger.info('Creating map with data:', {
             name: req.body.name,
             hasImage: !!req.file,
             hasMetadata: !!req.body.metadata,
@@ -601,22 +596,22 @@ router.post('/', auth_js_1.authenticateToken, upload.single('image'), handleMult
             name: req.body.name,
             description: req.body.description,
             isPublic: req.body.isPublic === 'true' || req.body.isPublic === true,
-            tags: (0, tagParser_js_1.parseTags)(req.body.tags),
+            tags: parseTags(req.body.tags),
         };
         let metadata = null;
         if (req.body.metadata) {
-            metadata = (0, tagParser_js_1.parseJsonField)(req.body.metadata, null);
+            metadata = parseJsonField(req.body.metadata, null);
             if (metadata) {
                 const sectorsLen = Array.isArray(metadata.sectors)
                     ? metadata.sectors.length
                     : 0;
-                logger_js_1.logger.info('Parsed metadata:', {
+                logger.info('Parsed metadata:', {
                     territories: metadata.territories?.length || 0,
                     sectors: sectorsLen,
                 });
             }
             else if (req.body.metadata) {
-                logger_js_1.logger.error('Failed to parse metadata');
+                logger.error('Failed to parse metadata');
                 return res.status(400).json({
                     error: 'Invalid metadata format',
                     details: 'The map data (territories and sectors) could not be parsed',
@@ -625,7 +620,7 @@ router.post('/', auth_js_1.authenticateToken, upload.single('image'), handleMult
         }
         if (req.file) {
             try {
-                const stored = await (0, imageStorage_js_1.storeImageBuffer)(req.file.buffer, {
+                const stored = await storeImageBuffer(req.file.buffer, {
                     mimeType: req.file.mimetype,
                     preferredFilename: req.file.originalname,
                 });
@@ -634,7 +629,7 @@ router.post('/', auth_js_1.authenticateToken, upload.single('image'), handleMult
                 mapData.imageHeight = stored.height;
             }
             catch (uploadError) {
-                logger_js_1.logger.error('Failed to process uploaded image:', uploadError);
+                logger.error('Failed to process uploaded image:', uploadError);
                 return res.status(400).json({
                     error: 'Failed to process image',
                     message: 'The uploaded image could not be processed',
@@ -644,15 +639,15 @@ router.post('/', auth_js_1.authenticateToken, upload.single('image'), handleMult
         if (metadata) {
             mapData.metadata = metadata;
         }
-        const map = await mapService_js_1.mapService.createMap(req.userId, mapData);
-        logger_js_1.logger.info('Map created successfully:', {
+        const map = await mapService.createMap(req.userId, mapData);
+        logger.info('Map created successfully:', {
             mapId: map.id,
             name: map.name,
         });
         return res.status(201).json(map);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create map');
+        handleRouteError(error, req, 'Failed to create map');
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         return res.status(500).json({
             error: 'Failed to create map',
@@ -661,7 +656,7 @@ router.post('/', auth_js_1.authenticateToken, upload.single('image'), handleMult
         });
     }
 });
-router.put('/:mapId', auth_js_1.authenticateToken, upload.single('image'), validateUpdateMap, checkValidation, async (req, res) => {
+router.put('/:mapId', authenticateToken, upload.single('image'), validateUpdateMap, checkValidation, async (req, res) => {
     const userId = req.userId;
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -671,11 +666,11 @@ router.put('/:mapId', auth_js_1.authenticateToken, upload.single('image'), valid
             name: req.body.name,
             description: req.body.description,
             isPublic: req.body.isPublic,
-            tags: (0, tagParser_js_1.parseTags)(req.body.tags),
+            tags: parseTags(req.body.tags),
         };
         if (req.file) {
             try {
-                const stored = await (0, imageStorage_js_1.storeImageBuffer)(req.file.buffer, {
+                const stored = await storeImageBuffer(req.file.buffer, {
                     mimeType: req.file.mimetype,
                     preferredFilename: req.file.originalname,
                 });
@@ -684,99 +679,99 @@ router.put('/:mapId', auth_js_1.authenticateToken, upload.single('image'), valid
                 updates.imageHeight = stored.height;
             }
             catch (uploadError) {
-                logger_js_1.logger.error('Failed to process uploaded image for update:', uploadError);
+                logger.error('Failed to process uploaded image for update:', uploadError);
                 return res.status(400).json({
                     error: 'Failed to process image',
                     message: 'The uploaded image could not be processed',
                 });
             }
         }
-        const map = await mapService_js_1.mapService.updateMap(req.params.mapId, userId, updates, {
+        const map = await mapService.updateMap(req.params.mapId, userId, updates, {
             isAdmin: req.user?.isAdmin,
             allowCollaborator: true,
         });
         return res.json(map);
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             return res.status(403).json({ error: error.message });
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             return res.status(404).json({ error: 'Map not found' });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update map', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to update map', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to update map' });
     }
 });
-router.delete('/:mapId', auth_js_1.authenticateToken, (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
+router.delete('/:mapId', authenticateToken, param('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
     const userId = req.userId;
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
     }
     try {
-        await mapService_js_1.mapService.deleteMap(req.params.mapId, userId, { isAdmin: req.user?.isAdmin });
+        await mapService.deleteMap(req.params.mapId, userId, { isAdmin: req.user?.isAdmin });
         return res.json({ message: 'Map deleted successfully' });
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             return res.status(403).json({ error: error.message });
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             return res.status(404).json({ error: 'Map not found' });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to delete map', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to delete map', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to delete map' });
     }
 });
-router.post('/:mapId/sectors', auth_js_1.authenticateToken, validateCreateSector, checkValidation, async (req, res) => {
+router.post('/:mapId/sectors', authenticateToken, validateCreateSector, checkValidation, async (req, res) => {
     const userId = req.userId;
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
     }
     try {
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(req.params.mapId, {
+        await mapPermissionService.assertCanEditMap(req.params.mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
-        const sector = await mapService_js_1.mapService.createSector(req.params.mapId, req.body.name, req.body.bonusArmies, req.body.color);
+        const sector = await mapService.createSector(req.params.mapId, req.body.name, req.body.bonusArmies, req.body.color);
         return res.status(201).json(sector);
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             return res.status(403).json({ error: error.message });
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             return res.status(404).json({ error: 'Map not found' });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create sector', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to create sector', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to create sector' });
     }
 });
-router.post('/:mapId/continents', auth_js_1.authenticateToken, validateCreateSector, checkValidation, async (req, res) => {
+router.post('/:mapId/continents', authenticateToken, validateCreateSector, checkValidation, async (req, res) => {
     try {
         req.url = `/${req.params.mapId}/sectors`;
-        const sector = await mapService_js_1.mapService.createSector(req.params.mapId, req.body.name, req.body.bonusArmies, req.body.color);
+        const sector = await mapService.createSector(req.params.mapId, req.body.name, req.body.bonusArmies, req.body.color);
         return res.status(201).json(sector);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create sector (compat)', 500, {
+        handleRouteError(error, req, 'Failed to create sector (compat)', 500, {
             mapId: req.params.mapId,
         });
         return res.status(500).json({ error: 'Failed to create sector' });
     }
 });
-router.post('/:mapId/territories', auth_js_1.authenticateToken, validateCreateTerritory, checkValidation, async (req, res) => {
+router.post('/:mapId/territories', authenticateToken, validateCreateTerritory, checkValidation, async (req, res) => {
     const userId = req.userId;
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
     }
     try {
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(req.params.mapId, {
+        await mapPermissionService.assertCanEditMap(req.params.mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
         const bodyWithSectors = req.body;
-        const territory = await mapService_js_1.mapService.createTerritory({
+        const territory = await mapService.createTerritory({
             mapId: req.params.mapId,
             territoryId: req.body.territoryId,
             name: req.body.name,
@@ -790,24 +785,24 @@ router.post('/:mapId/territories', auth_js_1.authenticateToken, validateCreateTe
         return res.status(201).json(territory);
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             return res.status(403).json({ error: error.message });
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             return res.status(404).json({ error: 'Map not found' });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create territory', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to create territory', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to create territory' });
     }
 });
-router.post('/adjacencies', auth_js_1.authenticateToken, validateCreateAdjacency, checkValidation, async (req, res) => {
+router.post('/adjacencies', authenticateToken, validateCreateAdjacency, checkValidation, async (req, res) => {
     const userId = req.userId;
     if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
     }
     try {
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditTerritories([req.body.fromTerritoryId, req.body.toTerritoryId], { userId, isAdmin: req.user?.isAdmin });
-        const adjacency = await mapService_js_1.mapService.createAdjacency({
+        await mapPermissionService.assertCanEditTerritories([req.body.fromTerritoryId, req.body.toTerritoryId], { userId, isAdmin: req.user?.isAdmin });
+        const adjacency = await mapService.createAdjacency({
             fromTerritoryId: req.body.fromTerritoryId,
             toTerritoryId: req.body.toTerritoryId,
             connectionType: req.body.connectionType,
@@ -817,46 +812,46 @@ router.post('/adjacencies', auth_js_1.authenticateToken, validateCreateAdjacency
         return res.status(201).json(adjacency);
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             return res.status(403).json({ error: error.message });
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             return res.status(404).json({ error: error.message });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create adjacency', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to create adjacency', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to create adjacency' });
     }
 });
-router.post('/:mapId/rate', auth_js_1.authenticateToken, validateRating, checkValidation, async (req, res) => {
+router.post('/:mapId/rate', authenticateToken, validateRating, checkValidation, async (req, res) => {
     try {
-        const rating = await mapService_js_1.mapService.rateMap(req.params.mapId, req.userId, req.body.rating, req.body.review);
+        const rating = await mapService.rateMap(req.params.mapId, req.userId, req.body.rating, req.body.review);
         return res.status(201).json(rating);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to rate map', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to rate map', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to rate map' });
     }
 });
-router.post('/:mapId/generate-capitals', auth_js_1.authenticateToken, (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
+router.post('/:mapId/generate-capitals', authenticateToken, param('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
     try {
         const mapId = req.params.mapId;
         const userId = req.userId;
         if (!userId) {
             return res.status(401).json({ error: 'Authentication required' });
         }
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, {
+        await mapPermissionService.assertCanEditMap(mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
-        const capitalService = new capitalGeneratorService_js_1.CapitalGeneratorService((0, database_js_1.getPool)());
+        const capitalService = new CapitalGeneratorService(getPool());
         const capitals = await capitalService.generateCapitalsForMap(mapId);
         const metadata = {
             generatedAt: new Date().toISOString(),
             algorithm: 'maximin-distance-v1',
             manuallyAdjusted: {},
         };
-        await (0, database_js_1.getPool)().query('UPDATE maps SET capital_assignments = $1, capital_metadata = $2 WHERE id = $3', [JSON.stringify(capitals), JSON.stringify(metadata), mapId]);
-        logger_js_1.logger.info(`Generated capitals for map ${mapId}`);
+        await getPool().query('UPDATE maps SET capital_assignments = $1, capital_metadata = $2 WHERE id = $3', [JSON.stringify(capitals), JSON.stringify(metadata), mapId]);
+        logger.info(`Generated capitals for map ${mapId}`);
         return res.json({
             success: true,
             capitals,
@@ -864,17 +859,17 @@ router.post('/:mapId/generate-capitals', auth_js_1.authenticateToken, (0, expres
         });
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             return res.status(403).json({ error: error.message });
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             return res.status(404).json({ error: 'Map not found' });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to generate capitals', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to generate capitals', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to generate capitals' });
     }
 });
-router.patch('/:mapId/capitals/:playerCount', auth_js_1.authenticateToken, (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'), (0, express_validator_1.param)('playerCount').isInt({ min: 2, max: 12 }).withMessage('Player count must be 2-12'), (0, express_validator_1.body)('territoryIds').isArray({ min: 2, max: 12 }).withMessage('Must provide territory IDs'), (0, express_validator_1.body)('territoryIds.*').isString().withMessage('Each territory ID must be a string'), checkValidation, async (req, res) => {
+router.patch('/:mapId/capitals/:playerCount', authenticateToken, param('mapId').isUUID().withMessage('Invalid map ID'), param('playerCount').isInt({ min: 2, max: 12 }).withMessage('Player count must be 2-12'), body('territoryIds').isArray({ min: 2, max: 12 }).withMessage('Must provide territory IDs'), body('territoryIds.*').isString().withMessage('Each territory ID must be a string'), checkValidation, async (req, res) => {
     try {
         const { mapId, playerCount } = req.params;
         const { territoryIds } = req.body;
@@ -883,7 +878,7 @@ router.patch('/:mapId/capitals/:playerCount', auth_js_1.authenticateToken, (0, e
             return res.status(401).json({ error: 'Authentication required' });
         }
         const playerCountNum = parseInt(playerCount, 10);
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, {
+        await mapPermissionService.assertCanEditMap(mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
@@ -892,9 +887,9 @@ router.patch('/:mapId/capitals/:playerCount', auth_js_1.authenticateToken, (0, e
                 error: `Must provide exactly ${playerCountNum} territories for ${playerCountNum} players`,
             });
         }
-        const capitalService = new capitalGeneratorService_js_1.CapitalGeneratorService((0, database_js_1.getPool)());
+        const capitalService = new CapitalGeneratorService(getPool());
         await capitalService.updateCapitalsForPlayerCount(mapId, playerCountNum, territoryIds);
-        logger_js_1.logger.info(`Updated capitals for map ${mapId}, ${playerCountNum} players`);
+        logger.info(`Updated capitals for map ${mapId}, ${playerCountNum} players`);
         return res.json({
             success: true,
             playerCount: playerCountNum,
@@ -902,20 +897,20 @@ router.patch('/:mapId/capitals/:playerCount', auth_js_1.authenticateToken, (0, e
         });
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             return res.status(403).json({ error: error.message });
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             return res.status(404).json({ error: 'Map not found' });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update capitals', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to update capitals', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to update capitals' });
     }
 });
-router.get('/:mapId/capitals', (0, express_validator_1.param)('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
+router.get('/:mapId/capitals', param('mapId').isUUID().withMessage('Invalid map ID'), checkValidation, async (req, res) => {
     try {
         const mapId = req.params.mapId;
-        const mapData = await mapService_js_1.mapService.getMapWithFullData(mapId);
+        const mapData = await mapService.getMapWithFullData(mapId);
         if (!mapData) {
             return res.status(404).json({ error: 'Map not found' });
         }
@@ -924,7 +919,7 @@ router.get('/:mapId/capitals', (0, express_validator_1.param)('mapId').isUUID().
             if (!userId) {
                 return res.status(403).json({ error: 'Access denied' });
             }
-            const context = await mapPermissionService_js_1.mapPermissionService.getMapEditorContext(mapId, {
+            const context = await mapPermissionService.getMapEditorContext(mapId, {
                 userId,
                 isAdmin: req.user?.isAdmin,
             });
@@ -933,7 +928,7 @@ router.get('/:mapId/capitals', (0, express_validator_1.param)('mapId').isUUID().
                 return res.status(403).json({ error: 'Access denied' });
             }
         }
-        const result = await (0, database_js_1.getPool)().query('SELECT capital_assignments, capital_metadata FROM maps WHERE id = $1', [mapId]);
+        const result = await getPool().query('SELECT capital_assignments, capital_metadata FROM maps WHERE id = $1', [mapId]);
         if (!result.rows[0]) {
             return res.status(404).json({ error: 'Map not found' });
         }
@@ -945,9 +940,9 @@ router.get('/:mapId/capitals', (0, express_validator_1.param)('mapId').isUUID().
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch capitals', 500, { mapId: req.params.mapId });
+        handleRouteError(error, req, 'Failed to fetch capitals', 500, { mapId: req.params.mapId });
         return res.status(500).json({ error: 'Failed to fetch capitals' });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=maps.js.map

@@ -1,13 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.gameRoutes = void 0;
-const express_1 = require("express");
-const gameController_js_1 = require("../controllers/gameController.js");
-const auth_js_1 = require("../middleware/auth.js");
-const router = (0, express_1.Router)();
-exports.gameRoutes = router;
-const gameController = new gameController_js_1.GameController();
-router.use(auth_js_1.authenticateToken);
+import { Router } from 'express';
+import { GameController } from '../controllers/gameController.js';
+import { authenticateToken } from '../middleware/auth.js';
+const router = Router();
+const gameController = new GameController();
+router.use(authenticateToken);
 router.get('/rooms', gameController.getRooms);
 router.post('/rooms', gameController.createRoom);
 router.post('/rooms/:roomId/team-assignments', gameController.updateTeamAssignment);
@@ -23,4 +19,5 @@ router.get('/rooms/:roomId/state', gameController.getRoomState);
 router.get('/rooms/:roomId/log', gameController.getRoomLog);
 router.get('/my-games', gameController.getMyGames);
 router.get('/my-games/meta', gameController.getMyGamesMeta);
+export { router as gameRoutes };
 //# sourceMappingURL=game.js.map

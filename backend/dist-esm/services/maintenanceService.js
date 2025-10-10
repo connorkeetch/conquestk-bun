@@ -1,19 +1,17 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.maintenanceService = exports.MaintenanceService = void 0;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-class MaintenanceService {
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+import { eloService } from './eloService.js';
+export class MaintenanceService {
     async pruneNotifications(options) {
         const retentionDays = Number(options.retentionDays);
         const includeUnread = Boolean(options.includeUnread);
         if (!Number.isFinite(retentionDays) || retentionDays <= 0) {
-            logger_js_1.logger.info('Skipping notifications prune due to non-positive retentionDays', {
+            logger.info('Skipping notifications prune due to non-positive retentionDays', {
                 retentionDays: options.retentionDays,
             });
             return { deleted: 0, ranAt: new Date().toISOString() };
         }
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         WITH deleted AS (
           DELETE FROM notifications
           WHERE created_at < NOW() - make_interval(days => $1)
@@ -24,11 +22,11 @@ class MaintenanceService {
       `, [retentionDays, includeUnread]);
         const deleted = Number(result.rows[0]?.count ?? 0);
         const ranAt = new Date().toISOString();
-        logger_js_1.logger.info('Notifications prune complete', { retentionDays, includeUnread, deleted, ranAt });
+        logger.info('Notifications prune complete', { retentionDays, includeUnread, deleted, ranAt });
         return { deleted, ranAt };
     }
     async prunePasswordResetTokens() {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         WITH deleted AS (
           DELETE FROM password_reset_tokens
           WHERE (expires_at IS NOT NULL AND expires_at < NOW())
@@ -39,7 +37,7 @@ class MaintenanceService {
       `);
         const deleted = Number(result.rows[0]?.count ?? 0);
         const ranAt = new Date().toISOString();
-        logger_js_1.logger.info('Password reset tokens prune complete', { deleted, ranAt });
+        logger.info('Password reset tokens prune complete', { deleted, ranAt });
         return { deleted, ranAt };
     }
     async archiveCompletedGameMoves(options) {
@@ -47,12 +45,12 @@ class MaintenanceService {
         const gameLimit = Number(limitRaw);
         if (!Number.isFinite(gameLimit) || gameLimit <= 0) {
             const ranAt = new Date().toISOString();
-            logger_js_1.logger.info('Skipping move archive sweep due to non-positive limit', {
+            logger.info('Skipping move archive sweep due to non-positive limit', {
                 gameLimit: options?.gameLimit,
             });
             return { archivedMoves: 0, archivedGames: 0, ranAt };
         }
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         WITH candidates AS (
           SELECT gr.id
           FROM game_rooms gr
@@ -104,17 +102,31 @@ class MaintenanceService {
         const archivedGames = Number(result.rows[0]?.archived_games ?? 0);
         const ranAt = new Date().toISOString();
         if (archivedMoves > 0) {
-            logger_js_1.logger.info('Archived completed game moves', { archivedMoves, archivedGames, ranAt });
+            logger.info('Archived completed game moves', { archivedMoves, archivedGames, ranAt });
         }
         else {
-            logger_js_1.logger.debug('Move archive sweep found no eligible games', {
+            logger.debug('Move archive sweep found no eligible games', {
                 gameLimit,
                 ranAt,
             });
         }
         return { archivedMoves, archivedGames, ranAt };
     }
+    async refreshSkillLeaderboardCache() {
+        const ranAt = new Date().toISOString();
+        try {
+            await eloService.updateLeaderboardCache();
+            logger.info('✅ Skill leaderboard cache refreshed', { ranAt });
+            return { refreshed: true, ranAt };
+        }
+        catch (error) {
+            logger.warn('⚠️ Failed to refresh skill leaderboard cache', {
+                error: error instanceof Error ? error.message : String(error),
+                ranAt,
+            });
+            return { refreshed: false, ranAt };
+        }
+    }
 }
-exports.MaintenanceService = MaintenanceService;
-exports.maintenanceService = new MaintenanceService();
+export const maintenanceService = new MaintenanceService();
 //# sourceMappingURL=maintenanceService.js.map

@@ -1,14 +1,9 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
+import dotenv from 'dotenv';
+dotenv.config();
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 async function tableExists(table) {
-    const result = await (0, database_js_1.query)(`SELECT COUNT(*)::int AS count
+    const result = await query(`SELECT COUNT(*)::int AS count
      FROM information_schema.tables
      WHERE table_schema = 'public' AND table_name = $1`, [table]);
     return Number(result.rows[0]?.count ?? 0) > 0;
@@ -17,7 +12,7 @@ async function countRows(table) {
     const exists = await tableExists(table);
     if (!exists)
         return 0;
-    const result = await (0, database_js_1.query)(`SELECT COUNT(*)::bigint AS count FROM ${table}`);
+    const result = await query(`SELECT COUNT(*)::bigint AS count FROM ${table}`);
     return Number(result.rows[0]?.count ?? 0);
 }
 async function purge({ includeUserBlocks }) {
@@ -32,13 +27,13 @@ async function purge({ includeUserBlocks }) {
     if (hasUserBlocks)
         tablesToTruncate.push('user_blocks');
     if (tablesToTruncate.length === 0) {
-        logger_js_1.logger.warn('No messaging tables found to truncate');
+        logger.warn('No messaging tables found to truncate');
         return;
     }
     const sql = `TRUNCATE TABLE ${tablesToTruncate.join(', ')} RESTART IDENTITY CASCADE`;
-    logger_js_1.logger.info('Executing purge:', { sql });
-    await (0, database_js_1.query)(sql);
-    logger_js_1.logger.info('Purge complete');
+    logger.info('Executing purge:', { sql });
+    await query(sql);
+    logger.info('Purge complete');
 }
 function parseArgs() {
     const args = new Set(process.argv.slice(2));
@@ -57,9 +52,9 @@ async function main() {
         clan_chat_messages: await countRows('clan_chat_messages'),
         user_blocks: includeUserBlocks ? await countRows('user_blocks') : undefined,
     };
-    logger_js_1.logger.info('Current messaging row counts', before);
+    logger.info('Current messaging row counts', before);
     if (dryRun || !yes) {
-        logger_js_1.logger.warn('Dry run or confirmation missing. Pass --yes to execute, and optionally --include-user-blocks to wipe block lists.');
+        logger.warn('Dry run or confirmation missing. Pass --yes to execute, and optionally --include-user-blocks to wipe block lists.');
         return;
     }
     await purge({ includeUserBlocks });
@@ -70,12 +65,12 @@ async function main() {
         clan_chat_messages: await countRows('clan_chat_messages'),
         user_blocks: includeUserBlocks ? await countRows('user_blocks') : undefined,
     };
-    logger_js_1.logger.info('Post-purge messaging row counts', after);
+    logger.info('Post-purge messaging row counts', after);
 }
 main()
     .then(() => process.exit(0))
     .catch((error) => {
-    logger_js_1.logger.error('purgeMessaging failed', { error });
+    logger.error('purgeMessaging failed', { error });
     process.exit(1);
 });
 //# sourceMappingURL=purgeMessaging.js.map

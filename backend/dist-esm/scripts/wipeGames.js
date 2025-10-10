@@ -1,11 +1,6 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_readline_1 = __importDefault(require("node:readline"));
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
+import readline from 'node:readline';
+import { getClient } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 function parseFilters() {
     const getArg = (flag) => {
         const idx = process.argv.indexOf(flag);
@@ -40,7 +35,7 @@ function hasAnyFilter(f) {
 async function promptConfirm(message) {
     if (process.argv.includes('--yes') || process.argv.includes('-y'))
         return true;
-    const rl = node_readline_1.default.createInterface({ input: process.stdin, output: process.stdout });
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const answer = await new Promise((resolve) => rl.question(`${message} (yes/no): `, (ans) => resolve(ans.trim().toLowerCase())));
     rl.close();
     return answer === 'y' || answer === 'yes';
@@ -48,8 +43,8 @@ async function promptConfirm(message) {
 async function main() {
     const dryRun = process.argv.includes('--dry-run');
     const filters = parseFilters();
-    logger_js_1.logger.warn(`Wipe Games Script starting${dryRun ? ' (dry-run)' : ''}${hasAnyFilter(filters) ? ' (filtered)' : ''}`);
-    const client = await (0, database_js_1.getClient)();
+    logger.warn(`Wipe Games Script starting${dryRun ? ' (dry-run)' : ''}${hasAnyFilter(filters) ? ' (filtered)' : ''}`);
+    const client = await getClient();
     try {
         await client.query('BEGIN');
         let idSelectionSQL = 'SELECT id FROM game_rooms';
@@ -83,15 +78,15 @@ async function main() {
         const targetIds = targetRes.rows.map((r) => r.id);
         const gameRoomCount = targetIds.length;
         if (gameRoomCount === 0) {
-            logger_js_1.logger.info('No game rooms found; nothing to delete');
+            logger.info('No game rooms found; nothing to delete');
             await client.query('ROLLBACK');
             return;
         }
-        logger_js_1.logger.warn(`Found ${gameRoomCount} game room(s) to delete`);
-        logger_js_1.logger.debug(`Target IDs: ${targetIds.join(', ')}`);
+        logger.warn(`Found ${gameRoomCount} game room(s) to delete`);
+        logger.debug(`Target IDs: ${targetIds.join(', ')}`);
         if (!(await promptConfirm('This will permanently delete ALL games and related data. Proceed?'))) {
             await client.query('ROLLBACK');
-            logger_js_1.logger.info('Aborted by user');
+            logger.info('Aborted by user');
             return;
         }
         if (dryRun) {
@@ -116,10 +111,10 @@ async function main() {
              ($1::text = 'capital_eliminations' AND game_id = ANY($2)) OR
              ($1::text = 'rating_history' AND game_room_id = ANY($2))
            )`, [t, targetIds]);
-                logger_js_1.logger.info(`${t}: ~${res.rows[0]?.count ?? 0} row(s) associated`);
+                logger.info(`${t}: ~${res.rows[0]?.count ?? 0} row(s) associated`);
             }
             await client.query('ROLLBACK');
-            logger_js_1.logger.info('Dry-run complete; no changes applied');
+            logger.info('Dry-run complete; no changes applied');
             return;
         }
         const steps = [
@@ -196,20 +191,20 @@ async function main() {
             }
             catch (err) {
                 results.push({ label: `${step.label} (skipped/error)`, affected: null });
-                logger_js_1.logger.warn(`Step failed or skipped: ${step.label}`, {
+                logger.warn(`Step failed or skipped: ${step.label}`, {
                     error: err instanceof Error ? err.message : String(err),
                 });
             }
         }
         await client.query('COMMIT');
-        logger_js_1.logger.info('Wipe complete. Summary:');
+        logger.info('Wipe complete. Summary:');
         for (const r of results) {
-            logger_js_1.logger.info(`- ${r.label}: ${r.affected ?? 'n/a'}`);
+            logger.info(`- ${r.label}: ${r.affected ?? 'n/a'}`);
         }
     }
     catch (error) {
         await client.query('ROLLBACK');
-        logger_js_1.logger.error('Wipe games failed; rolled back', error);
+        logger.error('Wipe games failed; rolled back', error);
         process.exitCode = 1;
     }
     finally {
@@ -217,7 +212,7 @@ async function main() {
     }
 }
 main().catch((e) => {
-    logger_js_1.logger.error('Fatal error in wipeGames script', e);
+    logger.error('Fatal error in wipeGames script', e);
     process.exit(1);
 });
 //# sourceMappingURL=wipeGames.js.map
