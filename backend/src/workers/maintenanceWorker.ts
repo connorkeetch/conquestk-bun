@@ -62,7 +62,7 @@ export class MaintenanceWorker {
         const queue = queueService.getMaintenanceQueue()
         await queue.upsertJobScheduler('maintenance:prune', { every: intervalMs })
         await queue.upsertJobScheduler('maintenance:refresh-skill-leaderboard', {
-          cron: '0 4 * * *',
+          pattern: '0 4 * * *',
         } as any)
 
         const Redis = (await import('ioredis')).default
