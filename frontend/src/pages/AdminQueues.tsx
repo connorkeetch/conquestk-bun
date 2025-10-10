@@ -102,7 +102,7 @@ export default function AdminQueues() {
         actions={
           <div className="flex items-center gap-2">
             <a
-              href="/admin/queues"
+              href="/api/admin/queues/ui"
               target="_blank"
               rel="noreferrer"
               className="px-3 py-2 text-sm rounded bg-purple-600 hover:brightness-110"
