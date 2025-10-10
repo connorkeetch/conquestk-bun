@@ -1,25 +1,32 @@
 import { Info } from 'lucide-react'
 import { useMemo } from 'react'
-import { getColorValue } from '@/constants/colors'
+import { getColorValue, getPremiumColorMeta, isPureWhiteColor } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
 
 type DiceProps = {
   value: number
   color: string
   glow: boolean
+  effect?: string
+  pureWhite?: boolean
 }
 
-function Dice({ value, color, glow }: DiceProps) {
+function Dice({ value, color, glow, effect, pureWhite }: DiceProps) {
+  const premiumEffectClass = effect ? ` premium-effect premium-effect-${effect}` : ''
   return (
     <div
-      className="w-8 h-8 rounded-md border border-[color:var(--panel-border)] text-white font-bold text-sm flex items-center justify-center shadow-sm"
+      className={`w-8 h-8 rounded-md border border-[color:var(--panel-border)] font-bold text-sm flex items-center justify-center shadow-sm${premiumEffectClass}`}
       style={{
         // Use background so gradients (premium colors) render correctly
         background: color,
+        color: pureWhite ? '#111827' : '#FFFFFF',
+        textShadow: pureWhite
+          ? '0 1px 1px rgba(255,255,255,0.65)'
+          : '0 1px 1px rgba(0,0,0,0.75)',
         boxShadow: glow ? '0 0 0 2px #fde047, 0 0 12px #fde047' : undefined,
       }}
     >
-      {value}
+      <span className="relative z-10">{value}</span>
     </div>
   )
 }
@@ -37,9 +44,12 @@ export function DiceResultsBar() {
   const last = history.length > 0 ? history[history.length - 1] : null
   const neutralGrey = 'var(--color-gray-500)'
 
-  const { attackerColor, defenderColor } = useMemo(() => {
+  const { attacker, defender } = useMemo(() => {
     if (!game || !last) {
-      return { attackerColor: neutralGrey, defenderColor: neutralGrey }
+      return {
+        attacker: { color: neutralGrey, effect: undefined, pureWhite: false },
+        defender: { color: neutralGrey, effect: undefined, pureWhite: false },
+      }
     }
 
     // Prefer stable ids captured at roll time so colors don't flip post-conquest
@@ -63,8 +73,21 @@ export function DiceResultsBar() {
 
     const aColor = aPlayer ? getColorValue(aPlayer.color) : neutralGrey
     const dColor = dPlayer ? getColorValue(dPlayer.color) : neutralGrey
+    const aMeta = aPlayer ? getPremiumColorMeta(aPlayer.color) : undefined
+    const dMeta = dPlayer ? getPremiumColorMeta(dPlayer.color) : undefined
 
-    return { attackerColor: aColor, defenderColor: dColor }
+    return {
+      attacker: {
+        color: aColor,
+        effect: aMeta?.effect,
+        pureWhite: isPureWhiteColor(aPlayer?.color ?? aColor),
+      },
+      defender: {
+        color: dColor,
+        effect: dMeta?.effect,
+        pureWhite: isPureWhiteColor(dPlayer?.color ?? dColor),
+      },
+    }
   }, [game, last])
 
   // Reinforcement phase: show deployed/total summary for the active player only
@@ -176,8 +199,10 @@ export function DiceResultsBar() {
               <Dice
                 key={`a${i}-${v}`}
                 value={v}
-                color={attackerColor}
+                color={attacker.color}
                 glow={pairs[i]?.winner === 'A'}
+                effect={attacker.effect}
+                pureWhite={attacker.pureWhite}
               />
             ))}
           </div>
@@ -193,8 +218,10 @@ export function DiceResultsBar() {
               <Dice
                 key={`d${i}-${v}`}
                 value={v}
-                color={defenderColor}
+                color={defender.color}
                 glow={pairs[i]?.winner === 'D'}
+                effect={defender.effect}
+                pureWhite={defender.pureWhite}
               />
             ))}
           </div>

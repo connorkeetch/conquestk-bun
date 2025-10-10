@@ -3,7 +3,7 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import TreasureHud from '@/components/game/TreasureHud'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getConquestRank } from '@/components/RankInsignia'
-import { getColorValue } from '@/constants/colors'
+import { getColorValue, getPremiumColorMeta, isPureWhiteColor } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
 import { resolveAssetPath } from '@/utils/assets'
 
@@ -129,6 +129,14 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
               <tbody>
                 {sortedPlayers.map((player, _index) => {
                   const skillRating = player.skillRating ?? 800
+                  const playerColorValue = getColorValue(player.color)
+                  const playerPremiumMeta = getPremiumColorMeta(player.color)
+                  const playerPureWhite = isPureWhiteColor(player.color)
+                  const colorDotClass = `w-3.5 h-3.5 rounded-full border-2 shrink-0${
+                    playerPremiumMeta?.effect
+                      ? ` premium-effect premium-effect-${playerPremiumMeta.effect}`
+                      : ''
+                  }`
                   const rank = getConquestRank(skillRating)
                   return (
                     <tr
@@ -142,8 +150,18 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                       <td className="px-2 py-1.5 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <div
-                            className="w-3.5 h-3.5 rounded-full border-2 border-[color:var(--panel-border)] shrink-0"
-                            style={{ backgroundColor: getColorValue(player.color) }}
+                            className={colorDotClass}
+                            style={{
+                              background: playerColorValue,
+                              borderColor: playerPureWhite
+                                ? '#FFFFFF'
+                                : playerPremiumMeta?.outline ?? 'var(--panel-border)',
+                              boxShadow: playerPureWhite
+                                ? '0 0 0 1px rgba(17,24,39,0.25)'
+                                : playerPremiumMeta?.effect
+                                  ? '0 0 6px rgba(0,0,0,0.25)'
+                                  : undefined,
+                            }}
                           />
                           <button
                             type="button"

@@ -1,5 +1,10 @@
 import { useMemo } from 'react'
-import { getColorValue, type PlayerColor } from '@/constants/colors'
+import {
+  getColorValue,
+  getPremiumColorMeta,
+  isPureWhiteColor,
+  type PlayerColor,
+} from '@/constants/colors'
 import {
   extractFirstHexColor,
   getRelativeLuminance,
@@ -56,35 +61,54 @@ export function TokenLayer({
           (String(colorValue).startsWith('#')
             ? String(colorValue)
             : extractFirstHexColor(String(colorValue))) || '#94A3B8'
+        const premiumMeta = getPremiumColorMeta(t.ownerColor ?? color)
+        const premiumEffectClass = premiumMeta?.effect
+          ? ` premium-effect premium-effect-${premiumMeta.effect}`
+          : ''
+        const pureWhite = isPureWhiteColor(t.ownerColor ?? color)
         const baseSize = 28 // base size at scale 1 (stage will scale tokens)
         // Determine a high-contrast edge color derived from the token color
         const luminance = getRelativeLuminance(String(color))
-        const edgeStroke =
-          luminance < 0.5
+        const edgeStroke = pureWhite
+          ? '#FFFFFF'
+          : luminance < 0.5
             ? lightenColor(String(color), 0.25)
             : mixColors(String(color), '#000000', 0.3)
         // Neutral token edge width (selection/eligibility visuals live in overlay)
         const border = Math.max(2, Math.round(0.12 * baseSize))
-        const colorGlow = hexToRgba(String(color), dimmed ? 0.3 : 0.5)
+        const colorGlow = pureWhite
+          ? `rgba(255,255,255,${dimmed ? 0.3 : 0.65})`
+          : hexToRgba(String(color), dimmed ? 0.3 : 0.5)
         const innerFill = lightenColor(String(color), 0.15)
         // Edge-opaque → center-transparent radial gradient
         const edgeAlpha = dimmed ? 0.85 : 1
         const midAlpha = dimmed ? 0.5 : 0.7
         // formerly used for an inner alpha stop; no longer needed
         // Wider opaque edge and smoother ramp to center transparency
-        const gradient = `radial-gradient(circle at center,
-          ${hexToRgba(innerFill, 0.9)} 0%,
-          ${hexToRgba(innerFill, 0.85)} 45%,
-          ${hexToRgba(String(color), midAlpha)} 65%,
-          ${hexToRgba(String(color), edgeAlpha)} 85%,
-          ${hexToRgba(String(color), edgeAlpha)} 100%
-        )`
+        const gradient = pureWhite
+          ? `radial-gradient(circle at center,
+            rgba(255,255,255,0.7) 0%,
+            rgba(255,255,255,0.45) 45%,
+            rgba(255,255,255,0.25) 70%,
+            rgba(255,255,255,0.12) 85%,
+            rgba(255,255,255,0.08) 100%
+          )`
+          : `radial-gradient(circle at center,
+            ${hexToRgba(innerFill, 0.9)} 0%,
+            ${hexToRgba(innerFill, 0.85)} 45%,
+            ${hexToRgba(String(color), midAlpha)} 65%,
+            ${hexToRgba(String(color), edgeAlpha)} 85%,
+            ${hexToRgba(String(color), edgeAlpha)} 100%
+          )`
         // Subtle inner halo to boost number legibility on busy maps
-        const halo = `radial-gradient(circle at center,
-          rgba(0,0,0,0.35) 0%,
-          rgba(0,0,0,0.25) 35%,
-          rgba(0,0,0,0.0) 60%
-        )`
+        const halo = pureWhite
+          ? null
+          : `radial-gradient(circle at center,
+            rgba(0,0,0,0.35) 0%,
+            rgba(0,0,0,0.25) 35%,
+            rgba(0,0,0,0.0) 60%
+          )`
+        const backgroundLayers = halo ? `${halo}, ${gradient}` : gradient
         return (
           <button
             key={t.id}
@@ -108,12 +132,12 @@ export function TokenLayer({
             onBlur={() => onHover?.(null)}
           >
             <span
-              className="block"
+              className={`block${premiumEffectClass}`}
               style={{
                 width: baseSize,
                 height: baseSize,
                 // Layer halo on top of token gradient for better number contrast
-                background: `${halo}, ${gradient}`,
+                background: backgroundLayers,
                 opacity: dimmed ? 0.6 : 1,
                 borderRadius: '50%',
                 border: `${border}px solid ${edgeStroke}`,
@@ -127,11 +151,15 @@ export function TokenLayer({
               {t.armies && t.armies > 0 ? (
                 <span
                   style={{
-                    color: 'white',
+                    color: pureWhite ? '#111827' : 'white',
                     fontSize: Math.max(10, Math.round(baseSize * 0.45)),
                     fontWeight: 700,
-                    textShadow: '0 1px 2px rgba(0,0,0,0.85)',
+                    textShadow: pureWhite
+                      ? '0 1px 2px rgba(255,255,255,0.75)'
+                      : '0 1px 2px rgba(0,0,0,0.85)',
                     lineHeight: 1,
+                    position: 'relative',
+                    zIndex: 2,
                   }}
                 >
                   {t.armies}

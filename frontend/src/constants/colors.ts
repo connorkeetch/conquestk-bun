@@ -217,8 +217,65 @@ export const getPlayerColor = (index: number): string => {
   return PLAYER_COLORS[index % PLAYER_COLORS.length]
 }
 
-export const getPremiumPlayerColor = (key: keyof typeof PREMIUM_PLAYER_COLORS) => {
+export type PremiumColorKey = keyof typeof PREMIUM_PLAYER_COLORS
+
+type PremiumColorDefinition = (typeof PREMIUM_PLAYER_COLORS)[PremiumColorKey]
+
+export interface PremiumColorMeta extends PremiumColorDefinition {
+  key: PremiumColorKey
+}
+
+export const getPremiumPlayerColor = (key: PremiumColorKey) => {
   return PREMIUM_PLAYER_COLORS[key]
+}
+
+export const getPremiumColorMeta = (
+  color?: PlayerColor | string | null,
+): PremiumColorMeta | undefined => {
+  if (!color) return undefined
+
+  const str = String(color).trim()
+  if (!str) return undefined
+
+  const byKey = PREMIUM_PLAYER_COLORS[str as PremiumColorKey]
+  if (byKey) {
+    return { key: str as PremiumColorKey, ...byKey }
+  }
+
+  const lower = str.toLowerCase()
+  const entry = Object.entries(PREMIUM_PLAYER_COLORS).find(([, value]) => {
+    const solid = value.solid?.toLowerCase()
+    if (solid && solid === lower) return true
+    if ('gradient' in value && typeof value.gradient === 'string') {
+      return value.gradient.toLowerCase() === lower
+    }
+    return false
+  })
+
+  if (!entry) return undefined
+
+  const [key, value] = entry
+  return { key: key as PremiumColorKey, ...value }
+}
+
+export const getPremiumEffect = (
+  color?: PlayerColor | string | null,
+): PremiumColorDefinition['effect'] | undefined => {
+  return getPremiumColorMeta(color)?.effect
+}
+
+export const isPureWhiteColor = (color?: PlayerColor | string | null): boolean => {
+  const meta = getPremiumColorMeta(color)
+  if (meta?.solid) {
+    return meta.solid.toLowerCase() === '#ffffff'
+  }
+
+  if (typeof color === 'string') {
+    const normalized = color.trim().toLowerCase()
+    return normalized === '#ffffff' || normalized === 'white'
+  }
+
+  return false
 }
 
 export const getRankColor = (elo: number) => {
