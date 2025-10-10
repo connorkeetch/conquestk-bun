@@ -1,7 +1,6 @@
 import * as jwt from 'jsonwebtoken';
 import { query } from '../config/database.js';
 import { setupChatHandlers } from '../socket/chatHandlers.js';
-import { DeltaBuilder } from '../types/deltaUpdates.js';
 import { logger } from '../utils/logger.js';
 import { gameStateCache } from './cacheService.js';
 import { clanService } from './clanService.js';
@@ -435,28 +434,40 @@ export function setupSocketHandlers(io) {
                 });
             }
             else {
-                logger.info(`Processed game action directly (no queue): ${normalizedAction.type} for game ${data.roomId}`, {
-                    playerId: userId,
-                });
+                logger.info(`Processing game action inline (no queue): ${normalizedAction.type} for game ${data.roomId}`, { playerId: userId });
                 try {
-                    const updatedState = await gameService.processGameAction(normalizedAction, userId);
-                    const serialized = serializeGameStateForClient(updatedState);
-                    if (serialized) {
-                        emitGameUpdateToRoom(io, channel, serialized);
-                    }
-                    if (normalizedAction.type === 'go_back_to_reinforcement') {
-                        try {
-                            const currentPlayer = updatedState.players.find((p) => p.id === userId);
-                            const reinforcementArmies = Math.max(0, currentPlayer?.armies ?? 0);
-                            const phaseDelta = DeltaBuilder.phaseChange(data.roomId, updatedState.phase, updatedState.currentPlayer, updatedState.turn, reinforcementArmies);
-                            const { emitFogFilteredDelta } = await import('./fogService.js');
-                            await emitFogFilteredDelta(io, data.roomId, phaseDelta, updatedState);
+                    switch (normalizedAction.type) {
+                        case 'deploy': {
+                            await gameActionProcessor.processDeployment(data.roomId, userId, normalizedAction.payload.territoryId, normalizedAction.payload.armies, socket.id);
+                            break;
                         }
-                        catch (emitError) {
-                            logger.warn('Failed to emit go-back delta inline', {
-                                roomId: data.roomId,
-                                error: emitError instanceof Error ? emitError.message : emitError,
-                            });
+                        case 'attack': {
+                            await gameActionProcessor.processAttack(data.roomId, userId, normalizedAction.payload.fromTerritoryId, normalizedAction.payload.toTerritoryId, normalizedAction.payload?.armies, socket.id);
+                            break;
+                        }
+                        case 'fortify': {
+                            await gameActionProcessor.processFortify(data.roomId, userId, normalizedAction.payload.fromTerritoryId, normalizedAction.payload.toTerritoryId, normalizedAction.payload.armies, socket.id);
+                            break;
+                        }
+                        case 'end_turn': {
+                            await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id);
+                            break;
+                        }
+                        case 'go_back_to_reinforcement': {
+                            await gameActionProcessor.processGoBack(data.roomId, userId, socket.id);
+                            break;
+                        }
+                        case 'transfer_conquest': {
+                            await gameActionProcessor.processTransferConquest(data.roomId, userId, normalizedAction.payload.fromTerritoryId, normalizedAction.payload.toTerritoryId, normalizedAction.payload.armies, socket.id);
+                            break;
+                        }
+                        default: {
+                            const updatedState = await gameService.processGameAction(normalizedAction, userId);
+                            const serialized = serializeGameStateForClient(updatedState);
+                            if (serialized) {
+                                emitGameUpdateToRoom(io, channel, serialized);
+                            }
+                            break;
                         }
                     }
                 }
@@ -466,6 +477,7 @@ export function setupSocketHandlers(io) {
             }
         }));
         socket.on('deployArmies', withErrorHandler(socket, 'deployArmies', async (data, ack) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'deployArmies', prefer: 'game-action' });
             if (!data || !data.roomId || !data.territoryId || typeof data.armies !== 'number') {
                 throw new Error('Invalid deployment data');
             }
@@ -480,6 +492,7 @@ export function setupSocketHandlers(io) {
             }
         }));
         socket.on('attack', withErrorHandler(socket, 'attack', async (data, ack) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'attack', prefer: 'game-action' });
             if (!data || !data.roomId || !data.fromTerritoryId || !data.toTerritoryId) {
                 throw new Error('Invalid attack data');
             }
@@ -510,6 +523,7 @@ export function setupSocketHandlers(io) {
             });
         }));
         socket.on('transferConquestArmies', withErrorHandler(socket, 'transferConquestArmies', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'transferConquestArmies', prefer: 'game-action (future: transfer_conquest)' });
             if (!data ||
                 !data.roomId ||
                 !data.fromTerritoryId ||
@@ -522,26 +536,10 @@ export function setupSocketHandlers(io) {
             if (!hasAccess) {
                 throw new Error('Unauthorized: You are not a member of this game');
             }
-            const transferResult = await gameService.transferConquestArmies(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies);
-            const channel = getGameChannel(data.roomId);
-            emitGameDeltaBatchToRoom(io, channel, [
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.fromTerritoryId,
-                    changes: { armies: transferResult.fromArmies },
-                    timestamp: Date.now(),
-                },
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.toTerritoryId,
-                    changes: { armies: transferResult.toArmies },
-                    timestamp: Date.now(),
-                },
-            ]);
+            await gameActionProcessor.processTransferConquest(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies, socket.id);
         }));
         socket.on('fortify', withErrorHandler(socket, 'fortify', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'fortify', prefer: 'game-action' });
             if (!data ||
                 !data.roomId ||
                 !data.fromTerritoryId ||
@@ -554,43 +552,10 @@ export function setupSocketHandlers(io) {
             if (!hasAccess) {
                 throw new Error('Unauthorized: You are not a member of this game');
             }
-            const result = await gameService.fortify(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies);
-            const channel = getGameChannel(data.roomId);
-            emitGameDeltaBatchToRoom(io, channel, [
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.fromTerritoryId,
-                    changes: { armies: result.fromArmies },
-                    timestamp: Date.now(),
-                },
-                {
-                    type: 'TERRITORY_UPDATE',
-                    roomId: data.roomId,
-                    territoryId: data.toTerritoryId,
-                    changes: { armies: result.toArmies },
-                    timestamp: Date.now(),
-                },
-            ]);
-            try {
-                const fortifyDelta = {
-                    type: 'FORTIFY_RESULT',
-                    roomId: data.roomId,
-                    timestamp: Date.now(),
-                    fromTerritoryId: data.fromTerritoryId,
-                    toTerritoryId: data.toTerritoryId,
-                    movedArmies: data.armies,
-                    fromArmies: result.fromArmies,
-                    toArmies: result.toArmies,
-                    playerId: userId,
-                };
-                const { emitFogFilteredDelta } = await import('../services/fogService.js');
-                await emitFogFilteredDelta(io, data.roomId, fortifyDelta);
-            }
-            catch {
-            }
+            await gameActionProcessor.processFortify(data.roomId, userId, data.fromTerritoryId, data.toTerritoryId, data.armies, socket.id);
         }));
         socket.on('undoFortify', withErrorHandler(socket, 'undoFortify', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'undoFortify', prefer: 'game-action' });
             if (!data || !data.roomId) {
                 throw new Error('Invalid undo fortify data');
             }
@@ -704,36 +669,12 @@ export function setupSocketHandlers(io) {
             }
         }));
         socket.on('endTurn', withErrorHandler(socket, 'endTurn', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'endTurn', prefer: 'game-action' });
             if (!data || !data.roomId) {
                 throw new Error('Invalid end turn data');
             }
             const userId = requireUserId(socket);
-            const result = await gameService.endTurn(data.roomId, userId);
-            const channel = getGameChannel(data.roomId);
-            if (result.treasureAwarded) {
-                io.to(channel).emit('game-delta', {
-                    type: 'TREASURE_AWARDED',
-                    roomId: data.roomId,
-                    timestamp: Date.now(),
-                    userId,
-                    metal: result.treasureAwarded,
-                });
-            }
-            const phaseDelta = DeltaBuilder.phaseChange(data.roomId, result.gameState.phase, result.gameState.currentPlayer, result.gameState.turn, result.reinforcementArmies);
-            io.to(channel).emit('game-delta', phaseDelta);
-            if (result.turnAdvanced) {
-                try {
-                    const { GameLifecycleService } = await import('./gameLifecycleService.js');
-                    const lifecycleService = new GameLifecycleService();
-                    await lifecycleService.scheduleTurnTimeout(data.roomId);
-                }
-                catch (e) {
-                    logger.warn('Failed to schedule turn timeout after manual endTurn', {
-                        roomId: data.roomId,
-                        error: e instanceof Error ? e.message : e,
-                    });
-                }
-            }
+            await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id);
         }));
         socket.on('turn:begin', withErrorHandler(socket, 'turn:begin', async (data) => {
             if (!data || !data.roomId) {
@@ -743,6 +684,7 @@ export function setupSocketHandlers(io) {
             await gameService.acknowledgeTurnStart(data.roomId, userId);
         }));
         socket.on('goBackToReinforcement', withErrorHandler(socket, 'goBackToReinforcement', async (data) => {
+            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'goBackToReinforcement', prefer: 'game-action' });
             if (!data || !data.roomId) {
                 throw new Error('Invalid go-back data');
             }

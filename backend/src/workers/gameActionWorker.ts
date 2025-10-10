@@ -644,6 +644,38 @@ export class GameActionWorker {
           break
         }
 
+        case 'transfer_conquest': {
+          // Post-conquest transfer: emit concise territory deltas
+          const payload = (action as Extract<import('../types/game.js').GameAction, { type: 'transfer_conquest' }>).payload as { fromTerritoryId: string; toTerritoryId: string; armies: number }
+          const transfer = await this.gameService.transferConquestArmies(
+            gameId,
+            playerId,
+            payload.fromTerritoryId,
+            payload.toTerritoryId,
+            payload.armies,
+          )
+          try {
+            const updates: import('@risk-game/shared/types').GameDelta[] = [
+              DeltaBuilder.territoryUpdate(gameId, payload.fromTerritoryId, {
+                armies: transfer.fromArmies,
+              }),
+              DeltaBuilder.territoryUpdate(gameId, payload.toTerritoryId, {
+                armies: transfer.toArmies,
+              }),
+            ]
+            const { emitFogFilteredDelta } = await import('../services/fogService.js')
+            for (const d of updates) {
+              await emitFogFilteredDelta(this.io as unknown as Server, gameId, d)
+            }
+          } catch {
+            // best-effort
+          }
+          // Record move
+          await this.recordMove(gameId, playerId, currentState.turn, 'transfer_conquest', payload)
+          // Do not broadcast extra delta below
+          shouldBroadcast = false
+          break
+        }
         case 'trade_cards': {
           // Log a lightweight move record so profile stats can aggregate trades
           try {
@@ -965,7 +997,23 @@ export class GameActionWorker {
   }
 
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
-    const nextPlayer = await this.gameService.processEndTurn(gameId, playerId)
+    // Use full endTurn result for parity with inline path
+    const result = await this.gameService.endTurn(gameId, playerId)
+
+    // Emit treasure awarded (if any) before phase change for UX parity
+    try {
+      if (result.treasureAwarded) {
+        this.io.to(`game:${gameId}`).emit('game-delta', {
+          type: 'TREASURE_AWARDED',
+          roomId: gameId,
+          timestamp: Date.now(),
+          userId: playerId,
+          metal: result.treasureAwarded,
+        } as import('@risk-game/shared/types').GameDelta)
+      }
+    } catch (_e) {
+      // best-effort
+    }
 
     try {
       const { GameLifecycleService } = await import('../services/gameLifecycleService.js')
@@ -980,7 +1028,13 @@ export class GameActionWorker {
       })
     }
 
-    return DeltaBuilder.phaseChange(gameId, 'reinforcement', nextPlayer.id, 0, 0)
+    return DeltaBuilder.phaseChange(
+      gameId,
+      result.gameState.phase,
+      result.gameState.currentPlayer,
+      result.gameState.turn,
+      result.reinforcementArmies,
+    )
   }
 
   private async processPhaseChange(

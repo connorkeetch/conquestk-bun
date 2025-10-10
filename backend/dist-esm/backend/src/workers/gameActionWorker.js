@@ -503,6 +503,29 @@ export class GameActionWorker {
                     await this.recordMove(gameId, playerId, currentState.turn, 'end_turn', {});
                     break;
                 }
+                case 'transfer_conquest': {
+                    const payload = action.payload;
+                    const transfer = await this.gameService.transferConquestArmies(gameId, playerId, payload.fromTerritoryId, payload.toTerritoryId, payload.armies);
+                    try {
+                        const updates = [
+                            DeltaBuilder.territoryUpdate(gameId, payload.fromTerritoryId, {
+                                armies: transfer.fromArmies,
+                            }),
+                            DeltaBuilder.territoryUpdate(gameId, payload.toTerritoryId, {
+                                armies: transfer.toArmies,
+                            }),
+                        ];
+                        const { emitFogFilteredDelta } = await import('../services/fogService.js');
+                        for (const d of updates) {
+                            await emitFogFilteredDelta(this.io, gameId, d);
+                        }
+                    }
+                    catch {
+                    }
+                    await this.recordMove(gameId, playerId, currentState.turn, 'transfer_conquest', payload);
+                    shouldBroadcast = false;
+                    break;
+                }
                 case 'trade_cards': {
                     try {
                         const payload = action
@@ -745,7 +768,20 @@ export class GameActionWorker {
         });
     }
     async processEndTurn(gameId, playerId) {
-        const nextPlayer = await this.gameService.processEndTurn(gameId, playerId);
+        const result = await this.gameService.endTurn(gameId, playerId);
+        try {
+            if (result.treasureAwarded) {
+                this.io.to(`game:${gameId}`).emit('game-delta', {
+                    type: 'TREASURE_AWARDED',
+                    roomId: gameId,
+                    timestamp: Date.now(),
+                    userId: playerId,
+                    metal: result.treasureAwarded,
+                });
+            }
+        }
+        catch (_e) {
+        }
         try {
             const { GameLifecycleService } = await import('../services/gameLifecycleService.js');
             const lifecycle = new GameLifecycleService();
@@ -758,7 +794,7 @@ export class GameActionWorker {
                 error: error instanceof Error ? error.message : error,
             });
         }
-        return DeltaBuilder.phaseChange(gameId, 'reinforcement', nextPlayer.id, 0, 0);
+        return DeltaBuilder.phaseChange(gameId, result.gameState.phase, result.gameState.currentPlayer, result.gameState.turn, result.reinforcementArmies);
     }
     async processPhaseChange(gameId, playerId, action) {
         const phase = (action.payload?.phase ??

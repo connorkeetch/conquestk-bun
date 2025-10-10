@@ -184,6 +184,83 @@ export class GameActionProcessor {
   }
 
   /**
+   * Process post-conquest transfer (during attack phase)
+   */
+  async processTransferConquest(
+    gameId: string,
+    playerId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    armies: number,
+    socketId?: string,
+  ): Promise<void> {
+    const job = await queueService.addGameAction({
+      gameId,
+      playerId,
+      action: {
+        type: 'transfer_conquest',
+        roomId: gameId,
+        playerId,
+        payload: { fromTerritoryId, toTerritoryId, armies },
+      } as unknown as import('../types/game.js').TransferConquestAction,
+      socketId,
+    })
+
+    if (job) {
+      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+      if (hasWorkers) {
+        logger.info('Queued transfer_conquest for worker processing', {
+          gameId,
+          jobId: job.id,
+          fromTerritoryId,
+          toTerritoryId,
+          armies,
+        })
+        return
+      }
+      try {
+        await job.remove()
+      } catch (err) {
+        logger.warn('Failed to remove queued job for inline fallback', {
+          gameId,
+          jobId: job.id,
+          error: err instanceof Error ? err.message : err,
+        })
+      }
+    }
+
+    // Inline fallback: use GameService and emit deltas
+    const result = await this.gameService.transferConquestArmies(
+      gameId,
+      playerId,
+      fromTerritoryId,
+      toTerritoryId,
+      armies,
+    )
+
+    // Emit pair of territory updates (no snapshot)
+    try {
+      const { DeltaBuilder } = await import('../types/deltaUpdates.js')
+      const { emitFogFilteredDelta } = await import('./fogService.js')
+      await emitFogFilteredDelta(
+        this.io as unknown as Server,
+        gameId,
+        DeltaBuilder.territoryUpdate(gameId, fromTerritoryId, { armies: result.fromArmies }, result.gameState.version),
+      )
+      await emitFogFilteredDelta(
+        this.io as unknown as Server,
+        gameId,
+        DeltaBuilder.territoryUpdate(gameId, toTerritoryId, { armies: result.toArmies }, result.gameState.version),
+      )
+    } catch (e) {
+      logger.debug('Failed to emit transfer_conquest deltas (inline)', {
+        gameId,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
+  }
+
+  /**
    * Process a go-back-to-reinforcement action
    * Attempts to queue, falls back to inline if no workers
    */
@@ -367,6 +444,90 @@ export class GameActionProcessor {
         // best-effort
       }
     }
+    return { mode: 'inline' }
+  }
+
+  /**
+   * Process an end turn action. Queues when workers available; otherwise inline via GameService.
+   */
+  async processEndTurn(
+    gameId: string,
+    playerId: string,
+    socketId?: string,
+  ): Promise<{ mode: 'queued' | 'inline' }> {
+    const job = await queueService.addGameAction({
+      gameId,
+      playerId,
+      action: {
+        type: 'end_turn',
+        roomId: gameId,
+        playerId,
+      },
+      socketId,
+    })
+
+    if (job) {
+      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+      if (hasWorkers) {
+        logger.info('Queued endTurn action for worker processing', {
+          gameId,
+          jobId: job.id,
+        })
+        return { mode: 'queued' }
+      }
+      try {
+        await job.remove()
+      } catch (err) {
+        logger.warn('Failed to remove queued job for inline fallback', {
+          gameId,
+          jobId: job.id,
+          error: err instanceof Error ? err.message : err,
+        })
+      }
+    }
+
+    // Inline fallback: end the turn and emit a phase change delta
+    const result = await this.gameService.endTurn(gameId, playerId)
+    await this.deltaEmitter.emitPhaseChange(gameId, {
+      phase: result.gameState.phase,
+      currentPlayer: result.gameState.currentPlayer,
+      turn: result.gameState.turn,
+      reinforcementArmies: result.reinforcementArmies,
+      version: (result.gameState as { version?: number }).version,
+    })
+
+    // Emit treasure awarded delta first when present for UI logs
+    try {
+      if (result.treasureAwarded) {
+        const { tryGetSocketServer } = await import('./socketRegistry.js')
+        const io = tryGetSocketServer()
+        if (io) {
+          io.to(`game:${gameId}`).emit('game-delta', {
+            type: 'TREASURE_AWARDED',
+            roomId: gameId,
+            timestamp: Date.now(),
+            userId: playerId,
+            metal: result.treasureAwarded,
+          } as import('@risk-game/shared/types').GameDelta)
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Schedule next player's timer and potential AI turn
+    try {
+      const { GameLifecycleService } = await import('./gameLifecycleService.js')
+      const lifecycle = new GameLifecycleService()
+      await lifecycle.scheduleTurnTimeout(gameId)
+      await lifecycle.scheduleAiTurn(gameId)
+    } catch (e) {
+      logger.warn('Failed to schedule timers after inline endTurn', {
+        gameId,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
+
     return { mode: 'inline' }
   }
 }

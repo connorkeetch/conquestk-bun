@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Queue, QueueEvents } from 'bullmq';
-import Redis from 'ioredis';
 import { getRedisClient } from '../config/redis.js';
 import { logger } from '../utils/logger.js';
+import { createRedisFromOptions } from '../utils/redisFactory.js';
 const QUEUE_LATENCY_WARNING_MS = 2 * 60 * 1000;
 const DEAD_LETTER_TTL_SECONDS = 7 * 24 * 60 * 60;
 const QUEUE_CONFIGS = {
@@ -396,6 +396,7 @@ export class QueueService {
                 return 10;
             case 'attack':
             case 'fortify':
+            case 'transfer_conquest':
                 return 7;
             case 'deploy':
                 return 5;
@@ -467,7 +468,7 @@ export class QueueService {
     attachQueueEventHandlers(queueKey, queue, deadLetterQueue) {
         try {
             const baseOpts = (this.redis?.options ?? {});
-            const eventsConn = new Redis({
+            const eventsConn = createRedisFromOptions({
                 ...baseOpts,
                 enableReadyCheck: false,
                 lazyConnect: false,

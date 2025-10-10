@@ -568,6 +568,7 @@ export class QueueService {
         return 10 // Highest priority
       case 'attack':
       case 'fortify':
+      case 'transfer_conquest':
         return 7 // High priority
       case 'deploy':
         return 5 // Medium priority

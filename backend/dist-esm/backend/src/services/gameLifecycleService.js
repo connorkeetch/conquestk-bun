@@ -670,43 +670,7 @@ export class GameLifecycleService {
     }
     async persistGameState(roomId, gameState) {
         const serializable = this.toSerializableGameState(gameState);
-        try {
-            await query(`
-        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
-        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
-        ON CONFLICT (room_id) DO UPDATE
-        SET game_data = EXCLUDED.game_data,
-            turn_number = EXCLUDED.turn_number,
-            current_player_id = EXCLUDED.current_player_id,
-            game_phase = EXCLUDED.game_phase,
-            last_activity = NOW()
-      `, [
-                roomId,
-                JSON.stringify(serializable),
-                Math.max(1, Number(gameState.turn ?? 1)),
-                gameState.currentPlayer,
-                gameState.phase ?? 'deployment',
-            ]);
-        }
-        catch (error) {
-            logger.error('Failed to persist initial game state to database', {
-                roomId,
-                phase: gameState.phase,
-                turn: gameState.turn,
-                error: error instanceof Error ? error.message : error,
-            });
-            throw error;
-        }
-        try {
-            const { gameStateCache } = await import('./cacheService.js');
-            await gameStateCache.setGameState(roomId, serializable);
-        }
-        catch (error) {
-            logger.warn('Failed to cache initial game state', {
-                roomId,
-                error: error instanceof Error ? error.message : error,
-            });
-        }
+        await this.gameService.saveSnapshot(roomId, serializable);
     }
     toSerializableGameState(gameState) {
         return {

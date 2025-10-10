@@ -1,4 +1,5 @@
 import { GameEngine } from '../game/gameEngine.js';
+import { arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js';
 import { filterStateForPlanner } from './fogService.js';
 class AIDecisionService {
@@ -658,20 +659,7 @@ class AIDecisionService {
         return true;
     }
     arePlayersTeammates(gameState, playerA, playerB) {
-        if (!playerB || playerB === 'neutral') {
-            return false;
-        }
-        if (!gameState.gameConfig.allowTeamPlay) {
-            return false;
-        }
-        const player = gameState.players.find((entry) => entry.id === playerA);
-        const teammate = gameState.players.find((entry) => entry.id === playerB);
-        if (!player || !teammate) {
-            return false;
-        }
-        const playerTeam = typeof player.teamId === 'number' && player.teamId > 0 ? player.teamId : null;
-        const teammateTeam = typeof teammate.teamId === 'number' && teammate.teamId > 0 ? teammate.teamId : null;
-        return playerTeam !== null && playerTeam === teammateTeam;
+        return utilArePlayersTeammates(gameState, playerA, playerB);
     }
     getTerritory(gameState, territoryId) {
         return gameState.board.find((territory) => territory.id === territoryId) ?? null;
