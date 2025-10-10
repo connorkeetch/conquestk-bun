@@ -11,11 +11,11 @@
       "default": "./dist/types/index.js"
     },
     "./odds": {
-      "types": "./odds/index.ts",
+      "types": "./dist/odds/index.d.ts",
       "default": "./dist/odds/index.js"
     },
     "./odds/*": {
-      "types": "./odds/*.ts",
+      "types": "./dist/odds/*.d.ts",
       "default": "./dist/odds/*.js"
     },
     "./types": {
