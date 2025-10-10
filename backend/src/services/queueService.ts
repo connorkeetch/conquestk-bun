@@ -680,8 +680,15 @@ export class QueueService {
     // Create QueueEvents listener for failed jobs so we can implement DLQ semantics globally.
     try {
       const baseOpts = (this.redis?.options ?? {}) as RedisOptions
+      // IMPORTANT: BullMQ QueueEvents uses blocking XREAD. ioredis `commandTimeout`
+      // will incorrectly time out these long‑polling commands and emit noisy errors.
+      // Strip it for the dedicated events connection.
+      const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts
+
       const eventsConn = createRedisFromOptions({
-        ...baseOpts,
+        ...withoutCommandTimeout,
+        // Give this connection a distinct name for diagnostics
+        connectionName: `queue-events:${queue.name}`,
         enableReadyCheck: false,
         lazyConnect: false,
         // Critical for BullMQ blocking commands
@@ -714,9 +721,24 @@ export class QueueService {
       })
 
       events.on('error', (err) => {
+        const normalized = this.formatQueueError(err)
+        // Deduplicate noisy repeating errors (e.g., transient disconnects)
+        const { logNow, occurrences } = this.shouldLogQueueError(
+          `${queue.name}:events`,
+          normalized.message,
+        )
+        if (!logNow) {
+          logger.debug('Suppressed repetitive queue events error', {
+            queue: queue.name,
+            message: normalized.message,
+            occurrences,
+          })
+          return
+        }
         logger.warn('QueueEvents error', {
           queue: queue.name,
-          error: err instanceof Error ? err.message : err,
+          ...normalized,
+          occurrences,
         })
       })
 
