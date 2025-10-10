@@ -88,7 +88,7 @@ class AudioService {
   private sounds: Map<string, SoundEffect> = new Map()
   private currentMusic: Howl | null = null
   private musicTrackIndex: number = 0
-  private musicTimer: NodeJS.Timeout | null = null
+  private musicTimer: number | null = null
   private preferences: AudioPreferences = {
     enabled: true,
     masterVolume: 50,

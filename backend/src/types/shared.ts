@@ -3,7 +3,7 @@
  * These are the core types that both frontend and backend use
  */
 
-import type { GameDelta } from '@conquestk/shared/types'
+import type { GameDelta } from '@conquestk/shared/types/delta'
 import type { ClanProgressionSocketPayload } from './clans.js'
 import type { GameAction, SerializedGameState } from './game.js'
 import type { Player as RoomPlayer } from './gameRoom.js'

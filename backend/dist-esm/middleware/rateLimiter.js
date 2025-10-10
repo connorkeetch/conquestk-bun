@@ -82,6 +82,7 @@ export function stopRateLimiterCleanup() {
         loginCleanupInterval = null;
     }
 }
+const authStore = createRateLimitStore('auth');
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
@@ -89,7 +90,7 @@ export const authLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: false,
-    store: createRateLimitStore('auth'),
+    ...(authStore ? { store: authStore } : {}),
 });
 export const loginSlowDown = slowDown({
     windowMs: 15 * 60 * 1000,
@@ -98,14 +99,16 @@ export const loginSlowDown = slowDown({
     maxDelayMs: 5000,
     skipSuccessfulRequests: true,
 });
+const gameCreationStore = createRateLimitStore('game-creation');
 export const gameCreationLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 10,
     message: createMessage('game creation', 10, 'hour'),
     standardHeaders: true,
     legacyHeaders: false,
-    store: createRateLimitStore('game-creation'),
+    ...(gameCreationStore ? { store: gameCreationStore } : {}),
 });
+const messageStore = createRateLimitStore('messages');
 export const messageLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 30,
@@ -113,24 +116,27 @@ export const messageLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipFailedRequests: true,
-    store: createRateLimitStore('messages'),
+    ...(messageStore ? { store: messageStore } : {}),
 });
+const passwordResetStore = createRateLimitStore('password-reset');
 export const passwordResetLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 3,
     message: 'Too many password reset requests. Please check your email or try again later.',
     standardHeaders: true,
     legacyHeaders: false,
-    store: createRateLimitStore('password-reset'),
+    ...(passwordResetStore ? { store: passwordResetStore } : {}),
 });
+const mapUploadStore = createRateLimitStore('map-upload');
 export const mapUploadLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     max: 5,
     message: createMessage('map uploads', 5, 'day'),
     standardHeaders: true,
     legacyHeaders: false,
-    store: createRateLimitStore('map-upload'),
+    ...(mapUploadStore ? { store: mapUploadStore } : {}),
 });
+const generalApiStore = createRateLimitStore('general-api');
 export const generalApiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 100,
@@ -138,23 +144,25 @@ export const generalApiLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipFailedRequests: false,
-    store: createRateLimitStore('general-api'),
+    ...(generalApiStore ? { store: generalApiStore } : {}),
 });
+const adminStore = createRateLimitStore('admin');
 export const adminLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 30,
     message: 'Admin operation rate limit exceeded.',
     standardHeaders: true,
     legacyHeaders: false,
-    store: createRateLimitStore('admin'),
+    ...(adminStore ? { store: adminStore } : {}),
 });
+const socketConnStore = createRateLimitStore('socket-connection');
 export const socketConnectionLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 5,
     message: 'Too many socket connection attempts.',
     standardHeaders: true,
     legacyHeaders: false,
-    store: createRateLimitStore('socket-connection'),
+    ...(socketConnStore ? { store: socketConnStore } : {}),
 });
 export class SuspiciousActivityTracker {
     suspiciousIPs = new Map();
@@ -264,6 +272,7 @@ export class SuspiciousActivityTracker {
     }
 }
 export const suspiciousActivityTracker = new SuspiciousActivityTracker();
+const standardStore = createRateLimitStore('standard');
 export const standardLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 60,
@@ -271,6 +280,6 @@ export const standardLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipFailedRequests: false,
-    store: createRateLimitStore('standard'),
+    ...(standardStore ? { store: standardStore } : {}),
 });
 //# sourceMappingURL=rateLimiter.js.map

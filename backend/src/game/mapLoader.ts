@@ -46,7 +46,9 @@ export async function loadMapForEngine(mapId: string): Promise<{
     ownerId: null,
     armies: 0,
     adjacentTerritories: Array.from(adjacencyMap.get(t.id) ?? new Set<string>()),
-    coordinates: t.armyPosition ? { x: t.armyPosition.x, y: t.armyPosition.y } : undefined,
+    ...(t.armyPosition
+      ? { coordinates: { x: t.armyPosition.x, y: t.armyPosition.y } }
+      : {}),
     isCapital: false,
   }))
 

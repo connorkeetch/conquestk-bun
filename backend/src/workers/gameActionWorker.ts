@@ -1,4 +1,4 @@
-import type { GameDelta } from '@conquestk/shared/types'
+import type { GameDelta } from '@conquestk/shared/types/delta'
 import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
 import { query } from '../config/database.js'
@@ -177,14 +177,16 @@ export class GameActionWorker {
 
       const difficulty = current.aiDifficulty ?? 'recruit'
       const baseBudget = this.computeBudgetForDifficulty(difficulty)
+      const computedReadableDelay =
+        typeof process.env.AI_READABLE_DELAY_MS === 'string'
+          ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
+          : budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs
       const effectiveBudget: DecisionBudget = {
         ...baseBudget,
         ...(budgetOverrides || {}),
-        // Allow override via env for quick tuning
-        readableDelayMs:
-          typeof process.env.AI_READABLE_DELAY_MS === 'string'
-            ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
-            : (budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs),
+        ...(computedReadableDelay !== undefined
+          ? { readableDelayMs: computedReadableDelay }
+          : {}),
       }
 
       const streamEnabled = (process.env.AI_STREAM_ACTIONS ?? 'true').toLowerCase() !== 'false'
@@ -305,10 +307,10 @@ export class GameActionWorker {
             const last = updated.lastBattleResult
             if (last) {
               try {
-                const battleDelta: import('@conquestk/shared/types').GameDelta =
+              const battleDelta: import('@conquestk/shared/types/delta').GameDelta =
                   DeltaBuilder.battleResult(
                     gameId,
-                    last as unknown as import('@conquestk/shared/types').BattleResultDelta['battleResult'],
+                    last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
                     updated.version,
                   )
                 const { emitFogFilteredDelta } = await import('../services/fogService.js')
@@ -461,7 +463,7 @@ export class GameActionWorker {
     aiTurnMetrics.recordTurn({
       difficulty,
       fallbackUsed: usedFallback,
-      fallbackReason,
+      ...(fallbackReason ? { fallbackReason } : {}),
       thinkTimeMs: Date.now() - start,
       plannedActions: actions.length,
       appliedActions: applied,
@@ -598,7 +600,7 @@ export class GameActionWorker {
             try {
               const battleDelta: GameDelta = DeltaBuilder.battleResult(
                 gameId,
-                last as unknown as import('@conquestk/shared/types').BattleResultDelta['battleResult'],
+                last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
                 updated.version,
               )
               // Attach concise territory updates so clients immediately reflect armies/ownership
@@ -660,7 +662,7 @@ export class GameActionWorker {
             payload.armies,
           )
           try {
-            const updates: import('@conquestk/shared/types').GameDelta[] = [
+            const updates: import('@conquestk/shared/types/delta').GameDelta[] = [
               DeltaBuilder.territoryUpdate(gameId, payload.fromTerritoryId, {
                 armies: transfer.fromArmies,
               }),
@@ -779,7 +781,7 @@ export class GameActionWorker {
                 ? postPlayer?.mustCashInTreasures
                 : undefined
             const { emitFogFilteredDelta } = await import('../services/fogService.js')
-            const playerDelta = DeltaBuilder.playerUpdate(
+              const playerDelta = DeltaBuilder.playerUpdate(
               gameId,
               playerId,
               {
@@ -792,13 +794,14 @@ export class GameActionWorker {
 
             // If phase changed (commonly to reinforcement), emit phase change with bank as reinforcementArmies
             if (newPhase !== currentState.phase) {
-              await this.deltaEmitter.emitPhaseChange(gameId, {
+              const payload = {
                 phase: newPhase,
                 currentPlayer: serialized?.currentPlayer ?? playerId,
                 turn: serialized?.turn ?? currentState.turn,
                 reinforcementArmies: Number(postBank),
-                version,
-              })
+                ...(version !== undefined ? { version } : {}),
+              }
+              await this.deltaEmitter.emitPhaseChange(gameId, payload)
             }
           } catch (_e) {
             // Fallback: if delta emission fails, send a full snapshot to avoid desync
@@ -978,7 +981,7 @@ export class GameActionWorker {
 
     // Emit a consolidated fortify result delta for logging/UX purposes
     try {
-      const fortifyDelta: import('@conquestk/shared/types').GameDelta = {
+              const fortifyDelta: import('@conquestk/shared/types/delta').GameDelta = {
         type: 'FORTIFY_RESULT',
         roomId: gameId,
         timestamp: Date.now(),
@@ -1007,7 +1010,7 @@ export class GameActionWorker {
     // Emit treasure awarded (if any) before phase change for UX parity
     try {
       if (result.treasureAwarded) {
-        const delta: Partial<import('@conquestk/shared/types').TreasureAwardedDelta> & {
+        const delta: Partial<import('@conquestk/shared/types/delta').TreasureAwardedDelta> & {
           type: 'TREASURE_AWARDED'
           roomId: string
           timestamp: number

@@ -365,8 +365,10 @@ export class MigrationTracker {
       return result.rows.map((row) => ({
         filename: row.filename,
         status: this.resolveStatus(row.status),
-        executed_at: row.executed_at ?? undefined,
-        execution_time_ms: row.execution_time_ms ?? undefined,
+        ...(row.executed_at ? { executed_at: row.executed_at } : {}),
+        ...(typeof row.execution_time_ms === 'number'
+          ? { execution_time_ms: row.execution_time_ms }
+          : {}),
       }))
     } catch (error) {
       logger.error('❌ Failed to get all migration statuses:', error)

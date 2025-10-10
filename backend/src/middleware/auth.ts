@@ -57,7 +57,7 @@ export const authenticateToken: RequestHandler = async (
     if (payload.sessionId && typeof payload.sessionId === 'string') {
       req.sessionId = payload.sessionId
     } else {
-      req.sessionId = undefined
+      delete req.sessionId
     }
 
     // Enforce bans/suspensions via user_account_status
@@ -128,14 +128,14 @@ export const authenticateToken: RequestHandler = async (
 
         const requestUser: RequestUser = {
           id: userRow.id,
-          username: userRow.username ?? undefined,
-          email: userRow.email ?? undefined,
           isAdmin: hasAdminRole || Boolean(userRow.is_admin),
           isVip: Boolean(userRow.is_vip),
           isBetaUser: Boolean(userRow.is_beta_user),
           premiumTier,
           hasPremium: premiumTier !== 'free',
           clanMembership: membership,
+          ...(userRow.username ? { username: userRow.username } : {}),
+          ...(userRow.email ? { email: userRow.email } : {}),
         }
 
         req.user = requestUser

@@ -2,13 +2,11 @@ import RedisPkg from 'ioredis';
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js';
 import { logger } from '../utils/logger.js';
 let redisClient = null;
-let pubClient = null;
-let subClient = null;
 export async function initializeRedis() {
     const redisUrl = process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL;
     if (!redisUrl) {
         logger.warn('Redis URL not configured, using in-memory fallback');
-        return { redisClient: null, pubClient: null, subClient: null };
+        return { redisClient: null };
     }
     logger.debug(`Initializing Redis connection...`);
     logger.debug(`Using Redis URL: ${redisUrl.replace(/:[^:]*@/, ':****@')}`);
@@ -55,14 +53,6 @@ export async function initializeRedis() {
             ...redisOptions,
             connectionName: 'main',
         });
-        pubClient = new RedisCtor(finalRedisUrl, {
-            ...redisOptions,
-            connectionName: 'pub',
-        });
-        subClient = new RedisCtor(finalRedisUrl, {
-            ...redisOptions,
-            connectionName: 'sub',
-        });
         redisClient?.on('connect', () => {
             logger.info('✅ Redis client connected');
         });
@@ -92,48 +82,6 @@ export async function initializeRedis() {
         redisClient.on('close', () => {
             logger.warn('Redis client connection closed');
         });
-        pubClient.on('connect', () => {
-            logger.info('✅ Redis pub client connected');
-        });
-        pubClient.on('error', (err) => {
-            const errorDetails = toKnownError(err);
-            const errorMsg = errorDetails.message;
-            const errorCode = typeof errorDetails.code === 'string'
-                ? errorDetails.code
-                : errorDetails.code !== undefined
-                    ? String(errorDetails.code)
-                    : undefined;
-            if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-                logger.warn(`Redis pub client error (${errorCode || 'unknown'}): ${errorMsg}`);
-            }
-            else {
-                logger.error('Redis pub client error:', errorMsg);
-            }
-        });
-        pubClient.on('close', () => {
-            logger.warn('Redis pub client connection closed');
-        });
-        subClient.on('connect', () => {
-            logger.info('✅ Redis sub client connected');
-        });
-        subClient.on('error', (err) => {
-            const errorDetails = toKnownError(err);
-            const errorMsg = errorDetails.message;
-            const errorCode = typeof errorDetails.code === 'string'
-                ? errorDetails.code
-                : errorDetails.code !== undefined
-                    ? String(errorDetails.code)
-                    : undefined;
-            if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-                logger.warn(`Redis sub client error (${errorCode || 'unknown'}): ${errorMsg}`);
-            }
-            else {
-                logger.error('Redis sub client error:', errorMsg);
-            }
-        });
-        subClient.on('close', () => {
-            logger.warn('Redis sub client connection closed');
-        });
         logger.debug(`Redis connection attempt details:`);
         logger.debug(`  - Final Redis URL: ${finalRedisUrl.replace(/:[^:]*@/, ':****@')}`);
         logger.debug(`  - Connection timeout: ${redisOptions.connectTimeout}ms`);
@@ -146,7 +94,7 @@ export async function initializeRedis() {
             ]);
             await redisClient.ping();
             logger.info('✅ Redis connection established and verified');
-            return { redisClient, pubClient, subClient };
+            return { redisClient };
         }
         catch (err) {
             const errorDetails = toKnownError(err);
@@ -178,28 +126,21 @@ export async function initializeRedis() {
                     }
                 }
             };
-            await Promise.all([
-                cleanup(redisClient, 'main'),
-                cleanup(pubClient, 'pub'),
-                cleanup(subClient, 'sub'),
-            ]);
+            await Promise.all([cleanup(redisClient, 'main')]);
             logger.warn('Redis disabled, application will use in-memory fallbacks');
-            return { redisClient: null, pubClient: null, subClient: null };
+            return { redisClient: null };
         }
     }
     catch (error) {
         logger.error('Failed to initialize Redis:', toKnownError(error));
-        return { redisClient: null, pubClient: null, subClient: null };
+        return { redisClient: null };
     }
 }
 export function getRedisClient() {
     return redisClient;
 }
-export function getPubSubClients() {
-    return { pubClient, subClient };
-}
 export async function closeRedisConnections() {
-    const clients = [redisClient, pubClient, subClient].filter(Boolean);
+    const clients = [redisClient].filter(Boolean);
     await Promise.all(clients.map((client) => client?.quit().catch((err) => logger.error('Error closing Redis connection:', err))));
     logger.info('Redis connections closed');
 }
