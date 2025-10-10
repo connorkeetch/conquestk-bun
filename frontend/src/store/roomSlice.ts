@@ -70,7 +70,7 @@ const roomSlice = createSlice({
         const merged: Partial<GameRoom> = { ...state.currentRoom, ...rest }
         if (players !== undefined) {
           // Only overwrite players when explicitly provided
-          ;(merged as GameRoom).players = players as GameRoom['players']
+          ;(merged as GameRoom).players = players!
         }
         state.currentRoom = merged as GameRoom
       }
@@ -79,7 +79,7 @@ const roomSlice = createSlice({
       if (roomIndex !== -1) {
         const mergedList: Partial<GameRoom> = { ...state.rooms[roomIndex], ...rest }
         if (players !== undefined) {
-          ;(mergedList as GameRoom).players = players as GameRoom['players']
+          ;(mergedList as GameRoom).players = players!
         }
         state.rooms[roomIndex] = mergedList as GameRoom
       }
@@ -181,7 +181,7 @@ const roomSlice = createSlice({
 
         if (readyStates) {
           const readyMap = new Map(readyStates.map((entry) => [entry.userId, entry]))
-          room.players = room.players?.map((player) => {
+          const updated = room.players?.map((player) => {
             const readyEntry = readyMap.get(player.userId ?? player.id)
             if (!readyEntry) {
               return player
@@ -192,6 +192,9 @@ const roomSlice = createSlice({
               readyAt: readyEntry.readyAt,
             }
           })
+          if (updated) {
+            room.players = updated
+          }
         }
 
         // Apply status message if provided

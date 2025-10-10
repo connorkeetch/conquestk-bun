@@ -15,6 +15,8 @@
     "src/store/messagesSlice.ts",
     "src/services/messagesService.ts",
     "src/types/messages.ts",
-    "src/components/messages/**/*"
+    "src/components/messages/**/*",
+    "src/store/gameSlice.ts",
+    "src/store/roomSlice.ts"
   ]
 }

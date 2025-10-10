@@ -126,7 +126,6 @@ const adaptBattleResult = (
   const toDetails = gameState.board.find((territory) => territory.id === result.toTerritory.id)
 
   return {
-    attackerId: result.attackerId,
     defenderId: result.defenderId ?? null,
     attackerDice: result.attackerDice,
     defenderDice: result.defenderDice,
@@ -147,9 +146,12 @@ const adaptBattleResult = (
       armies: result.toTerritory.armies,
       ownerId: toDetails?.ownerId ?? result.toTerritory.ownerId ?? null,
     },
-    capitalElimination: result.capitalElimination,
-    gameEnded: result.gameEnded,
-    gameState: result.gameState as GameState | undefined,
+    ...(result.capitalElimination
+      ? { capitalElimination: result.capitalElimination }
+      : {}),
+    ...(typeof result.gameEnded === 'boolean' ? { gameEnded: result.gameEnded } : {}),
+    ...(result.gameState ? { gameState: result.gameState as GameState } : {}),
+    ...(typeof result.attackerId === 'string' ? { attackerId: result.attackerId } : {}),
   }
 }
 
@@ -211,7 +213,9 @@ export const fetchGameState = createAsyncThunk<
   { rejectValue: string }
 >('game/fetchGameState', async ({ roomId, allowSpectate }, { rejectWithValue }) => {
   try {
-    const game = await gameService.getGameState(roomId, { allowSpectate })
+    const opts =
+      typeof allowSpectate === 'boolean' ? ({ allowSpectate } as { allowSpectate?: boolean }) : {}
+    const game = await gameService.getGameState(roomId, opts)
     return game
   } catch (error) {
     if (typeof error === 'object' && error && 'response' in error) {
