@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": [
+    "src/components/notifications/**/*",
+    "src/components/SettingsModal.tsx",
+    "src/components/Header.tsx"
+  ]
+}

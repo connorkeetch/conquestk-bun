@@ -86,12 +86,12 @@ export class GameActionWorker {
       const Redis = (await import('ioredis')).default
       const redis = (await import('../config/redis.js')).getRedisClient()
       const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+      const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts
       const connection = new Redis({
-        ...baseOpts,
+        ...withoutCommandTimeout,
         enableReadyCheck: false,
         lazyConnect: false,
         maxRetriesPerRequest: null,
-        commandTimeout: undefined,
       })
       this.worker = new Worker(this.queueName, processJob, {
         concurrency: 10,
@@ -383,13 +383,16 @@ export class GameActionWorker {
               )
               await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
               if (updated.phase !== prevPhase) {
-                await this.deltaEmitter.emitPhaseChange(gameId, {
+              await this.deltaEmitter.emitPhaseChange(
+                gameId,
+                {
                   phase: updated.phase,
                   currentPlayer: updated.currentPlayer,
                   turn: updated.turn,
                   reinforcementArmies: Number(postBank),
-                  version: updated.version,
-                })
+                  ...(updated.version !== undefined ? { version: updated.version } : {}),
+                },
+              )
               }
             } catch {
               // Fallback to snapshot
@@ -612,7 +615,9 @@ export class GameActionWorker {
                   last.toTerritory.id,
                   {
                     armies: last.toTerritory.armies,
-                    ownerId: last.toTerritory.ownerId ?? undefined,
+                    ...(last.toTerritory.ownerId !== undefined
+                      ? { ownerId: last.toTerritory.ownerId }
+                      : {}),
                   },
                   updated.version,
                 ),
@@ -734,30 +739,29 @@ export class GameActionWorker {
               } catch {
                 /* ignore */
               }
-              await this.gameService.appendLog(gameId, [
-                {
-                  type: 'TREASURE_CASH',
-                  timestamp: new Date().toISOString(),
-                  playerId,
-                  troops: gained,
-                  // Include card names when derivable from submitted indices
-                  cards: cardNames && cardNames.length === 3 ? cardNames : undefined,
-                  cardCount: Array.isArray(
-                    (action as { payload?: { cards?: unknown[] } }).payload?.cards,
+              const baseLog: Record<string, unknown> = {
+                type: 'TREASURE_CASH',
+                timestamp: new Date().toISOString(),
+                playerId,
+                troops: gained,
+              }
+              const maybeCards = cardNames && cardNames.length === 3 ? cardNames : undefined
+              const cardsLen = Array.isArray(
+                (action as { payload?: { cards?: unknown[] } }).payload?.cards,
+              )
+                ? (action as { payload?: { cards?: unknown[] } }).payload?.cards?.length
+                : Array.isArray(
+                      (action as { payload?: { treasureSet?: unknown[] } }).payload?.treasureSet,
                   )
-                    ? ((action as { payload?: { cards?: unknown[] } }).payload?.cards?.length ??
-                      undefined)
-                    : Array.isArray(
-                          (action as { payload?: { treasureSet?: unknown[] } }).payload
-                            ?.treasureSet,
-                        )
-                      ? (
-                          (action as { payload?: { treasureSet?: unknown[] } }).payload
-                            ?.treasureSet as unknown[]
-                        ).length
-                      : undefined,
-                },
-              ])
+                  ? ((action as { payload?: { treasureSet?: unknown[] } }).payload
+                      ?.treasureSet as unknown[]).length
+                  : undefined
+              const fullLog = {
+                ...baseLog,
+                ...(maybeCards ? { cards: maybeCards } : {}),
+                ...(typeof cardsLen === 'number' ? { cardCount: cardsLen } : {}),
+              }
+              await this.gameService.appendLog(gameId, [fullLog as any])
             }
           } catch (logErr) {
             logger.debug('Skipped appending treasure cash log', {
@@ -1003,13 +1007,20 @@ export class GameActionWorker {
     // Emit treasure awarded (if any) before phase change for UX parity
     try {
       if (result.treasureAwarded) {
-        this.io.to(`game:${gameId}`).emit('game-delta', {
+        const delta: Partial<import('@conquestk/shared/types').TreasureAwardedDelta> & {
+          type: 'TREASURE_AWARDED'
+          roomId: string
+          timestamp: number
+          userId: string
+          metal: import('@conquestk/shared/types').Metal
+        } = {
           type: 'TREASURE_AWARDED',
           roomId: gameId,
           timestamp: Date.now(),
           userId: playerId,
           metal: result.treasureAwarded,
-        } as import('@conquestk/shared/types').GameDelta)
+        }
+        this.io.to(`game:${gameId}`).emit('game-delta', delta)
       }
     } catch (_e) {
       // best-effort

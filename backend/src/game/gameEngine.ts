@@ -125,9 +125,9 @@ export class GameEngine {
       ownerId: null,
       armies: 0,
       adjacentTerritories: [...t.adjacentTerritories],
-      coordinates: t.coordinates ? { ...t.coordinates } : undefined,
-      isCapital: t.isCapital,
-      capitalOwnerId: t.capitalOwnerId ?? null,
+      ...(t.coordinates ? { coordinates: { ...t.coordinates } } : {}),
+      ...(typeof t.isCapital === 'boolean' ? { isCapital: t.isCapital } : {}),
+      ...(t.capitalOwnerId !== undefined ? { capitalOwnerId: t.capitalOwnerId ?? null } : {}),
     }))
     const players = this.createPlayers(playerConfigs)
 

@@ -62,12 +62,12 @@ export class AnalyticsWorker {
         connection: (() => {
           const redis = getRedisClient()
           const baseOpts = (redis?.options ?? {}) as RedisOptions
+          const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts
           return createRedisFromOptions({
-            ...baseOpts,
+            ...withoutCommandTimeout,
             enableReadyCheck: false,
             lazyConnect: false,
             maxRetriesPerRequest: null,
-            commandTimeout: undefined,
           })
         })(),
       },

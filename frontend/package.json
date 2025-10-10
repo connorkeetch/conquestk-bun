@@ -9,6 +9,7 @@
     "build": "vite build",
     "build:check": "tsc && vite build",
     "typecheck": "tsc --noEmit",
+    "typecheck:strict-optional": "tsc -p tsconfig.strict-optional.json --noEmit",
     "preview": "vite preview",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

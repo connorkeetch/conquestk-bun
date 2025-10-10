@@ -68,12 +68,12 @@ export class MaintenanceWorker {
       const Redis = (await import('ioredis')).default
       const redis = (await import('../config/redis.js')).getRedisClient()
       const baseOpts = (redis?.options ?? {}) as import('ioredis').RedisOptions
+      const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts
       const connection = new Redis({
-        ...baseOpts,
+        ...withoutCommandTimeout,
         enableReadyCheck: false,
         lazyConnect: false,
         maxRetriesPerRequest: null,
-        commandTimeout: undefined,
       })
       this.worker = new Worker(
         queue.name,
