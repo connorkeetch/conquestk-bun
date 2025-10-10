@@ -429,7 +429,6 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
   try {
     const filters = {
       creator: req.userId,
-      isPublic: undefined, // Show both public and private
       sortBy: req.query.sortBy as string,
       sortOrder: req.query.sortOrder as 'asc' | 'desc',
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
@@ -474,7 +473,6 @@ router.get('/my/maps', authenticateToken, async (req: Request, res: Response) =>
   try {
     const filters = {
       creator: req.userId,
-      isPublic: undefined, // Show both public and private
       sortBy: req.query.sortBy as string,
       sortOrder: req.query.sortOrder as 'asc' | 'desc',
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
@@ -834,7 +832,7 @@ router.put(
       }
 
       const map = await mapService.updateMap(req.params.mapId, userId, updates, {
-        isAdmin: req.user?.isAdmin,
+        isAdmin: Boolean(req.user?.isAdmin),
         allowCollaborator: true,
       })
 
@@ -865,7 +863,7 @@ router.delete(
     }
 
     try {
-      await mapService.deleteMap(req.params.mapId, userId, { isAdmin: req.user?.isAdmin })
+      await mapService.deleteMap(req.params.mapId, userId, { isAdmin: Boolean(req.user?.isAdmin) })
 
       return res.json({ message: 'Map deleted successfully' })
     } catch (error) {
@@ -898,7 +896,7 @@ router.post(
     try {
       await mapPermissionService.assertCanEditMap(req.params.mapId, {
         userId,
-        isAdmin: req.user?.isAdmin,
+        isAdmin: Boolean(req.user?.isAdmin),
       })
       const sector = await mapService.createSector(
         req.params.mapId,
@@ -963,19 +961,24 @@ router.post(
     try {
       await mapPermissionService.assertCanEditMap(req.params.mapId, {
         userId,
-        isAdmin: req.user?.isAdmin,
+        isAdmin: Boolean(req.user?.isAdmin),
       })
       const bodyWithSectors = req.body as unknown as { sectorId?: string; continentId?: string }
-      const territory = await mapService.createTerritory({
+      const baseTerritory = {
         mapId: req.params.mapId,
         territoryId: req.body.territoryId,
         name: req.body.name,
-        sectorId: bodyWithSectors.sectorId ?? bodyWithSectors.continentId,
         boundaryCoords: req.body.boundaryCoords,
         armyPosition: req.body.armyPosition,
         abilityTypeId: req.body.abilityTypeId,
         startingOwnerSlot: req.body.startingOwnerSlot,
         startingArmies: req.body.startingArmies,
+      }
+      const territory = await mapService.createTerritory({
+        ...baseTerritory,
+        ...(bodyWithSectors.sectorId || bodyWithSectors.continentId
+          ? { sectorId: (bodyWithSectors.sectorId ?? bodyWithSectors.continentId) as string }
+          : {}),
       })
 
       return res.status(201).json(territory)
@@ -1007,7 +1010,7 @@ router.post(
     try {
       await mapPermissionService.assertCanEditTerritories(
         [req.body.fromTerritoryId, req.body.toTerritoryId],
-        { userId, isAdmin: req.user?.isAdmin },
+        { userId, isAdmin: Boolean(req.user?.isAdmin) },
       )
       const adjacency = await mapService.createAdjacency({
         fromTerritoryId: req.body.fromTerritoryId,
@@ -1074,7 +1077,7 @@ router.post(
 
       await mapPermissionService.assertCanEditMap(mapId, {
         userId,
-        isAdmin: req.user?.isAdmin,
+        isAdmin: Boolean(req.user?.isAdmin),
       })
 
       // Generate capitals using the service
@@ -1134,7 +1137,7 @@ router.patch(
 
       await mapPermissionService.assertCanEditMap(mapId, {
         userId,
-        isAdmin: req.user?.isAdmin,
+        isAdmin: Boolean(req.user?.isAdmin),
       })
 
       // Validate territory count matches player count
@@ -1192,7 +1195,7 @@ router.get(
 
         const context = await mapPermissionService.getMapEditorContext(mapId, {
           userId,
-          isAdmin: req.user?.isAdmin,
+          isAdmin: Boolean(req.user?.isAdmin),
         })
 
         const canView = context.canEdit || context.collaboratorRole !== undefined
