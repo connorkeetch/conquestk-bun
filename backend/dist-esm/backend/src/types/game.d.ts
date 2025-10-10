@@ -1,5 +1,5 @@
-import type { AIDifficulty, KingOfTheHillConfig, KingOfTheHillState, Metal, SectorBonus, TreasureConfig, TreasureState } from '@risk-game/shared/types';
-export type { AIDifficulty, KingOfTheHillConfig, KingOfTheHillState, Metal, TreasureConfig, TreasureState, } from '@risk-game/shared/types';
+import type { AIDifficulty, KingOfTheHillConfig, KingOfTheHillState, Metal, SectorBonus, TreasureConfig, TreasureState } from '../../../shared/types';
+export type { AIDifficulty, KingOfTheHillConfig, KingOfTheHillState, Metal, TreasureConfig, TreasureState, } from '../../../shared/types';
 export type GamePhase = 'reinforcement' | 'attack' | 'fortify' | 'finished';
 export interface GameTerritoryModifier {
     territory_id: string;

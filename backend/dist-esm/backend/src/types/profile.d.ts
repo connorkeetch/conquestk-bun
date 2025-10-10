@@ -1,4 +1,4 @@
-import type { ThemeId } from '@risk-game/shared/types/themes';
+import type { ThemeId } from '../../../shared/types/themes';
 export interface UserProfile {
     userId: string;
     avatarUrl?: string;

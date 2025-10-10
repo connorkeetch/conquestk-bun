@@ -1,4 +1,4 @@
-import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications';
+import type { NotificationEvent, NotificationResult } from '../../shared/types/notifications';
 import type { NotificationChannel } from '../NotificationDispatcher.js';
 interface DiscordWebhookChannelOptions {
     webhookUrls: string[];

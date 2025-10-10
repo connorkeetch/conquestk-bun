@@ -1,4 +1,4 @@
-import type { BattleResultDelta, GameEndDelta, PhaseChangeDelta, PlayerDelta as PlayerUpdateDelta, TerritoryDelta as TerritoryUpdateDelta } from '@risk-game/shared/types';
+import type { BattleResultDelta, GameEndDelta, PhaseChangeDelta, PlayerDelta as PlayerUpdateDelta, TerritoryDelta as TerritoryUpdateDelta } from '../shared/types';
 type BattleResultPayload = BattleResultDelta['battleResult'];
 export declare const DeltaBuilder: {
     readonly territoryUpdate: (roomId: string, territoryId: string, changes: {

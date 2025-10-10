@@ -1,4 +1,4 @@
-import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes';
+import { DEFAULT_THEME_ID, normalizeThemeId } from '../../../shared/types/themes';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { isPremiumColorChoice, isPremiumThemeId, normalizePremiumAwareColor, PREMIUM_COLOR_MESSAGE, PREMIUM_THEME_MESSAGE, PREMIUM_UPSELL_ERROR_CODE, } from '../constants/premium.js';

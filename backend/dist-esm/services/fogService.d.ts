@@ -1,4 +1,4 @@
-import type { GameDelta } from '@risk-game/shared/types';
+import type { GameDelta } from '../shared/types';
 import type { Server } from 'socket.io';
 import type { GameState } from '../types/game.js';
 export declare function computeVisibilityMask(state: GameState, viewerId: string): Set<string>;

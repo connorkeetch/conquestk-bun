@@ -1,4 +1,4 @@
-import type { NotificationEvent } from '@risk-game/shared/types/notifications';
+import type { NotificationEvent } from '../../../../shared/types/notifications';
 export interface DiscordWebhookPayload {
     content?: string;
     username?: string;

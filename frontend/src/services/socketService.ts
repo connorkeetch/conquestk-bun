@@ -12,7 +12,7 @@ import type {
   ReceiptReadAck,
   ServerToClientEvents,
   TerritoryDelta,
-} from '@shared/types'
+} from '@risk-game/shared'
 import { toast } from 'react-hot-toast'
 import { io, type Socket } from 'socket.io-client'
 import { getConquestRank } from '@/components/RankInsignia'
@@ -228,7 +228,16 @@ class SocketService {
     toTerritoryId: string,
     armies: number,
   ) {
-    this.socket?.emit('transferConquestArmies', { roomId, fromTerritoryId, toTerritoryId, armies })
+    // Migrate to unified game-action: transfer_conquest
+    this.sendGameAction({
+      roomId,
+      action: {
+        type: 'transfer_conquest',
+        roomId,
+        playerId: this.userId ?? '',
+        payload: { fromTerritoryId, toTerritoryId, armies },
+      } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+    })
   }
 
   undoFortify(roomId: string) {

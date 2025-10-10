@@ -66,8 +66,8 @@ export class GameService {
             });
         }
     }
-    async persistGameStateSnapshotWithClient(client, roomId, state) {
-        await client(`
+    async persistGameStateSnapshotWithClient(run, roomId, state) {
+        await run(`
         INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
         VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
         ON CONFLICT (room_id) DO UPDATE

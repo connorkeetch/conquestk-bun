@@ -1,4 +1,4 @@
-import type { ThemeId } from '@risk-game/shared/types/themes';
+import type { ThemeId } from '../../../shared/types/themes';
 export declare const PREMIUM_THEME_IDS: ReadonlySet<ThemeId>;
 export declare const PREMIUM_COLOR_KEYS: ReadonlySet<string>;
 export declare const PREMIUM_GAME_LIMIT = 5;

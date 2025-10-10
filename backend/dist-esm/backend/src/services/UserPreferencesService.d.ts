@@ -1,4 +1,4 @@
-import type { ThemeId } from '@risk-game/shared/types/themes';
+import type { ThemeId } from '../../../shared/types/themes';
 import type { Pool } from 'pg';
 export interface UserPreferences {
     userId: string;

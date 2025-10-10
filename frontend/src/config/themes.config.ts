@@ -4,7 +4,7 @@ import {
   normalizeThemeId,
   THEME_IDS,
   type ThemeId,
-} from '@shared/types/themes'
+} from '@risk-game/shared/types/themes'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { featureFlagService } from '../services/featureFlagService'
 

@@ -9,6 +9,10 @@
       "types": "./types/index.ts",
       "default": "./dist/types/index.js"
     },
+    "./types": {
+      "types": "./types/index.ts",
+      "default": "./dist/types/index.js"
+    },
     "./types/*": {
       "types": "./types/*.ts",
       "default": "./dist/types/*.js"
@@ -16,6 +20,10 @@
     "./constants/*": {
       "types": "./constants/*.ts",
       "default": "./dist/constants/*.js"
+    },
+    "./utils/*": {
+      "types": "./utils/*.ts",
+      "default": "./dist/utils/*.js"
     },
     "./package.json": "./package.json"
   },

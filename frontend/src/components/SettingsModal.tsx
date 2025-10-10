@@ -1,4 +1,4 @@
-import { normalizeThemeId } from '@shared/types/themes'
+import { normalizeThemeId } from '@risk-game/shared/types/themes'
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { applyTheme, storeTheme, THEMES } from '../config/themes.config'
