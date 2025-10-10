@@ -201,11 +201,13 @@ const normalizeProfileSummary = (data: RawProfileSummary): ProfileSummary => {
     0,
   )
 
+  const email = pickString(data as Record<string, unknown>, ['email'])
+  const emailVerified = (data.emailVerified ?? data.email_verified) as boolean | undefined
   return {
     id: data.id,
     username: data.username,
-    email: pickString(data as Record<string, unknown>, ['email']),
-    emailVerified: (data.emailVerified ?? data.email_verified) as boolean | undefined,
+    ...(email ? { email } : {}),
+    ...(typeof emailVerified === 'boolean' ? { emailVerified } : {}),
     avatarUrl: pickNullableString(data as Record<string, unknown>, ['avatarUrl', 'avatar_url']),
     bio: pickNullableString(data as Record<string, unknown>, ['bio']),
     tagline: pickNullableString(data as Record<string, unknown>, ['tagline']),
@@ -312,8 +314,8 @@ const normalizeStatsBreakdown = (payload: RawStatsBreakdown): PlayerStatsBreakdo
       mapName,
       gamesPlayed: games,
       wins: winsForMap,
-      averageGameLength: avgLength > 0 ? avgLength : undefined,
-      bestTerritories: bestTerritories > 0 ? bestTerritories : undefined,
+      ...(avgLength > 0 ? { averageGameLength: avgLength } : {}),
+      ...(bestTerritories > 0 ? { bestTerritories } : {}),
     }
   })
 
@@ -327,7 +329,7 @@ const normalizeStatsBreakdown = (payload: RawStatsBreakdown): PlayerStatsBreakdo
       mode,
       gamesPlayed: games,
       wins: winsPerMode,
-      averageGameLength: avgLength > 0 ? avgLength : undefined,
+      ...(avgLength > 0 ? { averageGameLength: avgLength } : {}),
     }
   })
 
