@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import RedisPkg from 'ioredis';
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js';
 import { logger } from '../utils/logger.js';
 let redisClient = null;
@@ -50,22 +50,23 @@ export async function initializeRedis() {
                 return delay;
             },
         };
-        redisClient = new Redis(finalRedisUrl, {
+        const RedisCtor = RedisPkg;
+        redisClient = new RedisCtor(finalRedisUrl, {
             ...redisOptions,
             connectionName: 'main',
         });
-        pubClient = new Redis(finalRedisUrl, {
+        pubClient = new RedisCtor(finalRedisUrl, {
             ...redisOptions,
             connectionName: 'pub',
         });
-        subClient = new Redis(finalRedisUrl, {
+        subClient = new RedisCtor(finalRedisUrl, {
             ...redisOptions,
             connectionName: 'sub',
         });
-        redisClient.on('connect', () => {
+        redisClient?.on('connect', () => {
             logger.info('✅ Redis client connected');
         });
-        redisClient.on('error', (err) => {
+        redisClient?.on('error', (err) => {
             const errorDetails = toKnownError(err);
             const errorMsg = errorDetails.message;
             const errorCode = typeof errorDetails.code === 'string'

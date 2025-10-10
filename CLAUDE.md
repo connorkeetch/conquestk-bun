@@ -83,6 +83,12 @@ cd backend && npm run make-admin   # promote an account interactively
 - Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/services/socketService.ts` (which wires chat handlers from `backend/src/socket/chatHandlers.ts`).
 - Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
 
+### Action routing & team utils
+- Prefer the unified `game-action` socket for all gameplay actions. Specialized events (`deployArmies`, `attack`, `fortify`, `transferConquestArmies`, `undoFortify`, `endTurn`, `goBackToReinforcement`) are deprecated and routed internally through the same processor for now.
+- New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket. This keeps queue/inline paths and deltas consistent.
+- Team checks are centralized in `backend/src/utils/gameTeams.ts` and used by both `GameEngine` and AI. Do not reimplement team logic elsewhere.
+- Emit deltas first; snapshots are recovery-only for desyncs.
+
 ## Frontend notes
 - Pages are under `frontend/src/pages`; shared components live in `frontend/src/components`.
 - Hooks in `frontend/src/hooks` and slices in `frontend/src/store` provide canonical state logic—reuse them before adding new state containers.

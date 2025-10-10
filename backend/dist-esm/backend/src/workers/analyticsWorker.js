@@ -1,10 +1,10 @@
 import { Worker } from 'bullmq';
-import Redis from 'ioredis';
 import { getRedisClient } from '../config/redis.js';
 import { GameService } from '../services/gameService.js';
 import { queueService } from '../services/queueService.js';
 import { startWorkerHeartbeat } from '../services/workerHeartbeat.js';
 import { logger } from '../utils/logger.js';
+import { createRedisFromOptions } from '../utils/redisFactory.js';
 export class AnalyticsWorker {
     constructor() {
         this.worker = null;
@@ -43,7 +43,7 @@ export class AnalyticsWorker {
             connection: (() => {
                 const redis = getRedisClient();
                 const baseOpts = (redis?.options ?? {});
-                return new Redis({
+                return createRedisFromOptions({
                     ...baseOpts,
                     enableReadyCheck: false,
                     lazyConnect: false,

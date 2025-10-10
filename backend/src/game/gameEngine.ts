@@ -2,6 +2,7 @@ import { treasureMetrics } from '../services/metricsService.js'
 import territoryModifierService, {
   type GameTerritoryModifier,
 } from '../services/territoryModifierService.js'
+import { getPlayerTeam as utilGetPlayerTeam, arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js'
 import type {
   AttackAction,
   BattleResult,
@@ -217,6 +218,17 @@ export class GameEngine {
       }
       case 'fortify':
         return { gameState: this.handleFortify(newState, action) }
+      case 'transfer_conquest': {
+        const { fromTerritoryId, toTerritoryId, armies } = (action as import('../types/game.js').TransferConquestAction).payload
+        const updated = this.transferConquestArmies(
+          newState,
+          action.playerId,
+          fromTerritoryId,
+          toTerritoryId,
+          armies,
+        )
+        return { gameState: updated }
+      }
       case 'undo_fortify':
         return { gameState: this.handleUndoFortify(newState, action) }
       case 'end_turn':
@@ -244,6 +256,9 @@ export class GameEngine {
         return this.validateAttack(gameState, action)
       case 'fortify':
         return this.validateFortify(gameState, action)
+      case 'transfer_conquest':
+        // Validation for transfer is enforced at the service layer; allow here to keep switch exhaustive
+        return true
       case 'undo_fortify':
         return this.validateUndoFortify(gameState, action)
       case 'end_turn': {
@@ -1871,17 +1886,7 @@ export class GameEngine {
   }
 
   private getPlayerTeam(gameState: GameState, playerId?: string | null): number | null {
-    if (!playerId) {
-      return null
-    }
-
-    const player = gameState.players.find((p) => p.id === playerId)
-    if (!player) {
-      return null
-    }
-
-    const { teamId } = player
-    return typeof teamId === 'number' && teamId > 0 ? teamId : null
+    return utilGetPlayerTeam(gameState, playerId)
   }
 
   private arePlayersTeammates(
@@ -1889,22 +1894,7 @@ export class GameEngine {
     playerA: string,
     playerB?: string | null,
   ): boolean {
-    if (!gameState.gameConfig.allowTeamPlay) {
-      return false
-    }
-
-    if (!playerB || playerB === 'neutral') {
-      return false
-    }
-
-    const teamA = this.getPlayerTeam(gameState, playerA)
-    const teamB = this.getPlayerTeam(gameState, playerB)
-
-    if (!teamA || !teamB) {
-      return false
-    }
-
-    return teamA === teamB
+    return utilArePlayersTeammates(gameState, playerA, playerB)
   }
 
   // Check if a territory can be moved to (owned by player or teammate)

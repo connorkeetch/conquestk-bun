@@ -55,6 +55,7 @@ import queueRoutes from './routes/queueRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
 import benchmarkRoutes from './routes/benchmarkRoutes.js';
 import { createPreferencesRouter } from './routes/preferences.js';
+import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js';
 const app = express();
 const server = createServer(app);
 const __filename = fileURLToPath(import.meta.url);
@@ -600,7 +601,6 @@ app.use((err, _req, res, _next) => {
 });
 setupSocketHandlers(io);
 memoryDiagnosticsService.start();
-import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js';
 async function startServer() {
     try {
         logger.info('🚀 Starting Risk Game server...');

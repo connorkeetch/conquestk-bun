@@ -1,5 +1,6 @@
 import { treasureMetrics } from '../services/metricsService.js';
 import territoryModifierService from '../services/territoryModifierService.js';
+import { getPlayerTeam as utilGetPlayerTeam, arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
 import { drawTreasure, ensureTreasureState, findRedeemableSets, normalizeTreasureConfig, redeemSet, } from './hiddenTreasures.js';
 export class GameEngine {
     constructor() {
@@ -143,6 +144,11 @@ export class GameEngine {
             }
             case 'fortify':
                 return { gameState: this.handleFortify(newState, action) };
+            case 'transfer_conquest': {
+                const { fromTerritoryId, toTerritoryId, armies } = action.payload;
+                const updated = this.transferConquestArmies(newState, action.playerId, fromTerritoryId, toTerritoryId, armies);
+                return { gameState: updated };
+            }
             case 'undo_fortify':
                 return { gameState: this.handleUndoFortify(newState, action) };
             case 'end_turn':
@@ -168,6 +174,8 @@ export class GameEngine {
                 return this.validateAttack(gameState, action);
             case 'fortify':
                 return this.validateFortify(gameState, action);
+            case 'transfer_conquest':
+                return true;
             case 'undo_fortify':
                 return this.validateUndoFortify(gameState, action);
             case 'end_turn': {
@@ -1361,29 +1369,10 @@ export class GameEngine {
         return dice;
     }
     getPlayerTeam(gameState, playerId) {
-        if (!playerId) {
-            return null;
-        }
-        const player = gameState.players.find((p) => p.id === playerId);
-        if (!player) {
-            return null;
-        }
-        const { teamId } = player;
-        return typeof teamId === 'number' && teamId > 0 ? teamId : null;
+        return utilGetPlayerTeam(gameState, playerId);
     }
     arePlayersTeammates(gameState, playerA, playerB) {
-        if (!gameState.gameConfig.allowTeamPlay) {
-            return false;
-        }
-        if (!playerB || playerB === 'neutral') {
-            return false;
-        }
-        const teamA = this.getPlayerTeam(gameState, playerA);
-        const teamB = this.getPlayerTeam(gameState, playerB);
-        if (!teamA || !teamB) {
-            return false;
-        }
-        return teamA === teamB;
+        return utilArePlayersTeammates(gameState, playerA, playerB);
     }
     canMoveTo(territory, playerId, gameState) {
         if (territory.ownerId === playerId)

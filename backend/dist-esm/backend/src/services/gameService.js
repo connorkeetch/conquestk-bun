@@ -66,6 +66,24 @@ export class GameService {
             });
         }
     }
+    async persistGameStateSnapshotWithClient(client, roomId, state) {
+        await client(`
+        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
+        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
+        ON CONFLICT (room_id) DO UPDATE
+          SET game_data = EXCLUDED.game_data,
+              turn_number = EXCLUDED.turn_number,
+              current_player_id = EXCLUDED.current_player_id,
+              game_phase = EXCLUDED.game_phase,
+              last_activity = NOW()
+      `, [
+            roomId,
+            JSON.stringify(state),
+            Math.max(1, Number(state.turn ?? 1)),
+            state.currentPlayer ?? null,
+            state.phase ?? 'reinforcement',
+        ]);
+    }
     async persistTurnStateTransactional(roomId, serialized) {
         await transaction(async (client) => {
             await client.query(`
@@ -915,22 +933,7 @@ export class GameService {
             const updatedTerritory = updatedState.board.find((t) => t.id === data.territoryId);
             const playerAfter = updatedState.players.find((p) => p.id === data.playerId);
             const serializedState = this.serializeGameState(updatedState);
-            await client.query(`
-        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
-        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
-        ON CONFLICT (room_id) DO UPDATE
-          SET game_data = EXCLUDED.game_data,
-              turn_number = EXCLUDED.turn_number,
-              current_player_id = EXCLUDED.current_player_id,
-              game_phase = EXCLUDED.game_phase,
-              last_activity = NOW()
-        `, [
-                gameId,
-                JSON.stringify(serializedState),
-                Math.max(1, Number(serializedState.turn ?? 1)),
-                serializedState.currentPlayer ?? null,
-                serializedState.phase,
-            ]);
+            await this.persistGameStateSnapshotWithClient(client.query.bind(client), gameId, serializedState);
             try {
                 await gameStateCache.setGameState(gameId, serializedState);
             }
@@ -1001,22 +1004,7 @@ export class GameService {
             }
             const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action);
             const serializedState = this.serializeGameState(updatedState);
-            await client.query(`
-        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
-        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
-        ON CONFLICT (room_id) DO UPDATE
-          SET game_data = EXCLUDED.game_data,
-              turn_number = EXCLUDED.turn_number,
-              current_player_id = EXCLUDED.current_player_id,
-              game_phase = EXCLUDED.game_phase,
-              last_activity = NOW()
-        `, [
-                gameId,
-                JSON.stringify(serializedState),
-                Math.max(1, Number(serializedState.turn ?? 1)),
-                serializedState.currentPlayer ?? null,
-                serializedState.phase,
-            ]);
+            await this.persistGameStateSnapshotWithClient(client.query.bind(client), gameId, serializedState);
             try {
                 await gameStateCache.setGameState(gameId, serializedState);
             }
