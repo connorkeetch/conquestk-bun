@@ -1,9 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.aiDecisionService = void 0;
-const gameEngine_js_1 = require("../game/gameEngine.js");
-const hiddenTreasures_js_1 = require("../game/hiddenTreasures.js");
-const fogService_js_1 = require("./fogService.js");
+import { GameEngine } from '../game/gameEngine.js';
+import { arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
+import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js';
+import { filterStateForPlanner } from './fogService.js';
 class AIDecisionService {
     async chooseAction(request) {
         const start = Date.now();
@@ -17,7 +15,7 @@ class AIDecisionService {
             const fogMode = request.gameState.gameConfig?.fogOfWar ?? 'off';
             const effectiveState = fogMode === 'off'
                 ? request.gameState
-                : (0, fogService_js_1.filterStateForPlanner)(request.gameState, request.player.id);
+                : filterStateForPlanner(request.gameState, request.player.id);
             const plannedActions = this.generatePlan({ ...request, gameState: effectiveState });
             if (request.budget.signal?.aborted) {
                 return this.createFallbackPlan('aborted', request, start);
@@ -89,8 +87,8 @@ class AIDecisionService {
             const hand = (player.treasures ?? []);
             const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures);
             if (cfg?.enabled && hand.length >= 3) {
-                const norm = (0, hiddenTreasures_js_1.normalizeTreasureConfig)(cfg);
-                const sets = (0, hiddenTreasures_js_1.findRedeemableSets)(hand);
+                const norm = normalizeTreasureConfig(cfg);
+                const sets = findRedeemableSets(hand);
                 const nearCap = hand.length >= Math.max(3, norm.handCap - 1);
                 if ((mustCash || nearCap) && sets.length > 0) {
                     const first = sets[0];
@@ -236,8 +234,8 @@ class AIDecisionService {
             const hand = (player.treasures ?? []);
             const mustCash = Boolean(player.mustCashInTreasures || gameState.mustCashInTreasures);
             if (cfg?.enabled && hand.length >= 3) {
-                const norm = (0, hiddenTreasures_js_1.normalizeTreasureConfig)(cfg);
-                const sets = (0, hiddenTreasures_js_1.findRedeemableSets)(hand);
+                const norm = normalizeTreasureConfig(cfg);
+                const sets = findRedeemableSets(hand);
                 const nearCap = hand.length >= Math.max(3, norm.handCap - 1);
                 if ((mustCash || nearCap) && sets.length > 0) {
                     const first = sets[0];
@@ -364,7 +362,7 @@ class AIDecisionService {
         const owned = gameState.board.filter((t) => t.ownerId === playerId);
         if (owned.length === 0)
             return null;
-        const engine = new gameEngine_js_1.GameEngine();
+        const engine = new GameEngine();
         const sources = owned
             .filter((t) => t.armies >= 4 && !this.hasEnemyNeighbor(gameState, t, playerId))
             .sort((a, b) => b.armies - a.armies);
@@ -661,20 +659,7 @@ class AIDecisionService {
         return true;
     }
     arePlayersTeammates(gameState, playerA, playerB) {
-        if (!playerB || playerB === 'neutral') {
-            return false;
-        }
-        if (!gameState.gameConfig.allowTeamPlay) {
-            return false;
-        }
-        const player = gameState.players.find((entry) => entry.id === playerA);
-        const teammate = gameState.players.find((entry) => entry.id === playerB);
-        if (!player || !teammate) {
-            return false;
-        }
-        const playerTeam = typeof player.teamId === 'number' && player.teamId > 0 ? player.teamId : null;
-        const teammateTeam = typeof teammate.teamId === 'number' && teammate.teamId > 0 ? teammate.teamId : null;
-        return playerTeam !== null && playerTeam === teammateTeam;
+        return utilArePlayersTeammates(gameState, playerA, playerB);
     }
     getTerritory(gameState, territoryId) {
         return gameState.board.find((territory) => territory.id === territoryId) ?? null;
@@ -742,5 +727,5 @@ class AIDecisionService {
         };
     }
 }
-exports.aiDecisionService = new AIDecisionService();
+export const aiDecisionService = new AIDecisionService();
 //# sourceMappingURL=aiDecisionService.js.map

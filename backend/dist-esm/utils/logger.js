@@ -1,38 +1,32 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.logger = void 0;
-const node_fs_1 = __importDefault(require("node:fs"));
-const node_path_1 = __importDefault(require("node:path"));
-const winston_1 = __importDefault(require("winston"));
+import fs from 'node:fs';
+import path from 'node:path';
+import winston from 'winston';
 const transports = [];
 if (process.env.NODE_ENV === 'production') {
-    transports.push(new winston_1.default.transports.Console({
-        format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.errors({ stack: true }), winston_1.default.format.json()),
+    transports.push(new winston.transports.Console({
+        format: winston.format.combine(winston.format.timestamp(), winston.format.errors({ stack: true }), winston.format.json()),
     }));
 }
 else {
     try {
-        const logsDir = node_path_1.default.join(process.cwd(), 'logs');
-        if (!node_fs_1.default.existsSync(logsDir)) {
-            node_fs_1.default.mkdirSync(logsDir, { recursive: true });
+        const logsDir = path.join(process.cwd(), 'logs');
+        if (!fs.existsSync(logsDir)) {
+            fs.mkdirSync(logsDir, { recursive: true });
         }
-        transports.push(new winston_1.default.transports.File({ filename: 'logs/error.log', level: 'error' }), new winston_1.default.transports.File({ filename: 'logs/combined.log' }), new winston_1.default.transports.Console({
-            format: winston_1.default.format.simple(),
+        transports.push(new winston.transports.File({ filename: 'logs/error.log', level: 'error' }), new winston.transports.File({ filename: 'logs/combined.log' }), new winston.transports.Console({
+            format: winston.format.simple(),
         }));
     }
     catch (_error) {
-        transports.push(new winston_1.default.transports.Console({
-            format: winston_1.default.format.simple(),
+        transports.push(new winston.transports.Console({
+            format: winston.format.simple(),
         }));
     }
 }
-exports.logger = winston_1.default.createLogger({
+export const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
-    format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.errors({ stack: true }), winston_1.default.format.json()),
-    defaultMeta: { service: 'risk-game-backend' },
+    format: winston.format.combine(winston.format.timestamp(), winston.format.errors({ stack: true }), winston.format.json()),
+    defaultMeta: { service: 'conquestk-backend' },
     transports,
 });
 //# sourceMappingURL=logger.js.map

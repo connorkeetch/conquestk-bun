@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GameRoomService = void 0;
-const node_crypto_1 = require("node:crypto");
-const database_js_1 = require("../config/database.js");
-const premium_js_1 = require("../constants/premium.js");
-const logger_js_1 = require("../utils/logger.js");
-const ACTIVE_ROOM_STATUS_VALUES = Array.from(premium_js_1.PREMIUM_ACTIVE_STATUS_VALUES);
-class GameRoomService {
+import { randomUUID } from 'node:crypto';
+import { getClient, query, transaction } from '../config/database.js';
+import { isPremiumColorChoice, PREMIUM_ACTIVE_STATUS_VALUES, PREMIUM_COLOR_MESSAGE, PREMIUM_GAME_LIMIT, PREMIUM_GAME_LIMIT_MESSAGE, } from '../constants/premium.js';
+import { logger } from '../utils/logger.js';
+const ACTIVE_ROOM_STATUS_VALUES = Array.from(PREMIUM_ACTIVE_STATUS_VALUES);
+export class GameRoomService {
     validateTeamConfiguration(maxPlayers, teamMode, numberOfTeams) {
         if (teamMode === 'none' || teamMode === 'auto_balance') {
             return;
@@ -349,7 +346,7 @@ class GameRoomService {
         if (!roomData.mapId || typeof roomData.mapId !== 'string') {
             throw new Error('Please select a map to create a game');
         }
-        const hostResult = await (0, database_js_1.query)('SELECT is_vip, premium_tier FROM users WHERE id = $1', [roomData.hostId]);
+        const hostResult = await query('SELECT is_vip, premium_tier FROM users WHERE id = $1', [roomData.hostId]);
         const hostRow = hostResult.rows[0];
         if (!hostRow) {
             throw new Error('User not found');
@@ -358,7 +355,7 @@ class GameRoomService {
         const hostHasPremium = hostPremiumTier !== 'free';
         const hostIsVip = hostRow.is_vip === true;
         if (!hostHasPremium) {
-            const activeCountResult = await (0, database_js_1.query)(`
+            const activeCountResult = await query(`
         SELECT COUNT(*)::int AS count
         FROM room_players rp
         JOIN game_rooms gr ON gr.id = rp.room_id
@@ -366,12 +363,12 @@ class GameRoomService {
           AND COALESCE(gr.status, 'lobby') = ANY($2)
       `, [roomData.hostId, ACTIVE_ROOM_STATUS_VALUES]);
             const activeCount = Number(activeCountResult.rows[0]?.count ?? 0);
-            if (activeCount >= premium_js_1.PREMIUM_GAME_LIMIT) {
-                throw new Error(premium_js_1.PREMIUM_GAME_LIMIT_MESSAGE);
+            if (activeCount >= PREMIUM_GAME_LIMIT) {
+                throw new Error(PREMIUM_GAME_LIMIT_MESSAGE);
             }
         }
         if (roomData.mapId) {
-            const mapResult = await (0, database_js_1.query)('SELECT is_vip_only FROM maps WHERE id = $1', [roomData.mapId]);
+            const mapResult = await query('SELECT is_vip_only FROM maps WHERE id = $1', [roomData.mapId]);
             if (mapResult.rows.length > 0 && mapResult.rows[0].is_vip_only) {
                 if (!hostIsVip) {
                     throw new Error('This map is VIP-only. Upgrade to VIP to play on this map.');
@@ -394,7 +391,7 @@ class GameRoomService {
         }
         this.validateTeamConfiguration(roomData.maxPlayers, normalizedTeamMode, normalizedNumberOfTeams);
         const sanitizedAiOpponents = this.sanitizeAiOpponents(roomData.maxPlayers, roomData.aiOpponents, roomData.isRanked);
-        const roomRow = await (0, database_js_1.transaction)(async (client) => {
+        const roomRow = await transaction(async (client) => {
             const insertQuery = `
         INSERT INTO game_rooms (
           name,
@@ -457,7 +454,7 @@ class GameRoomService {
           VALUES ($1, NULL, $2, TRUE, $3, $4, TRUE, NOW())
         `;
                 for (const opponent of sanitizedAiOpponents) {
-                    const aiIdentifier = (0, node_crypto_1.randomUUID)();
+                    const aiIdentifier = randomUUID();
                     const seed = typeof opponent.personalitySeed === 'number'
                         ? opponent.personalitySeed
                         : Math.trunc(Math.random() * 10000000);
@@ -485,7 +482,7 @@ class GameRoomService {
         return hydratedRoom ?? this.mapRoomRow(roomRow);
     }
     async pruneStaleRooms() {
-        const result = await (0, database_js_1.query)(`DELETE FROM game_rooms
+        const result = await query(`DELETE FROM game_rooms
        WHERE status IN ('lobby', 'initializing')
          AND expires_at IS NOT NULL
          AND expires_at < NOW()
@@ -509,7 +506,7 @@ class GameRoomService {
       GROUP BY gr.id, u.username, u.skill_rating, m.name
       ORDER BY gr.created_at DESC
     `;
-        const result = await (0, database_js_1.query)(getQuery);
+        const result = await query(getQuery);
         return result.rows.map((row) => {
             const mapped = this.mapRoomRow(row);
             return {
@@ -569,7 +566,7 @@ class GameRoomService {
       WHERE gr.id = $1
       GROUP BY gr.id, m.name, hu.username, hu.skill_rating
     `;
-        const result = await (0, database_js_1.query)(roomQuery, [roomId]);
+        const result = await query(roomQuery, [roomId]);
         const row = result.rows[0];
         if (!row) {
             return null;
@@ -577,7 +574,7 @@ class GameRoomService {
         return this.mapRoomRow(row);
     }
     async getRoomByCode(roomCode) {
-        const result = await (0, database_js_1.query)('SELECT id FROM game_rooms WHERE room_code = $1', [
+        const result = await query('SELECT id FROM game_rooms WHERE room_code = $1', [
             roomCode,
         ]);
         const row = result.rows[0];
@@ -588,7 +585,7 @@ class GameRoomService {
     async resolveRoomId(idOrCode) {
         if (/^\d+$/.test(idOrCode)) {
             const code = Number.parseInt(idOrCode, 10);
-            const res = await (0, database_js_1.query)('SELECT id FROM game_rooms WHERE room_code = $1', [
+            const res = await query('SELECT id FROM game_rooms WHERE room_code = $1', [
                 code,
             ]);
             const row = res.rows[0];
@@ -612,7 +609,7 @@ class GameRoomService {
             await lifecycleService.maybeAutoStart(roomId);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to evaluate auto-start after lobby change', {
+            logger.warn('Failed to evaluate auto-start after lobby change', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -627,10 +624,10 @@ class GameRoomService {
         AND is_ai IS TRUE
         AND (is_ready IS DISTINCT FROM TRUE OR ready_at IS NULL)
     `;
-        await (0, database_js_1.query)(updateQuery, [roomId]);
+        await query(updateQuery, [roomId]);
     }
     async updateAiOpponents(roomId, hostId, aiOpponents = []) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await client.query('BEGIN');
             const roomResult = await client.query('SELECT host_id, status, max_players, is_ranked FROM game_rooms WHERE id = $1 FOR UPDATE', [roomId]);
@@ -703,7 +700,7 @@ class GameRoomService {
                 if (targetCount > existing.length) {
                     const addCount = targetCount - existing.length;
                     for (let index = 0; index < addCount; index += 1) {
-                        const aiIdentifier = (0, node_crypto_1.randomUUID)();
+                        const aiIdentifier = randomUUID();
                         const personalitySeedRaw = desiredSeeds[difficulty]?.shift();
                         const personalitySeed = typeof personalitySeedRaw === 'number' && Number.isFinite(personalitySeedRaw)
                             ? Math.trunc(personalitySeedRaw)
@@ -754,7 +751,7 @@ class GameRoomService {
       WHERE room_id = $1 AND user_id = $2
       LIMIT 1
     `;
-        const result = await (0, database_js_1.query)(membershipQuery, [roomId, userId]);
+        const result = await query(membershipQuery, [roomId, userId]);
         return (result.rowCount ?? 0) > 0;
     }
     async getPlayer(roomId, userId) {
@@ -766,7 +763,7 @@ class GameRoomService {
       WHERE rp.room_id = $1 AND rp.user_id = $2
       LIMIT 1
     `;
-        const result = await (0, database_js_1.query)(playerQuery, [roomId, userId]);
+        const result = await query(playerQuery, [roomId, userId]);
         const row = result.rows[0];
         if (!row) {
             return null;
@@ -793,7 +790,7 @@ class GameRoomService {
         };
     }
     async joinRoom(roomId, userId, options) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         let joinSucceeded = false;
         try {
             await client.query('BEGIN');
@@ -834,8 +831,8 @@ class GameRoomService {
             AND COALESCE(gr.status, 'lobby') = ANY($2)
         `, [userId, ACTIVE_ROOM_STATUS_VALUES]);
                 const activeCount = Number(activeCountResult.rows[0]?.count ?? 0);
-                if (activeCount >= premium_js_1.PREMIUM_GAME_LIMIT) {
-                    throw new Error(premium_js_1.PREMIUM_GAME_LIMIT_MESSAGE);
+                if (activeCount >= PREMIUM_GAME_LIMIT) {
+                    throw new Error(PREMIUM_GAME_LIMIT_MESSAGE);
                 }
             }
             const playerCountQuery = `SELECT COUNT(*) as count FROM room_players WHERE room_id = $1`;
@@ -871,8 +868,8 @@ class GameRoomService {
             const requested = options?.selectedColor ?? null;
             const requestedNorm = requested ? normalize(requested) : null;
             if (requested && requestedNorm) {
-                if (!userHasPremium && (0, premium_js_1.isPremiumColorChoice)(requested)) {
-                    throw new Error(premium_js_1.PREMIUM_COLOR_MESSAGE);
+                if (!userHasPremium && isPremiumColorChoice(requested)) {
+                    throw new Error(PREMIUM_COLOR_MESSAGE);
                 }
                 if (used.has(requestedNorm)) {
                     throw new Error('Color already taken');
@@ -883,7 +880,7 @@ class GameRoomService {
                 const prefRes = await client.query(`SELECT preferred_color FROM user_preferences WHERE user_id = $1`, [userId]);
                 const preferred = prefRes.rows[0]?.preferred_color ?? null;
                 const preferredNorm = preferred ? normalize(preferred) : null;
-                const preferredIsPremium = preferred ? (0, premium_js_1.isPremiumColorChoice)(preferred) : false;
+                const preferredIsPremium = preferred ? isPremiumColorChoice(preferred) : false;
                 if (preferred &&
                     (!preferredIsPremium || userHasPremium) &&
                     (!preferredNorm || !used.has(preferredNorm))) {
@@ -934,7 +931,7 @@ class GameRoomService {
         }
     }
     async assignPlayerToTeam(roomId, actingUserId, targetPlayerIdentifier, teamId) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await client.query('BEGIN');
             const roomResult = await client.query('SELECT host_id, team_mode, number_of_teams FROM game_rooms WHERE id = $1 FOR UPDATE', [
@@ -1007,8 +1004,8 @@ class GameRoomService {
         return updatedRoom;
     }
     async leaveRoom(roomId, userId) {
-        await (0, database_js_1.query)(`DELETE FROM room_players WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
-        const result = await (0, database_js_1.query)('SELECT host_id, status FROM game_rooms WHERE id = $1', [roomId]);
+        await query(`DELETE FROM room_players WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
+        const result = await query('SELECT host_id, status FROM game_rooms WHERE id = $1', [roomId]);
         const row = result.rows[0];
         if (!row)
             return;
@@ -1019,7 +1016,7 @@ class GameRoomService {
             return;
         }
         if (status === 'lobby' || status === 'initializing') {
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE game_rooms
         SET status = 'lobby',
             ready_check_started_at = NULL,
@@ -1031,7 +1028,7 @@ class GameRoomService {
         }
     }
     async closeRoom(roomId, actorUserId) {
-        const res = await (0, database_js_1.query)(`SELECT host_id, status FROM game_rooms WHERE id = $1`, [roomId]);
+        const res = await query(`SELECT host_id, status FROM game_rooms WHERE id = $1`, [roomId]);
         const row = res.rows[0];
         if (!row) {
             throw new Error('Room not found');
@@ -1046,7 +1043,7 @@ class GameRoomService {
         await this.performCloseRoom(roomId);
     }
     async performCloseRoom(roomId) {
-        const client = await (0, database_js_1.getClient)();
+        const client = await getClient();
         try {
             await client.query('BEGIN');
             await client.query(`UPDATE game_rooms
@@ -1088,9 +1085,8 @@ class GameRoomService {
       ORDER BY gr.created_at DESC
       LIMIT 50
     `;
-        const result = await (0, database_js_1.query)(gamesQuery, [userId]);
+        const result = await query(gamesQuery, [userId]);
         return result.rows.map((row) => this.mapRoomRow(row));
     }
 }
-exports.GameRoomService = GameRoomService;
 //# sourceMappingURL=gameRoomService.js.map

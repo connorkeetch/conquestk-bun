@@ -1,10 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 const DRY_RUN = process.argv.includes('--dry-run');
 async function fetchRowsNeedingUpdate() {
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT
       cm.id,
       cm.conversation_id,
@@ -27,17 +25,17 @@ async function fetchRowsNeedingUpdate() {
     return result.rows;
 }
 async function run() {
-    logger_js_1.logger.info('Starting conversation read-state backfill', { dryRun: DRY_RUN });
+    logger.info('Starting conversation read-state backfill', { dryRun: DRY_RUN });
     const rows = await fetchRowsNeedingUpdate();
     if (rows.length === 0) {
-        logger_js_1.logger.info('No conversation members require backfill');
+        logger.info('No conversation members require backfill');
         return;
     }
     if (DRY_RUN) {
-        logger_js_1.logger.info('Dry run complete', { rowsNeedingUpdate: rows.length });
+        logger.info('Dry run complete', { rowsNeedingUpdate: rows.length });
         return;
     }
-    const updateResult = await (0, database_js_1.query)(`
+    const updateResult = await query(`
     UPDATE conversation_members cm
     SET
       last_read_message_id = src.last_message_id,
@@ -60,18 +58,18 @@ async function run() {
     ) src
     WHERE cm.id = src.id
   `);
-    logger_js_1.logger.info('Conversation read-state backfill complete', {
+    logger.info('Conversation read-state backfill complete', {
         rowsEvaluated: rows.length,
         rowsUpdated: updateResult.rowCount ?? rows.length,
     });
 }
 run()
     .then(() => {
-    logger_js_1.logger.info('Backfill finished successfully');
+    logger.info('Backfill finished successfully');
     process.exit(0);
 })
     .catch((error) => {
-    logger_js_1.logger.error('Backfill failed', { error });
+    logger.error('Backfill failed', { error });
     process.exit(1);
 });
 //# sourceMappingURL=backfillConversationReadState.js.map

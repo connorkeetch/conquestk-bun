@@ -1,14 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getWorkerManagerInstance = exports.setWorkerManagerInstance = exports.createWorkerManager = exports.WorkerManager = void 0;
-const queueService_js_1 = require("../services/queueService.js");
-const logger_js_1 = require("../utils/logger.js");
-const analyticsWorker_js_1 = require("./analyticsWorker.js");
-const cleanupWorker_js_1 = require("./cleanupWorker.js");
-const gameActionWorker_js_1 = require("./gameActionWorker.js");
-const maintenanceWorker_js_1 = require("./maintenanceWorker.js");
-const mapAssetWorker_js_1 = require("./mapAssetWorker.js");
-class WorkerManager {
+import { queueService } from '../services/queueService.js';
+import { logger } from '../utils/logger.js';
+import { createAnalyticsWorker } from './analyticsWorker.js';
+import { createCleanupWorker } from './cleanupWorker.js';
+import { createGameActionWorker } from './gameActionWorker.js';
+import { createMaintenanceWorker } from './maintenanceWorker.js';
+import { createMapAssetWorker } from './mapAssetWorker.js';
+export class WorkerManager {
     constructor(io) {
         this.isInitialized = false;
         this.mapAssetWorker = null;
@@ -19,13 +16,13 @@ class WorkerManager {
         if (this.isInitialized)
             return;
         try {
-            logger_js_1.logger.info('🔄 Initializing WorkerManager...');
-            await queueService_js_1.queueService.initialize();
-            const gameActionWorker = (0, gameActionWorker_js_1.createGameActionWorker)(this.io);
-            const cleanupWorker = (0, cleanupWorker_js_1.createCleanupWorker)();
-            const mapAssetWorker = (0, mapAssetWorker_js_1.createMapAssetWorker)();
-            const analyticsWorker = (0, analyticsWorker_js_1.createAnalyticsWorker)();
-            const maintenanceWorker = (0, maintenanceWorker_js_1.createMaintenanceWorker)();
+            logger.info('🔄 Initializing WorkerManager...');
+            await queueService.initialize();
+            const gameActionWorker = createGameActionWorker(this.io);
+            const cleanupWorker = createCleanupWorker();
+            const mapAssetWorker = createMapAssetWorker();
+            const analyticsWorker = createAnalyticsWorker();
+            const maintenanceWorker = createMaintenanceWorker();
             await Promise.all([
                 gameActionWorker.initialize(),
                 cleanupWorker.initialize(),
@@ -36,23 +33,23 @@ class WorkerManager {
             this.mapAssetWorker = mapAssetWorker;
             this.maintenanceWorker = maintenanceWorker;
             this.isInitialized = true;
-            logger_js_1.logger.info('✅ WorkerManager initialized successfully');
+            logger.info('✅ WorkerManager initialized successfully');
             try {
-                const stats = await queueService_js_1.queueService.getQueueStats();
-                logger_js_1.logger.info('📊 Initial queue stats:', stats);
+                const stats = await queueService.getQueueStats();
+                logger.info('📊 Initial queue stats:', stats);
             }
             catch (statsError) {
-                logger_js_1.logger.warn('⚠️ Unable to retrieve initial queue stats:', statsError instanceof Error ? statsError.message : statsError);
+                logger.warn('⚠️ Unable to retrieve initial queue stats:', statsError instanceof Error ? statsError.message : statsError);
             }
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to initialize WorkerManager:', error);
+            logger.error('❌ Failed to initialize WorkerManager:', error);
             throw error;
         }
     }
     async healthCheck() {
         try {
-            const queueHealth = await queueService_js_1.queueService.healthCheck();
+            const queueHealth = await queueService.healthCheck();
             if (queueHealth.status === 'disabled') {
                 return {
                     status: 'disabled',
@@ -82,7 +79,7 @@ class WorkerManager {
         }
     }
     async getStats() {
-        const queueStats = await queueService_js_1.queueService.getQueueStats();
+        const queueStats = await queueService.getQueueStats();
         return {
             initialized: this.isInitialized,
             queues: queueStats,
@@ -90,30 +87,26 @@ class WorkerManager {
         };
     }
     async shutdown() {
-        logger_js_1.logger.info('🔄 Shutting down WorkerManager...');
+        logger.info('🔄 Shutting down WorkerManager...');
         try {
-            await queueService_js_1.queueService.shutdown();
+            await queueService.shutdown();
             this.mapAssetWorker?.shutdown();
             this.maintenanceWorker?.shutdown();
             this.mapAssetWorker = null;
             this.maintenanceWorker = null;
             this.isInitialized = false;
-            logger_js_1.logger.info('✅ WorkerManager shutdown complete');
+            logger.info('✅ WorkerManager shutdown complete');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error during WorkerManager shutdown:', error);
+            logger.error('❌ Error during WorkerManager shutdown:', error);
             throw error;
         }
     }
 }
-exports.WorkerManager = WorkerManager;
-const createWorkerManager = (io) => new WorkerManager(io);
-exports.createWorkerManager = createWorkerManager;
+export const createWorkerManager = (io) => new WorkerManager(io);
 let workerManagerInstance = null;
-const setWorkerManagerInstance = (instance) => {
+export const setWorkerManagerInstance = (instance) => {
     workerManagerInstance = instance;
 };
-exports.setWorkerManagerInstance = setWorkerManagerInstance;
-const getWorkerManagerInstance = () => workerManagerInstance;
-exports.getWorkerManagerInstance = getWorkerManagerInstance;
+export const getWorkerManagerInstance = () => workerManagerInstance;
 //# sourceMappingURL=workerManager.js.map

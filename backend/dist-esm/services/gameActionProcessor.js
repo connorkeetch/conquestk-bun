@@ -1,18 +1,15 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GameActionProcessor = void 0;
-const logger_js_1 = require("../utils/logger.js");
-const deltaEmitter_js_1 = require("./deltaEmitter.js");
-const gameService_js_1 = require("./gameService.js");
-const queueService_js_1 = require("./queueService.js");
-class GameActionProcessor {
+import { logger } from '../utils/logger.js';
+import { DeltaEmitter } from './deltaEmitter.js';
+import { GameService } from './gameService.js';
+import { queueService } from './queueService.js';
+export class GameActionProcessor {
     constructor(io) {
-        this.gameService = new gameService_js_1.GameService();
-        this.deltaEmitter = new deltaEmitter_js_1.DeltaEmitter(io);
+        this.gameService = new GameService();
+        this.deltaEmitter = new DeltaEmitter(io);
         this.io = io;
     }
     async processDeployment(gameId, playerId, territoryId, armies, socketId) {
-        const job = await queueService_js_1.queueService.addGameAction({
+        const job = await queueService.addGameAction({
             gameId,
             playerId,
             action: {
@@ -24,9 +21,9 @@ class GameActionProcessor {
             socketId,
         });
         if (job) {
-            const hasWorkers = await queueService_js_1.queueService.hasActiveWorkers('gameActions');
+            const hasWorkers = await queueService.hasActiveWorkers('gameActions');
             if (hasWorkers) {
-                logger_js_1.logger.info('Queued deployment action for worker processing', {
+                logger.info('Queued deployment action for worker processing', {
                     gameId,
                     jobId: job.id,
                     territoryId,
@@ -38,7 +35,7 @@ class GameActionProcessor {
                 await job.remove();
             }
             catch (err) {
-                logger_js_1.logger.warn('Failed to remove queued job for inline fallback', {
+                logger.warn('Failed to remove queued job for inline fallback', {
                     gameId,
                     jobId: job.id,
                     error: err instanceof Error ? err.message : err,
@@ -51,7 +48,7 @@ class GameActionProcessor {
         return { mode: 'inline', result };
     }
     async processDeploymentInline(gameId, playerId, territoryId, armies) {
-        logger_js_1.logger.info('Processing deployment inline (no queue)', {
+        logger.info('Processing deployment inline (no queue)', {
             gameId,
             playerId,
             territoryId,
@@ -65,7 +62,7 @@ class GameActionProcessor {
         return result;
     }
     async processFortify(gameId, playerId, fromTerritoryId, toTerritoryId, armies, socketId) {
-        const job = await queueService_js_1.queueService.addGameAction({
+        const job = await queueService.addGameAction({
             gameId,
             playerId,
             action: {
@@ -77,9 +74,9 @@ class GameActionProcessor {
             socketId,
         });
         if (job) {
-            const hasWorkers = await queueService_js_1.queueService.hasActiveWorkers('gameActions');
+            const hasWorkers = await queueService.hasActiveWorkers('gameActions');
             if (hasWorkers) {
-                logger_js_1.logger.info('Queued fortify action for worker processing', {
+                logger.info('Queued fortify action for worker processing', {
                     gameId,
                     jobId: job.id,
                     fromTerritoryId,
@@ -92,7 +89,7 @@ class GameActionProcessor {
                 await job.remove();
             }
             catch (err) {
-                logger_js_1.logger.warn('Failed to remove queued job for inline fallback', {
+                logger.warn('Failed to remove queued job for inline fallback', {
                     gameId,
                     jobId: job.id,
                     error: err instanceof Error ? err.message : err,
@@ -102,7 +99,7 @@ class GameActionProcessor {
         await this.processFortifyInline(gameId, playerId, fromTerritoryId, toTerritoryId, armies);
     }
     async processFortifyInline(gameId, playerId, fromTerritoryId, toTerritoryId, armies) {
-        logger_js_1.logger.info('Processing fortify inline (no queue)', {
+        logger.info('Processing fortify inline (no queue)', {
             gameId,
             playerId,
             fromTerritoryId,
@@ -117,8 +114,57 @@ class GameActionProcessor {
         });
         await this.deltaEmitter.emitFortifyDeltas(gameId, fromTerritoryId, toTerritoryId, result);
     }
+    async processTransferConquest(gameId, playerId, fromTerritoryId, toTerritoryId, armies, socketId) {
+        const job = await queueService.addGameAction({
+            gameId,
+            playerId,
+            action: {
+                type: 'transfer_conquest',
+                roomId: gameId,
+                playerId,
+                payload: { fromTerritoryId, toTerritoryId, armies },
+            },
+            socketId,
+        });
+        if (job) {
+            const hasWorkers = await queueService.hasActiveWorkers('gameActions');
+            if (hasWorkers) {
+                logger.info('Queued transfer_conquest for worker processing', {
+                    gameId,
+                    jobId: job.id,
+                    fromTerritoryId,
+                    toTerritoryId,
+                    armies,
+                });
+                return;
+            }
+            try {
+                await job.remove();
+            }
+            catch (err) {
+                logger.warn('Failed to remove queued job for inline fallback', {
+                    gameId,
+                    jobId: job.id,
+                    error: err instanceof Error ? err.message : err,
+                });
+            }
+        }
+        const result = await this.gameService.transferConquestArmies(gameId, playerId, fromTerritoryId, toTerritoryId, armies);
+        try {
+            const { DeltaBuilder } = await import('../types/deltaUpdates.js');
+            const { emitFogFilteredDelta } = await import('./fogService.js');
+            await emitFogFilteredDelta(this.io, gameId, DeltaBuilder.territoryUpdate(gameId, fromTerritoryId, { armies: result.fromArmies }, result.gameState.version));
+            await emitFogFilteredDelta(this.io, gameId, DeltaBuilder.territoryUpdate(gameId, toTerritoryId, { armies: result.toArmies }, result.gameState.version));
+        }
+        catch (e) {
+            logger.debug('Failed to emit transfer_conquest deltas (inline)', {
+                gameId,
+                error: e instanceof Error ? e.message : e,
+            });
+        }
+    }
     async processGoBack(gameId, playerId, socketId) {
-        const job = await queueService_js_1.queueService.addGameAction({
+        const job = await queueService.addGameAction({
             gameId,
             playerId,
             action: {
@@ -129,9 +175,9 @@ class GameActionProcessor {
             socketId,
         });
         if (job) {
-            const hasWorkers = await queueService_js_1.queueService.hasActiveWorkers('gameActions');
+            const hasWorkers = await queueService.hasActiveWorkers('gameActions');
             if (hasWorkers) {
-                logger_js_1.logger.info('Queued go-back action for worker processing', {
+                logger.info('Queued go-back action for worker processing', {
                     gameId,
                     jobId: job.id,
                 });
@@ -141,7 +187,7 @@ class GameActionProcessor {
                 await job.remove();
             }
             catch (err) {
-                logger_js_1.logger.warn('Failed to remove queued job for inline fallback', {
+                logger.warn('Failed to remove queued job for inline fallback', {
                     gameId,
                     jobId: job.id,
                     error: err instanceof Error ? err.message : err,
@@ -151,7 +197,7 @@ class GameActionProcessor {
         await this.processGoBackInline(gameId, playerId);
     }
     async processGoBackInline(gameId, playerId) {
-        logger_js_1.logger.info('Processing go-back inline (no queue)', {
+        logger.info('Processing go-back inline (no queue)', {
             gameId,
             playerId,
         });
@@ -162,7 +208,7 @@ class GameActionProcessor {
         return this.deltaEmitter;
     }
     async processAttack(gameId, playerId, fromTerritoryId, toTerritoryId, armies, socketId) {
-        const job = await queueService_js_1.queueService.addGameAction({
+        const job = await queueService.addGameAction({
             gameId,
             playerId,
             action: {
@@ -178,9 +224,9 @@ class GameActionProcessor {
             socketId,
         });
         if (job) {
-            const hasWorkers = await queueService_js_1.queueService.hasActiveWorkers('gameActions');
+            const hasWorkers = await queueService.hasActiveWorkers('gameActions');
             if (hasWorkers) {
-                logger_js_1.logger.info('Queued attack action for worker processing', {
+                logger.info('Queued attack action for worker processing', {
                     gameId,
                     jobId: job.id,
                     fromTerritoryId,
@@ -193,7 +239,7 @@ class GameActionProcessor {
                 await job.remove();
             }
             catch (err) {
-                logger_js_1.logger.warn('Failed to remove queued job for inline fallback', {
+                logger.warn('Failed to remove queued job for inline fallback', {
                     gameId,
                     jobId: job.id,
                     error: err instanceof Error ? err.message : err,
@@ -233,7 +279,7 @@ class GameActionProcessor {
                 await emitFogFilteredDelta(this.io, gameId, battleDelta);
             }
             catch (e) {
-                logger_js_1.logger.debug('Failed to emit fog-filtered battle delta in inline attack', {
+                logger.debug('Failed to emit fog-filtered battle delta in inline attack', {
                     gameId,
                     error: e instanceof Error ? e.message : e,
                 });
@@ -249,6 +295,75 @@ class GameActionProcessor {
         }
         return { mode: 'inline' };
     }
+    async processEndTurn(gameId, playerId, socketId) {
+        const job = await queueService.addGameAction({
+            gameId,
+            playerId,
+            action: {
+                type: 'end_turn',
+                roomId: gameId,
+                playerId,
+            },
+            socketId,
+        });
+        if (job) {
+            const hasWorkers = await queueService.hasActiveWorkers('gameActions');
+            if (hasWorkers) {
+                logger.info('Queued endTurn action for worker processing', {
+                    gameId,
+                    jobId: job.id,
+                });
+                return { mode: 'queued' };
+            }
+            try {
+                await job.remove();
+            }
+            catch (err) {
+                logger.warn('Failed to remove queued job for inline fallback', {
+                    gameId,
+                    jobId: job.id,
+                    error: err instanceof Error ? err.message : err,
+                });
+            }
+        }
+        const result = await this.gameService.endTurn(gameId, playerId);
+        await this.deltaEmitter.emitPhaseChange(gameId, {
+            phase: result.gameState.phase,
+            currentPlayer: result.gameState.currentPlayer,
+            turn: result.gameState.turn,
+            reinforcementArmies: result.reinforcementArmies,
+            version: result.gameState.version,
+        });
+        try {
+            if (result.treasureAwarded) {
+                const { tryGetSocketServer } = await import('./socketRegistry.js');
+                const io = tryGetSocketServer();
+                if (io) {
+                    io.to(`game:${gameId}`).emit('game-delta', {
+                        type: 'TREASURE_AWARDED',
+                        roomId: gameId,
+                        timestamp: Date.now(),
+                        userId: playerId,
+                        metal: result.treasureAwarded,
+                    });
+                }
+            }
+        }
+        catch {
+        }
+        try {
+            const { GameLifecycleService } = await import('./gameLifecycleService.js');
+            const lifecycle = new GameLifecycleService();
+            await lifecycle.scheduleTurnTimeout(gameId);
+            await lifecycle.scheduleAiTurn(gameId);
+        }
+        catch (e) {
+            logger.warn('Failed to schedule timers after inline endTurn', {
+                gameId,
+                error: e instanceof Error ? e.message : e,
+            });
+        }
+        return { mode: 'inline' };
+    }
 }
-exports.GameActionProcessor = GameActionProcessor;
 //# sourceMappingURL=gameActionProcessor.js.map

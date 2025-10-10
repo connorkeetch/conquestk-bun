@@ -1,10 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.redisClusterService = exports.RedisClusterService = void 0;
-const ioredis_1 = require("ioredis");
-const redis_js_1 = require("../config/redis.js");
-const logger_js_1 = require("../utils/logger.js");
-class RedisClusterService {
+import { Cluster } from 'ioredis';
+import { getRedisClient } from '../config/redis.js';
+import { logger } from '../utils/logger.js';
+export class RedisClusterService {
     constructor() {
         this.cluster = null;
         this.fallbackClient = null;
@@ -34,13 +31,13 @@ class RedisClusterService {
             else {
                 await this.initializeFallback(redisUrl);
             }
-            logger_js_1.logger.info('✅ Redis Cluster Service initialized', {
+            logger.info('✅ Redis Cluster Service initialized', {
                 mode: this.isClusterMode ? 'cluster' : 'standalone',
                 nodes: clusterNodes?.split(',').length || 1,
             });
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to initialize Redis Cluster Service:', error);
+            logger.error('❌ Failed to initialize Redis Cluster Service:', error);
             throw error;
         }
     }
@@ -64,31 +61,31 @@ class RedisClusterService {
                 },
             },
         };
-        this.cluster = new ioredis_1.Cluster(config.nodes, config.options);
+        this.cluster = new Cluster(config.nodes, config.options);
         this.isClusterMode = true;
         this.cluster.on('connect', () => {
-            logger_js_1.logger.info('🔗 Redis Cluster connected');
+            logger.info('🔗 Redis Cluster connected');
         });
         this.cluster.on('error', (error) => {
-            logger_js_1.logger.error('❌ Redis Cluster error:', error);
+            logger.error('❌ Redis Cluster error:', error);
             this.metrics.errors++;
         });
         this.cluster.on('node error', (error, node) => {
             const host = node.host ?? 'unknown-host';
             const port = node.port ?? 0;
-            logger_js_1.logger.warn(`⚠️ Redis node error (${host}:${port}):`, error);
+            logger.warn(`⚠️ Redis node error (${host}:${port}):`, error);
         });
         await this.cluster.connect();
     }
     async initializeFallback(_redisUrl) {
-        this.fallbackClient = (0, redis_js_1.getRedisClient)();
+        this.fallbackClient = getRedisClient();
         if (!this.fallbackClient) {
-            logger_js_1.logger.warn('Centralized Redis client not available, RedisClusterService will be disabled');
+            logger.warn('Centralized Redis client not available, RedisClusterService will be disabled');
             return;
         }
-        logger_js_1.logger.info('🔗 RedisClusterService using centralized Redis client with Railway network support');
+        logger.info('🔗 RedisClusterService using centralized Redis client with Railway network support');
         this.fallbackClient.on('error', (error) => {
-            logger_js_1.logger.warn('RedisClusterService client error:', error.message);
+            logger.warn('RedisClusterService client error:', error.message);
             this.metrics.errors++;
         });
     }
@@ -110,12 +107,12 @@ class RedisClusterService {
             });
             const ttl = this.CACHE_TIERS[tier];
             await client.setex(key, ttl, serializedValue);
-            logger_js_1.logger.debug(`📦 Cache SET: ${key} (${tier}, TTL: ${ttl}s)`);
+            logger.debug(`📦 Cache SET: ${key} (${tier}, TTL: ${ttl}s)`);
             return true;
         }
         catch (error) {
             this.metrics.errors++;
-            logger_js_1.logger.error(`❌ Cache SET failed for key ${key}:`, error);
+            logger.error(`❌ Cache SET failed for key ${key}:`, error);
             return false;
         }
     }
@@ -128,17 +125,17 @@ class RedisClusterService {
             const result = await client.get(key);
             if (result === null) {
                 this.metrics.misses++;
-                logger_js_1.logger.debug(`💨 Cache MISS: ${key}`);
+                logger.debug(`💨 Cache MISS: ${key}`);
                 return null;
             }
             this.metrics.hits++;
             const parsed = JSON.parse(result);
-            logger_js_1.logger.debug(`🎯 Cache HIT: ${key} (${parsed.tier})`);
+            logger.debug(`🎯 Cache HIT: ${key} (${parsed.tier})`);
             return parsed.data;
         }
         catch (error) {
             this.metrics.errors++;
-            logger_js_1.logger.error(`❌ Cache GET failed for key ${key}:`, error);
+            logger.error(`❌ Cache GET failed for key ${key}:`, error);
             return null;
         }
     }
@@ -152,17 +149,17 @@ class RedisClusterService {
             const parsed = results.map((result, index) => {
                 if (result === null) {
                     this.metrics.misses++;
-                    logger_js_1.logger.debug(`💨 Cache MISS: ${keys[index]}`);
+                    logger.debug(`💨 Cache MISS: ${keys[index]}`);
                     return null;
                 }
                 this.metrics.hits++;
                 try {
                     const parsedValue = JSON.parse(result);
-                    logger_js_1.logger.debug(`🎯 Cache HIT: ${keys[index]} (${parsedValue.tier})`);
+                    logger.debug(`🎯 Cache HIT: ${keys[index]} (${parsedValue.tier})`);
                     return parsedValue.data;
                 }
                 catch (parseError) {
-                    logger_js_1.logger.error(`❌ Failed to parse cached value for key ${keys[index]}:`, parseError);
+                    logger.error(`❌ Failed to parse cached value for key ${keys[index]}:`, parseError);
                     return null;
                 }
             });
@@ -170,7 +167,7 @@ class RedisClusterService {
         }
         catch (error) {
             this.metrics.errors += keys.length;
-            logger_js_1.logger.error('❌ Cache MGET failed:', error);
+            logger.error('❌ Cache MGET failed:', error);
             return keys.map(() => null);
         }
     }
@@ -193,12 +190,12 @@ class RedisClusterService {
                 this.metrics.sets++;
             }
             await pipeline.exec();
-            logger_js_1.logger.debug(`📦 Cache MSET: ${keyValuePairs.length} keys`);
+            logger.debug(`📦 Cache MSET: ${keyValuePairs.length} keys`);
             return true;
         }
         catch (error) {
             this.metrics.errors += keyValuePairs.length;
-            logger_js_1.logger.error('❌ Cache MSET failed:', error);
+            logger.error('❌ Cache MSET failed:', error);
             return false;
         }
     }
@@ -218,23 +215,23 @@ class RedisClusterService {
                     this.metrics.deletes += keys.length;
                 }
             } while (cursor !== '0');
-            logger_js_1.logger.info(`🗑️ Deleted ${deletedCount} keys matching pattern: ${pattern}`);
+            logger.info(`🗑️ Deleted ${deletedCount} keys matching pattern: ${pattern}`);
             return deletedCount;
         }
         catch (error) {
             this.metrics.errors++;
-            logger_js_1.logger.error(`❌ Failed to delete pattern ${pattern}:`, error);
+            logger.error(`❌ Failed to delete pattern ${pattern}:`, error);
             return 0;
         }
     }
     async warmCache(warmingTasks) {
-        logger_js_1.logger.info('🔥 Starting cache warming...');
+        logger.info('🔥 Starting cache warming...');
         try {
             await Promise.allSettled(warmingTasks);
-            logger_js_1.logger.info('✅ Cache warming completed');
+            logger.info('✅ Cache warming completed');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Cache warming failed:', error);
+            logger.error('❌ Cache warming failed:', error);
         }
     }
     getMetrics() {
@@ -293,7 +290,7 @@ class RedisClusterService {
         return result;
     }
     async shutdown() {
-        logger_js_1.logger.info('🔄 Shutting down Redis Cluster Service...');
+        logger.info('🔄 Shutting down Redis Cluster Service...');
         try {
             if (this.cluster) {
                 await this.cluster.quit();
@@ -301,13 +298,12 @@ class RedisClusterService {
             if (this.fallbackClient) {
                 await this.fallbackClient.quit();
             }
-            logger_js_1.logger.info('✅ Redis Cluster Service shutdown complete');
+            logger.info('✅ Redis Cluster Service shutdown complete');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error during Redis Cluster Service shutdown:', error);
+            logger.error('❌ Error during Redis Cluster Service shutdown:', error);
         }
     }
 }
-exports.RedisClusterService = RedisClusterService;
-exports.redisClusterService = new RedisClusterService();
+export const redisClusterService = new RedisClusterService();
 //# sourceMappingURL=redisClusterService.js.map

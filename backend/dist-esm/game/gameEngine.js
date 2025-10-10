@@ -1,13 +1,8 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GameEngine = void 0;
-const metricsService_js_1 = require("../services/metricsService.js");
-const territoryModifierService_js_1 = __importDefault(require("../services/territoryModifierService.js"));
-const hiddenTreasures_js_1 = require("./hiddenTreasures.js");
-class GameEngine {
+import { treasureMetrics } from '../services/metricsService.js';
+import territoryModifierService from '../services/territoryModifierService.js';
+import { getPlayerTeam as utilGetPlayerTeam, arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
+import { drawTreasure, ensureTreasureState, findRedeemableSets, normalizeTreasureConfig, redeemSet, } from './hiddenTreasures.js';
+export class GameEngine {
     constructor() {
         this.gameModifiersCache = new Map();
     }
@@ -108,7 +103,7 @@ class GameEngine {
             hydratedConfig.kingOfTheHill = kingConfig;
         }
         const treasureConfig = this.ensureTreasureConfig(hydratedConfig);
-        metricsService_js_1.treasureMetrics.recordMode(treasureConfig);
+        treasureMetrics.recordMode(treasureConfig);
         if (hydratedConfig.gameMode === 'assassination') {
             hydratedConfig.allowTeamPlay = false;
         }
@@ -128,7 +123,7 @@ class GameEngine {
             cards: [],
             gameConfig: hydratedConfig,
             movementTracking: {},
-            treasureState: treasureConfig.enabled ? (0, hiddenTreasures_js_1.ensureTreasureState)() : undefined,
+            treasureState: treasureConfig.enabled ? ensureTreasureState() : undefined,
             mustCashInTreasures: false,
             conqueredDuringTurn: false,
             assassinationTargets,
@@ -149,6 +144,11 @@ class GameEngine {
             }
             case 'fortify':
                 return { gameState: this.handleFortify(newState, action) };
+            case 'transfer_conquest': {
+                const { fromTerritoryId, toTerritoryId, armies } = action.payload;
+                const updated = this.transferConquestArmies(newState, action.playerId, fromTerritoryId, toTerritoryId, armies);
+                return { gameState: updated };
+            }
             case 'undo_fortify':
                 return { gameState: this.handleUndoFortify(newState, action) };
             case 'end_turn':
@@ -174,6 +174,8 @@ class GameEngine {
                 return this.validateAttack(gameState, action);
             case 'fortify':
                 return this.validateFortify(gameState, action);
+            case 'transfer_conquest':
+                return true;
             case 'undo_fortify':
                 return this.validateUndoFortify(gameState, action);
             case 'end_turn': {
@@ -304,7 +306,7 @@ class GameEngine {
         return armyMap[playerCount] || 20;
     }
     ensureTreasureConfig(gameConfig) {
-        const normalized = (0, hiddenTreasures_js_1.normalizeTreasureConfig)(gameConfig.treasureConfig);
+        const normalized = normalizeTreasureConfig(gameConfig.treasureConfig);
         gameConfig.treasureConfig = normalized;
         return normalized;
     }
@@ -325,7 +327,7 @@ class GameEngine {
             return;
         }
         const hand = this.getPlayerTreasureHand(currentPlayer);
-        const hasValidSet = (0, hiddenTreasures_js_1.findRedeemableSets)(hand).length > 0;
+        const hasValidSet = findRedeemableSets(hand).length > 0;
         currentPlayer.mustCashInTreasures = hand.length >= treasureConfig.handCap && hasValidSet;
         gameState.mustCashInTreasures = currentPlayer.mustCashInTreasures ?? false;
     }
@@ -333,14 +335,14 @@ class GameEngine {
         if (!treasureConfig.enabled || !gameState.conqueredDuringTurn) {
             return;
         }
-        const treasureState = (0, hiddenTreasures_js_1.ensureTreasureState)(gameState.treasureState);
-        const treasure = (0, hiddenTreasures_js_1.drawTreasure)(treasureConfig);
+        const treasureState = ensureTreasureState(gameState.treasureState);
+        const treasure = drawTreasure(treasureConfig);
         const hand = this.getPlayerTreasureHand(player);
         hand.push(treasure);
         gameState.treasureState = treasureState;
-        metricsService_js_1.treasureMetrics.recordDraw(treasureConfig, treasure);
+        treasureMetrics.recordDraw(treasureConfig, treasure);
         if (hand.length >= treasureConfig.handCap) {
-            player.mustCashInTreasures = (0, hiddenTreasures_js_1.findRedeemableSets)(hand).length > 0;
+            player.mustCashInTreasures = findRedeemableSets(hand).length > 0;
         }
     }
     transferEliminatedTreasures(gameState, eliminatorId, treasureConfig, eliminatedPlayerIds = []) {
@@ -364,7 +366,7 @@ class GameEngine {
             eliminated.mustCashInTreasures = false;
         }
         if (transferred > 0 && eliminatorHand.length >= treasureConfig.handCap) {
-            const hasValidSet = (0, hiddenTreasures_js_1.findRedeemableSets)(eliminatorHand).length > 0;
+            const hasValidSet = findRedeemableSets(eliminatorHand).length > 0;
             eliminator.mustCashInTreasures = hasValidSet;
             if (hasValidSet && eliminator.id === gameState.currentPlayer) {
                 gameState.mustCashInTreasures = true;
@@ -861,7 +863,7 @@ class GameEngine {
         if (gameState.gameConfig?.useTerritoryModifiers && gameState.roomId) {
             let gameModifiers = this.gameModifiersCache.get(gameState.roomId);
             if (!gameModifiers) {
-                gameModifiers = await territoryModifierService_js_1.default.getGameModifiers(gameState.roomId);
+                gameModifiers = await territoryModifierService.getGameModifiers(gameState.roomId);
                 this.gameModifiersCache.set(gameState.roomId, gameModifiers);
             }
             const attackerModifier = gameModifiers.get(fromTerritoryId);
@@ -1039,11 +1041,11 @@ class GameEngine {
             throw new Error('Treasure indices must be numeric');
         }
         const tuple = [indices[0], indices[1], indices[2]];
-        const treasureState = (0, hiddenTreasures_js_1.ensureTreasureState)(gameState.treasureState);
-        const result = (0, hiddenTreasures_js_1.redeemSet)(this.getPlayerTreasureHand(player), tuple, treasureConfig, treasureState);
+        const treasureState = ensureTreasureState(gameState.treasureState);
+        const result = redeemSet(this.getPlayerTreasureHand(player), tuple, treasureConfig, treasureState);
         player.treasures = result.updatedHand;
         player.armies += result.troops;
-        const remainingMatches = (0, hiddenTreasures_js_1.findRedeemableSets)(result.updatedHand);
+        const remainingMatches = findRedeemableSets(result.updatedHand);
         player.mustCashInTreasures =
             result.updatedHand.length >= treasureConfig.handCap && remainingMatches.length > 0;
         gameState.treasureState = result.updatedState;
@@ -1057,7 +1059,7 @@ class GameEngine {
             gameState.resumePhaseAfterReinforcement = null;
             gameState.resumeHasAttackedAfterReinforcement = undefined;
         }
-        metricsService_js_1.treasureMetrics.recordCash(treasureConfig, result.hasDiamond);
+        treasureMetrics.recordCash(treasureConfig, result.hasDiamond);
         this.updateCurrentPlayerCashRequirement(gameState, treasureConfig);
         return gameState;
     }
@@ -1140,7 +1142,7 @@ class GameEngine {
         gameState.resumePhaseAfterReinforcement = null;
         gameState.resumeHasAttackedAfterReinforcement = undefined;
         if (treasureConfig.enabled) {
-            gameState.treasureState = (0, hiddenTreasures_js_1.ensureTreasureState)(gameState.treasureState);
+            gameState.treasureState = ensureTreasureState(gameState.treasureState);
             if (currentPlayer) {
                 this.getPlayerTreasureHand(currentPlayer);
             }
@@ -1321,7 +1323,7 @@ class GameEngine {
         if (sorted.some((index) => index < 0 || index >= hand.length)) {
             return false;
         }
-        const matches = (0, hiddenTreasures_js_1.findRedeemableSets)(hand);
+        const matches = findRedeemableSets(hand);
         return matches.some((match) => match.indices.every((value, idx) => value === sorted[idx]));
     }
     simulateBattle(gameState, attackerDiceCount, defenderDiceCount, attackBonus = 0, defenseBonus = 0) {
@@ -1367,29 +1369,10 @@ class GameEngine {
         return dice;
     }
     getPlayerTeam(gameState, playerId) {
-        if (!playerId) {
-            return null;
-        }
-        const player = gameState.players.find((p) => p.id === playerId);
-        if (!player) {
-            return null;
-        }
-        const { teamId } = player;
-        return typeof teamId === 'number' && teamId > 0 ? teamId : null;
+        return utilGetPlayerTeam(gameState, playerId);
     }
     arePlayersTeammates(gameState, playerA, playerB) {
-        if (!gameState.gameConfig.allowTeamPlay) {
-            return false;
-        }
-        if (!playerB || playerB === 'neutral') {
-            return false;
-        }
-        const teamA = this.getPlayerTeam(gameState, playerA);
-        const teamB = this.getPlayerTeam(gameState, playerB);
-        if (!teamA || !teamB) {
-            return false;
-        }
-        return teamA === teamB;
+        return utilArePlayersTeammates(gameState, playerA, playerB);
     }
     canMoveTo(territory, playerId, gameState) {
         if (territory.ownerId === playerId)
@@ -1584,5 +1567,4 @@ class GameEngine {
         };
     }
 }
-exports.GameEngine = GameEngine;
 //# sourceMappingURL=gameEngine.js.map

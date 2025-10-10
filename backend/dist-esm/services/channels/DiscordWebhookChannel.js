@@ -1,15 +1,12 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.discordWebhookChannel = exports.DiscordWebhookChannel = void 0;
-const logger_js_1 = require("../../utils/logger.js");
-const discordFormatting_js_1 = require("./discordFormatting.js");
+import { logger } from '../../utils/logger.js';
+import { formatDiscordWebhookPayload } from './discordFormatting.js';
 const DEFAULT_FAILURE_THRESHOLD = 5;
 const DEFAULT_COOLDOWN_MS = 60000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 500;
 const JITTER_MS = 250;
-const channelLogger = typeof logger_js_1.logger.child === 'function' ? logger_js_1.logger.child({ channel: 'discord' }) : logger_js_1.logger;
-class DiscordWebhookChannel {
+const channelLogger = typeof logger.child === 'function' ? logger.child({ channel: 'discord' }) : logger;
+export class DiscordWebhookChannel {
     constructor(options) {
         this.name = 'discord';
         this.consecutiveFailures = 0;
@@ -175,7 +172,7 @@ class DiscordWebhookChannel {
         return [...new Set(this.webhookUrls)];
     }
     buildPayload(event) {
-        const payload = (0, discordFormatting_js_1.formatDiscordWebhookPayload)(event);
+        const payload = formatDiscordWebhookPayload(event);
         return {
             ...payload,
             ...(this.username ? { username: this.username } : {}),
@@ -237,7 +234,6 @@ class DiscordWebhookChannel {
         return exponential + jitter;
     }
 }
-exports.DiscordWebhookChannel = DiscordWebhookChannel;
 function splitCsv(value) {
     if (!value) {
         return [];
@@ -287,5 +283,5 @@ function redactWebhook(webhookUrl) {
         return 'discord-webhook';
     }
 }
-exports.discordWebhookChannel = DiscordWebhookChannel.fromEnv();
+export const discordWebhookChannel = DiscordWebhookChannel.fromEnv();
 //# sourceMappingURL=DiscordWebhookChannel.js.map

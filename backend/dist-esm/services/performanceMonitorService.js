@@ -1,16 +1,13 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.performanceMonitorService = exports.PerformanceMonitorService = void 0;
-const node_crypto_1 = require("node:crypto");
-const logger_js_1 = require("../utils/logger.js");
-const workerManager_js_1 = require("../workers/workerManager.js");
-const adminService_js_1 = require("./adminService.js");
-const cdnService_js_1 = require("./cdnService.js");
-const databaseClusterService_js_1 = require("./databaseClusterService.js");
-const NotificationDispatcher_js_1 = require("./NotificationDispatcher.js");
-const performanceAlerts_js_1 = require("./notifications/performanceAlerts.js");
-const redisClusterService_js_1 = require("./redisClusterService.js");
-class PerformanceMonitorService {
+import { randomUUID } from 'node:crypto';
+import { logger } from '../utils/logger.js';
+import { getWorkerManagerInstance } from '../workers/workerManager.js';
+import { adminService } from './adminService.js';
+import { cdnService } from './cdnService.js';
+import { databaseClusterService } from './databaseClusterService.js';
+import { notificationDispatcher } from './NotificationDispatcher.js';
+import { buildPerformanceAlertNotification } from './notifications/performanceAlerts.js';
+import { redisClusterService } from './redisClusterService.js';
+export class PerformanceMonitorService {
     constructor() {
         this.metrics = [];
         this.alerts = [];
@@ -40,13 +37,13 @@ class PerformanceMonitorService {
     }
     async initialize() {
         try {
-            logger_js_1.logger.info('🔄 Initializing Performance Monitor Service...');
+            logger.info('🔄 Initializing Performance Monitor Service...');
             this.startMonitoring();
             this.startAlertSystem();
-            logger_js_1.logger.info('✅ Performance Monitor Service initialized');
+            logger.info('✅ Performance Monitor Service initialized');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to initialize Performance Monitor Service:', error);
+            logger.error('❌ Failed to initialize Performance Monitor Service:', error);
             throw error;
         }
     }
@@ -56,13 +53,13 @@ class PerformanceMonitorService {
         this.isMonitoring = true;
         this.monitoringInterval = setInterval(() => this.collectMetrics(), 30000);
         this.collectMetrics();
-        logger_js_1.logger.info('📊 Started performance monitoring');
+        logger.info('📊 Started performance monitoring');
     }
     startAlertSystem() {
         this.alertCheckInterval = setInterval(() => {
             void this.checkPerformanceAlerts();
         }, 60000);
-        logger_js_1.logger.info('🚨 Started alert system');
+        logger.info('🚨 Started alert system');
     }
     async collectMetrics() {
         try {
@@ -73,12 +70,12 @@ class PerformanceMonitorService {
             const now = Date.now();
             this.requestTimestamps = this.requestTimestamps.filter((ts) => now - ts < 60000);
             const requestsPerSecond = this.requestTimestamps.length / 60;
-            const dbMetrics = await databaseClusterService_js_1.databaseClusterService.getMetrics();
-            const cacheMetrics = redisClusterService_js_1.redisClusterService.getMetrics();
-            const workerManager = (0, workerManager_js_1.getWorkerManagerInstance)();
+            const dbMetrics = await databaseClusterService.getMetrics();
+            const cacheMetrics = redisClusterService.getMetrics();
+            const workerManager = getWorkerManagerInstance();
             const queueHealth = workerManager ? await workerManager.getStats() : null;
             const queueMetrics = this.calculateQueueMetrics(queueHealth);
-            const cdnMetrics = cdnService_js_1.cdnService.getMetrics();
+            const cdnMetrics = cdnService.getMetrics();
             const gameMetrics = await this.collectGameMetrics();
             const systemMetrics = {
                 timestamp,
@@ -115,7 +112,7 @@ class PerformanceMonitorService {
             if (this.metrics.length > 2880) {
                 this.metrics.shift();
             }
-            logger_js_1.logger.debug('📊 Metrics collected', {
+            logger.debug('📊 Metrics collected', {
                 timestamp,
                 database: systemMetrics.database.avgResponseTime,
                 cache: systemMetrics.cache.hitRate,
@@ -123,7 +120,7 @@ class PerformanceMonitorService {
             });
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to collect metrics:', error);
+            logger.error('❌ Failed to collect metrics:', error);
         }
     }
     calculateQueueMetrics(queueStats) {
@@ -185,7 +182,7 @@ class PerformanceMonitorService {
         }
         for (const alert of newAlerts) {
             this.alerts.push(alert);
-            logger_js_1.logger.warn(`🚨 Performance alert: ${alert.message}`, alert.metrics);
+            logger.warn(`🚨 Performance alert: ${alert.message}`, alert.metrics);
             await this.dispatchPerformanceAlert(alert);
         }
         const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -204,15 +201,15 @@ class PerformanceMonitorService {
     }
     async dispatchPerformanceAlert(alert) {
         try {
-            const adminUserIds = await adminService_js_1.adminService.getActiveAdminUserIds();
-            const event = (0, performanceAlerts_js_1.buildPerformanceAlertNotification)(alert, adminUserIds);
-            await NotificationDispatcher_js_1.notificationDispatcher.dispatch({
+            const adminUserIds = await adminService.getActiveAdminUserIds();
+            const event = buildPerformanceAlertNotification(alert, adminUserIds);
+            await notificationDispatcher.dispatch({
                 ...event,
-                id: (0, node_crypto_1.randomUUID)(),
+                id: randomUUID(),
             });
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to dispatch performance alert notification', {
+            logger.error('Failed to dispatch performance alert notification', {
                 alertId: alert.id,
                 error,
             });
@@ -239,7 +236,7 @@ class PerformanceMonitorService {
         const alert = this.alerts.find((a) => a.id === alertId);
         if (alert) {
             alert.resolved = true;
-            logger_js_1.logger.info(`✅ Alert resolved: ${alertId}`);
+            logger.info(`✅ Alert resolved: ${alertId}`);
             return true;
         }
         return false;
@@ -270,7 +267,7 @@ class PerformanceMonitorService {
     }
     updateThresholds(newThresholds) {
         this.thresholds = { ...this.thresholds, ...newThresholds };
-        logger_js_1.logger.info('⚙️ Performance thresholds updated', newThresholds);
+        logger.info('⚙️ Performance thresholds updated', newThresholds);
     }
     async healthCheck() {
         const current = this.getCurrentMetrics();
@@ -288,7 +285,7 @@ class PerformanceMonitorService {
         };
     }
     async shutdown() {
-        logger_js_1.logger.info('🔄 Shutting down Performance Monitor Service...');
+        logger.info('🔄 Shutting down Performance Monitor Service...');
         this.isMonitoring = false;
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval);
@@ -296,9 +293,8 @@ class PerformanceMonitorService {
         if (this.alertCheckInterval) {
             clearInterval(this.alertCheckInterval);
         }
-        logger_js_1.logger.info('✅ Performance Monitor Service shutdown complete');
+        logger.info('✅ Performance Monitor Service shutdown complete');
     }
 }
-exports.PerformanceMonitorService = PerformanceMonitorService;
-exports.performanceMonitorService = new PerformanceMonitorService();
+export const performanceMonitorService = new PerformanceMonitorService();
 //# sourceMappingURL=performanceMonitorService.js.map

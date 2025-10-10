@@ -1,27 +1,21 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GameService = void 0;
-const database_js_1 = require("../config/database.js");
-const gameEngine_js_1 = require("../game/gameEngine.js");
-const hiddenTreasures_js_1 = require("../game/hiddenTreasures.js");
-const mapLoader_js_1 = require("../game/mapLoader.js");
-const deltaUpdates_js_1 = require("../types/deltaUpdates.js");
-const logger_js_1 = require("../utils/logger.js");
-const aiDecisionService_js_1 = require("./aiDecisionService.js");
-const cacheService_js_1 = require("./cacheService.js");
-const clanProgressionService_js_1 = require("./clanProgressionService.js");
-const clanService_js_1 = require("./clanService.js");
-const eloService_js_1 = require("./eloService.js");
-const featureFlagService_js_1 = require("./featureFlagService.js");
-const mapService_js_1 = require("./mapService.js");
-const metricsService_js_1 = require("./metricsService.js");
-const notificationService_js_1 = __importDefault(require("./notificationService.js"));
-const queueService_js_1 = require("./queueService.js");
-const socketRegistry_js_1 = require("./socketRegistry.js");
-const territoryModifierService_js_1 = __importDefault(require("./territoryModifierService.js"));
+import { query, transaction } from '../config/database.js';
+import { GameEngine } from '../game/gameEngine.js';
+import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js';
+import { loadMapForEngine } from '../game/mapLoader.js';
+import { DeltaBuilder } from '../types/deltaUpdates.js';
+import { logger } from '../utils/logger.js';
+import { aiDecisionService } from './aiDecisionService.js';
+import { gameStateCache } from './cacheService.js';
+import { ClanProgressionServiceError, clanProgressionService } from './clanProgressionService.js';
+import { clanService } from './clanService.js';
+import { eloService } from './eloService.js';
+import { featureFlagService } from './featureFlagService.js';
+import { mapService } from './mapService.js';
+import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js';
+import notificationService from './notificationService.js';
+import { queueService } from './queueService.js';
+import { tryGetSocketServer } from './socketRegistry.js';
+import territoryModifierService from './territoryModifierService.js';
 const CLAN_XP_BASE = 400;
 const CLAN_XP_WIN_BONUS = 250;
 const CLAN_XP_TOP_PLACEMENTS = {
@@ -31,13 +25,13 @@ const CLAN_XP_TOP_PLACEMENTS = {
 };
 const CLAN_XP_TERRITORY_FACTOR = 5;
 const CLAN_XP_TERRITORY_CAP = 150;
-class GameService {
+export class GameService {
     constructor() {
-        this.gameEngine = new gameEngine_js_1.GameEngine();
+        this.gameEngine = new GameEngine();
     }
     async persistGameStateSnapshot(roomId, state) {
         try {
-            await (0, database_js_1.query)(`
+            await query(`
         INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
         VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
         ON CONFLICT (room_id) DO UPDATE
@@ -55,7 +49,7 @@ class GameService {
             ]);
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to persist game state snapshot to database', {
+            logger.error('Failed to persist game state snapshot to database', {
                 roomId,
                 phase: state.phase,
                 turn: state.turn,
@@ -63,17 +57,35 @@ class GameService {
             });
         }
         try {
-            await cacheService_js_1.gameStateCache.setGameState(roomId, state);
+            await gameStateCache.setGameState(roomId, state);
         }
         catch (error) {
-            logger_js_1.logger.warn('Failed to cache game state snapshot', {
+            logger.warn('Failed to cache game state snapshot', {
                 roomId,
                 error: error instanceof Error ? error.message : error,
             });
         }
     }
+    async persistGameStateSnapshotWithClient(run, roomId, state) {
+        await run(`
+        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
+        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
+        ON CONFLICT (room_id) DO UPDATE
+          SET game_data = EXCLUDED.game_data,
+              turn_number = EXCLUDED.turn_number,
+              current_player_id = EXCLUDED.current_player_id,
+              game_phase = EXCLUDED.game_phase,
+              last_activity = NOW()
+      `, [
+            roomId,
+            JSON.stringify(state),
+            Math.max(1, Number(state.turn ?? 1)),
+            state.currentPlayer ?? null,
+            state.phase ?? 'reinforcement',
+        ]);
+    }
     async persistTurnStateTransactional(roomId, serialized) {
-        await (0, database_js_1.transaction)(async (client) => {
+        await transaction(async (client) => {
             await client.query(`
         INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
         VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
@@ -163,7 +175,7 @@ class GameService {
         if (!assignments || Object.keys(assignments).length === 0) {
             return;
         }
-        metricsService_js_1.assassinationMetrics.recordAssignments(roomId, assignments, 0);
+        assassinationMetrics.recordAssignments(roomId, assignments, 0);
     }
     recordAssassinationElimination(roomId, gameState, elimination, eliminatorId, cause) {
         if (gameState.gameConfig?.gameMode !== 'assassination' ||
@@ -194,7 +206,7 @@ class GameService {
         else {
             resolution = 'collateral';
         }
-        metricsService_js_1.assassinationMetrics.recordElimination({
+        assassinationMetrics.recordElimination({
             gameId: roomId,
             hunterId,
             targetId,
@@ -216,7 +228,7 @@ class GameService {
         return normalizedState;
     }
     async executeAiTurn(roomId, budgetOverrides) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState) {
             throw new Error('Game not found');
         }
@@ -233,7 +245,7 @@ class GameService {
             maxPlannedActions: budgetOverrides?.maxPlannedActions ?? 4,
             signal: budgetOverrides?.signal,
         };
-        const decisionPlan = await aiDecisionService_js_1.aiDecisionService.chooseAction({
+        const decisionPlan = await aiDecisionService.chooseAction({
             gameState: this.cloneGameState(hydrated),
             player: currentPlayer,
             difficulty: currentPlayer.aiDifficulty ?? 'recruit',
@@ -252,7 +264,7 @@ class GameService {
             appliedActions = planResult.applied;
         }
         else {
-            const fallbackActions = this.limitFallbackActions(aiDecisionService_js_1.aiDecisionService.buildFallbackPlan(baselineState, currentPlayer.id), effectiveBudget, roomId, currentPlayer.id);
+            const fallbackActions = this.limitFallbackActions(aiDecisionService.buildFallbackPlan(baselineState, currentPlayer.id), effectiveBudget, roomId, currentPlayer.id);
             const fallbackResult = await this.applyActions(baselineState, fallbackActions, currentPlayer.id);
             if (!fallbackResult.success) {
                 throw new Error('Failed to apply fallback plan for AI turn');
@@ -267,7 +279,7 @@ class GameService {
         const thinkTimeMs = decisionDiagnostics?.durationMs;
         const plannedActionCount = decisionPlan.actions.length;
         const difficulty = currentPlayer.aiDifficulty ?? 'recruit';
-        metricsService_js_1.aiTurnMetrics.recordTurn({
+        aiTurnMetrics.recordTurn({
             difficulty,
             fallbackUsed,
             fallbackReason,
@@ -275,7 +287,7 @@ class GameService {
             plannedActions: plannedActionCount,
             appliedActions: appliedActions.length,
         });
-        logger_js_1.logger.info('AI turn executed', {
+        logger.info('AI turn executed', {
             roomId,
             playerId: currentPlayer.id,
             difficulty,
@@ -306,7 +318,7 @@ class GameService {
         };
     }
     async isCapitalTerritory(roomId, territoryId) {
-        const rawState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const rawState = await gameStateCache.getGameState(roomId);
         if (!rawState) {
             return false;
         }
@@ -316,7 +328,7 @@ class GameService {
         return territory?.isCapital === true;
     }
     async processGameAction(action, userId) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(action.roomId);
+        const cachedState = await gameStateCache.getGameState(action.roomId);
         if (!cachedState) {
             throw new Error('Game not found');
         }
@@ -326,7 +338,7 @@ class GameService {
         }
         const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action);
         await this.persistGameStateSnapshot(action.roomId, this.serializeGameState(updatedState));
-        logger_js_1.logger.info(`Game action processed for room ${action.roomId}: ${action.type}`);
+        logger.info(`Game action processed for room ${action.roomId}: ${action.type}`);
         return updatedState;
     }
     async initializeGame(roomId, players, gameConfig) {
@@ -363,13 +375,13 @@ class GameService {
         if (!config.mapId) {
             throw new Error('No map selected for game');
         }
-        const validation = await mapService_js_1.mapService.validateMapPlayable(config.mapId);
+        const validation = await mapService.validateMapPlayable(config.mapId);
         if (!validation.isValid) {
             const msg = `Selected map failed validation: ${validation.errors.join('; ')}`;
-            logger_js_1.logger.warn(msg, { mapId: config.mapId });
+            logger.warn(msg, { mapId: config.mapId });
             throw new Error(msg);
         }
-        const loaded = await (0, mapLoader_js_1.loadMapForEngine)(config.mapId);
+        const loaded = await loadMapForEngine(config.mapId);
         if (!config.sectorBonuses || config.sectorBonuses.length === 0) {
             config.sectorBonuses = loaded.continentBonuses;
             config.continentBonuses = loaded.continentBonuses;
@@ -394,41 +406,41 @@ class GameService {
                 await this.appendLog(roomId, [entry]);
             }
             catch (logErr) {
-                logger_js_1.logger.debug('Skipped RNG seed appendLog', {
+                logger.debug('Skipped RNG seed appendLog', {
                     roomId,
                     error: logErr instanceof Error ? logErr.message : logErr,
                 });
             }
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to initialize or log combat RNG seed', {
+            logger.warn('Failed to initialize or log combat RNG seed', {
                 roomId,
                 error: e instanceof Error ? e.message : e,
             });
         }
         if (config.useTerritoryModifiers) {
             const territoryIds = gameState.board.map((t) => t.id);
-            await territoryModifierService_js_1.default.initializeGameModifiers(roomId, config.mapId, territoryIds);
-            const modifiers = await territoryModifierService_js_1.default.getGameModifiers(roomId);
+            await territoryModifierService.initializeGameModifiers(roomId, config.mapId, territoryIds);
+            const modifiers = await territoryModifierService.getGameModifiers(roomId);
             gameState.territoryModifiers = modifiers;
         }
         await this.persistGameStateSnapshot(roomId, this.serializeGameState(gameState));
         this.recordAssassinationAssignments(roomId, gameState);
-        if (notificationService_js_1.default.isEnabled()) {
-            notificationService_js_1.default
+        if (notificationService.isEnabled()) {
+            notificationService
                 .notifyGameStart(roomId, players.map((player) => player.userId))
                 .catch((error) => {
-                logger_js_1.logger.warn('Failed to send game start push notifications', {
+                logger.warn('Failed to send game start push notifications', {
                     roomId,
                     error: error instanceof Error ? error.message : error,
                 });
             });
         }
-        logger_js_1.logger.info(`Game initialized for room ${roomId} with ${players.length} players`);
+        logger.info(`Game initialized for room ${roomId} with ${players.length} players`);
         return gameState;
     }
     async neutralizePlayerAndResolve(roomId, userId) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState) {
             return null;
         }
@@ -461,20 +473,20 @@ class GameService {
         }
         const serializedState = this.serializeGameState(gameState);
         if (gameState.phase === 'finished' || elimination.gameEnded) {
-            await cacheService_js_1.gameStateCache.setInactiveGameState(roomId, serializedState);
+            await gameStateCache.setInactiveGameState(roomId, serializedState);
             this.gameEngine.clearModifiersCache(roomId);
             try {
                 const playerStats = this.buildPlayerStats(gameState.players, gameState.board);
                 let battleLog = [];
                 try {
-                    const res = await (0, database_js_1.query)('SELECT game_log FROM game_states WHERE room_id = $1', [roomId]);
+                    const res = await query('SELECT game_log FROM game_states WHERE room_id = $1', [roomId]);
                     const raw = res.rows[0]?.game_log;
                     if (Array.isArray(raw)) {
                         battleLog = raw.filter((e) => e && typeof e === 'object' && e.type === 'BATTLE');
                     }
                 }
                 catch (e) {
-                    logger_js_1.logger.warn('Failed to load battle log before neutralize finalization', {
+                    logger.warn('Failed to load battle log before neutralize finalization', {
                         roomId,
                         error: e instanceof Error ? e.message : e,
                     });
@@ -482,19 +494,19 @@ class GameService {
                 const finalization = await this.finalizeCompletedGame(roomId, serializedState, gameState.players, playerStats, battleLog);
                 if (finalization.archived) {
                     try {
-                        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+                        const io = tryGetSocketServer();
                         if (io) {
                             const winnerId = finalization.playerRankings.find((r) => r.isWinner)?.userId ||
                                 (serializedState.currentPlayer ?? '');
                             const eliminated = finalization.playerRankings
                                 .filter((r) => r.eliminated)
                                 .map((r) => r.userId);
-                            const delta = deltaUpdates_js_1.DeltaBuilder.gameEnd(roomId, winnerId, eliminated, serializedState.version);
+                            const delta = DeltaBuilder.gameEnd(roomId, winnerId, eliminated, serializedState.version);
                             io.to(`game:${roomId}`).emit('game-delta', delta);
                         }
                     }
                     catch (e) {
-                        logger_js_1.logger.warn('Failed to emit GAME_END delta after neutralize', {
+                        logger.warn('Failed to emit GAME_END delta after neutralize', {
                             roomId,
                             error: e instanceof Error ? e.message : e,
                         });
@@ -510,7 +522,7 @@ class GameService {
                         await achievementService.handleGameCompleted(roomId, minimal);
                     }
                     catch (e) {
-                        logger_js_1.logger.warn('Failed to process achievements after neutralize completion', {
+                        logger.warn('Failed to process achievements after neutralize completion', {
                             roomId,
                             error: e instanceof Error ? e.message : e,
                         });
@@ -518,7 +530,7 @@ class GameService {
                 }
             }
             catch (e) {
-                logger_js_1.logger.error('Failed to finalize game after neutralize', {
+                logger.error('Failed to finalize game after neutralize', {
                     roomId,
                     error: e instanceof Error ? e.message : e,
                 });
@@ -530,10 +542,10 @@ class GameService {
         return { state: serializedState, elimination };
     }
     async getGameState(roomId) {
-        let cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        let cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState) {
             try {
-                const dbResult = await (0, database_js_1.query)('SELECT game_data FROM game_states WHERE room_id = $1', [roomId]);
+                const dbResult = await query('SELECT game_data FROM game_states WHERE room_id = $1', [roomId]);
                 if (dbResult.rows.length > 0 && dbResult.rows[0].game_data != null) {
                     const raw = dbResult.rows[0].game_data;
                     if (typeof raw === 'string') {
@@ -546,7 +558,7 @@ class GameService {
                         throw new Error('game_data has unexpected type');
                     }
                     await this.persistGameStateSnapshot(roomId, cachedState);
-                    logger_js_1.logger.info('Loaded game state from database and repopulated cache', { roomId });
+                    logger.info('Loaded game state from database and repopulated cache', { roomId });
                 }
                 else {
                     return null;
@@ -554,13 +566,13 @@ class GameService {
             }
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                logger_js_1.logger.warn('Error loading game state from database', { roomId, error: errorMessage });
+                logger.warn('Error loading game state from database', { roomId, error: errorMessage });
                 return null;
             }
         }
         const hydratedState = this.hydrateGameState(cachedState, roomId);
         if (hydratedState.gameConfig?.useTerritoryModifiers && !hydratedState.territoryModifiers) {
-            const modifiers = await territoryModifierService_js_1.default.getGameModifiers(roomId);
+            const modifiers = await territoryModifierService.getGameModifiers(roomId);
             if (modifiers.size > 0) {
                 hydratedState.territoryModifiers = modifiers;
             }
@@ -568,7 +580,7 @@ class GameService {
         return hydratedState;
     }
     async deployArmies(roomId, userId, territoryId, armies) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState)
             throw new Error('Game not found');
         const gameState = this.hydrateGameState(cachedState, roomId);
@@ -588,7 +600,7 @@ class GameService {
         const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action);
         const serialized = this.serializeGameState(updatedState);
         await this.persistTurnStateTransactional(roomId, serialized);
-        await cacheService_js_1.gameStateCache.setGameState(roomId, serialized);
+        await gameStateCache.setGameState(roomId, serialized);
         return {
             gameState: serialized,
             territoryId,
@@ -596,7 +608,7 @@ class GameService {
         };
     }
     async attack(roomId, userId, fromTerritoryId, toTerritoryId) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState)
             throw new Error('Game not found');
         const gameState = this.hydrateGameState(cachedState, roomId);
@@ -632,7 +644,7 @@ class GameService {
         };
     }
     async transferConquestArmies(roomId, userId, fromTerritoryId, toTerritoryId, armies) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState)
             throw new Error('Game not found');
         const gameState = this.hydrateGameState(cachedState, roomId);
@@ -645,7 +657,7 @@ class GameService {
         const updatedState = this.gameEngine.transferConquestArmies(gameState, userId, fromTerritoryId, toTerritoryId, armies);
         const serialized = this.serializeGameState(updatedState);
         await this.persistTurnStateTransactional(roomId, serialized);
-        await cacheService_js_1.gameStateCache.setGameState(roomId, serialized);
+        await gameStateCache.setGameState(roomId, serialized);
         const fromTerritory = updatedState.board.find((territory) => territory.id === fromTerritoryId);
         const toTerritory = updatedState.board.find((territory) => territory.id === toTerritoryId);
         return {
@@ -655,7 +667,7 @@ class GameService {
         };
     }
     async fortify(roomId, userId, fromTerritoryId, toTerritoryId, armies) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState)
             throw new Error('Game not found');
         const gameState = this.hydrateGameState(cachedState, roomId);
@@ -675,7 +687,7 @@ class GameService {
         const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action);
         const serialized = this.serializeGameState(updatedState);
         await this.persistTurnStateTransactional(roomId, serialized);
-        await cacheService_js_1.gameStateCache.setGameState(roomId, serialized);
+        await gameStateCache.setGameState(roomId, serialized);
         return {
             gameState: serialized,
             fromTerritoryId,
@@ -685,7 +697,7 @@ class GameService {
         };
     }
     async endTurn(roomId, userId, options) {
-        const cachedState = await cacheService_js_1.gameStateCache.getGameState(roomId);
+        const cachedState = await gameStateCache.getGameState(roomId);
         if (!cachedState)
             throw new Error('Game not found');
         const gameState = this.hydrateGameState(cachedState);
@@ -707,23 +719,23 @@ class GameService {
         const updatedState = this.gameEngine.advancePhase(gameState);
         if (updatedState.phase === 'finished') {
             const finalSerialized = this.serializeGameState(updatedState);
-            await cacheService_js_1.gameStateCache.setInactiveGameState(roomId, finalSerialized);
+            await gameStateCache.setInactiveGameState(roomId, finalSerialized);
             await this.persistTurnStateTransactional(roomId, finalSerialized);
         }
         else {
             const serialized = this.serializeGameState(updatedState);
             await this.persistTurnStateTransactional(roomId, serialized);
-            await cacheService_js_1.gameStateCache.setGameState(roomId, serialized);
+            await gameStateCache.setGameState(roomId, serialized);
         }
-        if (notificationService_js_1.default.isEnabled()) {
+        if (notificationService.isEnabled()) {
             const nextPlayerId = updatedState.currentPlayer;
             const participantIds = updatedState.players.map((player) => player.id);
             if (updatedState.phase === 'finished' && previousPhase !== 'finished') {
                 const winner = updatedState.players.find((player) => player.id === nextPlayerId && !player.isEliminated);
-                notificationService_js_1.default
+                notificationService
                     .notifyGameEnd(roomId, winner?.id ?? nextPlayerId, participantIds)
                     .catch((error) => {
-                    logger_js_1.logger.warn('Failed to send game end push notifications', {
+                    logger.warn('Failed to send game end push notifications', {
                         roomId,
                         error: error instanceof Error ? error.message : error,
                     });
@@ -731,10 +743,10 @@ class GameService {
             }
             else if (nextPlayerId !== previousPlayerId && updatedState.phase === 'reinforcement') {
                 const nextPlayer = updatedState.players.find((player) => player.id === nextPlayerId);
-                notificationService_js_1.default
+                notificationService
                     .notifyTurnStart(roomId, nextPlayerId, nextPlayer?.username ?? 'Your turn')
                     .catch((error) => {
-                    logger_js_1.logger.warn('Failed to send turn start push notification', {
+                    logger.warn('Failed to send turn start push notification', {
                         roomId,
                         nextPlayerId,
                         error: error instanceof Error ? error.message : error,
@@ -796,7 +808,7 @@ class GameService {
                     { event: 'append_log', gameId: roomId, data: entries },
                     { event: 'append_turn_stats', gameId: roomId, data: stats },
                 ];
-                const added = await queueService_js_1.queueService.addAnalyticsEventsBulk?.(bulkJobs);
+                const added = await queueService.addAnalyticsEventsBulk?.(bulkJobs);
                 if (!added) {
                     setImmediate(() => {
                         this.appendLog(roomId, entries).catch(() => {
@@ -825,14 +837,14 @@ class GameService {
                 const playerStats = this.buildPlayerStats(updatedState.players, updatedState.board);
                 let battleLog = [];
                 try {
-                    const res = await (0, database_js_1.query)('SELECT game_log FROM game_states WHERE room_id = $1', [roomId]);
+                    const res = await query('SELECT game_log FROM game_states WHERE room_id = $1', [roomId]);
                     const raw = res.rows[0]?.game_log;
                     if (Array.isArray(raw)) {
                         battleLog = raw.filter((e) => e && typeof e === 'object' && e.type === 'BATTLE');
                     }
                 }
                 catch (e) {
-                    logger_js_1.logger.warn('Failed to load battle log before finalization', {
+                    logger.warn('Failed to load battle log before finalization', {
                         roomId,
                         error: e instanceof Error ? e.message : e,
                     });
@@ -840,19 +852,19 @@ class GameService {
                 const finalization = await this.finalizeCompletedGame(roomId, finalSerialized, updatedState.players, playerStats, battleLog);
                 if (finalization.archived) {
                     try {
-                        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+                        const io = tryGetSocketServer();
                         if (io) {
                             const winnerId = finalization.playerRankings.find((r) => r.isWinner)?.userId ||
                                 (updatedState.currentPlayer ?? '');
                             const eliminated = finalization.playerRankings
                                 .filter((r) => r.eliminated)
                                 .map((r) => r.userId);
-                            const delta = deltaUpdates_js_1.DeltaBuilder.gameEnd(roomId, winnerId, eliminated, finalSerialized.version);
+                            const delta = DeltaBuilder.gameEnd(roomId, winnerId, eliminated, finalSerialized.version);
                             io.to(`game:${roomId}`).emit('game-delta', delta);
                         }
                     }
                     catch (e) {
-                        logger_js_1.logger.warn('Failed to emit GAME_END delta on endTurn', {
+                        logger.warn('Failed to emit GAME_END delta on endTurn', {
                             roomId,
                             error: e instanceof Error ? e.message : e,
                         });
@@ -868,7 +880,7 @@ class GameService {
                         await achievementService.handleGameCompleted(roomId, minimal);
                     }
                     catch (e) {
-                        logger_js_1.logger.warn('Failed to process achievements after game completion', {
+                        logger.warn('Failed to process achievements after game completion', {
                             roomId,
                             error: e instanceof Error ? e.message : e,
                         });
@@ -877,7 +889,7 @@ class GameService {
             }
         }
         catch (e) {
-            logger_js_1.logger.error('Failed to finalize game on endTurn', {
+            logger.error('Failed to finalize game on endTurn', {
                 roomId,
                 error: e instanceof Error ? e.message : e,
             });
@@ -896,7 +908,7 @@ class GameService {
         return this.gameEngine.validateAction(gameState, action);
     }
     async processPlaceArmies(gameId, data) {
-        return await (0, database_js_1.transaction)(async (client) => {
+        return await transaction(async (client) => {
             const gameState = await this.getGameState(gameId);
             if (!gameState)
                 throw new Error('Game not found');
@@ -921,27 +933,12 @@ class GameService {
             const updatedTerritory = updatedState.board.find((t) => t.id === data.territoryId);
             const playerAfter = updatedState.players.find((p) => p.id === data.playerId);
             const serializedState = this.serializeGameState(updatedState);
-            await client.query(`
-        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
-        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
-        ON CONFLICT (room_id) DO UPDATE
-          SET game_data = EXCLUDED.game_data,
-              turn_number = EXCLUDED.turn_number,
-              current_player_id = EXCLUDED.current_player_id,
-              game_phase = EXCLUDED.game_phase,
-              last_activity = NOW()
-        `, [
-                gameId,
-                JSON.stringify(serializedState),
-                Math.max(1, Number(serializedState.turn ?? 1)),
-                serializedState.currentPlayer ?? null,
-                serializedState.phase,
-            ]);
+            await this.persistGameStateSnapshotWithClient(client.query.bind(client), gameId, serializedState);
             try {
-                await cacheService_js_1.gameStateCache.setGameState(gameId, serializedState);
+                await gameStateCache.setGameState(gameId, serializedState);
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to cache game state during deployment', {
+                logger.warn('Failed to cache game state during deployment', {
                     gameId,
                     error: error instanceof Error ? error.message : error,
                 });
@@ -983,8 +980,8 @@ class GameService {
         });
     }
     async processFortify(gameId, data) {
-        return await (0, database_js_1.transaction)(async (client) => {
-            const cachedState = await cacheService_js_1.gameStateCache.getGameState(gameId);
+        return await transaction(async (client) => {
+            const cachedState = await gameStateCache.getGameState(gameId);
             if (!cachedState)
                 throw new Error('Game not found');
             const gameState = this.hydrateGameState(cachedState, gameId);
@@ -1007,27 +1004,12 @@ class GameService {
             }
             const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action);
             const serializedState = this.serializeGameState(updatedState);
-            await client.query(`
-        INSERT INTO game_states (room_id, game_data, turn_number, current_player_id, game_phase, last_activity)
-        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
-        ON CONFLICT (room_id) DO UPDATE
-          SET game_data = EXCLUDED.game_data,
-              turn_number = EXCLUDED.turn_number,
-              current_player_id = EXCLUDED.current_player_id,
-              game_phase = EXCLUDED.game_phase,
-              last_activity = NOW()
-        `, [
-                gameId,
-                JSON.stringify(serializedState),
-                Math.max(1, Number(serializedState.turn ?? 1)),
-                serializedState.currentPlayer ?? null,
-                serializedState.phase,
-            ]);
+            await this.persistGameStateSnapshotWithClient(client.query.bind(client), gameId, serializedState);
             try {
-                await cacheService_js_1.gameStateCache.setGameState(gameId, serializedState);
+                await gameStateCache.setGameState(gameId, serializedState);
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to cache game state during fortify', {
+                logger.warn('Failed to cache game state during fortify', {
                     gameId,
                     error: error instanceof Error ? error.message : error,
                 });
@@ -1079,7 +1061,7 @@ class GameService {
         const territoryCount = state.board.filter((t) => t.ownerId === userId).length;
         let logged = false;
         let _appendedEntry = null;
-        await (0, database_js_1.transaction)(async (client) => {
+        await transaction(async (client) => {
             const existing = await client.query('SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE', [roomId]);
             const current = Array.isArray(existing.rows[0]?.game_log)
                 ? existing.rows[0]?.game_log
@@ -1170,7 +1152,7 @@ class GameService {
         }
         try {
             if (gameState.phase === 'attack' && phase !== 'attack') {
-                const res = await (0, database_js_1.query)('SELECT game_log FROM game_states WHERE room_id = $1', [gameId]);
+                const res = await query('SELECT game_log FROM game_states WHERE room_id = $1', [gameId]);
                 const raw = res.rows[0]?.game_log;
                 const log = Array.isArray(raw) ? raw : [];
                 const lastBattle = [...log].reverse().find((e) => (e?.type ?? 'BATTLE') === 'BATTLE');
@@ -1210,7 +1192,7 @@ class GameService {
             }
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to flush engagement summary on phase change', {
+            logger.warn('Failed to flush engagement summary on phase change', {
                 gameId,
                 phase,
                 error: e instanceof Error ? e.message : e,
@@ -1311,7 +1293,7 @@ class GameService {
             : Math.max(0, defendingArmiesRemaining + defenderLosses);
         let engagementId;
         try {
-            const existing = await (0, database_js_1.query)('SELECT game_log FROM game_states WHERE room_id = $1', [gameId]);
+            const existing = await query('SELECT game_log FROM game_states WHERE room_id = $1', [gameId]);
             const list = (existing.rows[0]?.game_log || []);
             const last = [...list].reverse().find((e) => (e?.type ?? 'BATTLE') === 'BATTLE');
             if (last &&
@@ -1350,7 +1332,7 @@ class GameService {
         let persistenceOutcome;
         let latestBattleLog = [];
         try {
-            persistenceOutcome = await (0, database_js_1.transaction)(async (client) => {
+            persistenceOutcome = await transaction(async (client) => {
                 const existingStateResult = await client.query('SELECT territories, game_log, winner_id FROM game_states WHERE room_id = $1 FOR UPDATE', [gameId]);
                 const existingRow = existingStateResult.rows[0];
                 const existingLog = Array.isArray(existingRow?.game_log)
@@ -1474,15 +1456,15 @@ class GameService {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown battle persistence error';
-            metricsService_js_1.battleMetrics.recordFailure(message, { gameId, jobId });
+            battleMetrics.recordFailure(message, { gameId, jobId });
             throw error;
         }
         const status = persistenceOutcome.applied ? 'applied' : 'duplicate';
-        metricsService_js_1.battleMetrics.recordApply(gameId, status, persistenceOutcome.divergence);
+        battleMetrics.recordApply(gameId, status, persistenceOutcome.divergence);
         if (persistenceOutcome.applied) {
             try {
                 if (lastBattleResult.eliminatedPlayers && lastBattleResult.eliminatedPlayers.length > 0) {
-                    const cfg = (0, hiddenTreasures_js_1.normalizeTreasureConfig)(updatedGameState.gameConfig.treasureConfig);
+                    const cfg = normalizeTreasureConfig(updatedGameState.gameConfig.treasureConfig);
                     if (cfg.enabled) {
                         const eliminator = updatedGameState.players.find((p) => p.id === attackerId);
                         if (eliminator) {
@@ -1506,7 +1488,7 @@ class GameService {
                                 eliminated.mustCashInTreasures = false;
                             }
                             if (transferred > 0 && eliminatorHand.length >= cfg.handCap) {
-                                const hasValidSet = (0, hiddenTreasures_js_1.findRedeemableSets)(eliminatorHand)
+                                const hasValidSet = findRedeemableSets(eliminatorHand)
                                     .length > 0;
                                 eliminator.mustCashInTreasures = hasValidSet;
                                 if (hasValidSet && eliminator.id === updatedGameState.currentPlayer) {
@@ -1518,7 +1500,7 @@ class GameService {
                 }
             }
             catch (e) {
-                logger_js_1.logger.warn('Failed to transfer eliminated treasures in applyBattleResult', {
+                logger.warn('Failed to transfer eliminated treasures in applyBattleResult', {
                     gameId,
                     error: e instanceof Error ? e.message : e,
                 });
@@ -1526,29 +1508,29 @@ class GameService {
             serializedState = this.serializeGameState(updatedGameState);
             await this.persistTurnStateTransactional(gameId, serializedState);
             try {
-                await cacheService_js_1.gameStateCache.setGameState(gameId, serializedState);
+                await gameStateCache.setGameState(gameId, serializedState);
             }
             catch {
             }
         }
         if (persistenceOutcome.applied && gameEnded) {
             const finalization = await this.finalizeCompletedGame(gameId, serializedState, playersAfterBattle, playerStats, latestBattleLog.filter((e) => e.type === 'BATTLE'));
-            metricsService_js_1.battleMetrics.clearGame(gameId);
+            battleMetrics.clearGame(gameId);
             if (finalization.archived) {
                 try {
-                    const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+                    const io = tryGetSocketServer();
                     if (io) {
                         const winnerId = finalization.playerRankings.find((r) => r.isWinner)?.userId ||
                             (serializedState.currentPlayer ?? '');
                         const eliminated = finalization.playerRankings
                             .filter((r) => r.eliminated)
                             .map((r) => r.userId);
-                        const delta = deltaUpdates_js_1.DeltaBuilder.gameEnd(gameId, winnerId, eliminated, serializedState.version);
+                        const delta = DeltaBuilder.gameEnd(gameId, winnerId, eliminated, serializedState.version);
                         io.to(`game:${gameId}`).emit('game-delta', delta);
                     }
                 }
                 catch (e) {
-                    logger_js_1.logger.warn('Failed to emit GAME_END delta after battle', {
+                    logger.warn('Failed to emit GAME_END delta after battle', {
                         gameId,
                         error: e instanceof Error ? e.message : e,
                     });
@@ -1564,7 +1546,7 @@ class GameService {
                     await achievementService.handleGameCompleted(gameId, minimal);
                 }
                 catch (e) {
-                    logger_js_1.logger.warn('Failed to process achievements after game completion', {
+                    logger.warn('Failed to process achievements after game completion', {
                         gameId,
                         error: e instanceof Error ? e.message : e,
                     });
@@ -1655,7 +1637,7 @@ class GameService {
         return null;
     }
     async appendTurnStats(roomId, snapshot) {
-        await (0, database_js_1.transaction)(async (client) => {
+        await transaction(async (client) => {
             const res = await client.query('SELECT turn_stats FROM game_states WHERE room_id = $1 FOR UPDATE', [roomId]);
             const current = (Array.isArray(res.rows[0]?.turn_stats) ? res.rows[0]?.turn_stats : []);
             const updated = [...current, snapshot].slice(-500);
@@ -1744,16 +1726,16 @@ class GameService {
             return;
         }
         try {
-            await featureFlagService_js_1.featureFlagService.evaluateFlagByName('clans_enabled');
+            await featureFlagService.evaluateFlagByName('clans_enabled');
         }
         catch (_err) {
         }
         let membershipMap;
         try {
-            membershipMap = await clanService_js_1.clanService.getActiveMembershipsForUsers(rankings.map((ranking) => ranking.userId));
+            membershipMap = await clanService.getActiveMembershipsForUsers(rankings.map((ranking) => ranking.userId));
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to load clan memberships for awarding contributions', {
+            logger.error('Failed to load clan memberships for awarding contributions', {
                 gameId,
                 error: error instanceof Error ? error.message : error,
             });
@@ -1772,7 +1754,7 @@ class GameService {
                 continue;
             }
             try {
-                const contribution = await clanProgressionService_js_1.clanProgressionService.awardContribution({
+                const contribution = await clanProgressionService.awardContribution({
                     clanId: membership.clanId,
                     userId: ranking.userId,
                     actorUserId: ranking.userId,
@@ -1804,8 +1786,8 @@ class GameService {
                 });
             }
             catch (error) {
-                if (error instanceof clanProgressionService_js_1.ClanProgressionServiceError) {
-                    logger_js_1.logger.warn('Skipped clan contribution for player', {
+                if (error instanceof ClanProgressionServiceError) {
+                    logger.warn('Skipped clan contribution for player', {
                         gameId,
                         userId: ranking.userId,
                         clanId: membership.clanId,
@@ -1813,7 +1795,7 @@ class GameService {
                     });
                     continue;
                 }
-                logger_js_1.logger.error('Failed to award clan contribution', {
+                logger.error('Failed to award clan contribution', {
                     gameId,
                     userId: ranking.userId,
                     clanId: membership.clanId,
@@ -1823,7 +1805,7 @@ class GameService {
         }
     }
     emitClanProgressionUpdate(payload) {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io) {
             return;
         }
@@ -1839,7 +1821,7 @@ class GameService {
         const archiveTimestamp = new Date();
         let finalRatingChanges = [];
         let isRankedGame = false;
-        const persisted = await (0, database_js_1.transaction)(async (client) => {
+        const persisted = await transaction(async (client) => {
             const existingResult = await client.query('SELECT room_id FROM game_results WHERE room_id = $1', [gameId]);
             if ((existingResult.rowCount ?? 0) > 0) {
                 return false;
@@ -1872,10 +1854,10 @@ class GameService {
             }));
             let ratingChanges = [];
             try {
-                ratingChanges = eloService_js_1.eloService.calculateRatingChanges(playerRatings);
+                ratingChanges = eloService.calculateRatingChanges(playerRatings);
             }
             catch (error) {
-                logger_js_1.logger.warn('Skipping ELO calculation for game', {
+                logger.warn('Skipping ELO calculation for game', {
                     gameId,
                     playerCount: playerRatings.length,
                     error: error instanceof Error ? error.message : error,
@@ -1883,7 +1865,7 @@ class GameService {
             }
             if (ratingChanges.length > 0) {
                 const ratingInputMap = new Map(playerRatings.map((player) => [player.userId, player]));
-                logger_js_1.logger.info('Calculated rating changes for completed ranked game', {
+                logger.info('Calculated rating changes for completed ranked game', {
                     gameId,
                     players: ratingChanges.length,
                     breakdown: ratingChanges.map((change) => {
@@ -2002,22 +1984,22 @@ class GameService {
            WHERE room_id = $1 AND user_id = $2`, [gameId, ranking.userId, ranking.eliminated, ranking.position]);
             }
             if (ratingChanges.length > 0) {
-                await eloService_js_1.eloService.applyRatingChanges(gameId, ratingChanges, client);
+                await eloService.applyRatingChanges(gameId, ratingChanges, client);
             }
-            await eloService_js_1.eloService.updateLeaderboardCache(client);
+            await eloService.updateLeaderboardCache(client);
             finalRatingChanges = ratingChanges;
             return true;
         });
-        await cacheService_js_1.gameStateCache.setInactiveGameState(gameId, serializedState);
+        await gameStateCache.setInactiveGameState(gameId, serializedState);
         if (persisted) {
-            logger_js_1.logger.info('Archived completed game', {
+            logger.info('Archived completed game', {
                 gameId,
                 winnerId: winner?.userId ?? null,
             });
         }
         try {
             if (isRankedGame && finalRatingChanges && finalRatingChanges.length > 0) {
-                const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+                const io = tryGetSocketServer();
                 if (io) {
                     io.to(`game:${gameId}`).emit('ratingUpdate', {
                         changes: finalRatingChanges.map((c) => ({
@@ -2031,7 +2013,7 @@ class GameService {
             }
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to emit ratingUpdate socket event', {
+            logger.warn('Failed to emit ratingUpdate socket event', {
                 gameId,
                 error: e instanceof Error ? e.message : e,
             });
@@ -2062,14 +2044,14 @@ class GameService {
                 await this.appendLog(gameId, [endEntry]);
             }
             catch (logErr) {
-                logger_js_1.logger.warn('Failed to append GAME_END log', {
+                logger.warn('Failed to append GAME_END log', {
                     gameId,
                     error: logErr instanceof Error ? logErr.message : logErr,
                 });
             }
         }
         catch (e) {
-            logger_js_1.logger.warn('Failed to append rating change logs', {
+            logger.warn('Failed to append rating change logs', {
                 gameId,
                 error: e instanceof Error ? e.message : e,
             });
@@ -2077,13 +2059,13 @@ class GameService {
         return { archived: persisted, playerRankings };
     }
     async archiveGameResults(gameId, results) {
-        logger_js_1.logger.debug(`Archiving game ${gameId}:`, results);
+        logger.debug(`Archiving game ${gameId}:`, results);
     }
     async archiveGameMoves(gameId) {
         if (!gameId) {
             return { archived: 0 };
         }
-        const archived = await (0, database_js_1.transaction)(async (client) => {
+        const archived = await transaction(async (client) => {
             const result = await client.query(`
           WITH moved AS (
             DELETE FROM game_moves
@@ -2119,57 +2101,57 @@ class GameService {
             return result.rowCount ?? 0;
         });
         if (archived > 0) {
-            logger_js_1.logger.debug('Archived game moves', { gameId, archived });
+            logger.debug('Archived game moves', { gameId, archived });
         }
         return { archived };
     }
     async updateEloRatings(gameId, _gameState) {
-        logger_js_1.logger.debug(`Updating ELO for game ${gameId}`);
+        logger.debug(`Updating ELO for game ${gameId}`);
     }
     async recordGameHistory(gameId, _gameState) {
-        logger_js_1.logger.debug(`Recording history for game ${gameId}`);
+        logger.debug(`Recording history for game ${gameId}`);
     }
     async removeFromActiveGames(gameId) {
-        await cacheService_js_1.gameStateCache.deleteGameState(gameId);
+        await gameStateCache.deleteGameState(gameId);
     }
     async getIdleGames(_threshold) {
         return [];
     }
     async markPlayerAsInactive(gameId, playerId) {
-        logger_js_1.logger.info(`Marking player ${playerId} as inactive in game ${gameId}`);
+        logger.info(`Marking player ${playerId} as inactive in game ${gameId}`);
     }
     async pauseGame(gameId) {
-        logger_js_1.logger.info(`Pausing game ${gameId}`);
+        logger.info(`Pausing game ${gameId}`);
     }
     async deleteGame(gameId) {
-        await cacheService_js_1.gameStateCache.deleteGameState(gameId);
+        await gameStateCache.deleteGameState(gameId);
     }
     async cleanupTemporaryData(gameId) {
-        logger_js_1.logger.debug(`Cleaning temp data for game ${gameId}`);
+        logger.debug(`Cleaning temp data for game ${gameId}`);
     }
     async cleanupAbandonedGame(gameId) {
         await this.removeFromActiveGames(gameId);
     }
     async logCleanup(gameId, reason) {
-        logger_js_1.logger.info(`Cleanup logged for game ${gameId}: ${reason}`);
+        logger.info(`Cleanup logged for game ${gameId}: ${reason}`);
     }
     async archiveGame(gameId) {
-        logger_js_1.logger.info(`Archiving game ${gameId}`);
+        logger.info(`Archiving game ${gameId}`);
     }
     async findAbandonedGames(thresholdMs) {
-        logger_js_1.logger.debug(`Finding games abandoned for ${thresholdMs}ms`);
+        logger.debug(`Finding games abandoned for ${thresholdMs}ms`);
         return [];
     }
     async cleanupFinishedGames(roomIds) {
-        await cacheService_js_1.gameStateCache.cleanupFinishedGames(roomIds);
-        await territoryModifierService_js_1.default.cleanupFinishedGameModifiers(roomIds);
+        await gameStateCache.cleanupFinishedGames(roomIds);
+        await territoryModifierService.cleanupFinishedGameModifiers(roomIds);
     }
     async removeGame(roomId) {
-        await cacheService_js_1.gameStateCache.invalidateGame(roomId);
-        logger_js_1.logger.info(`Forcefully removed game ${roomId} from cache`);
+        await gameStateCache.invalidateGame(roomId);
+        logger.info(`Forcefully removed game ${roomId} from cache`);
     }
     async getBattleLog(roomId) {
-        const result = await (0, database_js_1.query)('SELECT game_log FROM game_states WHERE room_id = $1', [roomId]);
+        const result = await query('SELECT game_log FROM game_states WHERE room_id = $1', [roomId]);
         const rows = result.rows;
         if (!rows || rows.length === 0)
             return [];
@@ -2179,7 +2161,7 @@ class GameService {
     async appendLog(roomId, entries) {
         if (!entries || entries.length === 0)
             return;
-        await (0, database_js_1.transaction)(async (client) => {
+        await transaction(async (client) => {
             const existing = await client.query('SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE', [roomId]);
             const current = Array.isArray(existing.rows[0]?.game_log)
                 ? existing.rows[0]?.game_log
@@ -2191,5 +2173,4 @@ class GameService {
         });
     }
 }
-exports.GameService = GameService;
 //# sourceMappingURL=gameService.js.map

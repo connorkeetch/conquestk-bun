@@ -1,17 +1,11 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.webPushChannel = exports.WebPushChannel = void 0;
-const logger_js_1 = require("../../utils/logger.js");
-const notificationService_js_1 = __importDefault(require("../notificationService.js"));
-const channelLogger = typeof logger_js_1.logger.child === 'function' ? logger_js_1.logger.child({ channel: 'webpush' }) : logger_js_1.logger;
+import { logger } from '../../utils/logger.js';
+import notificationService from '../notificationService.js';
+const channelLogger = typeof logger.child === 'function' ? logger.child({ channel: 'webpush' }) : logger;
 const MAX_ACTIONS = 2;
-class WebPushChannel {
+export class WebPushChannel {
     constructor(options = {}) {
         this.name = 'webpush';
-        this.service = options.service ?? notificationService_js_1.default;
+        this.service = options.service ?? notificationService;
     }
     isAvailable() {
         return this.service.isEnabled();
@@ -93,6 +87,5 @@ class WebPushChannel {
         };
     }
 }
-exports.WebPushChannel = WebPushChannel;
-exports.webPushChannel = new WebPushChannel();
+export const webPushChannel = new WebPushChannel();
 //# sourceMappingURL=WebPushChannel.js.map

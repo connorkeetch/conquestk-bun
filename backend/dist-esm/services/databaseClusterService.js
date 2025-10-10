@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.databaseClusterService = exports.DatabaseClusterService = void 0;
-const pg_1 = require("pg");
-const logger_js_1 = require("../utils/logger.js");
-class DatabaseClusterService {
+import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
+export class DatabaseClusterService {
     constructor() {
         this.nodes = new Map();
         this.metrics = {
@@ -25,7 +22,7 @@ class DatabaseClusterService {
     }
     async initialize() {
         try {
-            logger_js_1.logger.info('🔄 Initializing Database Cluster Service...');
+            logger.info('🔄 Initializing Database Cluster Service...');
             await this.addDatabaseNode({
                 id: 'primary',
                 host: this.getEnvValue('DB_HOST', 'localhost'),
@@ -50,14 +47,14 @@ class DatabaseClusterService {
                 }
             }
             this.startHealthMonitoring();
-            logger_js_1.logger.info('✅ Database Cluster Service initialized', {
+            logger.info('✅ Database Cluster Service initialized', {
                 nodes: this.nodes.size,
                 primary: 1,
                 replicas: this.nodes.size - 1,
             });
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to initialize Database Cluster Service:', error);
+            logger.error('❌ Failed to initialize Database Cluster Service:', error);
             throw error;
         }
     }
@@ -78,12 +75,12 @@ class DatabaseClusterService {
             statement_timeout: this.config.queryTimeout,
             query_timeout: this.config.queryTimeout,
         };
-        const pool = new pg_1.Pool(poolConfig);
+        const pool = new Pool(poolConfig);
         pool.on('connect', () => {
-            logger_js_1.logger.debug(`🔗 New client connected to ${nodeConfig.id}`);
+            logger.debug(`🔗 New client connected to ${nodeConfig.id}`);
         });
         pool.on('error', (error) => {
-            logger_js_1.logger.error(`❌ Database pool error on ${nodeConfig.id}:`, error);
+            logger.error(`❌ Database pool error on ${nodeConfig.id}:`, error);
             this.metrics.connectionErrors++;
             this.markNodeUnhealthy(nodeConfig.id);
         });
@@ -93,7 +90,7 @@ class DatabaseClusterService {
             client.release();
         }
         catch (error) {
-            logger_js_1.logger.error(`❌ Failed to connect to database node ${nodeConfig.id}:`, error);
+            logger.error(`❌ Failed to connect to database node ${nodeConfig.id}:`, error);
             throw error;
         }
         const node = {
@@ -106,12 +103,12 @@ class DatabaseClusterService {
             avgResponseTime: 0,
         };
         this.nodes.set(nodeConfig.id, node);
-        logger_js_1.logger.info(`✅ Database node added: ${nodeConfig.id} (${nodeConfig.role})`);
+        logger.info(`✅ Database node added: ${nodeConfig.id} (${nodeConfig.role})`);
     }
     selectNodeForRead() {
         const healthyNodes = Array.from(this.nodes.values()).filter((node) => node.isHealthy);
         if (healthyNodes.length === 0) {
-            logger_js_1.logger.error('❌ No healthy database nodes available');
+            logger.error('❌ No healthy database nodes available');
             return null;
         }
         switch (this.config.strategy) {
@@ -128,7 +125,7 @@ class DatabaseClusterService {
     selectNodeForWrite() {
         const primaryNode = Array.from(this.nodes.values()).find((node) => node.role === 'primary' && node.isHealthy);
         if (!primaryNode) {
-            logger_js_1.logger.error('❌ Primary database node not available');
+            logger.error('❌ Primary database node not available');
         }
         return primaryNode || null;
     }
@@ -184,14 +181,14 @@ class DatabaseClusterService {
                 this.metrics.successfulQueries++;
                 if (responseTime > this.config.slowQueryThreshold) {
                     this.metrics.slowQueries++;
-                    logger_js_1.logger.warn(`🐌 Slow query detected (${responseTime}ms): ${text.substring(0, 100)}`);
+                    logger.warn(`🐌 Slow query detected (${responseTime}ms): ${text.substring(0, 100)}`);
                 }
                 return result;
             }
             catch (error) {
                 const responseTime = Date.now() - startTime;
                 this.updateNodeMetrics(node, responseTime, false);
-                logger_js_1.logger.error(`❌ Query failed on node ${node.id} (attempt ${attempt + 1}):`, error);
+                logger.error(`❌ Query failed on node ${node.id} (attempt ${attempt + 1}):`, error);
                 if (this.isConnectionError(error)) {
                     this.markNodeUnhealthy(node.id);
                     this.metrics.connectionErrors++;
@@ -226,7 +223,7 @@ class DatabaseClusterService {
         const node = this.nodes.get(nodeId);
         if (node) {
             node.isHealthy = false;
-            logger_js_1.logger.warn(`⚠️ Marked node ${nodeId} as unhealthy`);
+            logger.warn(`⚠️ Marked node ${nodeId} as unhealthy`);
         }
     }
     sleep(ms) {
@@ -234,7 +231,7 @@ class DatabaseClusterService {
     }
     startHealthMonitoring() {
         this.healthCheckInterval = setInterval(() => this.performHealthChecks(), this.config.healthCheckInterval);
-        logger_js_1.logger.info('🔍 Started database health monitoring');
+        logger.info('🔍 Started database health monitoring');
     }
     async performHealthChecks() {
         const healthCheckPromises = Array.from(this.nodes.entries()).map(async ([nodeId, node]) => {
@@ -247,12 +244,12 @@ class DatabaseClusterService {
                 node.lastHealthCheck = Date.now();
                 if (!node.isHealthy) {
                     node.isHealthy = true;
-                    logger_js_1.logger.info(`✅ Node ${nodeId} is healthy again`);
+                    logger.info(`✅ Node ${nodeId} is healthy again`);
                 }
                 node.avgResponseTime = node.avgResponseTime * 0.9 + responseTime * 0.1;
             }
             catch (error) {
-                logger_js_1.logger.warn(`⚠️ Health check failed for node ${nodeId}:`, error);
+                logger.warn(`⚠️ Health check failed for node ${nodeId}:`, error);
                 this.markNodeUnhealthy(nodeId);
             }
         });
@@ -286,15 +283,14 @@ class DatabaseClusterService {
         };
     }
     async shutdown() {
-        logger_js_1.logger.info('🔄 Shutting down Database Cluster Service...');
+        logger.info('🔄 Shutting down Database Cluster Service...');
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
         }
         const shutdownPromises = Array.from(this.nodes.values()).map((node) => node.pool.end());
         await Promise.allSettled(shutdownPromises);
-        logger_js_1.logger.info('✅ Database Cluster Service shutdown complete');
+        logger.info('✅ Database Cluster Service shutdown complete');
     }
 }
-exports.DatabaseClusterService = DatabaseClusterService;
-exports.databaseClusterService = new DatabaseClusterService();
+export const databaseClusterService = new DatabaseClusterService();
 //# sourceMappingURL=databaseClusterService.js.map

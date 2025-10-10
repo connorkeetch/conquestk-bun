@@ -1,11 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.territoryModifierCache = exports.mapCache = exports.leaderboardCache = exports.userCache = exports.gameStateCache = exports.TerritoryModifierCache = exports.MapCache = exports.LeaderboardCache = exports.UserCache = exports.GameStateCache = exports.cacheService = exports.CacheService = void 0;
-const redis_js_1 = require("../config/redis.js");
-const logger_js_1 = require("../utils/logger.js");
-class CacheService {
+import { getRedisClient } from '../config/redis.js';
+import { logger } from '../utils/logger.js';
+export class CacheService {
     constructor() {
-        this.redisClient = (0, redis_js_1.getRedisClient)();
+        this.redisClient = getRedisClient();
         this.inMemoryCache = new Map();
     }
     async get(key) {
@@ -17,7 +14,7 @@ class CacheService {
                 }
             }
             catch (error) {
-                logger_js_1.logger.error(`Cache get error for key ${key}:`, error);
+                logger.error(`Cache get error for key ${key}:`, error);
             }
         }
         else {
@@ -35,7 +32,7 @@ class CacheService {
                 await this.redisClient.setex(key, ttlSeconds, JSON.stringify(value));
             }
             catch (error) {
-                logger_js_1.logger.error(`Cache set error for key ${key}:`, error);
+                logger.error(`Cache set error for key ${key}:`, error);
                 this.setInMemory(key, value, ttlSeconds);
             }
         }
@@ -58,7 +55,7 @@ class CacheService {
                 await this.redisClient.del(key);
             }
             catch (error) {
-                logger_js_1.logger.error(`Cache delete error for key ${key}:`, error);
+                logger.error(`Cache delete error for key ${key}:`, error);
             }
         }
         this.inMemoryCache.delete(key);
@@ -75,7 +72,7 @@ class CacheService {
                 }
             }
             catch (error) {
-                logger_js_1.logger.error(`Cache clear error for prefix ${prefix}:`, error);
+                logger.error(`Cache clear error for prefix ${prefix}:`, error);
             }
         }
         const keysToDelete = [];
@@ -115,9 +112,8 @@ class CacheService {
         }
     }
 }
-exports.CacheService = CacheService;
-exports.cacheService = new CacheService();
-class GameStateCache {
+export const cacheService = new CacheService();
+export class GameStateCache {
     constructor() {
         this.cache = new CacheService();
         this.DEFAULT_TTL = 3600;
@@ -143,11 +139,10 @@ class GameStateCache {
         for (const gameId of gameIds) {
             await this.invalidateGame(gameId);
         }
-        logger_js_1.logger.info(`Cleaned up ${gameIds.length} finished games from cache`);
+        logger.info(`Cleaned up ${gameIds.length} finished games from cache`);
     }
 }
-exports.GameStateCache = GameStateCache;
-class UserCache {
+export class UserCache {
     constructor() {
         this.cache = new CacheService();
         this.TTL = 600;
@@ -168,8 +163,7 @@ class UserCache {
         return this.cache.set(`user:stats:${userId}`, stats, this.TTL);
     }
 }
-exports.UserCache = UserCache;
-class LeaderboardCache {
+export class LeaderboardCache {
     constructor() {
         this.cache = new CacheService();
         this.TTL = 300;
@@ -184,8 +178,7 @@ class LeaderboardCache {
         return this.cache.clearPrefix('leaderboard:');
     }
 }
-exports.LeaderboardCache = LeaderboardCache;
-class MapCache {
+export class MapCache {
     constructor() {
         this.cache = new CacheService();
         this.TTL = 3600;
@@ -203,8 +196,7 @@ class MapCache {
         return this.cache.set('maps:list', maps, this.TTL);
     }
 }
-exports.MapCache = MapCache;
-class TerritoryModifierCache extends CacheService {
+export class TerritoryModifierCache extends CacheService {
     constructor() {
         super(...arguments);
         this.CACHE_PREFIX = 'territory_modifiers';
@@ -234,10 +226,9 @@ class TerritoryModifierCache extends CacheService {
         return this.get(`${this.CACHE_PREFIX}:map:${mapId}`);
     }
 }
-exports.TerritoryModifierCache = TerritoryModifierCache;
-exports.gameStateCache = new GameStateCache();
-exports.userCache = new UserCache();
-exports.leaderboardCache = new LeaderboardCache();
-exports.mapCache = new MapCache();
-exports.territoryModifierCache = new TerritoryModifierCache();
+export const gameStateCache = new GameStateCache();
+export const userCache = new UserCache();
+export const leaderboardCache = new LeaderboardCache();
+export const mapCache = new MapCache();
+export const territoryModifierCache = new TerritoryModifierCache();
 //# sourceMappingURL=cacheService.js.map

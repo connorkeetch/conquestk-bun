@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.startWorkerHeartbeat = startWorkerHeartbeat;
-const redis_js_1 = require("../config/redis.js");
-const logger_js_1 = require("../utils/logger.js");
+import { getRedisClient } from '../config/redis.js';
+import { logger } from '../utils/logger.js';
 const DEFAULT_TTL_SECONDS = 10;
 const DEFAULT_INTERVAL_MS = 5000;
-function startWorkerHeartbeat(queueName, options) {
-    const redis = (0, redis_js_1.getRedisClient)();
+export function startWorkerHeartbeat(queueName, options) {
+    const redis = getRedisClient();
     if (!redis)
         return null;
     const ttl = Math.max(2, Math.trunc(options?.ttlSeconds ?? DEFAULT_TTL_SECONDS));
@@ -19,7 +16,7 @@ function startWorkerHeartbeat(queueName, options) {
             await redis.set(key, String(Date.now()), 'EX', ttl);
         }
         catch (e) {
-            logger_js_1.logger.debug('Failed to send worker heartbeat', {
+            logger.debug('Failed to send worker heartbeat', {
                 queue: queueName,
                 error: e instanceof Error ? e.message : e,
             });

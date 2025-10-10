@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildPerformanceAlertNotification = buildPerformanceAlertNotification;
-function buildPerformanceAlertNotification(alert, adminUserIds) {
+export function buildPerformanceAlertNotification(alert, adminUserIds) {
     const severity = mapAlertSeverity(alert.severity);
     const recipients = buildRecipients(adminUserIds);
     const event = {

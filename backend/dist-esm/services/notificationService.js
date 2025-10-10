@@ -1,33 +1,27 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.notificationService = void 0;
-const node_crypto_1 = require("node:crypto");
-const web_push_1 = __importDefault(require("web-push"));
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-const realtimeNotificationService_js_1 = require("./realtimeNotificationService.js");
+import { randomUUID } from 'node:crypto';
+import webpush from 'web-push';
+import { query } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+import { emitNotificationToUsers } from './realtimeNotificationService.js';
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 const isNotificationServiceEnabled = Boolean(vapidPublicKey && vapidPrivateKey);
 if (isNotificationServiceEnabled && vapidPublicKey && vapidPrivateKey) {
     try {
-        web_push_1.default.setVapidDetails(process.env.VAPID_EMAIL || 'mailto:admin@conquestk.com', vapidPublicKey, vapidPrivateKey);
+        webpush.setVapidDetails(process.env.VAPID_EMAIL || 'mailto:admin@conquestk.com', vapidPublicKey, vapidPrivateKey);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to configure web-push VAPID details', error);
+        logger.error('Failed to configure web-push VAPID details', error);
     }
 }
-const webpushLogger = typeof logger_js_1.logger.child === 'function' ? logger_js_1.logger.child({ channel: 'webpush' }) : logger_js_1.logger;
+const webpushLogger = typeof logger.child === 'function' ? logger.child({ channel: 'webpush' }) : logger;
 const retryableStatusCodes = new Set([429, 500, 502, 503, 504]);
 const retryDelaysMs = [250, 1000, 3000];
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const createEventLogger = (metadata, parentContext) => {
     const context = parentContext
         ? { ...parentContext, ...metadata }
-        : { eventId: (0, node_crypto_1.randomUUID)(), ...metadata };
+        : { eventId: randomUUID(), ...metadata };
     const supportsChild = typeof webpushLogger.child === 'function';
     const baseLogger = (supportsChild ? webpushLogger.child(context) : webpushLogger);
     const log = (level, message, extra = {}) => {
@@ -65,7 +59,7 @@ class NotificationService {
                 auth: keys.auth,
             },
         };
-        await (0, database_js_1.query)(`
+        await query(`
         INSERT INTO web_push_subscriptions (
           user_id,
           endpoint,
@@ -96,7 +90,7 @@ class NotificationService {
     async removeSubscription(userId, endpoint, parentContext) {
         if (endpoint) {
             const eventLogger = createEventLogger({ userId, endpoint }, parentContext);
-            const result = await (0, database_js_1.query)('DELETE FROM web_push_subscriptions WHERE user_id = $1 AND endpoint = $2 RETURNING 1 as count', [userId, endpoint]);
+            const result = await query('DELETE FROM web_push_subscriptions WHERE user_id = $1 AND endpoint = $2 RETURNING 1 as count', [userId, endpoint]);
             if (result.rowCount === 0) {
                 eventLogger.debug('No matching subscription to remove');
             }
@@ -108,7 +102,7 @@ class NotificationService {
             return Number(result.rowCount ?? 0);
         }
         const eventLogger = createEventLogger({ userId, scope: 'all' }, parentContext);
-        const result = await (0, database_js_1.query)('DELETE FROM web_push_subscriptions WHERE user_id = $1 RETURNING 1 as count', [userId]);
+        const result = await query('DELETE FROM web_push_subscriptions WHERE user_id = $1 RETURNING 1 as count', [userId]);
         if (result.rowCount && result.rowCount > 0) {
             eventLogger.info('Removed all subscriptions for user', {
                 removed: Number(result.rowCount ?? 0),
@@ -120,7 +114,7 @@ class NotificationService {
         return Number(result.rowCount ?? 0);
     }
     async getSubscriptions(userId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         SELECT
           user_id,
           endpoint,
@@ -132,7 +126,7 @@ class NotificationService {
         return result.rows;
     }
     async markDeliverySuccess(userId, endpoint) {
-        await (0, database_js_1.query)(`
+        await query(`
         UPDATE web_push_subscriptions
         SET
           failure_count = 0,
@@ -144,7 +138,7 @@ class NotificationService {
       `, [userId, endpoint]);
     }
     async markDeliveryFailure(userId, endpoint, reason) {
-        await (0, database_js_1.query)(`
+        await query(`
         UPDATE web_push_subscriptions
         SET
           failure_count = failure_count + 1,
@@ -159,7 +153,7 @@ class NotificationService {
         const eventLogger = createEventLogger({ endpoint }, parentLogger.context);
         for (let attempt = 1; attempt <= retryDelaysMs.length + 1; attempt++) {
             try {
-                await web_push_1.default.sendNotification(subscription, payload);
+                await webpush.sendNotification(subscription, payload);
                 await this.markDeliverySuccess(userId, endpoint);
                 eventLogger.debug('Delivered web push notification', { attempt });
                 return true;
@@ -253,7 +247,7 @@ class NotificationService {
     }
     async shouldSendDMPush(userId) {
         try {
-            const result = await (0, database_js_1.query)(`SELECT notification_enabled, dm_notifications_browser, dm_notifications_email
+            const result = await query(`SELECT notification_enabled, dm_notifications_browser, dm_notifications_email
          FROM user_preferences
          WHERE user_id = $1`, [userId]);
             if (result.rows.length === 0) {
@@ -265,7 +259,7 @@ class NotificationService {
             return notificationsEnabled && dmBrowserEnabled;
         }
         catch (error) {
-            logger_js_1.logger.error('Failed to load DM notification preferences', {
+            logger.error('Failed to load DM notification preferences', {
                 userId,
                 error,
             });
@@ -361,7 +355,7 @@ class NotificationService {
         }
         const failureAgeInterval = `${failureAgeDays} days`;
         const staleInterval = `${staleRegistrationDays} days`;
-        const pruneResult = await (0, database_js_1.query)(`
+        const pruneResult = await query(`
         WITH expired AS (
           DELETE FROM web_push_subscriptions
           WHERE expiration_time IS NOT NULL
@@ -395,7 +389,7 @@ class NotificationService {
         const removedFailed = Number(row.failed_removed ?? 0);
         const removedStale = Number(row.stale_removed ?? 0);
         const totalRemoved = removedExpired + removedFailed + removedStale;
-        const remainingResult = await (0, database_js_1.query)('SELECT COUNT(*) AS total FROM web_push_subscriptions');
+        const remainingResult = await query('SELECT COUNT(*) AS total FROM web_push_subscriptions');
         const remainingSubscriptions = Number(remainingResult.rows[0]?.total ?? 0);
         const ranAt = new Date().toISOString();
         const summary = {
@@ -431,7 +425,7 @@ class NotificationService {
         return await this.sendToUser(userId, payload);
     }
     async createInAppNotification(userId, options) {
-        const id = (0, node_crypto_1.randomUUID)();
+        const id = randomUUID();
         const createdAt = new Date();
         const mergedData = {
             ...(options.data ?? {}),
@@ -439,7 +433,7 @@ class NotificationService {
             actionLabel: options.actionLabel,
             icon: options.icon,
         };
-        await (0, database_js_1.query)(`
+        await query(`
         INSERT INTO notifications (id, user_id, type, title, message, data, created_at, read_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
@@ -452,7 +446,7 @@ class NotificationService {
             createdAt,
             options.read ? createdAt : null,
         ]);
-        (0, realtimeNotificationService_js_1.emitNotificationToUsers)([userId], {
+        emitNotificationToUsers([userId], {
             id,
             type: options.type,
             title: options.title,
@@ -486,6 +480,6 @@ class NotificationService {
         return isNotificationServiceEnabled;
     }
 }
-exports.notificationService = new NotificationService();
-exports.default = exports.notificationService;
+export const notificationService = new NotificationService();
+export default notificationService;
 //# sourceMappingURL=notificationService.js.map

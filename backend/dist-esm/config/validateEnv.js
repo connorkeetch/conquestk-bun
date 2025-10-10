@@ -1,8 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ENV_VARIABLES = void 0;
-exports.validateEnvironmentVariables = validateEnvironmentVariables;
-const logger_js_1 = require("../utils/logger.js");
+import { logger } from '../utils/logger.js';
 const isPositiveInteger = (value) => {
     const parsed = Number.parseInt(value, 10);
     return Number.isInteger(parsed) && parsed > 0;
@@ -167,9 +163,8 @@ const ENV_VARIABLES = [
         description: 'Public base URL for serving uploaded assets',
     },
 ];
-exports.ENV_VARIABLES = ENV_VARIABLES;
-function validateEnvironmentVariables() {
-    logger_js_1.logger.info('🔍 Validating environment variables...');
+export function validateEnvironmentVariables() {
+    logger.info('🔍 Validating environment variables...');
     const errors = [];
     const warnings = [];
     const applied = [];
@@ -227,38 +222,39 @@ function validateEnvironmentVariables() {
         }
     }
     if (applied.length > 0) {
-        logger_js_1.logger.info('Applied defaults:');
+        logger.info('Applied defaults:');
         for (const msg of applied) {
-            logger_js_1.logger.info(msg);
+            logger.info(msg);
         }
     }
     if (warnings.length > 0) {
-        logger_js_1.logger.warn('Environment warnings:');
+        logger.warn('Environment warnings:');
         for (const msg of warnings) {
-            logger_js_1.logger.warn(msg);
+            logger.warn(msg);
         }
     }
     if (errors.length > 0) {
-        logger_js_1.logger.error('Environment validation failed:');
+        logger.error('Environment validation failed:');
         for (const msg of errors) {
-            logger_js_1.logger.error(msg);
+            logger.error(msg);
         }
         if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-            logger_js_1.logger.error('🛑 Cannot start server with missing/invalid environment variables in production');
+            logger.error('🛑 Cannot start server with missing/invalid environment variables in production');
             process.exit(1);
         }
         else {
-            logger_js_1.logger.warn('⚠️  Starting with missing/invalid environment variables (development mode)');
+            logger.warn('⚠️  Starting with missing/invalid environment variables (development mode)');
         }
     }
     else {
-        logger_js_1.logger.info('✅ Environment variables validated successfully');
+        logger.info('✅ Environment variables validated successfully');
     }
-    logger_js_1.logger.info(`📊 Environment Summary:
+    logger.info(`📊 Environment Summary:
   - Mode: ${process.env.NODE_ENV || 'development'}
   - Port: ${process.env.PORT || '5001'}
   - Database: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}
   - Redis: ${process.env.REDIS_URL ? 'Configured' : 'Not configured'}
   - Email: ${process.env.SMTP_HOST ? 'Configured' : 'Not configured'}`);
 }
+export { ENV_VARIABLES };
 //# sourceMappingURL=validateEnv.js.map

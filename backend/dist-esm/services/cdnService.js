@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.cdnService = exports.CDNService = void 0;
-const node_path_1 = require("node:path");
-const logger_js_1 = require("../utils/logger.js");
-class CDNService {
+import { join } from 'node:path';
+import { logger } from '../utils/logger.js';
+export class CDNService {
     constructor() {
         this.providers = [];
         this.assetConfigs = new Map();
@@ -46,17 +43,17 @@ class CDNService {
     }
     async initialize() {
         try {
-            logger_js_1.logger.info('🔄 Initializing CDN Service...');
+            logger.info('🔄 Initializing CDN Service...');
             await this.initializeCDNProviders();
             await this.configureAssetOptimization();
             await this.generateAssetVersions();
-            logger_js_1.logger.info('✅ CDN Service initialized', {
+            logger.info('✅ CDN Service initialized', {
                 providers: this.providers.length,
                 assets: this.assetConfigs.size,
             });
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to initialize CDN Service:', error);
+            logger.error('❌ Failed to initialize CDN Service:', error);
             throw error;
         }
     }
@@ -91,10 +88,10 @@ class CDNService {
                 uploadEndpoint: process.env.CDN_UPLOAD_ENDPOINT,
             });
         }
-        logger_js_1.logger.info(`🌐 Configured ${this.providers.length} CDN providers`);
+        logger.info(`🌐 Configured ${this.providers.length} CDN providers`);
     }
     async configureAssetOptimization() {
-        const _publicPath = (0, node_path_1.join)(process.cwd(), 'public');
+        const _publicPath = join(process.cwd(), 'public');
         const assetTypes = [
             { pattern: /\.(js|mjs|jsx)$/, type: 'script' },
             { pattern: /\.(css|scss|sass)$/, type: 'style' },
@@ -115,19 +112,19 @@ class CDNService {
                 });
             }
         }
-        logger_js_1.logger.info(`📁 Configured optimization for ${this.assetConfigs.size} asset types`);
+        logger.info(`📁 Configured optimization for ${this.assetConfigs.size} asset types`);
     }
     async generateAssetVersions() {
         try {
-            const _publicPath = (0, node_path_1.join)(process.cwd(), 'public');
+            const _publicPath = join(process.cwd(), 'public');
             const version = Date.now().toString();
             this.assetConfigs.forEach((config, _pattern) => {
                 config.version = version;
             });
-            logger_js_1.logger.info(`🔢 Generated asset versions (v${version})`);
+            logger.info(`🔢 Generated asset versions (v${version})`);
         }
         catch (error) {
-            logger_js_1.logger.warn('⚠️ Failed to generate asset versions:', error);
+            logger.warn('⚠️ Failed to generate asset versions:', error);
         }
     }
     getAssetUrl(assetPath, options = {}) {
@@ -140,7 +137,7 @@ class CDNService {
         const versionParam = config?.version ? `?v=${config.version}` : '';
         const cdnUrl = `${selectedProvider.baseUrl}${assetPath}${versionParam}`;
         this.metrics.totalRequests++;
-        logger_js_1.logger.debug(`🌐 CDN URL generated: ${cdnUrl}`);
+        logger.debug(`🌐 CDN URL generated: ${cdnUrl}`);
         return cdnUrl;
     }
     selectProvider(region, preferredProvider) {
@@ -232,7 +229,7 @@ class CDNService {
             if (!provider.apiKey)
                 return false;
             try {
-                logger_js_1.logger.info(`🗑️ Purging cache for provider ${provider.name}`, {
+                logger.info(`🗑️ Purging cache for provider ${provider.name}`, {
                     paths: assetPaths.length,
                     tags: tags.length,
                 });
@@ -240,13 +237,13 @@ class CDNService {
                 return true;
             }
             catch (error) {
-                logger_js_1.logger.error(`❌ Failed to purge cache for ${provider.name}:`, error);
+                logger.error(`❌ Failed to purge cache for ${provider.name}:`, error);
                 return false;
             }
         });
         const results = await Promise.allSettled(purgePromises);
         const successful = results.filter((result) => result.status === 'fulfilled' && result.value === true).length;
-        logger_js_1.logger.info(`✅ Cache purged for ${successful}/${this.providers.length} providers`);
+        logger.info(`✅ Cache purged for ${successful}/${this.providers.length} providers`);
         return successful > 0;
     }
     recordCDNHit(loadTime, bandwidth) {
@@ -304,6 +301,5 @@ class CDNService {
         };
     }
 }
-exports.CDNService = CDNService;
-exports.cdnService = new CDNService();
+export const cdnService = new CDNService();
 //# sourceMappingURL=cdnService.js.map

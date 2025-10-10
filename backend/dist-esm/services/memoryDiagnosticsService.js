@@ -1,14 +1,8 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.memoryDiagnosticsService = void 0;
-const node_fs_1 = __importDefault(require("node:fs"));
-const node_path_1 = __importDefault(require("node:path"));
-const node_v8_1 = require("node:v8");
-const errorHelpers_js_1 = require("../utils/errorHelpers.js");
-const logger_js_1 = require("../utils/logger.js");
+import fs from 'node:fs';
+import path from 'node:path';
+import { writeHeapSnapshot } from 'node:v8';
+import { getErrorMessage } from '../utils/errorHelpers.js';
+import { logger } from '../utils/logger.js';
 const MB = 1024 * 1024;
 class MemoryDiagnosticsService {
     constructor(options = {}) {
@@ -24,18 +18,18 @@ class MemoryDiagnosticsService {
             this.readNumberEnv('MEMORY_MONITOR_ALERT_COOLDOWN_MS', 10 * 60 * 1000));
         this.historySize = Math.max(this.minSamples, options.historySize ?? this.readNumberEnv('MEMORY_MONITOR_HISTORY_SIZE', this.minSamples * 3));
         const directory = options.snapshotDirectory ?? process.env.MEMORY_MONITOR_SNAPSHOT_DIR ?? null;
-        this.snapshotDirectory = directory ? node_path_1.default.resolve(directory) : null;
+        this.snapshotDirectory = directory ? path.resolve(directory) : null;
     }
     start() {
         const isDisabled = process.env.MEMORY_MONITOR_ENABLED === 'false';
         if (isDisabled) {
-            logger_js_1.logger.info('🧠 Memory diagnostics disabled via MEMORY_MONITOR_ENABLED=false');
+            logger.info('🧠 Memory diagnostics disabled via MEMORY_MONITOR_ENABLED=false');
             return;
         }
         if (this.monitorInterval) {
             return;
         }
-        logger_js_1.logger.info('🧠 Memory diagnostics monitor starting', {
+        logger.info('🧠 Memory diagnostics monitor starting', {
             intervalMs: this.intervalMs,
             growthThresholdMb: Math.round((this.growthThresholdBytes / MB) * 10) / 10,
             minSamples: this.minSamples,
@@ -49,7 +43,7 @@ class MemoryDiagnosticsService {
                 this.evaluateTrend();
             }
             catch (error) {
-                logger_js_1.logger.error('❌ Memory diagnostics failed', { error: (0, errorHelpers_js_1.getErrorMessage)(error) });
+                logger.error('❌ Memory diagnostics failed', { error: getErrorMessage(error) });
             }
         }, this.intervalMs);
         if (typeof this.monitorInterval.unref === 'function') {
@@ -65,7 +59,7 @@ class MemoryDiagnosticsService {
     }
     reportUsage(context) {
         const usage = process.memoryUsage();
-        logger_js_1.logger.info('🧠 Memory usage snapshot', {
+        logger.info('🧠 Memory usage snapshot', {
             context,
             rssMb: this.toMb(usage.rss),
             heapTotalMb: this.toMb(usage.heapTotal),
@@ -83,7 +77,7 @@ class MemoryDiagnosticsService {
             external: usage.external,
         };
         if (reason === 'startup') {
-            logger_js_1.logger.info('🧠 Memory diagnostics initialized', {
+            logger.info('🧠 Memory diagnostics initialized', {
                 rssMb: this.toMb(usage.rss),
                 heapUsedMb: this.toMb(usage.heapUsed),
             });
@@ -118,7 +112,7 @@ class MemoryDiagnosticsService {
         this.lastAlertAt = now;
         const heapGrowthMb = this.toMb(heapGrowth);
         const rssGrowthMb = this.toMb(latest.rss - baseline.rss);
-        logger_js_1.logger.warn('⚠️ Potential memory leak detected', {
+        logger.warn('⚠️ Potential memory leak detected', {
             heapGrowthMb,
             rssGrowthMb,
             sampleWindowMs: latest.timestamp - baseline.timestamp,
@@ -131,14 +125,14 @@ class MemoryDiagnosticsService {
             return;
         }
         try {
-            node_fs_1.default.mkdirSync(this.snapshotDirectory, { recursive: true });
+            fs.mkdirSync(this.snapshotDirectory, { recursive: true });
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const filePath = node_path_1.default.join(this.snapshotDirectory, `${timestamp}-${reason}.heapsnapshot`);
-            const snapshotPath = (0, node_v8_1.writeHeapSnapshot)(filePath);
-            logger_js_1.logger.warn('🧠 Heap snapshot captured for analysis', { snapshotPath });
+            const filePath = path.join(this.snapshotDirectory, `${timestamp}-${reason}.heapsnapshot`);
+            const snapshotPath = writeHeapSnapshot(filePath);
+            logger.warn('🧠 Heap snapshot captured for analysis', { snapshotPath });
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to capture heap snapshot', { error: (0, errorHelpers_js_1.getErrorMessage)(error) });
+            logger.error('❌ Failed to capture heap snapshot', { error: getErrorMessage(error) });
         }
     }
     toMb(value) {
@@ -153,5 +147,5 @@ class MemoryDiagnosticsService {
         return Number.isFinite(parsed) ? parsed : fallback;
     }
 }
-exports.memoryDiagnosticsService = new MemoryDiagnosticsService();
+export const memoryDiagnosticsService = new MemoryDiagnosticsService();
 //# sourceMappingURL=memoryDiagnosticsService.js.map

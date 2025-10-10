@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.emitNotificationToAdmin = exports.emitNotificationToUsers = void 0;
-const socketRegistry_js_1 = require("./socketRegistry.js");
-const emitNotificationToUsers = (userIds, payload) => {
-    const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+import { tryGetSocketServer } from './socketRegistry.js';
+export const emitNotificationToUsers = (userIds, payload) => {
+    const io = tryGetSocketServer();
     if (!io) {
         return;
     }
@@ -12,12 +9,10 @@ const emitNotificationToUsers = (userIds, payload) => {
         io.to(`user:${userId}`).emit('notification:new', payload);
     });
 };
-exports.emitNotificationToUsers = emitNotificationToUsers;
-const emitNotificationToAdmin = (userId, payload) => {
+export const emitNotificationToAdmin = (userId, payload) => {
     if (!userId) {
         return;
     }
-    (0, exports.emitNotificationToUsers)([userId], payload);
+    emitNotificationToUsers([userId], payload);
 };
-exports.emitNotificationToAdmin = emitNotificationToAdmin;
 //# sourceMappingURL=realtimeNotificationService.js.map

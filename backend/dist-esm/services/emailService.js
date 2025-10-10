@@ -1,8 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const resend_1 = require("resend");
-const uuid_1 = require("uuid");
-const logger_js_1 = require("../utils/logger.js");
+import { Resend } from 'resend';
+import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../utils/logger.js';
 class EmailService {
     constructor() {
         this.resend = null;
@@ -13,22 +11,22 @@ class EmailService {
         const apiKey = process.env.RESEND_API_KEY;
         this.emailEnabled = process.env.EMAIL_ENABLED !== 'false';
         if (apiKey && this.emailEnabled) {
-            this.resend = new resend_1.Resend(apiKey);
-            logger_js_1.logger.info('✅ Email service initialized with Resend');
+            this.resend = new Resend(apiKey);
+            logger.info('✅ Email service initialized with Resend');
         }
         else {
             if (!apiKey) {
-                logger_js_1.logger.warn('⚠️ Email service disabled - RESEND_API_KEY not configured');
+                logger.warn('⚠️ Email service disabled - RESEND_API_KEY not configured');
             }
             else {
-                logger_js_1.logger.warn('⚠️ Email service disabled - EMAIL_ENABLED is false');
+                logger.warn('⚠️ Email service disabled - EMAIL_ENABLED is false');
             }
             this.emailEnabled = false;
         }
     }
     async sendEmail(options) {
         if (!this.emailEnabled || !this.resend) {
-            logger_js_1.logger.debug('⚠️ Email not sent - service disabled');
+            logger.debug('⚠️ Email not sent - service disabled');
             return false;
         }
         const fromEmail = process.env.EMAIL_FROM || 'noreply@send.conquestk.com';
@@ -42,19 +40,19 @@ class EmailService {
                 html: options.html,
             });
             if (error) {
-                logger_js_1.logger.error('❌ Email send error:', error);
+                logger.error('❌ Email send error:', error);
                 return false;
             }
-            logger_js_1.logger.info('✅ Email sent successfully:', data?.id);
+            logger.info('✅ Email sent successfully:', data?.id);
             return true;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Email service error:', error);
+            logger.error('❌ Email service error:', error);
             return false;
         }
     }
     generateVerificationToken() {
-        return (0, uuid_1.v4)();
+        return uuidv4();
     }
     async sendVerificationEmail(data) {
         const subject = 'Verify Your ConquestK Account';
@@ -328,5 +326,5 @@ If you didn't request a password reset, please ignore this email. Your password 
         return this.emailEnabled;
     }
 }
-exports.default = new EmailService();
+export default new EmailService();
 //# sourceMappingURL=emailService.js.map

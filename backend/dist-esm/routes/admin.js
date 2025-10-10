@@ -1,32 +1,30 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const express_validator_1 = require("express-validator");
-const database_js_1 = require("../config/database.js");
-const adminAuth_js_1 = require("../middleware/adminAuth.js");
-const auth_js_1 = require("../middleware/auth.js");
-const adminService_js_1 = require("../services/adminService.js");
-const gameLifecycleService_js_1 = require("../services/gameLifecycleService.js");
-const mapService_js_1 = require("../services/mapService.js");
-const logger_js_1 = require("../utils/logger.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const url_js_1 = require("../utils/url.js");
-const router = (0, express_1.Router)();
-router.use(auth_js_1.authenticateToken);
+import { Router } from 'express';
+import { body, param, query as queryParam, validationResult } from 'express-validator';
+import { query as dbQuery, transaction } from '../config/database.js';
+import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { adminService } from '../services/adminService.js';
+import { GameLifecycleService } from '../services/gameLifecycleService.js';
+import { mapService } from '../services/mapService.js';
+import { logger } from '../utils/logger.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+import { resolveAssetUrl } from '../utils/url.js';
+const router = Router();
+router.use(authenticateToken);
 router.get('/status', async (req, res) => {
     try {
         const userId = req.userId;
-        const isAdmin = await adminService_js_1.adminService.isAdmin(userId);
+        const isAdmin = await adminService.isAdmin(userId);
         res.json({ isAdmin });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to check admin status', 500, { userId: req.userId });
+        handleRouteError(error, req, 'Failed to check admin status', 500, { userId: req.userId });
         res.status(500).json({ error: 'Failed to check admin status' });
     }
 });
-router.use(adminAuth_js_1.requireAdmin);
+router.use(requireAdmin);
 const checkValidation = (req, res, next) => {
-    const errors = (0, express_validator_1.validationResult)(req);
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ error: 'Validation failed', details: errors.array() });
     }
@@ -35,7 +33,7 @@ const checkValidation = (req, res, next) => {
 router.get('/me', async (req, res) => {
     try {
         const userId = req.userId;
-        const adminInfo = await adminService_js_1.adminService.getUserAdminInfo(userId);
+        const adminInfo = await adminService.getUserAdminInfo(userId);
         res.json({
             userId,
             adminRoles: adminInfo,
@@ -43,20 +41,20 @@ router.get('/me', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get admin info', 500, { userId: req.userId });
+        handleRouteError(error, req, 'Failed to get admin info', 500, { userId: req.userId });
         res.status(500).json({ error: 'Failed to get admin info' });
     }
 });
-router.get('/users', (0, adminAuth_js_1.requirePermission)('users.view'), (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 100 }), (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }), (0, express_validator_1.query)('search').optional().isString(), checkValidation, async (req, res) => {
+router.get('/users', requirePermission('users.view'), queryParam('limit').optional().isInt({ min: 1, max: 100 }), queryParam('offset').optional().isInt({ min: 0 }), queryParam('search').optional().isString(), checkValidation, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 50;
         const offset = parseInt(req.query.offset, 10) || 0;
         const search = req.query.search;
-        const result = await adminService_js_1.adminService.getAllUsers(limit, offset, search);
+        const result = await adminService.getAllUsers(limit, offset, search);
         res.json(result);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get users', 500, {
+        handleRouteError(error, req, 'Failed to get users', 500, {
             limit: req.query.limit,
             offset: req.query.offset,
             search: req.query.search,
@@ -64,157 +62,157 @@ router.get('/users', (0, adminAuth_js_1.requirePermission)('users.view'), (0, ex
         res.status(500).json({ error: 'Failed to get users' });
     }
 });
-router.put('/users/:userId/status', (0, adminAuth_js_1.requirePermission)('users.moderate'), (0, adminAuth_js_1.logAdminActivity)('user_status_update'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.body)('status').isIn(['active', 'suspended', 'banned']), (0, express_validator_1.body)('reason').optional().isString().isLength({ max: 500 }), (0, express_validator_1.body)('expiresAt').optional().isISO8601(), checkValidation, async (req, res) => {
+router.put('/users/:userId/status', requirePermission('users.moderate'), logAdminActivity('user_status_update'), param('userId').isUUID(), body('status').isIn(['active', 'suspended', 'banned']), body('reason').optional().isString().isLength({ max: 500 }), body('expiresAt').optional().isISO8601(), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const { status, reason, expiresAt } = req.body;
         const adminUserId = req.userId;
         const expirationDate = expiresAt ? new Date(expiresAt) : undefined;
-        await adminService_js_1.adminService.updateUserStatus(userId, adminUserId, status, reason, expirationDate);
+        await adminService.updateUserStatus(userId, adminUserId, status, reason, expirationDate);
         res.json({ message: 'User status updated successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update user status', 500, {
+        handleRouteError(error, req, 'Failed to update user status', 500, {
             targetUserId: req.params.userId,
             status: req.body?.status,
         });
         res.status(500).json({ error: 'Failed to update user status' });
     }
 });
-router.post('/users/:userId/reset-password', (0, adminAuth_js_1.requirePermission)('users.edit'), (0, adminAuth_js_1.logAdminActivity)('password_reset'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.body)('newPassword').isLength({ min: 6 }), checkValidation, async (req, res) => {
+router.post('/users/:userId/reset-password', requirePermission('users.edit'), logAdminActivity('password_reset'), param('userId').isUUID(), body('newPassword').isLength({ min: 6 }), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const { newPassword } = req.body;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.resetUserPassword(userId, adminUserId, newPassword);
+        await adminService.resetUserPassword(userId, adminUserId, newPassword);
         res.json({ message: 'Password reset successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to reset password', 500, {
+        handleRouteError(error, req, 'Failed to reset password', 500, {
             targetUserId: req.params.userId,
         });
         res.status(500).json({ error: 'Failed to reset password' });
     }
 });
-router.post('/users/:userId/vip', (0, adminAuth_js_1.requirePermission)('users.edit'), (0, adminAuth_js_1.logAdminActivity)('vip_status_change'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.body)('isVip').isBoolean(), (0, express_validator_1.body)('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
+router.post('/users/:userId/vip', requirePermission('users.edit'), logAdminActivity('vip_status_change'), param('userId').isUUID(), body('isVip').isBoolean(), body('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const { isVip, reason } = req.body;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.updateUserVipStatus(userId, adminUserId, isVip, reason);
+        await adminService.updateUserVipStatus(userId, adminUserId, isVip, reason);
         res.json({ message: 'VIP status updated successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update VIP status', 500, {
+        handleRouteError(error, req, 'Failed to update VIP status', 500, {
             targetUserId: req.params.userId,
             isVip: req.body?.isVip,
         });
         res.status(500).json({ error: 'Failed to update VIP status' });
     }
 });
-router.post('/users/:userId/admin', (0, adminAuth_js_1.requirePermission)('admin.manage'), (0, adminAuth_js_1.logAdminActivity)('admin_status_change'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.body)('isAdmin').isBoolean(), checkValidation, async (req, res) => {
+router.post('/users/:userId/admin', requirePermission('admin.manage'), logAdminActivity('admin_status_change'), param('userId').isUUID(), body('isAdmin').isBoolean(), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const { isAdmin } = req.body;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.updateUserAdminStatus(userId, adminUserId, isAdmin);
+        await adminService.updateUserAdminStatus(userId, adminUserId, isAdmin);
         res.json({ message: 'Admin status updated successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update admin status', 500, {
+        handleRouteError(error, req, 'Failed to update admin status', 500, {
             targetUserId: req.params.userId,
             isAdmin: req.body?.isAdmin,
         });
         res.status(500).json({ error: 'Failed to update admin status' });
     }
 });
-router.post('/users/:userId/premium', (0, adminAuth_js_1.requirePermission)('users.edit'), (0, adminAuth_js_1.logAdminActivity)('premium_tier_change'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.body)('tier').isIn(['free', 'premium']), (0, express_validator_1.body)('expiresAt').optional().isISO8601(), checkValidation, async (req, res) => {
+router.post('/users/:userId/premium', requirePermission('users.edit'), logAdminActivity('premium_tier_change'), param('userId').isUUID(), body('tier').isIn(['free', 'premium']), body('expiresAt').optional().isISO8601(), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const { tier, expiresAt } = req.body;
         const adminUserId = req.userId;
         const expirationDate = expiresAt ? new Date(expiresAt) : undefined;
-        await adminService_js_1.adminService.updateUserPremiumTier(userId, adminUserId, tier, expirationDate);
+        await adminService.updateUserPremiumTier(userId, adminUserId, tier, expirationDate);
         res.json({ message: 'Premium tier updated successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update premium tier', 500, {
+        handleRouteError(error, req, 'Failed to update premium tier', 500, {
             targetUserId: req.params.userId,
             tier: req.body?.tier,
         });
         res.status(500).json({ error: 'Failed to update premium tier' });
     }
 });
-router.post('/users/:userId/ban', (0, adminAuth_js_1.requirePermission)('users.moderate'), (0, adminAuth_js_1.logAdminActivity)('user_ban'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.body)('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
+router.post('/users/:userId/ban', requirePermission('users.moderate'), logAdminActivity('user_ban'), param('userId').isUUID(), body('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const { reason } = req.body;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.updateUserStatus(userId, adminUserId, 'banned', reason);
+        await adminService.updateUserStatus(userId, adminUserId, 'banned', reason);
         res.json({ message: 'User banned successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to ban user', 500, {
+        handleRouteError(error, req, 'Failed to ban user', 500, {
             targetUserId: req.params.userId,
         });
         res.status(500).json({ error: 'Failed to ban user' });
     }
 });
-router.post('/users/:userId/unban', (0, adminAuth_js_1.requirePermission)('users.moderate'), (0, adminAuth_js_1.logAdminActivity)('user_unban'), (0, express_validator_1.param)('userId').isUUID(), checkValidation, async (req, res) => {
+router.post('/users/:userId/unban', requirePermission('users.moderate'), logAdminActivity('user_unban'), param('userId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.updateUserStatus(userId, adminUserId, 'active');
+        await adminService.updateUserStatus(userId, adminUserId, 'active');
         res.json({ message: 'User unbanned successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to unban user', 500, {
+        handleRouteError(error, req, 'Failed to unban user', 500, {
             targetUserId: req.params.userId,
         });
         res.status(500).json({ error: 'Failed to unban user' });
     }
 });
-router.post('/users/:userId/admin-roles', (0, adminAuth_js_1.requirePermission)('admin.manage'), (0, adminAuth_js_1.logAdminActivity)('admin_role_assign'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.body)('roleId').isUUID(), (0, express_validator_1.body)('expiresAt').optional().isISO8601(), checkValidation, async (req, res) => {
+router.post('/users/:userId/admin-roles', requirePermission('admin.manage'), logAdminActivity('admin_role_assign'), param('userId').isUUID(), body('roleId').isUUID(), body('expiresAt').optional().isISO8601(), checkValidation, async (req, res) => {
     try {
         const { userId } = req.params;
         const { roleId, expiresAt } = req.body;
         const adminUserId = req.userId;
         const expirationDate = expiresAt ? new Date(expiresAt) : undefined;
-        await adminService_js_1.adminService.assignAdminRole(userId, roleId, adminUserId, expirationDate);
+        await adminService.assignAdminRole(userId, roleId, adminUserId, expirationDate);
         res.json({ message: 'Admin role assigned successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to assign admin role', 500, {
+        handleRouteError(error, req, 'Failed to assign admin role', 500, {
             targetUserId: req.params.userId,
             roleId: req.body?.roleId,
         });
         res.status(500).json({ error: 'Failed to assign admin role' });
     }
 });
-router.delete('/users/:userId/admin-roles/:roleId', (0, adminAuth_js_1.requirePermission)('admin.manage'), (0, adminAuth_js_1.logAdminActivity)('admin_role_remove'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.param)('roleId').isUUID(), checkValidation, async (req, res) => {
+router.delete('/users/:userId/admin-roles/:roleId', requirePermission('admin.manage'), logAdminActivity('admin_role_remove'), param('userId').isUUID(), param('roleId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { userId, roleId } = req.params;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.removeAdminRole(userId, roleId, adminUserId);
+        await adminService.removeAdminRole(userId, roleId, adminUserId);
         res.json({ message: 'Admin role removed successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to remove admin role', 500, {
+        handleRouteError(error, req, 'Failed to remove admin role', 500, {
             targetUserId: req.params.userId,
             roleId: req.params.roleId,
         });
         res.status(500).json({ error: 'Failed to remove admin role' });
     }
 });
-const registerContentApprovalQueueRoute = (path) => router.get(path, (0, adminAuth_js_1.requirePermission)('content.moderate'), (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 100 }), (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }), checkValidation, async (req, res) => {
+const registerContentApprovalQueueRoute = (path) => router.get(path, requirePermission('content.moderate'), queryParam('limit').optional().isInt({ min: 1, max: 100 }), queryParam('offset').optional().isInt({ min: 0 }), checkValidation, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 50;
         const offset = parseInt(req.query.offset, 10) || 0;
-        const result = await adminService_js_1.adminService.getContentApprovalQueue(limit, offset);
+        const result = await adminService.getContentApprovalQueue(limit, offset);
         res.json(result);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get approval queue', 500, {
+        handleRouteError(error, req, 'Failed to get approval queue', 500, {
             limit: req.query.limit,
             offset: req.query.offset,
         });
@@ -223,31 +221,31 @@ const registerContentApprovalQueueRoute = (path) => router.get(path, (0, adminAu
 });
 registerContentApprovalQueueRoute('/content/queue');
 registerContentApprovalQueueRoute('/content/approval-queue');
-router.post('/content/approval-queue/:queueId/approve', (0, adminAuth_js_1.requirePermission)('content.moderate'), (0, adminAuth_js_1.logAdminActivity)('content_approve'), (0, express_validator_1.param)('queueId').isUUID(), (0, express_validator_1.body)('notes').optional().isString().isLength({ max: 1000 }), checkValidation, async (req, res) => {
+router.post('/content/approval-queue/:queueId/approve', requirePermission('content.moderate'), logAdminActivity('content_approve'), param('queueId').isUUID(), body('notes').optional().isString().isLength({ max: 1000 }), checkValidation, async (req, res) => {
     try {
         const { queueId } = req.params;
         const { notes } = req.body;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.approveContent(queueId, adminUserId, notes);
+        await adminService.approveContent(queueId, adminUserId, notes);
         res.json({ message: 'Content approved successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to approve content', 500, {
+        handleRouteError(error, req, 'Failed to approve content', 500, {
             queueId: req.params.queueId,
         });
         res.status(500).json({ error: 'Failed to approve content' });
     }
 });
-router.post('/content/approval-queue/:queueId/reject', (0, adminAuth_js_1.requirePermission)('content.moderate'), (0, adminAuth_js_1.logAdminActivity)('content_reject'), (0, express_validator_1.param)('queueId').isUUID(), (0, express_validator_1.body)('reason').isString().isLength({ min: 1, max: 1000 }), checkValidation, async (req, res) => {
+router.post('/content/approval-queue/:queueId/reject', requirePermission('content.moderate'), logAdminActivity('content_reject'), param('queueId').isUUID(), body('reason').isString().isLength({ min: 1, max: 1000 }), checkValidation, async (req, res) => {
     try {
         const { queueId } = req.params;
         const { reason } = req.body;
         const adminUserId = req.userId;
-        await adminService_js_1.adminService.rejectContent(queueId, adminUserId, reason);
+        await adminService.rejectContent(queueId, adminUserId, reason);
         res.json({ message: 'Content rejected successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to reject content', 500, {
+        handleRouteError(error, req, 'Failed to reject content', 500, {
             queueId: req.params.queueId,
         });
         res.status(500).json({ error: 'Failed to reject content' });
@@ -274,7 +272,7 @@ const normalizeAdminGameStatus = (status) => {
             return 'waiting';
     }
 };
-router.get('/games', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 100 }), (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }), (0, express_validator_1.query)('status').optional().isString(), (0, express_validator_1.query)('search').optional().isString(), (0, express_validator_1.query)('sortBy').optional().isString(), (0, express_validator_1.query)('sortDir').optional().isIn(['asc', 'desc']), checkValidation, async (req, res) => {
+router.get('/games', requirePermission('games.view'), queryParam('limit').optional().isInt({ min: 1, max: 100 }), queryParam('offset').optional().isInt({ min: 0 }), queryParam('status').optional().isString(), queryParam('search').optional().isString(), queryParam('sortBy').optional().isString(), queryParam('sortDir').optional().isIn(['asc', 'desc']), checkValidation, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 20;
         const offset = parseInt(req.query.offset, 10) || 0;
@@ -349,7 +347,7 @@ router.get('/games', (0, adminAuth_js_1.requirePermission)('games.view'), (0, ex
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
         queryParams.push(limit, offset);
-        const gamesResult = await (0, database_js_1.query)(gamesQuery, queryParams);
+        const gamesResult = await dbQuery(gamesQuery, queryParams);
         let countQuery = `
         SELECT COUNT(*) as total
         FROM game_rooms gr
@@ -369,7 +367,7 @@ router.get('/games', (0, adminAuth_js_1.requirePermission)('games.view'), (0, ex
             countQuery += ` AND (gr.name ILIKE $${countParamIndex} OR m.name ILIKE $${countParamIndex} OR u.username ILIKE $${countParamIndex})`;
             countParams.push(`%${search}%`);
         }
-        const countResult = await (0, database_js_1.query)(countQuery, countParams);
+        const countResult = await dbQuery(countQuery, countParams);
         const gameRows = gamesResult.rows;
         const gameIds = gameRows.map((g) => g.id);
         let playersData = [];
@@ -388,7 +386,7 @@ router.get('/games', (0, adminAuth_js_1.requirePermission)('games.view'), (0, ex
           WHERE rp.room_id = ANY($1)
           ORDER BY rp.room_id, rp.joined_at
         `;
-            const playersResult = await (0, database_js_1.query)(playersQuery, [gameIds]);
+            const playersResult = await dbQuery(playersQuery, [gameIds]);
             playersData = playersResult.rows;
         }
         const games = gamesResult.rows.map((game) => {
@@ -434,7 +432,7 @@ router.get('/games', (0, adminAuth_js_1.requirePermission)('games.view'), (0, ex
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get games', 500, {
+        handleRouteError(error, req, 'Failed to get games', 500, {
             limit: req.query.limit,
             offset: req.query.offset,
             status: req.query.status,
@@ -444,7 +442,7 @@ router.get('/games', (0, adminAuth_js_1.requirePermission)('games.view'), (0, ex
         });
     }
 });
-router.get('/games/:gameId/details', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), checkValidation, async (req, res) => {
+router.get('/games/:gameId/details', requirePermission('games.view'), param('gameId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
         const detailsQuery = `
@@ -479,13 +477,13 @@ router.get('/games/:gameId/details', (0, adminAuth_js_1.requirePermission)('game
         WHERE gr.id = $1
         LIMIT 1
       `;
-        const detailsResult = await (0, database_js_1.query)(detailsQuery, [gameId]);
+        const detailsResult = await dbQuery(detailsQuery, [gameId]);
         if (detailsResult.rowCount === 0) {
             res.status(404).json({ error: 'Game not found' });
             return;
         }
         const row = detailsResult.rows[0];
-        const playersResult = await (0, database_js_1.query)(`SELECT rp.room_id, rp.user_id, u.username, rp.joined_at, rp.is_ai, rp.ai_difficulty, rp.ai_personality_seed
+        const playersResult = await dbQuery(`SELECT rp.room_id, rp.user_id, u.username, rp.joined_at, rp.is_ai, rp.ai_difficulty, rp.ai_personality_seed
          FROM room_players rp
          LEFT JOIN users u ON rp.user_id = u.id
          WHERE rp.room_id = $1
@@ -525,13 +523,13 @@ router.get('/games/:gameId/details', (0, adminAuth_js_1.requirePermission)('game
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get game details', 500, {
+        handleRouteError(error, req, 'Failed to get game details', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({ error: 'Failed to get game details' });
     }
 });
-router.get('/games/:gameId/moves', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 200 }), (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }), (0, express_validator_1.query)('moveType').optional().isString(), (0, express_validator_1.query)('playerId').optional().isUUID(), (0, express_validator_1.query)('turn').optional().isInt({ min: 1 }), (0, express_validator_1.query)('sort').optional().isString(), checkValidation, async (req, res) => {
+router.get('/games/:gameId/moves', requirePermission('games.view'), param('gameId').isUUID(), queryParam('limit').optional().isInt({ min: 1, max: 200 }), queryParam('offset').optional().isInt({ min: 0 }), queryParam('moveType').optional().isString(), queryParam('playerId').optional().isUUID(), queryParam('turn').optional().isInt({ min: 1 }), queryParam('sort').optional().isString(), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
         const limit = parseInt(req.query.limit ?? '50', 10);
@@ -579,56 +577,56 @@ router.get('/games/:gameId/moves', (0, adminAuth_js_1.requirePermission)('games.
         LIMIT $${idx} OFFSET $${idx + 1}
       `;
         const listParams = [...params, limit, offset];
-        const rowsRes = await (0, database_js_1.query)(sql, listParams);
-        const countRes = await (0, database_js_1.query)(`SELECT COUNT(*) as total FROM ${combinedSource} gm ${whereSql}`, params);
+        const rowsRes = await dbQuery(sql, listParams);
+        const countRes = await dbQuery(`SELECT COUNT(*) as total FROM ${combinedSource} gm ${whereSql}`, params);
         res.json({
             moves: rowsRes.rows || [],
             total: Number.parseInt(countRes.rows?.[0]?.total ?? '0', 10),
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get game moves', 500, {
+        handleRouteError(error, req, 'Failed to get game moves', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({ error: 'Failed to get game moves' });
     }
 });
-router.get('/games/:gameId/turn-stats', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), checkValidation, async (req, res) => {
+router.get('/games/:gameId/turn-stats', requirePermission('games.view'), param('gameId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
-        const result = await (0, database_js_1.query)('SELECT turn_stats FROM game_states WHERE room_id = $1', [gameId]);
+        const result = await dbQuery('SELECT turn_stats FROM game_states WHERE room_id = $1', [gameId]);
         const arr = Array.isArray(result.rows?.[0]?.turn_stats)
             ? result.rows[0]?.turn_stats
             : [];
         res.json({ turnStats: arr, count: arr.length });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get turn stats', 500, {
+        handleRouteError(error, req, 'Failed to get turn stats', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({ error: 'Failed to get turn stats' });
     }
 });
-router.get('/games/:gameId/log', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), checkValidation, async (req, res) => {
+router.get('/games/:gameId/log', requirePermission('games.view'), param('gameId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
-        const result = await (0, database_js_1.query)('SELECT game_log FROM game_states WHERE room_id = $1', [gameId]);
+        const result = await dbQuery('SELECT game_log FROM game_states WHERE room_id = $1', [gameId]);
         const arr = Array.isArray(result.rows?.[0]?.game_log)
             ? result.rows[0]?.game_log
             : [];
         res.json({ entries: arr, count: arr.length });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get game log', 500, {
+        handleRouteError(error, req, 'Failed to get game log', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({ error: 'Failed to get game log' });
     }
 });
-router.get('/games/:gameId/seed', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), checkValidation, async (req, res) => {
+router.get('/games/:gameId/seed', requirePermission('games.view'), param('gameId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
-        const result = await (0, database_js_1.query)('SELECT game_log, game_data FROM game_states WHERE room_id = $1', [gameId]);
+        const result = await dbQuery('SELECT game_log, game_data FROM game_states WHERE room_id = $1', [gameId]);
         const row = result.rows?.[0];
         let seed = null;
         let source = null;
@@ -655,26 +653,26 @@ router.get('/games/:gameId/seed', (0, adminAuth_js_1.requirePermission)('games.v
         res.json({ seed, source });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get combat RNG seed', 500, {
+        handleRouteError(error, req, 'Failed to get combat RNG seed', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({ error: 'Failed to get combat RNG seed' });
     }
 });
-router.get('/games/:gameId/state', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), checkValidation, async (req, res) => {
+router.get('/games/:gameId/state', requirePermission('games.view'), param('gameId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
-        const result = await (0, database_js_1.query)('SELECT game_data FROM game_states WHERE room_id = $1', [gameId]);
+        const result = await dbQuery('SELECT game_data FROM game_states WHERE room_id = $1', [gameId]);
         res.json({ state: result.rows?.[0]?.game_data ?? null });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get game state', 500, {
+        handleRouteError(error, req, 'Failed to get game state', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({ error: 'Failed to get game state' });
     }
 });
-router.get('/games/:gameId/snapshots', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 200 }), (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }), (0, express_validator_1.query)('order').optional().isIn(['asc', 'desc']), checkValidation, async (req, res) => {
+router.get('/games/:gameId/snapshots', requirePermission('games.view'), param('gameId').isUUID(), queryParam('limit').optional().isInt({ min: 1, max: 200 }), queryParam('offset').optional().isInt({ min: 0 }), queryParam('order').optional().isIn(['asc', 'desc']), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
         const limit = Math.min(parseInt(req.query.limit || '20', 10), 200);
@@ -687,22 +685,22 @@ router.get('/games/:gameId/snapshots', (0, adminAuth_js_1.requirePermission)('ga
         ORDER BY created_at ${order}
         LIMIT $2 OFFSET $3
       `;
-        const rowsRes = await (0, database_js_1.query)(listSql, [gameId, limit, offset]);
-        const countRes = await (0, database_js_1.query)(`SELECT COUNT(*) as total FROM game_state_snapshots WHERE room_id = $1`, [gameId]);
+        const rowsRes = await dbQuery(listSql, [gameId, limit, offset]);
+        const countRes = await dbQuery(`SELECT COUNT(*) as total FROM game_state_snapshots WHERE room_id = $1`, [gameId]);
         res.json({
             snapshots: rowsRes.rows || [],
             total: Number.parseInt(countRes.rows?.[0]?.total ?? '0', 10),
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to list snapshots', 500, { gameId: req.params.gameId });
+        handleRouteError(error, req, 'Failed to list snapshots', 500, { gameId: req.params.gameId });
         res.status(500).json({ error: 'Failed to list snapshots' });
     }
 });
-router.get('/games/:gameId/snapshots/:snapshotId', (0, adminAuth_js_1.requirePermission)('games.view'), (0, express_validator_1.param)('gameId').isUUID(), (0, express_validator_1.param)('snapshotId').isUUID(), checkValidation, async (req, res) => {
+router.get('/games/:gameId/snapshots/:snapshotId', requirePermission('games.view'), param('gameId').isUUID(), param('snapshotId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { gameId, snapshotId } = req.params;
-        const result = await (0, database_js_1.query)(`SELECT id, room_id, turn_number, phase, snapshot, created_at
+        const result = await dbQuery(`SELECT id, room_id, turn_number, phase, snapshot, created_at
          FROM game_state_snapshots
          WHERE id = $1 AND room_id = $2`, [snapshotId, gameId]);
         if (result.rowCount === 0) {
@@ -712,16 +710,16 @@ router.get('/games/:gameId/snapshots/:snapshotId', (0, adminAuth_js_1.requirePer
         res.json(result.rows[0]);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get snapshot', 500, {
+        handleRouteError(error, req, 'Failed to get snapshot', 500, {
             gameId: req.params.gameId,
             snapshotId: req.params.snapshotId,
         });
         res.status(500).json({ error: 'Failed to get snapshot' });
     }
 });
-router.get('/games/active', (0, adminAuth_js_1.requirePermission)('games.view'), async (_req, res) => {
+router.get('/games/active', requirePermission('games.view'), async (_req, res) => {
     try {
-        const result = await (0, database_js_1.query)(`
+        const result = await dbQuery(`
         SELECT COUNT(*) as count 
         FROM game_rooms 
         WHERE status IN ('active', 'initializing')
@@ -731,25 +729,25 @@ router.get('/games/active', (0, adminAuth_js_1.requirePermission)('games.view'),
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, _req, 'Failed to get active games count');
+        handleRouteError(error, _req, 'Failed to get active games count');
         res.status(500).json({
             error: 'Failed to get active games count',
         });
     }
 });
-router.post('/games/:gameId/force-end', (0, adminAuth_js_1.requirePermission)('games.manage'), (0, adminAuth_js_1.logAdminActivity)('game_force_end'), (0, express_validator_1.param)('gameId').isUUID(), (0, express_validator_1.body)('reason').isString().isLength({ min: 1, max: 500 }), checkValidation, async (req, res) => {
+router.post('/games/:gameId/force-end', requirePermission('games.manage'), logAdminActivity('game_force_end'), param('gameId').isUUID(), body('reason').isString().isLength({ min: 1, max: 500 }), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
         const { reason } = req.body;
         const adminUserId = req.userId;
-        await (0, database_js_1.query)('UPDATE game_rooms SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['abandoned', gameId]);
+        await dbQuery('UPDATE game_rooms SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['abandoned', gameId]);
         try {
-            const lifecycle = new gameLifecycleService_js_1.GameLifecycleService();
+            const lifecycle = new GameLifecycleService();
             await lifecycle.refreshLifecycle(gameId);
         }
         catch (_e) {
         }
-        await (0, database_js_1.query)(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+        await dbQuery(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
             adminUserId,
             'game_force_end',
@@ -762,7 +760,7 @@ router.post('/games/:gameId/force-end', (0, adminAuth_js_1.requirePermission)('g
         res.json({ success: true, message: 'Game force-ended successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to force-end game', 500, {
+        handleRouteError(error, req, 'Failed to force-end game', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({
@@ -770,12 +768,12 @@ router.post('/games/:gameId/force-end', (0, adminAuth_js_1.requirePermission)('g
         });
     }
 });
-router.post('/games/:gameId/pause', (0, adminAuth_js_1.requirePermission)('games.manage'), (0, adminAuth_js_1.logAdminActivity)('game_pause'), (0, express_validator_1.param)('gameId').isUUID(), (0, express_validator_1.body)('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
+router.post('/games/:gameId/pause', requirePermission('games.manage'), logAdminActivity('game_pause'), param('gameId').isUUID(), body('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
         const { reason } = req.body;
         const adminUserId = req.userId;
-        const result = await (0, database_js_1.query)(`UPDATE game_rooms 
+        const result = await dbQuery(`UPDATE game_rooms 
          SET status = 'paused', updated_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND status IN ('in_progress', 'starting', 'active')
          RETURNING id`, [gameId]);
@@ -785,7 +783,7 @@ router.post('/games/:gameId/pause', (0, adminAuth_js_1.requirePermission)('games
             });
             return;
         }
-        await (0, database_js_1.query)(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+        await dbQuery(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
             adminUserId,
             'game_pause',
@@ -798,7 +796,7 @@ router.post('/games/:gameId/pause', (0, adminAuth_js_1.requirePermission)('games
         res.json({ success: true, message: 'Game paused successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to pause game', 500, {
+        handleRouteError(error, req, 'Failed to pause game', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({
@@ -806,12 +804,12 @@ router.post('/games/:gameId/pause', (0, adminAuth_js_1.requirePermission)('games
         });
     }
 });
-router.post('/games/:gameId/resume', (0, adminAuth_js_1.requirePermission)('games.manage'), (0, adminAuth_js_1.logAdminActivity)('game_resume'), (0, express_validator_1.param)('gameId').isUUID(), (0, express_validator_1.body)('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
+router.post('/games/:gameId/resume', requirePermission('games.manage'), logAdminActivity('game_resume'), param('gameId').isUUID(), body('reason').optional().isString().isLength({ max: 500 }), checkValidation, async (req, res) => {
     try {
         const { gameId } = req.params;
         const { reason } = req.body;
         const adminUserId = req.userId;
-        const result = await (0, database_js_1.query)(`UPDATE game_rooms 
+        const result = await dbQuery(`UPDATE game_rooms 
          SET status = 'active', updated_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND status = 'paused'
          RETURNING id`, [gameId]);
@@ -821,7 +819,7 @@ router.post('/games/:gameId/resume', (0, adminAuth_js_1.requirePermission)('game
             });
             return;
         }
-        await (0, database_js_1.query)(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+        await dbQuery(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
             adminUserId,
             'game_resume',
@@ -834,7 +832,7 @@ router.post('/games/:gameId/resume', (0, adminAuth_js_1.requirePermission)('game
         res.json({ success: true, message: 'Game resumed successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to resume game', 500, {
+        handleRouteError(error, req, 'Failed to resume game', 500, {
             gameId: req.params.gameId,
         });
         res.status(500).json({
@@ -842,16 +840,16 @@ router.post('/games/:gameId/resume', (0, adminAuth_js_1.requirePermission)('game
         });
     }
 });
-router.delete('/games/:gameId', (0, adminAuth_js_1.requirePermission)('games.manage'), (0, adminAuth_js_1.logAdminActivity)('game_delete'), (0, express_validator_1.param)('gameId').isUUID(), checkValidation, async (req, res) => {
+router.delete('/games/:gameId', requirePermission('games.manage'), logAdminActivity('game_delete'), param('gameId').isUUID(), checkValidation, async (req, res) => {
     const { gameId } = req.params;
     try {
-        const { deleted } = await (0, database_js_1.transaction)(async (client) => {
-            const exists = await (0, database_js_1.query)('SELECT id FROM game_rooms WHERE id = $1 FOR UPDATE', [gameId], { client });
+        const { deleted } = await transaction(async (client) => {
+            const exists = await dbQuery('SELECT id FROM game_rooms WHERE id = $1 FOR UPDATE', [gameId], { client });
             if ((exists.rowCount ?? 0) === 0) {
                 return { deleted: false };
             }
-            await (0, database_js_1.query)('DELETE FROM rating_history WHERE game_room_id = $1', [gameId], { client });
-            await (0, database_js_1.query)('DELETE FROM game_rooms WHERE id = $1', [gameId], { client });
+            await dbQuery('DELETE FROM rating_history WHERE game_room_id = $1', [gameId], { client });
+            await dbQuery('DELETE FROM game_rooms WHERE id = $1', [gameId], { client });
             return { deleted: true };
         });
         if (!deleted) {
@@ -867,11 +865,11 @@ router.delete('/games/:gameId', (0, adminAuth_js_1.requirePermission)('games.man
         res.json({ success: true, message: 'Game and related data deleted' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to delete game', 500, { gameId });
+        handleRouteError(error, req, 'Failed to delete game', 500, { gameId });
         res.status(500).json({ error: 'Failed to delete game' });
     }
 });
-router.get('/games/active', (0, adminAuth_js_1.requirePermission)('games.view'), async (_req, res) => {
+router.get('/games/active', requirePermission('games.view'), async (_req, res) => {
     try {
         const gamesQuery = `
         SELECT 
@@ -894,7 +892,7 @@ router.get('/games/active', (0, adminAuth_js_1.requirePermission)('games.view'),
         ORDER BY gr.created_at DESC
         LIMIT 50
       `;
-        const result = await (0, database_js_1.query)(gamesQuery);
+        const result = await dbQuery(gamesQuery);
         const games = result.rows.map((game) => ({
             id: game.id,
             name: game.name || `Game ${game.id.slice(0, 8)}`,
@@ -910,26 +908,26 @@ router.get('/games/active', (0, adminAuth_js_1.requirePermission)('games.view'),
         res.json(games);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, _req, 'Failed to get active games');
+        handleRouteError(error, _req, 'Failed to get active games');
         res.status(500).json({ error: 'Failed to get active games' });
     }
 });
-router.get('/feature-flags', (0, adminAuth_js_1.requirePermission)('system.view'), async (_req, res) => {
+router.get('/feature-flags', requirePermission('system.view'), async (_req, res) => {
     try {
-        const flags = await adminService_js_1.adminService.getFeatureFlags();
+        const flags = await adminService.getFeatureFlags();
         res.json(flags);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, _req, 'Failed to get feature flags');
+        handleRouteError(error, _req, 'Failed to get feature flags');
         res.status(500).json({ error: 'Failed to get feature flags' });
     }
 });
-router.put('/feature-flags/:flagName', (0, adminAuth_js_1.requirePermission)('system.admin'), (0, adminAuth_js_1.logAdminActivity)('feature_flag_toggle'), (0, express_validator_1.param)('flagName').isString(), (0, express_validator_1.body)('enabled').isBoolean(), checkValidation, async (req, res) => {
+router.put('/feature-flags/:flagName', requirePermission('system.admin'), logAdminActivity('feature_flag_toggle'), param('flagName').isString(), body('enabled').isBoolean(), checkValidation, async (req, res) => {
     try {
         const { flagName } = req.params;
         const { enabled } = req.body;
         const adminUserId = req.userId;
-        const updated = await adminService_js_1.adminService.toggleFeatureFlag(flagName, enabled, adminUserId);
+        const updated = await adminService.toggleFeatureFlag(flagName, enabled, adminUserId);
         if (!updated) {
             res.status(404).json({ error: 'Feature flag not found' });
             return;
@@ -937,17 +935,17 @@ router.put('/feature-flags/:flagName', (0, adminAuth_js_1.requirePermission)('sy
         res.json({ message: 'Feature flag updated successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to toggle feature flag', 500, {
+        handleRouteError(error, req, 'Failed to toggle feature flag', 500, {
             flagName: req.params.flagName,
         });
         res.status(500).json({ error: 'Failed to toggle feature flag' });
     }
 });
-router.patch('/feature-flags/:flagName', (0, adminAuth_js_1.requirePermission)('system.admin'), (0, adminAuth_js_1.logAdminActivity)('feature_flag_update'), (0, express_validator_1.param)('flagName').isString(), (0, express_validator_1.body)('description').optional().isString(), (0, express_validator_1.body)('accessLevel').optional().isIn(['disabled', 'internal', 'beta', 'public']), (0, express_validator_1.body)('category').optional().isString(), (0, express_validator_1.body)('config').optional().isObject(), (0, express_validator_1.body)('dependencies').optional().isArray(), (0, express_validator_1.body)('dependencies.*').optional().isString(), (0, express_validator_1.body)('reason').optional().isString(), checkValidation, async (req, res) => {
+router.patch('/feature-flags/:flagName', requirePermission('system.admin'), logAdminActivity('feature_flag_update'), param('flagName').isString(), body('description').optional().isString(), body('accessLevel').optional().isIn(['disabled', 'internal', 'beta', 'public']), body('category').optional().isString(), body('config').optional().isObject(), body('dependencies').optional().isArray(), body('dependencies.*').optional().isString(), body('reason').optional().isString(), checkValidation, async (req, res) => {
     try {
         const { flagName } = req.params;
         const { description, accessLevel, category, config, dependencies, reason } = req.body;
-        const updated = await adminService_js_1.adminService.updateFeatureFlagSettings(flagName, {
+        const updated = await adminService.updateFeatureFlagSettings(flagName, {
             description,
             accessLevel,
             category,
@@ -961,71 +959,71 @@ router.patch('/feature-flags/:flagName', (0, adminAuth_js_1.requirePermission)('
         res.json({ message: 'Feature flag updated successfully', flag: updated });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update feature flag', 500, {
+        handleRouteError(error, req, 'Failed to update feature flag', 500, {
             flagName: req.params.flagName,
         });
         res.status(500).json({ error: 'Failed to update feature flag' });
     }
 });
-router.get('/users/:userId/feature-flags', (0, adminAuth_js_1.requirePermission)('users.view'), (0, express_validator_1.param)('userId').isUUID(), checkValidation, async (req, res) => {
+router.get('/users/:userId/feature-flags', requirePermission('users.view'), param('userId').isUUID(), checkValidation, async (req, res) => {
     try {
-        const assignments = await adminService_js_1.adminService.getUserFeatureFlagAssignments(req.params.userId);
+        const assignments = await adminService.getUserFeatureFlagAssignments(req.params.userId);
         res.json(assignments);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch user feature flags', 500, {
+        handleRouteError(error, req, 'Failed to fetch user feature flags', 500, {
             targetUserId: req.params.userId,
         });
         res.status(500).json({ error: 'Failed to fetch user feature flags' });
     }
 });
-router.put('/users/:userId/feature-flags/:flagName', (0, adminAuth_js_1.requirePermission)('users.edit'), (0, adminAuth_js_1.logAdminActivity)('feature_flag_user_override_set'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.param)('flagName').isString(), (0, express_validator_1.body)('enabled').isBoolean(), checkValidation, async (req, res) => {
+router.put('/users/:userId/feature-flags/:flagName', requirePermission('users.edit'), logAdminActivity('feature_flag_user_override_set'), param('userId').isUUID(), param('flagName').isString(), body('enabled').isBoolean(), checkValidation, async (req, res) => {
     try {
         const { userId, flagName } = req.params;
         const { enabled } = req.body;
-        await adminService_js_1.adminService.setUserFeatureFlagOverride(userId, flagName, enabled, req.userId);
+        await adminService.setUserFeatureFlagOverride(userId, flagName, enabled, req.userId);
         res.json({ message: 'Feature flag override updated' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to set user feature flag override', 500, {
+        handleRouteError(error, req, 'Failed to set user feature flag override', 500, {
             targetUserId: req.params.userId,
             flagName: req.params.flagName,
         });
         res.status(500).json({ error: 'Failed to set feature flag override' });
     }
 });
-router.delete('/users/:userId/feature-flags/:flagName', (0, adminAuth_js_1.requirePermission)('users.edit'), (0, adminAuth_js_1.logAdminActivity)('feature_flag_user_override_cleared'), (0, express_validator_1.param)('userId').isUUID(), (0, express_validator_1.param)('flagName').isString(), checkValidation, async (req, res) => {
+router.delete('/users/:userId/feature-flags/:flagName', requirePermission('users.edit'), logAdminActivity('feature_flag_user_override_cleared'), param('userId').isUUID(), param('flagName').isString(), checkValidation, async (req, res) => {
     try {
         const { userId, flagName } = req.params;
-        await adminService_js_1.adminService.clearUserFeatureFlagOverride(userId, flagName, req.userId);
+        await adminService.clearUserFeatureFlagOverride(userId, flagName, req.userId);
         res.status(204).send();
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to clear user feature flag override', 500, {
+        handleRouteError(error, req, 'Failed to clear user feature flag override', 500, {
             targetUserId: req.params.userId,
             flagName: req.params.flagName,
         });
         res.status(500).json({ error: 'Failed to clear feature flag override' });
     }
 });
-router.get('/logs/admin-activity', (0, adminAuth_js_1.requirePermission)('logs.view'), (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 500 }), (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }), checkValidation, async (req, res) => {
+router.get('/logs/admin-activity', requirePermission('logs.view'), queryParam('limit').optional().isInt({ min: 1, max: 500 }), queryParam('offset').optional().isInt({ min: 0 }), checkValidation, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 100;
         const offset = parseInt(req.query.offset, 10) || 0;
-        const logs = await adminService_js_1.adminService.getAdminActivityLogs(limit, offset);
+        const logs = await adminService.getAdminActivityLogs(limit, offset);
         res.json(logs);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get admin activity logs', 500, {
+        handleRouteError(error, req, 'Failed to get admin activity logs', 500, {
             limit: req.query.limit,
             offset: req.query.offset,
         });
         res.status(500).json({ error: 'Failed to get admin activity logs' });
     }
 });
-router.get('/system/status', (0, adminAuth_js_1.requirePermission)('system.view'), async (_req, res) => {
+router.get('/system/status', requirePermission('system.view'), async (_req, res) => {
     try {
-        const dbStats = await (0, database_js_1.query)(`
+        const dbStats = await dbQuery(`
         SELECT 
           (SELECT COUNT(*) FROM users) as user_count,
           (SELECT COUNT(*) FROM users WHERE email_verified = TRUE) as verified_users,
@@ -1038,7 +1036,7 @@ router.get('/system/status', (0, adminAuth_js_1.requirePermission)('system.view'
           (SELECT COUNT(*) FROM game_rooms WHERE status IN ('in_progress', 'starting')) as active_games,
           (SELECT COUNT(*) FROM map_approval_requests WHERE decision IS NULL) as pending_approvals
       `);
-        const featureFlags = await adminService_js_1.adminService.getFeatureFlags();
+        const featureFlags = await adminService.getFeatureFlags();
         const statsRow = dbStats.rows[0] ?? {};
         const parseCount = (value) => parseInt(value?.toString() ?? '0', 10);
         res.json({
@@ -1062,14 +1060,14 @@ router.get('/system/status', (0, adminAuth_js_1.requirePermission)('system.view'
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, _req, 'Failed to get system status');
+        handleRouteError(error, _req, 'Failed to get system status');
         res.status(500).json({ error: 'Failed to get system status' });
     }
 });
-router.get('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.view'), (0, express_validator_1.param)('mapId').isUUID(), checkValidation, async (req, res) => {
+router.get('/maps/:mapId', requirePermission('content.view'), param('mapId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { mapId } = req.params;
-        const mapResult = await (0, database_js_1.query)(`SELECT 
+        const mapResult = await dbQuery(`SELECT 
           m.*,
           u.username as creator_name
         FROM maps m
@@ -1080,10 +1078,10 @@ router.get('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.view')
             return;
         }
         const map = mapResult.rows[0];
-        const territoriesResult = await (0, database_js_1.query)('SELECT * FROM map_territories WHERE map_id = $1', [
+        const territoriesResult = await dbQuery('SELECT * FROM map_territories WHERE map_id = $1', [
             mapId,
         ]);
-        const normalizedAdjacencies = await mapService_js_1.mapService.getMapAdjacencies(mapId);
+        const normalizedAdjacencies = await mapService.getMapAdjacencies(mapId);
         const adjacencies = normalizedAdjacencies.map((a) => ({
             from: a.fromTerritoryId,
             to: a.toTerritoryId,
@@ -1095,23 +1093,23 @@ router.get('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.view')
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get map details', 500, {
+        handleRouteError(error, req, 'Failed to get map details', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ error: 'Failed to get map details' });
     }
 });
-router.put('/maps/:mapId/content', (0, adminAuth_js_1.requirePermission)('content.edit'), (0, adminAuth_js_1.logAdminActivity)('map_content_update'), (0, express_validator_1.param)('mapId').isUUID(), (0, express_validator_1.body)('metadata').optional().isObject(), (0, express_validator_1.body)('name').optional().isString().isLength({ min: 1, max: 100 }), (0, express_validator_1.body)('description').optional().isString().isLength({ max: 1000 }), (0, express_validator_1.body)('imageUrl').optional().isString(), (0, express_validator_1.body)('imageWidth').optional().isInt({ min: 1, max: 10000 }), (0, express_validator_1.body)('imageHeight').optional().isInt({ min: 1, max: 10000 }), (0, express_validator_1.body)('isPublic').optional().isBoolean(), (0, express_validator_1.body)('tags').optional().isArray(), (0, express_validator_1.body)('minPlayers').optional().isInt({ min: 2, max: 20 }), (0, express_validator_1.body)('maxPlayers').optional().isInt({ min: 2, max: 20 }), checkValidation, async (req, res) => {
+router.put('/maps/:mapId/content', requirePermission('content.edit'), logAdminActivity('map_content_update'), param('mapId').isUUID(), body('metadata').optional().isObject(), body('name').optional().isString().isLength({ min: 1, max: 100 }), body('description').optional().isString().isLength({ max: 1000 }), body('imageUrl').optional().isString(), body('imageWidth').optional().isInt({ min: 1, max: 10000 }), body('imageHeight').optional().isInt({ min: 1, max: 10000 }), body('isPublic').optional().isBoolean(), body('tags').optional().isArray(), body('minPlayers').optional().isInt({ min: 2, max: 20 }), body('maxPlayers').optional().isInt({ min: 2, max: 20 }), checkValidation, async (req, res) => {
     try {
         const { mapId } = req.params;
         const { metadata, name, description, imageUrl, imageWidth, imageHeight, isPublic, tags, minPlayers, maxPlayers, } = req.body || {};
-        const existing = await mapService_js_1.mapService.getMap(mapId);
+        const existing = await mapService.getMap(mapId);
         if (!existing) {
             res.status(404).json({ error: 'Map not found' });
             return;
         }
         if (metadata && typeof metadata === 'object') {
-            await mapService_js_1.mapService.updateMapContentFromMetadata(mapId, metadata);
+            await mapService.updateMapContentFromMetadata(mapId, metadata);
         }
         if (name !== undefined ||
             description !== undefined ||
@@ -1120,7 +1118,7 @@ router.put('/maps/:mapId/content', (0, adminAuth_js_1.requirePermission)('conten
             imageHeight !== undefined ||
             isPublic !== undefined ||
             tags !== undefined) {
-            await mapService_js_1.mapService.updateMap(mapId, req.userId, {
+            await mapService.updateMap(mapId, req.userId, {
                 name,
                 description,
                 imageUrl,
@@ -1143,18 +1141,18 @@ router.put('/maps/:mapId/content', (0, adminAuth_js_1.requirePermission)('conten
                 params.push(maxPlayers);
             }
             params.push(mapId);
-            await (0, database_js_1.query)(`UPDATE maps SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx}`, params);
+            await dbQuery(`UPDATE maps SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx}`, params);
         }
         res.json({ success: true });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update map content', 500, {
+        handleRouteError(error, req, 'Failed to update map content', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ error: 'Failed to update map content' });
     }
 });
-router.get('/maps', (0, adminAuth_js_1.requirePermission)('content.view'), (0, express_validator_1.query)('limit').optional().isInt({ min: 1, max: 100 }), (0, express_validator_1.query)('offset').optional().isInt({ min: 0 }), (0, express_validator_1.query)('status').optional().isString(), (0, express_validator_1.query)('search').optional().isString(), (0, express_validator_1.query)('includeAll').optional().isBoolean(), checkValidation, async (req, res) => {
+router.get('/maps', requirePermission('content.view'), queryParam('limit').optional().isInt({ min: 1, max: 100 }), queryParam('offset').optional().isInt({ min: 0 }), queryParam('status').optional().isString(), queryParam('search').optional().isString(), queryParam('includeAll').optional().isBoolean(), checkValidation, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 50;
         const offset = parseInt(req.query.offset, 10) || 0;
@@ -1200,7 +1198,7 @@ router.get('/maps', (0, adminAuth_js_1.requirePermission)('content.view'), (0, e
       `;
         queryParams.push(limit, offset);
         paramIndex += 2;
-        const mapsResult = await (0, database_js_1.query)(mapsQuery, queryParams);
+        const mapsResult = await dbQuery(mapsQuery, queryParams);
         let countQuery = `
         SELECT COUNT(*) as total
         FROM maps m
@@ -1220,9 +1218,9 @@ router.get('/maps', (0, adminAuth_js_1.requirePermission)('content.view'), (0, e
             countQuery += ` AND (m.name ILIKE $${countParamIndex} OR m.description ILIKE $${countParamIndex})`;
             countParams.push(`%${search}%`);
         }
-        const countResult = await (0, database_js_1.query)(countQuery, countParams);
+        const countResult = await dbQuery(countQuery, countParams);
         const maps = mapsResult.rows.map((map) => {
-            const imageUrl = (0, url_js_1.resolveAssetUrl)(req, map.image_url);
+            const imageUrl = resolveAssetUrl(req, map.image_url);
             return {
                 ...map,
                 image_url: imageUrl,
@@ -1248,7 +1246,7 @@ router.get('/maps', (0, adminAuth_js_1.requirePermission)('content.view'), (0, e
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to get maps', 500, {
+        handleRouteError(error, req, 'Failed to get maps', 500, {
             limit: req.query.limit,
             offset: req.query.offset,
             status: req.query.status,
@@ -1256,7 +1254,7 @@ router.get('/maps', (0, adminAuth_js_1.requirePermission)('content.view'), (0, e
         res.status(500).json({ error: 'Failed to get maps' });
     }
 });
-router.patch('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.edit'), (0, adminAuth_js_1.logAdminActivity)('map_update'), (0, express_validator_1.param)('mapId').isUUID(), (0, express_validator_1.body)('name').optional().isString().isLength({ min: 1, max: 100 }), (0, express_validator_1.body)('description').optional().isString().isLength({ max: 1000 }), (0, express_validator_1.body)('minPlayers').optional().isInt({ min: 2, max: 20 }), (0, express_validator_1.body)('maxPlayers').optional().isInt({ min: 2, max: 20 }), (0, express_validator_1.body)('status').optional().isIn(['draft', 'pending_review', 'approved', 'rejected', 'archived']), (0, express_validator_1.body)('isFeatured').optional().isBoolean(), (0, express_validator_1.body)('isPublic').optional().isBoolean(), (0, express_validator_1.body)('isVipOnly').optional().isBoolean(), checkValidation, async (req, res) => {
+router.patch('/maps/:mapId', requirePermission('content.edit'), logAdminActivity('map_update'), param('mapId').isUUID(), body('name').optional().isString().isLength({ min: 1, max: 100 }), body('description').optional().isString().isLength({ max: 1000 }), body('minPlayers').optional().isInt({ min: 2, max: 20 }), body('maxPlayers').optional().isInt({ min: 2, max: 20 }), body('status').optional().isIn(['draft', 'pending_review', 'approved', 'rejected', 'archived']), body('isFeatured').optional().isBoolean(), body('isPublic').optional().isBoolean(), body('isVipOnly').optional().isBoolean(), checkValidation, async (req, res) => {
     try {
         const { mapId } = req.params;
         const { name, description, minPlayers, maxPlayers, status, isFeatured, isPublic, isVipOnly } = req.body;
@@ -1316,12 +1314,12 @@ router.patch('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.edit
         WHERE id = $${paramIndex}
         RETURNING *
       `;
-        const result = await (0, database_js_1.query)(updateQuery, params);
+        const result = await dbQuery(updateQuery, params);
         if (result.rows.length === 0) {
             res.status(404).json({ error: 'Map not found' });
             return;
         }
-        await (0, database_js_1.query)(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+        await dbQuery(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
             adminUserId,
             'map_update',
@@ -1334,18 +1332,18 @@ router.patch('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.edit
         res.json({ message: 'Map updated successfully', map: result.rows[0] });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update map', 500, {
+        handleRouteError(error, req, 'Failed to update map', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ error: 'Failed to update map' });
     }
 });
-router.post('/maps/:mapId/clone', (0, adminAuth_js_1.requirePermission)('content.create'), (0, adminAuth_js_1.logAdminActivity)('map_clone'), (0, express_validator_1.param)('mapId').isUUID(), (0, express_validator_1.body)('assignedUserId').optional().isUUID().withMessage('Assigned user must be a valid UUID'), checkValidation, async (req, res) => {
+router.post('/maps/:mapId/clone', requirePermission('content.create'), logAdminActivity('map_clone'), param('mapId').isUUID(), body('assignedUserId').optional().isUUID().withMessage('Assigned user must be a valid UUID'), checkValidation, async (req, res) => {
     try {
         const { mapId } = req.params;
         const adminUserId = req.userId;
         const assignedUserId = req.body.assignedUserId;
-        const originalMapResult = await (0, database_js_1.query)('SELECT * FROM maps WHERE id = $1', [mapId]);
+        const originalMapResult = await dbQuery('SELECT * FROM maps WHERE id = $1', [mapId]);
         if (originalMapResult.rows.length === 0) {
             res.status(404).json({ error: 'Map not found' });
             return;
@@ -1353,7 +1351,7 @@ router.post('/maps/:mapId/clone', (0, adminAuth_js_1.requirePermission)('content
         const originalMap = originalMapResult.rows[0];
         const clonedName = `${originalMap.name} (Copy)`;
         if (assignedUserId) {
-            const assignedUserCheck = await (0, database_js_1.query)('SELECT id FROM users WHERE id = $1', [
+            const assignedUserCheck = await dbQuery('SELECT id FROM users WHERE id = $1', [
                 assignedUserId,
             ]);
             if (assignedUserCheck.rows.length === 0) {
@@ -1361,7 +1359,7 @@ router.post('/maps/:mapId/clone', (0, adminAuth_js_1.requirePermission)('content
                 return;
             }
         }
-        const cloneResult = await (0, database_js_1.query)(`INSERT INTO maps (name, description, image_url, min_players, max_players, creator_id, status, capital_assignments, capital_metadata)
+        const cloneResult = await dbQuery(`INSERT INTO maps (name, description, image_url, min_players, max_players, creator_id, status, capital_assignments, capital_metadata)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`, [
             clonedName,
@@ -1376,19 +1374,19 @@ router.post('/maps/:mapId/clone', (0, adminAuth_js_1.requirePermission)('content
         ]);
         const clonedMap = cloneResult.rows[0];
         if (assignedUserId) {
-            await (0, database_js_1.query)(`
+            await dbQuery(`
           INSERT INTO map_collaborators (map_id, user_id, role, assigned_by)
           VALUES ($1, $2, 'editor', $3)
           ON CONFLICT (map_id, user_id)
           DO UPDATE SET role = EXCLUDED.role, assigned_at = CURRENT_TIMESTAMP, assigned_by = EXCLUDED.assigned_by
         `, [clonedMap.id, assignedUserId, adminUserId]);
         }
-        const territoriesResult = await (0, database_js_1.query)('SELECT * FROM map_territories WHERE map_id = $1', [
+        const territoriesResult = await dbQuery('SELECT * FROM map_territories WHERE map_id = $1', [
             mapId,
         ]);
         if (territoriesResult.rows.length > 0) {
             for (const territory of territoriesResult.rows) {
-                await (0, database_js_1.query)(`INSERT INTO map_territories (map_id, name, polygon, center_x, center_y, sector, army_position, metadata)
+                await dbQuery(`INSERT INTO map_territories (map_id, name, polygon, center_x, center_y, sector, army_position, metadata)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [
                     clonedMap.id,
                     territory.name,
@@ -1401,14 +1399,14 @@ router.post('/maps/:mapId/clone', (0, adminAuth_js_1.requirePermission)('content
                 ]);
             }
         }
-        const adjacenciesResult = await (0, database_js_1.query)('SELECT * FROM territory_adjacencies WHERE map_id = $1', [mapId]);
+        const adjacenciesResult = await dbQuery('SELECT * FROM territory_adjacencies WHERE map_id = $1', [mapId]);
         if (adjacenciesResult.rows.length > 0) {
             for (const adjacency of adjacenciesResult.rows) {
-                await (0, database_js_1.query)(`INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
+                await dbQuery(`INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
              VALUES ($1, $2, $3)`, [clonedMap.id, adjacency.territory_from, adjacency.territory_to]);
             }
         }
-        await (0, database_js_1.query)(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+        await dbQuery(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
             adminUserId,
             'map_clone',
@@ -1426,18 +1424,18 @@ router.post('/maps/:mapId/clone', (0, adminAuth_js_1.requirePermission)('content
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to clone map', 500, {
+        handleRouteError(error, req, 'Failed to clone map', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ error: 'Failed to clone map' });
     }
 });
-router.patch('/maps/:mapId/status', (0, adminAuth_js_1.requirePermission)('content.moderate'), (0, adminAuth_js_1.logAdminActivity)('map_status_update'), (0, express_validator_1.param)('mapId').isUUID(), (0, express_validator_1.body)('status').isIn(['draft', 'pending_review', 'approved', 'rejected', 'archived']), (0, express_validator_1.body)('notes').optional().isString().isLength({ max: 1000 }), checkValidation, async (req, res) => {
+router.patch('/maps/:mapId/status', requirePermission('content.moderate'), logAdminActivity('map_status_update'), param('mapId').isUUID(), body('status').isIn(['draft', 'pending_review', 'approved', 'rejected', 'archived']), body('notes').optional().isString().isLength({ max: 1000 }), checkValidation, async (req, res) => {
     try {
         const { mapId } = req.params;
         const { status, notes } = req.body;
         const adminUserId = req.userId;
-        const mapResult = await (0, database_js_1.query)(`UPDATE maps 
+        const mapResult = await dbQuery(`UPDATE maps 
          SET status = $1, updated_at = CURRENT_TIMESTAMP
          WHERE id = $2
          RETURNING *`, [status, mapId]);
@@ -1446,12 +1444,12 @@ router.patch('/maps/:mapId/status', (0, adminAuth_js_1.requirePermission)('conte
             return;
         }
         if (status === 'approved' || status === 'rejected') {
-            await (0, database_js_1.query)(`INSERT INTO map_reviews (map_id, reviewer_id, status, notes, reviewed_at)
+            await dbQuery(`INSERT INTO map_reviews (map_id, reviewer_id, status, notes, reviewed_at)
            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
            ON CONFLICT (map_id, reviewer_id) 
            DO UPDATE SET status = $3, notes = $4, reviewed_at = CURRENT_TIMESTAMP`, [mapId, adminUserId, status, notes]);
         }
-        await (0, database_js_1.query)(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+        await dbQuery(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
             adminUserId,
             'map_status_update',
@@ -1464,18 +1462,18 @@ router.patch('/maps/:mapId/status', (0, adminAuth_js_1.requirePermission)('conte
         res.json({ message: 'Map status updated successfully', map: mapResult.rows[0] });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update map status', 500, {
+        handleRouteError(error, req, 'Failed to update map status', 500, {
             mapId: req.params.mapId,
             status: req.body?.status,
         });
         res.status(500).json({ error: 'Failed to update map status' });
     }
 });
-router.delete('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.delete'), (0, adminAuth_js_1.logAdminActivity)('map_delete'), (0, express_validator_1.param)('mapId').isUUID(), checkValidation, async (req, res) => {
+router.delete('/maps/:mapId', requirePermission('content.delete'), logAdminActivity('map_delete'), param('mapId').isUUID(), checkValidation, async (req, res) => {
     try {
         const { mapId } = req.params;
         const adminUserId = req.userId;
-        const gamesCheck = await (0, database_js_1.query)(`SELECT COUNT(*) as count 
+        const gamesCheck = await dbQuery(`SELECT COUNT(*) as count 
          FROM game_rooms 
          WHERE map_id = $1 AND status IN ('in_progress', 'starting', 'waiting')`, [mapId]);
         if (parseInt(gamesCheck.rows[0].count, 10) > 0) {
@@ -1484,13 +1482,13 @@ router.delete('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.del
             });
             return;
         }
-        const mapInfo = await (0, database_js_1.query)('SELECT * FROM maps WHERE id = $1', [mapId]);
+        const mapInfo = await dbQuery('SELECT * FROM maps WHERE id = $1', [mapId]);
         if (mapInfo.rows.length === 0) {
             res.status(404).json({ error: 'Map not found' });
             return;
         }
-        await mapService_js_1.mapService.deleteMap(mapId, adminUserId, { isAdmin: true });
-        await (0, database_js_1.query)(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+        await mapService.deleteMap(mapId, adminUserId, { isAdmin: true });
+        await dbQuery(`INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
             adminUserId,
             'map_delete',
@@ -1503,7 +1501,7 @@ router.delete('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.del
         res.json({ message: 'Map deleted successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to delete map', 500, {
+        handleRouteError(error, req, 'Failed to delete map', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ error: 'Failed to delete map' });
@@ -1512,14 +1510,14 @@ router.delete('/maps/:mapId', (0, adminAuth_js_1.requirePermission)('content.del
 router.post('/cache/refresh', async (req, res) => {
     try {
         const userId = req.userId;
-        logger_js_1.logger.info('Admin cache refresh requested', { adminId: userId });
+        logger.info('Admin cache refresh requested', { adminId: userId });
         try {
-            await adminService_js_1.adminService.logAdminAction(userId, 'cache.refresh', {
+            await adminService.logAdminAction(userId, 'cache.refresh', {
                 timestamp: new Date().toISOString(),
             });
         }
         catch (logError) {
-            logger_js_1.logger.warn('Failed to log cache refresh activity:', logError);
+            logger.warn('Failed to log cache refresh activity:', logError);
         }
         const { mapService } = (await import('../services/mapService.js'));
         if (mapService && typeof mapService.clearCache === 'function') {
@@ -1532,17 +1530,17 @@ router.post('/cache/refresh', async (req, res) => {
                 const redis = getRedisClient();
                 if (redis) {
                     await redis.flushdb();
-                    logger_js_1.logger.info('Redis cache cleared');
+                    logger.info('Redis cache cleared');
                 }
                 else {
-                    logger_js_1.logger.info('Redis not connected, skipping cache clear');
+                    logger.info('Redis not connected, skipping cache clear');
                 }
             }
             catch (redisError) {
-                logger_js_1.logger.warn('Redis cache clear failed (non-critical):', redisError);
+                logger.warn('Redis cache clear failed (non-critical):', redisError);
             }
         }
-        logger_js_1.logger.info('Cache refresh completed successfully', { adminId: userId });
+        logger.info('Cache refresh completed successfully', { adminId: userId });
         res.json({
             success: true,
             message: 'Cache refreshed successfully',
@@ -1550,9 +1548,9 @@ router.post('/cache/refresh', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to refresh cache');
+        handleRouteError(error, req, 'Failed to refresh cache');
         res.status(500).json({ error: 'Failed to refresh cache' });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=admin.js.map

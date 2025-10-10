@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.notificationDispatcher = exports.NotificationDispatcher = void 0;
-const logger_js_1 = require("../utils/logger.js");
-const DiscordWebhookChannel_js_1 = require("./channels/DiscordWebhookChannel.js");
-const SlackWebhookChannel_js_1 = require("./channels/SlackWebhookChannel.js");
-const WebPushChannel_js_1 = require("./channels/WebPushChannel.js");
-const SERVICE_LOGGER = logger_js_1.logger.child({ service: 'NotificationDispatcher' });
-class NotificationDispatcher {
+import { logger } from '../utils/logger.js';
+import { DiscordWebhookChannel, discordWebhookChannel } from './channels/DiscordWebhookChannel.js';
+import { SlackWebhookChannel } from './channels/SlackWebhookChannel.js';
+import { webPushChannel } from './channels/WebPushChannel.js';
+const SERVICE_LOGGER = logger.child({ service: 'NotificationDispatcher' });
+export class NotificationDispatcher {
     constructor(options = {}) {
         this.logger = SERVICE_LOGGER;
         this.channels = new Map();
@@ -135,22 +132,21 @@ class NotificationDispatcher {
         return value.toLowerCase() === 'true';
     }
 }
-exports.NotificationDispatcher = NotificationDispatcher;
-const defaultChannels = [WebPushChannel_js_1.webPushChannel];
-const slackChannel = SlackWebhookChannel_js_1.SlackWebhookChannel.fromEnv();
+const defaultChannels = [webPushChannel];
+const slackChannel = SlackWebhookChannel.fromEnv();
 if (slackChannel) {
     defaultChannels.push(slackChannel);
 }
-if (DiscordWebhookChannel_js_1.discordWebhookChannel) {
-    defaultChannels.push(DiscordWebhookChannel_js_1.discordWebhookChannel);
+if (discordWebhookChannel) {
+    defaultChannels.push(discordWebhookChannel);
 }
 else {
-    const fallbackDiscordChannel = DiscordWebhookChannel_js_1.DiscordWebhookChannel.fromEnv();
+    const fallbackDiscordChannel = DiscordWebhookChannel.fromEnv();
     if (fallbackDiscordChannel) {
         defaultChannels.push(fallbackDiscordChannel);
     }
 }
-exports.notificationDispatcher = new NotificationDispatcher({
+export const notificationDispatcher = new NotificationDispatcher({
     channels: defaultChannels,
 });
 //# sourceMappingURL=NotificationDispatcher.js.map

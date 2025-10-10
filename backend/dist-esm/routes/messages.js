@@ -1,21 +1,19 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const adminAuth_js_1 = require("../middleware/adminAuth.js");
-const auth_js_1 = require("../middleware/auth.js");
-const rateLimiter_js_1 = require("../middleware/rateLimiter.js");
-const conversationService_js_1 = require("../services/conversationService.js");
-const userBlockService_js_1 = require("../services/userBlockService.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const router = (0, express_1.Router)();
-router.post('/blocks', auth_js_1.authenticateToken, async (req, res) => {
+import { Router } from 'express';
+import { requireAdmin } from '../middleware/adminAuth.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { messageLimiter } from '../middleware/rateLimiter.js';
+import { addMembersToConversation, ConversationError, createGroupConversation, ensureDirectConversation, ensureGameConversation, ensureTeamConversation, getConversationDetail, getUnreadSummary, leaveConversation, listConversationsForUser, listMessages, markConversationRead, removeConversationMember, sendMessage, } from '../services/conversationService.js';
+import { createBlock, getBlockRecords, getBlocksForUser, removeBlock, } from '../services/userBlockService.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+const router = Router();
+router.post('/blocks', authenticateToken, async (req, res) => {
     try {
         const blockerId = req.userId;
         const { blockedUserId } = req.body ?? {};
         if (!blockedUserId || typeof blockedUserId !== 'string') {
             return res.status(400).json({ error: 'blockedUserId is required' });
         }
-        const record = await (0, userBlockService_js_1.createBlock)(blockerId, blockedUserId);
+        const record = await createBlock(blockerId, blockedUserId);
         return res.status(200).json({
             success: true,
             block: record,
@@ -25,36 +23,36 @@ router.post('/blocks', auth_js_1.authenticateToken, async (req, res) => {
         if (error instanceof Error && error.message === 'Cannot block yourself') {
             return res.status(400).json({ error: 'You cannot block yourself' });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create block');
+        handleRouteError(error, req, 'Failed to create block');
         return res.status(500).json({ error: 'Failed to create block' });
     }
 });
-router.delete('/blocks/:blockedUserId', auth_js_1.authenticateToken, async (req, res) => {
+router.delete('/blocks/:blockedUserId', authenticateToken, async (req, res) => {
     try {
         const blockerId = req.userId;
         const { blockedUserId } = req.params;
-        const removed = await (0, userBlockService_js_1.removeBlock)(blockerId, blockedUserId);
+        const removed = await removeBlock(blockerId, blockedUserId);
         return res.status(200).json({
             success: true,
             removed,
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to remove block');
+        handleRouteError(error, req, 'Failed to remove block');
         return res.status(500).json({ error: 'Failed to remove block' });
     }
 });
-router.get('/blocks', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/blocks', authenticateToken, async (req, res) => {
     try {
-        const records = await (0, userBlockService_js_1.getBlocksForUser)(req.userId);
+        const records = await getBlocksForUser(req.userId);
         return res.json({ blocks: records, scope: 'self' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch block records');
+        handleRouteError(error, req, 'Failed to fetch block records');
         return res.status(500).json({ error: 'Failed to fetch block records' });
     }
 });
-router.get('/blocks/admin', auth_js_1.authenticateToken, adminAuth_js_1.requireAdmin, async (req, res) => {
+router.get('/blocks/admin', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { blockerId, blockedId, limit, offset } = req.query;
         const parsedLimit = limit ? Number(limit) : undefined;
@@ -63,7 +61,7 @@ router.get('/blocks/admin', auth_js_1.authenticateToken, adminAuth_js_1.requireA
             (parsedOffset !== undefined && (!Number.isFinite(parsedOffset) || parsedOffset < 0))) {
             return res.status(400).json({ error: 'limit and offset must be positive numbers' });
         }
-        const records = await (0, userBlockService_js_1.getBlockRecords)({
+        const records = await getBlockRecords({
             blockerId: typeof blockerId === 'string' ? blockerId : undefined,
             blockedId: typeof blockedId === 'string' ? blockedId : undefined,
             limit: parsedLimit,
@@ -72,7 +70,7 @@ router.get('/blocks/admin', auth_js_1.authenticateToken, adminAuth_js_1.requireA
         return res.json({ blocks: records, scope: 'admin' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch block records');
+        handleRouteError(error, req, 'Failed to fetch block records');
         return res.status(500).json({ error: 'Failed to fetch block records' });
     }
 });
@@ -92,25 +90,25 @@ const mapConversationErrorToStatus = (error) => {
             return 500;
     }
 };
-router.post('/dm', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/dm', authenticateToken, async (req, res) => {
     try {
         const { targetUserId } = req.body ?? {};
         if (!targetUserId || typeof targetUserId !== 'string') {
             return res.status(400).json({ error: 'targetUserId is required' });
         }
-        const conversation = await (0, conversationService_js_1.ensureDirectConversation)(req.userId, targetUserId);
+        const conversation = await ensureDirectConversation(req.userId, targetUserId);
         return res.status(200).json({ conversation });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create or fetch DM conversation');
+        handleRouteError(error, req, 'Failed to create or fetch DM conversation');
         return res.status(500).json({ error: 'Failed to create DM conversation' });
     }
 });
-router.post('/conversations', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/conversations', authenticateToken, async (req, res) => {
     try {
         const { kind, title, memberIds, metadata } = req.body ?? {};
         if (kind !== 'group') {
@@ -124,7 +122,7 @@ router.post('/conversations', auth_js_1.authenticateToken, async (req, res) => {
                 return res.status(400).json({ error: 'metadata must be an object when provided' });
             }
         }
-        const conversation = await (0, conversationService_js_1.createGroupConversation)({
+        const conversation = await createGroupConversation({
             creatorId: req.userId,
             title: typeof title === 'string' ? title : undefined,
             memberIds,
@@ -133,22 +131,22 @@ router.post('/conversations', auth_js_1.authenticateToken, async (req, res) => {
         return res.status(201).json({ conversation });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create group conversation');
+        handleRouteError(error, req, 'Failed to create group conversation');
         return res.status(500).json({ error: 'Failed to create conversation' });
     }
 });
-router.post('/conversations/:conversationId/members', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/conversations/:conversationId/members', authenticateToken, async (req, res) => {
     try {
         const { conversationId } = req.params;
         const { memberIds } = req.body ?? {};
         if (!Array.isArray(memberIds) || memberIds.length === 0) {
             return res.status(400).json({ error: 'memberIds must be a non-empty array' });
         }
-        const members = await (0, conversationService_js_1.addMembersToConversation)({
+        const members = await addMembersToConversation({
             actorId: req.userId,
             conversationId,
             memberIds,
@@ -156,33 +154,33 @@ router.post('/conversations/:conversationId/members', auth_js_1.authenticateToke
         return res.status(200).json({ members });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update conversation members');
+        handleRouteError(error, req, 'Failed to update conversation members');
         return res.status(500).json({ error: 'Failed to update conversation members' });
     }
 });
-router.post('/conversations/:conversationId/leave', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/conversations/:conversationId/leave', authenticateToken, async (req, res) => {
     try {
         const { conversationId } = req.params;
-        await (0, conversationService_js_1.leaveConversation)(conversationId, req.userId);
+        await leaveConversation(conversationId, req.userId);
         return res.status(200).json({ success: true });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to leave conversation');
+        handleRouteError(error, req, 'Failed to leave conversation');
         return res.status(500).json({ error: 'Failed to leave conversation' });
     }
 });
-router.delete('/conversations/:conversationId/members/:memberId', auth_js_1.authenticateToken, async (req, res) => {
+router.delete('/conversations/:conversationId/members/:memberId', authenticateToken, async (req, res) => {
     try {
         const { conversationId, memberId } = req.params;
-        await (0, conversationService_js_1.removeConversationMember)({
+        await removeConversationMember({
             actorId: req.userId,
             conversationId,
             targetUserId: memberId,
@@ -190,48 +188,48 @@ router.delete('/conversations/:conversationId/members/:memberId', auth_js_1.auth
         return res.status(200).json({ success: true });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to remove conversation member');
+        handleRouteError(error, req, 'Failed to remove conversation member');
         return res.status(500).json({ error: 'Failed to remove conversation member' });
     }
 });
-router.get('/conversations/unread', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/conversations/unread', authenticateToken, async (req, res) => {
     try {
-        const summary = await (0, conversationService_js_1.getUnreadSummary)(req.userId);
+        const summary = await getUnreadSummary(req.userId);
         return res.json({ conversations: summary });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load unread summary');
+        handleRouteError(error, req, 'Failed to load unread summary');
         return res.status(500).json({ error: 'Failed to load unread summary' });
     }
 });
-router.get('/conversations/:conversationId', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/conversations/:conversationId', authenticateToken, async (req, res) => {
     try {
         const { conversationId } = req.params;
         const markReadParam = req.query.markRead;
         const shouldMarkRead = markReadParam === undefined ||
             (Array.isArray(markReadParam) ? markReadParam[0] !== 'false' : markReadParam !== 'false');
         if (shouldMarkRead) {
-            await (0, conversationService_js_1.markConversationRead)(conversationId, req.userId);
+            await markConversationRead(conversationId, req.userId);
         }
-        const detail = await (0, conversationService_js_1.getConversationDetail)(conversationId, req.userId, {
+        const detail = await getConversationDetail(conversationId, req.userId, {
             allowSpectatorGameAccess: true,
         });
         return res.json(detail);
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load conversation detail');
+        handleRouteError(error, req, 'Failed to load conversation detail');
         return res.status(500).json({ error: 'Failed to load conversation detail' });
     }
 });
-router.post('/conversations/:conversationId/messages', rateLimiter_js_1.messageLimiter, auth_js_1.authenticateToken, async (req, res) => {
+router.post('/conversations/:conversationId/messages', messageLimiter, authenticateToken, async (req, res) => {
     try {
         const { conversationId } = req.params;
         const { body, clientMessageId, metadata } = req.body ?? {};
@@ -243,7 +241,7 @@ router.post('/conversations/:conversationId/messages', rateLimiter_js_1.messageL
                 return res.status(400).json({ error: 'metadata must be an object when provided' });
             }
         }
-        const message = await (0, conversationService_js_1.sendMessage)({
+        const message = await sendMessage({
             conversationId,
             senderId: req.userId,
             body,
@@ -253,36 +251,36 @@ router.post('/conversations/:conversationId/messages', rateLimiter_js_1.messageL
         return res.status(200).json({ message });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to send message');
+        handleRouteError(error, req, 'Failed to send message');
         return res.status(500).json({ error: 'Failed to send message' });
     }
 });
-router.post('/conversations/game', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/conversations/game', authenticateToken, async (req, res) => {
     try {
         const { gameId } = req.body ?? {};
         if (!gameId || typeof gameId !== 'string') {
             return res.status(400).json({ error: 'gameId is required' });
         }
-        const conversation = await (0, conversationService_js_1.ensureGameConversation)(gameId);
-        const detail = await (0, conversationService_js_1.getConversationDetail)(conversation.id, req.userId, {
+        const conversation = await ensureGameConversation(gameId);
+        const detail = await getConversationDetail(conversation.id, req.userId, {
             allowSpectatorGameAccess: true,
         });
         return res.status(200).json(detail);
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to ensure game conversation');
+        handleRouteError(error, req, 'Failed to ensure game conversation');
         return res.status(500).json({ error: 'Failed to ensure game conversation' });
     }
 });
-router.post('/conversations/team', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/conversations/team', authenticateToken, async (req, res) => {
     try {
         const { gameId, teamId } = req.body ?? {};
         if (!gameId || typeof gameId !== 'string') {
@@ -292,20 +290,20 @@ router.post('/conversations/team', auth_js_1.authenticateToken, async (req, res)
         if (!Number.isFinite(parsedTeamId)) {
             return res.status(400).json({ error: 'teamId must be a number' });
         }
-        const conversation = await (0, conversationService_js_1.ensureTeamConversation)(gameId, parsedTeamId);
-        const detail = await (0, conversationService_js_1.getConversationDetail)(conversation.id, req.userId);
+        const conversation = await ensureTeamConversation(gameId, parsedTeamId);
+        const detail = await getConversationDetail(conversation.id, req.userId);
         return res.status(200).json(detail);
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to ensure team conversation');
+        handleRouteError(error, req, 'Failed to ensure team conversation');
         return res.status(500).json({ error: 'Failed to ensure team conversation' });
     }
 });
-router.get('/conversations', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/conversations', authenticateToken, async (req, res) => {
     try {
         const { limit, offset } = req.query;
         const parsedLimit = limit ? Number(limit) : undefined;
@@ -314,18 +312,18 @@ router.get('/conversations', auth_js_1.authenticateToken, async (req, res) => {
             (parsedOffset !== undefined && (!Number.isFinite(parsedOffset) || parsedOffset < 0))) {
             return res.status(400).json({ error: 'limit and offset must be positive numbers' });
         }
-        const conversations = await (0, conversationService_js_1.listConversationsForUser)(req.userId, {
+        const conversations = await listConversationsForUser(req.userId, {
             limit: parsedLimit,
             offset: parsedOffset,
         });
         return res.json({ conversations });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to list conversations');
+        handleRouteError(error, req, 'Failed to list conversations');
         return res.status(500).json({ error: 'Failed to list conversations' });
     }
 });
-router.get('/conversations/:conversationId/messages', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/conversations/:conversationId/messages', authenticateToken, async (req, res) => {
     try {
         const { conversationId } = req.params;
         const { before, limit } = req.query;
@@ -333,17 +331,17 @@ router.get('/conversations/:conversationId/messages', auth_js_1.authenticateToke
         if (parsedLimit !== undefined && (!Number.isFinite(parsedLimit) || parsedLimit <= 0)) {
             return res.status(400).json({ error: 'limit must be a positive number' });
         }
-        const messages = await (0, conversationService_js_1.listMessages)(conversationId, req.userId, parsedLimit ?? 50, typeof before === 'string' ? before : undefined);
+        const messages = await listMessages(conversationId, req.userId, parsedLimit ?? 50, typeof before === 'string' ? before : undefined);
         return res.json({ messages });
     }
     catch (error) {
-        if (error instanceof conversationService_js_1.ConversationError) {
+        if (error instanceof ConversationError) {
             const status = mapConversationErrorToStatus(error);
             return res.status(status).json({ error: error.message, code: error.code });
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch messages');
+        handleRouteError(error, req, 'Failed to fetch messages');
         return res.status(500).json({ error: 'Failed to fetch messages' });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=messages.js.map

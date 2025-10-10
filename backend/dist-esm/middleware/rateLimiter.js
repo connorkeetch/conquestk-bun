@@ -1,16 +1,9 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.standardLimiter = exports.suspiciousActivityTracker = exports.SuspiciousActivityTracker = exports.socketConnectionLimiter = exports.adminLimiter = exports.generalApiLimiter = exports.mapUploadLimiter = exports.passwordResetLimiter = exports.messageLimiter = exports.gameCreationLimiter = exports.loginSlowDown = exports.authLimiter = void 0;
-exports.stopRateLimiterCleanup = stopRateLimiterCleanup;
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const express_slow_down_1 = __importDefault(require("express-slow-down"));
-const rate_limit_redis_1 = __importDefault(require("rate-limit-redis"));
-const redis_js_1 = require("../config/redis.js");
-const errorHelpers_js_1 = require("../utils/errorHelpers.js");
-const logger_js_1 = require("../utils/logger.js");
+import rateLimit from 'express-rate-limit';
+import slowDown from 'express-slow-down';
+import RedisStore from 'rate-limit-redis';
+import { getRedisClient } from '../config/redis.js';
+import { getErrorMessage } from '../utils/errorHelpers.js';
+import { logger } from '../utils/logger.js';
 const createMessage = (endpoint, limit, window) => {
     return `Too many requests to ${endpoint}. Limited to ${limit} requests per ${window}. Please try again later.`;
 };
@@ -23,27 +16,27 @@ function scheduleAggregateLog() {
     setImmediate(() => {
         if (inMemoryPrefixes.size > 0) {
             const list = Array.from(inMemoryPrefixes).sort().join(', ');
-            logger_js_1.logger.warn(`Using in-memory store for rate limiting (temporary) – Redis not available yet. Policies: ${list}`);
+            logger.warn(`Using in-memory store for rate limiting (temporary) – Redis not available yet. Policies: ${list}`);
         }
         inMemoryPrefixes.clear();
         scheduledAggregateLog = false;
     });
 }
 function createRateLimitStore(prefix) {
-    const redisClient = (0, redis_js_1.getRedisClient)();
+    const redisClient = getRedisClient();
     if (redisClient) {
         try {
             const sendCommand = async (...args) => {
                 const normalizedArgs = args.map((arg) => arg.toString());
                 return redisClient.call(...normalizedArgs);
             };
-            return new rate_limit_redis_1.default({
+            return new RedisStore({
                 prefix: `rate-limit:${prefix}:`,
                 sendCommand,
             });
         }
         catch (error) {
-            logger_js_1.logger.error(`Failed to create Redis store for ${prefix}:`, (0, errorHelpers_js_1.getErrorMessage)(error));
+            logger.error(`Failed to create Redis store for ${prefix}:`, getErrorMessage(error));
             inMemoryPrefixes.add(prefix);
             scheduleAggregateLog();
             return undefined;
@@ -55,7 +48,7 @@ function createRateLimitStore(prefix) {
 }
 let loginAttemptsStore = null;
 function initLoginAttemptsStore() {
-    const redisClient = (0, redis_js_1.getRedisClient)();
+    const redisClient = getRedisClient();
     if (!redisClient) {
         loginAttemptsStore = new Map();
         return true;
@@ -83,13 +76,13 @@ if (useInMemoryLogin && loginAttemptsStore) {
     interval.unref();
     loginCleanupInterval = interval;
 }
-function stopRateLimiterCleanup() {
+export function stopRateLimiterCleanup() {
     if (loginCleanupInterval) {
         clearInterval(loginCleanupInterval);
         loginCleanupInterval = null;
     }
 }
-exports.authLimiter = (0, express_rate_limit_1.default)({
+export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
     message: createMessage('authentication endpoints', 5, '15 minutes'),
@@ -98,14 +91,14 @@ exports.authLimiter = (0, express_rate_limit_1.default)({
     skipSuccessfulRequests: false,
     store: createRateLimitStore('auth'),
 });
-exports.loginSlowDown = (0, express_slow_down_1.default)({
+export const loginSlowDown = slowDown({
     windowMs: 15 * 60 * 1000,
     delayAfter: 2,
     delayMs: () => 1000,
     maxDelayMs: 5000,
     skipSuccessfulRequests: true,
 });
-exports.gameCreationLimiter = (0, express_rate_limit_1.default)({
+export const gameCreationLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 10,
     message: createMessage('game creation', 10, 'hour'),
@@ -113,7 +106,7 @@ exports.gameCreationLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     store: createRateLimitStore('game-creation'),
 });
-exports.messageLimiter = (0, express_rate_limit_1.default)({
+export const messageLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 30,
     message: createMessage('messaging', 30, 'minute'),
@@ -122,7 +115,7 @@ exports.messageLimiter = (0, express_rate_limit_1.default)({
     skipFailedRequests: true,
     store: createRateLimitStore('messages'),
 });
-exports.passwordResetLimiter = (0, express_rate_limit_1.default)({
+export const passwordResetLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 3,
     message: 'Too many password reset requests. Please check your email or try again later.',
@@ -130,7 +123,7 @@ exports.passwordResetLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     store: createRateLimitStore('password-reset'),
 });
-exports.mapUploadLimiter = (0, express_rate_limit_1.default)({
+export const mapUploadLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     max: 5,
     message: createMessage('map uploads', 5, 'day'),
@@ -138,7 +131,7 @@ exports.mapUploadLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     store: createRateLimitStore('map-upload'),
 });
-exports.generalApiLimiter = (0, express_rate_limit_1.default)({
+export const generalApiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 100,
     message: 'Too many requests, please slow down.',
@@ -147,7 +140,7 @@ exports.generalApiLimiter = (0, express_rate_limit_1.default)({
     skipFailedRequests: false,
     store: createRateLimitStore('general-api'),
 });
-exports.adminLimiter = (0, express_rate_limit_1.default)({
+export const adminLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 30,
     message: 'Admin operation rate limit exceeded.',
@@ -155,7 +148,7 @@ exports.adminLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     store: createRateLimitStore('admin'),
 });
-exports.socketConnectionLimiter = (0, express_rate_limit_1.default)({
+export const socketConnectionLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 5,
     message: 'Too many socket connection attempts.',
@@ -163,7 +156,7 @@ exports.socketConnectionLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     store: createRateLimitStore('socket-connection'),
 });
-class SuspiciousActivityTracker {
+export class SuspiciousActivityTracker {
     constructor() {
         this.suspiciousIPs = new Map();
         this.blockedIPs = new Set();
@@ -171,7 +164,7 @@ class SuspiciousActivityTracker {
         this.BLOCK_DURATION = 60 * 60;
     }
     getRedis() {
-        return (0, redis_js_1.getRedisClient)();
+        return getRedisClient();
     }
     async recordViolation(ip) {
         const redisClient = this.getRedis();
@@ -187,7 +180,7 @@ class SuspiciousActivityTracker {
                 }
             }
             catch (error) {
-                logger_js_1.logger.error('Redis error in recordViolation:', error);
+                logger.error('Redis error in recordViolation:', error);
                 this.recordViolationInMemory(ip);
             }
         }
@@ -208,10 +201,10 @@ class SuspiciousActivityTracker {
             try {
                 const key = `blocked:${ip}`;
                 await redisClient.setex(key, this.BLOCK_DURATION, '1');
-                logger_js_1.logger.warn(`Blocked IP ${ip} for suspicious activity`);
+                logger.warn(`Blocked IP ${ip} for suspicious activity`);
             }
             catch (error) {
-                logger_js_1.logger.error('Redis error in blockIP:', error);
+                logger.error('Redis error in blockIP:', error);
                 this.blockIPInMemory(ip);
             }
         }
@@ -236,7 +229,7 @@ class SuspiciousActivityTracker {
                 return result === '1';
             }
             catch (error) {
-                logger_js_1.logger.error('Redis error in isBlocked:', error);
+                logger.error('Redis error in isBlocked:', error);
                 return this.blockedIPs.has(ip);
             }
         }
@@ -272,9 +265,8 @@ class SuspiciousActivityTracker {
         };
     }
 }
-exports.SuspiciousActivityTracker = SuspiciousActivityTracker;
-exports.suspiciousActivityTracker = new SuspiciousActivityTracker();
-exports.standardLimiter = (0, express_rate_limit_1.default)({
+export const suspiciousActivityTracker = new SuspiciousActivityTracker();
+export const standardLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 60,
     message: 'Too many requests, please try again later.',

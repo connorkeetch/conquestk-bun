@@ -1,11 +1,5 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.schemas = exports.sanitizeAllInputs = exports.validateMap = exports.validateProfile = exports.validateMessage = exports.validateGame = exports.validateAuth = void 0;
-const joi_1 = __importDefault(require("joi"));
-const validator_1 = __importDefault(require("validator"));
+import Joi from 'joi';
+import validator from 'validator';
 const usernamePattern = /^[a-zA-Z0-9_-]+$/;
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
 const sqlInjectionPattern = /(\b(ALTER|CREATE|DELETE|DROP|EXEC(UTE)?|INSERT|SELECT|UNION|UPDATE)\b)|(-{2})|(\/*\*+(?:[^*/]|[/][^*])*\*+\/)|(\b(OR|AND)\b.*?=.*?['"=])|([';])|(\bEXEC\b)|(\bCAST\b)|(\bDECLARE\b)/i;
@@ -16,7 +10,7 @@ function sanitizeInput(input) {
         return input;
     let sanitized = input.replace(/\0/g, '');
     sanitized = sanitized.trim();
-    sanitized = validator_1.default.escape(sanitized);
+    sanitized = validator.escape(sanitized);
     return sanitized;
 }
 function validateAgainstPatterns(value, fieldName) {
@@ -31,8 +25,8 @@ function validateAgainstPatterns(value, fieldName) {
     }
     return null;
 }
-const authSchema = joi_1.default.object({
-    username: joi_1.default.string()
+const authSchema = Joi.object({
+    username: Joi.string()
         .min(3)
         .max(20)
         .pattern(usernamePattern)
@@ -47,24 +41,24 @@ const authSchema = joi_1.default.object({
         'string.min': 'Username must be at least 3 characters',
         'string.max': 'Username cannot exceed 20 characters',
     }),
-    identifier: joi_1.default.string()
+    identifier: Joi.string()
         .max(255)
         .messages({
         'string.empty': 'Please provide username or email',
         'any.required': 'Username or email is required',
     }),
-    email: joi_1.default.string()
+    email: Joi.string()
         .email({ tlds: { allow: true } })
         .max(100)
         .custom((value, helpers) => {
-        if (value && !validator_1.default.isEmail(value)) {
+        if (value && !validator.isEmail(value)) {
             return helpers.error('any.invalid', { message: 'Invalid email format' });
         }
         if (value) {
             const error = validateAgainstPatterns(value, 'Email');
             if (error)
                 return helpers.error('any.invalid', { message: error });
-            return validator_1.default.normalizeEmail(value) || value;
+            return validator.normalizeEmail(value) || value;
         }
         return value;
     })
@@ -72,7 +66,7 @@ const authSchema = joi_1.default.object({
         'string.email': 'Please provide a valid email address',
         'string.max': 'Email cannot exceed 100 characters',
     }),
-    password: joi_1.default.string()
+    password: Joi.string()
         .min(8)
         .max(128)
         .pattern(passwordPattern)
@@ -85,8 +79,8 @@ const authSchema = joi_1.default.object({
 });
 const authRegisterSchema = authSchema.fork(['username', 'email'], (schema) => schema.required());
 const authLoginSchema = authSchema.fork(['identifier'], (schema) => schema.required());
-const gameSchema = joi_1.default.object({
-    name: joi_1.default.string()
+const gameSchema = Joi.object({
+    name: Joi.string()
         .min(3)
         .max(50)
         .pattern(/^[a-zA-Z0-9\s\-_'.!]+$/)
@@ -102,12 +96,12 @@ const gameSchema = joi_1.default.object({
         'string.min': 'Game name must be at least 3 characters',
         'string.max': 'Game name cannot exceed 50 characters',
     }),
-    maxPlayers: joi_1.default.number().integer().min(2).max(8).required().messages({
+    maxPlayers: Joi.number().integer().min(2).max(8).required().messages({
         'number.min': 'Game must have at least 2 players',
         'number.max': 'Game cannot have more than 8 players',
     }),
-    isPrivate: joi_1.default.boolean().default(false),
-    password: joi_1.default.string()
+    isPrivate: Joi.boolean().default(false),
+    password: Joi.string()
         .max(50)
         .custom((value, helpers) => {
         if (value) {
@@ -117,18 +111,18 @@ const gameSchema = joi_1.default.object({
         }
         return value;
     }),
-    mapId: joi_1.default.string().uuid().required().messages({
+    mapId: Joi.string().uuid().required().messages({
         'string.guid': 'Invalid map ID format',
     }),
-    settings: joi_1.default.object({
-        turnTimeLimit: joi_1.default.number().integer().min(30).max(300),
-        cardTradeMode: joi_1.default.string().valid('fixed', 'progressive', 'none'),
-        fogOfWar: joi_1.default.boolean(),
-        autoAssignTerritories: joi_1.default.boolean(),
+    settings: Joi.object({
+        turnTimeLimit: Joi.number().integer().min(30).max(300),
+        cardTradeMode: Joi.string().valid('fixed', 'progressive', 'none'),
+        fogOfWar: Joi.boolean(),
+        autoAssignTerritories: Joi.boolean(),
     }).default({}),
 });
-const messageSchema = joi_1.default.object({
-    content: joi_1.default.string()
+const messageSchema = Joi.object({
+    content: Joi.string()
         .min(1)
         .max(500)
         .required()
@@ -142,11 +136,11 @@ const messageSchema = joi_1.default.object({
         'string.min': 'Message cannot be empty',
         'string.max': 'Message cannot exceed 500 characters',
     }),
-    roomId: joi_1.default.string().uuid().required(),
-    type: joi_1.default.string().valid('chat', 'system', 'game').default('chat'),
+    roomId: Joi.string().uuid().required(),
+    type: Joi.string().valid('chat', 'system', 'game').default('chat'),
 });
-const profileSchema = joi_1.default.object({
-    username: joi_1.default.string()
+const profileSchema = Joi.object({
+    username: Joi.string()
         .min(3)
         .max(20)
         .pattern(usernamePattern)
@@ -156,7 +150,7 @@ const profileSchema = joi_1.default.object({
             return helpers.error('any.invalid', { message: error });
         return sanitizeInput(value);
     }),
-    bio: joi_1.default.string()
+    bio: Joi.string()
         .max(500)
         .allow('')
         .custom((value, helpers) => {
@@ -168,7 +162,7 @@ const profileSchema = joi_1.default.object({
         }
         return value;
     }),
-    location: joi_1.default.string()
+    location: Joi.string()
         .max(100)
         .allow('')
         .custom((value, helpers) => {
@@ -180,7 +174,7 @@ const profileSchema = joi_1.default.object({
         }
         return value;
     }),
-    website: joi_1.default.string()
+    website: Joi.string()
         .uri({ scheme: ['http', 'https'] })
         .max(200)
         .allow('')
@@ -188,8 +182,8 @@ const profileSchema = joi_1.default.object({
         'string.uri': 'Please provide a valid website URL',
     }),
 });
-const mapSchema = joi_1.default.object({
-    name: joi_1.default.string()
+const mapSchema = Joi.object({
+    name: Joi.string()
         .min(3)
         .max(100)
         .required()
@@ -199,7 +193,7 @@ const mapSchema = joi_1.default.object({
             return helpers.error('any.invalid', { message: error });
         return sanitizeInput(value);
     }),
-    description: joi_1.default.string()
+    description: Joi.string()
         .max(1000)
         .allow('')
         .custom((value, helpers) => {
@@ -211,8 +205,8 @@ const mapSchema = joi_1.default.object({
         }
         return value;
     }),
-    tags: joi_1.default.array()
-        .items(joi_1.default.string()
+    tags: Joi.array()
+        .items(Joi.string()
         .max(30)
         .pattern(/^[a-zA-Z0-9\-_]+$/)
         .custom((value, helpers) => {
@@ -225,13 +219,13 @@ const mapSchema = joi_1.default.object({
         .messages({
         'array.max': 'Cannot have more than 10 tags',
     }),
-    isPublic: joi_1.default.boolean().default(false),
-    territories: joi_1.default.array().min(10).max(200).required().messages({
+    isPublic: Joi.boolean().default(false),
+    territories: Joi.array().min(10).max(200).required().messages({
         'array.min': 'Map must have at least 10 territories',
         'array.max': 'Map cannot have more than 200 territories',
     }),
 });
-const validateAuth = (req, res, next) => {
+export const validateAuth = (req, res, next) => {
     const isRegister = req.path === '/register' || req.path.endsWith('/register');
     const isLogin = req.path === '/login' || req.path.endsWith('/login');
     let schema = authSchema;
@@ -275,8 +269,7 @@ const validateAuth = (req, res, next) => {
     req.body = value;
     return next();
 };
-exports.validateAuth = validateAuth;
-const validateGame = (req, res, next) => {
+export const validateGame = (req, res, next) => {
     const { error, value } = gameSchema.validate(req.body, { abortEarly: false });
     if (error) {
         return res.status(400).json({
@@ -303,8 +296,7 @@ const validateGame = (req, res, next) => {
     req.body = value;
     return next();
 };
-exports.validateGame = validateGame;
-const validateMessage = (req, res, next) => {
+export const validateMessage = (req, res, next) => {
     const { error, value } = messageSchema.validate(req.body, { abortEarly: false });
     if (error) {
         return res.status(400).json({
@@ -319,8 +311,7 @@ const validateMessage = (req, res, next) => {
     req.body = value;
     return next();
 };
-exports.validateMessage = validateMessage;
-const validateProfile = (req, res, next) => {
+export const validateProfile = (req, res, next) => {
     const { error, value } = profileSchema.validate(req.body, { abortEarly: false });
     if (error) {
         return res.status(400).json({
@@ -335,8 +326,7 @@ const validateProfile = (req, res, next) => {
     req.body = value;
     return next();
 };
-exports.validateProfile = validateProfile;
-const validateMap = (req, res, next) => {
+export const validateMap = (req, res, next) => {
     const { error, value } = mapSchema.validate(req.body, { abortEarly: false });
     if (error) {
         return res.status(400).json({
@@ -351,8 +341,7 @@ const validateMap = (req, res, next) => {
     req.body = value;
     return next();
 };
-exports.validateMap = validateMap;
-const sanitizeAllInputs = (req, res, next) => {
+export const sanitizeAllInputs = (req, res, next) => {
     if (req.query) {
         for (const key of Object.keys(req.query)) {
             if (typeof req.query[key] === 'string') {
@@ -385,8 +374,7 @@ const sanitizeAllInputs = (req, res, next) => {
     }
     next();
 };
-exports.sanitizeAllInputs = sanitizeAllInputs;
-exports.schemas = {
+export const schemas = {
     auth: authSchema,
     game: gameSchema,
     message: messageSchema,

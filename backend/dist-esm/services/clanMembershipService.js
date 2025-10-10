@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.clanMembershipService = exports.ClanMembershipService = exports.ClanMembershipServiceError = void 0;
-const database_js_1 = require("../config/database.js");
-const clanActivityService_js_1 = require("./clanActivityService.js");
-const clanService_js_1 = require("./clanService.js");
+import { query, transaction } from '../config/database.js';
+import { logClanActivity } from './clanActivityService.js';
+import { clanService } from './clanService.js';
 const APPLICATION_STATUS_ORDER = {
     pending: 0,
     accepted: 1,
@@ -11,13 +8,12 @@ const APPLICATION_STATUS_ORDER = {
     withdrawn: 3,
 };
 const ACTIVE_MEMBER_STATUSES = ['active'];
-class ClanMembershipServiceError extends Error {
+export class ClanMembershipServiceError extends Error {
     constructor(code, message) {
         super(message);
         this.code = code;
     }
 }
-exports.ClanMembershipServiceError = ClanMembershipServiceError;
 const mapApplication = (row) => ({
     id: row.id,
     clanId: row.clan_id,
@@ -29,10 +25,10 @@ const mapApplication = (row) => ({
     createdAt: row.created_at,
     updatedAt: row.updated_at,
 });
-class ClanMembershipService {
+export class ClanMembershipService {
     async applyToClan(userId, clanId, message) {
         const trimmedMessage = message?.trim() ?? null;
-        const applicationRow = await (0, database_js_1.transaction)(async (client) => {
+        const applicationRow = await transaction(async (client) => {
             const clanGate = await client.query(`SELECT recruitment_status, recruitment_policy FROM clans WHERE id = $1 AND deleted_at IS NULL FOR SHARE`, [clanId]);
             const clanRow = clanGate.rows[0];
             if (!clanRow) {
@@ -62,7 +58,7 @@ class ClanMembershipService {
           VALUES ($1, $2, 'application', 'pending', $3, $2)
           RETURNING id, clan_id, user_id, status, message, reviewed_by, reviewed_at, created_at, updated_at
         `, [clanId, userId, trimmedMessage]);
-            await (0, clanActivityService_js_1.logClanActivity)({
+            await logClanActivity({
                 clanId,
                 actorUserId: userId,
                 actionType: 'application_submitted',
@@ -82,7 +78,7 @@ class ClanMembershipService {
         }
     }
     async reviewApplication(reviewerId, clanId, applicationId, decision) {
-        const updatedApplication = await (0, database_js_1.transaction)(async (client) => {
+        const updatedApplication = await transaction(async (client) => {
             const applicationResult = await client.query(`
           SELECT id, clan_id, user_id, status, message, reviewed_by, reviewed_at, created_at, updated_at
           FROM clan_join_requests
@@ -122,14 +118,14 @@ class ClanMembershipService {
           RETURNING id, clan_id, user_id, status, message, reviewed_by, reviewed_at, created_at, updated_at
         `, [newStatus, reviewerId, applicationId]);
             if (decision === 'accepted') {
-                const memberRoleId = await clanService_js_1.clanService.getMemberRoleId(application.clan_id, 'Member', client);
+                const memberRoleId = await clanService.getMemberRoleId(application.clan_id, 'Member', client);
                 await client.query(`
             INSERT INTO clan_members (clan_id, user_id, role_id, status)
             VALUES ($1, $2, $3, 'active')
             ON CONFLICT (clan_id, user_id)
             DO UPDATE SET status = 'active', role_id = EXCLUDED.role_id, joined_at = CURRENT_TIMESTAMP
           `, [application.clan_id, application.user_id, memberRoleId]);
-                await (0, clanActivityService_js_1.logClanActivity)({
+                await logClanActivity({
                     clanId: application.clan_id,
                     actorUserId: reviewerId,
                     actionType: 'member_joined',
@@ -139,7 +135,7 @@ class ClanMembershipService {
                 });
             }
             else {
-                await (0, clanActivityService_js_1.logClanActivity)({
+                await logClanActivity({
                     clanId: application.clan_id,
                     actorUserId: reviewerId,
                     actionType: 'application_rejected',
@@ -153,7 +149,7 @@ class ClanMembershipService {
         return mapApplication(updatedApplication);
     }
     async getMembershipForUser(userId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
         SELECT * FROM clan_members
         WHERE user_id = $1 AND status = 'active'
         LIMIT 1
@@ -183,6 +179,5 @@ class ClanMembershipService {
         };
     }
 }
-exports.ClanMembershipService = ClanMembershipService;
-exports.clanMembershipService = new ClanMembershipService();
+export const clanMembershipService = new ClanMembershipService();
 //# sourceMappingURL=clanMembershipService.js.map

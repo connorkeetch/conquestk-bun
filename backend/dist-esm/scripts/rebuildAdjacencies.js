@@ -1,12 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_path_1 = __importDefault(require("node:path"));
-const dotenv_1 = __importDefault(require("dotenv"));
-const logger_js_1 = require("../utils/logger.js");
-dotenv_1.default.config({ path: node_path_1.default.resolve(process.cwd(), '.env') });
+import path from 'node:path';
+import dotenv from 'dotenv';
+import { logger } from '../utils/logger.js';
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const pick = (...candidates) => {
     for (const c of candidates)
         if (c?.trim())
@@ -16,14 +11,14 @@ const pick = (...candidates) => {
 async function run() {
     const mapId = process.argv[2];
     if (!mapId) {
-        logger_js_1.logger.error('Usage: ts-node src/scripts/rebuildAdjacencies.ts <mapId>');
+        logger.error('Usage: ts-node src/scripts/rebuildAdjacencies.ts <mapId>');
         process.exit(1);
     }
     const { query } = (await import('../config/database.js'));
     const result = await query('SELECT id, name, metadata FROM maps WHERE id = $1', [mapId]);
     const row = result.rows[0];
     if (!row) {
-        logger_js_1.logger.error('Map not found', { mapId });
+        logger.error('Map not found', { mapId });
         process.exit(1);
     }
     const metadata = (() => {
@@ -43,7 +38,7 @@ async function run() {
     const territories = Array.isArray(metadata.territories) ? metadata.territories : [];
     const adjacencies = Array.isArray(metadata.adjacencies) ? metadata.adjacencies : [];
     if (territories.length === 0) {
-        logger_js_1.logger.error('No territories in metadata; cannot rebuild adjacencies');
+        logger.error('No territories in metadata; cannot rebuild adjacencies');
         process.exit(1);
     }
     const idToName = new Map();
@@ -90,17 +85,17 @@ async function run() {
                 addPair(from, c);
         }
     }
-    logger_js_1.logger.info(`Rebuilding adjacencies for ${row.name}: ${pairs.length} directed edges`);
+    logger.info(`Rebuilding adjacencies for ${row.name}: ${pairs.length} directed edges`);
     await query('DELETE FROM territory_adjacencies WHERE map_id = $1', [mapId]);
     for (const { from, to } of pairs) {
         await query(`INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
        VALUES ($1,$2,$3)
        ON CONFLICT (map_id, territory_from, territory_to) DO NOTHING`, [mapId, from, to]);
     }
-    logger_js_1.logger.info('Adjacencies rebuilt successfully');
+    logger.info('Adjacencies rebuilt successfully');
 }
 run().catch((err) => {
-    logger_js_1.logger.error('Failed to rebuild adjacencies', err);
+    logger.error('Failed to rebuild adjacencies', err);
     process.exit(1);
 });
 //# sourceMappingURL=rebuildAdjacencies.js.map

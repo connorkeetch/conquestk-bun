@@ -1,36 +1,16 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConversationError = exports.MAX_GROUP_MEMBERS = exports.MAX_MESSAGE_LENGTH = void 0;
-exports.ensureDirectConversation = ensureDirectConversation;
-exports.createGroupConversation = createGroupConversation;
-exports.addMembersToConversation = addMembersToConversation;
-exports.ensureGameConversation = ensureGameConversation;
-exports.ensureClanConversation = ensureClanConversation;
-exports.ensureTeamConversation = ensureTeamConversation;
-exports.leaveConversation = leaveConversation;
-exports.removeConversationMember = removeConversationMember;
-exports.updateConversationMemberRole = updateConversationMemberRole;
-exports.setConversationArchived = setConversationArchived;
-exports.sendMessage = sendMessage;
-exports.listMessages = listMessages;
-exports.markConversationRead = markConversationRead;
-exports.getConversationDetail = getConversationDetail;
-exports.getUnreadSummary = getUnreadSummary;
-exports.listConversationsForUser = listConversationsForUser;
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("../utils/logger.js");
-const messagingPolicyService_js_1 = require("./messagingPolicyService.js");
-const socketRegistry_js_1 = require("./socketRegistry.js");
-exports.MAX_MESSAGE_LENGTH = 2000;
-exports.MAX_GROUP_MEMBERS = 50;
-class ConversationError extends Error {
+import { query, transaction } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+import { assertCanInviteToGroup, assertCanSendDirectMessage, assertCanStartDirectConversation, MessagingPolicyError, } from './messagingPolicyService.js';
+import { tryGetSocketServer } from './socketRegistry.js';
+export const MAX_MESSAGE_LENGTH = 2000;
+export const MAX_GROUP_MEMBERS = 50;
+export class ConversationError extends Error {
     constructor(code, message) {
         super(message);
         this.name = 'ConversationError';
         this.code = code;
     }
 }
-exports.ConversationError = ConversationError;
 const CONVERSATION_COLUMNS = `
   id,
   kind,
@@ -69,7 +49,7 @@ const mapMessageRow = (row) => ({
     shadowMuted: row.shadow_muted ?? false,
 });
 const getConversationMemberRoles = async (conversationId) => {
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT cm.user_id, cm.role, cm.joined_at, cm.shadow_muted, u.username
     FROM conversation_members cm
     JOIN users u ON u.id = cm.user_id
@@ -93,7 +73,7 @@ const getConversationMemberRolesBulk = async (conversationIds) => {
     for (const id of uniqueIds) {
         memberMap.set(id, []);
     }
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT
       cm.conversation_id,
       cm.user_id,
@@ -134,13 +114,13 @@ const buildConversationDescriptor = async (conversation, memberRolesOverride) =>
     };
 };
 const handlePolicyError = (error) => {
-    if (error instanceof messagingPolicyService_js_1.MessagingPolicyError) {
+    if (error instanceof MessagingPolicyError) {
         throw new ConversationError(error.code, error.message);
     }
     throw error;
 };
 const getDirectConversation = async (userA, userB) => {
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT ${CONVERSATION_COLUMNS}
     FROM conversations c
     WHERE c.kind = 'direct'
@@ -168,7 +148,7 @@ const insertConversationMember = async (client, conversationId, userId, role) =>
 const syncConversationMembers = async (conversationId, desiredUserIds, ownerUserId) => {
     const uniqueDesired = Array.from(new Set(desiredUserIds.filter((id) => typeof id === 'string')));
     const desiredSet = new Set(uniqueDesired);
-    const existingResult = await (0, database_js_1.query)(`
+    const existingResult = await query(`
     SELECT user_id, role
     FROM conversation_members
     WHERE conversation_id = $1
@@ -184,7 +164,7 @@ const syncConversationMembers = async (conversationId, desiredUserIds, ownerUser
     if (toAdd.length === 0 && toRemove.length === 0) {
         return { added: [], removed: [] };
     }
-    await (0, database_js_1.transaction)(async (client) => {
+    await transaction(async (client) => {
         for (const userId of toAdd) {
             await insertConversationMember(client, conversationId, userId, 'member');
         }
@@ -204,12 +184,12 @@ const syncConversationMembers = async (conversationId, desiredUserIds, ownerUser
     });
     return { added: toAdd, removed: toRemove };
 };
-async function ensureDirectConversation(initiatorId, targetUserId) {
+export async function ensureDirectConversation(initiatorId, targetUserId) {
     try {
-        await (0, messagingPolicyService_js_1.assertCanStartDirectConversation)(initiatorId, targetUserId);
+        await assertCanStartDirectConversation(initiatorId, targetUserId);
     }
     catch (error) {
-        if (error instanceof messagingPolicyService_js_1.MessagingPolicyError) {
+        if (error instanceof MessagingPolicyError) {
             throw new ConversationError(error.code, error.message);
         }
         throw error;
@@ -219,7 +199,7 @@ async function ensureDirectConversation(initiatorId, targetUserId) {
         return existing;
     }
     try {
-        const conversationRecord = await (0, database_js_1.transaction)(async (client) => {
+        const conversationRecord = await transaction(async (client) => {
             const conversationResult = await client.query(`
         INSERT INTO conversations (kind, created_by, metadata)
         VALUES ('direct', $1, '{}'::jsonb)
@@ -234,7 +214,7 @@ async function ensureDirectConversation(initiatorId, targetUserId) {
         return buildConversationDescriptor(conversationRecord);
     }
     catch (error) {
-        logger_js_1.logger.error('Failed to create direct conversation', { initiatorId, targetUserId, error });
+        logger.error('Failed to create direct conversation', { initiatorId, targetUserId, error });
         throw error;
     }
 }
@@ -260,7 +240,7 @@ const normalizeMetadata = (metadata) => {
         throw new ConversationError('INVALID_METADATA', 'Conversation metadata must be JSON serializable');
     }
 };
-async function createGroupConversation(options) {
+export async function createGroupConversation(options) {
     const { creatorId } = options;
     const title = normalizeGroupTitle(options.title);
     const uniqueMembers = new Set([creatorId]);
@@ -272,20 +252,20 @@ async function createGroupConversation(options) {
     if (uniqueMembers.size < 2) {
         throw new ConversationError('NOT_ENOUGH_MEMBERS', 'Group conversations require at least two members');
     }
-    if (uniqueMembers.size > exports.MAX_GROUP_MEMBERS) {
-        throw new ConversationError('GROUP_LIMIT', `Group conversations are limited to ${exports.MAX_GROUP_MEMBERS} members`);
+    if (uniqueMembers.size > MAX_GROUP_MEMBERS) {
+        throw new ConversationError('GROUP_LIMIT', `Group conversations are limited to ${MAX_GROUP_MEMBERS} members`);
     }
     const invitees = Array.from(uniqueMembers).filter((userId) => userId !== creatorId);
     for (const invitee of invitees) {
         try {
-            await (0, messagingPolicyService_js_1.assertCanInviteToGroup)(creatorId, invitee);
+            await assertCanInviteToGroup(creatorId, invitee);
         }
         catch (error) {
             handlePolicyError(error);
         }
     }
     const metadataJson = normalizeMetadata(options.metadata);
-    const conversationRecord = await (0, database_js_1.transaction)(async (client) => {
+    const conversationRecord = await transaction(async (client) => {
         const conversationResult = await client.query(`
       INSERT INTO conversations (kind, title, created_by, metadata)
       VALUES ('group', $1, $2, $3::jsonb)
@@ -303,7 +283,7 @@ async function createGroupConversation(options) {
     emitConversationCreatedEvent(descriptor);
     return descriptor;
 }
-async function addMembersToConversation(options) {
+export async function addMembersToConversation(options) {
     const { actorId, conversationId } = options;
     const requestedIds = Array.from(new Set((options.memberIds ?? []).filter((id) => typeof id === 'string' && id && id !== actorId)));
     if (requestedIds.length === 0) {
@@ -323,18 +303,18 @@ async function addMembersToConversation(options) {
     if (newMembers.length === 0) {
         return [];
     }
-    if (existingMembers.length + newMembers.length > exports.MAX_GROUP_MEMBERS) {
-        throw new ConversationError('GROUP_LIMIT', `Group conversations are limited to ${exports.MAX_GROUP_MEMBERS} members`);
+    if (existingMembers.length + newMembers.length > MAX_GROUP_MEMBERS) {
+        throw new ConversationError('GROUP_LIMIT', `Group conversations are limited to ${MAX_GROUP_MEMBERS} members`);
     }
     for (const userId of newMembers) {
         try {
-            await (0, messagingPolicyService_js_1.assertCanInviteToGroup)(actorId, userId);
+            await assertCanInviteToGroup(actorId, userId);
         }
         catch (error) {
             handlePolicyError(error);
         }
     }
-    await (0, database_js_1.transaction)(async (client) => {
+    await transaction(async (client) => {
         for (const userId of newMembers) {
             await insertConversationMember(client, conversationId, userId, 'member');
         }
@@ -346,9 +326,9 @@ async function addMembersToConversation(options) {
     emitConversationMembersAddedEvent(conversationId, addedMemberRoles, descriptor.memberIds);
     return addedMemberRoles;
 }
-async function ensureGameConversation(gameId) {
+export async function ensureGameConversation(gameId) {
     const { hostId, name, roomId } = await getGameRoomHost(gameId);
-    const existingResult = await (0, database_js_1.query)(`
+    const existingResult = await query(`
     SELECT ${CONVERSATION_COLUMNS}
     FROM conversations
     WHERE kind = 'game' AND game_id = $1
@@ -358,7 +338,7 @@ async function ensureGameConversation(gameId) {
     if (existingResult.rows.length === 0) {
         const title = name ? `${name} (Game Chat)` : null;
         const metadata = JSON.stringify({ gameId: roomId });
-        conversationRecord = await (0, database_js_1.transaction)(async (client) => {
+        conversationRecord = await transaction(async (client) => {
             const conversationInsert = await client.query(`
         INSERT INTO conversations (kind, title, created_by, metadata, game_id)
         VALUES ('game', $1, $2, $3::jsonb, $4)
@@ -387,18 +367,18 @@ async function ensureGameConversation(gameId) {
     emitConversationUpdatedEvent(descriptor);
     return descriptor;
 }
-async function ensureClanConversation(clanId) {
-    const clanResult = await (0, database_js_1.query)(`SELECT id, owner_user_id, name FROM clans WHERE id = $1 AND deleted_at IS NULL LIMIT 1`, [clanId]);
+export async function ensureClanConversation(clanId) {
+    const clanResult = await query(`SELECT id, owner_user_id, name FROM clans WHERE id = $1 AND deleted_at IS NULL LIMIT 1`, [clanId]);
     const clan = clanResult.rows[0];
     if (!clan) {
         throw new ConversationError('NOT_FOUND', 'Clan not found');
     }
-    const existing = await (0, database_js_1.query)(`SELECT ${CONVERSATION_COLUMNS}, clan_id FROM conversations WHERE clan_id = $1 LIMIT 1`, [clanId]);
+    const existing = await query(`SELECT ${CONVERSATION_COLUMNS}, clan_id FROM conversations WHERE clan_id = $1 LIMIT 1`, [clanId]);
     let conversationRecord;
     if (existing.rows.length === 0) {
         const title = `${clan.name} — Clan Chat`;
         const metadata = JSON.stringify({ clanId });
-        conversationRecord = await (0, database_js_1.transaction)(async (client) => {
+        conversationRecord = await transaction(async (client) => {
             const insert = await client.query(`
           INSERT INTO conversations (kind, title, created_by, metadata, clan_id)
           VALUES ('group', $1, $2, $3::jsonb, $4)
@@ -412,7 +392,7 @@ async function ensureClanConversation(clanId) {
     else {
         conversationRecord = mapConversationRow(existing.rows[0]);
     }
-    const members = await (0, database_js_1.query)(`SELECT user_id FROM clan_members WHERE clan_id = $1 AND status = 'active'`, [clanId]);
+    const members = await query(`SELECT user_id FROM clan_members WHERE clan_id = $1 AND status = 'active'`, [clanId]);
     const desired = new Set(members.rows.map((r) => r.user_id));
     desired.add(clan.owner_user_id);
     const { added, removed } = await syncConversationMembers(conversationRecord.id, Array.from(desired), clan.owner_user_id);
@@ -427,9 +407,9 @@ async function ensureClanConversation(clanId) {
     emitConversationUpdatedEvent(descriptor);
     return descriptor;
 }
-async function ensureTeamConversation(gameId, teamId) {
+export async function ensureTeamConversation(gameId, teamId) {
     const { hostId, name, roomId } = await getGameRoomHost(gameId);
-    const existingResult = await (0, database_js_1.query)(`
+    const existingResult = await query(`
     SELECT ${CONVERSATION_COLUMNS}
     FROM conversations
     WHERE kind = 'team'
@@ -441,7 +421,7 @@ async function ensureTeamConversation(gameId, teamId) {
     if (existingResult.rows.length === 0) {
         const title = name ? `${name} — Team ${teamId}` : `Team ${teamId}`;
         const metadata = JSON.stringify({ gameId: roomId, teamId });
-        conversationRecord = await (0, database_js_1.transaction)(async (client) => {
+        conversationRecord = await transaction(async (client) => {
             const conversationInsert = await client.query(`
         INSERT INTO conversations (kind, title, created_by, metadata, game_id)
         VALUES ('team', $1, $2, $3::jsonb, $4)
@@ -472,12 +452,12 @@ async function ensureTeamConversation(gameId, teamId) {
     emitConversationUpdatedEvent(descriptor);
     return descriptor;
 }
-async function leaveConversation(conversationId, userId) {
+export async function leaveConversation(conversationId, userId) {
     const conversation = await getConversationRow(conversationId);
     if (conversation.kind !== 'group') {
         throw new ConversationError('INVALID_OPERATION', 'Leave is only supported for group conversations');
     }
-    await (0, database_js_1.transaction)(async (client) => {
+    await transaction(async (client) => {
         const membershipResult = await client.query(`
       SELECT user_id, role, joined_at, shadow_muted
       FROM conversation_members
@@ -525,7 +505,7 @@ async function leaveConversation(conversationId, userId) {
     const descriptor = await buildConversationDescriptor(await getConversationRow(conversationId));
     emitConversationMembersRemovedEvent(conversationId, [userId], descriptor.memberIds);
 }
-async function removeConversationMember(options) {
+export async function removeConversationMember(options) {
     const { actorId, conversationId, targetUserId } = options;
     if (actorId === targetUserId) {
         throw new ConversationError('INVALID_OPERATION', 'Use the leave endpoint to remove yourself');
@@ -534,7 +514,7 @@ async function removeConversationMember(options) {
     if (conversation.kind !== 'group') {
         throw new ConversationError('INVALID_OPERATION', 'Remove member is only supported for group conversations');
     }
-    await (0, database_js_1.transaction)(async (client) => {
+    await transaction(async (client) => {
         const actorResult = await client.query(`
       SELECT user_id, role, joined_at, shadow_muted
       FROM conversation_members
@@ -574,12 +554,12 @@ async function removeConversationMember(options) {
     const descriptor = await buildConversationDescriptor(await getConversationRow(conversationId));
     emitConversationMembersRemovedEvent(conversationId, [targetUserId], descriptor.memberIds);
 }
-async function updateConversationMemberRole(options) {
+export async function updateConversationMemberRole(options) {
     const { actorId, conversationId, targetUserId, role } = options;
     if (role !== 'admin' && role !== 'member') {
         throw new ConversationError('INVALID_ROLE', 'Only admin and member roles are supported');
     }
-    await (0, database_js_1.transaction)(async (client) => {
+    await transaction(async (client) => {
         const conversationResult = await client.query(`
       SELECT ${CONVERSATION_COLUMNS}
       FROM conversations
@@ -644,10 +624,10 @@ async function updateConversationMemberRole(options) {
     emitConversationMembersChangedEvent(conversationId, [updatedMember], descriptor.memberIds);
     return updatedMember;
 }
-async function setConversationArchived(options) {
+export async function setConversationArchived(options) {
     const { actorId, conversationId, archived } = options;
     let changed = false;
-    await (0, database_js_1.transaction)(async (client) => {
+    await transaction(async (client) => {
         const conversationResult = await client.query(`
       SELECT ${CONVERSATION_COLUMNS}
       FROM conversations
@@ -691,7 +671,7 @@ async function setConversationArchived(options) {
     return descriptor;
 }
 const ensureMembership = async (conversationId, userId) => {
-    const membershipResult = await (0, database_js_1.query)(`
+    const membershipResult = await query(`
     SELECT user_id, role, joined_at, shadow_muted
     FROM conversation_members
     WHERE conversation_id = $1 AND user_id = $2
@@ -703,7 +683,7 @@ const ensureMembership = async (conversationId, userId) => {
     return { role: row.role, shadowMuted: row.shadow_muted ?? false, joinedAt: row.joined_at };
 };
 const getConversationRow = async (conversationId) => {
-    const result = await (0, database_js_1.query)(`SELECT ${CONVERSATION_COLUMNS} FROM conversations WHERE id = $1`, [conversationId]);
+    const result = await query(`SELECT ${CONVERSATION_COLUMNS} FROM conversations WHERE id = $1`, [conversationId]);
     if (result.rows.length === 0) {
         throw new ConversationError('NOT_FOUND', 'Conversation not found');
     }
@@ -711,7 +691,7 @@ const getConversationRow = async (conversationId) => {
 };
 const resolveConversationAccess = async (conversationId, userId, options = {}) => {
     const conversation = await getConversationRow(conversationId);
-    const membershipResult = await (0, database_js_1.query)(`
+    const membershipResult = await query(`
     SELECT role, shadow_muted, joined_at, is_muted, is_pinned, last_read_message_id, last_read_at
     FROM conversation_members
     WHERE conversation_id = $1 AND user_id = $2
@@ -727,7 +707,7 @@ const resolveConversationAccess = async (conversationId, userId, options = {}) =
         if (!conversation.gameId) {
             throw new ConversationError('NOT_FOUND', 'Game conversation not linked to a room');
         }
-        const privacyResult = await (0, database_js_1.query)('SELECT is_private FROM game_rooms WHERE id = $1', [conversation.gameId]);
+        const privacyResult = await query('SELECT is_private FROM game_rooms WHERE id = $1', [conversation.gameId]);
         const isPrivate = privacyResult.rows[0]?.is_private ?? true;
         if (!isPrivate) {
             return {
@@ -740,7 +720,7 @@ const resolveConversationAccess = async (conversationId, userId, options = {}) =
     throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation');
 };
 const getOtherDirectMember = async (conversationId, senderId) => {
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT user_id
     FROM conversation_members
     WHERE conversation_id = $1 AND user_id <> $2
@@ -756,7 +736,7 @@ const getGameRoomHost = async (gameIdentifier) => {
     const isNumeric = (value) => /^[0-9]+$/.test(value);
     let row;
     if (isUUID(gameIdentifier)) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT id, host_id, name
       FROM game_rooms
       WHERE id = $1::uuid
@@ -767,7 +747,7 @@ const getGameRoomHost = async (gameIdentifier) => {
         row = result.rows[0];
     }
     else if (isNumeric(gameIdentifier)) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT id, host_id, name
       FROM game_rooms
       WHERE room_code = $1::bigint
@@ -783,7 +763,7 @@ const getGameRoomHost = async (gameIdentifier) => {
     return { hostId: row.host_id, name: row.name, roomId: row.id };
 };
 const getActiveRoomPlayers = async (gameId) => {
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT user_id, team_id
     FROM room_players
     WHERE room_id = $1 AND (left_at IS NULL)
@@ -806,7 +786,7 @@ const serializeConversationForEvent = (conversation) => ({
 });
 const emitConversationCreatedEvent = (conversation, recipients) => {
     try {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io) {
             return;
         }
@@ -824,7 +804,7 @@ const emitConversationCreatedEvent = (conversation, recipients) => {
         }
     }
     catch (error) {
-        logger_js_1.logger.warn('Failed to emit conversation.created event', {
+        logger.warn('Failed to emit conversation.created event', {
             conversationId: conversation.id,
             error,
         });
@@ -835,7 +815,7 @@ const emitConversationMembersAddedEvent = (conversationId, addedMembers, recipie
         return;
     }
     try {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io) {
             return;
         }
@@ -848,7 +828,7 @@ const emitConversationMembersAddedEvent = (conversationId, addedMembers, recipie
         }
     }
     catch (error) {
-        logger_js_1.logger.warn('Failed to emit conversation.members.added event', {
+        logger.warn('Failed to emit conversation.members.added event', {
             conversationId,
             error,
         });
@@ -859,7 +839,7 @@ const emitConversationMembersRemovedEvent = (conversationId, removedUserIds, rec
         return;
     }
     try {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io) {
             return;
         }
@@ -872,7 +852,7 @@ const emitConversationMembersRemovedEvent = (conversationId, removedUserIds, rec
         }
     }
     catch (error) {
-        logger_js_1.logger.warn('Failed to emit conversation.members.removed event', {
+        logger.warn('Failed to emit conversation.members.removed event', {
             conversationId,
             error,
         });
@@ -883,7 +863,7 @@ const emitConversationMembersChangedEvent = (conversationId, members, recipients
         return;
     }
     try {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io) {
             return;
         }
@@ -897,7 +877,7 @@ const emitConversationMembersChangedEvent = (conversationId, members, recipients
         }
     }
     catch (error) {
-        logger_js_1.logger.warn('Failed to emit conversation.members.changed event', {
+        logger.warn('Failed to emit conversation.members.changed event', {
             conversationId,
             error,
         });
@@ -905,7 +885,7 @@ const emitConversationMembersChangedEvent = (conversationId, members, recipients
 };
 const emitConversationMessageEvent = (descriptor, message) => {
     try {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io) {
             return;
         }
@@ -925,7 +905,7 @@ const emitConversationMessageEvent = (descriptor, message) => {
         }
     }
     catch (error) {
-        logger_js_1.logger.warn('Failed to emit conversation.message.new event', {
+        logger.warn('Failed to emit conversation.message.new event', {
             conversationId: descriptor.id,
             error,
         });
@@ -933,7 +913,7 @@ const emitConversationMessageEvent = (descriptor, message) => {
 };
 const emitConversationUpdatedEvent = (conversation) => {
     try {
-        const io = (0, socketRegistry_js_1.tryGetSocketServer)();
+        const io = tryGetSocketServer();
         if (!io) {
             return;
         }
@@ -946,19 +926,19 @@ const emitConversationUpdatedEvent = (conversation) => {
         }
     }
     catch (error) {
-        logger_js_1.logger.warn('Failed to emit conversation.updated event', {
+        logger.warn('Failed to emit conversation.updated event', {
             conversationId: conversation.id,
             error,
         });
     }
 };
-async function sendMessage(options) {
+export async function sendMessage(options) {
     const { conversationId, senderId, body, clientMessageId, metadata } = options;
     const trimmed = body?.trim();
     if (!trimmed) {
         throw new ConversationError('EMPTY_MESSAGE', 'Message body is required');
     }
-    if (trimmed.length > exports.MAX_MESSAGE_LENGTH) {
+    if (trimmed.length > MAX_MESSAGE_LENGTH) {
         throw new ConversationError('MESSAGE_TOO_LONG', 'Message exceeds the allowed length');
     }
     const access = await resolveConversationAccess(conversationId, senderId, {
@@ -969,10 +949,10 @@ async function sendMessage(options) {
         const otherMember = await getOtherDirectMember(conversationId, senderId);
         if (otherMember) {
             try {
-                await (0, messagingPolicyService_js_1.assertCanSendDirectMessage)(senderId, otherMember);
+                await assertCanSendDirectMessage(senderId, otherMember);
             }
             catch (error) {
-                if (error instanceof messagingPolicyService_js_1.MessagingPolicyError) {
+                if (error instanceof MessagingPolicyError) {
                     throw new ConversationError(error.code, error.message);
                 }
                 throw error;
@@ -981,7 +961,7 @@ async function sendMessage(options) {
     }
     const descriptor = await buildConversationDescriptor(conversation);
     if (clientMessageId) {
-        const existing = await (0, database_js_1.query)(`
+        const existing = await query(`
       SELECT *
       FROM conversation_messages
       WHERE conversation_id = $1
@@ -995,7 +975,7 @@ async function sendMessage(options) {
     }
     let senderName;
     if (senderId) {
-        const senderResult = await (0, database_js_1.query)(`SELECT username FROM users WHERE id = $1`, [senderId]);
+        const senderResult = await query(`SELECT username FROM users WHERE id = $1`, [senderId]);
         senderName = senderResult.rows[0]?.username;
     }
     const jsonMetadata = {
@@ -1004,14 +984,14 @@ async function sendMessage(options) {
         ...(senderName ? { senderName } : {}),
         ...(access.accessLevel === 'spectator' ? { senderRole: 'spectator' } : {}),
     };
-    const insertResult = await (0, database_js_1.query)(`
+    const insertResult = await query(`
     INSERT INTO conversation_messages (conversation_id, sender_id, body, json_metadata)
     VALUES ($1, $2, $3, $4::jsonb)
     RETURNING *
   `, [conversationId, senderId, trimmed, JSON.stringify(jsonMetadata)]);
     const message = mapMessageRow(insertResult.rows[0]);
     if (access.accessLevel === 'member') {
-        await (0, database_js_1.query)(`
+        await query(`
       UPDATE conversation_members
       SET last_read_message_id = $1,
           last_read_at = NOW()
@@ -1021,7 +1001,7 @@ async function sendMessage(options) {
     emitConversationMessageEvent(descriptor, message);
     return message;
 }
-async function listMessages(conversationId, userId, limit = 50, before) {
+export async function listMessages(conversationId, userId, limit = 50, before) {
     if (limit <= 0 || limit > 100) {
         throw new ConversationError('INVALID_PAGINATION', 'Limit must be between 1 and 100');
     }
@@ -1035,7 +1015,7 @@ async function listMessages(conversationId, userId, limit = 50, before) {
         cursorClause = 'AND id < $2';
     }
     params.push(limit);
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT *
     FROM conversation_messages
     WHERE conversation_id = $1
@@ -1045,14 +1025,14 @@ async function listMessages(conversationId, userId, limit = 50, before) {
   `, params);
     return result.rows.map(mapMessageRow);
 }
-async function markConversationRead(conversationId, userId) {
+export async function markConversationRead(conversationId, userId) {
     const access = await resolveConversationAccess(conversationId, userId, {
         allowSpectatorGameAccess: true,
     });
     if (access.accessLevel !== 'member') {
         return;
     }
-    const latestResult = await (0, database_js_1.query)(`
+    const latestResult = await query(`
     SELECT id, created_at
     FROM conversation_messages
     WHERE conversation_id = $1
@@ -1062,7 +1042,7 @@ async function markConversationRead(conversationId, userId) {
     const latestMessage = latestResult.rows[0] ?? null;
     const lastReadId = latestMessage?.id ?? null;
     const lastReadAt = latestMessage?.created_at ?? new Date();
-    await (0, database_js_1.query)(`
+    await query(`
     UPDATE conversation_members
     SET
       last_read_message_id = $3,
@@ -1071,7 +1051,7 @@ async function markConversationRead(conversationId, userId) {
     WHERE conversation_id = $1 AND user_id = $2
   `, [conversationId, userId, lastReadId, lastReadAt]);
 }
-async function getConversationDetail(conversationId, userId, options = {}) {
+export async function getConversationDetail(conversationId, userId, options = {}) {
     const access = await resolveConversationAccess(conversationId, userId, options);
     const descriptor = await buildConversationDescriptor(access.conversation);
     if (access.accessLevel === 'spectator') {
@@ -1095,7 +1075,7 @@ async function getConversationDetail(conversationId, userId, options = {}) {
         throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation');
     }
     const membershipRow = access.membership;
-    const unreadResult = await (0, database_js_1.query)(`
+    const unreadResult = await query(`
     SELECT COUNT(*)::INT AS count
     FROM conversation_messages
     WHERE conversation_id = $1
@@ -1117,8 +1097,8 @@ async function getConversationDetail(conversationId, userId, options = {}) {
         unreadCount: unreadResult.rows[0]?.count ?? 0,
     };
 }
-async function getUnreadSummary(userId) {
-    const result = await (0, database_js_1.query)(`
+export async function getUnreadSummary(userId) {
+    const result = await query(`
     SELECT
       cm.conversation_id,
       COALESCE(unread.unread_count, 0) AS unread_count
@@ -1136,10 +1116,10 @@ async function getUnreadSummary(userId) {
         unreadCount: Number(row.unread_count ?? 0),
     }));
 }
-async function listConversationsForUser(userId, options = {}) {
+export async function listConversationsForUser(userId, options = {}) {
     const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
     const offset = Math.max(options.offset ?? 0, 0);
-    const result = await (0, database_js_1.query)(`
+    const result = await query(`
     SELECT
       c.id,
       c.kind,
@@ -1223,7 +1203,7 @@ async function listConversationsForUser(userId, options = {}) {
     }
     return entries;
 }
-exports.default = {
+export default {
     ensureDirectConversation,
     createGroupConversation,
     addMembersToConversation,

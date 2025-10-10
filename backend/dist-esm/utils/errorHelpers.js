@@ -1,10 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getErrorCode = exports.getErrorStack = exports.getErrorMessage = exports.toKnownError = void 0;
 const isErrorObject = (value) => {
     return typeof value === 'object' && value !== null;
 };
-const toKnownError = (value) => {
+export const toKnownError = (value) => {
     if (value instanceof Error) {
         return value;
     }
@@ -16,17 +13,13 @@ const toKnownError = (value) => {
     }
     return new Error(String(value));
 };
-exports.toKnownError = toKnownError;
-const getErrorMessage = (value) => {
-    return (0, exports.toKnownError)(value).message;
+export const getErrorMessage = (value) => {
+    return toKnownError(value).message;
 };
-exports.getErrorMessage = getErrorMessage;
-const getErrorStack = (value) => {
-    return (0, exports.toKnownError)(value).stack;
+export const getErrorStack = (value) => {
+    return toKnownError(value).stack;
 };
-exports.getErrorStack = getErrorStack;
-const getErrorCode = (value) => {
-    return (0, exports.toKnownError)(value).code;
+export const getErrorCode = (value) => {
+    return toKnownError(value).code;
 };
-exports.getErrorCode = getErrorCode;
 //# sourceMappingURL=errorHelpers.js.map

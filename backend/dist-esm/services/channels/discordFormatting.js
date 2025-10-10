@@ -1,6 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatDiscordWebhookPayload = formatDiscordWebhookPayload;
 const severityEmojis = {
     info: 'ℹ️',
     warning: '⚠️',
@@ -13,7 +10,7 @@ const severityColours = {
 };
 const MAX_FIELD_VALUE_LENGTH = 1024;
 const MAX_FIELDS = 10;
-function formatDiscordWebhookPayload(event) {
+export function formatDiscordWebhookPayload(event) {
     const emoji = severityEmojis[event.severity] ?? '';
     const colour = severityColours[event.severity] ?? severityColours.info;
     const title = `${emoji ? `${emoji} ` : ''}${event.title}`.trim();

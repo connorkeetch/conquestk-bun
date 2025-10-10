@@ -1,8 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseTags = parseTags;
-exports.parseJsonField = parseJsonField;
-function parseTags(tags) {
+export function parseTags(tags) {
     if (Array.isArray(tags)) {
         return tags.filter((tag) => typeof tag === 'string').map((tag) => tag.trim());
     }
@@ -26,7 +22,7 @@ function parseTags(tags) {
     }
     return [];
 }
-function parseJsonField(field, defaultValue) {
+export function parseJsonField(field, defaultValue) {
     if (!field)
         return defaultValue;
     if (typeof field === 'object' && field !== null) {

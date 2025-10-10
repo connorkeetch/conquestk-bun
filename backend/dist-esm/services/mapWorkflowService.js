@@ -1,20 +1,14 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MapWorkflowService = void 0;
-const node_crypto_1 = require("node:crypto");
-const database_js_1 = require("../config/database.js");
-const imageStorage_js_1 = require("../utils/imageStorage.js");
-const logger_js_1 = require("../utils/logger.js");
-const adminService_js_1 = require("./adminService.js");
-const mapPermissionService_js_1 = require("./mapPermissionService.js");
-const mapService_js_1 = require("./mapService.js");
-const mapStagingService_js_1 = require("./mapStagingService.js");
-const NotificationDispatcher_js_1 = require("./NotificationDispatcher.js");
-const notificationService_js_1 = __importDefault(require("./notificationService.js"));
-const mapWorkflowNotifications_js_1 = require("./notifications/mapWorkflowNotifications.js");
+import { randomUUID } from 'node:crypto';
+import { query } from '../config/database.js';
+import { storeBase64Image } from '../utils/imageStorage.js';
+import { logger } from '../utils/logger.js';
+import { adminService } from './adminService.js';
+import { MapNotFoundError, mapPermissionService } from './mapPermissionService.js';
+import { mapService } from './mapService.js';
+import { mapStagingService } from './mapStagingService.js';
+import { notificationDispatcher } from './NotificationDispatcher.js';
+import notificationService from './notificationService.js';
+import { buildMapWorkflowNotification, } from './notifications/mapWorkflowNotifications.js';
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isRecordOfStringArray = (value) => isRecord(value) &&
     Object.values(value).every((entry) => Array.isArray(entry) && entry.every((id) => typeof id === 'string'));
@@ -103,17 +97,17 @@ const pickFirstFiniteNumber = (candidates) => {
     }
     return null;
 };
-class MapWorkflowService {
+export class MapWorkflowService {
     async saveDraft(userId, draftData) {
         try {
             const existingDraft = draftData.id
-                ? await (0, database_js_1.query)('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
+                ? await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
                     draftData.id,
                     userId,
                 ])
                 : null;
             if (existingDraft?.rows[0]) {
-                const result = await (0, database_js_1.query)(`
+                const result = await query(`
           UPDATE map_drafts 
           SET name = $1, description = $2, map_data = $3, territories = $4, 
               sectors = $5, adjacencies = $6, thumbnail_url = $7,
@@ -147,20 +141,20 @@ class MapWorkflowService {
                 ]);
                 return this.formatDraftRow(result.rows[0]);
             }
-            const quotaCheck = await (0, database_js_1.query)(`SELECT COUNT(*) as count FROM (
+            const quotaCheck = await query(`SELECT COUNT(*) as count FROM (
           SELECT id FROM map_images_staging WHERE user_id = $1 AND is_deleted = FALSE
           UNION ALL
           SELECT id FROM map_drafts WHERE user_id = $1 AND draft_status != 'submitted'
           UNION ALL
           SELECT id FROM map_submissions WHERE user_id = $1 AND review_status = 'pending'
         ) AS items`, [userId]);
-            const userCheck = await (0, database_js_1.query)('SELECT is_admin FROM users WHERE id = $1', [userId]);
+            const userCheck = await query('SELECT is_admin FROM users WHERE id = $1', [userId]);
             const isAdmin = userCheck.rows[0]?.is_admin;
             const currentCount = parseInt(quotaCheck.rows[0]?.count || '0', 10);
             if (!isAdmin && currentCount >= 5) {
                 throw new Error('Quota exceeded: Maximum 5 unpublished maps/images allowed');
             }
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
           INSERT INTO map_drafts (
             user_id, staging_image_id, parent_map_id, name, description, 
             map_data, territories, sectors, adjacencies, thumbnail_url,
@@ -193,13 +187,13 @@ class MapWorkflowService {
             return this.formatDraftRow(result.rows[0]);
         }
         catch (error) {
-            logger_js_1.logger.error('Error saving map draft:', error);
+            logger.error('Error saving map draft:', error);
             throw error;
         }
     }
     async getUserDrafts(userId) {
         try {
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT * FROM map_drafts 
         WHERE user_id = $1 AND draft_status != 'submitted'
         ORDER BY updated_at DESC
@@ -207,38 +201,38 @@ class MapWorkflowService {
             return (result.rows || []).map((row) => this.formatDraftRow(row));
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching user drafts:', error);
+            logger.error('Error fetching user drafts:', error);
             throw error;
         }
     }
     async getDraftById(draftId, userId) {
         try {
-            const result = await (0, database_js_1.query)('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [draftId, userId]);
+            const result = await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [draftId, userId]);
             const draft = result.rows?.[0];
             return draft ? this.formatDraftRow(draft) : null;
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching draft:', error);
+            logger.error('Error fetching draft:', error);
             throw error;
         }
     }
     async publishDraft(draftId, userId) {
         try {
-            const result = await (0, database_js_1.query)('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [draftId, userId]);
+            const result = await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [draftId, userId]);
             const draftRow = result.rows?.[0];
             if (!draftRow) {
                 throw new Error('Draft not found or access denied');
             }
             const draft = this.formatDraftRow(draftRow);
             const mapPayload = await this.buildMapPayloadFromDraft(draft);
-            const createdMap = await mapService_js_1.mapService.createMap(userId, mapPayload);
+            const createdMap = await mapService.createMap(userId, mapPayload);
             if (draft.stagingImageId) {
                 try {
-                    await mapStagingService_js_1.mapStagingService.deleteStagingImage(draft.userId, draft.stagingImageId, true);
+                    await mapStagingService.deleteStagingImage(draft.userId, draft.stagingImageId, true);
                 }
                 catch (assetError) {
                     const message = assetError instanceof Error ? assetError.message : String(assetError);
-                    logger_js_1.logger.warn('Failed to queue staging image for purge after publish', {
+                    logger.warn('Failed to queue staging image for purge after publish', {
                         draftId,
                         stagingImageId: draft.stagingImageId,
                         userId: draft.userId,
@@ -246,7 +240,7 @@ class MapWorkflowService {
                     });
                 }
             }
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE map_drafts
         SET draft_status = 'submitted',
             parent_map_id = $1,
@@ -267,31 +261,31 @@ class MapWorkflowService {
             return createdMap;
         }
         catch (error) {
-            logger_js_1.logger.error('Error publishing draft:', error);
+            logger.error('Error publishing draft:', error);
             throw error;
         }
     }
     async submitForReview(mapId, userId, options = {}) {
         try {
-            await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, {
+            await mapPermissionService.assertCanEditMap(mapId, {
                 userId,
                 isAdmin: options.isAdmin,
             });
-            const updateResult = await (0, database_js_1.query)(`
+            const updateResult = await query(`
         UPDATE maps 
         SET status = 'pending_review', submitted_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [mapId]);
             if (updateResult.rowCount === 0) {
-                throw new mapPermissionService_js_1.MapNotFoundError();
+                throw new MapNotFoundError();
             }
-            const v = await (0, database_js_1.query)(`SELECT id FROM map_versions WHERE map_id = $1 ORDER BY version_number DESC, created_at DESC LIMIT 1`, [mapId]);
+            const v = await query(`SELECT id FROM map_versions WHERE map_id = $1 ORDER BY version_number DESC, created_at DESC LIMIT 1`, [mapId]);
             const versionId = v.rows[0]?.id;
             if (versionId) {
-                await (0, database_js_1.query)(`INSERT INTO map_approval_requests (version_id, requester_id, submission_notes, priority_level)
+                await query(`INSERT INTO map_approval_requests (version_id, requester_id, submission_notes, priority_level)
            VALUES ($1, $2, $3, 'normal')`, [versionId, userId, 'Submitted via mapWorkflowService']);
             }
-            const mapNameResult = await (0, database_js_1.query)('SELECT name FROM maps WHERE id = $1', [
+            const mapNameResult = await query('SELECT name FROM maps WHERE id = $1', [
                 mapId,
             ]);
             const submittedMapName = mapNameResult.rows[0]?.name ?? 'Submitted map';
@@ -304,7 +298,7 @@ class MapWorkflowService {
             await this.logMapAction(mapId, 'submitted', userId);
         }
         catch (error) {
-            logger_js_1.logger.error('Error submitting map for review:', error);
+            logger.error('Error submitting map for review:', error);
             throw error;
         }
     }
@@ -313,13 +307,13 @@ class MapWorkflowService {
         try {
             const beforeState = await this.getMapModerationSnapshot(mapId);
             if (!beforeState) {
-                throw new mapPermissionService_js_1.MapNotFoundError();
+                throw new MapNotFoundError();
             }
-            const validation = await mapService_js_1.mapService.validateMapPlayable(mapId);
+            const validation = await mapService.validateMapPlayable(mapId);
             if (!validation.isValid) {
                 throw new Error(`Map cannot be approved; playability validation failed: ${validation.errors.join('; ')}`);
             }
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE maps 
         SET status = 'approved', 
             is_public = TRUE,
@@ -328,7 +322,7 @@ class MapWorkflowService {
             review_notes = $2
         WHERE id = $3
       `, [adminId, notes ?? null, mapId]);
-            await (0, database_js_1.query)(`
+            await query(`
           UPDATE map_approval_requests ar
           SET decision = 'approved', moderator_feedback = COALESCE($2, moderator_feedback), review_completed_at = CURRENT_TIMESTAMP, assigned_moderator_id = COALESCE(assigned_moderator_id, $1)
           FROM map_versions v
@@ -336,17 +330,17 @@ class MapWorkflowService {
         `, [adminId, notes ?? null, mapId]);
             await this.logMapAction(mapId, 'approved', adminId, notes ? { notes } : undefined);
             const afterState = await this.getMapModerationSnapshot(mapId);
-            await adminService_js_1.adminService.logAdminAction(adminId, 'map_approved', {
+            await adminService.logAdminAction(adminId, 'map_approved', {
                 mapId,
                 notes,
                 before: beforeState,
                 after: afterState,
             }, 'map', mapId, auditContext?.ipAddress, auditContext?.userAgent);
-            const mapInfo = await (0, database_js_1.query)('SELECT creator_id, name FROM maps WHERE id = $1', [mapId]);
+            const mapInfo = await query('SELECT creator_id, name FROM maps WHERE id = $1', [mapId]);
             const creatorId = mapInfo.rows?.[0]?.creator_id;
             const mapName = mapInfo.rows?.[0]?.name ?? 'Your map';
             if (creatorId) {
-                await notificationService_js_1.default.createInAppNotification(creatorId, {
+                await notificationService.createInAppNotification(creatorId, {
                     type: 'map_approved',
                     title: 'Map approved',
                     message: `"${mapName}" has been approved and is ready for players.`,
@@ -371,7 +365,7 @@ class MapWorkflowService {
             });
         }
         catch (error) {
-            logger_js_1.logger.error('Error approving map:', error);
+            logger.error('Error approving map:', error);
             throw error;
         }
     }
@@ -383,9 +377,9 @@ class MapWorkflowService {
         try {
             const beforeState = await this.getMapModerationSnapshot(mapId);
             if (!beforeState) {
-                throw new mapPermissionService_js_1.MapNotFoundError();
+                throw new MapNotFoundError();
             }
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE maps 
         SET status = 'rejected', 
             reviewed_at = CURRENT_TIMESTAMP,
@@ -393,7 +387,7 @@ class MapWorkflowService {
             rejection_reason = $2
         WHERE id = $3
       `, [adminId, reason, mapId]);
-            await (0, database_js_1.query)(`
+            await query(`
           UPDATE map_approval_requests ar
           SET decision = 'rejected', moderator_feedback = $2, review_completed_at = CURRENT_TIMESTAMP, assigned_moderator_id = COALESCE(assigned_moderator_id, $1)
           FROM map_versions v
@@ -401,17 +395,17 @@ class MapWorkflowService {
         `, [adminId, reason, mapId]);
             await this.logMapAction(mapId, 'rejected', adminId, { reason });
             const afterState = await this.getMapModerationSnapshot(mapId);
-            await adminService_js_1.adminService.logAdminAction(adminId, 'map_rejected', {
+            await adminService.logAdminAction(adminId, 'map_rejected', {
                 mapId,
                 reason,
                 before: beforeState,
                 after: afterState,
             }, 'map', mapId, auditContext?.ipAddress, auditContext?.userAgent);
-            const mapInfo = await (0, database_js_1.query)('SELECT creator_id, name FROM maps WHERE id = $1', [mapId]);
+            const mapInfo = await query('SELECT creator_id, name FROM maps WHERE id = $1', [mapId]);
             const creatorId = mapInfo.rows?.[0]?.creator_id;
             const mapName = mapInfo.rows?.[0]?.name ?? 'Your map';
             if (creatorId) {
-                await notificationService_js_1.default.createInAppNotification(creatorId, {
+                await notificationService.createInAppNotification(creatorId, {
                     type: 'map_rejected',
                     title: 'Map requires changes',
                     message: `"${mapName}" was rejected: ${reason}`,
@@ -436,20 +430,20 @@ class MapWorkflowService {
             });
         }
         catch (error) {
-            logger_js_1.logger.error('Error rejecting map:', error);
+            logger.error('Error rejecting map:', error);
             throw error;
         }
     }
     async editMap(mapId, userId, isAdmin) {
         try {
-            const map = await (0, database_js_1.query)('SELECT * FROM maps WHERE id = $1', [mapId]);
+            const map = await query('SELECT * FROM maps WHERE id = $1', [mapId]);
             const mapData = map.rows?.[0];
             if (!mapData)
                 throw new Error('Map not found');
             if (mapData.creator_id !== userId && !isAdmin) {
                 throw new Error('Unauthorized to edit this map');
             }
-            await (0, database_js_1.query)(`
+            await query(`
         INSERT INTO map_versions (map_id, version_number, data, territories, sectors, adjacencies, change_summary, changed_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
@@ -462,9 +456,9 @@ class MapWorkflowService {
                 'Version before edit',
                 userId,
             ]);
-            await (0, database_js_1.query)('UPDATE maps SET version = version + 1 WHERE id = $1', [mapId]);
+            await query('UPDATE maps SET version = version + 1 WHERE id = $1', [mapId]);
             if (!isAdmin && mapData.status === 'approved') {
-                await (0, database_js_1.query)(`
+                await query(`
           UPDATE maps 
           SET status = 'pending_review', 
               submitted_at = CURRENT_TIMESTAMP,
@@ -476,13 +470,13 @@ class MapWorkflowService {
             await this.logMapAction(mapId, 'edited', userId);
         }
         catch (error) {
-            logger_js_1.logger.error('Error editing map:', error);
+            logger.error('Error editing map:', error);
             throw error;
         }
     }
     async getPendingReviews() {
         try {
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT 
           ar.id,
           v.map_id,
@@ -516,7 +510,7 @@ class MapWorkflowService {
             }));
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching pending reviews:', error);
+            logger.error('Error fetching pending reviews:', error);
             throw error;
         }
     }
@@ -532,24 +526,24 @@ class MapWorkflowService {
                 sql += ' AND is_read = FALSE';
             }
             sql += ' ORDER BY created_at DESC LIMIT 50';
-            const result = await (0, database_js_1.query)(sql, params);
+            const result = await query(sql, params);
             return result.rows || [];
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching admin notifications:', error);
+            logger.error('Error fetching admin notifications:', error);
             throw error;
         }
     }
     async markNotificationRead(notificationId, adminId) {
         try {
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE admin_notifications 
         SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
         WHERE id = $1 AND (admin_id = $2 OR admin_id IS NULL)
       `, [notificationId, adminId]);
         }
         catch (error) {
-            logger_js_1.logger.error('Error marking notification as read:', error);
+            logger.error('Error marking notification as read:', error);
             throw error;
         }
     }
@@ -561,7 +555,7 @@ class MapWorkflowService {
                 return JSON.parse(value);
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to parse JSON field', { value, error });
+                logger.warn('Failed to parse JSON field', { value, error });
                 return fallback;
             }
         }
@@ -751,7 +745,7 @@ class MapWorkflowService {
         const imagePayload = isRecord(data.image) ? data.image : null;
         const imagePayloadData = imagePayload ? asString(imagePayload.data) : undefined;
         if (imagePayload && imagePayloadData) {
-            const stored = await (0, imageStorage_js_1.storeBase64Image)(imagePayloadData, {
+            const stored = await storeBase64Image(imagePayloadData, {
                 mimeType: asString(imagePayload.mimeType),
                 preferredFilename: asString(imagePayload.filename),
             });
@@ -762,7 +756,7 @@ class MapWorkflowService {
         else if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
             const parsed = this.parseDataUrl(imageUrl);
             if (parsed) {
-                const stored = await (0, imageStorage_js_1.storeBase64Image)(parsed.data, {
+                const stored = await storeBase64Image(parsed.data, {
                     mimeType: parsed.mimeType,
                 });
                 imageUrl = stored.relativeUrl;
@@ -836,42 +830,42 @@ class MapWorkflowService {
         try {
             const beforeState = await this.getMapModerationSnapshot(mapId);
             if (!beforeState) {
-                throw new mapPermissionService_js_1.MapNotFoundError();
+                throw new MapNotFoundError();
             }
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE maps 
         SET status = 'archived', updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [mapId]);
             await this.logMapAction(mapId, 'archived', adminId);
             const afterState = await this.getMapModerationSnapshot(mapId);
-            await adminService_js_1.adminService.logAdminAction(adminId, 'map_archived', {
+            await adminService.logAdminAction(adminId, 'map_archived', {
                 mapId,
                 before: beforeState,
                 after: afterState,
             }, 'map', mapId, options.auditContext?.ipAddress, options.auditContext?.userAgent);
         }
         catch (error) {
-            logger_js_1.logger.error('Error archiving map:', error);
+            logger.error('Error archiving map:', error);
             throw error;
         }
     }
     async toggleFeatured(mapId, adminId, options = {}) {
         try {
-            const result = await (0, database_js_1.query)('SELECT is_featured FROM maps WHERE id = $1', [mapId]);
+            const result = await query('SELECT is_featured FROM maps WHERE id = $1', [mapId]);
             const row = result.rows?.[0];
             if (!row) {
-                throw new mapPermissionService_js_1.MapNotFoundError();
+                throw new MapNotFoundError();
             }
             const isCurrentlyFeatured = Boolean(row.is_featured);
             const nextFeatured = !isCurrentlyFeatured;
-            await (0, database_js_1.query)(`
+            await query(`
         UPDATE maps 
         SET is_featured = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [nextFeatured, mapId]);
             await this.logMapAction(mapId, nextFeatured ? 'featured' : 'unfeatured', adminId);
-            await adminService_js_1.adminService.logAdminAction(adminId, nextFeatured ? 'map_featured' : 'map_unfeatured', {
+            await adminService.logAdminAction(adminId, nextFeatured ? 'map_featured' : 'map_unfeatured', {
                 mapId,
                 before: { is_featured: isCurrentlyFeatured },
                 after: { is_featured: nextFeatured },
@@ -879,20 +873,20 @@ class MapWorkflowService {
             return { isFeatured: nextFeatured };
         }
         catch (error) {
-            logger_js_1.logger.error('Error toggling map featured status:', error);
+            logger.error('Error toggling map featured status:', error);
             throw error;
         }
     }
     async dispatchMapWorkflowNotification(input) {
         try {
-            const event = (0, mapWorkflowNotifications_js_1.buildMapWorkflowNotification)(input);
-            await NotificationDispatcher_js_1.notificationDispatcher.dispatch({
+            const event = buildMapWorkflowNotification(input);
+            await notificationDispatcher.dispatch({
                 ...event,
-                id: (0, node_crypto_1.randomUUID)(),
+                id: randomUUID(),
             });
         }
         catch (error) {
-            logger_js_1.logger.error('Error dispatching map workflow notification', {
+            logger.error('Error dispatching map workflow notification', {
                 error,
                 mapId: input.mapId,
                 status: input.status,
@@ -902,7 +896,7 @@ class MapWorkflowService {
     async createAdminNotification(notification) {
         try {
             const metadata = (notification.data ?? {});
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         INSERT INTO admin_notifications (admin_id, type, title, message, data)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id, admin_id, created_at
@@ -919,9 +913,9 @@ class MapWorkflowService {
             }
             const recipients = notification.adminId
                 ? [notification.adminId]
-                : await adminService_js_1.adminService.getActiveAdminUserIds();
+                : await adminService.getActiveAdminUserIds();
             if (recipients.length > 0) {
-                await Promise.allSettled(recipients.map((userId) => notificationService_js_1.default.createInAppNotification(userId, {
+                await Promise.allSettled(recipients.map((userId) => notificationService.createInAppNotification(userId, {
                     type: notification.type ?? 'admin',
                     title: notification.title ?? 'Admin notification',
                     message: notification.message ?? 'You have a new admin notification.',
@@ -932,25 +926,25 @@ class MapWorkflowService {
                     sendPush: false,
                 })));
             }
-            logger_js_1.logger.info('Admin notification created:', notification.title);
+            logger.info('Admin notification created:', notification.title);
         }
         catch (error) {
-            logger_js_1.logger.error('Error creating admin notification:', error);
+            logger.error('Error creating admin notification:', error);
         }
     }
     async logMapAction(mapId, action, performedBy, details) {
         try {
-            await (0, database_js_1.query)(`
+            await query(`
         INSERT INTO map_submission_logs (map_id, action, performed_by, details)
         VALUES ($1, $2, $3, $4)
       `, [mapId, action, performedBy, JSON.stringify(details)]);
         }
         catch (error) {
-            logger_js_1.logger.error('Error logging map action:', error);
+            logger.error('Error logging map action:', error);
         }
     }
     async getMapModerationSnapshot(mapId) {
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT status, is_public, reviewed_at, reviewed_by, review_notes, rejection_reason, is_featured
       FROM maps
       WHERE id = $1
@@ -959,7 +953,7 @@ class MapWorkflowService {
     }
     async getMapsByStatus(status) {
         try {
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT 
           m.*,
           u.username as creator_name
@@ -976,13 +970,13 @@ class MapWorkflowService {
             return result.rows || [];
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching maps by status:', error);
+            logger.error('Error fetching maps by status:', error);
             throw error;
         }
     }
     async getMapHistory(mapId) {
         try {
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT 
           msl.*,
           u.username as performed_by_name
@@ -994,11 +988,10 @@ class MapWorkflowService {
             return result.rows || [];
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching map history:', error);
+            logger.error('Error fetching map history:', error);
             throw error;
         }
     }
 }
-exports.MapWorkflowService = MapWorkflowService;
-exports.default = new MapWorkflowService();
+export default new MapWorkflowService();
 //# sourceMappingURL=mapWorkflowService.js.map

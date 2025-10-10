@@ -1,29 +1,25 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const express_1 = require("express");
-const database_js_1 = require("../config/database.js");
-const premium_js_1 = require("../constants/premium.js");
-const auth_js_1 = require("../middleware/auth.js");
-const profileService_js_1 = require("../services/profileService.js");
-const logger_js_1 = require("../utils/logger.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const router = (0, express_1.Router)();
+import bcrypt from 'bcryptjs';
+import { Router } from 'express';
+import { query } from '../config/database.js';
+import { RANKS, getRankForRating } from '@conquestk/shared/constants/ranks';
+import { PREMIUM_COLOR_KEYS } from '../constants/premium.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { profileService } from '../services/profileService.js';
+import { logger } from '../utils/logger.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+const router = Router();
 let ensuredUserProfileColumns = false;
 const ensureUserProfileColumns = async () => {
     if (ensuredUserProfileColumns)
         return;
     try {
-        await (0, database_js_1.query)('ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT');
-        await (0, database_js_1.query)("ALTER TABLE users ADD COLUMN IF NOT EXISTS tagline TEXT DEFAULT 'Commander of the Conquest Realms'");
-        await (0, database_js_1.query)('ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP');
+        await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT');
+        await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS tagline TEXT DEFAULT 'Commander of the Conquest Realms'");
+        await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP');
         ensuredUserProfileColumns = true;
     }
     catch (error) {
-        logger_js_1.logger.warn('Failed to ensure required user columns exist:', error);
+        logger.warn('Failed to ensure required user columns exist:', error);
     }
 };
 const PLAYER_COLOR_DEFAULT = '#DC2626';
@@ -67,7 +63,7 @@ const normalizePreferredColor = (color) => {
         return PLAYER_COLOR_DEFAULT;
     }
     const trimmed = color.trim();
-    if (premium_js_1.PREMIUM_COLOR_KEYS.has(trimmed)) {
+    if (PREMIUM_COLOR_KEYS.has(trimmed)) {
         return trimmed;
     }
     if (trimmed.startsWith('linear-gradient(')) {
@@ -82,30 +78,25 @@ const normalizePreferredColor = (color) => {
     }
     return PLAYER_COLOR_DEFAULT;
 };
-const CONQUEST_RANKS = [
-    { name: 'Chieftain', minRating: 0, color: '#9CA3AF', insignia: '🛡️' },
-    { name: 'Warlord', minRating: 600, color: '#92400E', insignia: '⚔️' },
-    { name: 'Raider King', minRating: 800, color: '#B22222', insignia: '⚓' },
-    { name: 'Sultan', minRating: 1000, color: '#10B981', insignia: '☪️' },
-    { name: 'Caesar', minRating: 1200, color: '#C0C0C0', insignia: '🦅' },
-    { name: 'Khan', minRating: 1400, color: '#9B111E', insignia: '🏹' },
-    { name: 'Emperor', minRating: 1600, color: '#2563EB', insignia: '👑' },
-    { name: 'The Great King', minRating: 1800, color: '#FFD700', insignia: '☀️' },
-    { name: 'Overlord', minRating: 2000, color: '#000000', insignia: '💀' },
-    {
-        name: 'Worldbreaker',
-        minRating: 2200,
-        color: 'linear-gradient(90deg, #EF4444, #F59E0B)',
-        insignia: '☄️',
-    },
-];
+const RANK_META = {
+    Chieftain: { color: '#9CA3AF', insignia: '🛡️' },
+    Warlord: { color: '#92400E', insignia: '⚔️' },
+    'Raider King': { color: '#B22222', insignia: '⚓' },
+    Sultan: { color: '#10B981', insignia: '☪️' },
+    Caesar: { color: '#C0C0C0', insignia: '🦅' },
+    Khan: { color: '#9B111E', insignia: '🏹' },
+    Emperor: { color: '#2563EB', insignia: '👑' },
+    'The Great King': { color: '#FFD700', insignia: '☀️' },
+    Overlord: { color: '#000000', insignia: '💀' },
+    Worldbreaker: { color: 'linear-gradient(90deg, #EF4444, #F59E0B)', insignia: '☄️' },
+};
 function getConquestRank(skillRating) {
-    for (let i = CONQUEST_RANKS.length - 1; i >= 0; i--) {
-        if (skillRating >= CONQUEST_RANKS[i].minRating) {
-            return CONQUEST_RANKS[i];
-        }
-    }
-    return CONQUEST_RANKS[0];
+    const rank = getRankForRating(skillRating);
+    return {
+        ...rank,
+        color: RANK_META[rank.name]?.color ?? '#9CA3AF',
+        insignia: RANK_META[rank.name]?.insignia ?? '🏅',
+    };
 }
 router.get('/:username/history', async (req, res) => {
     const { username } = req.params;
@@ -114,7 +105,7 @@ router.get('/:username/history', async (req, res) => {
     const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 50) : 20;
     const offset = Number.isFinite(rawOffset) ? Math.max(rawOffset, 0) : 0;
     try {
-        const userResult = await (0, database_js_1.query)(`
+        const userResult = await query(`
       SELECT id
       FROM users
       WHERE username = $1 AND deleted_at IS NULL
@@ -123,7 +114,7 @@ router.get('/:username/history', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         const userId = userResult.rows[0].id;
-        const matches = await profileService_js_1.profileService.getGameHistory(userId, limit, offset);
+        const matches = await profileService.getGameHistory(userId, limit, offset);
         return res.json({
             matches,
             pagination: {
@@ -135,7 +126,7 @@ router.get('/:username/history', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch match history', 500, { username });
+        handleRouteError(error, req, 'Failed to fetch match history', 500, { username });
         return res.status(500).json({ error: 'Failed to fetch match history' });
     }
 });
@@ -143,7 +134,7 @@ router.get('/:username/profile', async (req, res) => {
     const { username } = req.params;
     try {
         await ensureUserProfileColumns();
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT
         u.id, u.username, u.created_at, u.email_verified, u.bio, u.tagline,
         u.skill_rating,
@@ -165,7 +156,7 @@ router.get('/:username/profile', async (req, res) => {
         const user = result.rows[0];
         const elo = user.skill_rating || 800;
         const rank = getConquestRank(elo);
-        const nextRank = CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null;
+        const nextRank = RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null;
         const gamesPlayed = user.games_played || 0;
         const wins = user.games_won || 0;
         const recordedLosses = user.games_lost ?? null;
@@ -204,15 +195,15 @@ router.get('/:username/profile', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch profile', 500, { username });
+        handleRouteError(error, req, 'Failed to fetch profile', 500, { username });
         return res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
-router.get('/profile', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/profile', authenticateToken, async (req, res) => {
     try {
         const userId = req.userId;
         await ensureUserProfileColumns();
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT
         u.id, u.username, u.email, u.created_at, u.email_verified, u.bio, u.tagline,
         u.skill_rating,
@@ -234,7 +225,7 @@ router.get('/profile', auth_js_1.authenticateToken, async (req, res) => {
         const user = result.rows[0];
         const elo = user.skill_rating || 800;
         const rank = getConquestRank(elo);
-        const nextRank = CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null;
+        const nextRank = RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null;
         const gamesPlayed = user.games_played || 0;
         const wins = user.games_won || 0;
         const recordedLosses = user.games_lost ?? null;
@@ -274,11 +265,11 @@ router.get('/profile', auth_js_1.authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch profile', 500, { userId: req.userId });
+        handleRouteError(error, req, 'Failed to fetch profile', 500, { userId: req.userId });
         return res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
-router.post('/check-username', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/check-username', authenticateToken, async (req, res) => {
     try {
         const { username } = req.body;
         const userId = req.userId;
@@ -288,7 +279,7 @@ router.post('/check-username', auth_js_1.authenticateToken, async (req, res) => 
                 error: 'Username must be at least 3 characters',
             });
         }
-        const result = await (0, database_js_1.query)('SELECT id FROM users WHERE username = $1 AND id != $2', [
+        const result = await query('SELECT id FROM users WHERE username = $1 AND id != $2', [
             username.trim(),
             userId,
         ]);
@@ -298,13 +289,13 @@ router.post('/check-username', auth_js_1.authenticateToken, async (req, res) => 
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to check username availability', 500, {
+        handleRouteError(error, req, 'Failed to check username availability', 500, {
             username: req.body?.username,
         });
         return res.status(500).json({ error: 'Failed to check username availability' });
     }
 });
-router.put('/profile', auth_js_1.authenticateToken, async (req, res) => {
+router.put('/profile', authenticateToken, async (req, res) => {
     try {
         const userId = req.userId;
         const { username, email, tagline } = req.body;
@@ -316,7 +307,7 @@ router.put('/profile', auth_js_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Invalid email format' });
         }
         if (username) {
-            const usernameCheck = await (0, database_js_1.query)('SELECT id FROM users WHERE username = $1 AND id != $2', [
+            const usernameCheck = await query('SELECT id FROM users WHERE username = $1 AND id != $2', [
                 username.trim(),
                 userId,
             ]);
@@ -325,7 +316,7 @@ router.put('/profile', auth_js_1.authenticateToken, async (req, res) => {
             }
         }
         if (email) {
-            const emailCheck = await (0, database_js_1.query)('SELECT id FROM users WHERE email = $1 AND id != $2', [
+            const emailCheck = await query('SELECT id FROM users WHERE email = $1 AND id != $2', [
                 email.trim().toLowerCase(),
                 userId,
             ]);
@@ -357,19 +348,19 @@ router.put('/profile', auth_js_1.authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'No fields to update' });
         }
         values.push(userId);
-        await (0, database_js_1.query)(`UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCounter}`, values);
-        const updatedUser = await (0, database_js_1.query)('SELECT id, username, email, created_at FROM users WHERE id = $1', [userId]);
+        await query(`UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCounter}`, values);
+        const updatedUser = await query('SELECT id, username, email, created_at FROM users WHERE id = $1', [userId]);
         return res.json({
             success: true,
             user: updatedUser.rows[0],
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to update profile', 500, { userId: req.userId });
+        handleRouteError(error, req, 'Failed to update profile', 500, { userId: req.userId });
         return res.status(500).json({ error: 'Failed to update profile' });
     }
 });
-router.put('/change-password', auth_js_1.authenticateToken, async (req, res) => {
+router.put('/change-password', authenticateToken, async (req, res) => {
     try {
         const userId = req.userId;
         const { currentPassword, newPassword } = req.body;
@@ -379,32 +370,32 @@ router.put('/change-password', auth_js_1.authenticateToken, async (req, res) => 
         if (newPassword.length < 8) {
             return res.status(400).json({ error: 'New password must be at least 8 characters' });
         }
-        const result = await (0, database_js_1.query)('SELECT password_hash FROM users WHERE id = $1', [userId]);
+        const result = await query('SELECT password_hash FROM users WHERE id = $1', [userId]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const isValidPassword = await bcryptjs_1.default.compare(currentPassword, result.rows[0].password_hash);
+        const isValidPassword = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Current password is incorrect' });
         }
-        const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
-        await (0, database_js_1.query)('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, userId]);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, userId]);
         return res.json({ success: true, message: 'Password updated successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to change password', 500, { userId: req.userId });
+        handleRouteError(error, req, 'Failed to change password', 500, { userId: req.userId });
         return res.status(500).json({ error: 'Failed to change password' });
     }
 });
-exports.default = router;
-router.get('/search', auth_js_1.authenticateToken, async (req, res) => {
+export default router;
+router.get('/search', authenticateToken, async (req, res) => {
     try {
         const raw = (req.query.q ?? req.query.query ?? '').toString().trim();
         const limit = Math.max(1, Math.min(Number(req.query.limit) || 10, 50));
         if (raw.length < 2) {
             return res.status(400).json({ error: 'Query must be at least 2 characters' });
         }
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       SELECT id, username
       FROM users
       WHERE username ILIKE $1
@@ -414,11 +405,11 @@ router.get('/search', auth_js_1.authenticateToken, async (req, res) => {
         return res.json({ users: result.rows });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to search users', 500, { q: req.query?.q });
+        handleRouteError(error, req, 'Failed to search users', 500, { q: req.query?.q });
         return res.status(500).json({ error: 'Failed to search users' });
     }
 });
-router.post('/:reportedUserId/report', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/:reportedUserId/report', authenticateToken, async (req, res) => {
     try {
         const reporterId = req.userId;
         const { reportedUserId } = req.params;
@@ -435,13 +426,13 @@ router.post('/:reportedUserId/report', auth_js_1.authenticateToken, async (req, 
         }
         const desc = typeof description === 'string' ? description.trim() : null;
         const safeDescription = desc && desc.length > 0 ? desc.slice(0, 4000) : null;
-        const target = await (0, database_js_1.query)('SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL', [
+        const target = await query('SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL', [
             reportedUserId,
         ]);
         if ((target.rowCount ?? 0) === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const result = await (0, database_js_1.query)(`
+        const result = await query(`
       INSERT INTO user_reports (reporter_id, reported_user_id, reason, description, evidence, status)
       VALUES ($1, $2, $3, $4, '{}', 'pending')
       RETURNING id, reporter_id, reported_user_id, reason, description, status, created_at
@@ -449,7 +440,7 @@ router.post('/:reportedUserId/report', auth_js_1.authenticateToken, async (req, 
         return res.status(201).json({ report: result.rows[0] });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to submit user report', 500, {
+        handleRouteError(error, req, 'Failed to submit user report', 500, {
             reportedUserId: req.params?.reportedUserId,
         });
         return res.status(500).json({ error: 'Failed to submit report' });

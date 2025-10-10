@@ -1,16 +1,10 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.performanceTestingService = exports.PerformanceTestingService = void 0;
-const axios_1 = __importDefault(require("axios"));
-const logger_js_1 = require("../utils/logger.js");
-const databaseClusterService_js_1 = require("./databaseClusterService.js");
-const performanceMonitorService_js_1 = require("./performanceMonitorService.js");
-const redisClusterService_js_1 = require("./redisClusterService.js");
-const scalingService_js_1 = require("./scalingService.js");
-class PerformanceTestingService {
+import axios from 'axios';
+import { logger } from '../utils/logger.js';
+import { databaseClusterService } from './databaseClusterService.js';
+import { performanceMonitorService } from './performanceMonitorService.js';
+import { redisClusterService } from './redisClusterService.js';
+import { scalingService } from './scalingService.js';
+export class PerformanceTestingService {
     constructor() {
         this.activeTests = new Map();
         this.benchmarkHistory = [];
@@ -32,7 +26,7 @@ class PerformanceTestingService {
                 { path: '/api/games', method: 'GET', weight: 3 },
                 { path: '/api/games/:id', method: 'GET', weight: 2 },
                 { path: '/api/users/me', method: 'GET', weight: 2 },
-                { path: '/api/leaderboard', method: 'GET', weight: 1 },
+                { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 1 },
             ],
         });
         this.testScenarios.set('api_peak_load', {
@@ -55,7 +49,7 @@ class PerformanceTestingService {
                     payload: { action: 'attack', from: 1, to: 2 },
                 },
                 { path: '/api/users/me', method: 'GET', weight: 3 },
-                { path: '/api/leaderboard', method: 'GET', weight: 2 },
+                { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 2 },
             ],
         });
         this.testScenarios.set('database_stress', {
@@ -66,7 +60,7 @@ class PerformanceTestingService {
                 { path: '/api/games/:id', method: 'GET', weight: 10 },
                 { path: '/api/users/:id/stats', method: 'GET', weight: 5 },
                 { path: '/api/games/:id/history', method: 'GET', weight: 3 },
-                { path: '/api/leaderboard', method: 'GET', weight: 2 },
+                { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 2 },
             ],
         });
         this.testScenarios.set('cache_performance', {
@@ -75,12 +69,12 @@ class PerformanceTestingService {
             rampUp: 15,
             endpoints: [
                 { path: '/api/games', method: 'GET', weight: 8 },
-                { path: '/api/leaderboard', method: 'GET', weight: 5 },
+                { path: '/api/skills/leaderboards/skill', method: 'GET', weight: 5 },
                 { path: '/api/maps', method: 'GET', weight: 3 },
                 { path: '/api/users/search?q=test', method: 'GET', weight: 2 },
             ],
         });
-        logger_js_1.logger.info('✅ Performance test scenarios initialized', {
+        logger.info('✅ Performance test scenarios initialized', {
             scenarios: this.testScenarios.size,
         });
     }
@@ -90,7 +84,7 @@ class PerformanceTestingService {
             throw new Error(`Unknown test scenario: ${scenarioName}`);
         }
         const testId = `load-test-${scenarioName}-${Date.now()}`;
-        logger_js_1.logger.info('🚀 Starting load test', {
+        logger.info('🚀 Starting load test', {
             testId,
             scenario: scenarioName,
             duration: config.duration,
@@ -111,7 +105,7 @@ class PerformanceTestingService {
             };
             this.benchmarkHistory.push(benchmarkResult);
             this.activeTests.delete(testId);
-            logger_js_1.logger.info('✅ Load test completed', {
+            logger.info('✅ Load test completed', {
                 testId,
                 successRate: (testResults.successfulRequests / testResults.totalRequests) * 100,
                 avgResponseTime: testResults.avgResponseTime,
@@ -127,7 +121,7 @@ class PerformanceTestingService {
     }
     async runGameScenarioTest(config) {
         const testId = `game-scenario-${config.scenario}-${Date.now()}`;
-        logger_js_1.logger.info('🎮 Starting game scenario test', {
+        logger.info('🎮 Starting game scenario test', {
             testId,
             scenario: config.scenario,
             players: config.players,
@@ -160,7 +154,7 @@ class PerformanceTestingService {
             };
             this.benchmarkHistory.push(benchmarkResult);
             this.activeTests.delete(testId);
-            logger_js_1.logger.info('✅ Game scenario test completed', {
+            logger.info('✅ Game scenario test completed', {
                 testId,
                 totalGames: config.gameCount,
                 avgResponseTime: testResults.avgResponseTime,
@@ -175,7 +169,7 @@ class PerformanceTestingService {
     }
     async runStressTest(maxConcurrency = 1000) {
         const testId = `stress-test-${Date.now()}`;
-        logger_js_1.logger.info('💥 Starting stress test', {
+        logger.info('💥 Starting stress test', {
             testId,
             maxConcurrency,
             strategy: 'gradual increase until failure',
@@ -187,7 +181,7 @@ class PerformanceTestingService {
         let testResults = null;
         try {
             while (currentConcurrency <= maxConcurrency && !breakingPoint) {
-                logger_js_1.logger.info(`📈 Testing concurrency level: ${currentConcurrency}`);
+                logger.info(`📈 Testing concurrency level: ${currentConcurrency}`);
                 const stepConfig = {
                     duration: 60,
                     concurrency: currentConcurrency,
@@ -218,7 +212,7 @@ class PerformanceTestingService {
                         firstFailureAt: Date.now(),
                         recoveryTime: 0,
                     };
-                    logger_js_1.logger.warn('💥 Breaking point detected!', {
+                    logger.warn('💥 Breaking point detected!', {
                         concurrency: currentConcurrency,
                         errorRate: errorRate.toFixed(2),
                         avgResponseTime: stepResults.avgResponseTime,
@@ -227,7 +221,7 @@ class PerformanceTestingService {
                 currentConcurrency += Math.ceil(currentConcurrency * 0.2);
             }
             if (breakingPoint) {
-                logger_js_1.logger.info('🔄 Testing system recovery...');
+                logger.info('🔄 Testing system recovery...');
                 const recoveryStart = Date.now();
                 await new Promise((resolve) => setTimeout(resolve, 30000));
                 const recoveryConfig = {
@@ -240,7 +234,7 @@ class PerformanceTestingService {
                 const recoveryErrorRate = (recoveryResults.failedRequests / recoveryResults.totalRequests) * 100;
                 if (recoveryErrorRate < 1) {
                     breakingPoint.recoveryTime = Date.now() - recoveryStart;
-                    logger_js_1.logger.info('✅ System recovered', { recoveryTimeMs: breakingPoint.recoveryTime });
+                    logger.info('✅ System recovered', { recoveryTimeMs: breakingPoint.recoveryTime });
                 }
             }
             const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId);
@@ -280,7 +274,7 @@ class PerformanceTestingService {
             };
             this.benchmarkHistory.push(stressTestResult);
             this.activeTests.delete(testId);
-            logger_js_1.logger.info('✅ Stress test completed', {
+            logger.info('✅ Stress test completed', {
                 testId,
                 maxStableConcurrency: breakingPoint?.maxConcurrentUsers || maxConcurrency,
                 totalSteps: degradationPoints.length,
@@ -354,7 +348,7 @@ class PerformanceTestingService {
             const url = `${baseUrl}${endpoint.path.replace(':id', '1')}`;
             try {
                 const startTime = Date.now();
-                const response = await (0, axios_1.default)({
+                const response = await axios({
                     method: endpoint.method,
                     url,
                     data: endpoint.payload,
@@ -430,10 +424,10 @@ class PerformanceTestingService {
         this.activeTests.set(testId, { metrics, startTime: Date.now() });
         return setInterval(async () => {
             try {
-                const current = performanceMonitorService_js_1.performanceMonitorService.getCurrentMetrics();
-                const scaling = scalingService_js_1.scalingService.getMetrics();
-                const cache = redisClusterService_js_1.redisClusterService.getMetrics();
-                const _db = await databaseClusterService_js_1.databaseClusterService.getMetrics();
+                const current = performanceMonitorService.getCurrentMetrics();
+                const scaling = scalingService.getMetrics();
+                const cache = redisClusterService.getMetrics();
+                const _db = await databaseClusterService.getMetrics();
                 if (current) {
                     metrics.cpuUsage.push(0);
                     metrics.memoryUsage.push(current.server.memoryUsage.heapUsed / (1024 * 1024));
@@ -443,7 +437,7 @@ class PerformanceTestingService {
                 }
             }
             catch (error) {
-                logger_js_1.logger.warn('Failed to collect metrics during test:', error);
+                logger.warn('Failed to collect metrics during test:', error);
             }
         }, 5000);
     }
@@ -513,7 +507,7 @@ class PerformanceTestingService {
     async stopTest(testId) {
         if (this.activeTests.has(testId)) {
             this.activeTests.delete(testId);
-            logger_js_1.logger.info(`🛑 Test ${testId} stopped by user request`);
+            logger.info(`🛑 Test ${testId} stopped by user request`);
             return true;
         }
         return false;
@@ -572,6 +566,5 @@ class PerformanceTestingService {
         };
     }
 }
-exports.PerformanceTestingService = PerformanceTestingService;
-exports.performanceTestingService = new PerformanceTestingService();
+export const performanceTestingService = new PerformanceTestingService();
 //# sourceMappingURL=performanceTestingService.js.map

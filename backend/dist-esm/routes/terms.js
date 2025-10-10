@@ -1,13 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const auth_js_1 = require("../middleware/auth.js");
-const termsService_js_1 = require("../services/termsService.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const router = (0, express_1.Router)();
+import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import { termsService } from '../services/termsService.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+const router = Router();
 const authenticateRequest = async (req, res, next) => {
     try {
-        await (0, auth_js_1.authenticateToken)(req, res, next);
+        await authenticateToken(req, res, next);
     }
     catch (error) {
         next(error instanceof Error ? error : new Error(String(error)));
@@ -21,16 +19,16 @@ router.get('/check/:featureType', authenticateRequest, async (req, res) => {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-        const hasAccepted = await termsService_js_1.termsService.hasAcceptedTerms(userId, featureType);
-        const termsContent = termsService_js_1.termsService.getTermsContent(featureType);
+        const hasAccepted = await termsService.hasAcceptedTerms(userId, featureType);
+        const termsContent = termsService.getTermsContent(featureType);
         res.json({
             hasAccepted,
-            currentVersion: termsService_js_1.termsService.getCurrentVersion(featureType),
+            currentVersion: termsService.getCurrentVersion(featureType),
             termsContent: !hasAccepted ? termsContent : undefined,
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to check terms acceptance', 500, {
+        handleRouteError(error, req, 'Failed to check terms acceptance', 500, {
             featureType: req.params.featureType,
         });
         res.status(500).json({ error: 'Failed to check terms acceptance' });
@@ -46,14 +44,14 @@ router.post('/accept/:featureType', authenticateRequest, async (req, res) => {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-        const acceptance = await termsService_js_1.termsService.acceptTerms(userId, featureType, ipAddress, userAgent);
+        const acceptance = await termsService.acceptTerms(userId, featureType, ipAddress, userAgent);
         res.json({
             success: true,
             acceptance,
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to accept terms', 500, {
+        handleRouteError(error, req, 'Failed to accept terms', 500, {
             featureType: req.params.featureType,
         });
         res.status(500).json({ error: 'Failed to accept terms' });
@@ -66,29 +64,29 @@ router.get('/history', authenticateRequest, async (req, res) => {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-        const history = await termsService_js_1.termsService.getUserTermsHistory(userId);
+        const history = await termsService.getUserTermsHistory(userId);
         res.json(history);
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch terms history');
+        handleRouteError(error, req, 'Failed to fetch terms history');
         res.status(500).json({ error: 'Failed to fetch terms history' });
     }
 });
 router.get('/content/:featureType', (req, res) => {
     try {
         const { featureType } = req.params;
-        const content = termsService_js_1.termsService.getTermsContent(featureType);
+        const content = termsService.getTermsContent(featureType);
         res.json({
             ...content,
-            currentVersion: termsService_js_1.termsService.getCurrentVersion(featureType),
+            currentVersion: termsService.getCurrentVersion(featureType),
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch terms content', 500, {
+        handleRouteError(error, req, 'Failed to fetch terms content', 500, {
             featureType: req.params.featureType,
         });
         res.status(500).json({ error: 'Failed to fetch terms content' });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=terms.js.map

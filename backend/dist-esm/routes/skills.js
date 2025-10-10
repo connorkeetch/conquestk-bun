@@ -1,11 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const database_js_1 = require("../config/database.js");
-const auth_js_1 = require("../middleware/auth.js");
-const eloService_js_1 = require("../services/eloService.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const router = (0, express_1.Router)();
+import { Router } from 'express';
+import { query } from '../config/database.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { eloService } from '../services/eloService.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+const router = Router();
 router.get('/users/:userId/rating', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -24,12 +22,12 @@ router.get('/users/:userId/rating', async (req, res) => {
       FROM users
       WHERE id = $1
     `;
-        const result = await (0, database_js_1.query)(userQuery, [userId]);
+        const result = await query(userQuery, [userId]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
         const user = result.rows[0];
-        const tier = eloService_js_1.eloService.getSkillTier(user.skill_rating || 800);
+        const tier = eloService.getSkillTier(user.skill_rating || 800);
         const winRate = user.total_ranked_games > 0
             ? ((user.ranked_wins / user.total_ranked_games) * 100).toFixed(1)
             : 0;
@@ -53,17 +51,17 @@ router.get('/users/:userId/rating', async (req, res) => {
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch user rating', 500, {
+        handleRouteError(error, req, 'Failed to fetch user rating', 500, {
             userId: req.params.userId,
         });
         return res.status(500).json({ error: 'Failed to fetch user rating' });
     }
 });
-router.get('/users/:userId/rating-history', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/users/:userId/rating-history', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
         const limit = parseInt(req.query.limit, 10) || 30;
-        const history = await eloService_js_1.eloService.getRatingHistory(userId, limit);
+        const history = await eloService.getRatingHistory(userId, limit);
         res.json({
             history: history.map((entry) => ({
                 gameId: entry.game_room_id,
@@ -76,7 +74,7 @@ router.get('/users/:userId/rating-history', auth_js_1.authenticateToken, async (
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch rating history', 500, {
+        handleRouteError(error, req, 'Failed to fetch rating history', 500, {
             userId: req.params.userId,
             limit: req.query.limit,
         });
@@ -87,26 +85,35 @@ router.get('/leaderboards/skill', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 100;
         const offset = parseInt(req.query.offset, 10) || 0;
-        const leaderboard = await eloService_js_1.eloService.getLeaderboard(limit, offset);
+        const leaderboard = await eloService.getLeaderboard(limit, offset);
         res.json({
-            leaderboard: leaderboard.map((entry, _index) => ({
-                rank: entry.rank_position,
-                userId: entry.user_id,
-                username: entry.username,
-                skillRating: entry.skill_rating,
-                tier: eloService_js_1.eloService.getSkillTier(entry.skill_rating).name,
-            })),
+            leaderboard: leaderboard.map((entry) => {
+                const wins = typeof entry.ranked_wins === 'number' ? entry.ranked_wins : 0;
+                const losses = typeof entry.ranked_losses === 'number' ? entry.ranked_losses : 0;
+                const gamesPlayed = wins + losses;
+                return {
+                    rank: entry.rank_position,
+                    userId: entry.user_id,
+                    username: entry.username,
+                    skillRating: entry.skill_rating,
+                    wins,
+                    losses,
+                    gamesPlayed,
+                    winRate: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
+                    tier: eloService.getSkillTier(entry.skill_rating).name,
+                };
+            }),
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch leaderboard', 500, {
+        handleRouteError(error, req, 'Failed to fetch leaderboard', 500, {
             limit: req.query.limit,
             offset: req.query.offset,
         });
         res.status(500).json({ error: 'Failed to fetch leaderboard' });
     }
 });
-router.get('/users/:userId/rank', auth_js_1.authenticateToken, async (req, res) => {
+router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
         const rankQuery = `
@@ -118,14 +125,14 @@ router.get('/users/:userId/rank', auth_js_1.authenticateToken, async (req, res) 
       )
       AND total_ranked_games > 0
     `;
-        const result = await (0, database_js_1.query)(rankQuery, [userId]);
+        const result = await query(rankQuery, [userId]);
         const rank = result.rows[0].rank;
         const totalQuery = `
       SELECT COUNT(*) as total
       FROM users
       WHERE total_ranked_games > 0
     `;
-        const totalResult = await (0, database_js_1.query)(totalQuery);
+        const totalResult = await query(totalQuery);
         const total = totalResult.rows[0].total;
         res.json({
             rank,
@@ -134,26 +141,26 @@ router.get('/users/:userId/rank', auth_js_1.authenticateToken, async (req, res) 
         });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to fetch user rank', 500, {
+        handleRouteError(error, req, 'Failed to fetch user rank', 500, {
             userId: req.params.userId,
         });
         res.status(500).json({ error: 'Failed to fetch user rank' });
     }
 });
-router.post('/leaderboards/refresh', auth_js_1.authenticateToken, async (req, res) => {
+router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
     try {
         const userQuery = `SELECT is_admin FROM users WHERE id = $1`;
-        const userResult = await (0, database_js_1.query)(userQuery, [req.userId]);
+        const userResult = await query(userQuery, [req.userId]);
         if (!userResult.rows[0]?.is_admin) {
             return res.status(403).json({ error: 'Admin access required' });
         }
-        await eloService_js_1.eloService.updateLeaderboardCache();
+        await eloService.updateLeaderboardCache();
         return res.json({ message: 'Leaderboard cache refreshed successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to refresh leaderboard cache');
+        handleRouteError(error, req, 'Failed to refresh leaderboard cache');
         return res.status(500).json({ error: 'Failed to refresh leaderboard' });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=skills.js.map

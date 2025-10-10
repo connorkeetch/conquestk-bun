@@ -1,17 +1,12 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const adminAuth_js_1 = require("../middleware/adminAuth.js");
-const auth_js_1 = require("../middleware/auth.js");
-const mapApprovalService_js_1 = __importDefault(require("../services/mapApprovalService.js"));
-const mapPermissionService_js_1 = require("../services/mapPermissionService.js");
-const errorHelpers_js_1 = require("../utils/errorHelpers.js");
-const routeErrorHandler_js_1 = require("../utils/routeErrorHandler.js");
-const router = express_1.default.Router();
-router.use(auth_js_1.authenticateToken);
+import express from 'express';
+import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth.js';
+import { authenticateToken } from '../middleware/auth.js';
+import MapApprovalService from '../services/mapApprovalService.js';
+import { MapNotFoundError, MapPermissionError, mapPermissionService, } from '../services/mapPermissionService.js';
+import { getErrorMessage } from '../utils/errorHelpers.js';
+import { handleRouteError } from '../utils/routeErrorHandler.js';
+const router = express.Router();
+router.use(authenticateToken);
 router.get('/maps/:mapId/versions', async (req, res) => {
     try {
         const { mapId } = req.params;
@@ -20,7 +15,7 @@ router.get('/maps/:mapId/versions', async (req, res) => {
             res.status(401).json({ message: 'User not authenticated' });
             return;
         }
-        const context = await mapPermissionService_js_1.mapPermissionService.getMapEditorContext(mapId, {
+        const context = await mapPermissionService.getMapEditorContext(mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
@@ -32,11 +27,11 @@ router.get('/maps/:mapId/versions', async (req, res) => {
             res.status(403).json({ message: 'Forbidden' });
             return;
         }
-        const versions = await mapApprovalService_js_1.default.getVersionHistory(mapId);
+        const versions = await MapApprovalService.getVersionHistory(mapId);
         res.json({ versions });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load map version history', 500, {
+        handleRouteError(error, req, 'Failed to load map version history', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ message: 'Failed to load version history' });
@@ -50,24 +45,24 @@ router.get('/versions/:versionId', async (req, res) => {
             res.status(401).json({ message: 'User not authenticated' });
             return;
         }
-        const version = await mapApprovalService_js_1.default.getVersionById(versionId);
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(version.mapId, {
+        const version = await MapApprovalService.getVersionById(versionId);
+        await mapPermissionService.assertCanEditMap(version.mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
         res.json({ version });
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             res.status(403).json({ message: error.message });
             return;
         }
-        const message = (0, errorHelpers_js_1.getErrorMessage)(error);
+        const message = getErrorMessage(error);
         if (message === 'Version not found') {
             res.status(404).json({ message });
         }
         else {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load version details', 500, {
+            handleRouteError(error, req, 'Failed to load version details', 500, {
                 versionId: req.params.versionId,
             });
             res.status(500).json({ message });
@@ -83,23 +78,23 @@ router.post('/maps/:mapId/versions', async (req, res) => {
             res.status(401).json({ message: 'User not authenticated' });
             return;
         }
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(mapId, {
+        await mapPermissionService.assertCanEditMap(mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
-        const version = await mapApprovalService_js_1.default.createVersion(mapId, userId, versionData);
+        const version = await MapApprovalService.createVersion(mapId, userId, versionData);
         res.status(201).json({ version });
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             res.status(403).json({ message: error.message });
             return;
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             res.status(404).json({ message: error.message });
             return;
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to create map version', 500, {
+        handleRouteError(error, req, 'Failed to create map version', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ message: 'Failed to create version' });
@@ -113,24 +108,24 @@ router.put('/versions/:versionId/current', async (req, res) => {
             res.status(401).json({ message: 'User not authenticated' });
             return;
         }
-        const version = await mapApprovalService_js_1.default.getVersionById(versionId);
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(version.mapId, {
+        const version = await MapApprovalService.getVersionById(versionId);
+        await mapPermissionService.assertCanEditMap(version.mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
-        await mapApprovalService_js_1.default.setCurrentVersion(versionId);
+        await MapApprovalService.setCurrentVersion(versionId);
         res.json({ message: 'Current version updated' });
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             res.status(403).json({ message: error.message });
             return;
         }
-        if (error instanceof mapPermissionService_js_1.MapNotFoundError) {
+        if (error instanceof MapNotFoundError) {
             res.status(404).json({ message: error.message });
             return;
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to set current version', 500, {
+        handleRouteError(error, req, 'Failed to set current version', 500, {
             versionId: req.params.versionId,
         });
         res.status(500).json({ message: 'Failed to update current version' });
@@ -145,56 +140,56 @@ router.post('/versions/:versionId/submit', async (req, res) => {
             res.status(401).json({ message: 'User not authenticated' });
             return;
         }
-        const version = await mapApprovalService_js_1.default.getVersionById(versionId);
-        await mapPermissionService_js_1.mapPermissionService.assertCanEditMap(version.mapId, {
+        const version = await MapApprovalService.getVersionById(versionId);
+        await mapPermissionService.assertCanEditMap(version.mapId, {
             userId,
             isAdmin: req.user?.isAdmin,
         });
-        const approvalRequest = await mapApprovalService_js_1.default.submitForApproval(versionId, userId, submissionNotes);
+        const approvalRequest = await MapApprovalService.submitForApproval(versionId, userId, submissionNotes);
         res.status(201).json({ approvalRequest });
     }
     catch (error) {
-        if (error instanceof mapPermissionService_js_1.MapPermissionError) {
+        if (error instanceof MapPermissionError) {
             res.status(403).json({ message: error.message });
             return;
         }
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to submit version for approval', 400, {
+        handleRouteError(error, req, 'Failed to submit version for approval', 400, {
             versionId: req.params.versionId,
         });
-        res.status(400).json({ message: (0, errorHelpers_js_1.getErrorMessage)(error) });
+        res.status(400).json({ message: getErrorMessage(error) });
     }
 });
 router.get('/approval-requests/:requestId', async (req, res) => {
     try {
         const { requestId } = req.params;
-        const approvalRequest = await mapApprovalService_js_1.default.getApprovalRequestById(requestId);
-        const reviewResults = await mapApprovalService_js_1.default.getReviewResults(requestId);
+        const approvalRequest = await MapApprovalService.getApprovalRequestById(requestId);
+        const reviewResults = await MapApprovalService.getReviewResults(requestId);
         res.json({ approvalRequest, reviewResults });
     }
     catch (error) {
-        const message = (0, errorHelpers_js_1.getErrorMessage)(error);
+        const message = getErrorMessage(error);
         if (message === 'Approval request not found') {
             res.status(404).json({ message });
         }
         else {
-            (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load approval request', 500, {
+            handleRouteError(error, req, 'Failed to load approval request', 500, {
                 requestId: req.params.requestId,
             });
             res.status(500).json({ message });
         }
     }
 });
-router.get('/approval-requests', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), async (req, res) => {
+router.get('/approval-requests', requireAdmin, requirePermission('map_approval'), async (req, res) => {
     try {
-        const requests = await mapApprovalService_js_1.default.getPendingApprovalRequests();
+        const requests = await MapApprovalService.getPendingApprovalRequests();
         res.json({ requests });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load approval requests');
+        handleRouteError(error, req, 'Failed to load approval requests');
         res.status(500).json({ message: 'Failed to load approval requests' });
     }
 });
-router.put('/approval-requests/:requestId/assign', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_assign'), async (req, res) => {
+router.put('/approval-requests/:requestId/assign', requireAdmin, requirePermission('map_approval'), logAdminActivity('map_review_assign'), async (req, res) => {
     try {
         const { requestId } = req.params;
         const { moderatorId } = req.body;
@@ -204,20 +199,20 @@ router.put('/approval-requests/:requestId/assign', adminAuth_js_1.requireAdmin, 
             return;
         }
         const assignedModeratorId = moderatorId || currentUserId;
-        await mapApprovalService_js_1.default.assignReviewer(requestId, currentUserId, assignedModeratorId, {
+        await MapApprovalService.assignReviewer(requestId, currentUserId, assignedModeratorId, {
             ipAddress: req.ip,
             userAgent: req.get('User-Agent') ?? undefined,
         });
         res.json({ message: 'Reviewer assigned successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to assign reviewer', 500, {
+        handleRouteError(error, req, 'Failed to assign reviewer', 500, {
             requestId: req.params.requestId,
         });
         res.status(500).json({ message: 'Failed to assign reviewer' });
     }
 });
-router.delete('/approval-requests/:requestId/assign', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_unassign'), async (req, res) => {
+router.delete('/approval-requests/:requestId/assign', requireAdmin, requirePermission('map_approval'), logAdminActivity('map_review_unassign'), async (req, res) => {
     try {
         const { requestId } = req.params;
         const currentUserId = req.userId;
@@ -225,30 +220,30 @@ router.delete('/approval-requests/:requestId/assign', adminAuth_js_1.requireAdmi
             res.status(401).json({ message: 'Moderator not authenticated' });
             return;
         }
-        await mapApprovalService_js_1.default.unassignReviewer(requestId, currentUserId, {
+        await MapApprovalService.unassignReviewer(requestId, currentUserId, {
             ipAddress: req.ip,
             userAgent: req.get('User-Agent') ?? undefined,
         });
         res.json({ message: 'Reviewer unassigned successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to unassign reviewer', 500, {
+        handleRouteError(error, req, 'Failed to unassign reviewer', 500, {
             requestId: req.params.requestId,
         });
         res.status(500).json({ message: 'Failed to unassign reviewer' });
     }
 });
-router.get('/review-criteria', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), async (req, res) => {
+router.get('/review-criteria', requireAdmin, requirePermission('map_approval'), async (req, res) => {
     try {
-        const criteria = await mapApprovalService_js_1.default.getReviewCriteria();
+        const criteria = await MapApprovalService.getReviewCriteria();
         res.json({ criteria });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load review criteria');
+        handleRouteError(error, req, 'Failed to load review criteria');
         res.status(500).json({ message: 'Failed to load review criteria' });
     }
 });
-router.post('/approval-requests/:requestId/review', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_decision'), async (req, res) => {
+router.post('/approval-requests/:requestId/review', requireAdmin, requirePermission('map_approval'), logAdminActivity('map_review_decision'), async (req, res) => {
     try {
         const { requestId } = req.params;
         const moderatorId = req.userId;
@@ -261,20 +256,20 @@ router.post('/approval-requests/:requestId/review', adminAuth_js_1.requireAdmin,
             res.status(400).json({ message: 'Review results and decision are required' });
             return;
         }
-        await mapApprovalService_js_1.default.submitReviewResults(requestId, moderatorId, results, decision, moderatorFeedback, {
+        await MapApprovalService.submitReviewResults(requestId, moderatorId, results, decision, moderatorFeedback, {
             ipAddress: req.ip,
             userAgent: req.get('User-Agent') ?? undefined,
         });
         res.json({ message: 'Review submitted successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to submit review results', 500, {
+        handleRouteError(error, req, 'Failed to submit review results', 500, {
             requestId: req.params.requestId,
         });
         res.status(500).json({ message: 'Failed to submit review results' });
     }
 });
-router.post('/versions/:versionId/publish', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_publish'), async (req, res) => {
+router.post('/versions/:versionId/publish', requireAdmin, requirePermission('map_approval'), logAdminActivity('map_review_publish'), async (req, res) => {
     try {
         const { versionId } = req.params;
         const moderatorId = req.userId;
@@ -282,20 +277,20 @@ router.post('/versions/:versionId/publish', adminAuth_js_1.requireAdmin, (0, adm
             res.status(401).json({ message: 'Moderator not authenticated' });
             return;
         }
-        await mapApprovalService_js_1.default.publishVersion(versionId, moderatorId, {
+        await MapApprovalService.publishVersion(versionId, moderatorId, {
             ipAddress: req.ip,
             userAgent: req.get('User-Agent') ?? undefined,
         });
         res.json({ message: 'Version published successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to publish version', 400, {
+        handleRouteError(error, req, 'Failed to publish version', 400, {
             versionId: req.params.versionId,
         });
-        res.status(400).json({ message: (0, errorHelpers_js_1.getErrorMessage)(error) });
+        res.status(400).json({ message: getErrorMessage(error) });
     }
 });
-router.post('/maps/:mapId/archive', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), (0, adminAuth_js_1.logAdminActivity)('map_review_archive'), async (req, res) => {
+router.post('/maps/:mapId/archive', requireAdmin, requirePermission('map_approval'), logAdminActivity('map_review_archive'), async (req, res) => {
     try {
         const { mapId } = req.params;
         const moderatorId = req.userId;
@@ -304,39 +299,39 @@ router.post('/maps/:mapId/archive', adminAuth_js_1.requireAdmin, (0, adminAuth_j
             res.status(401).json({ message: 'Moderator not authenticated' });
             return;
         }
-        await mapApprovalService_js_1.default.archiveMap(mapId, moderatorId, reason, {
+        await MapApprovalService.archiveMap(mapId, moderatorId, reason, {
             ipAddress: req.ip,
             userAgent: req.get('User-Agent') ?? undefined,
         });
         res.json({ message: 'Map archived successfully' });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to archive map', 500, {
+        handleRouteError(error, req, 'Failed to archive map', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ message: 'Failed to archive map' });
     }
 });
-router.get('/maps/:mapId/moderation-history', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), async (req, res) => {
+router.get('/maps/:mapId/moderation-history', requireAdmin, requirePermission('map_approval'), async (req, res) => {
     try {
         const { mapId } = req.params;
-        const history = await mapApprovalService_js_1.default.getMapModerationHistory(mapId);
+        const history = await MapApprovalService.getMapModerationHistory(mapId);
         res.json({ history });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load moderation history', 500, {
+        handleRouteError(error, req, 'Failed to load moderation history', 500, {
             mapId: req.params.mapId,
         });
         res.status(500).json({ message: 'Failed to load moderation history' });
     }
 });
-router.get('/stats/approvals', adminAuth_js_1.requireAdmin, (0, adminAuth_js_1.requirePermission)('map_approval'), async (req, res) => {
+router.get('/stats/approvals', requireAdmin, requirePermission('map_approval'), async (req, res) => {
     try {
-        const stats = await mapApprovalService_js_1.default.getApprovalStats();
+        const stats = await MapApprovalService.getApprovalStats();
         res.json({ stats });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load approval stats');
+        handleRouteError(error, req, 'Failed to load approval stats');
         res.status(500).json({ message: 'Failed to load approval stats' });
     }
 });
@@ -350,9 +345,9 @@ router.get('/my-maps', async (req, res) => {
         res.json({ maps: [] });
     }
     catch (error) {
-        (0, routeErrorHandler_js_1.handleRouteError)(error, req, 'Failed to load user map permissions');
+        handleRouteError(error, req, 'Failed to load user map permissions');
         res.status(500).json({ message: 'Failed to load user map permissions' });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=mapApproval.js.map

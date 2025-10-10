@@ -1,64 +1,59 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MigrationRunner = void 0;
-exports.runMigrations = runMigrations;
-exports.runMigration = runMigration;
-const node_fs_1 = require("node:fs");
-const node_path_1 = require("node:path");
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("./logger.js");
-const migrationTracker_js_1 = require("./migrationTracker.js");
-class MigrationRunner {
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { query } from '../config/database.js';
+import { logger } from './logger.js';
+import { MigrationTracker } from './migrationTracker.js';
+export class MigrationRunner {
     constructor(migrationTracker) {
         this.migrationsPath = '';
-        this.migrationTracker = migrationTracker || new migrationTracker_js_1.MigrationTracker();
+        this.migrationTracker = migrationTracker || new MigrationTracker();
         const rawPaths = [
             '/app/backend/dist/migrations',
             '/app/backend/migrations',
             '/app/migrations',
-            (0, node_path_1.join)(__dirname, '../migrations'),
-            (0, node_path_1.join)(__dirname, '../../migrations'),
-            (0, node_path_1.join)(process.cwd(), 'migrations'),
-            (0, node_path_1.join)(process.cwd(), 'backend/migrations'),
+            join(__dirname, '../migrations'),
+            join(__dirname, '../../migrations'),
+            join(process.cwd(), 'migrations'),
+            join(process.cwd(), 'backend/migrations'),
         ];
         const possiblePaths = Array.from(new Set(rawPaths));
         if (process.env.STARTUP_VERBOSE === 'true' ||
             (process.env.LOG_LEVEL || '').toLowerCase() === 'debug') {
-            logger_js_1.logger.debug('📁 Checking migration paths:');
+            logger.debug('📁 Checking migration paths:');
             possiblePaths.forEach((path, index) => {
-                const exists = (0, node_fs_1.existsSync)(path);
-                logger_js_1.logger.debug(`  ${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`);
+                const exists = existsSync(path);
+                logger.debug(`  ${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`);
             });
         }
         else if (!MigrationRunner.didLogPathScan) {
-            logger_js_1.logger.debug('📁 Scanning for migrations (paths deduplicated)');
+            logger.debug('📁 Scanning for migrations (paths deduplicated)');
             MigrationRunner.didLogPathScan = true;
         }
         let foundPath = false;
         for (const path of possiblePaths) {
-            if ((0, node_fs_1.existsSync)(path)) {
+            if (existsSync(path)) {
                 this.migrationsPath = path;
                 try {
-                    const files = (0, node_fs_1.readdirSync)(path).filter((f) => f.endsWith('.sql'));
-                    logger_js_1.logger.debug(`✅ Found migrations at: ${this.migrationsPath}`);
-                    logger_js_1.logger.debug(`  ✓ Contains ${files.length} SQL files: ${files.join(', ')}`);
+                    const files = readdirSync(path).filter((f) => f.endsWith('.sql'));
+                    logger.debug(`✅ Found migrations at: ${this.migrationsPath}`);
+                    logger.debug(`  ✓ Contains ${files.length} SQL files: ${files.join(', ')}`);
                     foundPath = true;
                     break;
                 }
                 catch (err) {
-                    logger_js_1.logger.debug(`⚠️  Could not read directory ${path}: ${err}`);
+                    logger.debug(`⚠️  Could not read directory ${path}: ${err}`);
                 }
             }
         }
         if (!foundPath) {
-            logger_js_1.logger.error(`❌ Migrations directory not found in any of the checked paths`);
-            this.migrationsPath = (0, node_path_1.join)(__dirname, '../migrations');
-            logger_js_1.logger.warn(`⚠️  Using fallback path: ${this.migrationsPath}`);
+            logger.error(`❌ Migrations directory not found in any of the checked paths`);
+            this.migrationsPath = join(__dirname, '../migrations');
+            logger.warn(`⚠️  Using fallback path: ${this.migrationsPath}`);
         }
     }
     async runPendingMigrations() {
         try {
-            logger_js_1.logger.info('🔄 Starting migration system...');
+            logger.info('🔄 Starting migration system...');
             await this.migrationTracker.createTrackingTable();
             await this.ensureLegacyCompatibility();
             const availableMigrations = this.getAvailableMigrations();
@@ -68,8 +63,8 @@ class MigrationRunner {
             if (baselineFiles.length > 0) {
                 for (const baseline of baselineFiles) {
                     try {
-                        const fsPath = (0, node_path_1.join)(this.migrationsPath, baseline);
-                        const content = (0, node_fs_1.readFileSync)(fsPath, 'utf8');
+                        const fsPath = join(this.migrationsPath, baseline);
+                        const content = readFileSync(fsPath, 'utf8');
                         const checksum = this.migrationTracker.calculateChecksum(content);
                         await this.migrationTracker.markMigrationCompleted({
                             filename: baseline,
@@ -79,71 +74,71 @@ class MigrationRunner {
                             status: 'completed',
                             rollback_sql: '-- baseline marker only; no rollback',
                         });
-                        logger_js_1.logger.warn(`⏭️  Skipped baseline migration and marked completed: ${baseline}`);
+                        logger.warn(`⏭️  Skipped baseline migration and marked completed: ${baseline}`);
                     }
                     catch (e) {
-                        logger_js_1.logger.error(`❌ Failed to mark baseline as completed: ${baseline}`, e);
+                        logger.error(`❌ Failed to mark baseline as completed: ${baseline}`, e);
                     }
                 }
                 pendingMigrations = pendingMigrations.filter((m) => !baselineFiles.includes(m));
             }
             const keyTablesExist = await this.checkKeyTablesExist();
             if (!keyTablesExist && pendingMigrations.length === 0) {
-                logger_js_1.logger.warn('⚠️  Key tables missing despite migrations marked as complete');
-                logger_js_1.logger.info('🔄 Re-running initial schema migration to create missing tables...');
+                logger.warn('⚠️  Key tables missing despite migrations marked as complete');
+                logger.info('🔄 Re-running initial schema migration to create missing tables...');
                 const initialSchema = availableMigrations.find((m) => m === '001_initial_schema.sql');
                 if (initialSchema) {
                     pendingMigrations = [initialSchema];
                     try {
-                        await (0, database_js_1.query)(`
+                        await query(`
               DELETE FROM schema_migrations 
               WHERE filename = $1
             `, [initialSchema]);
-                        logger_js_1.logger.info('🗑️  Cleared migration record for re-run');
+                        logger.info('🗑️  Cleared migration record for re-run');
                     }
                     catch (_err) {
-                        logger_js_1.logger.warn('⚠️  Could not clear migration record, will attempt to run anyway');
+                        logger.warn('⚠️  Could not clear migration record, will attempt to run anyway');
                     }
                 }
             }
             if (pendingMigrations.length === 0) {
-                logger_js_1.logger.info('✅ All migrations are up to date');
+                logger.info('✅ All migrations are up to date');
                 return;
             }
-            logger_js_1.logger.info(`📋 Found ${pendingMigrations.length} pending migrations:`, pendingMigrations.map((m) => `  - ${m}`).join('\n'));
+            logger.info(`📋 Found ${pendingMigrations.length} pending migrations:`, pendingMigrations.map((m) => `  - ${m}`).join('\n'));
             for (const migrationFile of pendingMigrations) {
                 await this.runSingleMigration(migrationFile);
             }
-            logger_js_1.logger.info('🎯 All pending migrations completed successfully');
+            logger.info('🎯 All pending migrations completed successfully');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Migration system failed:', error);
+            logger.error('❌ Migration system failed:', error);
             throw error;
         }
     }
     async ensureLegacyCompatibility() {
         try {
-            logger_js_1.logger.info('🧩 Checking legacy compatibility shims before running migrations');
-            await (0, database_js_1.query)('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
-            await (0, database_js_1.query)('CREATE EXTENSION IF NOT EXISTS citext');
-            await (0, database_js_1.query)('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-            const gamesExistsResult = await (0, database_js_1.query)(`SELECT EXISTS (
+            logger.info('🧩 Checking legacy compatibility shims before running migrations');
+            await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+            await query('CREATE EXTENSION IF NOT EXISTS citext');
+            await query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+            const gamesExistsResult = await query(`SELECT EXISTS (
            SELECT 1 FROM information_schema.tables
            WHERE table_schema = 'public' AND table_name = 'games'
          ) AS exists`);
             const gamesExists = Boolean(gamesExistsResult.rows[0]?.exists);
             if (gamesExists) {
-                logger_js_1.logger.info('  ✅ games table present (legacy) — leaving as-is');
+                logger.info('  ✅ games table present (legacy) — leaving as-is');
             }
             else {
-                logger_js_1.logger.info('  ℹ️ games table missing — skipping legacy compatibility shim (deprecated)');
+                logger.info('  ℹ️ games table missing — skipping legacy compatibility shim (deprecated)');
             }
         }
         catch (error) {
-            logger_js_1.logger.error('  ❌ Failed to prepare legacy compatibility tables', error);
+            logger.error('  ❌ Failed to prepare legacy compatibility tables', error);
             throw error;
         }
-        const clanRolesTable = await (0, database_js_1.query)(`
+        const clanRolesTable = await query(`
       SELECT EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'clan_roles'
@@ -151,7 +146,7 @@ class MigrationRunner {
     `);
         const clanRolesExists = Boolean(clanRolesTable.rows[0]?.exists);
         if (clanRolesExists) {
-            const clanRolesIndex = await (0, database_js_1.query)(`
+            const clanRolesIndex = await query(`
         SELECT EXISTS (
           SELECT 1
           FROM pg_indexes
@@ -162,17 +157,17 @@ class MigrationRunner {
       `);
             const clanRolesIndexExists = Boolean(clanRolesIndex.rows[0]?.exists);
             if (!clanRolesIndexExists) {
-                logger_js_1.logger.info('  🔐 Backfilling case-insensitive uniqueness for clan role names (idx_clan_roles_clan_id_lower_name)');
-                await (0, database_js_1.query)(`
+                logger.info('  🔐 Backfilling case-insensitive uniqueness for clan role names (idx_clan_roles_clan_id_lower_name)');
+                await query(`
           CREATE UNIQUE INDEX idx_clan_roles_clan_id_lower_name
           ON clan_roles (clan_id, LOWER(name))
         `);
             }
             else {
-                logger_js_1.logger.info('  ✅ Case-insensitive clan role name index already present');
+                logger.info('  ✅ Case-insensitive clan role name index already present');
             }
         }
-        const approvalTable = await (0, database_js_1.query)(`
+        const approvalTable = await query(`
       SELECT EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'map_approval_requests'
@@ -180,22 +175,22 @@ class MigrationRunner {
     `);
         const approvalExists = Boolean(approvalTable.rows[0]?.exists);
         if (!approvalExists) {
-            const mapVersionsExistsRes = await (0, database_js_1.query)(`SELECT EXISTS (
+            const mapVersionsExistsRes = await query(`SELECT EXISTS (
            SELECT 1 FROM information_schema.tables
            WHERE table_schema = 'public' AND table_name = 'map_versions'
          ) AS exists`);
-            const usersExistsRes = await (0, database_js_1.query)(`SELECT EXISTS (
+            const usersExistsRes = await query(`SELECT EXISTS (
            SELECT 1 FROM information_schema.tables
            WHERE table_schema = 'public' AND table_name = 'users'
          ) AS exists`);
             const mapVersionsExists = Boolean(mapVersionsExistsRes.rows[0]?.exists);
             const usersExists = Boolean(usersExistsRes.rows[0]?.exists);
             if (!mapVersionsExists || !usersExists) {
-                logger_js_1.logger.info('  ℹ️ Skipping compatibility map_approval_requests creation (missing prerequisites: map_versions/users). Baseline will create full schema.');
+                logger.info('  ℹ️ Skipping compatibility map_approval_requests creation (missing prerequisites: map_versions/users). Baseline will create full schema.');
                 return;
             }
-            logger_js_1.logger.warn('  ⚠️ map_approval_requests table missing — creating compatibility table');
-            await (0, database_js_1.query)(`
+            logger.warn('  ⚠️ map_approval_requests table missing — creating compatibility table');
+            await query(`
         CREATE TABLE map_approval_requests (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
           version_id UUID NOT NULL REFERENCES map_versions(id) ON DELETE CASCADE,
@@ -212,19 +207,19 @@ class MigrationRunner {
           updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
       `);
-            await (0, database_js_1.query)(`
+            await query(`
         CREATE INDEX idx_map_approval_requests_version
         ON map_approval_requests(version_id)
       `);
-            await (0, database_js_1.query)(`
+            await query(`
         CREATE INDEX idx_map_approval_requests_requester
         ON map_approval_requests(requester_id)
       `);
-            await (0, database_js_1.query)(`
+            await query(`
         CREATE INDEX idx_map_approval_requests_decision
         ON map_approval_requests(decision)
       `);
-            await (0, database_js_1.query)(`
+            await query(`
         CREATE OR REPLACE FUNCTION update_map_approval_requests_updated_at()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -233,14 +228,14 @@ class MigrationRunner {
         END;
         $$ LANGUAGE plpgsql;
       `);
-            await (0, database_js_1.query)('DROP TRIGGER IF EXISTS trg_map_approval_requests_updated_at ON map_approval_requests');
-            await (0, database_js_1.query)(`
+            await query('DROP TRIGGER IF EXISTS trg_map_approval_requests_updated_at ON map_approval_requests');
+            await query(`
         CREATE TRIGGER trg_map_approval_requests_updated_at
         BEFORE UPDATE ON map_approval_requests
         FOR EACH ROW
         EXECUTE FUNCTION update_map_approval_requests_updated_at()
       `);
-            logger_js_1.logger.info('  ✅ Created compatibility map_approval_requests table');
+            logger.info('  ✅ Created compatibility map_approval_requests table');
         }
     }
     async runSingleMigration(migrationFile) {
@@ -251,20 +246,20 @@ class MigrationRunner {
             if (!isValid) {
                 throw new Error(`Migration integrity check failed: ${migrationFile}`);
             }
-            const migrationPath = (0, node_path_1.join)(this.migrationsPath, migrationFile);
-            const originalSQL = (0, node_fs_1.readFileSync)(migrationPath, 'utf8');
-            logger_js_1.logger.info(`📄 Processing migration: ${migrationFile}`);
-            logger_js_1.logger.info(`  Original SQL length: ${originalSQL.length} characters`);
-            logger_js_1.logger.info(`  Contains legacy UUID patterns: ${originalSQL.includes('randomblob') ? 'YES' : 'NO'}`);
-            logger_js_1.logger.info(`  Contains TEXT PRIMARY KEY: ${originalSQL.includes('TEXT PRIMARY KEY') ? 'YES' : 'NO'}`);
+            const migrationPath = join(this.migrationsPath, migrationFile);
+            const originalSQL = readFileSync(migrationPath, 'utf8');
+            logger.info(`📄 Processing migration: ${migrationFile}`);
+            logger.info(`  Original SQL length: ${originalSQL.length} characters`);
+            logger.info(`  Contains legacy UUID patterns: ${originalSQL.includes('randomblob') ? 'YES' : 'NO'}`);
+            logger.info(`  Contains TEXT PRIMARY KEY: ${originalSQL.includes('TEXT PRIMARY KEY') ? 'YES' : 'NO'}`);
             migrationSQL = this.convertLegacyToPostgreSQL(originalSQL);
-            logger_js_1.logger.info(`  Converted SQL length: ${migrationSQL.length} characters`);
-            logger_js_1.logger.info(`  UUID conversions applied: ${originalSQL !== migrationSQL ? 'YES' : 'NO'}`);
+            logger.info(`  Converted SQL length: ${migrationSQL.length} characters`);
+            logger.info(`  UUID conversions applied: ${originalSQL !== migrationSQL ? 'YES' : 'NO'}`);
             if (originalSQL !== migrationSQL) {
                 const preview = migrationSQL.substring(0, 500).replace(/\n/g, ' ');
-                logger_js_1.logger.info(`  Converted SQL preview: ${preview}...`);
+                logger.info(`  Converted SQL preview: ${preview}...`);
             }
-            logger_js_1.logger.info(`🔧 Executing migration: ${migrationFile}`);
+            logger.info(`🔧 Executing migration: ${migrationFile}`);
             await this.executeInTransaction(migrationSQL, migrationFile);
             const executionTime = Date.now() - startTime;
             const checksum = this.migrationTracker.calculateChecksum(migrationSQL);
@@ -277,11 +272,11 @@ class MigrationRunner {
                 rollback_sql: this.generateRollbackHints(migrationSQL),
             };
             await this.migrationTracker.markMigrationCompleted(record);
-            logger_js_1.logger.info(`✅ Migration completed: ${migrationFile} (${executionTime}ms)`);
+            logger.info(`✅ Migration completed: ${migrationFile} (${executionTime}ms)`);
         }
         catch (error) {
             const executionTime = Date.now() - startTime;
-            logger_js_1.logger.error(`❌ Migration failed: ${migrationFile}`, error);
+            logger.error(`❌ Migration failed: ${migrationFile}`, error);
             try {
                 const checksum = migrationSQL
                     ? this.migrationTracker.calculateChecksum(migrationSQL)
@@ -296,28 +291,28 @@ class MigrationRunner {
                 await this.migrationTracker.markMigrationCompleted(record);
             }
             catch (trackingError) {
-                logger_js_1.logger.error('❌ Failed to record migration failure:', trackingError);
+                logger.error('❌ Failed to record migration failure:', trackingError);
             }
             throw error;
         }
     }
     getAvailableMigrations() {
         try {
-            logger_js_1.logger.debug(`📁 Checking migration files in: ${this.migrationsPath}`);
-            if (!(0, node_fs_1.existsSync)(this.migrationsPath)) {
-                logger_js_1.logger.warn(`⚠️  Migrations directory not found: ${this.migrationsPath}`);
+            logger.debug(`📁 Checking migration files in: ${this.migrationsPath}`);
+            if (!existsSync(this.migrationsPath)) {
+                logger.warn(`⚠️  Migrations directory not found: ${this.migrationsPath}`);
                 return [];
             }
-            const allFiles = (0, node_fs_1.readdirSync)(this.migrationsPath);
-            logger_js_1.logger.debug(`  Found ${allFiles.length} total files: ${allFiles.join(', ')}`);
+            const allFiles = readdirSync(this.migrationsPath);
+            logger.debug(`  Found ${allFiles.length} total files: ${allFiles.join(', ')}`);
             const sqlFiles = allFiles
                 .filter((file) => file.endsWith('.sql') && !file.includes('_mysql') && !file.includes('_sqlite'))
                 .sort();
-            logger_js_1.logger.debug(`  ✅ Found ${sqlFiles.length} migration files: ${sqlFiles.join(', ')}`);
+            logger.debug(`  ✅ Found ${sqlFiles.length} migration files: ${sqlFiles.join(', ')}`);
             return sqlFiles;
         }
         catch (error) {
-            logger_js_1.logger.error(`❌ Failed to read migrations directory ${this.migrationsPath}:`, error);
+            logger.error(`❌ Failed to read migrations directory ${this.migrationsPath}:`, error);
             return [];
         }
     }
@@ -353,49 +348,49 @@ class MigrationRunner {
         return convertedSQL;
     }
     async executeInTransaction(migrationSQL, _migrationFile) {
-        await (0, database_js_1.query)('BEGIN');
+        await query('BEGIN');
         try {
-            logger_js_1.logger.info('  Enabling uuid-ossp extension...');
-            await (0, database_js_1.query)('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+            logger.info('  Enabling uuid-ossp extension...');
+            await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
             const statements = this.splitMigrationStatements(migrationSQL);
-            logger_js_1.logger.info(`  Migration contains ${statements.length} SQL statements`);
+            logger.info(`  Migration contains ${statements.length} SQL statements`);
             let statementCount = 0;
             for (const statement of statements) {
                 if (statement.trim()) {
                     statementCount++;
                     const statementPreview = statement.substring(0, 100).replace(/\n/g, ' ');
                     try {
-                        logger_js_1.logger.debug(`  Executing statement ${statementCount}/${statements.length}: ${statementPreview}...`);
-                        await (0, database_js_1.query)(statement);
+                        logger.debug(`  Executing statement ${statementCount}/${statements.length}: ${statementPreview}...`);
+                        await query(statement);
                     }
                     catch (error) {
                         const { message: errorMessage, code: errorCode } = this.extractErrorDetails(error);
                         if (this.isAcceptableError(errorMessage, statement)) {
-                            logger_js_1.logger.debug(`  ⏭️  Skipped expected error: ${errorMessage}`);
+                            logger.debug(`  ⏭️  Skipped expected error: ${errorMessage}`);
                             continue;
                         }
-                        logger_js_1.logger.error(`  ❌ Statement ${statementCount} failed:`);
-                        logger_js_1.logger.error(`     Error code: ${errorCode}`);
-                        logger_js_1.logger.error(`     Error message: ${errorMessage}`);
-                        logger_js_1.logger.error(`     Statement preview: ${statementPreview}`);
-                        logger_js_1.logger.error(`     Full statement (first 500 chars): ${statement.substring(0, 500)}`);
+                        logger.error(`  ❌ Statement ${statementCount} failed:`);
+                        logger.error(`     Error code: ${errorCode}`);
+                        logger.error(`     Error message: ${errorMessage}`);
+                        logger.error(`     Statement preview: ${statementPreview}`);
+                        logger.error(`     Full statement (first 500 chars): ${statement.substring(0, 500)}`);
                         const msg = errorMessage.toLowerCase();
                         const looksLikeDollarQuoteIssue = msg.includes('unterminated dollar-quoted string') ||
                             msg.includes('syntax error at or near "$$"') ||
                             /syntax error at or near "\$[a-z_][a-z0-9_]*\$"/i.test(errorMessage);
                         if (looksLikeDollarQuoteIssue) {
                             try {
-                                logger_js_1.logger.warn('  ⚠️  Detected dollar-quote parsing issue. Falling back to whole-script execution');
-                                await (0, database_js_1.query)('ROLLBACK');
-                                await (0, database_js_1.query)('BEGIN');
-                                await (0, database_js_1.query)('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
-                                await (0, database_js_1.query)(migrationSQL);
-                                await (0, database_js_1.query)('COMMIT');
-                                logger_js_1.logger.info('  ✅ Whole-script execution succeeded after parser fallback');
+                                logger.warn('  ⚠️  Detected dollar-quote parsing issue. Falling back to whole-script execution');
+                                await query('ROLLBACK');
+                                await query('BEGIN');
+                                await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+                                await query(migrationSQL);
+                                await query('COMMIT');
+                                logger.info('  ✅ Whole-script execution succeeded after parser fallback');
                                 return;
                             }
                             catch (fallbackErr) {
-                                logger_js_1.logger.error('  ❌ Fallback whole-script execution failed:', fallbackErr);
+                                logger.error('  ❌ Fallback whole-script execution failed:', fallbackErr);
                                 throw error;
                             }
                         }
@@ -403,10 +398,10 @@ class MigrationRunner {
                     }
                 }
             }
-            await (0, database_js_1.query)('COMMIT');
+            await query('COMMIT');
         }
         catch (error) {
-            await (0, database_js_1.query)('ROLLBACK');
+            await query('ROLLBACK');
             throw error;
         }
     }
@@ -534,7 +529,7 @@ class MigrationRunner {
         try {
             const keyTables = ['users', 'maps', 'game_rooms', 'game_states', 'user_admin_roles'];
             for (const tableName of keyTables) {
-                const result = await (0, database_js_1.query)(`
+                const result = await query(`
           SELECT EXISTS (
             SELECT FROM information_schema.tables 
             WHERE table_schema = 'public' 
@@ -542,14 +537,14 @@ class MigrationRunner {
           )
         `, [tableName]);
                 if (!result.rows[0].exists) {
-                    logger_js_1.logger.warn(`⚠️  Key table missing: ${tableName}`);
+                    logger.warn(`⚠️  Key table missing: ${tableName}`);
                     return false;
                 }
             }
             return true;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Error checking key tables:', error);
+            logger.error('❌ Error checking key tables:', error);
             return false;
         }
     }
@@ -557,7 +552,7 @@ class MigrationRunner {
         try {
             const keyTables = ['users', 'game_rooms', 'game_states', 'maps', 'user_admin_roles'];
             for (const tableName of keyTables) {
-                const result = await (0, database_js_1.query)(`
+                const result = await query(`
           SELECT EXISTS (
             SELECT FROM information_schema.tables 
             WHERE table_schema = 'public' 
@@ -565,15 +560,15 @@ class MigrationRunner {
           )
         `, [tableName]);
                 if (!result.rows[0].exists) {
-                    logger_js_1.logger.error(`❌ Schema validation failed: Missing table ${tableName}`);
+                    logger.error(`❌ Schema validation failed: Missing table ${tableName}`);
                     return false;
                 }
             }
-            logger_js_1.logger.info('✅ Schema integrity validation passed');
+            logger.info('✅ Schema integrity validation passed');
             return true;
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Schema integrity validation failed:', error);
+            logger.error('❌ Schema integrity validation failed:', error);
             return false;
         }
     }
@@ -591,15 +586,14 @@ class MigrationRunner {
         return await this.migrationTracker.getAllMigrationStatuses();
     }
 }
-exports.MigrationRunner = MigrationRunner;
 MigrationRunner.didLogPathScan = false;
-async function runMigrations() {
-    logger_js_1.logger.warn('⚠️  Using legacy runMigrations - consider using MigrationRunner class');
+export async function runMigrations() {
+    logger.warn('⚠️  Using legacy runMigrations - consider using MigrationRunner class');
     const migrationRunner = new MigrationRunner();
     await migrationRunner.runPendingMigrations();
 }
-async function runMigration(migrationFile) {
-    logger_js_1.logger.warn(`⚠️  Using legacy runMigration for ${migrationFile} - consider using MigrationRunner class`);
+export async function runMigration(migrationFile) {
+    logger.warn(`⚠️  Using legacy runMigration for ${migrationFile} - consider using MigrationRunner class`);
     const migrationRunner = new MigrationRunner();
     await migrationRunner.runSingleMigration(migrationFile);
 }

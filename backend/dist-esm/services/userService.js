@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserService = void 0;
-const database_js_1 = require("../config/database.js");
+import { query } from '../config/database.js';
 function isMissingColumnError(error) {
     if (!(error instanceof Error)) {
         return false;
@@ -12,7 +9,7 @@ function isMissingColumnError(error) {
         code === '42703' ||
         code === 'ER_BAD_FIELD_ERROR');
 }
-class UserService {
+export class UserService {
     async create(userData) {
         try {
             const insertQuery = `
@@ -26,8 +23,8 @@ class UserService {
                 userData.email_verified === true,
                 userData.verification_token ?? null,
             ];
-            await (0, database_js_1.query)(insertQuery, values);
-            const result = await (0, database_js_1.query)('SELECT * FROM users WHERE email = $1', [userData.email]);
+            await query(insertQuery, values);
+            const result = await query('SELECT * FROM users WHERE email = $1', [userData.email]);
             if (!result.rows || result.rows.length === 0) {
                 throw new Error('Failed to retrieve created user');
             }
@@ -39,8 +36,8 @@ class UserService {
           INSERT INTO users (username, email, password_hash)
           VALUES ($1, $2, $3)
         `;
-                await (0, database_js_1.query)(basicQuery, [userData.username, userData.email, userData.password]);
-                const result = await (0, database_js_1.query)('SELECT * FROM users WHERE email = $1', [userData.email]);
+                await query(basicQuery, [userData.username, userData.email, userData.password]);
+                const result = await query('SELECT * FROM users WHERE email = $1', [userData.email]);
                 if (!result.rows || result.rows.length === 0) {
                     throw new Error('Failed to retrieve created user');
                 }
@@ -53,19 +50,19 @@ class UserService {
         }
     }
     async findById(id) {
-        const result = await (0, database_js_1.query)('SELECT * FROM users WHERE id = $1', [id]);
+        const result = await query('SELECT * FROM users WHERE id = $1', [id]);
         return result.rows[0] || null;
     }
     async findByEmail(email) {
-        const result = await (0, database_js_1.query)('SELECT * FROM users WHERE email = $1', [email]);
+        const result = await query('SELECT * FROM users WHERE email = $1', [email]);
         return result.rows[0] || null;
     }
     async findByUsername(username) {
-        const result = await (0, database_js_1.query)('SELECT * FROM users WHERE username = $1', [username]);
+        const result = await query('SELECT * FROM users WHERE username = $1', [username]);
         return result.rows[0] || null;
     }
     async findByVerificationToken(token) {
-        const result = await (0, database_js_1.query)('SELECT * FROM users WHERE verification_token = $1', [token]);
+        const result = await query('SELECT * FROM users WHERE verification_token = $1', [token]);
         return result.rows[0] || null;
     }
     async verifyEmail(userId) {
@@ -76,7 +73,7 @@ class UserService {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `;
-        await (0, database_js_1.query)(updateQuery, [userId]);
+        await query(updateQuery, [userId]);
     }
     async updateVerificationToken(userId, token) {
         const updateQuery = `
@@ -85,14 +82,14 @@ class UserService {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
     `;
-        await (0, database_js_1.query)(updateQuery, [token, userId]);
+        await query(updateQuery, [token, userId]);
     }
     async logEmailVerification(data) {
         const insertQuery = `
       INSERT INTO email_verification_logs (user_id, email, token, created_at)
       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
     `;
-        await (0, database_js_1.query)(insertQuery, [data.user_id, data.email, data.token]);
+        await query(insertQuery, [data.user_id, data.email, data.token]);
     }
     async updateEmailVerificationLog(token) {
         const updateQuery = `
@@ -100,7 +97,7 @@ class UserService {
       SET verified_at = CURRENT_TIMESTAMP
       WHERE token = $1
     `;
-        await (0, database_js_1.query)(updateQuery, [token]);
+        await query(updateQuery, [token]);
     }
     async getEmailVerificationLogByToken(token) {
         const findQuery = `
@@ -110,7 +107,7 @@ class UserService {
       ORDER BY created_at DESC
       LIMIT 1
     `;
-        const result = await (0, database_js_1.query)(findQuery, [token]);
+        const result = await query(findQuery, [token]);
         const row = result.rows[0];
         if (!row) {
             return null;
@@ -131,7 +128,7 @@ class UserService {
       FROM email_verification_logs 
       WHERE user_id = $1 AND created_at > $2
     `;
-        const result = await (0, database_js_1.query)(countQuery, [userId, oneHourAgo]);
+        const result = await query(countQuery, [userId, oneHourAgo]);
         return result.rows[0]?.count || 0;
     }
     async createPasswordResetToken(data) {
@@ -139,14 +136,14 @@ class UserService {
       INSERT INTO password_reset_tokens (user_id, token, expires_at)
       VALUES ($1, $2, $3)
     `;
-        await (0, database_js_1.query)(insertQuery, [data.user_id, data.token, data.expires_at]);
+        await query(insertQuery, [data.user_id, data.token, data.expires_at]);
     }
     async findPasswordResetToken(token) {
         const findQuery = `
       SELECT * FROM password_reset_tokens 
       WHERE token = $1
     `;
-        const result = await (0, database_js_1.query)(findQuery, [token]);
+        const result = await query(findQuery, [token]);
         const row = result.rows[0];
         if (!row) {
             return null;
@@ -162,7 +159,7 @@ class UserService {
       SET used_at = CURRENT_TIMESTAMP
       WHERE token = $1
     `;
-        await (0, database_js_1.query)(updateQuery, [token]);
+        await query(updateQuery, [token]);
     }
     async updatePassword(userId, hashedPassword) {
         const updateQuery = `
@@ -171,7 +168,7 @@ class UserService {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
     `;
-        await (0, database_js_1.query)(updateQuery, [hashedPassword, userId]);
+        await query(updateQuery, [hashedPassword, userId]);
     }
     async getRecentPasswordResetAttempts(userId) {
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -180,12 +177,12 @@ class UserService {
       FROM password_reset_tokens 
       WHERE user_id = $1 AND created_at > $2
     `;
-        const result = await (0, database_js_1.query)(countQuery, [userId, oneHourAgo]);
+        const result = await query(countQuery, [userId, oneHourAgo]);
         return result.rows[0]?.count || 0;
     }
     async deleteUser(userId) {
         const deleteQuery = `DELETE FROM users WHERE id = $1`;
-        await (0, database_js_1.query)(deleteQuery, [userId]);
+        await query(deleteQuery, [userId]);
     }
     async updateLastLogin(userId) {
         const updateQuery = `
@@ -194,8 +191,7 @@ class UserService {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `;
-        await (0, database_js_1.query)(updateQuery, [userId]);
+        await query(updateQuery, [userId]);
     }
 }
-exports.UserService = UserService;
 //# sourceMappingURL=userService.js.map

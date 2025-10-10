@@ -1,15 +1,9 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MigrationTracker = void 0;
-const node_crypto_1 = __importDefault(require("node:crypto"));
-const node_fs_1 = require("node:fs");
-const node_path_1 = require("node:path");
-const database_js_1 = require("../config/database.js");
-const logger_js_1 = require("./logger.js");
-class MigrationTracker {
+import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { query } from '../config/database.js';
+import { logger } from './logger.js';
+export class MigrationTracker {
     constructor() {
         this.trackingTableExists = false;
     }
@@ -21,7 +15,7 @@ class MigrationTracker {
     }
     async createTrackingTable() {
         try {
-            const tableCheck = await (0, database_js_1.query)(`
+            const tableCheck = await query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables
           WHERE table_schema = 'public'
@@ -31,10 +25,10 @@ class MigrationTracker {
             if (tableCheck.rows[0].exists) {
                 await this.upgradeTrackingTable();
                 this.trackingTableExists = true;
-                logger_js_1.logger.info('✅ Migration tracking table already exists');
+                logger.info('✅ Migration tracking table already exists');
                 return;
             }
-            await (0, database_js_1.query)(`
+            await query(`
         CREATE TABLE schema_migrations (
           id SERIAL PRIMARY KEY,
           filename VARCHAR(255) UNIQUE NOT NULL,
@@ -46,20 +40,20 @@ class MigrationTracker {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
       `);
-            await (0, database_js_1.query)('CREATE INDEX idx_schema_migrations_filename ON schema_migrations(filename)');
-            await (0, database_js_1.query)('CREATE INDEX idx_schema_migrations_status ON schema_migrations(status)');
+            await query('CREATE INDEX idx_schema_migrations_filename ON schema_migrations(filename)');
+            await query('CREATE INDEX idx_schema_migrations_status ON schema_migrations(status)');
             this.trackingTableExists = true;
-            logger_js_1.logger.info('✅ Created schema_migrations tracking table');
+            logger.info('✅ Created schema_migrations tracking table');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to create migration tracking table:', error);
+            logger.error('❌ Failed to create migration tracking table:', error);
             throw error;
         }
     }
     async upgradeTrackingTable() {
         try {
-            logger_js_1.logger.info('🔧 Ensuring schema_migrations table matches current layout');
-            const columnQuery = await (0, database_js_1.query)(`
+            logger.info('🔧 Ensuring schema_migrations table matches current layout');
+            const columnQuery = await query(`
         SELECT column_name
         FROM information_schema.columns
         WHERE table_schema = 'public'
@@ -80,22 +74,22 @@ class MigrationTracker {
                 statements.push('ALTER TABLE schema_migrations ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP');
             }
             for (const statement of statements) {
-                await (0, database_js_1.query)(statement);
+                await query(statement);
             }
-            await (0, database_js_1.query)("UPDATE schema_migrations SET checksum = COALESCE(checksum, 'legacy-manual-import')");
-            await (0, database_js_1.query)('UPDATE schema_migrations SET execution_time_ms = COALESCE(execution_time_ms, 0)');
-            await (0, database_js_1.query)('UPDATE schema_migrations SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP)');
-            await (0, database_js_1.query)('ALTER TABLE schema_migrations ALTER COLUMN checksum SET NOT NULL');
-            await (0, database_js_1.query)('ALTER TABLE schema_migrations ALTER COLUMN execution_time_ms SET NOT NULL');
-            await (0, database_js_1.query)('ALTER TABLE schema_migrations ALTER COLUMN created_at SET NOT NULL');
-            await (0, database_js_1.query)('ALTER TABLE schema_migrations DROP CONSTRAINT IF EXISTS migration_status_check');
-            await (0, database_js_1.query)("ALTER TABLE schema_migrations ADD CONSTRAINT migration_status_check CHECK (status IN ('pending', 'running', 'completed', 'failed', 'rolled_back'))");
-            await (0, database_js_1.query)('CREATE INDEX IF NOT EXISTS idx_schema_migrations_filename ON schema_migrations(filename)');
-            await (0, database_js_1.query)('CREATE INDEX IF NOT EXISTS idx_schema_migrations_status ON schema_migrations(status)');
-            logger_js_1.logger.info('✅ schema_migrations table is compatible with the modern migration runner');
+            await query("UPDATE schema_migrations SET checksum = COALESCE(checksum, 'legacy-manual-import')");
+            await query('UPDATE schema_migrations SET execution_time_ms = COALESCE(execution_time_ms, 0)');
+            await query('UPDATE schema_migrations SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP)');
+            await query('ALTER TABLE schema_migrations ALTER COLUMN checksum SET NOT NULL');
+            await query('ALTER TABLE schema_migrations ALTER COLUMN execution_time_ms SET NOT NULL');
+            await query('ALTER TABLE schema_migrations ALTER COLUMN created_at SET NOT NULL');
+            await query('ALTER TABLE schema_migrations DROP CONSTRAINT IF EXISTS migration_status_check');
+            await query("ALTER TABLE schema_migrations ADD CONSTRAINT migration_status_check CHECK (status IN ('pending', 'running', 'completed', 'failed', 'rolled_back'))");
+            await query('CREATE INDEX IF NOT EXISTS idx_schema_migrations_filename ON schema_migrations(filename)');
+            await query('CREATE INDEX IF NOT EXISTS idx_schema_migrations_status ON schema_migrations(status)');
+            logger.info('✅ schema_migrations table is compatible with the modern migration runner');
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to upgrade schema_migrations table:', error);
+            logger.error('❌ Failed to upgrade schema_migrations table:', error);
             throw error;
         }
     }
@@ -104,7 +98,7 @@ class MigrationTracker {
             await this.createTrackingTable();
         }
         try {
-            const columnCheck = await (0, database_js_1.query)(`
+            const columnCheck = await query(`
         SELECT column_name 
         FROM information_schema.columns 
         WHERE table_name = 'schema_migrations' 
@@ -113,7 +107,7 @@ class MigrationTracker {
             const hasFilename = columnCheck.rows.some((row) => row.column_name === 'filename');
             const hasVersion = columnCheck.rows.some((row) => row.column_name === 'version');
             if (hasFilename) {
-                const result = await (0, database_js_1.query)(`
+                const result = await query(`
           SELECT filename 
           FROM schema_migrations 
           WHERE status = 'completed' 
@@ -122,7 +116,7 @@ class MigrationTracker {
                 return result.rows.map((row) => row.filename);
             }
             if (hasVersion) {
-                const result = await (0, database_js_1.query)(`
+                const result = await query(`
           SELECT version 
           FROM schema_migrations 
           ORDER BY applied_at ASC
@@ -144,7 +138,7 @@ class MigrationTracker {
             return [];
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to get applied migrations:', error);
+            logger.error('❌ Failed to get applied migrations:', error);
             return [];
         }
     }
@@ -153,7 +147,7 @@ class MigrationTracker {
             await this.createTrackingTable();
         }
         try {
-            const columnCheck = await (0, database_js_1.query)(`
+            const columnCheck = await query(`
         SELECT column_name 
         FROM information_schema.columns 
         WHERE table_name = 'schema_migrations' 
@@ -161,7 +155,7 @@ class MigrationTracker {
       `);
             const hasFilename = columnCheck.rows.some((row) => row.column_name === 'filename');
             if (hasFilename) {
-                await (0, database_js_1.query)(`
+                await query(`
           INSERT INTO schema_migrations (filename, checksum, executed_at, execution_time_ms, status, rollback_sql)
           VALUES ($1, $2, $3, $4, $5, $6)
           ON CONFLICT (filename) 
@@ -179,20 +173,20 @@ class MigrationTracker {
                     record.status,
                     record.rollback_sql,
                 ]);
-                logger_js_1.logger.debug(`✅ Marked migration as ${record.status}: ${record.filename}`);
+                logger.debug(`✅ Marked migration as ${record.status}: ${record.filename}`);
             }
             else {
                 const version = record.filename.replace('.sql', '').split('_')[0];
-                await (0, database_js_1.query)(`
+                await query(`
           INSERT INTO schema_migrations (version, applied_at)
           VALUES ($1, $2)
           ON CONFLICT (version) DO NOTHING
           `, [version, record.executed_at]);
-                logger_js_1.logger.debug(`✅ Marked migration as completed: ${version}`);
+                logger.debug(`✅ Marked migration as completed: ${version}`);
             }
         }
         catch (error) {
-            logger_js_1.logger.error(`❌ Failed to mark migration ${record.filename}:`, error);
+            logger.error(`❌ Failed to mark migration ${record.filename}:`, error);
             throw error;
         }
     }
@@ -201,7 +195,7 @@ class MigrationTracker {
             await this.createTrackingTable();
         }
         try {
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT filename, status, executed_at, execution_time_ms
         FROM schema_migrations 
         WHERE filename = $1
@@ -218,24 +212,24 @@ class MigrationTracker {
             };
         }
         catch (error) {
-            logger_js_1.logger.error(`❌ Failed to get migration status for ${filename}:`, error);
+            logger.error(`❌ Failed to get migration status for ${filename}:`, error);
             return { filename, status: 'pending' };
         }
     }
     async validateMigrationIntegrity(filename) {
         try {
-            const migrationPath = (0, node_path_1.join)(__dirname, '../../migrations', filename);
-            const migrationContent = (0, node_fs_1.readFileSync)(migrationPath, 'utf8');
+            const migrationPath = join(__dirname, '../../migrations', filename);
+            const migrationContent = readFileSync(migrationPath, 'utf8');
             const currentChecksum = this.calculateChecksum(migrationContent);
             const status = await this.getMigrationStatus(filename);
             if (!status || status.status === 'pending') {
                 return true;
             }
             if (status.status === 'failed') {
-                logger_js_1.logger.info(`🔄 Allowing re-run of failed migration with updated content: ${filename}`);
+                logger.info(`🔄 Allowing re-run of failed migration with updated content: ${filename}`);
                 return true;
             }
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT checksum FROM schema_migrations WHERE filename = $1
       `, [filename]);
             if (result.rows.length === 0) {
@@ -244,26 +238,26 @@ class MigrationTracker {
             const storedChecksum = result.rows[0].checksum;
             const isValid = currentChecksum === storedChecksum;
             if (!isValid) {
-                logger_js_1.logger.error(`❌ Migration integrity violation: ${filename}`);
-                logger_js_1.logger.error(`   Stored checksum:  ${storedChecksum}`);
-                logger_js_1.logger.error(`   Current checksum: ${currentChecksum}`);
+                logger.error(`❌ Migration integrity violation: ${filename}`);
+                logger.error(`   Stored checksum:  ${storedChecksum}`);
+                logger.error(`   Current checksum: ${currentChecksum}`);
             }
             return isValid;
         }
         catch (error) {
-            logger_js_1.logger.error(`❌ Failed to validate migration integrity for ${filename}:`, error);
+            logger.error(`❌ Failed to validate migration integrity for ${filename}:`, error);
             return false;
         }
     }
     calculateChecksum(content) {
-        return node_crypto_1.default.createHash('sha256').update(content.trim()).digest('hex').substring(0, 16);
+        return crypto.createHash('sha256').update(content.trim()).digest('hex').substring(0, 16);
     }
     async getAllMigrationStatuses() {
         if (!this.trackingTableExists) {
             await this.createTrackingTable();
         }
         try {
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT filename, status, executed_at, execution_time_ms
         FROM schema_migrations 
         ORDER BY executed_at ASC
@@ -276,13 +270,13 @@ class MigrationTracker {
             }));
         }
         catch (error) {
-            logger_js_1.logger.error('❌ Failed to get all migration statuses:', error);
+            logger.error('❌ Failed to get all migration statuses:', error);
             return [];
         }
     }
     async rollbackMigration(filename) {
         try {
-            const result = await (0, database_js_1.query)(`
+            const result = await query(`
         SELECT rollback_sql FROM schema_migrations 
         WHERE filename = $1 AND status = 'completed'
       `, [filename]);
@@ -293,19 +287,18 @@ class MigrationTracker {
             if (!rollbackSql) {
                 throw new Error(`No rollback SQL available for migration: ${filename}`);
             }
-            await (0, database_js_1.query)(rollbackSql);
-            await (0, database_js_1.query)(`
+            await query(rollbackSql);
+            await query(`
         UPDATE schema_migrations 
         SET status = 'rolled_back', executed_at = CURRENT_TIMESTAMP
         WHERE filename = $1
       `, [filename]);
-            logger_js_1.logger.info(`✅ Rolled back migration: ${filename}`);
+            logger.info(`✅ Rolled back migration: ${filename}`);
         }
         catch (error) {
-            logger_js_1.logger.error(`❌ Failed to rollback migration ${filename}:`, error);
+            logger.error(`❌ Failed to rollback migration ${filename}:`, error);
             throw error;
         }
     }
 }
-exports.MigrationTracker = MigrationTracker;
 //# sourceMappingURL=migrationTracker.js.map

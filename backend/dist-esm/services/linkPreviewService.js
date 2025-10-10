@@ -1,11 +1,5 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.linkPreviewService = void 0;
-const open_graph_scraper_1 = __importDefault(require("open-graph-scraper"));
-const logger_js_1 = require("../utils/logger.js");
+import ogs from 'open-graph-scraper';
+import { logger } from '../utils/logger.js';
 class LinkPreviewService {
     constructor() {
         this.cache = new Map();
@@ -31,7 +25,7 @@ class LinkPreviewService {
             if (cachedPreview) {
                 return cachedPreview;
             }
-            const { error, result: preview } = await (0, open_graph_scraper_1.default)({
+            const { error, result: preview } = await ogs({
                 url,
                 timeout: 5,
                 fetchOptions: {
@@ -41,7 +35,7 @@ class LinkPreviewService {
                 },
             });
             if (error || !preview) {
-                logger_js_1.logger.warn('Open graph metadata not available for url', { url, error });
+                logger.warn('Open graph metadata not available for url', { url, error });
                 return null;
             }
             const result = {
@@ -67,7 +61,7 @@ class LinkPreviewService {
             return result;
         }
         catch (error) {
-            logger_js_1.logger.error('Error fetching link preview', { url, error });
+            logger.error('Error fetching link preview', { url, error });
             return null;
         }
     }
@@ -100,5 +94,5 @@ class LinkPreviewService {
         this.cacheTimestamps.clear();
     }
 }
-exports.linkPreviewService = new LinkPreviewService();
+export const linkPreviewService = new LinkPreviewService();
 //# sourceMappingURL=linkPreviewService.js.map
