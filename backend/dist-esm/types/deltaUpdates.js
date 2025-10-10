@@ -15,7 +15,7 @@ export const DeltaBuilder = {
                 ...(normalizedOwner !== undefined ? { ownerId: normalizedOwner } : {}),
             },
             timestamp: Date.now(),
-            version,
+            ...(version !== undefined ? { version } : {}),
         };
     },
     playerUpdate(roomId, playerId, changes, version) {
@@ -25,7 +25,7 @@ export const DeltaBuilder = {
             playerId,
             changes,
             timestamp: Date.now(),
-            version,
+            ...(version !== undefined ? { version } : {}),
         };
     },
     phaseChange(roomId, phase, currentPlayer, turn, reinforcementArmies, version) {
@@ -38,10 +38,10 @@ export const DeltaBuilder = {
             roomId,
             phase,
             currentPlayer,
-            turn: safeTurn,
-            reinforcementArmies: safeReinforce,
+            ...(safeTurn !== undefined ? { turn: safeTurn } : {}),
+            ...(safeReinforce !== undefined ? { reinforcementArmies: safeReinforce } : {}),
             timestamp: Date.now(),
-            version,
+            ...(version !== undefined ? { version } : {}),
         };
     },
     battleResult(roomId, battleResult, version) {
@@ -50,7 +50,7 @@ export const DeltaBuilder = {
             roomId,
             battleResult,
             timestamp: Date.now(),
-            version,
+            ...(version !== undefined ? { version } : {}),
         };
     },
     gameEnd(roomId, winner, eliminatedPlayers, version) {
@@ -60,7 +60,7 @@ export const DeltaBuilder = {
             winner,
             eliminatedPlayers,
             timestamp: Date.now(),
-            version,
+            ...(version !== undefined ? { version } : {}),
         };
     },
 };

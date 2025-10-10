@@ -51,20 +51,17 @@ const ActiveGamesDropdown: React.FC = () => {
             currentTurnUsername?: string | null
           }
         >
-        const map: Record<
-          string,
-          { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string }
-        > = {}
+        const map: Record<string, { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string }> = {}
         for (const [id, t] of Object.entries(metaObj)) {
-          map[id] = {
-            expiresAt: t.turnExpiresAt ? Date.parse(t.turnExpiresAt) : undefined,
-            bank:
-              typeof t.timeBankSecondsRemaining === 'number'
-                ? Math.max(0, Math.trunc(t.timeBankSecondsRemaining))
-                : undefined,
-            queueAhead: typeof t.queueAhead === 'number' ? t.queueAhead : undefined,
-            currentName: t.currentTurnUsername ?? undefined,
+          const entry: { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string } = {}
+          const expires = t.turnExpiresAt ? Date.parse(t.turnExpiresAt) : null
+          if (expires !== null) entry.expiresAt = expires
+          if (typeof t.timeBankSecondsRemaining === 'number') {
+            entry.bank = Math.max(0, Math.trunc(t.timeBankSecondsRemaining))
           }
+          if (typeof t.queueAhead === 'number') entry.queueAhead = t.queueAhead
+          if (typeof t.currentTurnUsername === 'string') entry.currentName = t.currentTurnUsername
+          map[id] = entry
         }
         setTurnMeta(map)
       } catch (err) {

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": [
+    "src/components/notifications/**/*",
+    "src/store/messagesSlice.ts",
+    "src/services/messagesService.ts",
+    "src/types/messages.ts"
+  ]
+}

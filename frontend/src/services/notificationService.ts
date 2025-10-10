@@ -69,10 +69,14 @@ class NotificationService {
       title: notification.title,
       message: notification.message,
       read: notification.read ?? false,
-      actionUrl: notification.actionUrl,
-      actionLabel: notification.actionLabel,
-      icon: notification.icon,
-      metadata: notification.metadata,
+      ...(typeof notification.actionUrl === 'string'
+        ? { actionUrl: notification.actionUrl }
+        : {}),
+      ...(typeof notification.actionLabel === 'string'
+        ? { actionLabel: notification.actionLabel }
+        : {}),
+      ...(typeof notification.icon === 'string' ? { icon: notification.icon } : {}),
+      ...(notification.metadata ? { metadata: notification.metadata } : {}),
       timestamp: notification.timestamp ?? new Date(),
     }
     this.notifications.unshift(newNotification)

@@ -111,6 +111,7 @@ export function stopRateLimiterCleanup(): void {
  * Strict rate limiter for authentication endpoints
  * 5 attempts per 15 minutes per IP
  */
+const authStore = createRateLimitStore('auth')
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per 15 minutes
@@ -118,7 +119,7 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false, // Count all requests
-  store: createRateLimitStore('auth'),
+  ...(authStore ? { store: authStore } : {}),
 })
 
 /**
@@ -137,19 +138,21 @@ export const loginSlowDown = slowDown({
  * Rate limiter for game creation
  * 10 games per hour per user
  */
+const gameCreationStore = createRateLimitStore('game-creation')
 export const gameCreationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // 10 games per hour
   message: createMessage('game creation', 10, 'hour'),
   standardHeaders: true,
   legacyHeaders: false,
-  store: createRateLimitStore('game-creation'),
+  ...(gameCreationStore ? { store: gameCreationStore } : {}),
 })
 
 /**
  * Rate limiter for messaging/chat
  * 30 messages per minute per user
  */
+const messageStore = createRateLimitStore('messages')
 export const messageLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30, // 30 messages per minute
@@ -157,39 +160,42 @@ export const messageLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipFailedRequests: true, // Don't count failed requests
-  store: createRateLimitStore('messages'),
+  ...(messageStore ? { store: messageStore } : {}),
 })
 
 /**
  * Strict limiter for password reset requests
  * 3 requests per hour per email
  */
+const passwordResetStore = createRateLimitStore('password-reset')
 export const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // 3 requests per hour
   message: 'Too many password reset requests. Please check your email or try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  store: createRateLimitStore('password-reset'),
+  ...(passwordResetStore ? { store: passwordResetStore } : {}),
 })
 
 /**
  * Rate limiter for map uploads
  * 5 maps per day per user
  */
+const mapUploadStore = createRateLimitStore('map-upload')
 export const mapUploadLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: 5, // 5 maps per day
   message: createMessage('map uploads', 5, 'day'),
   standardHeaders: true,
   legacyHeaders: false,
-  store: createRateLimitStore('map-upload'),
+  ...(mapUploadStore ? { store: mapUploadStore } : {}),
 })
 
 /**
  * General API rate limiter
  * 100 requests per minute for general endpoints
  */
+const generalApiStore = createRateLimitStore('general-api')
 export const generalApiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute
@@ -197,33 +203,35 @@ export const generalApiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipFailedRequests: false,
-  store: createRateLimitStore('general-api'),
+  ...(generalApiStore ? { store: generalApiStore } : {}),
 })
 
 /**
  * Strict rate limiter for admin operations
  * 30 requests per minute for admin endpoints
  */
+const adminStore = createRateLimitStore('admin')
 export const adminLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30, // 30 requests per minute
   message: 'Admin operation rate limit exceeded.',
   standardHeaders: true,
   legacyHeaders: false,
-  store: createRateLimitStore('admin'),
+  ...(adminStore ? { store: adminStore } : {}),
 })
 
 /**
  * Socket connection rate limiter
  * 5 connection attempts per minute per IP
  */
+const socketConnStore = createRateLimitStore('socket-connection')
 export const socketConnectionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5, // 5 connection attempts
   message: 'Too many socket connection attempts.',
   standardHeaders: true,
   legacyHeaders: false,
-  store: createRateLimitStore('socket-connection'),
+  ...(socketConnStore ? { store: socketConnStore } : {}),
 })
 
 /**
@@ -361,6 +369,7 @@ export const suspiciousActivityTracker = new SuspiciousActivityTracker()
  * Standard rate limiter for general protected routes
  * 60 requests per minute
  */
+const standardStore = createRateLimitStore('standard')
 export const standardLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 60, // 60 requests per minute
@@ -368,5 +377,5 @@ export const standardLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipFailedRequests: false,
-  store: createRateLimitStore('standard'),
+  ...(standardStore ? { store: standardStore } : {}),
 })

@@ -37,8 +37,8 @@ export const storeImageBuffer = async (buffer, options = {}) => {
     await uploadAsset({
         key: storageKey,
         body: buffer,
-        contentType: options.mimeType,
         cacheControl: 'public, max-age=31536000, immutable',
+        ...(options.mimeType ? { contentType: options.mimeType } : {}),
     });
     let width = 800;
     let height = 600;

@@ -121,7 +121,7 @@ export class MapWorkflowController {
       const { mapId } = req.params
 
       await mapWorkflowService.submitForReview(mapId, userId, {
-        isAdmin: req.user?.isAdmin,
+        isAdmin: Boolean(req.user?.isAdmin),
       })
 
       return res.json({
@@ -183,10 +183,10 @@ export class MapWorkflowController {
       const { notes } = req.body as { notes?: string }
 
       await mapWorkflowService.approveMap(mapId, adminId, {
-        notes: notes ?? undefined,
+        ...(notes ? { notes } : {}),
         auditContext: {
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent') ?? undefined,
+          ipAddress: String(req.ip),
+          ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
         },
       })
 
@@ -230,8 +230,8 @@ export class MapWorkflowController {
       await mapWorkflowService.rejectMap(mapId, adminId, {
         reason,
         auditContext: {
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent') ?? undefined,
+          ipAddress: String(req.ip),
+          ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
         },
       })
 
@@ -323,8 +323,8 @@ export class MapWorkflowController {
 
       await mapWorkflowService.archiveMap(mapId, adminId, {
         auditContext: {
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent') ?? undefined,
+          ipAddress: String(req.ip),
+          ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
         },
       })
 
@@ -359,8 +359,8 @@ export class MapWorkflowController {
 
       const result = await mapWorkflowService.toggleFeatured(mapId, adminId, {
         auditContext: {
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent') ?? undefined,
+          ipAddress: String(req.ip),
+          ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
         },
       })
 
@@ -431,7 +431,7 @@ export class MapWorkflowController {
 
       const context = await mapPermissionService.getMapEditorContext(mapId, {
         userId,
-        isAdmin: req.user?.isAdmin,
+        isAdmin: Boolean(req.user?.isAdmin),
       })
 
       if (!context.exists) {

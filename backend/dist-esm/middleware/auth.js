@@ -31,7 +31,7 @@ export const authenticateToken = async (req, res, next) => {
             req.sessionId = payload.sessionId;
         }
         else {
-            req.sessionId = undefined;
+            delete req.sessionId;
         }
         try {
             const statusResult = await query('SELECT status, reason, expires_at FROM user_account_status WHERE user_id = $1', [
@@ -75,14 +75,14 @@ export const authenticateToken = async (req, res, next) => {
                 const membership = await clanService.getActiveMembership(payload.userId);
                 const requestUser = {
                     id: userRow.id,
-                    username: userRow.username ?? undefined,
-                    email: userRow.email ?? undefined,
                     isAdmin: hasAdminRole || Boolean(userRow.is_admin),
                     isVip: Boolean(userRow.is_vip),
                     isBetaUser: Boolean(userRow.is_beta_user),
                     premiumTier,
                     hasPremium: premiumTier !== 'free',
                     clanMembership: membership,
+                    ...(userRow.username ? { username: userRow.username } : {}),
+                    ...(userRow.email ? { email: userRow.email } : {}),
                 };
                 req.user = requestUser;
             }

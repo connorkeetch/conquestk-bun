@@ -471,7 +471,6 @@ export class QueueService {
                 enableReadyCheck: false,
                 lazyConnect: false,
                 maxRetriesPerRequest: null,
-                commandTimeout: undefined,
             });
             const bullPrefix = process.env.BULL_PREFIX?.trim() || 'bull';
             const events = new QueueEvents(queue.name, {

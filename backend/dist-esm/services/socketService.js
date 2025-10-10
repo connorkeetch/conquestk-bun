@@ -173,7 +173,11 @@ function serializeGameStateForClient(state) {
         armies: p.armies,
         isEliminated: p.isEliminated,
         skillRating: p.skillRating,
-        teamId: p.teamId ?? undefined,
+        ...(p.teamId === null
+            ? { teamId: null }
+            : typeof p.teamId === 'number'
+                ? { teamId: p.teamId }
+                : {}),
         treasures: p.treasures,
         territories: p.territories,
         cards: p.cards,
@@ -188,7 +192,7 @@ function serializeGameStateForClient(state) {
         continent: t.continent,
         isCapital: t.isCapital,
         capitalOwnerId: t.capitalOwnerId,
-        coordinates: t.coordinates,
+        ...(t.coordinates ? { coordinates: t.coordinates } : {}),
     }));
     const cfg = (s.gameConfig ?? {});
     const gameConfig = {
@@ -208,20 +212,29 @@ function serializeGameStateForClient(state) {
         players,
         board,
         gameConfig: gameConfig,
-        kingOfTheHillState: s.kingOfTheHillState,
-        assassinationTargets: s.assassinationTargets,
-        cards: Array.isArray(s.cards) ? s.cards : [],
-        movementTracking: s.movementTracking,
+        ...(s.kingOfTheHillState
+            ? { kingOfTheHillState: s.kingOfTheHillState }
+            : {}),
+        ...(s.assassinationTargets
+            ? { assassinationTargets: s.assassinationTargets }
+            : {}),
+        cards: Array.isArray(s.cards)
+            ? s.cards
+            : [],
+        ...(s.movementTracking
+            ? { movementTracking: s.movementTracking }
+            : {}),
     };
-    const territoryModifiers = s.territoryModifiers;
-    if (territoryModifiers instanceof Map) {
-        const obj = Object.fromEntries(territoryModifiers.entries());
+    const territoryModifiersAny = state
+        .territoryModifiers;
+    if (territoryModifiersAny instanceof Map) {
+        const obj = Object.fromEntries(territoryModifiersAny.entries());
         return { ...base, territoryModifiers: obj };
     }
-    if (territoryModifiers) {
+    if (territoryModifiersAny && !(territoryModifiersAny instanceof Map)) {
         return {
             ...base,
-            territoryModifiers: territoryModifiers,
+            territoryModifiers: territoryModifiersAny,
         };
     }
     return base;
@@ -340,7 +353,7 @@ export function setupSocketHandlers(io) {
             socket.joinedGameRooms.add(normalizedRoomId);
             const player = await gameRoomService.getPlayer(normalizedRoomId, userId);
             const isAi = player?.isAi === true;
-            const normalizedPlayer = {
+            const basePlayer = {
                 id: player?.id ?? player?.userId ?? userId,
                 userId: player?.userId ?? userId,
                 aiPlayerId: player?.aiPlayerId ?? null,
@@ -348,11 +361,6 @@ export function setupSocketHandlers(io) {
                 joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
                 isReady: player?.isReady === undefined ? isAi : Boolean(player.isReady),
                 readyAt: player?.readyAt instanceof Date ? player.readyAt.toISOString() : null,
-                teamId: typeof player?.teamId === 'number'
-                    ? player.teamId
-                    : player?.teamId === null
-                        ? null
-                        : undefined,
                 isAi,
                 aiDifficulty: player?.aiDifficulty ?? null,
                 aiPersonalitySeed: typeof player?.aiPersonalitySeed === 'number'
@@ -361,6 +369,14 @@ export function setupSocketHandlers(io) {
                 selectedColor: typeof player?.selected_color === 'string' && player.selected_color.length > 0
                     ? player.selected_color
                     : null,
+            };
+            const normalizedPlayer = {
+                ...basePlayer,
+                ...(typeof player?.teamId === 'number'
+                    ? { teamId: player.teamId }
+                    : player?.teamId === null
+                        ? { teamId: null }
+                        : {}),
             };
             socket.to(channel).emit('player-joined', {
                 roomId: normalizedRoomId,
@@ -488,7 +504,13 @@ export function setupSocketHandlers(io) {
             }
             const outcome = await gameActionProcessor.processDeployment(data.roomId, userId, data.territoryId, data.armies, socket.id);
             if (typeof ack === 'function') {
-                ack({ ok: true, queued: outcome.mode === 'queued', version: outcome.result?.version });
+                ack({
+                    ok: true,
+                    queued: outcome.mode === 'queued',
+                    ...(outcome.result?.version !== undefined
+                        ? { version: outcome.result.version }
+                        : {}),
+                });
             }
         }));
         socket.on('attack', withErrorHandler(socket, 'attack', async (data, ack) => {
@@ -598,7 +620,7 @@ export function setupSocketHandlers(io) {
                     roomId: data.roomId,
                     timestamp: Date.now(),
                     text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
-                    playerId: socket.userId,
+                    ...(socket.userId ? { playerId: socket.userId } : {}),
                 });
             }
             catch {

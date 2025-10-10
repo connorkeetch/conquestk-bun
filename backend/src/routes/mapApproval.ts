@@ -30,7 +30,7 @@ router.get('/maps/:mapId/versions', async (req, res) => {
 
     const context = await mapPermissionService.getMapEditorContext(mapId, {
       userId,
-      isAdmin: req.user?.isAdmin,
+      isAdmin: Boolean(req.user?.isAdmin),
     })
 
     if (!context.exists) {
@@ -68,7 +68,7 @@ router.get('/versions/:versionId', async (req, res) => {
 
     await mapPermissionService.assertCanEditMap(version.mapId, {
       userId,
-      isAdmin: req.user?.isAdmin,
+      isAdmin: Boolean(req.user?.isAdmin),
     })
 
     res.json({ version })
@@ -103,7 +103,7 @@ router.post('/maps/:mapId/versions', async (req, res) => {
 
     await mapPermissionService.assertCanEditMap(mapId, {
       userId,
-      isAdmin: req.user?.isAdmin,
+      isAdmin: Boolean(req.user?.isAdmin),
     })
 
     const version = await MapApprovalService.createVersion(mapId, userId, versionData)
@@ -139,7 +139,7 @@ router.put('/versions/:versionId/current', async (req, res) => {
 
     await mapPermissionService.assertCanEditMap(version.mapId, {
       userId,
-      isAdmin: req.user?.isAdmin,
+      isAdmin: Boolean(req.user?.isAdmin),
     })
 
     await MapApprovalService.setCurrentVersion(versionId)
@@ -178,7 +178,7 @@ router.post('/versions/:versionId/submit', async (req, res) => {
 
     await mapPermissionService.assertCanEditMap(version.mapId, {
       userId,
-      isAdmin: req.user?.isAdmin,
+      isAdmin: Boolean(req.user?.isAdmin),
     })
 
     const approvalRequest = await MapApprovalService.submitForApproval(
@@ -259,8 +259,8 @@ router.put(
       const assignedModeratorId = moderatorId || currentUserId
 
       await MapApprovalService.assignReviewer(requestId, currentUserId, assignedModeratorId, {
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent') ?? undefined,
+        ipAddress: String(req.ip),
+        ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
       })
       res.json({ message: 'Reviewer assigned successfully' })
     } catch (error) {
@@ -289,8 +289,8 @@ router.delete(
       }
 
       await MapApprovalService.unassignReviewer(requestId, currentUserId, {
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent') ?? undefined,
+        ipAddress: String(req.ip),
+        ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
       })
       res.json({ message: 'Reviewer unassigned successfully' })
     } catch (error) {
@@ -347,8 +347,8 @@ router.post(
         decision,
         moderatorFeedback,
         {
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent') ?? undefined,
+          ipAddress: String(req.ip),
+          ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
         },
       )
 
@@ -379,8 +379,8 @@ router.post(
       }
 
       await MapApprovalService.publishVersion(versionId, moderatorId, {
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent') ?? undefined,
+        ipAddress: String(req.ip),
+        ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
       })
       res.json({ message: 'Version published successfully' })
     } catch (error) {
@@ -410,8 +410,8 @@ router.post(
       }
 
       await MapApprovalService.archiveMap(mapId, moderatorId, reason, {
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent') ?? undefined,
+        ipAddress: String(req.ip),
+        ...(req.get('User-Agent') ? { userAgent: String(req.get('User-Agent')) } : {}),
       })
       res.json({ message: 'Map archived successfully' })
     } catch (error) {

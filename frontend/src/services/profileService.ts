@@ -367,19 +367,20 @@ export const profileService = {
     username: string,
     options: RequestOptions = {},
   ): Promise<ProfileSummary> {
-    const response = await apiClient.get(`/users/${encodeURIComponent(username)}/profile`, {
-      signal: options.signal,
-    })
+    const cfg = options.signal ? { signal: options.signal } : undefined
+    const response = await apiClient.get(`/users/${encodeURIComponent(username)}/profile`, cfg)
     return normalizeProfileSummary(response.data)
   },
 
   async getMyProfile(options: RequestOptions = {}): Promise<ProfileSummary> {
-    const response = await apiClient.get('/users/profile', { signal: options.signal })
+    const cfg = options.signal ? { signal: options.signal } : undefined
+    const response = await apiClient.get('/users/profile', cfg)
     return normalizeProfileSummary(response.data)
   },
 
   async getMyStats(options: RequestOptions = {}): Promise<PlayerStatsBreakdown> {
-    const response = await apiClient.get('/profile/stats', { signal: options.signal })
+    const cfg = options.signal ? { signal: options.signal } : undefined
+    const response = await apiClient.get('/profile/stats', cfg)
     return normalizeStatsBreakdown(response.data)
   },
 
@@ -393,10 +394,10 @@ export const profileService = {
       ? '/profile/history'
       : `/users/${encodeURIComponent(username)}/history`
 
-    const response = await apiClient.get(endpoint, {
-      params: { limit, offset },
-      signal: options.signal,
-    })
+    const cfg = options.signal
+      ? ({ params: { limit, offset }, signal: options.signal } as const)
+      : ({ params: { limit, offset } } as const)
+    const response = await apiClient.get(endpoint, cfg)
 
     const rawMatches = Array.isArray(response.data?.matches) ? response.data.matches : []
     const matches = rawMatches.map((item: Record<string, unknown>) =>
@@ -436,11 +437,9 @@ export async function searchUsers(
 ): Promise<UserSearchResult[]> {
   const q = query.trim()
   if (q.length < 2) return []
+  const cfg = options.signal ? { params: { q, limit }, signal: options.signal } : { params: { q, limit } }
   const response = await apiClient.get<{
     users: Array<{ id: string; username: string }>
-  }>('/users/search', {
-    params: { q, limit },
-    signal: options.signal,
-  })
+  }>('/users/search', cfg)
   return response.data.users ?? []
 }

@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.esm.json && tsc-alias -p tsconfig.esm.json",
     "build:esm": "tsc -p tsconfig.esm.json && tsc-alias -p tsconfig.esm.json",
     "typecheck": "tsc --noEmit",
+    "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
     "postbuild": "node scripts/copy-migrations.cjs",
     "start": "node dist-esm/index.js",
     "start:legacy-sequence": "node dist-esm/scripts/runMigration.js && node dist-esm/scripts/ensureDeployAccounts.js && ( [ \"$SYNC_FEATURE_FLAGS_ON_START\" = \"true\" ] && node dist-esm/scripts/checkFeatureFlags.js --apply || echo \"Skipping feature flag sync (set SYNC_FEATURE_FLAGS_ON_START=true to enable)\" ) && node dist-esm/index.js",

@@ -105,7 +105,7 @@ export class GameController {
 
           normalizedAiOpponents.push({
             difficulty: rawDifficulty as 'recruit' | 'commander' | 'grandmaster',
-            personalitySeed: personalitySeed ?? undefined,
+            ...(personalitySeed !== undefined ? { personalitySeed } : {}),
           })
         }
       }
@@ -120,46 +120,41 @@ export class GameController {
         hostId,
         maxPlayers: maxPlayers || 6,
         isPrivate: isPrivate || false,
-        mapId: mapId ?? undefined,
         gameMode: gameMode || 'classic',
-        movementType:
-          movementType === 'classic_adjacent' ||
-          movementType === 'adjacent_multi' ||
-          movementType === 'path_single' ||
-          movementType === 'path_multi'
-            ? movementType
-            : undefined,
-        fogOfWar:
-          fogOfWar === 'off' || fogOfWar === 'adjacent' || fogOfWar === 'persistent'
-            ? fogOfWar
-            : undefined,
-        turnTimerSeconds:
-          typeof turnTimerSeconds === 'number' && Number.isFinite(turnTimerSeconds)
-            ? Math.max(10, Math.min(86400, Math.trunc(turnTimerSeconds)))
-            : undefined,
-        timeBankSeconds:
-          typeof timeBankSeconds === 'number' && Number.isFinite(timeBankSeconds)
-            ? Math.max(0, Math.min(86400, Math.trunc(timeBankSeconds)))
-            : undefined,
         allowTeamPlay:
           allowTeamPlay === undefined ? normalizedTeamMode !== 'none' : Boolean(allowTeamPlay),
         teamMode: normalizedTeamMode,
-        numberOfTeams:
-          typeof parsedNumberOfTeams === 'number' && !Number.isNaN(parsedNumberOfTeams)
-            ? parsedNumberOfTeams
-            : undefined,
         isRanked: normalizedIsRanked,
         aiOpponents: normalizedAiOpponents,
-        treasureConfig,
+        ...(typeof mapId === 'string' ? { mapId } : {}),
+        ...(movementType === 'classic_adjacent' ||
+        movementType === 'adjacent_multi' ||
+        movementType === 'path_single' ||
+        movementType === 'path_multi'
+          ? { movementType }
+          : {}),
+        ...(fogOfWar === 'off' || fogOfWar === 'adjacent' || fogOfWar === 'persistent'
+          ? { fogOfWar }
+          : {}),
+        ...(typeof turnTimerSeconds === 'number' && Number.isFinite(turnTimerSeconds)
+          ? { turnTimerSeconds: Math.max(10, Math.min(86400, Math.trunc(turnTimerSeconds))) }
+          : {}),
+        ...(typeof timeBankSeconds === 'number' && Number.isFinite(timeBankSeconds)
+          ? { timeBankSeconds: Math.max(0, Math.min(86400, Math.trunc(timeBankSeconds))) }
+          : {}),
+        ...(typeof parsedNumberOfTeams === 'number' && !Number.isNaN(parsedNumberOfTeams)
+          ? { numberOfTeams: parsedNumberOfTeams }
+          : {}),
+        ...(treasureConfig !== undefined ? { treasureConfig } : {}),
       }
 
       const room = await this.gameRoomService.createRoom(roomData)
 
       // Ensure host is part of the room immediately after creation
       try {
-        await this.gameRoomService.joinRoom(room.id, hostId, {
-          selectedColor: typeof selectedColor === 'string' ? selectedColor : undefined,
-        })
+        const joinOptions =
+          typeof selectedColor === 'string' ? { selectedColor } : undefined
+        await this.gameRoomService.joinRoom(room.id, hostId, joinOptions)
       } catch (joinError) {
         logger.warn('Host auto-join failed after room creation', {
           roomId: room.id,
@@ -244,7 +239,7 @@ export class GameController {
         gameId: roomId,
         playerId: userId,
         action,
-        idempotencyKey,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       })
 
       if (job) {
@@ -571,7 +566,7 @@ export class GameController {
 
         sanitizedRequest.push({
           difficulty: rawDifficulty as NormalizedDifficulty,
-          personalitySeed: personalitySeed ?? undefined,
+          ...(personalitySeed !== undefined ? { personalitySeed } : {}),
         })
       }
 
