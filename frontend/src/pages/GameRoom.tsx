@@ -1,4 +1,4 @@
-import type { TreasureConfig } from '@risk-game/shared'
+import type { TreasureConfig } from '@conquestk/shared'
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -60,7 +60,7 @@ import { toggleMuteUser } from '@/store/uiRoomSlice'
 */
 import { logger } from '@/utils/logger'
 // PlayerStatsTable is used via PlayerStatsPanel tabs
-import { RiskGameBoard } from '../components/RiskGameBoard'
+import { ConquestKBoard } from '../components/ConquestKBoard'
 import { Skeleton } from '../components/ui/Skeleton'
 import {
   getBackgroundMotionPreference,
@@ -2103,14 +2103,14 @@ export default function GameRoom() {
           >
             <div className="flex-1 min-h-0">
               {currentGame ? (
-                <RiskGameBoard
+                <ConquestKBoard
                   mapId={currentRoom?.mapId || 'world'}
                   onTerritoryClick={(_territoryId) => {
                     // TODO: Handle territory interactions based on game phase
                   }}
                 />
               ) : currentRoom ? (
-                <RiskGameBoard
+                <ConquestKBoard
                   mapId={currentRoom.mapId || 'world'}
                   lobbyMode={true}
                   lobbyPlayers={

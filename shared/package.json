@@ -1,7 +1,7 @@
 {
-  "name": "@risk-game/shared",
+  "name": "@conquestk/shared",
   "version": "1.0.0",
-  "description": "Shared types for Risk Game",
+  "description": "Shared types for ConquestK",
   "main": "dist/types/index.js",
   "types": "types/index.ts",
   "exports": {

@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
-import type { GameDelta } from '@risk-game/shared'
+import type { GameDelta } from '@conquestk/shared'
 import type { GameState, PlayerColor } from '../types/game'
 import gameReducer, {
   applyDelta,

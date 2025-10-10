@@ -1,4 +1,4 @@
-import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
+import type { NotificationEvent, NotificationResult } from '@conquestk/shared/types/notifications'
 import { logger } from '../utils/logger.js'
 import { DiscordWebhookChannel, discordWebhookChannel } from './channels/DiscordWebhookChannel.js'
 import { SlackWebhookChannel } from './channels/SlackWebhookChannel.js'

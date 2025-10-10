@@ -6,7 +6,7 @@ import { TerritoryModifierLegend } from '../TerritoryModifierLegend'
 import UnifiedMapDisplay from '../UnifiedMapDisplay'
 import type { TerritoryDisplayMap } from './territoryDisplay'
 
-interface RiskGameMapProps {
+interface ConquestKMapProps {
   mapId: string
   territories: TerritoryDisplayMap
   players: GamePlayer[]
@@ -19,7 +19,7 @@ interface RiskGameMapProps {
   onTerritoryHover: (territoryId: string | null) => void
 }
 
-export const RiskGameMap: React.FC<RiskGameMapProps> = ({
+export const ConquestKMap: React.FC<ConquestKMapProps> = ({
   mapId,
   territories,
   players,

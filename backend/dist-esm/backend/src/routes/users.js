@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import { query } from '../config/database.js';
-import { RANKS, getRankForRating } from '@risk-game/shared/constants/ranks';
+import { RANKS, getRankForRating } from '@conquestk/shared/constants/ranks';
 import { PREMIUM_COLOR_KEYS } from '../constants/premium.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { profileService } from '../services/profileService.js';

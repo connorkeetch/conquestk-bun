@@ -154,7 +154,7 @@ jobs:
 
       - name: Health check
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://risk-game-production-9935.up.railway.app/health)
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://dev.conquestk.com/health)
           if [ "$response" -eq 200 ]; then
             echo "Staging deployment successful!"
           else

@@ -20,7 +20,7 @@ import { AssassinationContract } from './game/AssassinationContract'
 import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
 // MapHeaderBar removed; floating zoom now in-map
 // MapSidebar removed; all zoom controls moved to header
-import { RiskGameMap } from './game/RiskGameMap'
+import { ConquestKMap } from './game/ConquestKMap'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
 
@@ -28,14 +28,14 @@ type OwnedTerritory = { id: string; ownerId?: string | null; armies?: number }
 
 export type { TerritoryDisplay, TerritoryDisplayMap }
 
-interface RiskGameBoardProps {
+interface ConquestKBoardProps {
   onTerritoryClick?: (territoryId: string) => void
   mapId?: string
   lobbyMode?: boolean
   lobbyPlayers?: Array<{ id: string; username: string; color: string }>
 }
 
-export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
+export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
   onTerritoryClick,
   mapId = 'world',
   lobbyMode = false,
@@ -385,7 +385,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="relative flex-1 min-h-0">
-            <RiskGameMap
+            <ConquestKMap
               mapId={mapId}
               territories={territories}
               players={players}

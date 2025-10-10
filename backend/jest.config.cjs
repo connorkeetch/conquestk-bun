@@ -16,7 +16,7 @@ module.exports = {
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/index.ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@risk-game/shared/(.*)$': '<rootDir>/../shared/$1',
+    '^@conquestk/shared/(.*)$': '<rootDir>/../shared/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/test/setupTests.cjs'],

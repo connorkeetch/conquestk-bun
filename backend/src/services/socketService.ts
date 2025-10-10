@@ -1,4 +1,4 @@
-import type { GameDelta } from '@risk-game/shared/types'
+import type { GameDelta } from '@conquestk/shared/types'
 import * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'

@@ -737,7 +737,7 @@ memoryDiagnosticsService.start()
 
 async function startServer() {
   try {
-    logger.info('🚀 Starting Risk Game server...')
+    logger.info('🚀 Starting ConquestK server...')
 
     // Log comprehensive diagnostics
     logStartupDiagnostics()

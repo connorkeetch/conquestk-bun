@@ -1,4 +1,4 @@
-# 🗺️ Risk Game Map Data Reference
+# 🗺️ ConquestK Map Data Reference
 
 This document consolidates the previous *Map Format* and *Map Schema* guides into a single source of truth for how maps are modeled, edited, stored, and reviewed inside ConquestK.
 

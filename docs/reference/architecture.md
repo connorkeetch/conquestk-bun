@@ -33,7 +33,7 @@ _Last updated: March 7, 2026_
 - Job idempotency helpers (`jobIdempotencyService.ts`) and metrics instrumentation (`metricsService.ts`) keep retries observable and safe.
 
 ### Real‑Time Game Deltas
-- Contract is defined once in the shared package at `shared/types/delta.ts` and re-exported via `@risk-game/shared/types`. All runtimes (backend + frontend) use this single contract.
+- Contract is defined once in the shared package at `shared/types/delta.ts` and re-exported via `@conquestk/shared/types`. All runtimes (backend + frontend) use this single contract.
 - Emission on the backend is centralized through the `DeltaBuilder` factory in `backend/src/types/deltaUpdates.ts` together with the runtime `DeltaEmitter` service. Fields are normalized before broadcasting:
   - `armies`, `turn`, `reinforcementArmies` are clamped to non-negative integers
   - `ownerId` is only included when a non-empty string is provided

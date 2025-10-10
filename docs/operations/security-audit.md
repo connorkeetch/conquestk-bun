@@ -1,7 +1,7 @@
 # 🔒 Security Audit & Implementation Report
 
 ## Executive Summary
-Comprehensive security hardening has been implemented across the Risk Game application to protect against common web vulnerabilities including SQL injection, XSS, NoSQL injection, and brute force attacks.
+Comprehensive security hardening has been implemented across the ConquestK application to protect against common web vulnerabilities including SQL injection, XSS, NoSQL injection, and brute force attacks.
 
 ## ✅ Security Implementations
 

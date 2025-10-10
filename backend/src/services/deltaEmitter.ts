@@ -35,7 +35,7 @@ export class DeltaEmitter {
     | ((
         io: Server,
         roomId: string,
-        delta: import('@risk-game/shared/types').GameDelta,
+        delta: import('@conquestk/shared/types').GameDelta,
       ) => Promise<void>)
     | null = null
 

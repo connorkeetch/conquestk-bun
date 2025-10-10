@@ -13,7 +13,7 @@ export function buildFrontendUrl(req, path) {
         return joinUrl('https://conquestk.com', path);
     }
     if (process.env.NODE_ENV === 'staging') {
-        return joinUrl('https://risk-game-production-9935.up.railway.app', path);
+        return joinUrl('https://dev.conquestk.com', path);
     }
     return joinUrl('http://localhost:5173', path);
 }

@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { DEFAULT_THEME_ID, normalizeThemeId, type ThemeId } from '@risk-game/shared/types/themes'
+import { DEFAULT_THEME_ID, normalizeThemeId, type ThemeId } from '@conquestk/shared/types/themes'
 import { setBackgroundMotionPreference } from '../config/themes.config'
 import type { PlayerColor } from '../constants/colors'
 import preferencesService from '../services/preferencesService'

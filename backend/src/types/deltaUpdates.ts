@@ -1,6 +1,6 @@
 /**
  * Delta builder for efficient real-time broadcasting.
- * Use shared types from @risk-game/shared/types to avoid drift.
+ * Use shared types from @conquestk/shared/types to avoid drift.
  */
 import type {
   BattleResultDelta,
@@ -8,7 +8,7 @@ import type {
   PhaseChangeDelta,
   PlayerDelta as PlayerUpdateDelta,
   TerritoryDelta as TerritoryUpdateDelta,
-} from '@risk-game/shared/types'
+} from '@conquestk/shared/types'
 
 /**
  * Delta builder utility for creating efficient updates

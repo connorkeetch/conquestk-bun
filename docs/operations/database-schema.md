@@ -6,7 +6,7 @@ Generated on 2025-10-02T17:56:02.737Z
 
 ## Overview
 
-- Database: `risk_game_local`
+- Database: `conquestk_local`
 - Schema: `public`
 - PostgreSQL: PostgreSQL 18.0
 - Tables: 1

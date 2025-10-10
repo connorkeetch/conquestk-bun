@@ -1,4 +1,4 @@
-import { normalizeThemeId } from '@risk-game/shared/types/themes'
+import { normalizeThemeId } from '@conquestk/shared/types/themes'
 import type { Request, Response } from 'express'
 import { Router } from 'express'
 import type { Pool } from 'pg'

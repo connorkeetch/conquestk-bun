@@ -1,7 +1,7 @@
 import type React from 'react'
 import { RANK_COLORS } from '../constants/colors'
 // Shared ranks come from the shared package (ESM named exports)
-import * as ranksModule from '@risk-game/shared/constants/ranks'
+import * as ranksModule from '@conquestk/shared/constants/ranks'
 
 export interface ConquestRank {
   name: string

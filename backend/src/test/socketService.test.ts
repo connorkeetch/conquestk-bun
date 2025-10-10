@@ -60,6 +60,7 @@ const queueServiceMocks = getQueueServiceMocks()
 
 const mockGameServiceInstance = {
   fortify: jest.fn(),
+  processFortify: jest.fn(),
   endTurn: jest.fn(),
   processPlaceArmies: jest.fn(),
   processPhaseChange: jest.fn(),
@@ -220,6 +221,14 @@ describe('socketService event handlers', () => {
       toArmies: 2,
       gameState: { id: 'state' },
     })
+    if (mockGameServiceInstance.processFortify) {
+      mockGameServiceInstance.processFortify.mockReset()
+      mockGameServiceInstance.processFortify.mockResolvedValue({
+        fromArmies: 1,
+        toArmies: 2,
+        version: 1,
+      })
+    }
     mockGameServiceInstance.endTurn.mockReset()
     mockGameServiceInstance.endTurn.mockResolvedValue({
       gameState: {
@@ -296,24 +305,23 @@ describe('socketService event handlers', () => {
       armies: 5,
     })
 
-    expect(mockGameServiceInstance.fortify).toHaveBeenCalledWith(
+    expect(mockGameServiceInstance.processFortify).toHaveBeenCalledWith(
       'room-99',
-      'user-1',
-      'from',
-      'to',
-      5,
+      expect.objectContaining({
+        fromTerritoryId: 'from',
+        toTerritoryId: 'to',
+        armies: 5,
+        playerId: 'user-1',
+      }),
     )
 
+    // Under fog-aware emission, fallback path emits individual 'game-delta' events
     const ioToMock = io.to as unknown as jest.Mock
     expect(ioToMock).toHaveBeenCalledWith('game:room-99')
-    // First emission should be a coalesced batch with two TERRITORY_UPDATE deltas
     const firstCall = roomEmit.mock.calls[0]
-    expect(firstCall[0]).toBe('game-delta-batch')
-    const deltas = firstCall[1] as Array<{ type: string; territoryId: string; changes: unknown }>
-    expect(Array.isArray(deltas) && deltas.length).toBe(2)
-    const [d1, d2] = deltas
-    expect(d1.type).toBe('TERRITORY_UPDATE')
-    expect(d2.type).toBe('TERRITORY_UPDATE')
+    expect(firstCall[0]).toBe('game-delta')
+    const delta = firstCall[1] as { type: string; territoryId?: string }
+    expect(delta.type).toBe('TERRITORY_UPDATE')
   })
 
   it('broadcasts phase changes via unified game-delta on end turn', async () => {

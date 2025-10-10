@@ -1,4 +1,4 @@
-import type { ThemeId } from '@risk-game/shared/types/themes'
+import type { ThemeId } from '@conquestk/shared/types/themes'
 
 // User Profile and Achievement System Types
 

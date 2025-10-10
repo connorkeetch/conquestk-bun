@@ -1,4 +1,4 @@
-import { type ClanProgressionSocketPayload, subscribeToClanProgress } from '@risk-game/shared/types'
+import { type ClanProgressionSocketPayload, subscribeToClanProgress } from '@conquestk/shared/types'
 import {
   AlertTriangle,
   ArrowLeft,

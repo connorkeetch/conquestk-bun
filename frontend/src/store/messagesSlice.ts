@@ -9,7 +9,7 @@ import type {
   ConversationUpdatedPayload,
   ReceiptReadEventPayload,
   TypingEventResponse,
-} from '@risk-game/shared'
+} from '@conquestk/shared'
 import {
   ensureDirectConversation as ensureDirectConversationRequest,
   ensureGameConversation as ensureGameConversationRequest,

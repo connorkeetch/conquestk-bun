@@ -180,7 +180,7 @@ Implementation status (Sept 30)
 - Conflict toast/log for contested actions: Implemented. Socket `gameError` triggers a toast and adds a client log line. See `frontend/src/services/socketService.ts`.
 - Render only what’s visible: Implemented earlier. SVG map + separate army/modifier overlays reduce repaint.
 - Socket hygiene + status dot: Implemented earlier. ConnectionBanner and header dot reflect connection status with reconnect backoff from Socket.io.
-- Persist small UI state: Extended. Added zoom persistence (per‑map key) in `ResponsiveMapContainer` via `storageKey`, wired by `RiskGameMap` (`storageKey="map:${mapId}"`). Existing persisted toggles remain.
+- Persist small UI state: Extended. Added zoom persistence (per‑map key) in `ResponsiveMapContainer` via `storageKey`, wired by `ConquestKMap` (`storageKey="map:${mapId}"`). Existing persisted toggles remain.
 - Overlays & filters: Implemented Sectors/Attackable/Threat for classic and custom maps. Added a small sector legend.
 - Mobile FAB + Drawer: Implemented a bottom-right FAB (mobile only) that opens a bottom drawer with tabs for Actions and Chat/Log. The Actions tab embeds the action controls; desktop keeps the fixed bottom action bar.
 - Mini-HUD: Added a compact top-center HUD on mobile with phase chip, timer, and current player color/name. Tapping it opens the drawer to Chat.

@@ -2,7 +2,7 @@
 
 **Last Updated**: 2025-09-01
 
-This document outlines the coding standards and best practices for the Risk Game project. All contributors and AI assistants (including Claude Code) should follow these principles.
+This document outlines the coding standards and best practices for the ConquestK project. All contributors and AI assistants (including Claude Code) should follow these principles.
 
 ## 🎯 Core Principles
 

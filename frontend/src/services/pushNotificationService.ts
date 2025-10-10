@@ -182,7 +182,7 @@ class PushNotificationService {
       return
     }
 
-    const notification = new Notification('Risk Game Test', {
+    const notification = new Notification('ConquestK Test', {
       body: 'This is a test notification!',
       icon: '/icon-192.png',
       badge: '/icon-192.png',

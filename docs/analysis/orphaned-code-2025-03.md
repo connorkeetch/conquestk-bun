@@ -15,7 +15,7 @@
 | Lobby teams | `TeamAssignment.tsx` | Drag-and-drop team balancer for hosts | Wire it into the host drawer on `LobbyPage` when `allowTeamPlay` is true so manual team setups work again, or remove it together with the unused `/rooms/:id/team-assignments` flow. |
 | Chat UX | `chat/MessageReactions.tsx`, `chat/ReactionPicker.tsx` | Emoji reactions picker and pill list | Implement reactions in the Inbox/chat drawer (hook into socket + persistence) or delete the scaffolding. |
 | Game Room sidebars | `game/ConquestArmyTransferModal.tsx`, `ContinentControlPanel.tsx`, `CurrentActionPanel.tsx`, `GameActionPanel.tsx`, `PlayersLegend.tsx`, `PlayersPanel.tsx`, `TerritoryInfoPanel.tsx` | Legacy panels/modals that surfaced current action, territory details, continent bonuses, and transfer flow | Audit the current `GameRoom` UX to see which affordances are still missing. Re-introduce only the valuable bits (e.g. continent bonuses) using the new panel framework; delete the rest to avoid regressions. |
-| Hooks | `useTerritorySelection.ts` | Helper that wrapped selection + hover dispatching | Either re-home it inside the modern `RiskGameBoard` once hover highlights are restored, or remove it if the Redux slice now handles everything inline. |
+| Hooks | `useTerritorySelection.ts` | Helper that wrapped selection + hover dispatching | Either re-home it inside the modern `ConquestKBoard` once hover highlights are restored, or remove it if the Redux slice now handles everything inline. |
 | Admin maps | `pages/AdminMapReviews.tsx` | Alternate review queue dashboard | Confirm nobody still relies on this route (only `AdminMapReview` is linked). Delete once verified to avoid confusing admins. |
 | Backend data | `backend/src/data/defaultMaps.ts` | Hard-coded sample maps for dev testing | Retire it if our map loader now depends exclusively on DB records/fixtures; otherwise move the seed data into a migration or test fixture so it is actually used. |
 
@@ -39,10 +39,10 @@ The rating animation toast and skill progress bar are left over from an earlier 
 `MessageReactions` and `ReactionPicker` provide a complete reaction UX (picker, pill list, toggling). Implementing the socket + persistence glue would bring them to life; otherwise delete them so contributors do not assume reactions already exist.
 
 ### Legacy Game Room panels
-Several memoized panels/modals (`ConquestArmyTransferModal`, `ContinentControlPanel`, `CurrentActionPanel`, `GameActionPanel`, `PlayersLegend`, `PlayersPanel`, `TerritoryInfoPanel`) live beside the modern `RiskGameBoard` but are not referenced. Compare their capabilities with what the current drawers and overlays provide, then either port the missing affordances or remove the redundant files.
+Several memoized panels/modals (`ConquestArmyTransferModal`, `ContinentControlPanel`, `CurrentActionPanel`, `GameActionPanel`, `PlayersLegend`, `PlayersPanel`, `TerritoryInfoPanel`) live beside the modern `ConquestKBoard` but are not referenced. Compare their capabilities with what the current drawers and overlays provide, then either port the missing affordances or remove the redundant files.
 
 ### Territory selection hook
-`useTerritorySelection` wraps Redux selectors and hover dispatching. `RiskGameBoard` now performs those calls inline, so the hook can likely be deleted unless we plan to re-extract hover logic for reuse.
+`useTerritorySelection` wraps Redux selectors and hover dispatching. `ConquestKBoard` now performs those calls inline, so the hook can likely be deleted unless we plan to re-extract hover logic for reuse.
 
 ### Admin map review page
 `AdminMapReviews` still fetches the approval queue, but `App.tsx` only routes to `AdminMapReview` (singular) and `AdminMaps`. Confirm nobody deep-links to the plural version before deleting.

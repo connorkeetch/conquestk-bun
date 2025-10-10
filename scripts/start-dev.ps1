@@ -1,4 +1,4 @@
-# Risk Game Development Startup Script
+# ConquestK Development Startup Script
 # This script sets up and starts the development environment
 
 param(
@@ -26,7 +26,7 @@ function Write-Error { param([string]$Message) Write-ColorOutput "[ERROR] $Messa
 function Write-Info { param([string]$Message) Write-ColorOutput "[INFO] $Message" "Cyan" }
 
 # Header
-Write-ColorOutput "`nRisk Game Development Environment" "Magenta"
+Write-ColorOutput "`nConquestK Development Environment" "Magenta"
 Write-ColorOutput "====================================" "Magenta"
 
 # Check PowerShell version
@@ -37,7 +37,7 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 
 # Check if we're in the right directory
 if (-not (Test-Path "package.json")) {
-    Write-Error "Not in the Risk game root directory. Please run from the project root."
+    Write-Error "Not in the ConquestK root directory. Please run from the project root."
     exit 1
 }
 
@@ -160,7 +160,7 @@ if ($startBackend) {
         }
     }
     
-    $backendProcess = Start-Service -Name "Backend Server" -Command "npm run dev" -WorkingDirectory "$PWD\backend" -WindowTitle "Risk Game - Backend"
+    $backendProcess = Start-Service -Name "Backend Server" -Command "npm run dev" -WorkingDirectory "$PWD\backend" -WindowTitle "ConquestK - Backend"
     if ($backendProcess) {
         $processes += $backendProcess
         Write-Info "Backend will be available at: http://localhost:$backendPort"
@@ -189,7 +189,7 @@ if ($startFrontend) {
         }
     }
     
-    $frontendProcess = Start-Service -Name "Frontend Server" -Command "npm run dev" -WorkingDirectory "$PWD\frontend" -WindowTitle "Risk Game - Frontend"
+    $frontendProcess = Start-Service -Name "Frontend Server" -Command "npm run dev" -WorkingDirectory "$PWD\frontend" -WindowTitle "ConquestK - Frontend"
     if ($frontendProcess) {
         $processes += $frontendProcess
         Write-Info "Frontend will be available at: http://localhost:$frontendPort"

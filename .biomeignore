@@ -12,3 +12,6 @@ shared/dist/**
 **/*.min.css
 frontend/build
 backend/dist
+**/.venv*/**
+.claude/**
+shared/types/*.js
