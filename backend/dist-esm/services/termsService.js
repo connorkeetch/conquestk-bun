@@ -1,6 +1,11 @@
 import { query } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 export class TermsService {
+    static CURRENT_VERSIONS = {
+        map_editor: '1.0',
+        tournament: '1.0',
+        general: '1.0',
+    };
     async hasAcceptedTerms(userId, featureType) {
         try {
             const currentVersion = this.getCurrentVersion(featureType);
@@ -108,10 +113,5 @@ export class TermsService {
         return terms[featureType] || terms.general;
     }
 }
-TermsService.CURRENT_VERSIONS = {
-    map_editor: '1.0',
-    tournament: '1.0',
-    general: '1.0',
-};
 export const termsService = new TermsService();
 //# sourceMappingURL=termsService.js.map

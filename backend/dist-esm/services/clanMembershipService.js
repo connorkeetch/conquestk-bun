@@ -9,6 +9,7 @@ const APPLICATION_STATUS_ORDER = {
 };
 const ACTIVE_MEMBER_STATUSES = ['active'];
 export class ClanMembershipServiceError extends Error {
+    code;
     constructor(code, message) {
         super(message);
         this.code = code;

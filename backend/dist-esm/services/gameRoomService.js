@@ -457,7 +457,7 @@ export class GameRoomService {
                     const aiIdentifier = randomUUID();
                     const seed = typeof opponent.personalitySeed === 'number'
                         ? opponent.personalitySeed
-                        : Math.trunc(Math.random() * 10000000);
+                        : Math.trunc(Math.random() * 10_000_000);
                     await client.query(insertAiQuery, [
                         createdRoom.id,
                         aiIdentifier,
@@ -704,7 +704,7 @@ export class GameRoomService {
                         const personalitySeedRaw = desiredSeeds[difficulty]?.shift();
                         const personalitySeed = typeof personalitySeedRaw === 'number' && Number.isFinite(personalitySeedRaw)
                             ? Math.trunc(personalitySeedRaw)
-                            : Math.trunc(Math.random() * 10000000);
+                            : Math.trunc(Math.random() * 10_000_000);
                         await client.query(`
               INSERT INTO room_players (
                 room_id,

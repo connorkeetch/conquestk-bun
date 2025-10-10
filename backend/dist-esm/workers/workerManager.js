@@ -6,10 +6,11 @@ import { createGameActionWorker } from './gameActionWorker.js';
 import { createMaintenanceWorker } from './maintenanceWorker.js';
 import { createMapAssetWorker } from './mapAssetWorker.js';
 export class WorkerManager {
+    isInitialized = false;
+    io;
+    mapAssetWorker = null;
+    maintenanceWorker = null;
     constructor(io) {
-        this.isInitialized = false;
-        this.mapAssetWorker = null;
-        this.maintenanceWorker = null;
         this.io = io;
     }
     async initialize() {

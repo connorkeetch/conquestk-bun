@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger.js';
 export class CapitalGeneratorService {
+    db;
     constructor(db) {
         this.db = db;
     }

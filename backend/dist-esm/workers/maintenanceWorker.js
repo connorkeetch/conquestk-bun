@@ -34,11 +34,9 @@ function getMoveArchiveBatchSize() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_ARCHIVE_BATCH;
 }
 export class MaintenanceWorker {
-    constructor() {
-        this.timer = null;
-        this.leaderboardTimer = null;
-        this.worker = null;
-    }
+    timer = null;
+    leaderboardTimer = null;
+    worker = null;
     async initialize() {
         const intervalMs = getIntervalMs();
         const retentionDays = getNotificationRetentionDays();

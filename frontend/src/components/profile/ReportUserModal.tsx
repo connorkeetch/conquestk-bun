@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 import reportService from '@/services/reportService'
 
 interface ReportUserModalProps {
@@ -31,25 +31,31 @@ export default function ReportUserModal({
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
 
+  const onEscape = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onEscape()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open])
 
+  const onOutside = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
     if (!open) return
     const onClick = (e: MouseEvent) => {
       if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        onClose()
+        onOutside()
       }
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
-  }, [open, onClose])
+  }, [open])
 
   useEffect(() => {
     if (open) {

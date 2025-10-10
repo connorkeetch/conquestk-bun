@@ -5,10 +5,10 @@ import { performanceMonitorService } from './performanceMonitorService.js';
 import { redisClusterService } from './redisClusterService.js';
 import { scalingService } from './scalingService.js';
 export class PerformanceTestingService {
+    activeTests = new Map();
+    benchmarkHistory = [];
+    testScenarios = new Map();
     constructor() {
-        this.activeTests = new Map();
-        this.benchmarkHistory = [];
-        this.testScenarios = new Map();
         this.initializeTestScenarios();
     }
     initializeTestScenarios() {

@@ -1,5 +1,5 @@
 import { Bell, MessageSquare } from 'lucide-react'
-import { type RefObject, useEffect, useRef, useState } from 'react'
+import { type RefObject, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { notificationService } from '@/services/notificationService'
 import { ratingChangeModalService } from '@/services/ratingChangeModalService'
 import type { Notification } from '@/types/notification'
@@ -42,13 +42,21 @@ export default function NotificationDropdown({
     return unsub
   }, [])
 
+  const onEscape = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
     if (!isOpen) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onEscape()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isOpen, onClose])
+  }, [isOpen])
 
+  const onOutside = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
     if (!isOpen) return
     const onClick = (e: MouseEvent) => {
@@ -57,12 +65,12 @@ export default function NotificationDropdown({
       const clickedInsidePanel = containerRef.current.contains(target)
       const clickedOnTrigger = triggerRef?.current?.contains(target) ?? false
       if (!clickedInsidePanel && !clickedOnTrigger) {
-        onClose()
+        onOutside()
       }
     }
     window.addEventListener('mousedown', onClick)
     return () => window.removeEventListener('mousedown', onClick)
-  }, [isOpen, onClose, triggerRef])
+  }, [isOpen, triggerRef])
 
   // Do not auto-mark as read on open; users can mark per-item or use the button
 

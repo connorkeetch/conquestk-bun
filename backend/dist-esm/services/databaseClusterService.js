@@ -1,25 +1,24 @@
 import { Pool } from 'pg';
 import { logger } from '../utils/logger.js';
 export class DatabaseClusterService {
-    constructor() {
-        this.nodes = new Map();
-        this.metrics = {
-            totalQueries: 0,
-            successfulQueries: 0,
-            failedQueries: 0,
-            avgResponseTime: 0,
-            slowQueries: 0,
-            connectionErrors: 0,
-        };
-        this.config = {
-            strategy: 'health_weighted',
-            healthCheckInterval: 30000,
-            maxRetries: 3,
-            queryTimeout: 10000,
-            slowQueryThreshold: 1000,
-        };
-        this.currentRoundRobinIndex = 0;
-    }
+    nodes = new Map();
+    metrics = {
+        totalQueries: 0,
+        successfulQueries: 0,
+        failedQueries: 0,
+        avgResponseTime: 0,
+        slowQueries: 0,
+        connectionErrors: 0,
+    };
+    config = {
+        strategy: 'health_weighted',
+        healthCheckInterval: 30000,
+        maxRetries: 3,
+        queryTimeout: 10000,
+        slowQueryThreshold: 1000,
+    };
+    currentRoundRobinIndex = 0;
+    healthCheckInterval;
     async initialize() {
         try {
             logger.info('🔄 Initializing Database Cluster Service...');

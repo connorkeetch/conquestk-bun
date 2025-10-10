@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { query } from '../config/database.js'
 import { logger } from './logger.js'
 import { type MigrationRecord, type MigrationStatus, MigrationTracker } from './migrationTracker.js'
@@ -13,6 +14,8 @@ export class MigrationRunner {
     this.migrationTracker = migrationTracker || new MigrationTracker()
 
     // Try multiple possible migration paths (simplified - no postgres subdirectory)
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = dirname(__filename)
     const rawPaths = [
       // Production paths (Railway) - check these first
       '/app/backend/dist/migrations', // Railway dist

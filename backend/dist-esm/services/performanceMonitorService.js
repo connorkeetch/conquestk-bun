@@ -8,33 +8,33 @@ import { notificationDispatcher } from './NotificationDispatcher.js';
 import { buildPerformanceAlertNotification } from './notifications/performanceAlerts.js';
 import { redisClusterService } from './redisClusterService.js';
 export class PerformanceMonitorService {
-    constructor() {
-        this.metrics = [];
-        this.alerts = [];
-        this.isMonitoring = false;
-        this.thresholds = {
-            database: {
-                maxResponseTime: 1000,
-                minHitRate: 85,
-                maxSlowQueries: 10,
-            },
-            cache: {
-                minHitRate: 90,
-                maxMemoryUsage: 1024 * 1024 * 512,
-            },
-            server: {
-                maxMemoryUsage: 1024 * 1024 * 1024,
-                maxCpuUsage: 80,
-                maxResponseTime: 500,
-            },
-            queues: {
-                maxWaitingJobs: 100,
-                maxFailureRate: 5,
-            },
-        };
-        this.requestCounter = 0;
-        this.requestTimestamps = [];
-    }
+    metrics = [];
+    alerts = [];
+    isMonitoring = false;
+    monitoringInterval;
+    alertCheckInterval;
+    thresholds = {
+        database: {
+            maxResponseTime: 1000,
+            minHitRate: 85,
+            maxSlowQueries: 10,
+        },
+        cache: {
+            minHitRate: 90,
+            maxMemoryUsage: 1024 * 1024 * 512,
+        },
+        server: {
+            maxMemoryUsage: 1024 * 1024 * 1024,
+            maxCpuUsage: 80,
+            maxResponseTime: 500,
+        },
+        queues: {
+            maxWaitingJobs: 100,
+            maxFailureRate: 5,
+        },
+    };
+    requestCounter = 0;
+    requestTimestamps = [];
     async initialize() {
         try {
             logger.info('🔄 Initializing Performance Monitor Service...');

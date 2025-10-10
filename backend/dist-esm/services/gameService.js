@@ -26,9 +26,7 @@ const CLAN_XP_TOP_PLACEMENTS = {
 const CLAN_XP_TERRITORY_FACTOR = 5;
 const CLAN_XP_TERRITORY_CAP = 150;
 export class GameService {
-    constructor() {
-        this.gameEngine = new GameEngine();
-    }
+    gameEngine = new GameEngine();
     async persistGameStateSnapshot(roomId, state) {
         try {
             await query(`

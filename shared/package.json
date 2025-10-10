@@ -2,6 +2,7 @@
   "name": "@conquestk/shared",
   "version": "1.0.0",
   "description": "Shared types for ConquestK",
+  "type": "module",
   "main": "dist/types/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -33,6 +34,6 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.5.3"
+    "typescript": "^5.9.2"
   }
 }

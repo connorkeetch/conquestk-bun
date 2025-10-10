@@ -20,9 +20,9 @@ export const RANKS: RankDef[] = [
 ]
 
 export function getRankForRating(rating: number): RankDef {
-  for (let i = RANKS.length - 1; i >= 0; i--) {
-    if (rating >= RANKS[i].minRating) return RANKS[i]
+  // Iterate from highest to lowest without index arithmetic to satisfy TS strictness
+  for (const rank of [...RANKS].reverse()) {
+    if (rating >= rank.minRating) return rank
   }
-  return RANKS[0]
+  return RANKS[0] ?? { name: 'Chieftain', minRating: 0 }
 }
-

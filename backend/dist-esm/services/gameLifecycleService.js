@@ -8,10 +8,9 @@ import { mapService } from './mapService.js';
 import { queueService } from './queueService.js';
 import { tryGetSocketServer } from './socketRegistry.js';
 export class GameLifecycleService {
-    constructor() {
-        this.gameRoomService = new GameRoomService();
-        this.gameService = new GameService();
-    }
+    gameRoomService = new GameRoomService();
+    gameService = new GameService();
+    static localTurnTimeouts = new Map();
     async setReadyState(roomId, userId, ready) {
         const lockKey = `lock:game:ready:${roomId}`;
         const lockToken = await acquireLock(lockKey, 5000);
@@ -854,7 +853,7 @@ export class GameLifecycleService {
                 };
             case 'commander':
                 return {
-                    maxThinkTimeMs: 10000,
+                    maxThinkTimeMs: 10_000,
                     maxPlannedActions: 10,
                     readableDelayMs: 300,
                     maxAttackChains: 6,
@@ -862,7 +861,7 @@ export class GameLifecycleService {
                 };
             default:
                 return {
-                    maxThinkTimeMs: 15000,
+                    maxThinkTimeMs: 15_000,
                     maxPlannedActions: 16,
                     readableDelayMs: 300,
                     maxAttackChains: 999,
@@ -1058,5 +1057,4 @@ export class GameLifecycleService {
         return result;
     }
 }
-GameLifecycleService.localTurnTimeouts = new Map();
 //# sourceMappingURL=gameLifecycleService.js.map

@@ -6,8 +6,9 @@ import { startWorkerHeartbeat } from '../services/workerHeartbeat.js';
 import { logger } from '../utils/logger.js';
 import { createRedisFromOptions } from '../utils/redisFactory.js';
 export class AnalyticsWorker {
+    worker = null;
+    gameService;
     constructor() {
-        this.worker = null;
         this.gameService = new GameService();
     }
     async initialize() {

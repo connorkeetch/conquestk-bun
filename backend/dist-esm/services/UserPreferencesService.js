@@ -1,6 +1,7 @@
 import { DEFAULT_THEME_ID, normalizeThemeId } from '@conquestk/shared/types/themes';
 import { logger } from '../utils/logger.js';
 export class UserPreferencesService {
+    pool;
     constructor(pool) {
         this.pool = pool;
     }

@@ -1,12 +1,17 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { query } from '../config/database.js';
 import { logger } from './logger.js';
 import { MigrationTracker } from './migrationTracker.js';
 export class MigrationRunner {
+    migrationTracker;
+    migrationsPath = '';
+    static didLogPathScan = false;
     constructor(migrationTracker) {
-        this.migrationsPath = '';
         this.migrationTracker = migrationTracker || new MigrationTracker();
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = dirname(__filename);
         const rawPaths = [
             '/app/backend/dist/migrations',
             '/app/backend/migrations',
@@ -586,7 +591,6 @@ export class MigrationRunner {
         return await this.migrationTracker.getAllMigrationStatuses();
     }
 }
-MigrationRunner.didLogPathScan = false;
 export async function runMigrations() {
     logger.warn('⚠️  Using legacy runMigrations - consider using MigrationRunner class');
     const migrationRunner = new MigrationRunner();

@@ -3,9 +3,7 @@ import territoryModifierService from '../services/territoryModifierService.js';
 import { getPlayerTeam as utilGetPlayerTeam, arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
 import { drawTreasure, ensureTreasureState, findRedeemableSets, normalizeTreasureConfig, redeemSet, } from './hiddenTreasures.js';
 export class GameEngine {
-    constructor() {
-        this.gameModifiersCache = new Map();
-    }
+    gameModifiersCache = new Map();
     cyrb128(seed) {
         let h1 = 1779033703;
         let h2 = 3144134277;
@@ -1278,7 +1276,7 @@ export class GameEngine {
             return false;
         if (armies <= 0)
             return false;
-        if (armies > 1000000)
+        if (armies > 1_000_000)
             return false;
         if (gameState.phase !== 'fortify')
             return false;

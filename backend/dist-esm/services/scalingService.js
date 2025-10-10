@@ -2,9 +2,13 @@ import cluster from 'node:cluster';
 import os from 'node:os';
 import { logger } from '../utils/logger.js';
 export class ScalingService {
+    workers = new Map();
+    scalingMetrics;
+    config;
+    isInitialized = false;
+    scalingInterval;
+    metricsInterval;
     constructor() {
-        this.workers = new Map();
-        this.isInitialized = false;
         this.config = {
             minWorkers: parseInt(process.env.MIN_WORKERS || '2', 10),
             maxWorkers: parseInt(process.env.MAX_WORKERS || String(os.cpus().length), 10),

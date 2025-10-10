@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import blockService from '@/services/blockService'
@@ -94,29 +94,35 @@ export default function PlayerProfileModal({
     }
   }, [open, profile?.id])
 
+  const onEscape = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
+    if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onEscape()
     }
-    if (open) {
-      document.addEventListener('keydown', onKey)
-      document.body.style.overflow = 'hidden'
-    }
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = 'unset'
     }
-  }, [open, onClose])
+  }, [open])
 
+  const onOutside = useEffectEvent(() => {
+    onClose()
+  })
   useEffect(() => {
+    if (!open) return
     const onClickOutside = (e: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-        onClose()
+        onOutside()
       }
     }
-    if (open) document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [open, onClose])
+  }, [open])
 
   const rank = profile ? getConquestRank(profile.elo) : null
   const rankTierInfo = profile

@@ -27,6 +27,7 @@ const clamp = (value, min, max) => {
     return Math.min(Math.max(value, min), max);
 };
 export class ClanProgressionServiceError extends Error {
+    code;
     constructor(code, message) {
         super(message);
         this.code = code;
@@ -106,11 +107,11 @@ class ClanProgressionService {
         const seedSource = `${clanId}:${windowStart.toISOString()}`;
         let seed = 0;
         for (let index = 0; index < seedSource.length; index += 1) {
-            seed = (seed * 31 + seedSource.charCodeAt(index)) % 10000;
+            seed = (seed * 31 + seedSource.charCodeAt(index)) % 10_000;
         }
         const weighted = DEFAULT_OBJECTIVE_POOL.map((template, index) => ({
             template,
-            weight: (seed + index * 1373) % 10000,
+            weight: (seed + index * 1373) % 10_000,
         }));
         weighted.sort((a, b) => a.weight - b.weight);
         return weighted.slice(0, 3).map((item) => item.template);

@@ -1,17 +1,25 @@
 import { logger } from '../../utils/logger.js';
 import { formatSlackWebhookPayload } from './slackFormatting.js';
 const DEFAULT_FAILURE_THRESHOLD = 5;
-const DEFAULT_COOLDOWN_MS = 60000;
+const DEFAULT_COOLDOWN_MS = 60_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 500;
 const JITTER_MS = 250;
 const channelLogger = logger.child({ channel: 'slack' });
 export class SlackWebhookChannel {
+    name = 'slack';
+    webhookUrls;
+    defaultChannel;
+    additionalChannels;
+    username;
+    iconEmoji;
+    failureThreshold;
+    cooldownMs;
+    maxAttempts;
+    consecutiveFailures = 0;
+    state = 'closed';
+    nextAttemptAfter = 0;
     constructor(options) {
-        this.name = 'slack';
-        this.consecutiveFailures = 0;
-        this.state = 'closed';
-        this.nextAttemptAfter = 0;
         if (options.webhookUrls.length === 0) {
             throw new Error('SlackWebhookChannel requires at least one webhook URL');
         }

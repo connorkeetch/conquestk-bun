@@ -1,46 +1,44 @@
 import { join } from 'node:path';
 import { logger } from '../utils/logger.js';
 export class CDNService {
-    constructor() {
-        this.providers = [];
-        this.assetConfigs = new Map();
-        this.metrics = {
-            cdnHits: 0,
-            cdnMisses: 0,
-            totalRequests: 0,
-            avgLoadTime: 0,
-            bandwidth: 0,
-            cacheHitRate: 0,
-        };
-        this.ASSET_RULES = {
-            images: {
-                cacheControl: 'public, max-age=31536000, immutable',
-                compression: 'none',
-                formats: ['webp', 'avif', 'jpg', 'png'],
-                sizes: [320, 640, 1024, 1920, 2560],
-            },
-            scripts: {
-                cacheControl: 'public, max-age=31536000, immutable',
-                compression: 'brotli',
-                minify: true,
-            },
-            styles: {
-                cacheControl: 'public, max-age=31536000, immutable',
-                compression: 'brotli',
-                minify: true,
-            },
-            fonts: {
-                cacheControl: 'public, max-age=31536000, immutable',
-                compression: 'none',
-                preload: true,
-            },
-            audio: {
-                cacheControl: 'public, max-age=86400',
-                compression: 'none',
-                formats: ['opus', 'mp3', 'wav'],
-            },
-        };
-    }
+    providers = [];
+    assetConfigs = new Map();
+    metrics = {
+        cdnHits: 0,
+        cdnMisses: 0,
+        totalRequests: 0,
+        avgLoadTime: 0,
+        bandwidth: 0,
+        cacheHitRate: 0,
+    };
+    ASSET_RULES = {
+        images: {
+            cacheControl: 'public, max-age=31536000, immutable',
+            compression: 'none',
+            formats: ['webp', 'avif', 'jpg', 'png'],
+            sizes: [320, 640, 1024, 1920, 2560],
+        },
+        scripts: {
+            cacheControl: 'public, max-age=31536000, immutable',
+            compression: 'brotli',
+            minify: true,
+        },
+        styles: {
+            cacheControl: 'public, max-age=31536000, immutable',
+            compression: 'brotli',
+            minify: true,
+        },
+        fonts: {
+            cacheControl: 'public, max-age=31536000, immutable',
+            compression: 'none',
+            preload: true,
+        },
+        audio: {
+            cacheControl: 'public, max-age=86400',
+            compression: 'none',
+            formats: ['opus', 'mp3', 'wav'],
+        },
+    };
     async initialize() {
         try {
             logger.info('🔄 Initializing CDN Service...');

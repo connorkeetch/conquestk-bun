@@ -33,18 +33,16 @@ const QUEUE_CONFIGS = {
     },
 };
 export class QueueService {
-    constructor() {
-        this.redis = null;
-        this.queues = new Map();
-        this.deadLetterQueues = new Map();
-        this.queueDisplayNames = new Map();
-        this.queueEvents = new Map();
-        this.queueEventCounters = new Map();
-        this.eventCountersSince = null;
-        this.queueErrorState = new Map();
-        this.isInitialized = false;
-        this.queueReadyTimeoutMs = Number(process.env.QUEUE_READY_TIMEOUT_MS ?? 15000);
-    }
+    redis = null;
+    queues = new Map();
+    deadLetterQueues = new Map();
+    queueDisplayNames = new Map();
+    queueEvents = new Map();
+    queueEventCounters = new Map();
+    eventCountersSince = null;
+    queueErrorState = new Map();
+    isInitialized = false;
+    queueReadyTimeoutMs = Number(process.env.QUEUE_READY_TIMEOUT_MS ?? 15000);
     resolveQueue(key) {
         return this.queues.get(key) ?? null;
     }
@@ -367,7 +365,7 @@ export class QueueService {
             if (!finishedOn) {
                 return false;
             }
-            const RECENT_MS = 30000;
+            const RECENT_MS = 30_000;
             return Date.now() - finishedOn < RECENT_MS;
         }
         catch (error) {

@@ -3,8 +3,9 @@ import notificationService from '../notificationService.js';
 const channelLogger = typeof logger.child === 'function' ? logger.child({ channel: 'webpush' }) : logger;
 const MAX_ACTIONS = 2;
 export class WebPushChannel {
+    name = 'webpush';
+    service;
     constructor(options = {}) {
-        this.name = 'webpush';
         this.service = options.service ?? notificationService;
     }
     isAvailable() {

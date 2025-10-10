@@ -2,6 +2,7 @@ import { query, transaction } from '../config/database.js';
 import { logClanActivity } from './clanActivityService.js';
 import { clanProgressionService } from './clanProgressionService.js';
 export class ClanServiceError extends Error {
+    code;
     constructor(code, message) {
         super(message);
         this.code = code;

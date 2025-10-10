@@ -157,12 +157,10 @@ export const socketConnectionLimiter = rateLimit({
     store: createRateLimitStore('socket-connection'),
 });
 export class SuspiciousActivityTracker {
-    constructor() {
-        this.suspiciousIPs = new Map();
-        this.blockedIPs = new Set();
-        this.THRESHOLD = 10;
-        this.BLOCK_DURATION = 60 * 60;
-    }
+    suspiciousIPs = new Map();
+    blockedIPs = new Set();
+    THRESHOLD = 10;
+    BLOCK_DURATION = 60 * 60;
     getRedis() {
         return getRedisClient();
     }

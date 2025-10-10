@@ -2,9 +2,7 @@ import { query } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 import { profileService } from './profileService.js';
 class AchievementService {
-    constructor() {
-        this.nameToId = new Map();
-    }
+    nameToId = new Map();
     async getAchievementIdByName(name) {
         if (this.nameToId.has(name))
             return this.nameToId.get(name) ?? null;

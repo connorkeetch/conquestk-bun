@@ -4,9 +4,11 @@ import { SlackWebhookChannel } from './channels/SlackWebhookChannel.js';
 import { webPushChannel } from './channels/WebPushChannel.js';
 const SERVICE_LOGGER = logger.child({ service: 'NotificationDispatcher' });
 export class NotificationDispatcher {
+    logger = SERVICE_LOGGER;
+    configuredChannels;
+    externalNotificationsEnabled;
+    channels = new Map();
     constructor(options = {}) {
-        this.logger = SERVICE_LOGGER;
-        this.channels = new Map();
         if (options.loggerContext) {
             this.logger = SERVICE_LOGGER.child(options.loggerContext);
         }

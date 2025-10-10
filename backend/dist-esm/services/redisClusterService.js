@@ -2,25 +2,23 @@ import { Cluster } from 'ioredis';
 import { getRedisClient } from '../config/redis.js';
 import { logger } from '../utils/logger.js';
 export class RedisClusterService {
-    constructor() {
-        this.cluster = null;
-        this.fallbackClient = null;
-        this.isClusterMode = false;
-        this.metrics = {
-            hits: 0,
-            misses: 0,
-            sets: 0,
-            deletes: 0,
-            errors: 0,
-            totalRequests: 0,
-        };
-        this.CACHE_TIERS = {
-            CRITICAL: 30 * 60,
-            STANDARD: 15 * 60,
-            EXTENDED: 60 * 60,
-            TEMPORARY: 5 * 60,
-        };
-    }
+    cluster = null;
+    fallbackClient = null;
+    isClusterMode = false;
+    metrics = {
+        hits: 0,
+        misses: 0,
+        sets: 0,
+        deletes: 0,
+        errors: 0,
+        totalRequests: 0,
+    };
+    CACHE_TIERS = {
+        CRITICAL: 30 * 60,
+        STANDARD: 15 * 60,
+        EXTENDED: 60 * 60,
+        TEMPORARY: 5 * 60,
+    };
     async initialize() {
         const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
         const clusterNodes = process.env.REDIS_CLUSTER_NODES;

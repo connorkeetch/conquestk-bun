@@ -58,7 +58,7 @@ import { ensureTablesExist } from './utils/initTables.js'
 import { logger } from './utils/logger.js'
 import { MigrationRunner } from './utils/migrationRunner.js'
 import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js'
-import { createAdapter } from '@socket.io/redis-adapter'
+import { createAdapter } from '@socket.io/redis-streams-adapter'
 import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js'
 import mapWorkflowRoutes from './routes/mapWorkflow.js'
 import mapApprovalRoutes from './routes/mapApproval.js'
@@ -138,21 +138,23 @@ const corsOptions = {
 // Initialize Socket.io first
 const io = new Server(server, {
   cors: corsOptions,
+  // Enable connection state recovery for client resilience on brief disconnects
+  connectionStateRecovery: {},
 })
 
 // Initialize Redis asynchronously and set up adapter if successful
 initializeRedis()
   .then(async (redisClients: RedisClients) => {
-    const { pubClient, subClient, redisClient } = redisClients
+    const { redisClient } = redisClients
 
-    // Set up Socket.io Redis adapter only if clients are valid and connected
-    if (pubClient && subClient) {
+    // Set up Socket.io Redis Streams adapter if Redis is available
+    if (redisClient) {
       try {
-        io.adapter(createAdapter(pubClient, subClient))
-        logger.info('✅ Socket.io using Redis adapter for multi-server support')
+        io.adapter(createAdapter(redisClient))
+        logger.info('✅ Socket.io using Redis Streams adapter for multi-server support')
       } catch (error) {
         logger.warn(
-          '⚠️ Failed to create Redis adapter, using in-memory adapter:',
+          '⚠️ Failed to create Redis Streams adapter, using in-memory adapter:',
           getErrorMessage(error),
         )
       }
@@ -598,95 +600,97 @@ if (process.env.NODE_ENV !== 'production') {
 // Staging should behave exactly like production for testing
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
 if (isProductionLike) {
-  const fsNs = (await import('node:fs')) as unknown as
-    | typeof import('node:fs')
-    | { default: typeof import('node:fs') }
+  ;(async () => {
+    const fsNs = (await import('node:fs')) as unknown as
+      | typeof import('node:fs')
+      | { default: typeof import('node:fs') }
 
-  const fsModule: typeof import('node:fs') = 'default' in fsNs ? fsNs.default : fsNs
-  const { existsSync, readdirSync } = fsModule
-  const frontendPath = path.join(__dirname, '../public')
+    const fsModule: typeof import('node:fs') = 'default' in fsNs ? fsNs.default : fsNs
+    const { existsSync, readdirSync } = fsModule
+    const frontendPath = path.join(__dirname, '../public')
 
-  logger.debug(`📁 Setting up static file serving from: ${frontendPath}`)
-  logger.debug(`📁 Frontend path exists: ${existsSync(frontendPath)}`)
+    logger.debug(`📁 Setting up static file serving from: ${frontendPath}`)
+    logger.debug(`📁 Frontend path exists: ${existsSync(frontendPath)}`)
 
-  if (existsSync(frontendPath)) {
-    const files = readdirSync(frontendPath)
-    logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`)
+    if (existsSync(frontendPath)) {
+      const files = readdirSync(frontendPath)
+      logger.debug(`📁 Files in frontend directory: ${files.join(', ')}`)
 
-    const indexExists = fsModule.existsSync(path.join(frontendPath, 'index.html'))
-    logger.debug(`📁 index.html exists: ${indexExists}`)
-  }
-
-  // IMPORTANT: Serve static files with explicit options
-  // This MUST come before the catch-all route
-  app.use(
-    express.static(frontendPath, {
-      maxAge: 0,
-      setHeaders: (res: Response, filePath: string) => {
-        logger.debug(`📦 Serving static file: ${filePath}`)
-        const relativePath = path.relative(frontendPath, filePath)
-
-        // Enforce correct caching behaviour per asset type
-        if (relativePath === 'index.html') {
-          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-          res.setHeader('Pragma', 'no-cache')
-          res.setHeader('Expires', '0')
-        } else if (relativePath === 'sw.js') {
-          res.setHeader('Cache-Control', 'no-cache')
-        } else if (relativePath.startsWith('assets/')) {
-          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-        } else {
-          res.setHeader('Cache-Control', 'public, max-age=86400')
-        }
-
-        // Set proper content types for assets
-        if (filePath.endsWith('.js')) {
-          res.setHeader('Content-Type', 'application/javascript; charset=UTF-8')
-        } else if (filePath.endsWith('.css')) {
-          res.setHeader('Content-Type', 'text/css; charset=UTF-8')
-        } else if (filePath.endsWith('.json')) {
-          res.setHeader('Content-Type', 'application/json; charset=UTF-8')
-        }
-      },
-      index: false, // Don't automatically serve index.html
-    }),
-  )
-
-  // Handle React Router - serve index.html for all non-API and non-asset routes
-  // This catch-all route MUST come after static middleware
-  app.get('/', (_req: Request, res: Response) => {
-    const indexPath = path.join(frontendPath, 'index.html')
-
-    return res.sendFile(indexPath, (err) => {
-      if (err) {
-        logger.error(`Failed to serve index.html for root path`, { error: err.message })
-        res.status(500).send('Error serving page')
-      }
-      // Success case - no logging needed, this happens constantly
-    })
-  })
-
-  // Handle all other routes for React Router
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    // Don't interfere with API routes or static assets
-    if (
-      req.path.startsWith('/api') ||
-      req.path.startsWith('/assets') ||
-      req.path.startsWith('/uploads')
-    ) {
-      return next()
+      const indexExists = fsModule.existsSync(path.join(frontendPath, 'index.html'))
+      logger.debug(`📁 index.html exists: ${indexExists}`)
     }
 
-    const indexPath = path.join(frontendPath, 'index.html')
+    // IMPORTANT: Serve static files with explicit options
+    // This MUST come before the catch-all route
+    app.use(
+      express.static(frontendPath, {
+        maxAge: 0,
+        setHeaders: (res: Response, filePath: string) => {
+          logger.debug(`📦 Serving static file: ${filePath}`)
+          const relativePath = path.relative(frontendPath, filePath)
 
-    return res.sendFile(indexPath, (err) => {
-      if (err) {
-        logger.error(`Failed to serve index.html`, { path: req.path, error: err.message })
-        res.status(500).send('Error serving page')
-      }
-      // Success case - no logging needed for normal SPA routing
+          // Enforce correct caching behaviour per asset type
+          if (relativePath === 'index.html') {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+            res.setHeader('Pragma', 'no-cache')
+            res.setHeader('Expires', '0')
+          } else if (relativePath === 'sw.js') {
+            res.setHeader('Cache-Control', 'no-cache')
+          } else if (relativePath.startsWith('assets/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+          } else {
+            res.setHeader('Cache-Control', 'public, max-age=86400')
+          }
+
+          // Set proper content types for assets
+          if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript; charset=UTF-8')
+          } else if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css; charset=UTF-8')
+          } else if (filePath.endsWith('.json')) {
+            res.setHeader('Content-Type', 'application/json; charset=UTF-8')
+          }
+        },
+        index: false, // Don't automatically serve index.html
+      }),
+    )
+
+    // Handle React Router - serve index.html for all non-API and non-asset routes
+    // This catch-all route MUST come after static middleware
+    app.get('/', (_req: Request, res: Response) => {
+      const indexPath = path.join(frontendPath, 'index.html')
+
+      return res.sendFile(indexPath, (err) => {
+        if (err) {
+          logger.error(`Failed to serve index.html for root path`, { error: err.message })
+          res.status(500).send('Error serving page')
+        }
+        // Success case - no logging needed, this happens constantly
+      })
     })
-  })
+
+    // Handle all other routes for React Router
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      // Don't interfere with API routes or static assets
+      if (
+        req.path.startsWith('/api') ||
+        req.path.startsWith('/assets') ||
+        req.path.startsWith('/uploads')
+      ) {
+        return next()
+      }
+
+      const indexPath = path.join(frontendPath, 'index.html')
+
+      return res.sendFile(indexPath, (err) => {
+        if (err) {
+          logger.error(`Failed to serve index.html`, { path: req.path, error: err.message })
+          res.status(500).send('Error serving page')
+        }
+        // Success case - no logging needed for normal SPA routing
+      })
+    })
+  })().catch((e) => logger.warn('Static frontend setup failed', getErrorMessage(e)))
 }
 
 // IMPORTANT: Sentry error handler must be registered AFTER all controllers

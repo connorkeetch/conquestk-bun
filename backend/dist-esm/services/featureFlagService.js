@@ -8,11 +8,11 @@ const PREMIUM_TIER_RANK = {
 };
 const normalizeTier = (tier) => (tier || 'free').toLowerCase();
 export class FeatureFlagService {
-    constructor() {
-        this.flagCache = new Map();
-        this.cacheExpiry = 60000;
-        this.lastCacheUpdate = 0;
-    }
+    static instance;
+    flagCache = new Map();
+    cacheExpiry = 60000;
+    lastCacheUpdate = 0;
+    constructor() { }
     static getInstance() {
         if (!FeatureFlagService.instance) {
             FeatureFlagService.instance = new FeatureFlagService();
