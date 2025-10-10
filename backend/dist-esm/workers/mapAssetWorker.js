@@ -19,19 +19,23 @@ export class MapAssetWorker {
             const Redis = (await import('ioredis')).default;
             const redis = (await import('../config/redis.js')).getRedisClient();
             const baseOpts = (redis?.options ?? {});
+            const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts;
             const connection = new Redis({
-                ...baseOpts,
+                ...withoutCommandTimeout,
                 enableReadyCheck: false,
                 lazyConnect: false,
                 maxRetriesPerRequest: null,
-                commandTimeout: undefined,
             });
             this.worker = new Worker(queue.name, async (job) => {
                 if (job.name && job.name !== 'map-assets:purge')
                     return null;
                 await this.runOnce('interval', {
-                    batchSize: job.data?.batchSize,
-                    minAgeMinutes: job.data?.minAgeMinutes,
+                    ...(typeof job.data?.batchSize === 'number'
+                        ? { batchSize: job.data.batchSize }
+                        : {}),
+                    ...(typeof job.data?.minAgeMinutes === 'number'
+                        ? { minAgeMinutes: job.data.minAgeMinutes }
+                        : {}),
                 });
                 return { ok: true };
             }, { connection });
@@ -53,8 +57,10 @@ export class MapAssetWorker {
     async runOnce(source, overrides) {
         logger.info('🧹 Running map asset purge', { source, overrides });
         const summary = await mapStagingService.purgeDeletedImages({
-            batchSize: overrides?.batchSize,
-            minAgeMinutes: overrides?.minAgeMinutes,
+            ...(typeof overrides?.batchSize === 'number' ? { batchSize: overrides.batchSize } : {}),
+            ...(typeof overrides?.minAgeMinutes === 'number'
+                ? { minAgeMinutes: overrides.minAgeMinutes }
+                : {}),
         });
         logger.info('🧹 Map asset purge complete', { source, summary });
         return summary;

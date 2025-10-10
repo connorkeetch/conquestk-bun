@@ -28,7 +28,8 @@ import type {
   ConversationSummary,
   UnreadSummaryEntry,
 } from '../types/messages'
-import type { RootState } from './index'
+// Narrowed RootState for selectors in strict-optional scope to avoid importing the full store
+type RootState = { messages: MessagesState }
 
 const toIsoString = (value: string | Date | null | undefined): string => {
   if (!value) {
@@ -92,10 +93,11 @@ const adaptConversation = (item: ConversationListItem): ConversationEntity => ({
   createdAt: toIsoString(item.conversation.createdAt),
   updatedAt: toIsoString(item.conversation.updatedAt),
   memberRoles: item.conversation.memberRoles.map((member) => ({
-    ...member,
+    userId: member.userId,
+    role: member.role,
     joinedAt: toIsoString(member.joinedAt),
     shadowMuted: Boolean(member.shadowMuted),
-    username: member.username,
+    ...(typeof member.username === 'string' ? { username: member.username } : {}),
   })),
   membership: {
     ...item.membership,
@@ -103,13 +105,15 @@ const adaptConversation = (item: ConversationListItem): ConversationEntity => ({
     lastReadAt: item.membership.lastReadAt ? toIsoString(item.membership.lastReadAt) : null,
   },
   unreadCount: item.unreadCount,
-  lastMessage: item.lastMessage
+  ...(item.lastMessage
     ? {
-        ...item.lastMessage,
-        createdAt: toIsoString(item.lastMessage.createdAt),
-        metadata: normalizeMetadata(item.lastMessage.metadata),
+        lastMessage: {
+          ...item.lastMessage,
+          createdAt: toIsoString(item.lastMessage.createdAt),
+          metadata: normalizeMetadata(item.lastMessage.metadata),
+        },
       }
-    : undefined,
+    : {}),
 })
 
 const adaptConversationDetail = (detail: ConversationDetail): ConversationEntity =>
@@ -193,7 +197,7 @@ const mergeMembers = (
       roleMap.set(addition.userId, {
         ...existing,
         role: addition.role,
-        username: addition.username ?? existing.username,
+        ...(typeof addition.username === 'string' ? { username: addition.username } : {}),
       })
     } else {
       roleMap.set(addition.userId, {
@@ -201,7 +205,7 @@ const mergeMembers = (
         role: addition.role,
         joinedAt: new Date().toISOString(),
         shadowMuted: false,
-        username: addition.username,
+        ...(typeof addition.username === 'string' ? { username: addition.username } : {}),
       })
     }
   }
@@ -212,7 +216,7 @@ const mergeMembers = (
       roleMap.set(update.userId, {
         ...existing,
         role: update.role,
-        username: update.username ?? existing.username,
+        ...(typeof update.username === 'string' ? { username: update.username } : {}),
       })
     }
   }
@@ -243,7 +247,11 @@ const applyConversationEntity = (state: MessagesState, incoming: ConversationEnt
         ...entity.membership,
       },
       unreadCount: entity.unreadCount ?? current.unreadCount,
-      lastMessage: entity.lastMessage ?? current.lastMessage,
+      ...(entity.lastMessage
+        ? { lastMessage: entity.lastMessage }
+        : current.lastMessage
+          ? { lastMessage: current.lastMessage }
+          : {}),
     }
   } else {
     const unread = state.pendingUnread[entity.id] ?? entity.unreadCount ?? 0
@@ -272,10 +280,11 @@ export const loadConversationMessages = createAsyncThunk<
   { rejectValue: string }
 >('messages/loadConversationMessages', async (payload, { rejectWithValue }) => {
   try {
-    const messages = await fetchConversationMessages(payload.conversationId, {
-      before: payload.before,
-      limit: payload.limit,
-    })
+    const opts = {
+      ...(typeof payload.before === 'string' ? { before: payload.before } : {}),
+      ...(typeof payload.limit === 'number' ? { limit: payload.limit } : {}),
+    }
+    const messages = await fetchConversationMessages(payload.conversationId, opts)
     const hasMore = messages.length === (payload.limit ?? 50)
     return { conversationId: payload.conversationId, messages, hasMore }
   } catch (_error) {
@@ -492,7 +501,7 @@ const messagesSlice = createSlice({
           role: member.role,
           joinedAt: new Date().toISOString(),
           shadowMuted: false,
-          username: member.username,
+          ...(typeof member.username === 'string' ? { username: member.username } : {}),
         })),
       }
 
@@ -540,7 +549,7 @@ const messagesSlice = createSlice({
         ...conversation,
         ...action.payload.conversation,
         membership: conversation.membership,
-        lastMessage: conversation.lastMessage,
+        ...(conversation.lastMessage ? { lastMessage: conversation.lastMessage } : {}),
       }
     },
     archiveConversation(state, action: PayloadAction<{ conversationId: string }>) {

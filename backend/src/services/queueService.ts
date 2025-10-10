@@ -686,8 +686,6 @@ export class QueueService {
         lazyConnect: false,
         // Critical for BullMQ blocking commands
         maxRetriesPerRequest: null,
-        // Avoid per-command timeouts on blocking ops
-        commandTimeout: undefined,
       })
       const bullPrefix = process.env.BULL_PREFIX?.trim() || 'bull'
       const events = new QueueEvents(queue.name, {

@@ -17,7 +17,6 @@
 
     // Recommended strictness
     "strict": true,
-    "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
     "moduleDetection": "force",
 

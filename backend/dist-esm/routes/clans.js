@@ -50,12 +50,20 @@ router.get('/', [
         return;
     try {
         const filters = {
-            search: req.query.search?.trim() || undefined,
-            region: req.query.region?.trim() || undefined,
-            recruitmentStatus: req.query.recruitmentStatus,
-            privacy: req.query.privacy,
-            limit: req.query.limit ? Number(req.query.limit) : undefined,
-            cursor: req.query.cursor,
+            ...(typeof req.query.search === 'string' && req.query.search.trim()
+                ? { search: req.query.search.trim() }
+                : {}),
+            ...(typeof req.query.region === 'string' && req.query.region.trim()
+                ? { region: req.query.region.trim() }
+                : {}),
+            ...(typeof req.query.recruitmentStatus === 'string'
+                ? { recruitmentStatus: req.query.recruitmentStatus }
+                : {}),
+            ...(typeof req.query.privacy === 'string'
+                ? { privacy: req.query.privacy }
+                : {}),
+            ...(req.query.limit ? { limit: Number(req.query.limit) } : {}),
+            ...(typeof req.query.cursor === 'string' ? { cursor: req.query.cursor } : {}),
         };
         const result = await clanService.listClans(filters);
         res.json(result);
@@ -89,18 +97,26 @@ router.post('/', authenticateToken, [
         const clanRequest = {
             name: req.body.name,
             tag: req.body.tag,
-            motto: req.body.motto,
-            description: req.body.description,
-            crestAssetUrl: req.body.crestAssetUrl,
-            bannerAssetUrl: req.body.bannerAssetUrl,
-            recruitmentPolicy: req.body.recruitmentPolicy,
-            recruitmentStatus: req.body.recruitmentStatus,
-            minimumRank: req.body.minimumRank,
-            autoAcceptThresholds: req.body.autoAcceptThresholds,
-            language: req.body.language,
-            region: req.body.region,
-            timeZone: req.body.timeZone,
-            privacy: req.body.privacy,
+            ...(typeof req.body.motto === 'string' ? { motto: req.body.motto } : {}),
+            ...(typeof req.body.description === 'string' ? { description: req.body.description } : {}),
+            ...(typeof req.body.crestAssetUrl === 'string' ? { crestAssetUrl: req.body.crestAssetUrl } : {}),
+            ...(typeof req.body.bannerAssetUrl === 'string'
+                ? { bannerAssetUrl: req.body.bannerAssetUrl }
+                : {}),
+            ...(typeof req.body.recruitmentPolicy === 'string'
+                ? { recruitmentPolicy: req.body.recruitmentPolicy }
+                : {}),
+            ...(typeof req.body.recruitmentStatus === 'string'
+                ? { recruitmentStatus: req.body.recruitmentStatus }
+                : {}),
+            ...(typeof req.body.minimumRank === 'number' ? { minimumRank: req.body.minimumRank } : {}),
+            ...(req.body.autoAcceptThresholds
+                ? { autoAcceptThresholds: req.body.autoAcceptThresholds }
+                : {}),
+            ...(typeof req.body.language === 'string' ? { language: req.body.language } : {}),
+            ...(typeof req.body.region === 'string' ? { region: req.body.region } : {}),
+            ...(typeof req.body.timeZone === 'string' ? { timeZone: req.body.timeZone } : {}),
+            ...(typeof req.body.privacy === 'string' ? { privacy: req.body.privacy } : {}),
         };
         const clan = await clanService.createClan(req.userId, clanRequest);
         res.status(201).json({ clan });

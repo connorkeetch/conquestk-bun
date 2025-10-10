@@ -7,7 +7,8 @@
   },
   "include": [
     "src/components/notifications/**/*",
-    "src/components/SettingsModal.tsx",
-    "src/components/Header.tsx"
+    "src/store/messagesSlice.ts",
+    "src/services/messagesService.ts",
+    "src/types/messages.ts"
   ]
 }

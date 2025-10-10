@@ -64,12 +64,12 @@ export class GameActionWorker {
             const Redis = (await import('ioredis')).default;
             const redis = (await import('../config/redis.js')).getRedisClient();
             const baseOpts = (redis?.options ?? {});
+            const { commandTimeout: _omitCommandTimeout, ...withoutCommandTimeout } = baseOpts;
             const connection = new Redis({
-                ...baseOpts,
+                ...withoutCommandTimeout,
                 enableReadyCheck: false,
                 lazyConnect: false,
                 maxRetriesPerRequest: null,
-                commandTimeout: undefined,
             });
             this.worker = new Worker(this.queueName, processJob, {
                 concurrency: 10,
@@ -132,12 +132,15 @@ export class GameActionWorker {
             }
             const difficulty = current.aiDifficulty ?? 'recruit';
             const baseBudget = this.computeBudgetForDifficulty(difficulty);
+            const computedReadableDelay = typeof process.env.AI_READABLE_DELAY_MS === 'string'
+                ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
+                : budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs;
             const effectiveBudget = {
                 ...baseBudget,
                 ...(budgetOverrides || {}),
-                readableDelayMs: typeof process.env.AI_READABLE_DELAY_MS === 'string'
-                    ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
-                    : (budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs),
+                ...(computedReadableDelay !== undefined
+                    ? { readableDelayMs: computedReadableDelay }
+                    : {}),
             };
             const streamEnabled = (process.env.AI_STREAM_ACTIONS ?? 'true').toLowerCase() !== 'false';
             if (streamEnabled && (effectiveBudget.readableDelayMs ?? 0) > 0) {
@@ -302,7 +305,7 @@ export class GameActionWorker {
                                     currentPlayer: updated.currentPlayer,
                                     turn: updated.turn,
                                     reinforcementArmies: Number(postBank),
-                                    version: updated.version,
+                                    ...(updated.version !== undefined ? { version: updated.version } : {}),
                                 });
                             }
                         }
@@ -368,7 +371,7 @@ export class GameActionWorker {
         aiTurnMetrics.recordTurn({
             difficulty,
             fallbackUsed: usedFallback,
-            fallbackReason,
+            ...(fallbackReason ? { fallbackReason } : {}),
             thinkTimeMs: Date.now() - start,
             plannedActions: actions.length,
             appliedActions: applied,
@@ -482,7 +485,9 @@ export class GameActionWorker {
                                 DeltaBuilder.territoryUpdate(gameId, last.fromTerritory.id, { armies: last.fromTerritory.armies }, updated.version),
                                 DeltaBuilder.territoryUpdate(gameId, last.toTerritory.id, {
                                     armies: last.toTerritory.armies,
-                                    ownerId: last.toTerritory.ownerId ?? undefined,
+                                    ...(last.toTerritory.ownerId !== undefined
+                                        ? { ownerId: last.toTerritory.ownerId }
+                                        : {}),
                                 }, updated.version),
                             ];
                             const { emitFogFilteredDelta } = await import('../services/fogService.js');
@@ -579,23 +584,25 @@ export class GameActionWorker {
                             }
                             catch {
                             }
-                            await this.gameService.appendLog(gameId, [
-                                {
-                                    type: 'TREASURE_CASH',
-                                    timestamp: new Date().toISOString(),
-                                    playerId,
-                                    troops: gained,
-                                    cards: cardNames && cardNames.length === 3 ? cardNames : undefined,
-                                    cardCount: Array.isArray(action.payload?.cards)
-                                        ? (action.payload?.cards?.length ??
-                                            undefined)
-                                        : Array.isArray(action.payload
-                                            ?.treasureSet)
-                                            ? (action.payload
-                                                ?.treasureSet).length
-                                            : undefined,
-                                },
-                            ]);
+                            const baseLog = {
+                                type: 'TREASURE_CASH',
+                                timestamp: new Date().toISOString(),
+                                playerId,
+                                troops: gained,
+                            };
+                            const maybeCards = cardNames && cardNames.length === 3 ? cardNames : undefined;
+                            const cardsLen = Array.isArray(action.payload?.cards)
+                                ? action.payload?.cards?.length
+                                : Array.isArray(action.payload?.treasureSet)
+                                    ? (action.payload
+                                        ?.treasureSet).length
+                                    : undefined;
+                            const fullLog = {
+                                ...baseLog,
+                                ...(maybeCards ? { cards: maybeCards } : {}),
+                                ...(typeof cardsLen === 'number' ? { cardCount: cardsLen } : {}),
+                            };
+                            await this.gameService.appendLog(gameId, [fullLog]);
                         }
                     }
                     catch (logErr) {
@@ -618,13 +625,14 @@ export class GameActionWorker {
                         }, version);
                         await emitFogFilteredDelta(this.io, gameId, playerDelta);
                         if (newPhase !== currentState.phase) {
-                            await this.deltaEmitter.emitPhaseChange(gameId, {
+                            const payload = {
                                 phase: newPhase,
                                 currentPlayer: serialized?.currentPlayer ?? playerId,
                                 turn: serialized?.turn ?? currentState.turn,
                                 reinforcementArmies: Number(postBank),
-                                version,
-                            });
+                                ...(version !== undefined ? { version } : {}),
+                            };
+                            await this.deltaEmitter.emitPhaseChange(gameId, payload);
                         }
                     }
                     catch (_e) {
@@ -775,13 +783,14 @@ export class GameActionWorker {
         const result = await this.gameService.endTurn(gameId, playerId);
         try {
             if (result.treasureAwarded) {
-                this.io.to(`game:${gameId}`).emit('game-delta', {
+                const delta = {
                     type: 'TREASURE_AWARDED',
                     roomId: gameId,
                     timestamp: Date.now(),
                     userId: playerId,
                     metal: result.treasureAwarded,
-                });
+                };
+                this.io.to(`game:${gameId}`).emit('game-delta', delta);
             }
         }
         catch (_e) {

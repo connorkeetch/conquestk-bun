@@ -143,12 +143,15 @@ const sendConversationMessageForUser = async (socket, options) => {
         const detail = await ensureConversationAccess(socket, options.conversationId, options.userId);
         descriptor = detail.conversation;
     }
-    const message = await sendConversationMessage({
+    const baseOptions = {
         conversationId: descriptor.id,
         senderId: options.userId,
         body: trimmed,
-        clientMessageId: options.clientMessageId,
-        metadata: options.metadata,
+    };
+    const message = await sendConversationMessage({
+        ...baseOptions,
+        ...(options.clientMessageId ? { clientMessageId: options.clientMessageId } : {}),
+        ...(options.metadata ? { metadata: options.metadata } : {}),
     });
     await maybeSendDirectMessageNotification(descriptor, options.userId, trimmed);
     return { message, descriptor, body: trimmed };
@@ -367,12 +370,12 @@ const handleConversationMembersUpdate = async (_io, socket, actorId, payload, ca
         }
         ackSuccess(callback, {
             ok: errors.length === 0,
-            added: addedMembers.length > 0 ? addedMembers : undefined,
-            removed: removedMembers.length > 0 ? removedMembers : undefined,
-            roleUpdates: roleResults.length > 0 ? roleResults : undefined,
-            archived: archivedState,
-            conversation: conversationSummary,
-            errors: errors.length > 0 ? errors : undefined,
+            ...(typeof archivedState === 'boolean' ? { archived: archivedState } : {}),
+            ...(conversationSummary ? { conversation: conversationSummary } : {}),
+            ...(addedMembers.length > 0 ? { added: addedMembers } : {}),
+            ...(removedMembers.length > 0 ? { removed: removedMembers } : {}),
+            ...(roleResults.length > 0 ? { roleUpdates: roleResults } : {}),
+            ...(errors.length > 0 ? { errors } : {}),
         });
     }
     catch (error) {
@@ -425,8 +428,8 @@ export const setupChatHandlers = (io, socket) => {
             const metadata = sanitizeMetadata(data.metadata);
             const { message } = await sendConversationMessageForUser(socket, {
                 ...data,
-                metadata,
                 userId,
+                ...(metadata ? { metadata } : {}),
             });
             ackSuccess(callback, {
                 ok: true,
@@ -532,9 +535,9 @@ export const setupChatHandlers = (io, socket) => {
                 const metadata = sanitizeMetadata(data.metadata);
                 conversation = await createGroupConversation({
                     creatorId: userId,
-                    title: typeof data.title === 'string' ? data.title : undefined,
                     memberIds: data.memberIds,
-                    metadata,
+                    ...(typeof data.title === 'string' ? { title: data.title } : {}),
+                    ...(metadata ? { metadata } : {}),
                 });
                 await joinConversationRoom(socket, conversation.id);
             }

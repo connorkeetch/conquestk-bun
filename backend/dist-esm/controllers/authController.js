@@ -144,9 +144,11 @@ export class AuthController {
             if (registrationSessionId) {
                 tokenPayload.sessionId = registrationSessionId;
             }
-            const token = jwt.sign(tokenPayload, this.jwtSecret, {
-                expiresIn: this.tokenExpiration,
-            });
+            const signOptions = {};
+            if (this.tokenExpiration !== undefined) {
+                signOptions.expiresIn = this.tokenExpiration;
+            }
+            const token = jwt.sign(tokenPayload, this.jwtSecret, signOptions);
             const requiresEmailVerification = emailService.isEnabled() && process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
             const isAdmin = await adminService.isAdmin(user.id);
             return res.status(201).json({
@@ -283,9 +285,11 @@ export class AuthController {
             if (loginSessionId) {
                 tokenPayload.sessionId = loginSessionId;
             }
-            const token = jwt.sign(tokenPayload, this.jwtSecret, {
-                expiresIn: this.tokenExpiration,
-            });
+            const signOptions = {};
+            if (this.tokenExpiration !== undefined) {
+                signOptions.expiresIn = this.tokenExpiration;
+            }
+            const token = jwt.sign(tokenPayload, this.jwtSecret, signOptions);
             const rawIsVip = user.is_vip;
             const rawPremiumTier = user.premium_tier;
             return res.json({
