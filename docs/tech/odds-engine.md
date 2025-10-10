@@ -47,3 +47,14 @@ The CI job installs Rust + wasm-pack and runs `npm run odds:test` on Linux. Benc
 - We count divergences over time; target is 0 across 100k+ simulations.
 - Flip to `ODDS_ENGINE=wasm` when divergence is 0 for a week. Keep a kill switch: set to `ts` to rollback.
 
+## Admin/Benchmark Route
+
+- Endpoint: `POST /api/benchmark/odds-shadow-verify`
+- Auth: Admin (uses existing authenticate middleware)
+- Body (JSON):
+  - `trials` (number, default 100000)
+  - `attMin`/`attMax` (default 5/40), `defMin`/`defMax` (default 5/35)
+  - `seedHi`/`seedLo` (u32 seeds to drive determinism)
+- Behavior: forces odds engine to `shadow`, runs N randomized battles, counts divergences via odds facade logger, then restores previous engine.
+- Metrics: updates `odds_shadow_checked_total`, `odds_shadow_divergence_total`, and `odds_shadow_divergence_rate` (gauge) labeled by environment and kind=`battle`.
+- Response: `{ trials, divergences, divergenceRate, durationMs, opsPerSec, range }`

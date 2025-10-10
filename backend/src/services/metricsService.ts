@@ -381,3 +381,29 @@ class AssassinationMetrics {
 }
 
 export const assassinationMetrics = new AssassinationMetrics()
+
+// Odds (shadow) verification metrics
+class OddsMetrics {
+  private readonly checkedCounter = new CounterMetric('odds_shadow_checked_total')
+  private readonly divergenceCounter = new CounterMetric('odds_shadow_divergence_total')
+  private readonly divergenceRateGauge = new GaugeMetric('odds_shadow_divergence_rate')
+
+  recordBatch(environment: string, kind: string, checked: number, divergences: number) {
+    this.checkedCounter.inc({ environment, kind }, checked)
+    if (divergences > 0) this.divergenceCounter.inc({ environment, kind }, divergences)
+    const rate = checked > 0 ? divergences / checked : 0
+    this.divergenceRateGauge.set(rate, { environment, kind })
+  }
+
+  snapshot() {
+    return {
+      counters: [
+        ...this.checkedCounter.snapshot(),
+        ...this.divergenceCounter.snapshot(),
+      ],
+      gauges: this.divergenceRateGauge.snapshot(),
+    }
+  }
+}
+
+export const oddsMetrics = new OddsMetrics()

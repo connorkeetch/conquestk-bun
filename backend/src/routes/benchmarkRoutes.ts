@@ -3,6 +3,8 @@ import { authenticateToken } from '../middleware/auth.js'
 import { performanceTestingService } from '../services/performanceTestingService.js'
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
+import { oddsMetrics } from '../services/metricsService.js'
+import { getEngine as getOddsEngine, setEngine as setOddsEngine, setLogger as setOddsLogger, simulateBattle as simulateBattleOdds } from '@conquestk/shared/odds'
 
 const router = express.Router()
 
@@ -230,6 +232,68 @@ router.get('/status', authenticateToken, async (req, res) => {
       success: false,
       error: 'Failed to load benchmark status',
     })
+  }
+})
+
+// Run shadow verification for odds engine (TS vs WASM) and emit divergence metric
+router.post('/odds-shadow-verify', authenticateToken, async (req, res): Promise<void> => {
+  try {
+    const {
+      trials = 100_000,
+      attMin = 5,
+      attMax = 40,
+      defMin = 5,
+      defMax = 35,
+      seedHi = 0xA1B2C3D4,
+      seedLo = 0x0F1E2D3C,
+      kind = 'battle',
+    } = req.body ?? {}
+
+    const prevEngine = getOddsEngine()
+    // Wrap logger to count divergences while passing through to backend logs
+    let divergences = 0
+    const passThrough = (entry: unknown) => logger.info('odds', entry as Record<string, unknown>)
+    setOddsLogger((entry) => {
+      try {
+        const e = entry as any
+        if (e?.tag === 'odds-divergence') divergences++
+      } catch {}
+      passThrough(entry)
+    })
+    setOddsEngine('shadow')
+
+    const start = Date.now()
+    for (let i = 0; i < trials; i++) {
+      const att = attMin + (i % Math.max(1, attMax - attMin + 1))
+      const def = defMin + (i % Math.max(1, defMax - defMin + 1))
+      const sh = (seedHi ^ i) >>> 0
+      const sl = (seedLo ^ (i * 2654435761)) >>> 0
+      await simulateBattleOdds({ seedHi: sh, seedLo: sl, attArmies: att, defArmies: def })
+    }
+    const durationMs = Date.now() - start
+
+    // Record metric
+    const environment = process.env.NODE_ENV || 'development'
+    oddsMetrics.recordBatch(environment, kind, Number(trials), divergences)
+
+    // Restore engine to previous value
+    setOddsEngine(prevEngine)
+    setOddsLogger((entry) => passThrough(entry))
+
+    res.json({
+      success: true,
+      data: {
+        trials: Number(trials),
+        divergences,
+        divergenceRate: trials > 0 ? divergences / Number(trials) : 0,
+        durationMs,
+        opsPerSec: trials > 0 ? (Number(trials) / durationMs) * 1000 : 0,
+        range: { attMin, attMax, defMin, defMax },
+      },
+    })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed odds shadow verification', 500)
+    res.status(500).json({ success: false, error: 'Failed odds shadow verification' })
   }
 })
 

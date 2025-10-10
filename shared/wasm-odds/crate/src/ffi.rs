@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::battle::{simulate_battle as rb_simulate_battle, monte_carlo as rb_monte_carlo, AttackerPolicy, DefenderPolicy};
 use crate::dice::simulate_step as rb_simulate_step;
+use crate::dp::exact_win_probability;
 use crate::rng::Xoshiro128pp;
 
 #[derive(Serialize)]
@@ -82,3 +83,7 @@ pub fn odds_matrix(max_att: u16, max_def: u16, trials: u32, seed_hi: u32, seed_l
     serde_wasm_bindgen::to_value(&matrix).unwrap()
 }
 
+#[wasm_bindgen]
+pub fn exact_odds(att_armies: u16, def_armies: u16) -> f64 {
+    exact_win_probability(att_armies, def_armies)
+}

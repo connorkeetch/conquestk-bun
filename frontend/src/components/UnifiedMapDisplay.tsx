@@ -610,20 +610,24 @@ export default function UnifiedMapDisplay({
             name: t.name,
             x: t.x,
             y: t.y,
-            owner: t.owner,
+            owner: t.owner ?? null,
             ownerColor: playerColors[t.owner ?? ''] as PlayerColor,
           }))}
-          selectedId={selectedTerritoryId ?? undefined}
+          {...(selectedTerritoryId !== undefined ? { selectedId: selectedTerritoryId } : {})}
           validTargets={validTargets}
-          hoveredId={isMyTurn ? (hoveredTargetId ?? undefined) : undefined}
-          invalidShakeId={invalidShakeId ?? undefined}
+          {...(isMyTurn ? { hoveredId: hoveredTargetId ?? null } : {})}
+          {...(invalidShakeId !== undefined ? { invalidShakeId } : {})}
         />
         {hillOverlayEnabled && (
           <HillOverlay
             mapWidth={mapData.width}
             mapHeight={mapData.height}
             territories={territories}
-            players={players.map((p) => ({ id: p.id, username: p.username, color: p.color }))}
+            players={players.map((p: { id: string; username: string; color: string }) => ({
+              id: p.id,
+              username: p.username,
+              color: p.color,
+            }))}
             state={hillState}
           />
         )}
@@ -638,23 +642,23 @@ export default function UnifiedMapDisplay({
             name: t.name,
             xPx: t.x,
             yPx: t.y,
-            owner: t.owner,
+            owner: t.owner ?? null,
             ownerColor: playerColors[t.owner ?? ''] as PlayerColor,
-            armies: t.armies,
+            ...(typeof t.armies === 'number' ? { armies: t.armies } : {}),
           }))}
-          selectedId={selectedTerritoryId ?? undefined}
+          {...(selectedTerritoryId !== undefined ? { selectedId: selectedTerritoryId } : {})}
           validTargets={validTargets}
           dimNonTargets={isMyTurn && pendingAction === 'attack'}
-          onClick={isMyTurn ? handleTerritoryActivate : undefined}
-          onHover={isMyTurn ? handleHoverChange : undefined}
+          {...(isMyTurn ? { onClick: handleTerritoryActivate } : {})}
+          {...(isMyTurn ? { onHover: handleHoverChange } : {})}
         />
         {/* Interaction overlays (rings, brackets, arcs) - placed after tokens for visibility */}
         <InteractionOverlay
           width={mapData.width}
           height={mapData.height}
           points={territories.map((t) => ({ id: t.id, x: t.x, y: t.y }))}
-          selectedId={isMyTurn ? selectedTerritoryId : null}
-          targetId={isMyTurn ? selectedTargetTerritoryId : null}
+          selectedId={isMyTurn ? (selectedTerritoryId ?? null) : null}
+          targetId={isMyTurn ? (selectedTargetTerritoryId ?? null) : null}
           hoverId={isMyTurn ? hoveredTargetId : null}
           eligibleIds={isMyTurn ? validTargets : []}
           phase={

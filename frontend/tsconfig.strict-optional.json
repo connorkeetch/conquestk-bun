@@ -47,5 +47,10 @@
     "src/components/ActiveGamesDropdown.tsx"
     ,
     "src/strict-shims/virtual-pwa-register-react.d.ts"
+    ,
+    "src/components/MapDetailModal.tsx",
+    "src/components/UnifiedMapDisplay.tsx",
+    "src/components/AuthGuard.tsx",
+    "src/components/ProfileRedirect.tsx"
   ]
 }
