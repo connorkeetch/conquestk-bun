@@ -28,7 +28,11 @@
       "backend/dist/**",
       "backend/public/**",
       "shared/dist/**",
-      "frontend/dist/**"
+      "frontend/dist/**",
+      ".claude/**",
+      ".venv-awscli/**",
+      "**/.venv*/**",
+      "shared/types/**/*.js"
     ]
   },
   "formatter": {
@@ -160,13 +164,22 @@
   },
   "overrides": [
     {
-      "includes": ["*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx"],
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
       "linter": {
         "rules": {
+          "correctness": {
+            "noUndeclaredVariables": "off"
+          },
           "suspicious": {
             "noConsole": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
           }
         }
+      },
+      "javascript": {
+        "globals": ["jest"]
       }
     },
     {
