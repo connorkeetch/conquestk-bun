@@ -23,3 +23,4 @@ export interface MonteCarloResult {
   def_remaining_hist: number[]
 }
 
+export type ExactOdds = number

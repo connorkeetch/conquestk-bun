@@ -153,9 +153,13 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
                 <UnifiedMapDisplay
                   mapId={mapId}
                   territories={territoriesForDisplay}
-                  imageUrl={mapData.map.imageUrl || undefined}
-                  mapWidth={mapData.map.imageWidth}
-                  mapHeight={mapData.map.imageHeight}
+                  {...(mapData.map.imageUrl ? { imageUrl: mapData.map.imageUrl } : {})}
+                  {...(typeof mapData.map.imageWidth === 'number'
+                    ? { mapWidth: mapData.map.imageWidth }
+                    : {})}
+                  {...(typeof mapData.map.imageHeight === 'number'
+                    ? { mapHeight: mapData.map.imageHeight }
+                    : {})}
                   previewMode={true}
                 />
               </div>

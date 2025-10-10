@@ -9,6 +9,7 @@ Rust → WebAssembly engine for Risk-style combat and odds. Provides determinist
 - simulate_battle(seed_hi: u32, seed_lo: u32, att_armies: u16, def_armies: u16, policy: object) → { attacker_won, attacker_remaining, defender_remaining, steps }
 - monte_carlo(att_armies: u16, def_armies: u16, trials: u32, seed_hi: u32, seed_lo: u32) → { trials, wins, losses, p_win, p_loss, att_remaining_hist, def_remaining_hist }
 - odds_matrix(max_att: u16, max_def: u16, trials: u32, seed_hi: u32, seed_lo: u32) → number[][]
+- exact_odds(att_armies: u16, def_armies: u16) → number (0..1)
 
 All integers are returned in JSON-compatible shapes. Internally, the combat logic uses integer math only.
 
@@ -59,4 +60,3 @@ const wasm = await loadWasm(bytes)
 
 - Rust: `npm run test:rs`
 - TypeScript (interop): `npm run test:ts` (requires a prior `npm run wasm:build` if running tests that import the built package)
-

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { loadWasm } from '../index.js'
+import { loadWasm } from '../index.ts'
 
 // Minimal TS xoshiro128++ and simulator matching Rust for cross-checks
 class Xoshiro128pp {
@@ -121,5 +121,15 @@ describe('wasm odds ffi', () => {
     expect(rs.wins).toBe(wins)
     expect(rs.losses).toBe(losses)
   })
-})
 
+  it('exact_odds matches TS DP (computeConquestProbability) on 0..20 grid', async () => {
+    const { computeConquestProbability } = await import('../../utils/battleOdds.ts')
+    for (let a = 0; a <= 20; a++) {
+      for (let d = 0; d <= 20; d++) {
+        const exact = wasm.exact_odds(a, d) as number
+        const ts = computeConquestProbability(a, d)
+        expect(Math.abs(exact - ts)).toBeLessThan(1e-6)
+      }
+    }
+  })
+})
