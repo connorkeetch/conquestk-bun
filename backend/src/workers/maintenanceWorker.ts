@@ -60,9 +60,10 @@ export class MaintenanceWorker {
         every: intervalMs,
       })
       // Nightly (04:00 UTC) leaderboard cache refresh
-      await queue.upsertJobScheduler('maintenance:refresh-skill-leaderboard', {
-        cron: '0 4 * * *',
-      })
+      await queue.upsertJobScheduler(
+        'maintenance:refresh-skill-leaderboard',
+        { cron: '0 4 * * *' } as any,
+      )
       // Create a worker to process scheduled maintenance jobs
       const Redis = (await import('ioredis')).default
       const redis = (await import('../config/redis.js')).getRedisClient()

@@ -1,4 +1,4 @@
-import type Redis from 'ioredis'
+import type { Redis as IORedis } from 'ioredis'
 import { Cluster } from 'ioredis'
 import { getRedisClient } from '../config/redis.js'
 import { logger } from '../utils/logger.js'
@@ -30,7 +30,7 @@ interface ClusterConfig {
 
 export class RedisClusterService {
   private cluster: Cluster | null = null
-  private fallbackClient: Redis | null = null
+  private fallbackClient: IORedis | null = null
   private isClusterMode = false
   private metrics: CacheMetrics = {
     hits: 0,
@@ -136,7 +136,7 @@ export class RedisClusterService {
     // Centralized client is already connected, no need to call connect() again
   }
 
-  private getClient(): Redis | Cluster | null {
+  private getClient(): IORedis | Cluster | null {
     return this.isClusterMode ? this.cluster : this.fallbackClient
   }
 

@@ -609,7 +609,7 @@ export class GameEngine {
       : config?.eligibleTerritoryIds
 
     const eligibleSet = new Set<string>(
-      (eligibleSource && eligibleSource.length > 0 ? eligibleSource : territoryIds).filter((id) =>
+      (eligibleSource && eligibleSource.length > 0 ? eligibleSource : territoryIds).filter((id: string) =>
         territoryIdSet.has(id),
       ),
     )
@@ -678,7 +678,7 @@ export class GameEngine {
         seen.add(id)
         uniqueOrder.push(id)
       }
-      const remaining = eligiblePool.filter((id) => !seen.has(id))
+      const remaining = eligiblePool.filter((id: string) => !seen.has(id))
       rotationPool = [...uniqueOrder, ...remaining]
     } else {
       rotationPool = [...eligiblePool]

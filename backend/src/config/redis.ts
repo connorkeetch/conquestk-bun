@@ -1,4 +1,4 @@
-import Redis, { type RedisOptions, type Redis as IORedis } from 'ioredis'
+import RedisPkg, { type RedisOptions, type Redis as IORedis } from 'ioredis'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
 
@@ -79,28 +79,32 @@ export async function initializeRedis(): Promise<RedisClients> {
     }
 
     // Main Redis client for general use
-    redisClient = new Redis(finalRedisUrl, {
+    const RedisCtor = RedisPkg as unknown as new (
+      url: string,
+      options?: RedisOptions,
+    ) => IORedis
+    redisClient = new RedisCtor(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'main',
     })
 
     // Pub/Sub clients for Socket.io
-    pubClient = new Redis(finalRedisUrl, {
+    pubClient = new RedisCtor(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'pub',
     })
 
-    subClient = new Redis(finalRedisUrl, {
+    subClient = new RedisCtor(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'sub',
     })
 
     // Event handlers with graceful degradation
-    redisClient.on('connect', () => {
+    redisClient?.on('connect', () => {
       logger.info('✅ Redis client connected')
     })
 
-    redisClient.on('error', (err) => {
+    redisClient?.on('error', (err) => {
       const errorDetails = toKnownError(err)
       const errorMsg = errorDetails.message
       const errorCode =

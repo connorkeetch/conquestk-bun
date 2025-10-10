@@ -71,6 +71,7 @@ import queueRoutes from './routes/queueRoutes.js'
 import performanceRoutes from './routes/performanceRoutes.js'
 import benchmarkRoutes from './routes/benchmarkRoutes.js'
 import { createPreferencesRouter } from './routes/preferences.js'
+import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js'
 
 const app = express()
 const server = createServer(app)
@@ -202,7 +203,7 @@ initializeRedis()
       .then(() => {
         logger.info('✅ WorkerManager initialized without Redis (degraded mode)')
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         logger.error(
           '❌ Failed to initialize WorkerManager in degraded mode:',
           getErrorMessage(error),
@@ -733,7 +734,6 @@ setupSocketHandlers(io)
 memoryDiagnosticsService.start()
 
 // WorkerManager will be created AND initialized after Redis is ready (see Redis initialization block above)
-import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js'
 
 async function startServer() {
   try {

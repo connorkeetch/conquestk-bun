@@ -1,4 +1,4 @@
-import type Redis from 'ioredis'
+import type { Redis as IORedis } from 'ioredis'
 import { getRedisClient } from '../config/redis.js'
 import { logger } from '../utils/logger.js'
 
@@ -14,7 +14,7 @@ export function startWorkerHeartbeat(
   queueName: string,
   options?: { ttlSeconds?: number; intervalMs?: number },
 ): HeartbeatHandle | null {
-  const redis: Redis | null = getRedisClient()
+  const redis: IORedis | null = getRedisClient()
   if (!redis) return null
 
   const ttl = Math.max(2, Math.trunc(options?.ttlSeconds ?? DEFAULT_TTL_SECONDS))
