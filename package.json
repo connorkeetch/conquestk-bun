@@ -30,6 +30,7 @@
     "typecheck": "npm run typecheck:shared && npm run typecheck:backend && npm run typecheck:frontend",
     "typecheck:backend": "cd backend && npm run typecheck",
     "typecheck:frontend": "cd frontend && npm run typecheck",
+    "typecheck:frontend:strict": "cd frontend && npm run typecheck:strict-optional",
     "typecheck:shared": "cd shared && npm run typecheck",
     "check": "npx biome check --write .",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",

@@ -147,10 +147,10 @@ const uiRoomSlice = createSlice({
     ) {
       const now = Date.now()
       const ttl = Math.max(500, Math.min(10_000, action.payload.ttlMs ?? 3000))
-      const ping = {
+      const ping: NonNullable<UIRoomState['pings']>[number] = {
         id: action.payload.id,
         territoryId: action.payload.territoryId,
-        userId: action.payload.userId,
+        ...(typeof action.payload.userId === 'string' ? { userId: action.payload.userId } : {}),
         username: action.payload.username ?? null,
         createdAt: now,
         expiresAt: now + ttl,
@@ -170,10 +170,13 @@ const uiRoomSlice = createSlice({
       const id = action.payload.id ?? `${Date.now()}:${Math.random().toString(36).slice(2, 8)}`
       const ts = action.payload.ts ?? Date.now()
       const list = state.clientLogs ?? []
-      state.clientLogs = [
-        { id, ts, text: action.payload.text, roomId: action.payload.roomId },
-        ...list,
-      ].slice(0, 300)
+      const entry: NonNullable<UIRoomState['clientLogs']>[number] = {
+        id,
+        ts,
+        text: action.payload.text,
+        ...(typeof action.payload.roomId === 'string' ? { roomId: action.payload.roomId } : {}),
+      }
+      state.clientLogs = [entry, ...list].slice(0, 300)
     },
     clearClientLogs(state) {
       state.clientLogs = []

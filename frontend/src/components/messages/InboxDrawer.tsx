@@ -395,19 +395,22 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   }, [drawerActiveConversationId, dispatch, messagesByConversation])
 
   const displayMessages: DisplayMessage[] = useMemo(() => {
-    return activeMessages.map((m) => ({
-      id: m.id,
-      senderId: m.senderId,
-      senderName:
+    return activeMessages.map((m) => {
+      const label =
         m.senderId === currentUserId
           ? 'You'
           : typeof m.metadata?.senderName === 'string'
             ? (m.metadata.senderName as string)
-            : (m.senderId ?? undefined),
-      body: m.body,
-      createdAt: m.createdAt,
-      metadata: m.metadata,
-    }))
+            : undefined
+      return {
+        id: m.id,
+        senderId: m.senderId,
+        ...(label ? { senderName: label } : {}),
+        body: m.body,
+        createdAt: m.createdAt,
+        metadata: m.metadata,
+      }
+    })
   }, [activeMessages, currentUserId])
 
   const handleSendMessage = useCallback(

@@ -44,7 +44,7 @@ import { ensureTablesExist } from './utils/initTables.js';
 import { logger } from './utils/logger.js';
 import { MigrationRunner } from './utils/migrationRunner.js';
 import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js';
-import { createAdapter } from '@socket.io/redis-adapter';
+import { createAdapter } from '@socket.io/redis-streams-adapter';
 import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js';
 import mapWorkflowRoutes from './routes/mapWorkflow.js';
 import mapApprovalRoutes from './routes/mapApproval.js';
@@ -103,17 +103,18 @@ const corsOptions = {
 };
 const io = new Server(server, {
     cors: corsOptions,
+    connectionStateRecovery: {},
 });
 initializeRedis()
     .then(async (redisClients) => {
-    const { pubClient, subClient, redisClient } = redisClients;
-    if (pubClient && subClient) {
+    const { redisClient } = redisClients;
+    if (redisClient) {
         try {
-            io.adapter(createAdapter(pubClient, subClient));
-            logger.info('✅ Socket.io using Redis adapter for multi-server support');
+            io.adapter(createAdapter(redisClient));
+            logger.info('✅ Socket.io using Redis Streams adapter for multi-server support');
         }
         catch (error) {
-            logger.warn('⚠️ Failed to create Redis adapter, using in-memory adapter:', getErrorMessage(error));
+            logger.warn('⚠️ Failed to create Redis Streams adapter, using in-memory adapter:', getErrorMessage(error));
         }
     }
     else {

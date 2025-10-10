@@ -103,6 +103,7 @@ const corsOptions = {
 };
 const io = new Server(server, {
     cors: corsOptions,
+    connectionStateRecovery: {},
 });
 initializeRedis()
     .then(async (redisClients) => {
