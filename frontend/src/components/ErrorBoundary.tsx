@@ -76,8 +76,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
     this.setState((prevState) => ({
       hasError: false,
-      error: undefined,
-      errorInfo: undefined,
       errorCount: prevState.errorCount,
     }))
   }
@@ -116,7 +114,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             </p>
 
             {/* Show error details in development */}
-            {process.env.NODE_ENV === 'development' && (
+            {(typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'development') && (
               <details className="text-left text-sm text-muted mb-4">
                 <summary className="cursor-pointer text-red-300 hover:text-red-200">
                   Error Details (Dev Only)

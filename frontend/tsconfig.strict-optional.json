@@ -52,5 +52,14 @@
     "src/components/UnifiedMapDisplay.tsx",
     "src/components/AuthGuard.tsx",
     "src/components/ProfileRedirect.tsx"
+    ,
+    "src/components/ErrorBoundary.tsx",
+    "src/components/GameErrorBoundary.tsx",
+    "src/components/Footer.tsx",
+    "src/components/AdminLayout.tsx",
+    "src/components/admin/AdminPageHeader.tsx",
+    "src/components/InfoTooltip.tsx",
+    "src/components/ProfilePage.tsx",
+    "src/components/RankInsignia.tsx"
   ]
 }
