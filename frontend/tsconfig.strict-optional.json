@@ -3,12 +3,18 @@
   "compilerOptions": {
     "exactOptionalPropertyTypes": true,
     "noEmit": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@/services/socketService": ["src/strict-shims/socketServiceShim.ts"],
+      "@/hooks/redux": ["src/strict-shims/reduxHooksShim.ts"],
+      "@/*": ["src/*"]
+    }
   },
   "include": [
     "src/components/notifications/**/*",
     "src/store/messagesSlice.ts",
     "src/services/messagesService.ts",
-    "src/types/messages.ts"
+    "src/types/messages.ts",
+    "src/components/messages/**/*"
   ]
 }
