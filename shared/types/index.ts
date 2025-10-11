@@ -3,10 +3,10 @@
  * This ensures type consistency across the entire application
  */
 
-export * from './delta'
-export * from './messaging'
-export * from './notifications'
-export * from './themes'
+export * from './delta.js'
+export * from './messaging.js'
+export * from './notifications.js'
+export * from './themes.js'
 
 // Import messaging types for internal references
 import type {
@@ -27,7 +27,7 @@ import type {
   ReceiptReadPayload,
   TypingEventPayload,
   TypingEventResponse,
-} from './messaging'
+} from './messaging.js'
 
 // ============================================
 // Chat Types
@@ -586,7 +586,7 @@ export interface RealtimeNotification {
   metadata?: Record<string, unknown>
 }
 
-import type { GameDelta } from './delta'
+import type { GameDelta } from './delta.js'
 
 export interface ServerToClientEvents {
   'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
