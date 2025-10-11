@@ -5,7 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "wasm:build": "wasm-pack build --release --target bundler --out-dir ../pkg crate && wasm-pack build --release --target nodejs --out-dir ../pkg-node crate",
+    "wasm:build": "RUSTFLAGS='-C target-feature=+simd128' wasm-pack build --release --target bundler --out-dir ../pkg crate && RUSTFLAGS='-C target-feature=+simd128' wasm-pack build --release --target nodejs --out-dir ../pkg-node crate && node ./scripts/opt-wasm.js",
     "build:ts": "tsc -p tsconfig.json",
     "wasm:build:dev": "wasm-pack build --dev --target bundler --out-dir pkg crate",
     "test:rs": "cd crate && cargo test",
@@ -18,11 +18,20 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./types": {
       "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
       "default": "./dist/types.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": ["dist/*"],
+      "types": ["dist/types.d.ts"],
+      "types/*": ["dist/types.d.ts"]
     }
   },
   "devDependencies": {
