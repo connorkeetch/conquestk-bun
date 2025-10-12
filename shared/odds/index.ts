@@ -45,7 +45,7 @@ export async function simulateStep(params: { seedHi: number; seedLo: number; att
     if (typeof console !== 'undefined') console.warn('[odds] WASM engine unavailable in shadow mode; using TS only', (e as Error)?.message)
     return tsr
   }
-  if (tsr.attacker_losses !== wsr.attacker_losses || tsr.defender_losses !== wsr.defender_losses) {
+  if (wsr && (tsr.attacker_losses !== wsr.attacker_losses || tsr.defender_losses !== wsr.defender_losses)) {
     logger?.({ tag: 'odds-divergence', kind: 'step', seed: { seedHi, seedLo }, params: { attDice, defDice }, ts: tsr, wasm: wsr })
   }
   return tsr

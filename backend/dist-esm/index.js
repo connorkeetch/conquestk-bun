@@ -55,6 +55,7 @@ import featureFlagsRoutes from './routes/featureFlags.js';
 import queueRoutes from './routes/queueRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
 import benchmarkRoutes from './routes/benchmarkRoutes.js';
+import oddsRoutes from './routes/odds.js';
 import { createPreferencesRouter } from './routes/preferences.js';
 import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js';
 const app = express();
@@ -283,6 +284,7 @@ app.use('/api/feature-flags', featureFlagsRoutes);
 app.use('/api/queues', queueRoutes);
 app.use('/api/performance', performanceRoutes);
 app.use('/api/benchmark', benchmarkRoutes);
+app.use('/api/odds', oddsRoutes);
 try {
     const bullBoardRouter = bullBoardRouterFactory();
     app.use(bullBoardRouter);

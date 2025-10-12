@@ -137,6 +137,21 @@ openssl rand -base64 32  # JWT and session secrets
 - Production: https://conquestk.com/api/health (behind proxy)
 - Staging: https://dev.conquestk.com/health
 
+### Odds Engine Status
+- Endpoint: `/api/odds/status` (no auth)
+- Response example:
+```json
+{
+  "success": true,
+  "data": {
+    "engine": "ts | wasm | shadow",
+    "wasmAvailable": true,
+    "wasmVersion": "wasm-odds x.y.z"
+  }
+}
+```
+- Use this to confirm Railway has built the WASM module when `ODDS_ENGINE=shadow|wasm` is set.
+
 Response shape:
 ```json
 {
