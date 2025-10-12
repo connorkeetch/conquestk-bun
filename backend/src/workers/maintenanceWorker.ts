@@ -1,7 +1,12 @@
+import {
+  getEngine as getOddsEngine,
+  setEngine as setOddsEngine,
+  setLogger as setOddsLogger,
+  simulateBattle as simulateBattleOdds,
+} from '@conquestk/shared/odds'
 import { type Job, Worker } from 'bullmq'
 import { maintenanceService } from '../services/maintenanceService.js'
 import { oddsMetrics } from '../services/metricsService.js'
-import { getEngine as getOddsEngine, setEngine as setOddsEngine, setLogger as setOddsLogger, simulateBattle as simulateBattleOdds } from '@conquestk/shared/odds'
 import { queueService } from '../services/queueService.js'
 import { logger } from '../utils/logger.js'
 
@@ -120,9 +125,12 @@ export class MaintenanceWorker {
     }
 
     if (!initialized) {
-      logger.warn('Failed to initialize maintenance scheduler after retries; falling back to setInterval', {
-        error: lastError instanceof Error ? lastError.message : lastError,
-      })
+      logger.warn(
+        'Failed to initialize maintenance scheduler after retries; falling back to setInterval',
+        {
+          error: lastError instanceof Error ? lastError.message : lastError,
+        },
+      )
       // Fallback interval
       if (intervalMs > 0) {
         this.timer = setInterval(() => {
@@ -133,18 +141,23 @@ export class MaintenanceWorker {
       }
       // Nightly fallback: 24h cadence starting one hour from now
       const ONE_DAY_MS = 24 * 60 * 60 * 1000
-      this.leaderboardTimer = setTimeout(() => {
-        maintenanceService
-          .refreshSkillLeaderboardCache()
-          .catch((error) => logger.warn('Failed to refresh leaderboard cache (fallback)', { error }))
-        this.leaderboardTimer = setInterval(() => {
+      this.leaderboardTimer = setTimeout(
+        () => {
           maintenanceService
             .refreshSkillLeaderboardCache()
             .catch((error) =>
-              logger.warn('Failed to refresh leaderboard cache (interval fallback)', { error }),
+              logger.warn('Failed to refresh leaderboard cache (fallback)', { error }),
             )
-        }, ONE_DAY_MS) as unknown as NodeJS.Timeout
-      }, 60 * 60 * 1000) as unknown as NodeJS.Timeout
+          this.leaderboardTimer = setInterval(() => {
+            maintenanceService
+              .refreshSkillLeaderboardCache()
+              .catch((error) =>
+                logger.warn('Failed to refresh leaderboard cache (interval fallback)', { error }),
+              )
+          }, ONE_DAY_MS) as unknown as NodeJS.Timeout
+        },
+        60 * 60 * 1000,
+      ) as unknown as NodeJS.Timeout
     }
 
     // Run once on startup (non-blocking)
@@ -227,7 +240,9 @@ export class MaintenanceWorker {
         durationMs,
       })
     } catch (e) {
-      logger.warn('⚠️ Nightly odds shadow verify failed', { error: e instanceof Error ? e.message : e })
+      logger.warn('⚠️ Nightly odds shadow verify failed', {
+        error: e instanceof Error ? e.message : e,
+      })
     }
   }
 

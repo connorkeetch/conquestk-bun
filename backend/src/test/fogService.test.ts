@@ -1,5 +1,5 @@
-import { describe, expect, it, jest } from '@jest/globals'
 import type { GameDelta } from '@conquestk/shared/types'
+import { describe, expect, it, jest } from '@jest/globals'
 import type { Server } from 'socket.io'
 import { emitFogFilteredDelta } from '../services/fogService.js'
 import type { GameState } from '../types/game.js'

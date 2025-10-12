@@ -79,8 +79,18 @@ export default function AdminDashboard() {
   const [editReason, setEditReason] = useState('')
   const [savingFlag, setSavingFlag] = useState(false)
   const [oddsHistory, setOddsHistory] = useState<{
-    points: Array<{ ts: number; environment: string; kind: string; checked: number; divergences: number; rate: number }>
-    snapshot: { counters: Array<{ metric: string; labels: Record<string, string>; value: number }>; gauges: Array<{ metric: string; labels: Record<string, string>; value: number }> }
+    points: Array<{
+      ts: number
+      environment: string
+      kind: string
+      checked: number
+      divergences: number
+      rate: number
+    }>
+    snapshot: {
+      counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
+      gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
+    }
   } | null>(null)
 
   const Sparkline = ({ points }: { points: Array<{ ts: number; rate: number }> }) => {
@@ -94,8 +104,7 @@ export default function AdminDashboard() {
     const maxX = Math.max(...xs)
     // const minY = 0
     const maxY = Math.max(0.001, Math.max(...ys))
-    const normX = (x: number) =>
-      pad + ((x - minX) / Math.max(1, maxX - minX)) * (width - pad * 2)
+    const normX = (x: number) => pad + ((x - minX) / Math.max(1, maxX - minX)) * (width - pad * 2)
     const normY = (y: number) => height - pad - (y / maxY) * (height - pad * 2)
     const d = points
       .map((p, i) => `${i === 0 ? 'M' : 'L'} ${normX(p.ts).toFixed(1)} ${normY(p.rate).toFixed(1)}`)
@@ -181,7 +190,11 @@ export default function AdminDashboard() {
     try {
       setRunningAiBench(true)
       toast.loading('Running AI eval benchmark…', { id: 'ai-bench' })
-      const result = await adminService.runAiEvalBench({ sets: 50, candidatesPer: 200, territories: 120 })
+      const result = await adminService.runAiEvalBench({
+        sets: 50,
+        candidatesPer: 200,
+        territories: 120,
+      })
       setAiBenchResult(result)
       toast.success(
         `AI eval: TS ${Math.round(result.ts.candidatesPerSec).toLocaleString()} cps, WASM ${Math.round(result.wasm.candidatesPerSec).toLocaleString()} cps`,
@@ -440,11 +453,11 @@ export default function AdminDashboard() {
                 Checks: {oddsHistory?.points?.reduce((acc, p) => acc + (p.checked || 0), 0) ?? 0}
               </div>
               <div>
-                Divergences: {oddsHistory?.points?.reduce((acc, p) => acc + (p.divergences || 0), 0) ?? 0}
+                Divergences:{' '}
+                {oddsHistory?.points?.reduce((acc, p) => acc + (p.divergences || 0), 0) ?? 0}
               </div>
               <div>
-                Last run:{' '}
-                {(() => {
+                Last run: {(() => {
                   const ts = oddsHistory?.points?.[oddsHistory.points.length - 1]?.ts
                   return ts ? new Date(ts).toLocaleString() : '—'
                 })()}
@@ -576,7 +589,8 @@ export default function AdminDashboard() {
                   </div>
                   {aiBenchResult && (
                     <div className="mt-2 text-xs text-muted">
-                      TS: {Math.round(aiBenchResult.ts.candidatesPerSec).toLocaleString()} cps · WASM: {Math.round(aiBenchResult.wasm.candidatesPerSec).toLocaleString()} cps
+                      TS: {Math.round(aiBenchResult.ts.candidatesPerSec).toLocaleString()} cps ·
+                      WASM: {Math.round(aiBenchResult.wasm.candidatesPerSec).toLocaleString()} cps
                     </div>
                   )}
                 </button>

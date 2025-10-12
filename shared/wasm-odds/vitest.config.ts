@@ -8,6 +8,6 @@ export default defineConfig({
     pool: 'threads',
     poolOptions: { threads: { singleThread: true } },
     isolate: true,
-    reporters: 'default'
+    reporters: 'default',
   },
 })

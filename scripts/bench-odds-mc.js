@@ -1,12 +1,13 @@
 #!/usr/bin/env node
+
 // Benchmark monte_carlo throughput for TS vs WASM.
 // Writes JSON to stdout and docs/bench/bench-mc.json.
 
-import { performance } from 'node:perf_hooks'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
-import { setEngine, monteCarlo } from '@conquestk/shared/odds'
+import { monteCarlo, setEngine } from '@conquestk/shared/odds'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -26,8 +27,8 @@ async function benchEngine(kind, trials) {
   const start = performance.now()
   for (let i = 0; i < items.length; i++) {
     const { att, def } = items[i]
-    const seedHi = (0xF00D0000 ^ i) >>> 0
-    const seedLo = (0xBEEF5678 ^ (i * 1103515245)) >>> 0
+    const seedHi = (0xf00d0000 ^ i) >>> 0
+    const seedLo = (0xbeef5678 ^ (i * 1103515245)) >>> 0
     await monteCarlo({ attArmies: att, defArmies: def, trials, seedHi, seedLo })
   }
   const total = performance.now() - start
@@ -49,4 +50,7 @@ async function main() {
   } catch {}
 }
 
-main().catch((e) => { console.error(e); process.exit(1) })
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

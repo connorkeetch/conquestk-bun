@@ -12,13 +12,17 @@ import { gameStateCache } from './cacheService.js'
 import { clanService } from './clanService.js'
 import { eloService, type PlayerRating } from './eloService.js'
 import { GameActionProcessor } from './gameActionProcessor.js'
+import { GameLifecycleService } from './gameLifecycleService.js'
 import { GameRoomService } from './gameRoomService.js'
 import { GameService } from './gameService.js'
-import { GameLifecycleService } from './gameLifecycleService.js'
+import {
+  matchPresenceMove,
+  matchPresenceOffline,
+  matchPresenceOnline,
+} from './matchSvcIntegration.js'
 import { socketPayloadMetrics } from './metricsService.js'
 import { queueService } from './queueService.js'
 import { registerSocketServer } from './socketRegistry.js'
-import { matchPresenceOnline, matchPresenceOffline, matchPresenceMove } from './matchSvcIntegration.js'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -281,16 +285,16 @@ function serializeGameStateForClient(
     players,
     board,
     gameConfig: gameConfig as unknown as SerializedGameState['gameConfig'],
-    ...( (s as unknown as SerializedGameState).kingOfTheHillState
+    ...((s as unknown as SerializedGameState).kingOfTheHillState
       ? { kingOfTheHillState: (s as unknown as SerializedGameState).kingOfTheHillState }
       : {}),
-    ...( (s as unknown as SerializedGameState).assassinationTargets
+    ...((s as unknown as SerializedGameState).assassinationTargets
       ? { assassinationTargets: (s as unknown as SerializedGameState).assassinationTargets }
       : {}),
     cards: Array.isArray((s as unknown as SerializedGameState).cards)
       ? (s as unknown as SerializedGameState).cards
       : [],
-    ...( (s as unknown as SerializedGameState).movementTracking
+    ...((s as unknown as SerializedGameState).movementTracking
       ? { movementTracking: (s as unknown as SerializedGameState).movementTracking }
       : {}),
   }
@@ -722,9 +726,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             ack({
               ok: true,
               queued: outcome.mode === 'queued',
-              ...(outcome.result?.version !== undefined
-                ? { version: outcome.result.version }
-                : {}),
+              ...(outcome.result?.version !== undefined ? { version: outcome.result.version } : {}),
             })
           }
         },
@@ -1021,7 +1023,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     socket.on(
       'goBackToReinforcement',
       withErrorHandler(socket, 'goBackToReinforcement', async (data) => {
-        logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'goBackToReinforcement', prefer: 'game-action' })
+        logger.warn('DEPRECATED_SOCKET_EVENT', {
+          event: 'goBackToReinforcement',
+          prefer: 'game-action',
+        })
         if (!data || !data.roomId) {
           throw new Error('Invalid go-back data')
         }

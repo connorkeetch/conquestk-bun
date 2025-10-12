@@ -89,6 +89,9 @@
     "src/pages/AdminMaps.tsx",
     "src/pages/AdminMapReview.tsx"
     ,
+    "src/pages/ClanDetailPage.tsx",
+    "src/pages/TutorialPage.tsx"
+    ,
     "src/pages/MapEditor.tsx",
     "src/pages/MapEditorTokens.tsx"
   ]

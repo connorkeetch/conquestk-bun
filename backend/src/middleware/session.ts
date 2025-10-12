@@ -1,10 +1,10 @@
 import { randomBytes } from 'node:crypto'
+import { createRequire } from 'node:module'
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import session from 'express-session'
 import { getRedisClient } from '../config/redis.js'
 import { getErrorMessage } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
-import { createRequire } from 'node:module'
 
 // Keep CommonJS interop for connect-redis under ESM
 const requireCjs = createRequire(import.meta.url)

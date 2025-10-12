@@ -1,5 +1,5 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { BattleResultDelta, GameDelta } from '@conquestk/shared'
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { gameService } from '../services/gameService'
 import type { BattleResult, GameState } from '../types/game'
 import { logger } from '../utils/logger'
@@ -146,9 +146,7 @@ const adaptBattleResult = (
       armies: result.toTerritory.armies,
       ownerId: toDetails?.ownerId ?? result.toTerritory.ownerId ?? null,
     },
-    ...(result.capitalElimination
-      ? { capitalElimination: result.capitalElimination }
-      : {}),
+    ...(result.capitalElimination ? { capitalElimination: result.capitalElimination } : {}),
     ...(typeof result.gameEnded === 'boolean' ? { gameEnded: result.gameEnded } : {}),
     ...(result.gameState ? { gameState: result.gameState as GameState } : {}),
     ...(typeof result.attackerId === 'string' ? { attackerId: result.attackerId } : {}),

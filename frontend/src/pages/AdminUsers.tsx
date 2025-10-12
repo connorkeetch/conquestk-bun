@@ -244,9 +244,7 @@ const AdminUsers: React.FC = () => {
             return {
               ...current,
               isVip: enableVip,
-              ...(enableVip && trimmedNotes
-                ? { vipReason: trimmedNotes }
-                : {}),
+              ...(enableVip && trimmedNotes ? { vipReason: trimmedNotes } : {}),
               ...(enableVip ? { vipGrantedAt: new Date().toISOString() } : {}),
             }
           }
@@ -858,9 +856,7 @@ const AdminUsers: React.FC = () => {
       await loadUsers()
       if (selectedUser?.id === userId) {
         setSelectedUser((prev) =>
-          prev
-            ? { ...prev, premiumTier: tier as Exclude<User['premiumTier'], undefined> }
-            : prev,
+          prev ? { ...prev, premiumTier: tier as Exclude<User['premiumTier'], undefined> } : prev,
         )
       }
     } catch (err) {

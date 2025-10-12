@@ -74,10 +74,10 @@ jest.mock('../game/mapLoader', () => ({
 }))
 
 import type { ContinentBonus, GameAction, GameState, Territory } from '../types/game.js'
-import { gameStateCache } from './cacheService.js'
 import { aiDecisionService } from './aiDecisionService.js'
-import { aiTurnMetrics, assassinationMetrics } from './metricsService.js'
+import { gameStateCache } from './cacheService.js'
 import { GameService } from './gameService.js'
+import { aiTurnMetrics, assassinationMetrics } from './metricsService.js'
 
 describe('GameService', () => {
   let gameService: GameService
@@ -582,36 +582,39 @@ describe('GameService', () => {
         to: mockTo,
       })
 
-      mockTransaction.mockImplementation(async (callback: (client: unknown) => Promise<unknown>) => {
-        const client = {
-          query: jest.fn()
-            .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing game_results
-            .mockResolvedValueOnce({
-              rows: [{ map_id: 'test-map', started_at: now, ended_at: null }],
-              rowCount: 1,
-            })
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // update game_rooms
-            .mockResolvedValueOnce({
-              rows: [
-                { id: 'attacker', username: 'Attacker', skill_rating: 1200, created_at: now },
-                { id: 'defender', username: 'Defender', skill_rating: 1100, created_at: now },
-              ],
-              rowCount: 2,
-            })
-            .mockResolvedValueOnce({
-              rows: [
-                { user_id: 'attacker', games_played: 10 },
-                { user_id: 'defender', games_played: 5 },
-              ],
-              rowCount: 2,
-            })
-            .mockResolvedValueOnce({ rows: [], rowCount: 1 })
-            .mockResolvedValueOnce({ rows: [], rowCount: 2 })
-            .mockResolvedValueOnce({ rows: [], rowCount: 2 })
-            .mockResolvedValue({ rows: [], rowCount: 1 })
-        }
-        return callback(client as any)
-      })
+      mockTransaction.mockImplementation(
+        async (callback: (client: unknown) => Promise<unknown>) => {
+          const client = {
+            query: jest
+              .fn()
+              .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing game_results
+              .mockResolvedValueOnce({
+                rows: [{ map_id: 'test-map', started_at: now, ended_at: null }],
+                rowCount: 1,
+              })
+              .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // update game_rooms
+              .mockResolvedValueOnce({
+                rows: [
+                  { id: 'attacker', username: 'Attacker', skill_rating: 1200, created_at: now },
+                  { id: 'defender', username: 'Defender', skill_rating: 1100, created_at: now },
+                ],
+                rowCount: 2,
+              })
+              .mockResolvedValueOnce({
+                rows: [
+                  { user_id: 'attacker', games_played: 10 },
+                  { user_id: 'defender', games_played: 5 },
+                ],
+                rowCount: 2,
+              })
+              .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+              .mockResolvedValueOnce({ rows: [], rowCount: 2 })
+              .mockResolvedValueOnce({ rows: [], rowCount: 2 })
+              .mockResolvedValue({ rows: [], rowCount: 1 }),
+          }
+          return callback(client as any)
+        },
+      )
 
       const result = await gameService.applyBattleResult(gameIdComplete, {
         attackerLosses: 0,
@@ -646,7 +649,11 @@ describe('GameService', () => {
       expect(mockTo).toHaveBeenCalledWith('clan:clan-1')
       expect(emit).toHaveBeenCalledWith(
         'clan:progress',
-        expect.objectContaining({ clanId: 'clan-1', userId: 'attacker', xpAwarded: expect.any(Number) }),
+        expect.objectContaining({
+          clanId: 'clan-1',
+          userId: 'attacker',
+          xpAwarded: expect.any(Number),
+        }),
       )
     })
   })
@@ -938,7 +945,10 @@ describe('GameService', () => {
       await gameStateCache.setGameState(roomId, manualState)
 
       const simulateSpy = jest
-        .spyOn((gameService as unknown as { gameEngine: { simulateBattle: Function } }).gameEngine, 'simulateBattle')
+        .spyOn(
+          (gameService as unknown as { gameEngine: { simulateBattle: Function } }).gameEngine,
+          'simulateBattle',
+        )
         .mockReturnValue({
           attackerDice: [6],
           defenderDice: [1],

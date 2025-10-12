@@ -23,7 +23,9 @@ export function GameStartModal({ className = '' }: Props) {
   // Prefer the local player's configured color for header styling when available
   const myColor = useMemo(() => {
     if (!userId || !game) return '#2563EB' // blue as a neutral default
-    const me = game.players.find((p: { userId?: string; id: string; color: string }) => (p.userId ?? p.id) === userId)
+    const me = game.players.find(
+      (p: { userId?: string; id: string; color: string }) => (p.userId ?? p.id) === userId,
+    )
     const val = me ? getColorValue(me.color) : '#2563EB'
     const hex = isGradientValue(val) ? (extractFirstHexColor(val) ?? '#2563EB') : val
     return hex

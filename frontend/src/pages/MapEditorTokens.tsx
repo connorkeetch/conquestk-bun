@@ -438,7 +438,10 @@ const normalizeTerritoryModifierEntry = (
       : undefined
 
   const base: TerritoryModifierConfig = {
-    name: isString(value.name) && value.name.trim() ? (value.name as string).trim() : 'Strategic Territory',
+    name:
+      isString(value.name) && value.name.trim()
+        ? (value.name as string).trim()
+        : 'Strategic Territory',
     icon: isString(value.icon) && value.icon.trim() ? (value.icon as string).trim() : '✨',
     color: isString(value.color) && value.color.trim() ? (value.color as string).trim() : '#a855f7',
     defenseBonus: toNumber(value.defenseBonus ?? value.defense_bonus, 0),
@@ -715,7 +718,7 @@ const findCanvasPresetId = (width: number, height: number) =>
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
-  const DEFAULT_LABEL_SETTINGS: Required<LabelSettings> = {
+const DEFAULT_LABEL_SETTINGS: Required<LabelSettings> = {
   showLabels: true,
   preset: 'classic',
   fontSize: 14,
@@ -734,7 +737,8 @@ const resolveLabelSettings = (settings?: LabelSettings): LabelSettings => ({
   textColor: (settings?.textColor ?? DEFAULT_LABEL_SETTINGS.textColor) as string,
   showBackground: (settings?.showBackground ?? DEFAULT_LABEL_SETTINGS.showBackground) as boolean,
   backgroundColor: (settings?.backgroundColor ?? DEFAULT_LABEL_SETTINGS.backgroundColor) as string,
-  backgroundOpacity: (settings?.backgroundOpacity ?? DEFAULT_LABEL_SETTINGS.backgroundOpacity) as number,
+  backgroundOpacity: (settings?.backgroundOpacity ??
+    DEFAULT_LABEL_SETTINGS.backgroundOpacity) as number,
 })
 
 const reportError = (message: string, error: unknown) => {
@@ -2614,7 +2618,9 @@ export default function MapEditorTokens() {
             selectedTerritoryId: null,
             draggedTerritoryId: null,
           }
-          return mapData.imageUrl ? ({ ...base, imageUrl: mapData.imageUrl } as MapState) : (base as MapState)
+          return mapData.imageUrl
+            ? ({ ...base, imageUrl: mapData.imageUrl } as MapState)
+            : (base as MapState)
         })
 
         alert('Map imported successfully!')

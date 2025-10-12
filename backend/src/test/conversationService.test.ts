@@ -64,7 +64,8 @@ const {
   leaveConversation,
   removeConversationMember,
   sendMessage,
-} = require('../services/conversationService') as typeof import('../services/conversationService.js')
+} =
+  require('../services/conversationService') as typeof import('../services/conversationService.js')
 
 const socketRegistryModule = require('../services/socketRegistry') as {
   tryGetSocketServer: jest.Mock

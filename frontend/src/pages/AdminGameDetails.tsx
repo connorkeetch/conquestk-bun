@@ -71,10 +71,9 @@ export default function AdminGameDetailsPage() {
           lastRound = round
         }
       }
-      const combined = [
-        ...logEntries,
-        ...markers,
-      ] as Array<LogEntry | { type: 'ROUND_MARKER'; timestamp: string; round: number }>
+      const combined = [...logEntries, ...markers] as Array<
+        LogEntry | { type: 'ROUND_MARKER'; timestamp: string; round: number }
+      >
       combined.sort((a, b) => {
         const ta = new Date(String((a as { timestamp?: string }).timestamp)).getTime()
         const tb = new Date(String((b as { timestamp?: string }).timestamp)).getTime()
@@ -813,7 +812,8 @@ export default function AdminGameDetailsPage() {
                   <div className="text-muted">No log entries</div>
                 ) : (
                   logWithRounds.map((e) => {
-                    const k = (e as { id?: string; timestamp?: string }).id ||
+                    const k =
+                      (e as { id?: string; timestamp?: string }).id ||
                       (e as { timestamp?: string }).timestamp ||
                       JSON.stringify(e)
                     const type = (e as { type?: string }).type || 'UNKNOWN'

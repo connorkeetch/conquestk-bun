@@ -1,7 +1,7 @@
-import { logger } from './utils/logger.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { logger } from './utils/logger.js'
 
 function isVerbose(): boolean {
   const lvl = (process.env.LOG_LEVEL || 'info').toLowerCase()
@@ -141,7 +141,6 @@ export async function testMigrationFiles() {
   else logger.debug('📁 Checking migration files...')
 
   try {
-
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = path.dirname(__filename)
     const migrationsPath = path.join(__dirname, '../migrations')

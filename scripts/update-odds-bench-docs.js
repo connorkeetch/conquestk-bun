@@ -11,7 +11,11 @@ const battlePath = path.join(root, 'docs', 'bench', 'bench-battle.json')
 const mcPath = path.join(root, 'docs', 'bench', 'bench-mc.json')
 
 function safeRead(p) {
-  try { return JSON.parse(readFileSync(p, 'utf8')) } catch { return null }
+  try {
+    return JSON.parse(readFileSync(p, 'utf8'))
+  } catch {
+    return null
+  }
 }
 
 const battle = safeRead(battlePath)
@@ -25,10 +29,10 @@ lines.push('')
 if (battle) {
   lines.push(`- Battle: N=${battle.N} (timestamp ${battle.timestamp})`)
   lines.push(
-    `  - TS ops/sec: ${battle.ts.opsPerSec.toFixed(1)}, p95: ${battle.ts.p95Ms.toFixed(2)}ms`
+    `  - TS ops/sec: ${battle.ts.opsPerSec.toFixed(1)}, p95: ${battle.ts.p95Ms.toFixed(2)}ms`,
   )
   lines.push(
-    `  - WASM ops/sec: ${battle.wasm.opsPerSec.toFixed(1)}, p95: ${battle.wasm.p95Ms.toFixed(2)}ms`
+    `  - WASM ops/sec: ${battle.wasm.opsPerSec.toFixed(1)}, p95: ${battle.wasm.p95Ms.toFixed(2)}ms`,
   )
 }
 if (mc) {
@@ -49,4 +53,3 @@ if (start !== -1 && end !== -1 && end > start) {
   md = `${md}\n\n${lines.join('\n')}\n`
 }
 writeFileSync(docsPath, md)
-

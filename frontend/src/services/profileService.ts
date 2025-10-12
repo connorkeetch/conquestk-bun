@@ -439,7 +439,9 @@ export async function searchUsers(
 ): Promise<UserSearchResult[]> {
   const q = query.trim()
   if (q.length < 2) return []
-  const cfg = options.signal ? { params: { q, limit }, signal: options.signal } : { params: { q, limit } }
+  const cfg = options.signal
+    ? { params: { q, limit }, signal: options.signal }
+    : { params: { q, limit } }
   const response = await apiClient.get<{
     users: Array<{ id: string; username: string }>
   }>('/users/search', cfg)

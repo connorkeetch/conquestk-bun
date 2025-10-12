@@ -2,12 +2,12 @@ import express, { type Request, type Response } from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { cdnService } from '../services/cdnService.js'
 import { databaseClusterService } from '../services/databaseClusterService.js'
+import { oddsMetrics } from '../services/metricsService.js'
 import { performanceMonitorService } from '../services/performanceMonitorService.js'
 import { redisClusterService } from '../services/redisClusterService.js'
 import { getErrorMessage } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
-import { oddsMetrics } from '../services/metricsService.js'
 
 type ServiceHealthResult = {
   status: string

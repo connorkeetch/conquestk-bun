@@ -245,12 +245,22 @@ export class GameActionProcessor {
       await emitFogFilteredDelta(
         this.io as unknown as Server,
         gameId,
-        DeltaBuilder.territoryUpdate(gameId, fromTerritoryId, { armies: result.fromArmies }, result.gameState.version),
+        DeltaBuilder.territoryUpdate(
+          gameId,
+          fromTerritoryId,
+          { armies: result.fromArmies },
+          result.gameState.version,
+        ),
       )
       await emitFogFilteredDelta(
         this.io as unknown as Server,
         gameId,
-        DeltaBuilder.territoryUpdate(gameId, toTerritoryId, { armies: result.toArmies }, result.gameState.version),
+        DeltaBuilder.territoryUpdate(
+          gameId,
+          toTerritoryId,
+          { armies: result.toArmies },
+          result.gameState.version,
+        ),
       )
     } catch (e) {
       logger.debug('Failed to emit transfer_conquest deltas (inline)', {

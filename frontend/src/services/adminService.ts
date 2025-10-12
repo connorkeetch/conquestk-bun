@@ -420,7 +420,14 @@ class AdminService {
 
   // ============= ODDS METRICS (Performance) =============
   async getOddsHistory(hours = 24): Promise<{
-    points: Array<{ ts: number; environment: string; kind: string; checked: number; divergences: number; rate: number }>
+    points: Array<{
+      ts: number
+      environment: string
+      kind: string
+      checked: number
+      divergences: number
+      rate: number
+    }>
     snapshot: {
       counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
       gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
@@ -432,15 +439,17 @@ class AdminService {
     return response.data?.data ?? response.data
   }
 
-  async runOddsShadowVerify(body: {
-    trials?: number
-    attMin?: number
-    attMax?: number
-    defMin?: number
-    defMax?: number
-    seedHi?: number
-    seedLo?: number
-  } = {}): Promise<{
+  async runOddsShadowVerify(
+    body: {
+      trials?: number
+      attMin?: number
+      attMax?: number
+      defMin?: number
+      defMax?: number
+      seedHi?: number
+      seedLo?: number
+    } = {},
+  ): Promise<{
     trials: number
     divergences: number
     divergenceRate: number
@@ -451,7 +460,9 @@ class AdminService {
     return response.data?.data ?? response.data
   }
 
-  async runAiEvalBench(body: { sets?: number; candidatesPer?: number; territories?: number } = {}): Promise<{
+  async runAiEvalBench(
+    body: { sets?: number; candidatesPer?: number; territories?: number } = {},
+  ): Promise<{
     sets: number
     candidatesPer: number
     territories: number

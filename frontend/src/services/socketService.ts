@@ -213,9 +213,13 @@ class SocketService {
       typeof armies === 'number'
         ? { roomId, fromTerritoryId, toTerritoryId, armies }
         : { roomId, fromTerritoryId, toTerritoryId }
-    this.socket?.emit('attack', attackPayload as Parameters<ClientToServerEvents['attack']>[0], () => {
-      clear()
-    })
+    this.socket?.emit(
+      'attack',
+      attackPayload as Parameters<ClientToServerEvents['attack']>[0],
+      () => {
+        clear()
+      },
+    )
   }
 
   checkCapitalAttack(roomId: string, targetTerritoryId: string) {
@@ -364,9 +368,7 @@ class SocketService {
 
       const normalizedPlayer: RoomPlayer = {
         id: payload.player.id,
-        ...(payload.player.userId !== undefined
-          ? { userId: payload.player.userId ?? null }
-          : {}),
+        ...(payload.player.userId !== undefined ? { userId: payload.player.userId ?? null } : {}),
         ...(payload.player.aiPlayerId !== undefined
           ? { aiPlayerId: payload.player.aiPlayerId ?? null }
           : {}),
@@ -374,9 +376,7 @@ class SocketService {
         joinedAt: payload.player.joinedAt,
         isReady: payload.player.isReady,
         readyAt: payload.player.readyAt,
-        ...(payload.player.teamId !== undefined
-          ? { teamId: payload.player.teamId }
-          : {}),
+        ...(payload.player.teamId !== undefined ? { teamId: payload.player.teamId } : {}),
         isAi: payload.player.isAi,
         ...(payload.player.aiDifficulty !== undefined
           ? { aiDifficulty: payload.player.aiDifficulty }
@@ -384,8 +384,12 @@ class SocketService {
         ...(payload.player.aiPersonalitySeed !== undefined
           ? { aiPersonalitySeed: payload.player.aiPersonalitySeed }
           : {}),
-        ...(typeof (payload.player as { selectedColor?: string | null }).selectedColor !== 'undefined'
-          ? { selected_color: (payload.player as { selectedColor?: string | null }).selectedColor ?? null }
+        ...(typeof (payload.player as { selectedColor?: string | null }).selectedColor !==
+        'undefined'
+          ? {
+              selected_color:
+                (payload.player as { selectedColor?: string | null }).selectedColor ?? null,
+            }
           : {}),
       }
 
@@ -842,8 +846,9 @@ class SocketService {
         ...(typeof (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
           .timeBankSecondsRemaining !== 'undefined'
           ? {
-              timeBankSecondsRemaining: (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
-                .timeBankSecondsRemaining ?? null,
+              timeBankSecondsRemaining:
+                (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
+                  .timeBankSecondsRemaining ?? null,
             }
           : {}),
         readyCheckStartedAt: payload.readyCheckStartedAt,
@@ -988,8 +993,9 @@ class SocketService {
         ...(typeof (payload as Parameters<ServerToClientEvents['room-update']>[0])
           .timeBankSecondsRemaining !== 'undefined'
           ? {
-              timeBankSecondsRemaining: (payload as Parameters<ServerToClientEvents['room-update']>[0])
-                .timeBankSecondsRemaining ?? null,
+              timeBankSecondsRemaining:
+                (payload as Parameters<ServerToClientEvents['room-update']>[0])
+                  .timeBankSecondsRemaining ?? null,
             }
           : {}),
         readyCheckStartedAt:

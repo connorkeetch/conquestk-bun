@@ -958,16 +958,16 @@ export class GameLifecycleService {
       const job = changed
         ? null
         : await queueService.addDelayedGameAction(
-        {
-          gameId: roomId,
-          playerId: currentTurnUserId,
-          action: { type: 'end_turn', playerId: currentTurnUserId, roomId },
-          idempotencyKey: idKey,
-          turnTimeoutStage: 'expire',
-        },
-        seconds * 1000,
-        { idempotencyKey: idKey, priority: 10 },
-      )
+            {
+              gameId: roomId,
+              playerId: currentTurnUserId,
+              action: { type: 'end_turn', playerId: currentTurnUserId, roomId },
+              idempotencyKey: idKey,
+              turnTimeoutStage: 'expire',
+            },
+            seconds * 1000,
+            { idempotencyKey: idKey, priority: 10 },
+          )
 
       // Development fallback: if queue is unavailable, schedule a local timer.
       // This keeps local dev playable without Redis.

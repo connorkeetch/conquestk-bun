@@ -20,9 +20,7 @@ function Dice({ value, color, glow, effect, pureWhite }: DiceProps) {
         // Use background so gradients (premium colors) render correctly
         background: color,
         color: pureWhite ? '#111827' : '#FFFFFF',
-        textShadow: pureWhite
-          ? '0 1px 1px rgba(255,255,255,0.65)'
-          : '0 1px 1px rgba(0,0,0,0.75)',
+        textShadow: pureWhite ? '0 1px 1px rgba(255,255,255,0.65)' : '0 1px 1px rgba(0,0,0,0.75)',
         boxShadow: glow ? '0 0 0 2px #fde047, 0 0 12px #fde047' : undefined,
       }}
     >
@@ -55,13 +53,17 @@ export function DiceResultsBar() {
     // Prefer stable ids captured at roll time so colors don't flip post-conquest
     const attackerId = (() => {
       if (last.attackerId) return last.attackerId
-      const t = game.board?.find((tt: { id: string; ownerId?: string | null }) => tt.id === last.fromId)
+      const t = game.board?.find(
+        (tt: { id: string; ownerId?: string | null }) => tt.id === last.fromId,
+      )
       return t?.ownerId ?? game.currentPlayer ?? null
     })()
 
     const defenderId = (() => {
       if (last.defenderId) return last.defenderId
-      const t = game.board?.find((tt: { id: string; ownerId?: string | null }) => tt.id === last.toId)
+      const t = game.board?.find(
+        (tt: { id: string; ownerId?: string | null }) => tt.id === last.toId,
+      )
       const owner = t?.ownerId ?? null
       // If owner matches attacker (e.g., after conquest or hidden defender), avoid attacker color
       if (owner && owner === attackerId) return null

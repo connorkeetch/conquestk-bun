@@ -31,12 +31,12 @@ export const authenticateTokenFromCookie: RequestHandler = (
 ) => {
   // If an Authorization header is already present, defer to the standard middleware
   const existing = req.headers.authorization
-  if (existing && existing.startsWith('Bearer ')) {
+  if (existing?.startsWith('Bearer ')) {
     return authenticateToken(req, res, next)
   }
 
   const cookies = parseCookie(req.headers.cookie)
-  const token = cookies['auth_token'] || cookies['token']
+  const token = cookies.auth_token || cookies.token
   if (!token) {
     res.status(401).json({ message: 'Access token required' })
     return
@@ -48,4 +48,3 @@ export const authenticateTokenFromCookie: RequestHandler = (
 }
 
 export default authenticateTokenFromCookie
-

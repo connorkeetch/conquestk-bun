@@ -1,4 +1,3 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type {
   ConversationCreatedPayload,
   ConversationMemberEvent,
@@ -10,6 +9,7 @@ import type {
   ReceiptReadEventPayload,
   TypingEventResponse,
 } from '@conquestk/shared'
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import {
   ensureDirectConversation as ensureDirectConversationRequest,
   ensureGameConversation as ensureGameConversationRequest,
@@ -28,6 +28,7 @@ import type {
   ConversationSummary,
   UnreadSummaryEntry,
 } from '../types/messages'
+
 // Narrowed RootState for selectors in strict-optional scope to avoid importing the full store
 type RootState = { messages: MessagesState }
 

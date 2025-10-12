@@ -1,4 +1,4 @@
-import RedisPkg, { type RedisOptions, type Redis as IORedis } from 'ioredis'
+import RedisPkg, { type Redis as IORedis, type RedisOptions } from 'ioredis'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
 
@@ -75,10 +75,7 @@ export async function initializeRedis(): Promise<RedisClients> {
     }
 
     // Main Redis client for general use
-    const RedisCtor = RedisPkg as unknown as new (
-      url: string,
-      options?: RedisOptions,
-    ) => IORedis
+    const RedisCtor = RedisPkg as unknown as new (url: string, options?: RedisOptions) => IORedis
     redisClient = new RedisCtor(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'main',

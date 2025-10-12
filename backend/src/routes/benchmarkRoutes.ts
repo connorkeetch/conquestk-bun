@@ -1,12 +1,17 @@
+import os from 'node:os'
+import { Worker } from 'node:worker_threads'
+import {
+  getEngine as getOddsEngine,
+  setEngine as setOddsEngine,
+  setLogger as setOddsLogger,
+  simulateBattle as simulateBattleOdds,
+} from '@conquestk/shared/odds'
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
+import { oddsMetrics } from '../services/metricsService.js'
 import { performanceTestingService } from '../services/performanceTestingService.js'
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
-import { oddsMetrics } from '../services/metricsService.js'
-import { Worker } from 'node:worker_threads'
-import os from 'node:os'
-import { getEngine as getOddsEngine, setEngine as setOddsEngine, setLogger as setOddsLogger, simulateBattle as simulateBattleOdds } from '@conquestk/shared/odds'
 
 const router = express.Router()
 
@@ -246,8 +251,8 @@ router.post('/odds-shadow-verify', authenticateToken, async (req, res): Promise<
       attMax = 40,
       defMin = 5,
       defMax = 35,
-      seedHi = 0xA1B2C3D4,
-      seedLo = 0x0F1E2D3C,
+      seedHi = 0xa1b2c3d4,
+      seedLo = 0x0f1e2d3c,
       kind = 'battle',
     } = req.body ?? {}
 
@@ -310,7 +315,9 @@ router.post('/odds-shadow-verify', authenticateToken, async (req, res): Promise<
 router.post('/ai-eval-bench', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { sets = 50, candidatesPer = 200, territories = 120 } = req.body || {}
-    const { evaluateCandidates: wasmEvaluate, computeConquestProbability } = await import('@conquestk/shared/odds')
+    const { evaluateCandidates: wasmEvaluate, computeConquestProbability } = await import(
+      '@conquestk/shared/odds'
+    )
 
     const mkState = () => {
       const terr = Array.from({ length: territories }, (_, i) => ({
