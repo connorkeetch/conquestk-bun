@@ -11,6 +11,9 @@
     "test:rs": "cd crate && cargo test",
     "bench:rs": "cd crate && cargo bench",
     "test:ts": "vitest run",
+    "lint:rs": "cd crate && cargo clippy --all-targets -- -D warnings",
+    "fmt:check": "cd crate && cargo fmt --all -- --check",
+    "fmt:write": "cd crate && cargo fmt --all",
     "build": "npm run wasm:build && npm run build:ts"
   },
   "main": "dist/index.js",
