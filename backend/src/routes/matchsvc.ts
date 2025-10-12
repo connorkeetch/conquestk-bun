@@ -48,12 +48,48 @@ router.get('/status', async (_req, res) => {
     }
   }
 
+  // 4) Metrics (Prometheus exposition)
+  let metrics: {
+    queueDepth?: Record<string, number>
+    matchesFormedTotal?: number
+    presenceOnline?: number
+  } | null = null
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2500)
+    const r = await fetch(`${baseUrl}/metrics`, { signal: controller.signal })
+    clearTimeout(timeout)
+    if (r.ok) {
+      const text = await r.text()
+      const qd: Record<string, number> = {}
+      let formed: number | undefined
+      let online: number | undefined
+      for (const line of text.split('\n')) {
+        if (line.startsWith('#') || line.trim() === '') continue
+        if (line.startsWith('matchsvc_queue_depth')) {
+          const m = line.match(/matchsvc_queue_depth\{[^}]*mode="([^"]+)"[^}]*}\s+([0-9eE+\-.]+)/)
+          if (m) qd[m[1]] = Number(m[2])
+        } else if (line.startsWith('matchsvc_matches_formed_total')) {
+          const m = line.match(/matchsvc_matches_formed_total\s+([0-9eE+\-.]+)/)
+          if (m) formed = Number(m[1])
+        } else if (line.startsWith('matchsvc_presence_online_total')) {
+          const m = line.match(/matchsvc_presence_online_total\s+([0-9eE+\-.]+)/)
+          if (m) online = Number(m[1])
+        }
+      }
+      metrics = { queueDepth: qd, ...(formed != null ? { matchesFormedTotal: formed } : {}), ...(online != null ? { presenceOnline: online } : {}) }
+    }
+  } catch (e) {
+    logger.debug('matchsvc metrics fetch failed', { error: (e as Error)?.message })
+  }
+
   const payload = {
     ok: health === 'ok' && redisHealth.healthy && (authTest === 'ok' || authTest === 'skipped'),
     service: { url: baseUrl, health, statusCode: healthCode },
     auth: { configured: Boolean(hmac), test: authTest, statusCode: authStatus },
     redis: redisHealth,
     subscriber: { active: isMatchSvcSubscriberActive() },
+    metrics,
     ts: new Date().toISOString(),
   }
 
@@ -61,4 +97,3 @@ router.get('/status', async (_req, res) => {
 })
 
 export default router
-

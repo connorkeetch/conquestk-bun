@@ -9,6 +9,7 @@ use crate::battle::{
 use crate::dice::simulate_step as rb_simulate_step;
 use crate::dp::exact_win_probability;
 use crate::rng::Xoshiro128pp;
+use js_sys::{Float64Array, Uint16Array};
 
 #[derive(Serialize)]
 pub struct StepResult {
@@ -144,6 +145,25 @@ pub fn odds_matrix(max_att: u16, max_def: u16, trials: u32, seed_hi: u32, seed_l
 #[wasm_bindgen]
 pub fn exact_odds(att_armies: u16, def_armies: u16) -> f64 {
     exact_win_probability(att_armies, def_armies)
+}
+
+/// Compute exact odds for many attacker/defender pairs in one call using typed arrays.
+/// This drastically reduces JS<->WASM bridging overhead compared to per-candidate calls.
+#[wasm_bindgen]
+pub fn bulk_exact_odds(att: Uint16Array, def: Uint16Array) -> Float64Array {
+    let n = core::cmp::min(att.length(), def.length()) as usize;
+    if n == 0 {
+        return Float64Array::new_with_length(0);
+    }
+    let mut a = vec![0u16; n];
+    let mut d = vec![0u16; n];
+    att.subarray(0, n as u32).copy_to(&mut a[..]);
+    def.subarray(0, n as u32).copy_to(&mut d[..]);
+    let mut out = vec![0f64; n];
+    for i in 0..n {
+        out[i] = exact_win_probability(a[i], d[i]);
+    }
+    Float64Array::from(out.as_slice())
 }
 
 #[wasm_bindgen]

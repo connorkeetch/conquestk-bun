@@ -49,9 +49,37 @@ function handleError(f, args) {
     }
 }
 
+let cachedFloat64ArrayMemory0 = null;
+
+function getFloat64ArrayMemory0() {
+    if (cachedFloat64ArrayMemory0 === null || cachedFloat64ArrayMemory0.byteLength === 0) {
+        cachedFloat64ArrayMemory0 = new Float64Array(wasm.memory.buffer);
+    }
+    return cachedFloat64ArrayMemory0;
+}
+
+function getArrayF64FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
+let cachedUint16ArrayMemory0 = null;
+
+function getUint16ArrayMemory0() {
+    if (cachedUint16ArrayMemory0 === null || cachedUint16ArrayMemory0.byteLength === 0) {
+        cachedUint16ArrayMemory0 = new Uint16Array(wasm.memory.buffer);
+    }
+    return cachedUint16ArrayMemory0;
+}
+
+function getArrayU16FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint16ArrayMemory0().subarray(ptr / 2, ptr / 2 + len);
 }
 
 function isLikeNone(x) {
@@ -263,6 +291,18 @@ export function exact_odds(att_armies, def_armies) {
 }
 
 /**
+ * Compute exact odds for many attacker/defender pairs in one call using typed arrays.
+ * This drastically reduces JS<->WASM bridging overhead compared to per-candidate calls.
+ * @param {Uint16Array} att
+ * @param {Uint16Array} def
+ * @returns {Float64Array}
+ */
+export function bulk_exact_odds(att, def) {
+    const ret = wasm.bulk_exact_odds(att, def);
+    return ret;
+}
+
+/**
  * @param {number} max_att
  * @param {number} max_def
  * @returns {any}
@@ -381,6 +421,11 @@ export function __wbg_length_6bb7e81f9d7713e4(arg0) {
     return ret;
 };
 
+export function __wbg_length_e0fc3528a2d029bf(arg0) {
+    const ret = arg0.length;
+    return ret;
+};
+
 export function __wbg_new_19c25a3f2fa63a02() {
     const ret = new Object();
     return ret;
@@ -393,6 +438,16 @@ export function __wbg_new_1f3a344cf3123716() {
 
 export function __wbg_new_638ebfaedbf32a5e(arg0) {
     const ret = new Uint8Array(arg0);
+    return ret;
+};
+
+export function __wbg_newfromslice_1d8308b8cab889b5(arg0, arg1) {
+    const ret = new Float64Array(getArrayF64FromWasm0(arg0, arg1));
+    return ret;
+};
+
+export function __wbg_newwithlength_8be0161363d807a9(arg0) {
+    const ret = new Float64Array(arg0 >>> 0);
     return ret;
 };
 
@@ -410,12 +465,21 @@ export function __wbg_prototypesetcall_3d4a26c1ed734349(arg0, arg1, arg2) {
     Uint8Array.prototype.set.call(getArrayU8FromWasm0(arg0, arg1), arg2);
 };
 
+export function __wbg_prototypesetcall_51502b563532fd20(arg0, arg1, arg2) {
+    Uint16Array.prototype.set.call(getArrayU16FromWasm0(arg0, arg1), arg2);
+};
+
 export function __wbg_set_3f1d0b984ed272ed(arg0, arg1, arg2) {
     arg0[arg1] = arg2;
 };
 
 export function __wbg_set_90f6c0f7bd8c0415(arg0, arg1, arg2) {
     arg0[arg1 >>> 0] = arg2;
+};
+
+export function __wbg_subarray_9c11d06e714364f5(arg0, arg1, arg2) {
+    const ret = arg0.subarray(arg1 >>> 0, arg2 >>> 0);
+    return ret;
 };
 
 export function __wbg_value_dd9372230531eade(arg0) {
