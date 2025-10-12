@@ -451,6 +451,17 @@ class AdminService {
     return response.data?.data ?? response.data
   }
 
+  async runAiEvalBench(body: { sets?: number; candidatesPer?: number; territories?: number } = {}): Promise<{
+    sets: number
+    candidatesPer: number
+    territories: number
+    ts: { totalMs: number; candidatesPerSec: number }
+    wasm: { totalMs: number; candidatesPerSec: number }
+  }> {
+    const response = await apiClient.post(`${this.benchmarkUrl}/ai-eval-bench`, body)
+    return response.data?.data ?? response.data
+  }
+
   async getDeadLetters(params: {
     queue: 'gameActions' | 'gameCleanup' | 'analyticsEvents'
     offset?: number

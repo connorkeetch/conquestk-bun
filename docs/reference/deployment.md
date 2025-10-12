@@ -161,6 +161,14 @@ openssl rand -base64 32  # JWT and session secrets
 ```
 - Use this to confirm Railway has built the WASM module when `ODDS_ENGINE=shadow|wasm` is set.
 
+### AI Eval Engine
+
+- `AI_EVAL_ENGINE=ts|wasm|shadow`
+  - `ts`: score AI candidates in TypeScript (default)
+  - `wasm`: score via Rust→WASM; falls back to TS if unavailable
+  - `shadow`: compute both, log divergences, return TS scores (safe rollout)
+- Admin benchmark: `POST /api/benchmark/ai-eval-bench` returns candidates/sec for TS vs WASM
+
 Response shape:
 ```json
 {

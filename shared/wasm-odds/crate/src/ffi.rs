@@ -5,6 +5,7 @@ use crate::battle::{simulate_battle as rb_simulate_battle, monte_carlo as rb_mon
 use crate::dice::simulate_step as rb_simulate_step;
 use crate::dp::exact_win_probability;
 use crate::rng::Xoshiro128pp;
+use crate::ai_eval::{evaluate_candidates, JsState as EvalState, JsCandidate as EvalCand};
 
 #[derive(Serialize)]
 pub struct StepResult {
@@ -97,4 +98,15 @@ pub fn exact_odds_matrix(max_att: u16, max_def: u16) -> JsValue {
         }
     }
     serde_wasm_bindgen::to_value(&matrix).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn ai_evaluate(state: JsValue, candidates: JsValue, opts: JsValue) -> JsValue {
+    let s: EvalState = serde_wasm_bindgen::from_value(state).unwrap_or(EvalState { territories: vec![], currentPlayerId: String::new() });
+    let c: Vec<EvalCand> = serde_wasm_bindgen::from_value(candidates).unwrap_or_default();
+    #[derive(serde::Deserialize, Default)]
+    struct Opts { difficulty: Option<String> }
+    let o: Opts = serde_wasm_bindgen::from_value(opts).unwrap_or_default();
+    let scores = evaluate_candidates(s, c, crate::ai_eval::EvalOpts { difficulty: o.difficulty });
+    serde_wasm_bindgen::to_value(&scores).unwrap()
 }

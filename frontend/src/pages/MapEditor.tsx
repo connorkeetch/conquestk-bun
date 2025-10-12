@@ -83,7 +83,6 @@ export default function MapEditor() {
     imageHeight: 600,
     imageScale: 1, // Default scale
     adjacencies: [],
-    firstSelectedTerritory: undefined,
   })
 
   // Terms acceptance state
@@ -499,7 +498,7 @@ export default function MapEditor() {
       mapId: state.currentMap?.id || 'temp',
       territoryId: newTerritoryName.toLowerCase().replace(/\s+/g, '_'),
       name: newTerritoryName,
-      continentId: state.selectedContinent,
+      ...(state.selectedContinent ? { continentId: state.selectedContinent } : {}),
       boundaryCoords: state.currentPolygon,
       armyPosition: { x: centerX, y: centerY },
       startingArmies: 1,
@@ -795,12 +794,14 @@ export default function MapEditor() {
         return
       }
 
-      // Remove continent assignment from territories
+      // Remove continent assignment from territories (omit property instead of setting undefined)
       setState((prev) => ({
         ...prev,
-        territories: prev.territories.map((t) =>
-          t.continentId === continentId ? { ...t, continentId: undefined } : t,
-        ),
+        territories: prev.territories.map((t) => {
+          if (t.continentId !== continentId) return t
+          const { continentId: _omit, ...rest } = t
+          return rest as MapTerritory
+        }),
         continents: prev.continents.filter((c) => c.id !== continentId),
       }))
     } else {
@@ -824,7 +825,14 @@ export default function MapEditor() {
     setState((prev) => ({
       ...prev,
       territories: prev.territories.map((t) =>
-        t.id === territoryId ? { ...t, continentId: newContinentId } : t,
+        t.id === territoryId
+          ? {
+              ...t,
+              ...(typeof newContinentId === 'string'
+                ? { continentId: newContinentId }
+                : {}),
+            }
+          : t,
       ),
     }))
   }
@@ -866,15 +874,16 @@ export default function MapEditor() {
           (c) => c.name === state.continents.find((sc) => sc.id === territory.continentId)?.name,
         )?.id
 
-        const savedTerritory = await mapService.createTerritory({
+        const saveReq = {
           mapId: savedMap.id,
           territoryId: territory.territoryId,
           name: territory.name,
-          continentId,
           boundaryCoords: territory.boundaryCoords,
           armyPosition: territory.armyPosition,
           startingArmies: territory.startingArmies,
-        })
+          ...(continentId ? { continentId } : {}),
+        }
+        const savedTerritory = await mapService.createTerritory(saveReq)
         savedTerritories.push({ editorId: territory.id, savedId: savedTerritory.id })
       }
 
@@ -937,12 +946,8 @@ export default function MapEditor() {
         continents: [],
         currentPolygon: [],
         isDrawing: false,
-        selectedTerritory: undefined,
-        selectedContinent: undefined,
-        imageUrl: undefined,
         imageScale: 1,
         adjacencies: [],
-        firstSelectedTerritory: undefined,
       }))
       setMapName('')
       setMapDescription('')
@@ -1158,10 +1163,14 @@ export default function MapEditor() {
       } else if (state.selectedTool === 'select') {
         // Select territory
         const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
-        setState((prev) => ({
-          ...prev,
-          selectedTerritory: clickedTerritory?.id,
-        }))
+        if (clickedTerritory) {
+          setState((prev) => ({ ...prev, selectedTerritory: clickedTerritory.id }))
+        } else {
+          setState((prev) => {
+            const { selectedTerritory: _omit, ...rest } = prev
+            return rest
+          })
+        }
       } else if (state.selectedTool === 'adjacency') {
         // Handle adjacency creation
         const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
@@ -1188,28 +1197,27 @@ export default function MapEditor() {
               (adj.from === newAdjacency.to && adj.to === newAdjacency.from),
           )
 
+          const clearSelection = (prev: EditorState) => {
+            const { firstSelectedTerritory: _omit1, selectedTerritory: _omit2, ...rest } = prev
+            return rest
+          }
           if (!exists) {
-            setState((prev) => ({
-              ...prev,
-              adjacencies: [...prev.adjacencies, newAdjacency],
-              firstSelectedTerritory: undefined,
-              selectedTerritory: undefined,
-            }))
+            setState((prev) => {
+              const base = { ...prev, adjacencies: [...prev.adjacencies, newAdjacency] }
+              const { firstSelectedTerritory: _o1, selectedTerritory: _o2, ...rest } = base as EditorState &
+                Record<string, unknown>
+              return rest as EditorState
+            })
           } else {
             // Reset selection if adjacency already exists
-            setState((prev) => ({
-              ...prev,
-              firstSelectedTerritory: undefined,
-              selectedTerritory: undefined,
-            }))
+            setState((prev) => clearSelection(prev))
           }
         } else {
           // Same territory clicked - deselect
-          setState((prev) => ({
-            ...prev,
-            firstSelectedTerritory: undefined,
-            selectedTerritory: undefined,
-          }))
+          setState((prev) => {
+            const { firstSelectedTerritory: _omit1, selectedTerritory: _omit2, ...rest } = prev
+            return rest
+          })
         }
       }
     },
@@ -1572,11 +1580,14 @@ export default function MapEditor() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                setState((prev) => ({ ...prev, imageUrl: undefined }))
-                                setUploadError(null)
-                                setUploadInfo(null)
-                              }}
+                      onClick={() => {
+                        setState((prev) => {
+                          const { imageUrl: _omit, ...rest } = prev
+                          return rest
+                        })
+                        setUploadError(null)
+                        setUploadInfo(null)
+                      }}
                               className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs transition-colors"
                               disabled={isUploading}
                             >
@@ -1767,12 +1778,17 @@ export default function MapEditor() {
                     <select
                       id={territoryContinentId}
                       value={state.selectedContinent || ''}
-                      onChange={(e) =>
-                        setState((prev) => ({
-                          ...prev,
-                          selectedContinent: e.target.value || undefined,
-                        }))
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val) {
+                          setState((prev) => ({ ...prev, selectedContinent: val }))
+                        } else {
+                          setState((prev) => {
+                            const { selectedContinent: _omit, ...rest } = prev
+                            return rest
+                          })
+                        }
+                      }}
                       className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                     >
                       <option value="">No continent</option>

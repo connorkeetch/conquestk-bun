@@ -33,3 +33,8 @@ export async function exactOddsMatrix(maxAtt: number, maxDef: number) {
   const api = await getApi()
   return api.exact_odds_matrix(maxAtt >>> 0, maxDef >>> 0) as unknown as number[][]
 }
+
+export async function ai_evaluate(state: unknown, candidates: unknown, opts?: { difficulty?: string }): Promise<number[]> {
+  const api = await getApi()
+  return api.ai_evaluate(state, candidates, opts) as unknown as number[]
+}

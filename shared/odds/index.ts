@@ -128,3 +128,39 @@ export async function exactOddsMatrix(maxAtt: number, maxDef: number): Promise<n
     return out
   }
 }
+
+// AI evaluation (WASM when available, fallback to simple TS heuristic for attacks)
+export interface EvalTerritory { id: string; ownerId?: string | null; armies: number }
+export type EvalCandidate =
+  | { kind: 'attack'; from: string; to: string }
+  | { kind: 'deploy'; territory: string; armies?: number }
+  | { kind: 'fortify'; from: string; to: string; armies?: number }
+
+export async function evaluateCandidates(
+  state: { territories: EvalTerritory[]; currentPlayerId: string },
+  candidates: EvalCandidate[],
+  opts?: { difficulty?: 'recruit' | 'commander' | 'grandmaster' },
+): Promise<number[]> {
+  try {
+    const wasm = await getWasmEngine()
+    return wasm.ai_evaluate(state, candidates, opts) as unknown as number[]
+  } catch {
+    // TS fallback: score attacks by exact DP odds; others score 0
+    const territoryById = new Map(state.territories.map((t) => [t.id, t]))
+    const scores: number[] = []
+    for (const c of candidates) {
+      if (c.kind === 'attack') {
+        const from = territoryById.get(c.from)
+        const to = territoryById.get(c.to)
+        if (from && to && from.ownerId === state.currentPlayerId && to.ownerId !== state.currentPlayerId) {
+          const att = Math.max(0, (from.armies | 0) - 1)
+          const def = Math.max(0, to.armies | 0)
+          scores.push(computeConquestProbability(att, def))
+        } else scores.push(0)
+      } else {
+        scores.push(0)
+      }
+    }
+    return scores
+  }
+}

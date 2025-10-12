@@ -75,7 +75,7 @@ class AIDecisionService {
         ? request.gameState
         : filterStateForPlanner(request.gameState, request.player.id)
 
-      const plannedActions = this.generatePlan({ ...request, gameState: effectiveState })
+      const plannedActions = await this.generatePlan({ ...request, gameState: effectiveState })
 
       if (request.budget.signal?.aborted) {
         return this.createFallbackPlan('aborted', request, start)
@@ -118,24 +118,24 @@ class AIDecisionService {
     }
   }
 
-  private generatePlan(request: DecisionRequest): GameAction[] {
+  private async generatePlan(request: DecisionRequest): Promise<GameAction[]> {
     if (request.player.isEliminated) {
       return []
     }
 
     switch (request.difficulty) {
       case 'recruit':
-        return this.generateRecruitPlan(request)
+        return await this.generateRecruitPlan(request)
       case 'commander':
-        return this.generateCommanderPlan(request)
+        return await this.generateCommanderPlan(request)
       case 'grandmaster':
-        return this.generateGrandmasterPlan(request)
+        return await this.generateGrandmasterPlan(request)
       default:
         return []
-    }
+      }
   }
 
-  private generateCommanderPlan(request: DecisionRequest): GameAction[] {
+  private async generateCommanderPlan(request: DecisionRequest): Promise<GameAction[]> {
     const { gameState, player, budget } = request
     const roomId = gameState.roomId
     const actions: GameAction[] = []
@@ -201,7 +201,7 @@ class AIDecisionService {
 
     // 3) Attack: choose a high-value border within priority sector
     if (phase === 'attack') {
-      const attack = this.findCommanderAttack(gameState, player.id, budget)
+      const attack = await this.findCommanderAttack(gameState, player.id, budget)
       if (attack) {
         if (!push(attack)) return actions
       }
@@ -253,11 +253,11 @@ class AIDecisionService {
     return allBorders[0]?.id ?? owned[0].id
   }
 
-  private findCommanderAttack(
+  private async findCommanderAttack(
     gameState: GameState,
     playerId: string,
     budget: DecisionBudget,
-  ): GameAction | null {
+  ): Promise<GameAction | null> {
     const owned = gameState.board.filter((t) => t.ownerId === playerId)
     if (owned.length === 0) return null
     const sectorScore = new Map<string, number>()
@@ -271,7 +271,7 @@ class AIDecisionService {
       .filter(([k]) => k !== 'unknown')
       .sort((a, b) => b[1] - a[1])[0]?.[0]
 
-    const candidates: Array<{ from: string; to: string; score: number; armies: number }> = []
+    const candidates: Array<{ from: string; to: string; score: number; armies: number; sectorBonus: number; isCapital: number }> = []
     for (const src of owned) {
       if (src.armies <= 3) continue
       for (const nid of src.adjacentTerritories) {
@@ -284,14 +284,29 @@ class AIDecisionService {
         const isCapital = tgt.isCapital === true ? 2 : 0
         const score = advantage * 2 + sectorBonus + isCapital
         if (advantage >= 1) {
-          candidates.push({ from: src.id, to: tgt.id, score, armies: attackDice })
+          candidates.push({ from: src.id, to: tgt.id, score, armies: attackDice, sectorBonus, isCapital })
         } else if (
           advantage === 0 &&
           (budget.minAttackOddsByTier?.commander ?? 0.68) <= 0.68 // only very marginal equal-odds
         ) {
-          candidates.push({ from: src.id, to: tgt.id, score: score - 1, armies: attackDice })
+          candidates.push({ from: src.id, to: tgt.id, score: score - 1, armies: attackDice, sectorBonus, isCapital })
         }
       }
+    }
+    try {
+      const { evaluateCandidatesAdapter } = await import('./aiEvalAdapter.js')
+      const state = {
+        currentPlayerId: playerId,
+        territories: gameState.board.map((t) => ({ id: t.id, ownerId: t.ownerId || null, armies: Math.max(0, t.armies | 0) })),
+      }
+      const evalCands = candidates.map((c) => ({ kind: 'attack' as const, from: c.from, to: c.to }))
+      const scores = await evaluateCandidatesAdapter(state, evalCands, { difficulty: request.difficulty })
+      for (let i = 0; i < candidates.length; i++) {
+        const p = scores[i] ?? 0
+        candidates[i]!.score = p * 100 + candidates[i]!.sectorBonus * 2 + candidates[i]!.isCapital * 3
+      }
+    } catch {
+      // keep heuristic scores
     }
     candidates.sort((a, b) => b.score - a.score)
     const pick = candidates[0]
@@ -305,7 +320,7 @@ class AIDecisionService {
   }
 
   // === Grandmaster (EV-driven) ===
-  private generateGrandmasterPlan(request: DecisionRequest): GameAction[] {
+  private async generateGrandmasterPlan(request: DecisionRequest): Promise<GameAction[]> {
     const { gameState, player, budget } = request
     const roomId = gameState.roomId
     const actions: GameAction[] = []
@@ -584,7 +599,7 @@ class AIDecisionService {
     return rolls.sort((a, b) => b - a)
   }
 
-  private generateRecruitPlan(request: DecisionRequest): GameAction[] {
+  private async generateRecruitPlan(request: DecisionRequest): Promise<GameAction[]> {
     const { gameState, player, budget } = request
     const actions: GameAction[] = []
     const roomId = gameState.roomId
