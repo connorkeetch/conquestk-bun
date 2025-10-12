@@ -3018,24 +3018,39 @@ export default function GameRoom() {
                 .filter((p) => p.isAi)
                 .map((p) => ({
                   difficulty: (p.aiDifficulty ?? 'recruit') as AIDifficulty,
-                  personalitySeed:
-                    typeof p.aiPersonalitySeed === 'number' ? p.aiPersonalitySeed : undefined,
+                  ...(typeof p.aiPersonalitySeed === 'number'
+                    ? { personalitySeed: p.aiPersonalitySeed }
+                    : { personalitySeed: null }),
                 }))
 
               const payload = {
                 name: `${currentRoom.name} (Rematch)`,
                 maxPlayers: currentRoom.maxPlayers,
-                isPrivate: currentRoom.isPrivate,
-                isRanked: currentRoom.isRanked ?? false,
-                mapId: currentRoom.mapId ?? undefined,
-                movementType: currentRoom.movementType ?? undefined,
-                fogOfWar: currentRoom.fogOfWar ?? undefined,
-                turnTimerSeconds: currentRoom.turnTimerSeconds ?? undefined,
+                ...(typeof currentRoom.isPrivate === 'boolean'
+                  ? { isPrivate: currentRoom.isPrivate }
+                  : {}),
+                ...(typeof currentRoom.isRanked === 'boolean'
+                  ? { isRanked: currentRoom.isRanked }
+                  : {}),
+                ...(typeof currentRoom.mapId === 'string' ? { mapId: currentRoom.mapId } : {}),
+                ...(typeof currentRoom.movementType === 'string'
+                  ? { movementType: currentRoom.movementType }
+                  : {}),
+                ...(typeof currentRoom.fogOfWar === 'string'
+                  ? { fogOfWar: currentRoom.fogOfWar as 'off' | 'adjacent' | 'persistent' }
+                  : {}),
+                ...(typeof currentRoom.turnTimerSeconds === 'number'
+                  ? { turnTimerSeconds: currentRoom.turnTimerSeconds }
+                  : {}),
                 aiOpponents,
                 teamMode: (currentRoom.teamMode ?? 'none') as 'none' | 'teams' | 'auto_balance',
-                numberOfTeams: currentRoom.numberOfTeams ?? undefined,
-                treasureConfig: (currentRoom as unknown as { treasureConfig?: unknown })
-                  .treasureConfig as Partial<TreasureConfig> | undefined,
+                ...(typeof currentRoom.numberOfTeams === 'number'
+                  ? { numberOfTeams: currentRoom.numberOfTeams }
+                  : {}),
+                ...(() => {
+                  const tc = (currentRoom as unknown as { treasureConfig?: unknown }).treasureConfig
+                  return tc ? { treasureConfig: tc as Partial<TreasureConfig> } : {}
+                })(),
               }
               const res = await gameService.createRoom(payload)
               const newRoomId =

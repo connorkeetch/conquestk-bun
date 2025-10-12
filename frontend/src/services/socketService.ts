@@ -841,8 +841,10 @@ class SocketService {
         status: payload.status,
         ...(payload.lifecyclePhase !== undefined ? { lifecyclePhase: payload.lifecyclePhase } : {}),
         ...(typeof payload.turnNumber === 'number' ? { turnNumber: payload.turnNumber } : {}),
-        currentTurnUserId: payload.currentTurnUserId,
-        turnExpiresAt: payload.turnExpiresAt,
+        ...(payload.currentTurnUserId !== undefined
+          ? { currentTurnUserId: payload.currentTurnUserId ?? null }
+          : {}),
+        ...(payload.turnExpiresAt !== undefined ? { turnExpiresAt: payload.turnExpiresAt ?? null } : {}),
         ...(typeof (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
           .timeBankSecondsRemaining !== 'undefined'
           ? {
@@ -851,17 +853,22 @@ class SocketService {
                   .timeBankSecondsRemaining ?? null,
             }
           : {}),
-        readyCheckStartedAt: payload.readyCheckStartedAt,
-        statusMessage:
-          typeof (payload as Record<string, unknown>).statusMessage === 'string'
-            ? ((payload as Record<string, unknown>).statusMessage as string)
-            : undefined,
-        statusMessageLevel:
-          (payload as Record<string, unknown>).statusMessageLevel === 'error' ||
+        ...(payload.readyCheckStartedAt !== undefined
+          ? { readyCheckStartedAt: payload.readyCheckStartedAt ?? null }
+          : {}),
+        ...(((payload as Record<string, unknown>).statusMessage as unknown) &&
+        typeof (payload as Record<string, unknown>).statusMessage === 'string'
+          ? { statusMessage: (payload as Record<string, unknown>).statusMessage as string }
+          : {}),
+        ...(((payload as Record<string, unknown>).statusMessageLevel as unknown) &&
+        ((payload as Record<string, unknown>).statusMessageLevel === 'error' ||
           (payload as Record<string, unknown>).statusMessageLevel === 'warn' ||
-          (payload as Record<string, unknown>).statusMessageLevel === 'info'
-            ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
-            : undefined,
+          (payload as Record<string, unknown>).statusMessageLevel === 'info')
+          ? {
+              statusMessageLevel: (payload as Record<string, unknown>)
+                .statusMessageLevel as 'error' | 'info' | 'warn',
+            }
+          : {}),
         ...(typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
           ? { usingTimeBank: (payload as Record<string, unknown>).usingTimeBank as boolean }
           : {}),
@@ -983,13 +990,12 @@ class SocketService {
           ? { lifecyclePhase: payload.lifecyclePhase as GameRoom['lifecyclePhase'] }
           : {}),
         ...(typeof payload.turnNumber === 'number' ? { turnNumber: payload.turnNumber } : {}),
-        currentTurnUserId:
-          typeof payload.currentTurnUserId === 'string'
-            ? payload.currentTurnUserId
-            : payload.currentTurnUserId === null
-              ? null
-              : undefined,
-        turnExpiresAt: typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
+        ...(payload.currentTurnUserId !== undefined
+          ? { currentTurnUserId: (payload.currentTurnUserId as string | null) ?? null }
+          : {}),
+        ...(payload.turnExpiresAt !== undefined
+          ? { turnExpiresAt: (payload.turnExpiresAt as string | null) ?? null }
+          : {}),
         ...(typeof (payload as Parameters<ServerToClientEvents['room-update']>[0])
           .timeBankSecondsRemaining !== 'undefined'
           ? {
@@ -998,18 +1004,22 @@ class SocketService {
                   .timeBankSecondsRemaining ?? null,
             }
           : {}),
-        readyCheckStartedAt:
-          typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
-        statusMessage:
-          typeof (payload as Record<string, unknown>).statusMessage === 'string'
-            ? ((payload as Record<string, unknown>).statusMessage as string)
-            : undefined,
-        statusMessageLevel:
-          (payload as Record<string, unknown>).statusMessageLevel === 'error' ||
+        ...(payload.readyCheckStartedAt !== undefined
+          ? { readyCheckStartedAt: (payload.readyCheckStartedAt as string | null) ?? null }
+          : {}),
+        ...(((payload as Record<string, unknown>).statusMessage as unknown) &&
+        typeof (payload as Record<string, unknown>).statusMessage === 'string'
+          ? { statusMessage: (payload as Record<string, unknown>).statusMessage as string }
+          : {}),
+        ...(((payload as Record<string, unknown>).statusMessageLevel as unknown) &&
+        ((payload as Record<string, unknown>).statusMessageLevel === 'error' ||
           (payload as Record<string, unknown>).statusMessageLevel === 'warn' ||
-          (payload as Record<string, unknown>).statusMessageLevel === 'info'
-            ? ((payload as Record<string, unknown>).statusMessageLevel as 'error' | 'info' | 'warn')
-            : undefined,
+          (payload as Record<string, unknown>).statusMessageLevel === 'info')
+          ? {
+              statusMessageLevel: (payload as Record<string, unknown>)
+                .statusMessageLevel as 'error' | 'info' | 'warn',
+            }
+          : {}),
         ...(typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
           ? { usingTimeBank: (payload as Record<string, unknown>).usingTimeBank as boolean }
           : {}),
@@ -1073,9 +1083,10 @@ class SocketService {
       // canonical players list and is handled above via applyLifecycleUpdate. Passing
       // players: undefined here would clear currentRoom.players, falsely dropping membership.
       const maybePlayers = (payload as { players?: unknown }).players
-      const roomUpdate: Partial<GameRoom> = Array.isArray(maybePlayers)
-        ? { ...roomUpdateBase, players: maybePlayers as GameRoom['players'] }
-        : roomUpdateBase
+      const roomUpdate: Partial<GameRoom> = { ...roomUpdateBase }
+      if (Array.isArray(maybePlayers)) {
+        ;(roomUpdate as GameRoom).players = maybePlayers as NonNullable<GameRoom['players']>
+      }
 
       store.dispatch(updateRoom(roomUpdate))
 
@@ -1175,7 +1186,12 @@ class SocketService {
       try {
         toast.error(payload.message || 'Game error')
         const rid = store.getState().game.currentGame?.roomId
-        store.dispatch(addClientLog({ text: `Error: ${payload.message}`, roomId: rid }))
+        store.dispatch(
+          addClientLog({
+            text: `Error: ${payload.message}`,
+            ...(typeof rid === 'string' ? { roomId: rid } : {}),
+          }),
+        )
       } catch {
         // ignore toast/log issues
       }
@@ -1195,10 +1211,10 @@ class SocketService {
         title: data.title,
         message: data.message,
         read: data.read ?? false,
-        actionUrl: data.actionUrl,
-        actionLabel: data.actionLabel,
-        icon: data.icon,
-        metadata: data.metadata as Record<string, unknown>,
+        ...(typeof data.actionUrl === 'string' ? { actionUrl: data.actionUrl } : {}),
+        ...(typeof data.actionLabel === 'string' ? { actionLabel: data.actionLabel } : {}),
+        ...(typeof data.icon === 'string' ? { icon: data.icon } : {}),
+        ...(data.metadata ? { metadata: data.metadata as Record<string, unknown> } : {}),
         timestamp: new Date(data.createdAt),
       })
 
@@ -1213,7 +1229,12 @@ class SocketService {
       const state = store.getState()
       const currentUserId = state.auth.user?.id
 
-      store.dispatch(messagesActions.messageReceived({ message: data, currentUserId }))
+      store.dispatch(
+        messagesActions.messageReceived({
+          message: data,
+          ...(typeof currentUserId === 'string' ? { currentUserId } : {}),
+        }),
+      )
 
       if (!state.messages.conversations[data.conversationId]) {
         store.dispatch(refreshConversation(data.conversationId))
@@ -1283,7 +1304,12 @@ class SocketService {
     this.socket.on('receipt.read', (payload) => {
       const data = payload as Parameters<ServerToClientEvents['receipt.read']>[0]
       const currentUserId = store.getState().auth.user?.id
-      store.dispatch(messagesActions.receiptReadReceived({ payload: data, currentUserId }))
+      store.dispatch(
+        messagesActions.receiptReadReceived({
+          payload: data,
+          ...(typeof currentUserId === 'string' ? { currentUserId } : {}),
+        }),
+      )
     })
 
     this.socket.on('typing.start', (payload) => {

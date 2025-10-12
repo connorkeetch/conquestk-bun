@@ -18,6 +18,13 @@ export async function evaluateCandidatesAdapter(
   opts?: { difficulty?: 'recruit' | 'commander' | 'grandmaster' },
 ): Promise<number[]> {
   const mode = (process.env.AI_EVAL_ENGINE || 'ts').toLowerCase() as EvalEngine
+  const difficulty = (opts?.difficulty || 'commander').toLowerCase()
+
+  // Gate WASM to grandmaster only to minimize overhead on lighter AIs
+  if (difficulty !== 'grandmaster') {
+    return scoreCandidatesTs(state, candidates)
+  }
+
   if (mode === 'wasm') {
     try {
       return await wasmEvaluate(state, candidates, opts)
@@ -40,7 +47,7 @@ export async function evaluateCandidatesAdapter(
         if (Math.abs(tsScores[i] - wasmScores[i]) > 1e-9) diffs++
       }
       if (diffs > 0) {
-        logger.info('ai-eval-divergence', { diffs, n: tsScores.length, mode })
+        logger.info('ai-eval-divergence', { diffs, n: tsScores.length, mode, difficulty })
       }
     }
     return tsScores
