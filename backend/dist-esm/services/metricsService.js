@@ -309,10 +309,7 @@ class OddsMetrics {
     }
     snapshot() {
         return {
-            counters: [
-                ...this.checkedCounter.snapshot(),
-                ...this.divergenceCounter.snapshot(),
-            ],
+            counters: [...this.checkedCounter.snapshot(), ...this.divergenceCounter.snapshot()],
             gauges: this.divergenceRateGauge.snapshot(),
         };
     }

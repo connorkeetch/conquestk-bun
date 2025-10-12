@@ -371,7 +371,9 @@ export default function GameRoom() {
       if (!isEditingLayout) return
       const panelId = parseDraggedPanelId(e)
       if (!panelId) return
-      dispatch(setPanelZone({ panelId, zone, order }))
+      dispatch(
+        setPanelZone({ panelId, zone, ...(order !== undefined ? { order } : {}) }),
+      )
       setIsDraggingPanel(false)
     },
     [dispatch, parseDraggedPanelId, isEditingLayout],
@@ -468,7 +470,11 @@ export default function GameRoom() {
     const queueMove = (panel: PanelConfig, zone: PanelZone, order?: number) => {
       if (panel.zone === zone) return
       rememberZone(panel)
-      actions.push(() => dispatch(setPanelZone({ panelId: panel.id, zone, order })))
+      actions.push(() =>
+        dispatch(
+          setPanelZone({ panelId: panel.id, zone, ...(order !== undefined ? { order } : {}) }),
+        ),
+      )
     }
 
     ;(['sidebar-left', 'sidebar-right'] as PanelZone[]).forEach((zone) => {
@@ -695,13 +701,15 @@ export default function GameRoom() {
         if (!isActive) {
           return
         }
-        const preview = {
+        const base = {
           imageUrl: data.map.imageUrl ?? null,
           width: data.map.imageWidth,
           height: data.map.imageHeight,
           name: data.map.name,
-          territoryCount: Array.isArray(data.territories) ? data.territories.length : undefined,
         }
+        const preview = Array.isArray(data.territories)
+          ? { ...base, territoryCount: data.territories.length }
+          : base
         setMapPreview(preview)
       } catch (error) {
         if (!isActive) {
@@ -2060,16 +2068,19 @@ export default function GameRoom() {
                       </div>
                     }
                   >
-                    <LazyChatLogPanel
-                      gameId={currentRoom?.id ?? roomId ?? ''}
-                      currentUserId={user.id}
-                      userTeamId={currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId}
-                      onLogFocus={(territories) => {
-                        const focus = territories[territories.length - 1]
-                        if (focus) dispatch(selectTerritory(focus))
-                      }}
-                      isEditingLayout={isEditingLayout}
-                    />
+                      <LazyChatLogPanel
+                        gameId={currentRoom?.id ?? roomId ?? ''}
+                        currentUserId={user.id}
+                        userTeamId={
+                          (currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId ??
+                            null) as number | null
+                        }
+                        onLogFocus={(territories) => {
+                          const focus = territories[territories.length - 1]
+                          if (focus) dispatch(selectTerritory(focus))
+                        }}
+                        isEditingLayout={isEditingLayout}
+                      />
                   </Suspense>
                 )}
               </div>
@@ -2359,7 +2370,7 @@ export default function GameRoom() {
                                       | null) ||
                                     ((pl.preferred_color as string | null) ?? null) ||
                                     '#9CA3AF'
-                                  return {
+                                  const base = {
                                     id: pl.userId || pl.id,
                                     userId: pl.userId || pl.id,
                                     username: pl.username,
@@ -2368,11 +2379,13 @@ export default function GameRoom() {
                                     armies: 0,
                                     cards: [],
                                     isEliminated: false,
-                                    isAi: pl.isAi,
+                                    isAi: Boolean(pl.isAi),
                                     aiDifficulty: pl.aiDifficulty ?? null,
-                                    teamId: pl.teamId ?? undefined,
                                     treasures: [],
                                   }
+                                  return pl.teamId != null
+                                    ? ({ ...base, teamId: pl.teamId } as any)
+                                    : (base as any)
                                 })
                           }
                           currentPlayerId={currentGame?.currentPlayer}

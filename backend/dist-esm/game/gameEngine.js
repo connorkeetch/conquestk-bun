@@ -1,6 +1,6 @@
 import { treasureMetrics } from '../services/metricsService.js';
 import territoryModifierService from '../services/territoryModifierService.js';
-import { getPlayerTeam as utilGetPlayerTeam, arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
+import { arePlayersTeammates as utilArePlayersTeammates, getPlayerTeam as utilGetPlayerTeam, } from '../utils/gameTeams.js';
 import { drawTreasure, ensureTreasureState, findRedeemableSets, normalizeTreasureConfig, redeemSet, } from './hiddenTreasures.js';
 export class GameEngine {
     gameModifiersCache = new Map();

@@ -35,9 +35,7 @@ export class MapAssetWorker {
                     if (job.name && job.name !== 'map-assets:purge')
                         return null;
                     await this.runOnce('interval', {
-                        ...(typeof job.data?.batchSize === 'number'
-                            ? { batchSize: job.data.batchSize }
-                            : {}),
+                        ...(typeof job.data?.batchSize === 'number' ? { batchSize: job.data.batchSize } : {}),
                         ...(typeof job.data?.minAgeMinutes === 'number'
                             ? { minAgeMinutes: job.data.minAgeMinutes }
                             : {}),

@@ -1,7 +1,8 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { setEngine, setLogger, simulateBattle } from '@conquestk/shared/odds';
 async function run() {
-    const { start, count, attMin, attMax, defMin, defMax, seedHi, seedLo, } = (workerData || {});
+    const { start, count, attMin, attMax, defMin, defMax, seedHi, seedLo } = (workerData ||
+        {});
     setEngine('shadow');
     let divergences = 0;
     setLogger((entry) => {

@@ -1486,8 +1486,7 @@ export class GameService {
                                 eliminated.mustCashInTreasures = false;
                             }
                             if (transferred > 0 && eliminatorHand.length >= cfg.handCap) {
-                                const hasValidSet = findRedeemableSets(eliminatorHand)
-                                    .length > 0;
+                                const hasValidSet = findRedeemableSets(eliminatorHand).length > 0;
                                 eliminator.mustCashInTreasures = hasValidSet;
                                 if (hasValidSet && eliminator.id === updatedGameState.currentPlayer) {
                                     updatedGameState.mustCashInTreasures = true;

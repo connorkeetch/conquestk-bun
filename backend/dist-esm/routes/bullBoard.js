@@ -3,8 +3,8 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { Router } from 'express';
 import { requireAdmin } from '../middleware/adminAuth.js';
-import authenticateTokenFromCookie from '../middleware/authFromCookie.js';
 import { authenticateToken } from '../middleware/auth.js';
+import authenticateTokenFromCookie from '../middleware/authFromCookie.js';
 import { queueService } from '../services/queueService.js';
 export const createBullBoardRouter = () => {
     const router = Router();

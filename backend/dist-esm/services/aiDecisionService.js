@@ -1,6 +1,6 @@
 import { GameEngine } from '../game/gameEngine.js';
-import { arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js';
+import { arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js';
 import { filterStateForPlanner } from './fogService.js';
 class AIDecisionService {
     async chooseAction(request) {
@@ -16,7 +16,7 @@ class AIDecisionService {
             const effectiveState = fogMode === 'off'
                 ? request.gameState
                 : filterStateForPlanner(request.gameState, request.player.id);
-            const plannedActions = this.generatePlan({ ...request, gameState: effectiveState });
+            const plannedActions = await this.generatePlan({ ...request, gameState: effectiveState });
             if (request.budget.signal?.aborted) {
                 return this.createFallbackPlan('aborted', request, start);
             }
@@ -54,22 +54,22 @@ class AIDecisionService {
             return this.createFallbackPlan('stubbed', request, start);
         }
     }
-    generatePlan(request) {
+    async generatePlan(request) {
         if (request.player.isEliminated) {
             return [];
         }
         switch (request.difficulty) {
             case 'recruit':
-                return this.generateRecruitPlan(request);
+                return await this.generateRecruitPlan(request);
             case 'commander':
-                return this.generateCommanderPlan(request);
+                return await this.generateCommanderPlan(request);
             case 'grandmaster':
-                return this.generateGrandmasterPlan(request);
+                return await this.generateGrandmasterPlan(request);
             default:
                 return [];
         }
     }
-    generateCommanderPlan(request) {
+    async generateCommanderPlan(request) {
         const { gameState, player, budget } = request;
         const roomId = gameState.roomId;
         const actions = [];
@@ -123,7 +123,7 @@ class AIDecisionService {
             phase = 'attack';
         }
         if (phase === 'attack') {
-            const attack = this.findCommanderAttack(gameState, player.id, budget);
+            const attack = await this.findCommanderAttack(gameState, player.id, budget, request.difficulty);
             if (attack) {
                 if (!push(attack))
                     return actions;
@@ -168,7 +168,7 @@ class AIDecisionService {
             .sort((a, b) => a.armies - b.armies);
         return allBorders[0]?.id ?? owned[0].id;
     }
-    findCommanderAttack(gameState, playerId, budget) {
+    async findCommanderAttack(gameState, playerId, budget, difficulty) {
         const owned = gameState.board.filter((t) => t.ownerId === playerId);
         if (owned.length === 0)
             return null;
@@ -197,13 +197,47 @@ class AIDecisionService {
                 const isCapital = tgt.isCapital === true ? 2 : 0;
                 const score = advantage * 2 + sectorBonus + isCapital;
                 if (advantage >= 1) {
-                    candidates.push({ from: src.id, to: tgt.id, score, armies: attackDice });
+                    candidates.push({
+                        from: src.id,
+                        to: tgt.id,
+                        score,
+                        armies: attackDice,
+                        sectorBonus,
+                        isCapital,
+                    });
                 }
                 else if (advantage === 0 &&
                     (budget.minAttackOddsByTier?.commander ?? 0.68) <= 0.68) {
-                    candidates.push({ from: src.id, to: tgt.id, score: score - 1, armies: attackDice });
+                    candidates.push({
+                        from: src.id,
+                        to: tgt.id,
+                        score: score - 1,
+                        armies: attackDice,
+                        sectorBonus,
+                        isCapital,
+                    });
                 }
             }
+        }
+        try {
+            const { evaluateCandidatesAdapter } = await import('./aiEvalAdapter.js');
+            const state = {
+                currentPlayerId: playerId,
+                territories: gameState.board.map((t) => ({
+                    id: t.id,
+                    ownerId: t.ownerId || null,
+                    armies: Math.max(0, t.armies | 0),
+                })),
+            };
+            const evalCands = candidates.map((c) => ({ kind: 'attack', from: c.from, to: c.to }));
+            const scores = await evaluateCandidatesAdapter(state, evalCands, { difficulty });
+            for (let i = 0; i < candidates.length; i++) {
+                const p = scores[i] ?? 0;
+                candidates[i].score =
+                    p * 100 + candidates[i].sectorBonus * 2 + candidates[i].isCapital * 3;
+            }
+        }
+        catch {
         }
         candidates.sort((a, b) => b.score - a.score);
         const pick = candidates[0];
@@ -216,7 +250,7 @@ class AIDecisionService {
             payload: { fromTerritoryId: pick.from, toTerritoryId: pick.to, armies: pick.armies },
         };
     }
-    generateGrandmasterPlan(request) {
+    async generateGrandmasterPlan(request) {
         const { gameState, player, budget } = request;
         const roomId = gameState.roomId;
         const actions = [];
@@ -462,7 +496,7 @@ class AIDecisionService {
         const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
         return rolls.sort((a, b) => b - a);
     }
-    generateRecruitPlan(request) {
+    async generateRecruitPlan(request) {
         const { gameState, player, budget } = request;
         const actions = [];
         const roomId = gameState.roomId;

@@ -1,12 +1,12 @@
+import os from 'node:os';
+import { Worker } from 'node:worker_threads';
+import { getEngine as getOddsEngine, setEngine as setOddsEngine, } from '@conquestk/shared/odds';
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
+import { oddsMetrics } from '../services/metricsService.js';
 import { performanceTestingService } from '../services/performanceTestingService.js';
 import { logger } from '../utils/logger.js';
 import { handleRouteError } from '../utils/routeErrorHandler.js';
-import { oddsMetrics } from '../services/metricsService.js';
-import { Worker } from 'node:worker_threads';
-import os from 'node:os';
-import { getEngine as getOddsEngine, setEngine as setOddsEngine } from '@conquestk/shared/odds';
 const router = express.Router();
 router.get('/scenarios', authenticateToken, async (req, res) => {
     try {
@@ -205,7 +205,7 @@ router.get('/status', authenticateToken, async (req, res) => {
 });
 router.post('/odds-shadow-verify', authenticateToken, async (req, res) => {
     try {
-        const { trials = 100_000, attMin = 5, attMax = 40, defMin = 5, defMax = 35, seedHi = 0xA1B2C3D4, seedLo = 0x0F1E2D3C, kind = 'battle', } = req.body ?? {};
+        const { trials = 100_000, attMin = 5, attMax = 40, defMin = 5, defMax = 35, seedHi = 0xa1b2c3d4, seedLo = 0x0f1e2d3c, kind = 'battle', } = req.body ?? {};
         const prevEngine = getOddsEngine();
         const start = Date.now();
         const cpuCount = Math.max(1, Math.min(os.cpus()?.length || 1, 8));
@@ -253,6 +253,73 @@ router.post('/odds-shadow-verify', authenticateToken, async (req, res) => {
     catch (error) {
         handleRouteError(error, req, 'Failed odds shadow verification', 500);
         res.status(500).json({ success: false, error: 'Failed odds shadow verification' });
+    }
+});
+router.post('/ai-eval-bench', authenticateToken, async (req, res) => {
+    try {
+        const { sets = 50, candidatesPer = 200, territories = 120 } = req.body || {};
+        const { evaluateCandidates: wasmEvaluate, computeConquestProbability } = await import('@conquestk/shared/odds');
+        const mkState = () => {
+            const terr = Array.from({ length: territories }, (_, i) => ({
+                id: `t${i}`,
+                ownerId: i % 3 === 0 ? 'A' : i % 3 === 1 ? 'B' : 'C',
+                armies: (i % 10) + 1,
+            }));
+            return { territories: terr, currentPlayerId: 'A' };
+        };
+        const mkCandidates = () => {
+            const arr = [];
+            for (let i = 0; i < candidatesPer; i++) {
+                const from = `t${(i * 7) % territories}`;
+                const to = `t${(i * 13 + 5) % territories}`;
+                if (from !== to)
+                    arr.push({ kind: 'attack', from, to });
+            }
+            return arr;
+        };
+        const measure = async (fn) => {
+            const t0 = Date.now();
+            await fn();
+            return Date.now() - t0;
+        };
+        const tsMs = await measure(async () => {
+            for (let s = 0; s < sets; s++) {
+                const st = mkState();
+                const cands = mkCandidates();
+                const byId = new Map(st.territories.map((t) => [t.id, t]));
+                for (const c of cands) {
+                    const from = byId.get(c.from);
+                    const to = byId.get(c.to);
+                    if (!from || !to)
+                        continue;
+                    if (from.ownerId !== st.currentPlayerId || to.ownerId === st.currentPlayerId)
+                        continue;
+                    const att = Math.max(0, from.armies - 1);
+                    const def = Math.max(0, to.armies);
+                    computeConquestProbability(att, def);
+                }
+            }
+        });
+        const wasmMs = await measure(async () => {
+            for (let s = 0; s < sets; s++) {
+                const st = mkState();
+                const cands = mkCandidates();
+                await wasmEvaluate(st, cands);
+            }
+        });
+        const totalCandidates = sets * candidatesPer;
+        const result = {
+            sets,
+            candidatesPer,
+            territories,
+            ts: { totalMs: tsMs, candidatesPerSec: (totalCandidates / tsMs) * 1000 },
+            wasm: { totalMs: wasmMs, candidatesPerSec: (totalCandidates / wasmMs) * 1000 },
+        };
+        res.json({ success: true, data: result });
+    }
+    catch (error) {
+        handleRouteError(error, req, 'Failed to run AI eval benchmark');
+        res.status(500).json({ success: false, error: 'Failed to run AI eval benchmark' });
     }
 });
 router.get('/results/:testId', authenticateToken, async (req, res) => {
