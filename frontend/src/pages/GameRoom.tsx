@@ -371,9 +371,7 @@ export default function GameRoom() {
       if (!isEditingLayout) return
       const panelId = parseDraggedPanelId(e)
       if (!panelId) return
-      dispatch(
-        setPanelZone({ panelId, zone, ...(order !== undefined ? { order } : {}) }),
-      )
+      dispatch(setPanelZone({ panelId, zone, ...(order !== undefined ? { order } : {}) }))
       setIsDraggingPanel(false)
     },
     [dispatch, parseDraggedPanelId, isEditingLayout],
@@ -2071,19 +2069,19 @@ export default function GameRoom() {
                       </div>
                     }
                   >
-                      <LazyChatLogPanel
-                        gameId={currentRoom?.id ?? roomId ?? ''}
-                        currentUserId={user.id}
-                        userTeamId={
-                          (currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId ??
-                            null) as number | null
-                        }
-                        onLogFocus={(territories) => {
-                          const focus = territories[territories.length - 1]
-                          if (focus) dispatch(selectTerritory(focus))
-                        }}
-                        isEditingLayout={isEditingLayout}
-                      />
+                    <LazyChatLogPanel
+                      gameId={currentRoom?.id ?? roomId ?? ''}
+                      currentUserId={user.id}
+                      userTeamId={
+                        (currentGame?.players?.find((pp) => pp.userId === user.id)?.teamId ??
+                          null) as number | null
+                      }
+                      onLogFocus={(territories) => {
+                        const focus = territories[territories.length - 1]
+                        if (focus) dispatch(selectTerritory(focus))
+                      }}
+                      isEditingLayout={isEditingLayout}
+                    />
                   </Suspense>
                 )}
               </div>
@@ -2426,8 +2424,12 @@ export default function GameRoom() {
                           gameId={currentRoom?.id || roomId}
                           currentUserId={user.id}
                           {...(() => {
-                            const teamId = currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
-                            return teamId !== undefined ? { userTeamId: teamId } : { userTeamId: null }
+                            const teamId = currentGame?.players?.find(
+                              (gp) => gp.userId === user.id,
+                            )?.teamId
+                            return teamId !== undefined
+                              ? { userTeamId: teamId }
+                              : { userTeamId: null }
                           })()}
                           onLogFocus={(territories) => {
                             const focus = territories[territories.length - 1]
@@ -2514,7 +2516,9 @@ export default function GameRoom() {
                       gameId={currentRoom?.id || roomId}
                       currentUserId={user.id}
                       {...(() => {
-                        const teamId = currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
+                        const teamId = currentGame?.players?.find(
+                          (gp) => gp.userId === user.id,
+                        )?.teamId
                         return teamId !== undefined ? { userTeamId: teamId } : { userTeamId: null }
                       })()}
                       onLogFocus={(territories) => {
@@ -2773,7 +2777,9 @@ export default function GameRoom() {
                       gameId={currentRoom.id}
                       currentUserId={user.id}
                       {...(() => {
-                        const teamId = currentGame?.players?.find((p) => p.userId === user.id)?.teamId
+                        const teamId = currentGame?.players?.find(
+                          (p) => p.userId === user.id,
+                        )?.teamId
                         return teamId !== undefined ? { userTeamId: teamId } : { userTeamId: null }
                       })()}
                       className="h-full"

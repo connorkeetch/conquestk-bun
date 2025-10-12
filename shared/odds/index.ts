@@ -242,7 +242,11 @@ export async function evaluateCandidates(
         const c = candidates[i] as Extract<EvalCandidate, { kind: 'attack' }>
         const from = byId.get(c.from)
         const to = byId.get(c.to)
-        const ok = !!from && !!to && from!.ownerId === state.currentPlayerId && to!.ownerId !== state.currentPlayerId
+        const ok =
+          !!from &&
+          !!to &&
+          from!.ownerId === state.currentPlayerId &&
+          to!.ownerId !== state.currentPlayerId
         if (ok) {
           const a = Math.max(0, (from!.armies | 0) - 1)
           const d = Math.max(0, to!.armies | 0)

@@ -31,7 +31,9 @@ export const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDi
       adjacentTerritories: territory.adjacentTerritories,
       armyPosition,
     }
-    const withOwner = territory.ownerId ? { owner: territory.ownerId, ownerId: territory.ownerId } : {}
+    const withOwner = territory.ownerId
+      ? { owner: territory.ownerId, ownerId: territory.ownerId }
+      : {}
     const withArmies = typeof territory.armies === 'number' ? { armies: territory.armies } : {}
     displayMap[territory.id] = { ...base, ...withOwner, ...withArmies }
   })

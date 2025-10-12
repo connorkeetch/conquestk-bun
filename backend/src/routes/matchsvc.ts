@@ -1,8 +1,8 @@
+import { MatchSvcClient } from '@conquestk/match-client'
 import { Router } from 'express'
-import { logger } from '../utils/logger.js'
 import { checkRedisHealth } from '../config/redis.js'
 import { isMatchSvcSubscriberActive } from '../services/matchSvcIntegration.js'
-import { MatchSvcClient } from '@conquestk/match-client'
+import { logger } from '../utils/logger.js'
 
 const router = Router()
 
@@ -35,16 +35,17 @@ router.get('/status', async (_req, res) => {
   if (hmac) {
     try {
       const client = new MatchSvcClient({ baseUrl, hmacSecret: hmac })
-      const r = await client.dequeue('status-check')
+      const _r = await client.dequeue('status-check')
       // Any 2xx means auth accepted; if not throwing, we got 200 OK {status: 'gone'}
       authTest = 'ok'
       authStatus = 200
     } catch (e) {
       const msg = String((e as Error).message || '')
-      if (msg.includes('401') || msg.toLowerCase().includes('unauthorized')) authTest = 'unauthorized'
+      if (msg.includes('401') || msg.toLowerCase().includes('unauthorized'))
+        authTest = 'unauthorized'
       else authTest = 'error'
       const m = msg.match(/\s(\d{3})$/)
-      authStatus = m ? Number.parseInt(m[1]!, 10) : undefined
+      authStatus = m ? Number.parseInt(m[1], 10) : undefined
     }
   }
 
@@ -77,7 +78,11 @@ router.get('/status', async (_req, res) => {
           if (m) online = Number(m[1])
         }
       }
-      metrics = { queueDepth: qd, ...(formed != null ? { matchesFormedTotal: formed } : {}), ...(online != null ? { presenceOnline: online } : {}) }
+      metrics = {
+        queueDepth: qd,
+        ...(formed != null ? { matchesFormedTotal: formed } : {}),
+        ...(online != null ? { presenceOnline: online } : {}),
+      }
     }
   } catch (e) {
     logger.debug('matchsvc metrics fetch failed', { error: (e as Error)?.message })

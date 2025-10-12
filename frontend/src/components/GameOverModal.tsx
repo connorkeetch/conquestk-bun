@@ -300,10 +300,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
             {roomId && (
               <>
-                <PlayerDebrief
-                  roomId={roomId}
-                  {...(currentUserId ? { currentUserId } : {})}
-                />
+                <PlayerDebrief roomId={roomId} {...(currentUserId ? { currentUserId } : {})} />
                 <PostGameCharts roomId={roomId} className="shadow-inner" />
               </>
             )}

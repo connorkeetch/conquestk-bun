@@ -89,10 +89,7 @@ export async function ai_evaluate(
   return api.ai_evaluate(state, candidates, opts) as unknown as number[]
 }
 
-export async function bulkExactOdds(
-  att: Uint16Array,
-  def: Uint16Array,
-): Promise<Float64Array> {
+export async function bulkExactOdds(att: Uint16Array, def: Uint16Array): Promise<Float64Array> {
   const api = await getApi()
   return api.bulk_exact_odds(att, def) as unknown as Float64Array
 }
