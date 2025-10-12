@@ -40,6 +40,14 @@ export interface WasmApi {
   exact_odds_matrix(max_att: number, max_def: number): number[][]
   ai_evaluate(state: unknown, candidates: unknown, opts?: { difficulty?: string }): number[]
   bulk_exact_odds(att: Uint16Array, def: Uint16Array): Float64Array
+  init_eval_state(ids: string[]): number
+  ai_eval_attacks_with_handle(
+    handle: number,
+    ownedByCurrent: Uint8Array,
+    armies: Uint16Array,
+    pairs: Uint32Array,
+  ): Float64Array
+  free_eval_state(handle: number): void
 }
 
 export async function loadWasm(_moduleUrlOrBytes?: string | ArrayBuffer): Promise<WasmApi> {

@@ -303,6 +303,34 @@ export function bulk_exact_odds(att, def) {
 }
 
 /**
+ * @param {any} ids
+ * @returns {number}
+ */
+export function init_eval_state(ids) {
+    const ret = wasm.init_eval_state(ids);
+    return ret >>> 0;
+}
+
+/**
+ * @param {number} handle
+ */
+export function free_eval_state(handle) {
+    wasm.free_eval_state(handle);
+}
+
+/**
+ * @param {number} handle
+ * @param {Uint8Array} owned_by_current
+ * @param {Uint16Array} armies
+ * @param {Uint32Array} pairs
+ * @returns {Float64Array}
+ */
+export function ai_eval_attacks_with_handle(handle, owned_by_current, armies, pairs) {
+    const ret = wasm.ai_eval_attacks_with_handle(handle, owned_by_current, armies, pairs);
+    return ret;
+}
+
+/**
  * @param {number} max_att
  * @param {number} max_def
  * @returns {any}
@@ -358,6 +386,11 @@ export function __wbg_get_458e874b43b18b25() { return handleError(function (arg0
     return ret;
 }, arguments) };
 
+export function __wbg_getindex_7b4a4ab71add1c85(arg0, arg1) {
+    const ret = arg0[arg1 >>> 0];
+    return ret;
+};
+
 export function __wbg_getwithrefkey_1dc361bd10053bfe(arg0, arg1) {
     const ret = arg0[arg1];
     return ret;
@@ -412,6 +445,11 @@ export function __wbg_iterator_f370b34483c71a1c() {
 };
 
 export function __wbg_length_186546c51cd61acd(arg0) {
+    const ret = arg0.length;
+    return ret;
+};
+
+export function __wbg_length_555ae304a7c78975(arg0) {
     const ret = arg0.length;
     return ret;
 };
@@ -475,6 +513,11 @@ export function __wbg_set_3f1d0b984ed272ed(arg0, arg1, arg2) {
 
 export function __wbg_set_90f6c0f7bd8c0415(arg0, arg1, arg2) {
     arg0[arg1 >>> 0] = arg2;
+};
+
+export function __wbg_subarray_70fd07feefe14294(arg0, arg1, arg2) {
+    const ret = arg0.subarray(arg1 >>> 0, arg2 >>> 0);
+    return ret;
 };
 
 export function __wbg_subarray_9c11d06e714364f5(arg0, arg1, arg2) {

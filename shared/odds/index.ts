@@ -17,6 +17,18 @@ async function getWasmEngine() {
   return mod
 }
 
+// Persistent eval-state handle cache keyed by ordered territory id signature
+const __stateHandleCache = new Map<string, number>()
+async function __getOrInitHandle(signature: string, ids: string[]) {
+  const mod = await getWasmEngine()
+  let h = __stateHandleCache.get(signature)
+  if (h == null) {
+    h = await mod.initEvalState(ids)
+    __stateHandleCache.set(signature, h)
+  }
+  return h
+}
+
 export type Engine = 'ts' | 'wasm' | 'shadow'
 
 let engine: Engine = (typeof process !== 'undefined' && (process as any)?.env?.ODDS_ENGINE) || 'ts'
@@ -233,35 +245,30 @@ export async function evaluateCandidates(
   if (allAttack) {
     try {
       const wasm = await getWasmEngine()
-      const byId = new Map(state.territories.map((t) => [t.id, t]))
+      const ids = state.territories.map((t) => t.id)
+      const signature = ids.join('|')
+      const handle = await __getOrInitHandle(signature, ids)
+
+      const T = state.territories.length
+      const owned = new Uint8Array(T)
+      const armies = new Uint16Array(T)
+      for (let i = 0; i < T; i++) {
+        const t = state.territories[i]!
+        owned[i] = t.ownerId === state.currentPlayerId ? 1 : 0
+        armies[i] = (t.armies | 0) as number
+      }
+      const byId = new Map(state.territories.map((t, i) => [t.id, i]))
       const n = candidates.length
-      const att = new Uint16Array(n)
-      const def = new Uint16Array(n)
-      const invalid = new Uint8Array(n)
+      const pairs = new Uint32Array(n * 2)
       for (let i = 0; i < n; i++) {
         const c = candidates[i] as Extract<EvalCandidate, { kind: 'attack' }>
-        const from = byId.get(c.from)
-        const to = byId.get(c.to)
-        const ok =
-          !!from &&
-          !!to &&
-          from!.ownerId === state.currentPlayerId &&
-          to!.ownerId !== state.currentPlayerId
-        if (ok) {
-          const a = Math.max(0, (from!.armies | 0) - 1)
-          const d = Math.max(0, to!.armies | 0)
-          att[i] = a
-          def[i] = d
-          invalid[i] = a < 1 ? 1 : 0 // maintain legacy: 0 attackers → score 0
-        } else {
-          att[i] = 0
-          def[i] = 1 // force probability 0 for invalids
-          invalid[i] = 1
-        }
+        const fi = byId.get(c.from)
+        const ti = byId.get(c.to)
+        pairs[i * 2] = (fi ?? 0xffffffff) >>> 0
+        pairs[i * 2 + 1] = (ti ?? 0xffffffff) >>> 0
       }
-      const probs = (await wasm.bulkExactOdds(att, def)) as unknown as Float64Array
-      const out = Array.from({ length: n }, (_, i) => (invalid[i] ? 0 : probs[i]!))
-      return out
+      const probs = await wasm.aiEvalAttacksWithHandle(handle, owned, armies, pairs)
+      return Array.from(probs as unknown as Float64Array)
     } catch {
       // fall back to generic path below
     }

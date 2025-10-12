@@ -93,3 +93,23 @@ export async function bulkExactOdds(att: Uint16Array, def: Uint16Array): Promise
   const api = await getApi()
   return api.bulk_exact_odds(att, def) as unknown as Float64Array
 }
+
+export async function initEvalState(ids: string[]): Promise<number> {
+  const api = await getApi()
+  return api.init_eval_state(ids) as unknown as number
+}
+
+export async function aiEvalAttacksWithHandle(
+  handle: number,
+  ownedByCurrent: Uint8Array,
+  armies: Uint16Array,
+  pairs: Uint32Array,
+): Promise<Float64Array> {
+  const api = await getApi()
+  return api.ai_eval_attacks_with_handle(handle, ownedByCurrent, armies, pairs) as unknown as Float64Array
+}
+
+export async function freeEvalState(handle: number): Promise<void> {
+  const api = await getApi()
+  return api.free_eval_state(handle) as unknown as void
+}

@@ -10,6 +10,10 @@ use crate::dice::simulate_step as rb_simulate_step;
 use crate::dp::exact_win_probability;
 use crate::rng::Xoshiro128pp;
 use js_sys::{Float64Array, Uint16Array};
+use js_sys::Uint8Array;
+use js_sys::Uint32Array;
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
 
 #[derive(Serialize)]
 pub struct StepResult {
@@ -162,6 +166,97 @@ pub fn bulk_exact_odds(att: Uint16Array, def: Uint16Array) -> Float64Array {
     let mut out = vec![0f64; n];
     for i in 0..n {
         out[i] = exact_win_probability(a[i], d[i]);
+    }
+    Float64Array::from(out.as_slice())
+}
+
+// === Persistent eval state (handle-based) ===
+
+struct EvalStateMeta {
+    len: usize,
+    // Keep ids to allow future extensions (string->index resolution)
+    #[allow(dead_code)]
+    ids: Vec<String>,
+}
+
+static EVAL_STATES: Lazy<Mutex<Vec<Option<EvalStateMeta>>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
+#[wasm_bindgen]
+pub fn init_eval_state(ids: JsValue) -> u32 {
+    let ids_vec: Vec<String> = serde_wasm_bindgen::from_value(ids).unwrap_or_default();
+    let mut store = EVAL_STATES.lock().unwrap();
+    // Try to reuse an empty slot
+    for (i, slot) in store.iter_mut().enumerate() {
+        if slot.is_none() {
+            *slot = Some(EvalStateMeta { len: ids_vec.len(), ids: ids_vec });
+            return i as u32;
+        }
+    }
+    store.push(Some(EvalStateMeta { len: ids_vec.len(), ids: ids_vec }));
+    (store.len() - 1) as u32
+}
+
+#[wasm_bindgen]
+pub fn free_eval_state(handle: u32) {
+    let mut store = EVAL_STATES.lock().unwrap();
+    let idx = handle as usize;
+    if idx < store.len() {
+        store[idx] = None;
+    }
+}
+
+#[wasm_bindgen]
+pub fn ai_eval_attacks_with_handle(
+    handle: u32,
+    owned_by_current: Uint8Array,
+    armies: Uint16Array,
+    pairs: Uint32Array,
+) -> Float64Array {
+    let store = EVAL_STATES.lock().unwrap();
+    let idx = handle as usize;
+    if idx >= store.len() || store[idx].is_none() {
+        return Float64Array::new_with_length(0);
+    }
+    let meta = store[idx].as_ref().unwrap();
+    let len = meta.len as u32;
+
+    let owned_len = owned_by_current.length();
+    let armies_len = armies.length();
+    if owned_len < len || armies_len < len {
+        return Float64Array::new_with_length(0);
+    }
+
+    let pairs_len = pairs.length();
+    if pairs_len % 2 != 0 { return Float64Array::new_with_length(0); }
+    let n = (pairs_len / 2) as usize;
+
+    let armies_vec = {
+        let mut v = vec![0u16; len as usize];
+        armies.subarray(0, len).copy_to(&mut v[..]);
+        v
+    };
+    let owned_vec = {
+        let mut v = vec![0u8; len as usize];
+        owned_by_current.subarray(0, len).copy_to(&mut v[..]);
+        v
+    };
+
+    let mut out = vec![0f64; n];
+    for i in 0..n {
+        let from = pairs.get_index((i * 2) as u32);
+        let to = pairs.get_index((i * 2 + 1) as u32);
+        if from >= len || to >= len {
+            out[i] = 0.0; continue;
+        }
+        let f = from as usize;
+        let t = to as usize;
+        // Valid only if from is owned by current player and to is not owned by them
+        let owned_ok = owned_vec[f] != 0 && owned_vec[t] == 0;
+        if !owned_ok { out[i] = 0.0; continue; }
+        let att = if armies_vec[f] > 0 { armies_vec[f].saturating_sub(1) } else { 0 };
+        let def = armies_vec[t];
+        if att < 1 { out[i] = 0.0; continue; }
+        out[i] = exact_win_probability(att, def);
     }
     Float64Array::from(out.as_slice())
 }
