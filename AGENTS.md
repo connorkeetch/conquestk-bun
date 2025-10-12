@@ -32,7 +32,8 @@ If you are not on Windows, use `npm run dev:manual` or run `npm run dev:backend`
 ## Environments
 - Production: https://conquestk.com (main branch)
 - Staging: https://dev.conquestk.com/ (dev branch)
-- Railway configuration now lives entirely in the Railway dashboard; `railway.json` was removed after it caused deployment issues, so define services and environment variables via the GUI.
+- Railway configuration now lives entirely in the Railway dashboard; `railway.json` was removed after it caused deployment issues.
+- Use Railpack-style Build/Start commands in the Railway GUI. To enable the WASM odds engine in staging/production, set the Install/Build/Start commands as documented in `docs/reference/deployment.md` (Build installs Rust + wasm-pack and runs `npm run odds:build` before the normal build).
 
 ## Key commands
 ```bash

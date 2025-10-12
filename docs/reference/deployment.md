@@ -20,7 +20,7 @@ git push origin dev  # GitHub Actions builds, tests, then triggers Railway via w
 > Configuration notes
 >
 > - The repo no longer ships a legacy `railway.json`. Manage services and environment variables directly in the Railway dashboard. Document changes in the dashboard when you update them.
-> - We do not ship a `railpack.json`. Railway’s default Node builder (Nixpacks) detects the workspace, installs dependencies, builds, and starts via `npm start`. Revisit this section if we adopt a custom builder.
+> - Railway builds from the repository and uses the configured Install/Build/Start commands (Railpack-style). We do not ship a `railway.json`; configure Build/Start in the Railway GUI.
 
 ## 🧰 Build & Install Strategy
 
@@ -34,6 +34,39 @@ Notes:
 - Optional startup tasks can be toggled via env vars without changing the build:
   - `SYNC_FEATURE_FLAGS_ON_START=true`
   - `RUN_DEPLOY_ACCOUNT_ENFORCEMENT_ON_START=true`
+
+### WASM Odds in Railway (Railpack-style build commands)
+
+To ensure the Rust→WASM odds package exists at runtime (so `ODDS_ENGINE=shadow|wasm` works), add the following in your Railway service settings:
+
+- Install Command:
+```
+npm ci
+```
+
+- Build Command:
+```
+bash -lc '
+  set -e
+  # Install Rust toolchain
+  curl https://sh.rustup.rs -sSf | sh -s -- -y
+  export PATH="$HOME/.cargo/bin:$PATH"
+  # Install wasm-pack (prebuilt binary)
+  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+  # Build WASM package and then the workspace
+  npm run odds:build
+  npm run build
+'
+```
+
+- Start Command:
+```
+npm start
+```
+
+Notes:
+- The backend will fall back to the TypeScript engine if WASM is unavailable at runtime, but with these commands WASM artifacts (`shared/wasm-odds/pkg-node/**`) will be present.
+- If you only want to test shadow mode on staging, set `ODDS_ENGINE=shadow` in the staging environment in Railway. Production can remain `ts` until you’re ready to flip.
 
 ## 🔐 Environment Variables
 
