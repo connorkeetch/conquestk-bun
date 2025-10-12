@@ -294,13 +294,16 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
             {/* Player Debrief + Final Standings */}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <FinalStandings className="h-full" roomId={roomId} />
+              <FinalStandings className="h-full" {...(roomId ? { roomId } : {})} />
               {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
             </div>
 
             {roomId && (
               <>
-                <PlayerDebrief roomId={roomId} currentUserId={currentUserId || undefined} />
+                <PlayerDebrief
+                  roomId={roomId}
+                  {...(currentUserId ? { currentUserId } : {})}
+                />
                 <PostGameCharts roomId={roomId} className="shadow-inner" />
               </>
             )}
@@ -765,17 +768,20 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
         (current.defenderId || null) === (b.defenderId || null)
       if (!same) {
         if (current) engagements.push(current)
-        current = {
+        const base: Engagement = {
           attackerId: b.attackerId,
           defenderId: b.defenderId,
           fromId: b.attackingTerritoryId,
           toId: b.defendingTerritoryId,
-          initFrom: typeof b.initialFromArmies === 'number' ? b.initialFromArmies : undefined,
-          initTo: typeof b.initialToArmies === 'number' ? b.initialToArmies : undefined,
           conquered: Boolean(b.conquered),
           firstTs: b.timestamp,
           lastTs: b.timestamp,
         }
+        const withInitFrom =
+          typeof b.initialFromArmies === 'number' ? { initFrom: b.initialFromArmies } : {}
+        const withInitTo =
+          typeof b.initialToArmies === 'number' ? { initTo: b.initialToArmies } : {}
+        current = { ...base, ...withInitFrom, ...withInitTo }
       } else {
         if (!current) {
           // Should not happen due to the guard above

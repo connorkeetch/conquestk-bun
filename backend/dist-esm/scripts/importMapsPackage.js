@@ -444,8 +444,12 @@ async function run() {
                 logger.info(`✅ Imported map: ${created.name} (${created.id})`);
                 try {
                     const { query } = (await import('../config/database.js'));
-                    const t = await query('SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1', [created.id]);
-                    const c = await query('SELECT COUNT(*) AS c FROM map_sectors WHERE map_id = $1', [created.id]);
+                    const t = await query('SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1', [
+                        created.id,
+                    ]);
+                    const c = await query('SELECT COUNT(*) AS c FROM map_sectors WHERE map_id = $1', [
+                        created.id,
+                    ]);
                     const a = await query('SELECT COUNT(*) AS c FROM territory_adjacencies WHERE map_id = $1', [created.id]);
                     logger.info('📊 Inserted rows', {
                         mapId: created.id,

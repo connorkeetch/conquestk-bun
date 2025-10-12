@@ -1,7 +1,7 @@
-import { logger } from './utils/logger.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { logger } from './utils/logger.js';
 function isVerbose() {
     const lvl = (process.env.LOG_LEVEL || 'info').toLowerCase();
     return process.env.STARTUP_VERBOSE === 'true' || lvl === 'debug' || lvl === 'silly';

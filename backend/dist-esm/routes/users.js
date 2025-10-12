@@ -1,7 +1,7 @@
+import { getRankForRating, RANKS } from '@conquestk/shared/constants/ranks';
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import { query } from '../config/database.js';
-import { RANKS, getRankForRating } from '@conquestk/shared/constants/ranks';
 import { PREMIUM_COLOR_KEYS } from '../constants/premium.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { profileService } from '../services/profileService.js';
@@ -336,7 +336,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
             values.push(email.trim().toLowerCase());
         }
         if (typeof tagline === 'string') {
-            const { isAllowedTagline } = await import('../constants/profileTaglines.js');
+            const { isAllowedTagline } = (await import('../constants/profileTaglines.js'));
             const trimmed = tagline.trim();
             if (!isAllowedTagline(trimmed)) {
                 return res.status(400).json({ error: 'Invalid tagline selection' });

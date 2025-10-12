@@ -21,11 +21,11 @@ const parseCookie = (cookieHeader) => {
 };
 export const authenticateTokenFromCookie = (req, res, next) => {
     const existing = req.headers.authorization;
-    if (existing && existing.startsWith('Bearer ')) {
+    if (existing?.startsWith('Bearer ')) {
         return authenticateToken(req, res, next);
     }
     const cookies = parseCookie(req.headers.cookie);
-    const token = cookies['auth_token'] || cookies['token'];
+    const token = cookies.auth_token || cookies.token;
     if (!token) {
         res.status(401).json({ message: 'Access token required' });
         return;

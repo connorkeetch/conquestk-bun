@@ -16,7 +16,13 @@ const TIER_META = {
 export const SKILL_TIERS = RANKS.map((r, i) => {
     const nextMin = i < RANKS.length - 1 ? RANKS[i + 1].minRating : 10000;
     const meta = TIER_META[r.name] || { icon: '🏅', color: '#666' };
-    return { name: r.name, minRating: r.minRating, maxRating: nextMin - 1, icon: meta.icon, color: meta.color };
+    return {
+        name: r.name,
+        minRating: r.minRating,
+        maxRating: nextMin - 1,
+        icon: meta.icon,
+        color: meta.color,
+    };
 });
 export class EloService {
     calculateKFactor(gamesPlayed, currentRating, numberOfPlayers) {

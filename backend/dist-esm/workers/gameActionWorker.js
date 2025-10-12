@@ -134,13 +134,11 @@ export class GameActionWorker {
             const baseBudget = this.computeBudgetForDifficulty(difficulty);
             const computedReadableDelay = typeof process.env.AI_READABLE_DELAY_MS === 'string'
                 ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
-                : budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs;
+                : (budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs);
             const effectiveBudget = {
                 ...baseBudget,
                 ...(budgetOverrides || {}),
-                ...(computedReadableDelay !== undefined
-                    ? { readableDelayMs: computedReadableDelay }
-                    : {}),
+                ...(computedReadableDelay !== undefined ? { readableDelayMs: computedReadableDelay } : {}),
             };
             const streamEnabled = (process.env.AI_STREAM_ACTIONS ?? 'true').toLowerCase() !== 'false';
             if (streamEnabled && (effectiveBudget.readableDelayMs ?? 0) > 0) {

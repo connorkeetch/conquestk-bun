@@ -49,9 +49,9 @@ export const ConquestKMap: React.FC<ConquestKMapProps> = ({
           name: territory.name,
           x: territory.armyPosition.x,
           y: territory.armyPosition.y,
-          armies: territory.armies,
-          owner: territory.owner,
-          continent: territory.continent,
+          ...(typeof territory.armies === 'number' ? { armies: territory.armies } : {}),
+          ...(territory.owner ? { owner: territory.owner } : {}),
+          ...(territory.continent ? { continent: territory.continent } : {}),
         }))}
         onTerritoryClick={onTerritoryClick}
         onTerritoryHover={onTerritoryHover}

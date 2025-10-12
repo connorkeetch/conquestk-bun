@@ -94,5 +94,11 @@
     ,
     "src/pages/MapEditor.tsx",
     "src/pages/MapEditorTokens.tsx"
+    ,
+    "src/components/game/MapCanvas.tsx",
+    "src/components/game/ConquestKMap.tsx",
+    "src/components/ConquestKBoard.tsx",
+    "src/pages/GameRoom.tsx",
+    "src/pages/AdminQueues.tsx"
   ]
 }

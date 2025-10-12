@@ -30,9 +30,7 @@ export async function loadMapForEngine(mapId) {
         ownerId: null,
         armies: 0,
         adjacentTerritories: Array.from(adjacencyMap.get(t.id) ?? new Set()),
-        ...(t.armyPosition
-            ? { coordinates: { x: t.armyPosition.x, y: t.armyPosition.y } }
-            : {}),
+        ...(t.armyPosition ? { coordinates: { x: t.armyPosition.x, y: t.armyPosition.y } } : {}),
         isCapital: false,
     }));
     const continentBonuses = sectors.map((c) => ({

@@ -6,9 +6,10 @@ import { gameStateCache } from './cacheService.js';
 import { clanService } from './clanService.js';
 import { eloService } from './eloService.js';
 import { GameActionProcessor } from './gameActionProcessor.js';
+import { GameLifecycleService } from './gameLifecycleService.js';
 import { GameRoomService } from './gameRoomService.js';
 import { GameService } from './gameService.js';
-import { GameLifecycleService } from './gameLifecycleService.js';
+import { matchPresenceMove, matchPresenceOffline, matchPresenceOnline, } from './matchSvcIntegration.js';
 import { socketPayloadMetrics } from './metricsService.js';
 import { queueService } from './queueService.js';
 import { registerSocketServer } from './socketRegistry.js';
@@ -304,6 +305,9 @@ export function setupSocketHandlers(io) {
     io.on('connection', (socket) => {
         logger.info(`User ${socket.userId} connected`);
         if (socket.userId) {
+            void matchPresenceOnline(socket.userId, socket.id);
+        }
+        if (socket.userId) {
             socketLatencies.set(socket.userId, []);
             socket.lastPingTime = Date.now();
         }
@@ -382,6 +386,7 @@ export function setupSocketHandlers(io) {
                 roomId: normalizedRoomId,
                 player: normalizedPlayer,
             });
+            void matchPresenceMove(userId, undefined, normalizedRoomId);
             const cachedState = await gameStateCache.getGameState(normalizedRoomId);
             let serializedState = serializeGameStateForClient(cachedState);
             if (!serializedState) {
@@ -428,6 +433,7 @@ export function setupSocketHandlers(io) {
                 aiPlayerId: player?.aiPlayerId ?? null,
                 isAi: player?.isAi === true,
             });
+            void matchPresenceMove(userId, normalizedRoomId, undefined);
             logger.info(`User ${userId} left game channel ${channel}`);
         }));
         socket.on('game-action', withErrorHandler(socket, 'game-action', async (data) => {
@@ -507,9 +513,7 @@ export function setupSocketHandlers(io) {
                 ack({
                     ok: true,
                     queued: outcome.mode === 'queued',
-                    ...(outcome.result?.version !== undefined
-                        ? { version: outcome.result.version }
-                        : {}),
+                    ...(outcome.result?.version !== undefined ? { version: outcome.result.version } : {}),
                 });
             }
         }));
@@ -690,7 +694,10 @@ export function setupSocketHandlers(io) {
             await gameService.acknowledgeTurnStart(data.roomId, userId);
         }));
         socket.on('goBackToReinforcement', withErrorHandler(socket, 'goBackToReinforcement', async (data) => {
-            logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'goBackToReinforcement', prefer: 'game-action' });
+            logger.warn('DEPRECATED_SOCKET_EVENT', {
+                event: 'goBackToReinforcement',
+                prefer: 'game-action',
+            });
             if (!data || !data.roomId) {
                 throw new Error('Invalid go-back data');
             }
@@ -745,6 +752,7 @@ export function setupSocketHandlers(io) {
                     });
                 }
                 socket.joinedGameRooms?.clear();
+                void matchPresenceOffline(userId, socket.id);
             }
             catch (error) {
                 logger.error('Disconnect handler error:', error);

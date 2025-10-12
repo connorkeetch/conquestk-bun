@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { API_URL } from '../config'
 import { adminService } from '../services/adminService'
-import { apiClient } from '../services/api'
+import apiClient from '../services/api'
 
 type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
 

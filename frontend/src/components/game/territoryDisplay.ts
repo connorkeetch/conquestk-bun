@@ -24,16 +24,16 @@ export const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDi
     const coordinates = territory.coordinates
     const armyPosition = coordinates ? { x: coordinates.x, y: coordinates.y } : defaultArmyPosition
 
-    displayMap[territory.id] = {
+    const base: TerritoryDisplay = {
       id: territory.id,
       name: territory.name,
-      continent: territory.continent ?? territory.continentId ?? 'unknown',
+      continent: territory.continent ?? (territory.continentId as string) ?? 'unknown',
       adjacentTerritories: territory.adjacentTerritories,
       armyPosition,
-      owner: territory.ownerId ?? undefined,
-      ownerId: territory.ownerId ?? undefined,
-      armies: territory.armies,
     }
+    const withOwner = territory.ownerId ? { owner: territory.ownerId, ownerId: territory.ownerId } : {}
+    const withArmies = typeof territory.armies === 'number' ? { armies: territory.armies } : {}
+    displayMap[territory.id] = { ...base, ...withOwner, ...withArmies }
   })
 
   return displayMap

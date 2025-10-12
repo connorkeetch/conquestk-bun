@@ -98,19 +98,21 @@ export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
       const id = territory.territoryId || territory.id
       const connections = adjacency.get(id) ?? new Set<string>()
 
-      return {
+      const base: Territory = {
         id,
         name: territory.name,
         ownerId: null,
         armies: territory.startingArmies ?? 0,
-        continent: territory.continentId,
-        sector: territory.continentId,
-        sectorId: territory.continentId,
         adjacentTerritories: Array.from(connections),
-        coordinates: territory.armyPosition
-          ? { x: territory.armyPosition.x, y: territory.armyPosition.y }
-          : undefined,
-      }
+      } as Territory
+      const withContinent = territory.continentId ? { continent: territory.continentId } : {}
+      const withSector = territory.continentId
+        ? { sector: territory.continentId, sectorId: territory.continentId }
+        : {}
+      const withCoords = territory.armyPosition
+        ? { coordinates: { x: territory.armyPosition.x, y: territory.armyPosition.y } }
+        : {}
+      return { ...base, ...withContinent, ...withSector, ...withCoords }
     })
   }, [lobbyMapData, lobbyMode])
 
@@ -358,7 +360,7 @@ export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
         <>
           {assassinationMode && (
             <AssassinationContract
-              target={targetPlayer}
+              {...(targetPlayer ? { target: targetPlayer } : {})}
               territoryCount={targetTerritories.length}
               armyCount={targetArmyCount}
               awaiting={awaitingContract}

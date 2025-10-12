@@ -29,12 +29,13 @@ export interface MatchSvcClientOptions {
 
 export class MatchSvcClient {
   private baseUrl: string
-  private hmacSecret?: string
+  private hmacSecret: string
   private fetchImpl: typeof fetch
 
   constructor(opts: MatchSvcClientOptions = {}) {
     this.baseUrl = opts.baseUrl ?? process.env.MATCHSVC_URL ?? 'http://localhost:8085'
-    this.hmacSecret = opts.hmacSecret ?? process.env.MATCHSVC_HMAC_SECRET
+    // Ensure a concrete string to satisfy exactOptionalPropertyTypes
+    this.hmacSecret = opts.hmacSecret ?? process.env.MATCHSVC_HMAC_SECRET ?? ''
     this.fetchImpl = opts.fetchImpl ?? fetch
   }
 

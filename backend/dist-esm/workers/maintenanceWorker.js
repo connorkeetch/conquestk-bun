@@ -1,7 +1,7 @@
+import { getEngine as getOddsEngine, setEngine as setOddsEngine, setLogger as setOddsLogger, simulateBattle as simulateBattleOdds, } from '@conquestk/shared/odds';
 import { Worker } from 'bullmq';
 import { maintenanceService } from '../services/maintenanceService.js';
 import { oddsMetrics } from '../services/metricsService.js';
-import { getEngine as getOddsEngine, setEngine as setOddsEngine, setLogger as setOddsLogger, simulateBattle as simulateBattleOdds } from '@conquestk/shared/odds';
 import { queueService } from '../services/queueService.js';
 import { logger } from '../utils/logger.js';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -200,7 +200,9 @@ export class MaintenanceWorker {
             });
         }
         catch (e) {
-            logger.warn('⚠️ Nightly odds shadow verify failed', { error: e instanceof Error ? e.message : e });
+            logger.warn('⚠️ Nightly odds shadow verify failed', {
+                error: e instanceof Error ? e.message : e,
+            });
         }
     }
     shutdown() {
