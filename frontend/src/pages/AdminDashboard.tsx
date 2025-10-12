@@ -92,6 +92,14 @@ export default function AdminDashboard() {
       gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
     }
   } | null>(null)
+  const [matchStatus, setMatchStatus] = useState<null | {
+    ok: boolean
+    service: { url: string; health: string; statusCode?: number }
+    auth: { configured: boolean; test: string; statusCode?: number }
+    subscriber: { active: boolean }
+    metrics?: { queueDepth?: Record<string, number>; matchesFormedTotal?: number; presenceOnline?: number } | null
+    ts: string
+  }>(null)
 
   const Sparkline = ({ points }: { points: Array<{ ts: number; rate: number }> }) => {
     if (!points || points.length === 0) return null
@@ -139,17 +147,19 @@ export default function AdminDashboard() {
         }
         setError(null)
 
-        const [statusData, adminData, featureFlagData, oddsData] = await Promise.all([
+        const [statusData, adminData, featureFlagData, oddsData, matchSvc] = await Promise.all([
           adminService.getSystemStatus(),
           adminService.getAdminInfo(),
           adminService.getFeatureFlags(),
           adminService.getOddsHistory(24),
+          adminService.getMatchSvcStatus(),
         ])
 
         setSystemStatus(statusData)
         setAdminInfo(adminData)
         setFeatureFlags(featureFlagData ?? [])
         setOddsHistory(oddsData)
+        setMatchStatus(matchSvc)
         await fetchActivityLogs()
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to load dashboard data'

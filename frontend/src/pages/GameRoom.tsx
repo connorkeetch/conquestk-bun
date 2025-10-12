@@ -2021,7 +2021,7 @@ export default function GameRoom() {
                                   | null) ||
                                 ((pl.preferred_color as string | null) ?? null) ||
                                 '#9CA3AF'
-                              return {
+                              const base = {
                                 id: pl.userId || pl.id,
                                 userId: pl.userId || pl.id,
                                 username: pl.username,
@@ -2030,14 +2030,17 @@ export default function GameRoom() {
                                 armies: 0,
                                 cards: [],
                                 isEliminated: false,
-                                isAi: pl.isAi,
                                 aiDifficulty: pl.aiDifficulty ?? null,
-                                teamId: pl.teamId ?? undefined,
                                 treasures: [],
                               }
+                              return {
+                                ...base,
+                                ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
+                                ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
+                              } as any
                             })
                       }
-                      currentPlayerId={currentGame?.currentPlayer}
+                      {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
                       territories={
                         currentGame
                           ? Object.fromEntries(
@@ -2388,7 +2391,7 @@ export default function GameRoom() {
                                     : (base as any)
                                 })
                           }
-                          currentPlayerId={currentGame?.currentPlayer}
+                          {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
                           territories={
                             currentGame
                               ? Object.fromEntries(
@@ -2422,9 +2425,10 @@ export default function GameRoom() {
                         <LazyChatLogPanel
                           gameId={currentRoom?.id || roomId}
                           currentUserId={user.id}
-                          userTeamId={
-                            currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
-                          }
+                          {...(() => {
+                            const teamId = currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
+                            return teamId !== undefined ? { userTeamId: teamId } : { userTeamId: null }
+                          })()}
                           onLogFocus={(territories) => {
                             const focus = territories[territories.length - 1]
                             if (focus) dispatch(selectTerritory(focus))
@@ -2509,7 +2513,10 @@ export default function GameRoom() {
                     <LazyChatLogPanel
                       gameId={currentRoom?.id || roomId}
                       currentUserId={user.id}
-                      userTeamId={currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId}
+                      {...(() => {
+                        const teamId = currentGame?.players?.find((gp) => gp.userId === user.id)?.teamId
+                        return teamId !== undefined ? { userTeamId: teamId } : { userTeamId: null }
+                      })()}
                       onLogFocus={(territories) => {
                         const focus = territories[territories.length - 1]
                         if (focus) dispatch(selectTerritory(focus))
@@ -2544,7 +2551,7 @@ export default function GameRoom() {
                                   | null) ||
                                 ((pl.preferred_color as string | null) ?? null) ||
                                 '#9CA3AF'
-                              return {
+                              const base = {
                                 id: pl.userId || pl.id,
                                 userId: pl.userId || pl.id,
                                 username: pl.username,
@@ -2553,14 +2560,17 @@ export default function GameRoom() {
                                 armies: 0,
                                 cards: [],
                                 isEliminated: false,
-                                isAi: pl.isAi,
                                 aiDifficulty: pl.aiDifficulty ?? null,
-                                teamId: pl.teamId ?? undefined,
                                 treasures: [],
                               }
+                              return {
+                                ...base,
+                                ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
+                                ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
+                              } as any
                             })
                       }
-                      currentPlayerId={currentGame?.currentPlayer}
+                      {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
                       territories={
                         currentGame
                           ? Object.fromEntries(
@@ -2762,7 +2772,10 @@ export default function GameRoom() {
                     <LazyTabbedGameChat
                       gameId={currentRoom.id}
                       currentUserId={user.id}
-                      userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
+                      {...(() => {
+                        const teamId = currentGame?.players?.find((p) => p.userId === user.id)?.teamId
+                        return teamId !== undefined ? { userTeamId: teamId } : { userTeamId: null }
+                      })()}
                       className="h-full"
                       onLogFocus={(territories) => {
                         const focus = territories[territories.length - 1]
@@ -2910,7 +2923,7 @@ export default function GameRoom() {
                               | null) ||
                             ((pl.preferred_color as string | null) ?? null) ||
                             '#9CA3AF'
-                          return {
+                          const base = {
                             id: pl.userId || pl.id,
                             userId: pl.userId || pl.id,
                             username: pl.username,
@@ -2919,14 +2932,17 @@ export default function GameRoom() {
                             armies: 0,
                             cards: [],
                             isEliminated: false,
-                            isAi: pl.isAi,
                             aiDifficulty: pl.aiDifficulty ?? null,
-                            teamId: pl.teamId ?? undefined,
                             treasures: [],
                           }
+                          return {
+                            ...base,
+                            ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
+                            ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
+                          } as any
                         })
                   }
-                  currentPlayerId={currentGame.currentPlayer}
+                  {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
                   territories={Object.fromEntries(
                     (currentGame.board || []).map((t) => [
                       t.id,

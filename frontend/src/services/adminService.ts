@@ -148,6 +148,7 @@ class AdminService {
   private baseUrl = '/admin'
   private performanceUrl = '/performance'
   private benchmarkUrl = '/benchmark'
+  private matchsvcUrl = '/matchsvc'
 
   // ============= ADMIN INFO =============
 
@@ -471,6 +472,20 @@ class AdminService {
   }> {
     const response = await apiClient.post(`${this.benchmarkUrl}/ai-eval-bench`, body)
     return response.data?.data ?? response.data
+  }
+
+  // ============= MATCH SERVICE =============
+  async getMatchSvcStatus(): Promise<{
+    ok: boolean
+    service: { url: string; health: string; statusCode?: number }
+    auth: { configured: boolean; test: 'ok' | 'unauthorized' | 'skipped' | 'error'; statusCode?: number }
+    redis: { healthy: boolean; message: string }
+    subscriber: { active: boolean }
+    metrics?: { queueDepth?: Record<string, number>; matchesFormedTotal?: number; presenceOnline?: number } | null
+    ts: string
+  }> {
+    const response = await apiClient.get(`${this.matchsvcUrl}/status`)
+    return response.data
   }
 
   async getDeadLetters(params: {

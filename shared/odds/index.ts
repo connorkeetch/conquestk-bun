@@ -228,9 +228,45 @@ export async function evaluateCandidates(
   candidates: EvalCandidate[],
   opts?: { difficulty?: 'recruit' | 'commander' | 'grandmaster' },
 ): Promise<number[]> {
+  // Fast path: attack-only batches → typed-array bulk exact odds to reduce JS<->WASM overhead
+  const allAttack = candidates.length > 0 && candidates.every((c) => c.kind === 'attack')
+  if (allAttack) {
+    try {
+      const wasm = await getWasmEngine()
+      const byId = new Map(state.territories.map((t) => [t.id, t]))
+      const n = candidates.length
+      const att = new Uint16Array(n)
+      const def = new Uint16Array(n)
+      const invalid = new Uint8Array(n)
+      for (let i = 0; i < n; i++) {
+        const c = candidates[i] as Extract<EvalCandidate, { kind: 'attack' }>
+        const from = byId.get(c.from)
+        const to = byId.get(c.to)
+        const ok = !!from && !!to && from!.ownerId === state.currentPlayerId && to!.ownerId !== state.currentPlayerId
+        if (ok) {
+          const a = Math.max(0, (from!.armies | 0) - 1)
+          const d = Math.max(0, to!.armies | 0)
+          att[i] = a
+          def[i] = d
+          invalid[i] = a < 1 ? 1 : 0 // maintain legacy: 0 attackers → score 0
+        } else {
+          att[i] = 0
+          def[i] = 1 // force probability 0 for invalids
+          invalid[i] = 1
+        }
+      }
+      const probs = (await wasm.bulkExactOdds(att, def)) as unknown as Float64Array
+      const out = Array.from({ length: n }, (_, i) => (invalid[i] ? 0 : probs[i]!))
+      return out
+    } catch {
+      // fall back to generic path below
+    }
+  }
+
+  // Generic path: try WASM struct-based API; fall back to TS implementation
   try {
     const wasm = await getWasmEngine()
-    return wasm.ai_evaluate(state, candidates, opts) as unknown as number[]
+    return (await wasm.ai_evaluate(state, candidates, opts)) as unknown as number[]
   } catch {
     // TS fallback: score attacks by exact DP odds; others score 0
     const territoryById = new Map(state.territories.map((t) => [t.id, t]))
@@ -247,7 +283,7 @@ export async function evaluateCandidates(
         ) {
           const att = Math.max(0, (from.armies | 0) - 1)
           const def = Math.max(0, to.armies | 0)
-          scores.push(computeConquestProbability(att, def))
+          scores.push(att < 1 ? 0 : computeConquestProbability(att, def))
         } else scores.push(0)
       } else {
         scores.push(0)
