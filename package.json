@@ -4,6 +4,7 @@
   "description": "A full-stack Risk-like multiplayer board game",
   "main": "index.js",
   "scripts": {
+    "prebuild": "cd shared/wasm-odds && npm run build:ts",
     "setup": "node scripts/setup-check.js",
     "dev": "powershell -ExecutionPolicy Bypass -File ./scripts/start-dev.ps1",
     "dev:backend": "cd backend && npm run dev",
