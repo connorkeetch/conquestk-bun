@@ -18,6 +18,7 @@ import { GameLifecycleService } from './gameLifecycleService.js'
 import { socketPayloadMetrics } from './metricsService.js'
 import { queueService } from './queueService.js'
 import { registerSocketServer } from './socketRegistry.js'
+import { matchPresenceOnline, matchPresenceOffline, matchPresenceMove } from './matchSvcIntegration.js'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -410,6 +411,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   io.on('connection', (socket: AuthenticatedSocket) => {
     logger.info(`User ${socket.userId} connected`)
 
+    // Best-effort presence to matchsvc
+    if (socket.userId) {
+      void matchPresenceOnline(socket.userId, socket.id)
+    }
+
     // Initialize latency tracking for this socket
     // Socket.io automatically tracks latency via ping/pong, we can access it later if needed
     if (socket.userId) {
@@ -513,6 +519,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           player: normalizedPlayer,
         })
 
+        // Best-effort presence move to room
+        void matchPresenceMove(userId, undefined, normalizedRoomId)
+
         const cachedState = await gameStateCache.getGameState<SerializedGameState>(normalizedRoomId)
         let serializedState = serializeGameStateForClient(cachedState)
 
@@ -573,6 +582,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           aiPlayerId: player?.aiPlayerId ?? null,
           isAi: player?.isAi === true,
         })
+        // Best-effort presence move from room
+        void matchPresenceMove(userId, normalizedRoomId, undefined)
         logger.info(`User ${userId} left game channel ${channel}`)
       }),
     )
@@ -1088,6 +1099,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         socket.joinedGameRooms?.clear()
+        // Best-effort presence offline
+        void matchPresenceOffline(userId, socket.id)
       } catch (error) {
         logger.error('Disconnect handler error:', error)
       }
