@@ -243,14 +243,15 @@ export default function AdminGameDetailsPage() {
       if (!gameId || activeTab !== 'moves') return
       try {
         const offset = (movesPage - 1) * movesLimit
-        const result = await adminService.getGameMoves(gameId, {
+        const moveOpts = {
           limit: movesLimit,
           offset,
-          moveType: moveTypeFilter || undefined,
-          playerId: movesPlayerFilter || undefined,
-          turn: movesTurnFilter ? Number.parseInt(movesTurnFilter, 10) : undefined,
-          sort: 'created_at_desc',
-        })
+          sort: 'created_at_desc' as const,
+          ...(moveTypeFilter ? { moveType: moveTypeFilter } : {}),
+          ...(movesPlayerFilter ? { playerId: movesPlayerFilter } : {}),
+          ...(movesTurnFilter ? { turn: Number.parseInt(movesTurnFilter, 10) } : {}),
+        }
+        const result = await adminService.getGameMoves(gameId, moveOpts)
         setMoves(result.moves)
         setMovesTotal(result.total)
       } catch (_err) {

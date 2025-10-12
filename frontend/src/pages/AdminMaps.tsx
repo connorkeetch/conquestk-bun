@@ -512,10 +512,10 @@ export const AdminMaps: React.FC = () => {
       setPreviewDetails({
         territories,
         adjacencies,
-        imageWidth: resolvedImageWidth,
-        imageHeight: resolvedImageHeight,
-        canvasWidth: metadataWidth,
-        canvasHeight: metadataHeight,
+        ...(typeof resolvedImageWidth === 'number' ? { imageWidth: resolvedImageWidth } : {}),
+        ...(typeof resolvedImageHeight === 'number' ? { imageHeight: resolvedImageHeight } : {}),
+        ...(typeof metadataWidth === 'number' ? { canvasWidth: metadataWidth } : {}),
+        ...(typeof metadataHeight === 'number' ? { canvasHeight: metadataHeight } : {}),
       })
 
       setPreviewMap((current) => {
@@ -523,14 +523,17 @@ export const AdminMaps: React.FC = () => {
           return current
         }
 
+        const maybeW =
+          typeof resolvedImageWidth === 'number' ? resolvedImageWidth : current.imageWidth
+        const maybeH =
+          typeof resolvedImageHeight === 'number' ? resolvedImageHeight : current.imageHeight
+
         return {
           ...current,
-          imageWidth: resolvedImageWidth ?? current.imageWidth,
-          imageHeight: resolvedImageHeight ?? current.imageHeight,
-          image_width:
-            typeof data.image_width === 'number' ? data.image_width : current.image_width,
-          image_height:
-            typeof data.image_height === 'number' ? data.image_height : current.image_height,
+          ...(typeof maybeW === 'number' ? { imageWidth: maybeW } : {}),
+          ...(typeof maybeH === 'number' ? { imageHeight: maybeH } : {}),
+          ...(typeof data.image_width === 'number' ? { image_width: data.image_width } : {}),
+          ...(typeof data.image_height === 'number' ? { image_height: data.image_height } : {}),
         }
       })
     } catch (error: unknown) {
@@ -564,7 +567,7 @@ export const AdminMaps: React.FC = () => {
     try {
       await api.patch(`/admin/maps/${mapId}/status`, {
         status: newStatus,
-        notes: notes,
+        ...(notes ? { notes } : {}),
       })
       await loadMaps()
       const updateMapState = (map: Map | null): Map | null => {
@@ -574,9 +577,11 @@ export const AdminMaps: React.FC = () => {
           status: newStatus as Map['status'],
         }
         if (newStatus === 'rejected') {
-          updatedMap.rejectionReason = notes
-        } else if (newStatus === 'approved') {
-          updatedMap.rejectionReason = undefined
+          return { ...updatedMap, ...(notes ? { rejectionReason: notes } : {}) }
+        }
+        if (newStatus === 'approved') {
+          const { rejectionReason: _ignore, ...rest } = updatedMap
+          return rest as Map
         }
         return updatedMap
       }
@@ -1528,7 +1533,6 @@ export const AdminMaps: React.FC = () => {
                                   armies={0}
                                   showArmies={false}
                                   color="#6b7280"
-                                  outlineColor={undefined}
                                   shape="circle"
                                   isSelected={false}
                                   isDragging={false}

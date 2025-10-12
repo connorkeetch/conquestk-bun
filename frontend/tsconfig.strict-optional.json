@@ -80,11 +80,13 @@
     "src/pages/FriendsPage.tsx",
     "src/pages/CommunityPage.tsx",
     "src/pages/Statistics.tsx",
-    "src/pages/ComingSoon.tsx",
-    "src/pages/Maps.tsx"
+    "src/pages/ComingSoon.tsx"
     ,
-    "src/pages/LobbyPage.tsx",
-    "src/pages/CreateGamePage.tsx",
-    "src/pages/Settings.tsx"
+    "src/pages/AdminDashboard.tsx",
+    "src/pages/AdminGames.tsx",
+    "src/pages/AdminUsers.tsx",
+    "src/pages/AdminGameDetails.tsx",
+    "src/pages/AdminMaps.tsx",
+    "src/pages/AdminMapReview.tsx"
   ]
 }

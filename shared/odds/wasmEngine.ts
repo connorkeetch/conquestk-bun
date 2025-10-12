@@ -28,3 +28,8 @@ export async function oddsMatrix(maxAtt: number, maxDef: number, trials: number,
   const api = await getApi()
   return api.odds_matrix(maxAtt >>> 0, maxDef >>> 0, trials >>> 0, seedHi >>> 0, seedLo >>> 0) as unknown as number[][]
 }
+
+export async function exactOddsMatrix(maxAtt: number, maxDef: number) {
+  const api = await getApi()
+  return api.exact_odds_matrix(maxAtt >>> 0, maxDef >>> 0) as unknown as number[][]
+}

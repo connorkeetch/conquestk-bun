@@ -32,6 +32,22 @@ services:
       timeout: 5s
       retries: 5
 
+  matchsvc:
+    build:
+      context: ./services/matchsvc
+    container_name: conquestk-matchsvc
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MATCHSVC_PORT=8085
+      - MATCHSVC_DISABLE_AUTH=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8085:8085"
+
 volumes:
   postgres_data:
     name: conquestk-postgres-data

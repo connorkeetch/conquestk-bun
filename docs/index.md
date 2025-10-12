@@ -27,6 +27,7 @@ Use this index to jump directly to the information you need.
 - [reference/architecture.md](reference/architecture.md) – system design, packages, and deployment shape
 - [reference/development.md](reference/development.md) – local environment setup and workflow commands
 - [reference/deployment.md](reference/deployment.md) – promotion checklist for staging and production
+- [reference/matchsvc.md](reference/matchsvc.md) – Go microservice for presence, matchmaking, and ratings
 - [reference/ai-discovery.md](reference/ai-discovery.md) – AI opponent turn pipeline, telemetry, and decision contract
 - [reference/changelog.md](reference/changelog.md) – notable changes and release notes
 - [guides/coding-standards.md](guides/coding-standards.md) – linting, testing, and review expectations

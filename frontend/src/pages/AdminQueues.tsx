@@ -3,7 +3,6 @@ import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { adminService } from '../services/adminService'
 import { apiClient } from '../services/api'
 import { API_URL } from '../config'
-import { apiClient } from '../services/api'
 
 type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
 

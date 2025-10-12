@@ -58,6 +58,7 @@ export default function AdminDashboard() {
   const [refreshingFlags, setRefreshingFlags] = useState(false)
   const [updatingFlag, setUpdatingFlag] = useState<string | null>(null)
   const [cacheClearing, setCacheClearing] = useState(false)
+  const [runningOddsVerify, setRunningOddsVerify] = useState(false)
   const [activityLogs, setActivityLogs] = useState<AdminActivityLog[]>([])
   const [activityError, setActivityError] = useState<string | null>(null)
   const [loadingActivity, setLoadingActivity] = useState(false)
@@ -83,7 +84,7 @@ export default function AdminDashboard() {
     const ys = points.map((p) => p.rate)
     const minX = Math.min(...xs)
     const maxX = Math.max(...xs)
-    const minY = 0
+    // const minY = 0
     const maxY = Math.max(0.001, Math.max(...ys))
     const normX = (x: number) =>
       pad + ((x - minX) / Math.max(1, maxX - minX)) * (width - pad * 2)
@@ -148,6 +149,25 @@ export default function AdminDashboard() {
     },
     [fetchActivityLogs],
   )
+
+  const handleRunOddsVerify = useCallback(async () => {
+    try {
+      setRunningOddsVerify(true)
+      toast.loading('Running odds shadow verification…', { id: 'odds-run' })
+      const result = await adminService.runOddsShadowVerify({ trials: 100_000 })
+      toast.success(
+        `Odds verify complete: ${result.trials.toLocaleString()} trials, divergences ${result.divergences}, rate ${(result.divergenceRate * 100).toFixed(4)}%`,
+        { id: 'odds-run' },
+      )
+      const oddsData = await adminService.getOddsHistory(24)
+      setOddsHistory(oddsData)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to run odds verification'
+      toast.error(msg, { id: 'odds-run' })
+    } finally {
+      setRunningOddsVerify(false)
+    }
+  }, [])
 
   useEffect(() => {
     void loadDashboardData()
@@ -303,7 +323,7 @@ export default function AdminDashboard() {
   const handleSaveFeatureFlag = async () => {
     if (!editingFlag) return
 
-    let parsedConfig: Record<string, unknown> | undefined
+    let parsedConfig: Record<string, unknown> = {}
     if (editConfig.trim().length > 0) {
       try {
         parsedConfig = JSON.parse(editConfig)
@@ -311,8 +331,6 @@ export default function AdminDashboard() {
         toast.error('Config must be valid JSON')
         return
       }
-    } else {
-      parsedConfig = {}
     }
 
     const dependencies = editDependencies
@@ -329,7 +347,7 @@ export default function AdminDashboard() {
         category: editCategory.trim() || null,
         config: parsedConfig,
         dependencies,
-        reason: editReason.trim() || undefined,
+        ...(editReason.trim() ? { reason: editReason.trim() } : {}),
       })
 
       toast.success('Feature flag updated')
@@ -499,6 +517,22 @@ export default function AdminDashboard() {
             <div className="glass-box-lg">
               <h2 className="text-xl font-bold mb-4">🛠️ Admin Tools</h2>
               <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => void handleRunOddsVerify()}
+                  disabled={runningOddsVerify}
+                  className="w-full text-left glass-box-sm hover:brightness-110 transition-all disabled:opacity-60"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold">Run Odds Shadow Verification (100k)</div>
+                      <div className="text-muted text-xs">
+                        Executes parallel shadow comparisons and updates the divergence metrics
+                      </div>
+                    </div>
+                    <div className="text-sm">{runningOddsVerify ? 'Running…' : 'Run now'}</div>
+                  </div>
+                </button>
                 <button
                   type="button"
                   onClick={handleClearCache}

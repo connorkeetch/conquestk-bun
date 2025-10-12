@@ -87,3 +87,14 @@ pub fn odds_matrix(max_att: u16, max_def: u16, trials: u32, seed_hi: u32, seed_l
 pub fn exact_odds(att_armies: u16, def_armies: u16) -> f64 {
     exact_win_probability(att_armies, def_armies)
 }
+
+#[wasm_bindgen]
+pub fn exact_odds_matrix(max_att: u16, max_def: u16) -> JsValue {
+    let mut matrix: Vec<Vec<f64>> = vec![vec![0.0; max_def as usize + 1]; max_att as usize + 1];
+    for a in 0..=max_att {
+        for d in 0..=max_def {
+            matrix[a as usize][d as usize] = exact_win_probability(a, d);
+        }
+    }
+    serde_wasm_bindgen::to_value(&matrix).unwrap()
+}
