@@ -8,7 +8,7 @@ import (
 
     "github.com/conquestk/matchsvc/pkg/config"
     "github.com/conquestk/matchsvc/pkg/metrics"
-    "github.com/go-redis/redis/v9"
+    "github.com/redis/go-redis/v9"
     "github.com/rs/zerolog/log"
 )
 
@@ -242,4 +242,3 @@ func (s *Service) publish(ctx context.Context, payload map[string]any) {
     b, _ := json.Marshal(payload)
     _ = s.rdb.Publish(ctx, eventsChannel, b).Err()
 }
-

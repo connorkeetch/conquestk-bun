@@ -6,7 +6,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/go-redis/redis/v9"
+    "github.com/redis/go-redis/v9"
 )
 
 type Service struct {
@@ -62,4 +62,3 @@ func (s *Service) GetMatch(ctx context.Context, id string) (any, int, error) {
 }
 
 func matchKey(id string) string { return fmt.Sprintf("match:%s", id) }
-

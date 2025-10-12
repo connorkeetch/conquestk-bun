@@ -11,7 +11,7 @@ import (
 
     "github.com/conquestk/matchsvc/pkg/config"
     "github.com/conquestk/matchsvc/pkg/metrics"
-    "github.com/go-redis/redis/v9"
+    "github.com/redis/go-redis/v9"
 )
 
 type EnqueueRequest struct {
@@ -268,4 +268,3 @@ func randomSeed() int64 {
     n, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
     return n.Int64()
 }
-
