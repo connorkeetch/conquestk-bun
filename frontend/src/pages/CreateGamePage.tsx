@@ -661,13 +661,14 @@ const CreateGamePage: React.FC = () => {
         mapId: finalMap,
         movementType: fortificationToMovementType(finalFortification),
         fogOfWar,
-        turnTimerSeconds:
-          typeof turnTimeLimit === 'number' ? Math.trunc(turnTimeLimit * 60) : undefined,
+        ...(typeof turnTimeLimit === 'number'
+          ? { turnTimerSeconds: Math.trunc(turnTimeLimit * 60) }
+          : {}),
         timeBankSeconds:
           typeof timeBankMinutes === 'number' ? Math.max(0, Math.trunc(timeBankMinutes * 60)) : 0,
         allowTeamPlay: finalTeams > 0,
         teamMode: finalTeams > 0 ? 'teams' : 'none',
-        numberOfTeams: finalTeams > 0 ? finalTeams : undefined,
+        ...(finalTeams > 0 ? { numberOfTeams: finalTeams } : {}),
         gameMode: finalGameMode,
         capitalsEnabled: finalGameMode === 'capitals',
         useTerritoryModifiers: finalModifiers,

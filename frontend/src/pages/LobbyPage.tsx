@@ -123,13 +123,13 @@ const normalizeLobbyRoom = (room: RawLobbyRoom): NormalizedLobbyRoom => {
 
   return {
     ...room,
-    isRanked,
-    currentPlayers,
-    playerCount,
-    turnTimerSeconds,
-    fogOfWar,
-    cardTradeMode,
-    bonusType,
+    ...(typeof isRanked === 'boolean' ? { isRanked } : {}),
+    ...(typeof currentPlayers === 'number' ? { currentPlayers } : {}),
+    ...(typeof playerCount === 'number' ? { playerCount } : {}),
+    ...(typeof turnTimerSeconds === 'number' ? { turnTimerSeconds } : {}),
+    ...(fogOfWar ? { fogOfWar } : {}),
+    ...(cardTradeMode ? { cardTradeMode } : {}),
+    ...(bonusType ? { bonusType } : {}),
   }
 }
 
@@ -517,15 +517,15 @@ const LobbyPage: React.FC = () => {
       > = {}
       for (const [id, m] of Object.entries(meta)) {
         map[id] = {
-          turnEndsAt: m.turnExpiresAt ? Date.parse(m.turnExpiresAt) : undefined,
+          ...(m.turnExpiresAt ? { turnEndsAt: Date.parse(m.turnExpiresAt) } : {}),
           timeBankSecondsRemaining:
             typeof m.timeBankSecondsRemaining === 'number'
               ? Math.max(0, Math.trunc(m.timeBankSecondsRemaining))
               : null,
           queueAhead: m.queueAhead ?? null,
           currentTurnUsername: m.currentTurnUsername ?? null,
-          isYourTurn: m.isYourTurn ?? undefined,
-          phase: typeof m.phase === 'string' ? m.phase : undefined,
+          ...(typeof m.isYourTurn === 'boolean' ? { isYourTurn: m.isYourTurn } : {}),
+          ...(typeof m.phase === 'string' ? { phase: m.phase } : {}),
         }
       }
       setMyGamesMeta(map)
