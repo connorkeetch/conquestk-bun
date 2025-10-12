@@ -61,5 +61,19 @@
     "src/components/InfoTooltip.tsx",
     "src/components/ProfilePage.tsx",
     "src/components/RankInsignia.tsx"
+    ,
+    "src/pages/Home.tsx",
+    "src/pages/Login.tsx",
+    "src/pages/Register.tsx",
+    "src/pages/ForgotPassword.tsx",
+    "src/pages/ResetPassword.tsx",
+    "src/pages/VerifyEmail.tsx",
+    "src/pages/VerifyEmailToken.tsx",
+    "src/pages/EmailVerificationPending.tsx",
+    "src/pages/PrivacyPage.tsx",
+    "src/pages/TermsPage.tsx",
+    "src/pages/NotFoundPage.tsx",
+    "src/pages/LearnPage.tsx",
+    "src/pages/PlayModePage.tsx"
   ]
 }
