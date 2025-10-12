@@ -23,10 +23,14 @@ jobs:
           profile: minimal
           override: true
 
-      - name: Setup wasm-pack
+      - name: Setup wasm-pack (latest)
         uses: jetli/wasm-pack-action@v0.4.0
         with:
-          version: '0.13.1'
+          version: 'latest'
+
+      - name: Show wasm-pack version
+        run: |
+          wasm-pack --version || true
 
       - name: Use Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -42,3 +46,22 @@ jobs:
 
       - name: Run odds tests (Rust + TS)
         run: npm run odds:test
+
+      - name: Run odds benchmark (main branch only)
+        if: github.ref == 'refs/heads/main'
+        run: npm run odds:bench
+
+      - name: Commit updated benchmark docs
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet docs/tech/odds-engine.md; then
+            echo "No doc changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/tech/odds-engine.md docs/bench/bench-*.json || true
+          git commit -m "docs(odds): update latest benchmark results [skip ci]"
+          git push

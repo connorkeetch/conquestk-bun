@@ -4,7 +4,9 @@ import { performanceTestingService } from '../services/performanceTestingService
 import { logger } from '../utils/logger.js';
 import { handleRouteError } from '../utils/routeErrorHandler.js';
 import { oddsMetrics } from '../services/metricsService.js';
-import { getEngine as getOddsEngine, setEngine as setOddsEngine, setLogger as setOddsLogger, simulateBattle as simulateBattleOdds } from '@conquestk/shared/odds';
+import { Worker } from 'node:worker_threads';
+import os from 'node:os';
+import { getEngine as getOddsEngine, setEngine as setOddsEngine } from '@conquestk/shared/odds';
 const router = express.Router();
 router.get('/scenarios', authenticateToken, async (req, res) => {
     try {
@@ -205,31 +207,37 @@ router.post('/odds-shadow-verify', authenticateToken, async (req, res) => {
     try {
         const { trials = 100_000, attMin = 5, attMax = 40, defMin = 5, defMax = 35, seedHi = 0xA1B2C3D4, seedLo = 0x0F1E2D3C, kind = 'battle', } = req.body ?? {};
         const prevEngine = getOddsEngine();
-        let divergences = 0;
-        const passThrough = (entry) => logger.info('odds', entry);
-        setOddsLogger((entry) => {
-            try {
-                const e = entry;
-                if (e?.tag === 'odds-divergence')
-                    divergences++;
-            }
-            catch { }
-            passThrough(entry);
-        });
-        setOddsEngine('shadow');
         const start = Date.now();
-        for (let i = 0; i < trials; i++) {
-            const att = attMin + (i % Math.max(1, attMax - attMin + 1));
-            const def = defMin + (i % Math.max(1, defMax - defMin + 1));
-            const sh = (seedHi ^ i) >>> 0;
-            const sl = (seedLo ^ (i * 2654435761)) >>> 0;
-            await simulateBattleOdds({ seedHi: sh, seedLo: sl, attArmies: att, defArmies: def });
+        const cpuCount = Math.max(1, Math.min(os.cpus()?.length || 1, 8));
+        const per = Math.floor(trials / cpuCount);
+        const extras = trials % cpuCount;
+        const workers = [];
+        for (let w = 0; w < cpuCount; w++) {
+            const startIdx = w * per;
+            const count = per + (w === cpuCount - 1 ? extras : 0);
+            if (count <= 0)
+                continue;
+            const worker = new Promise((resolve, reject) => {
+                const modUrl = new URL('../workers/oddsShadowWorker.js', import.meta.url);
+                const wt = new Worker(modUrl, {
+                    workerData: { start: startIdx, count, attMin, attMax, defMin, defMax, seedHi, seedLo },
+                    execArgv: [],
+                });
+                wt.on('message', (msg) => resolve(msg));
+                wt.on('error', reject);
+                wt.on('exit', (code) => {
+                    if (code !== 0)
+                        reject(new Error(`Worker exited with code ${code}`));
+                });
+            });
+            workers.push(worker);
         }
+        const results = await Promise.all(workers);
+        const divergences = results.reduce((sum, r) => sum + (r?.divergences || 0), 0);
         const durationMs = Date.now() - start;
         const environment = process.env.NODE_ENV || 'development';
         oddsMetrics.recordBatch(environment, kind, Number(trials), divergences);
         setOddsEngine(prevEngine);
-        setOddsLogger((entry) => passThrough(entry));
         res.json({
             success: true,
             data: {

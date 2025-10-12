@@ -53,6 +53,10 @@ bash -lc '
   export PATH="$HOME/.cargo/bin:$PATH"
   # Install wasm-pack (prebuilt binary)
   curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+  # Show versions for traceability
+  rustc --version
+  cargo --version
+  wasm-pack --version
   # Build WASM package and then the workspace
   npm run odds:build
   npm run build
