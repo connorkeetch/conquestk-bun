@@ -5,7 +5,7 @@ import (
     "strings"
 
     "github.com/conquestk/matchsvc/pkg/config"
-    goredis "github.com/go-redis/redis/v9"
+    goredis "github.com/redis/go-redis/v9"
 )
 
 func MustNew(ctx context.Context, cfg config.Config) *goredis.Client {
@@ -25,4 +25,3 @@ func MustNew(ctx context.Context, cfg config.Config) *goredis.Client {
     }
     return client
 }
-
