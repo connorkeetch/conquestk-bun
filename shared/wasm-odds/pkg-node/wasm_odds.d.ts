@@ -7,4 +7,4 @@ export function monte_carlo(att_armies: number, def_armies: number, trials: numb
 export function odds_matrix(max_att: number, max_def: number, trials: number, seed_hi: number, seed_lo: number): any;
 export function exact_odds(att_armies: number, def_armies: number): number;
 export function exact_odds_matrix(max_att: number, max_def: number): any;
-export function ai_evaluate(state: any, candidates: any): any;
+export function ai_evaluate(state: any, candidates: any, opts: any): any;

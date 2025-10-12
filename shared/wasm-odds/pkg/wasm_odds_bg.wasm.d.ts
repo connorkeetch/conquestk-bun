@@ -8,7 +8,7 @@ export const monte_carlo: (a: number, b: number, c: number, d: number, e: number
 export const odds_matrix: (a: number, b: number, c: number, d: number, e: number) => any;
 export const exact_odds: (a: number, b: number) => number;
 export const exact_odds_matrix: (a: number, b: number) => any;
-export const ai_evaluate: (a: any, b: any) => any;
+export const ai_evaluate: (a: any, b: any, c: any) => any;
 export const __wbindgen_exn_store: (a: number) => void;
 export const __externref_table_alloc: () => number;
 export const __wbindgen_export_2: WebAssembly.Table;

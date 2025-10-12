@@ -18,7 +18,9 @@ impl Xoshiro128pp {
         let s1 = (sm.next_u64() as u32) ^ 0x9E37_79B9; // decorrelate
         let s2 = sm.next_u64() as u32;
         let s3 = (sm.next_u64() as u32) ^ 0x243F_6A88;
-        let mut rng = Self { s: [s0, s1, s2, s3] };
+        let mut rng = Self {
+            s: [s0, s1, s2, s3],
+        };
         // Avoid all-zero state
         if rng.s == [0, 0, 0, 0] {
             rng.s = [0x1, 0x2, 0x3, 0x4];
@@ -81,4 +83,3 @@ mod tests {
         }
     }
 }
-

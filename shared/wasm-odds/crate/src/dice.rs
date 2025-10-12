@@ -23,8 +23,12 @@ pub fn simulate_step(att_dice: u8, def_dice: u8, rng: &mut Xoshiro128pp) -> Step
     // Counting sort approach: tally dice faces for each side (1..6)
     let mut ac = [0u8; 7];
     let mut dc = [0u8; 7];
-    for _ in 0..att_dice { ac[roll_die(rng) as usize] += 1; }
-    for _ in 0..def_dice { dc[roll_die(rng) as usize] += 1; }
+    for _ in 0..att_dice {
+        ac[roll_die(rng) as usize] += 1;
+    }
+    for _ in 0..def_dice {
+        dc[roll_die(rng) as usize] += 1;
+    }
 
     // Extract top two dice (descending) for each side by walking counts
     let mut atop = [0u8; 2];
@@ -44,19 +48,32 @@ pub fn simulate_step(att_dice: u8, def_dice: u8, rng: &mut Xoshiro128pp) -> Step
             di += 1;
             cntd -= 1;
         }
-        if ai >= 2 && di >= 2 { break; }
+        if ai >= 2 && di >= 2 {
+            break;
+        }
     }
 
     let pairs = usize::min(att_dice as usize, def_dice as usize);
     let mut attacker_losses = 0u8;
     let mut defender_losses = 0u8;
     if pairs >= 1 {
-        if atop[0] <= dtop[0] { attacker_losses += 1; } else { defender_losses += 1; }
+        if atop[0] <= dtop[0] {
+            attacker_losses += 1;
+        } else {
+            defender_losses += 1;
+        }
     }
     if pairs >= 2 {
-        if atop[1] <= dtop[1] { attacker_losses += 1; } else { defender_losses += 1; }
+        if atop[1] <= dtop[1] {
+            attacker_losses += 1;
+        } else {
+            defender_losses += 1;
+        }
     }
-    StepOutcome { attacker_losses, defender_losses }
+    StepOutcome {
+        attacker_losses,
+        defender_losses,
+    }
 }
 
 #[cfg(test)]

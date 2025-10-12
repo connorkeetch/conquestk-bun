@@ -59,6 +59,14 @@ export default function AdminDashboard() {
   const [updatingFlag, setUpdatingFlag] = useState<string | null>(null)
   const [cacheClearing, setCacheClearing] = useState(false)
   const [runningOddsVerify, setRunningOddsVerify] = useState(false)
+  const [runningAiBench, setRunningAiBench] = useState(false)
+  const [aiBenchResult, setAiBenchResult] = useState<null | {
+    sets: number
+    candidatesPer: number
+    territories: number
+    ts: { totalMs: number; candidatesPerSec: number }
+    wasm: { totalMs: number; candidatesPerSec: number }
+  }>(null)
   const [activityLogs, setActivityLogs] = useState<AdminActivityLog[]>([])
   const [activityError, setActivityError] = useState<string | null>(null)
   const [loadingActivity, setLoadingActivity] = useState(false)
@@ -166,6 +174,24 @@ export default function AdminDashboard() {
       toast.error(msg, { id: 'odds-run' })
     } finally {
       setRunningOddsVerify(false)
+    }
+  }, [])
+
+  const handleRunAiEvalBench = useCallback(async () => {
+    try {
+      setRunningAiBench(true)
+      toast.loading('Running AI eval benchmark…', { id: 'ai-bench' })
+      const result = await adminService.runAiEvalBench({ sets: 50, candidatesPer: 200, territories: 120 })
+      setAiBenchResult(result)
+      toast.success(
+        `AI eval: TS ${Math.round(result.ts.candidatesPerSec).toLocaleString()} cps, WASM ${Math.round(result.wasm.candidatesPerSec).toLocaleString()} cps`,
+        { id: 'ai-bench' },
+      )
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to run AI eval benchmark'
+      toast.error(msg, { id: 'ai-bench' })
+    } finally {
+      setRunningAiBench(false)
     }
   }, [])
 
@@ -532,6 +558,27 @@ export default function AdminDashboard() {
                     </div>
                     <div className="text-sm">{runningOddsVerify ? 'Running…' : 'Run now'}</div>
                   </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRunAiEvalBench()}
+                  disabled={runningAiBench}
+                  className="w-full text-left glass-box-sm hover:brightness-110 transition-all disabled:opacity-60"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold">Run AI Eval Benchmark</div>
+                      <div className="text-muted text-xs">
+                        Compare TS vs WASM candidate scoring throughput (candidates/sec)
+                      </div>
+                    </div>
+                    <div className="text-sm">{runningAiBench ? 'Running…' : 'Run now'}</div>
+                  </div>
+                  {aiBenchResult && (
+                    <div className="mt-2 text-xs text-muted">
+                      TS: {Math.round(aiBenchResult.ts.candidatesPerSec).toLocaleString()} cps · WASM: {Math.round(aiBenchResult.wasm.candidatesPerSec).toLocaleString()} cps
+                    </div>
+                  )}
                 </button>
                 <button
                   type="button"

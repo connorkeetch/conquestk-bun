@@ -1,8 +1,8 @@
-pub mod rng;
-mod dice;
+mod ai_eval;
 pub mod battle;
+mod dice;
 mod dp;
 mod ffi;
-mod ai_eval;
+pub mod rng;
 
 pub use crate::ffi::*;
