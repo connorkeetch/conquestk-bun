@@ -2,6 +2,8 @@ import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { adminService } from '../services/adminService'
 import { apiClient } from '../services/api'
+import { API_URL } from '../config'
+import { apiClient } from '../services/api'
 
 type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
 
@@ -106,9 +108,15 @@ export default function AdminQueues() {
               type="button"
               onClick={async () => {
                 try {
-                  // Ask backend to set a short-lived HttpOnly cookie for the UI path
-                  await apiClient.post('/admin/queues/ui/grant')
-                  window.open('/api/admin/queues/ui', '_blank', 'noopener')
+                  // Ask backend to set a short-lived HttpOnly cookie for the UI path.
+                  // withCredentials is required for the browser to accept Set-Cookie on CORS responses in dev.
+                  await apiClient.post('/admin/queues/ui/grant', undefined, { withCredentials: true })
+
+                  // Open Bull Board on the backend origin to ensure the cookie is sent in dev (5173 -> 5001).
+                  const backendOrigin = API_URL.startsWith('http')
+                    ? API_URL.replace(/\/?api$/, '')
+                    : window.location.origin
+                  window.open(`${backendOrigin}/api/admin/queues/ui`, '_blank', 'noopener')
                 } catch (e) {
                   alert(
                     e instanceof Error
