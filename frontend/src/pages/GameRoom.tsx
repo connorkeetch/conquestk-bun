@@ -96,7 +96,7 @@ import {
 } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import { addClientLog, hydrateFromStorage, setDice } from '../store/uiRoomSlice'
-import type { AIDifficulty, PlayerColor } from '../types/game'
+import type { AIDifficulty, Player as PlayerType, PlayerColor } from '../types/game'
 // import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { formatStatus, hostDisplay, seatUsage } from '../utils/lobby'
 
@@ -2035,7 +2035,7 @@ export default function GameRoom() {
                                 ...base,
                                 ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
                                 ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
-                              } as unknown as Player
+                              } as unknown as PlayerType
                             })
                       }
                       {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
@@ -2385,8 +2385,8 @@ export default function GameRoom() {
                                     treasures: [],
                                   }
                                   return pl.teamId != null
-                                    ? ({ ...base, teamId: pl.teamId } as unknown as Player)
-                                    : (base as unknown as Player)
+                                    ? ({ ...base, teamId: pl.teamId } as unknown as PlayerType)
+                                    : (base as unknown as PlayerType)
                                 })
                           }
                           {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
@@ -2945,7 +2945,7 @@ export default function GameRoom() {
                             ...base,
                             ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
                             ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
-                          } as unknown as Player
+                          } as unknown as PlayerType
                         })
                   }
                   {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
