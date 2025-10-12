@@ -10,6 +10,9 @@ type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
 export default function AdminQueues() {
   const selectId = useId()
   const [selectedQueue, setSelectedQueue] = useState<QueueKey>('gameActions')
+  const [bbStatus, setBbStatus] = useState<
+    'unknown' | 'checking' | 'ok' | 'unauthorized' | 'forbidden' | 'not_found' | 'error'
+  >('unknown')
   const [dlq, setDlq] = useState<
     Array<{
       id: string
@@ -66,6 +69,33 @@ export default function AdminQueues() {
     }
   }, [])
 
+  const backendOrigin = useMemo(() => {
+    return API_URL.startsWith('http') ? API_URL.replace(/\/?api$/, '') : window.location.origin
+  }, [])
+
+  const bullBoardUrl = useMemo(() => `${backendOrigin}/api/admin/queues/ui`, [backendOrigin])
+
+  const checkBullBoard = useCallback(async () => {
+    try {
+      setBbStatus('checking')
+      // Ensure UI cookie is set and valid for the UI path
+      await apiClient.post('/admin/queues/ui/grant', undefined, { withCredentials: true })
+      const response = await apiClient.get('/admin/queues/ui', {
+        withCredentials: true,
+        validateStatus: () => true,
+        responseType: 'text',
+      })
+      const status = response.status
+      if (status === 200) setBbStatus('ok')
+      else if (status === 401) setBbStatus('unauthorized')
+      else if (status === 403) setBbStatus('forbidden')
+      else if (status === 404) setBbStatus('not_found')
+      else setBbStatus('error')
+    } catch {
+      setBbStatus('error')
+    }
+  }, [])
+
   useEffect(() => {
     void loadDlq()
   }, [loadDlq])
@@ -73,6 +103,11 @@ export default function AdminQueues() {
   useEffect(() => {
     void loadStats()
   }, [loadStats])
+
+  useEffect(() => {
+    // Run a quick reachability check on mount
+    void checkBullBoard()
+  }, [checkBullBoard])
 
   const queuesList = useMemo(
     () =>
@@ -104,6 +139,19 @@ export default function AdminQueues() {
         icon="📥"
         actions={
           <div className="flex items-center gap-2">
+            <div
+              className="px-2 py-1 text-xs rounded bg-surface-2 border border-border"
+              title={`Target: ${bullBoardUrl}`}
+            >
+              UI:
+              {bbStatus === 'ok' && <span className="ml-1 text-green-400">OK</span>}
+              {bbStatus === 'checking' && <span className="ml-1 text-muted">Checking…</span>}
+              {bbStatus === 'unauthorized' && <span className="ml-1 text-yellow-300">401</span>}
+              {bbStatus === 'forbidden' && <span className="ml-1 text-red-400">403</span>}
+              {bbStatus === 'not_found' && <span className="ml-1 text-red-400">404</span>}
+              {bbStatus === 'error' && <span className="ml-1 text-red-400">Error</span>}
+              {bbStatus === 'unknown' && <span className="ml-1 text-muted">Unknown</span>}
+            </div>
             <button
               type="button"
               onClick={async () => {
@@ -113,10 +161,7 @@ export default function AdminQueues() {
                   await apiClient.post('/admin/queues/ui/grant', undefined, { withCredentials: true })
 
                   // Open Bull Board on the backend origin to ensure the cookie is sent in dev (5173 -> 5001).
-                  const backendOrigin = API_URL.startsWith('http')
-                    ? API_URL.replace(/\/?api$/, '')
-                    : window.location.origin
-                  window.open(`${backendOrigin}/api/admin/queues/ui`, '_blank', 'noopener')
+                  window.open(bullBoardUrl, '_blank', 'noopener')
                 } catch (e) {
                   alert(
                     e instanceof Error
@@ -128,6 +173,13 @@ export default function AdminQueues() {
               className="px-3 py-2 text-sm rounded bg-purple-600 hover:brightness-110"
             >
               Open Bull Board
+            </button>
+            <button
+              type="button"
+              className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80"
+              onClick={() => void checkBullBoard()}
+            >
+              Check UI
             </button>
             <button
               type="button"
