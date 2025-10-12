@@ -1801,8 +1801,8 @@ export default function Settings() {
             isWorking: true,
             defaultValue: isSubscribed,
             disabled,
-            disabledReason,
-            statusMessage: pushStatusMessage ?? undefined,
+            ...(disabledReason ? { disabledReason } : {}),
+            ...(pushStatusMessage ? { statusMessage: pushStatusMessage } : {}),
             onChange: (value) => {
               if (typeof value !== 'boolean') {
                 return
@@ -1854,11 +1854,11 @@ export default function Settings() {
             isWorking: isSubscribed && pushBackendEnabled && !pushOperationInFlight,
             buttonText: '🔔 Send Test',
             disabled: !pushBackendEnabled || pushOperationInFlight,
-            disabledReason: !pushBackendEnabled
-              ? 'Push notifications are currently disabled by the server. Please try again later.'
+            ...( !pushBackendEnabled
+              ? { disabledReason: 'Push notifications are currently disabled by the server. Please try again later.' }
               : pushOperationInFlight
-                ? 'Please wait while we update your notification settings.'
-                : undefined,
+                ? { disabledReason: 'Please wait while we update your notification settings.' }
+                : {} ),
             onClick: async () => {
               if (!isSubscribed) {
                 alert('Please enable browser notifications first')

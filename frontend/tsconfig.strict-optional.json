@@ -81,7 +81,10 @@
     "src/pages/CommunityPage.tsx",
     "src/pages/Statistics.tsx",
     "src/pages/ComingSoon.tsx",
-    "src/pages/Maps.tsx",
-    "src/pages/AdminQueues.tsx"
+    "src/pages/Maps.tsx"
+    ,
+    "src/pages/LobbyPage.tsx",
+    "src/pages/CreateGamePage.tsx",
+    "src/pages/Settings.tsx"
   ]
 }
