@@ -265,12 +265,12 @@ const ClanDirectoryPage = () => {
     const payload: ClanCreateRequest = {
       name: trimmedName,
       tag: sanitizedTag,
-      motto: trimmedMotto.length > 0 ? trimmedMotto : undefined,
-      description: trimmedDescription.length > 0 ? trimmedDescription : undefined,
-      region: trimmedRegion.length > 0 ? trimmedRegion : undefined,
       recruitmentPolicy: createForm.recruitmentPolicy,
       recruitmentStatus: createForm.recruitmentStatus,
       privacy: createForm.privacy,
+      ...(trimmedMotto.length > 0 ? { motto: trimmedMotto } : {}),
+      ...(trimmedDescription.length > 0 ? { description: trimmedDescription } : {}),
+      ...(trimmedRegion.length > 0 ? { region: trimmedRegion } : {}),
     }
 
     setIsSubmittingClan(true)
@@ -341,10 +341,10 @@ const ClanDirectoryPage = () => {
   const handleFilterSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const nextFilters: ClanListFilters = {
-      search: search.trim() || undefined,
-      region: region.trim() || undefined,
-      recruitmentStatus,
-      privacy,
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(region.trim() ? { region: region.trim() } : {}),
+      ...(recruitmentStatus ? { recruitmentStatus } : {}),
+      ...(privacy ? { privacy } : {}),
       limit: DEFAULT_LIMIT,
     }
     setActiveFilters(nextFilters)

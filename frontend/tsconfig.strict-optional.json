@@ -75,5 +75,13 @@
     "src/pages/NotFoundPage.tsx",
     "src/pages/LearnPage.tsx",
     "src/pages/PlayModePage.tsx"
+    ,
+    "src/pages/Dashboard.tsx",
+    "src/pages/FriendsPage.tsx",
+    "src/pages/CommunityPage.tsx",
+    "src/pages/Statistics.tsx",
+    "src/pages/ComingSoon.tsx",
+    "src/pages/Maps.tsx",
+    "src/pages/AdminQueues.tsx"
   ]
 }
