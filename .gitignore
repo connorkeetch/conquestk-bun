@@ -99,6 +99,9 @@ temp/
 # Frontend build output served by backend
 backend/public/
 
+# Rust build outputs (keep wasm-pack pkg, ignore cargo target)
+shared/wasm-odds/crate/target/
+
 # Archive directory
 _archive/
 
