@@ -31,8 +31,16 @@ type Config struct {
 }
 
 func Load() Config {
+    // Railway sets PORT; prefer MATCHSVC_PORT, then PORT, then 8085
+    httpPort := os.Getenv("MATCHSVC_PORT")
+    if httpPort == "" {
+        httpPort = os.Getenv("PORT")
+    }
+    if httpPort == "" {
+        httpPort = "8085"
+    }
     cfg := Config{
-        HTTPPort:             getenv("MATCHSVC_PORT", "8085"),
+        HTTPPort:             httpPort,
         RedisURL:             getenv("REDIS_URL", "redis://localhost:6379"),
         DatabaseURL:          getenv("DATABASE_URL", ""),
         LogLevel:             getenv("LOG_LEVEL", "info"),
@@ -263,4 +271,3 @@ func withAuth(cfg Config, next http.Handler) http.Handler {
         next.ServeHTTP(w, r)
     })
 }
-

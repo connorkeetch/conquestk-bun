@@ -192,6 +192,18 @@ const ENV_VARIABLES: EnvVariable[] = [
     required: false,
     description: 'Public base URL for serving uploaded assets',
   },
+  // Match service (optional)
+  {
+    name: 'MATCHSVC_URL',
+    required: false,
+    defaultValue: 'http://localhost:8085',
+    description: 'Base URL for Go matchsvc',
+  },
+  {
+    name: 'MATCHSVC_HMAC_SECRET',
+    required: false,
+    description: 'HMAC secret for signing matchsvc requests',
+  },
 ]
 
 export function validateEnvironmentVariables(): void {

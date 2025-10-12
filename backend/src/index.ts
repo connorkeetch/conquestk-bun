@@ -208,6 +208,16 @@ initializeRedis()
     } catch (error) {
       logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error))
     }
+
+    // Start matchsvc subscriber after Redis is ready
+    if (redisClient) {
+      try {
+        const { startMatchSvcSubscriber } = await import('./services/matchSvcIntegration.js')
+        await startMatchSvcSubscriber(io)
+      } catch (e) {
+        logger.warn('⚠️ Failed to start matchsvc subscriber', getErrorMessage(e))
+      }
+    }
   })
   .catch((err) => {
     logger.warn('⚠️ Redis initialization failed, using in-memory adapters:', getErrorMessage(err))
