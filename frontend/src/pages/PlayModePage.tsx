@@ -85,8 +85,8 @@ const normalizeRoom = (
 
   return {
     ...room,
-    isRanked,
-    playerCount: currentPlayers,
+    ...(typeof isRanked === 'boolean' ? { isRanked } : {}),
+    ...(typeof currentPlayers === 'number' ? { playerCount: currentPlayers } : {}),
   }
 }
 
