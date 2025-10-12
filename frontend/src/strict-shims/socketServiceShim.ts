@@ -41,20 +41,10 @@ export const socketService = {
   attack: (_roomId: string, _fromId: string, _toId: string) => {
     /* no-op */
   },
-  transferConquestArmies: (
-    _roomId: string,
-    _fromId: string,
-    _toId: string,
-    _armies: number,
-  ) => {
+  transferConquestArmies: (_roomId: string, _fromId: string, _toId: string, _armies: number) => {
     /* no-op */
   },
-  fortify: (
-    _roomId: string,
-    _fromId: string,
-    _toId: string,
-    _armies: number,
-  ) => {
+  fortify: (_roomId: string, _fromId: string, _toId: string, _armies: number) => {
     /* no-op */
   },
   undoFortify: (_roomId: string) => {

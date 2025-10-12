@@ -828,9 +828,7 @@ export default function MapEditor() {
         t.id === territoryId
           ? {
               ...t,
-              ...(typeof newContinentId === 'string'
-                ? { continentId: newContinentId }
-                : {}),
+              ...(typeof newContinentId === 'string' ? { continentId: newContinentId } : {}),
             }
           : t,
       ),
@@ -1204,8 +1202,11 @@ export default function MapEditor() {
           if (!exists) {
             setState((prev) => {
               const base = { ...prev, adjacencies: [...prev.adjacencies, newAdjacency] }
-              const { firstSelectedTerritory: _o1, selectedTerritory: _o2, ...rest } = base as EditorState &
-                Record<string, unknown>
+              const {
+                firstSelectedTerritory: _o1,
+                selectedTerritory: _o2,
+                ...rest
+              } = base as EditorState & Record<string, unknown>
               return rest as EditorState
             })
           } else {
@@ -1580,14 +1581,14 @@ export default function MapEditor() {
                             </button>
                             <button
                               type="button"
-                      onClick={() => {
-                        setState((prev) => {
-                          const { imageUrl: _omit, ...rest } = prev
-                          return rest
-                        })
-                        setUploadError(null)
-                        setUploadInfo(null)
-                      }}
+                              onClick={() => {
+                                setState((prev) => {
+                                  const { imageUrl: _omit, ...rest } = prev
+                                  return rest
+                                })
+                                setUploadError(null)
+                                setUploadInfo(null)
+                              }}
                               className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs transition-colors"
                               disabled={isUploading}
                             >

@@ -4,10 +4,22 @@ export type PresenceOnlineRequest = { user_id: string; connection_id: string; ro
 export type PresenceOfflineRequest = { user_id: string; connection_id: string }
 export type PresenceMoveRequest = { user_id: string; from_room_id?: string; to_room_id?: string }
 
-export type EnqueueRequest = { user_id: string; mode: string; party_id?: string; elo?: number; map_prefs?: string[]; timeout_s?: number }
+export type EnqueueRequest = {
+  user_id: string
+  mode: string
+  party_id?: string
+  elo?: number
+  map_prefs?: string[]
+  timeout_s?: number
+}
 export type EnqueueResponse = { ticket_id: string }
 export type DequeueRequest = { ticket_id: string }
-export type PollResponse = { status: 'PENDING'|'FOUND'|'EXPIRED'; match_id?: string; players?: string[]; mode?: string }
+export type PollResponse = {
+  status: 'PENDING' | 'FOUND' | 'EXPIRED'
+  match_id?: string
+  players?: string[]
+  mode?: string
+}
 
 export interface MatchSvcClientOptions {
   baseUrl?: string // default http://localhost:8085
@@ -72,4 +84,3 @@ export class MatchSvcClient {
 export function hmacSha256Hex(data: string, secret: string): string {
   return crypto.createHmac('sha256', secret).update(data).digest('hex')
 }
-

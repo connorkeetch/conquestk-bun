@@ -137,7 +137,9 @@ router.post(
         tag: req.body.tag,
         ...(typeof req.body.motto === 'string' ? { motto: req.body.motto } : {}),
         ...(typeof req.body.description === 'string' ? { description: req.body.description } : {}),
-        ...(typeof req.body.crestAssetUrl === 'string' ? { crestAssetUrl: req.body.crestAssetUrl } : {}),
+        ...(typeof req.body.crestAssetUrl === 'string'
+          ? { crestAssetUrl: req.body.crestAssetUrl }
+          : {}),
         ...(typeof req.body.bannerAssetUrl === 'string'
           ? { bannerAssetUrl: req.body.bannerAssetUrl }
           : {}),

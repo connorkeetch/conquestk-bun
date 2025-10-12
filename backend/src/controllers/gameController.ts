@@ -152,8 +152,7 @@ export class GameController {
 
       // Ensure host is part of the room immediately after creation
       try {
-        const joinOptions =
-          typeof selectedColor === 'string' ? { selectedColor } : undefined
+        const joinOptions = typeof selectedColor === 'string' ? { selectedColor } : undefined
         await this.gameRoomService.joinRoom(room.id, hostId, joinOptions)
       } catch (joinError) {
         logger.warn('Host auto-join failed after room creation', {

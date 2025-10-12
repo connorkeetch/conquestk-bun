@@ -155,7 +155,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                               background: playerColorValue,
                               borderColor: playerPureWhite
                                 ? '#FFFFFF'
-                                : playerPremiumMeta?.outline ?? 'var(--panel-border)',
+                                : (playerPremiumMeta?.outline ?? 'var(--panel-border)'),
                               boxShadow: playerPureWhite
                                 ? '0 0 0 1px rgba(17,24,39,0.25)'
                                 : playerPremiumMeta?.effect

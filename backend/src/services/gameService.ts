@@ -2211,8 +2211,9 @@ export class GameService {
               }
               if (transferred > 0 && eliminatorHand.length >= cfg.handCap) {
                 const hasValidSet =
-                  findRedeemableSets(eliminatorHand as unknown as import('../types/game.js').Metal[])
-                    .length > 0
+                  findRedeemableSets(
+                    eliminatorHand as unknown as import('../types/game.js').Metal[],
+                  ).length > 0
                 eliminator.mustCashInTreasures = hasValidSet
                 if (hasValidSet && eliminator.id === updatedGameState.currentPlayer) {
                   updatedGameState.mustCashInTreasures = true

@@ -1,8 +1,16 @@
 // Thin loader that initializes the wasm-pack bundle in Node or browser.
 // No global fetch reliance: caller can pass a module URL or bytes.
 
-import type { StepResult as TStepResult, BattleResult as TBattleResult, MonteCarloResult as TMonteCarloResult } from './types.js'
-export type { TStepResult as StepResult, TBattleResult as BattleResult, TMonteCarloResult as MonteCarloResult }
+import type {
+  BattleResult as TBattleResult,
+  MonteCarloResult as TMonteCarloResult,
+  StepResult as TStepResult,
+} from './types.js'
+export type {
+  TStepResult as StepResult,
+  TBattleResult as BattleResult,
+  TMonteCarloResult as MonteCarloResult,
+}
 
 export interface WasmApi {
   version(): string
@@ -21,7 +29,13 @@ export interface WasmApi {
     seed_hi: number,
     seed_lo: number,
   ): TMonteCarloResult
-  odds_matrix(max_att: number, max_def: number, trials: number, seed_hi: number, seed_lo: number): unknown
+  odds_matrix(
+    max_att: number,
+    max_def: number,
+    trials: number,
+    seed_hi: number,
+    seed_lo: number,
+  ): unknown
   exact_odds(att_armies: number, def_armies: number): number
   exact_odds_matrix(max_att: number, max_def: number): number[][]
   ai_evaluate(state: unknown, candidates: unknown, opts?: { difficulty?: string }): number[]

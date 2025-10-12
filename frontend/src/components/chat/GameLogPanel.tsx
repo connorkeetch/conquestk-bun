@@ -11,9 +11,9 @@ import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
-import { gameService } from '../../services/gameService'
-import { deriveRoundMarkers, isParticipantInRoom } from '@/utils/gameLog'
 import { socketService } from '@/services/socketService'
+import { deriveRoundMarkers, isParticipantInRoom } from '@/utils/gameLog'
+import { gameService } from '../../services/gameService'
 
 type Props = {
   gameId: string
@@ -805,7 +805,14 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           const markers = deriveRoundMarkers(
             stats
               .filter((s) => s && typeof s === 'object' && 'timestamp' in s && 'turn' in s)
-              .map((s) => s as unknown as { turn: number; timestamp: string; players?: Array<{ eliminated?: boolean }> }),
+              .map(
+                (s) =>
+                  s as unknown as {
+                    turn: number
+                    timestamp: string
+                    players?: Array<{ eliminated?: boolean }>
+                  },
+              ),
           )
           for (const m of markers) {
             const ts = new Date(m.timestamp)
@@ -851,7 +858,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         // De-dup by identical text within 2 seconds across client + persisted logs
         const existing: { ts: Date; text: string }[] = [
           ...prev,
-          ...((clientLogs as Array<{ ts: string | number | Date; text: string }>)).map((l) => ({
+          ...(clientLogs as Array<{ ts: string | number | Date; text: string }>).map((l) => ({
             ts: new Date(l.ts),
             text: l.text,
           })),
@@ -863,9 +870,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         if (dup) return prev
         const base = { ts: targetTs, text }
         const withFocus =
-          focusTerritories && focusTerritories.length > 0
-            ? { ...base, focusTerritories }
-            : base
+          focusTerritories && focusTerritories.length > 0 ? { ...base, focusTerritories } : base
         return [withFocus as LogEntry, ...prev].slice(0, 500)
       })
     }
@@ -881,7 +886,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         // De-dup by identical text within 2 seconds across client + persisted logs
         const existing: { ts: Date; text: string }[] = [
           ...prev,
-          ...((clientLogs as Array<{ ts: string | number | Date; text: string }>)).map((l) => ({
+          ...(clientLogs as Array<{ ts: string | number | Date; text: string }>).map((l) => ({
             ts: new Date(l.ts),
             text: l.text,
           })),
@@ -894,9 +899,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         if (dup) return prev
         const base = { ts: targetTs, text: textFallback, rich }
         const withFocus =
-          focusTerritories && focusTerritories.length > 0
-            ? { ...base, focusTerritories }
-            : base
+          focusTerritories && focusTerritories.length > 0 ? { ...base, focusTerritories } : base
         return [withFocus as LogEntry, ...prev].slice(0, 500)
       })
     }
@@ -1352,8 +1355,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           <div className="space-y-3">
             {(
               [
-                ...((clientLogs as Array<{ ts: string | number | Date; text: string }>)).map(
-                  (l) => ({ ts: new Date(l.ts), text: l.text } as LogEntry),
+                ...(clientLogs as Array<{ ts: string | number | Date; text: string }>).map(
+                  (l) => ({ ts: new Date(l.ts), text: l.text }) as LogEntry,
                 ),
                 ...entries,
               ] as LogEntry[]

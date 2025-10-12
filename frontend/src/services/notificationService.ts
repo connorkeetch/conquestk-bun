@@ -69,9 +69,7 @@ class NotificationService {
       title: notification.title,
       message: notification.message,
       read: notification.read ?? false,
-      ...(typeof notification.actionUrl === 'string'
-        ? { actionUrl: notification.actionUrl }
-        : {}),
+      ...(typeof notification.actionUrl === 'string' ? { actionUrl: notification.actionUrl } : {}),
       ...(typeof notification.actionLabel === 'string'
         ? { actionLabel: notification.actionLabel }
         : {}),

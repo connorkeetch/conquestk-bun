@@ -510,18 +510,15 @@ const handleConversationMembersUpdate = async (
       }
     }
 
-    ackSuccess(
-      callback,
-      {
-        ok: errors.length === 0,
-        ...(typeof archivedState === 'boolean' ? { archived: archivedState } : {}),
-        ...(conversationSummary ? { conversation: conversationSummary } : {}),
-        ...(addedMembers.length > 0 ? { added: addedMembers } : {}),
-        ...(removedMembers.length > 0 ? { removed: removedMembers } : {}),
-        ...(roleResults.length > 0 ? { roleUpdates: roleResults } : {}),
-        ...(errors.length > 0 ? { errors } : {}),
-      },
-    )
+    ackSuccess(callback, {
+      ok: errors.length === 0,
+      ...(typeof archivedState === 'boolean' ? { archived: archivedState } : {}),
+      ...(conversationSummary ? { conversation: conversationSummary } : {}),
+      ...(addedMembers.length > 0 ? { added: addedMembers } : {}),
+      ...(removedMembers.length > 0 ? { removed: removedMembers } : {}),
+      ...(roleResults.length > 0 ? { roleUpdates: roleResults } : {}),
+      ...(errors.length > 0 ? { errors } : {}),
+    })
   } catch (error) {
     if (error instanceof ConversationError) {
       return ackError(callback, mapConversationError(error))
@@ -582,14 +579,11 @@ export const setupChatHandlers = (
 
         const metadata = sanitizeMetadata(data.metadata)
 
-        const { message } = await sendConversationMessageForUser(
-          socket,
-          {
-            ...data,
-            userId,
-            ...(metadata ? { metadata } : {}),
-          },
-        )
+        const { message } = await sendConversationMessageForUser(socket, {
+          ...data,
+          userId,
+          ...(metadata ? { metadata } : {}),
+        })
 
         ackSuccess(callback, {
           ok: true,

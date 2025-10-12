@@ -135,7 +135,7 @@ const describeActivityEvent = (event: ClanActivityEvent): ActivityDescription =>
 
       return {
         title: `${actor} earned +${formatNumber(Math.max(amount, 0))} clan XP`,
-        subtitle: subtitle.length > 0 ? subtitle : undefined,
+        ...(subtitle.length > 0 ? { subtitle } : {}),
         icon: <Trophy className="w-4 h-4" />,
         accentClass: 'text-primary-soft',
       }

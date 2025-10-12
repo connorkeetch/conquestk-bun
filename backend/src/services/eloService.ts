@@ -1,5 +1,5 @@
-import type { PoolClient, QueryResultRow } from 'pg'
 import { RANKS } from '@conquestk/shared/constants/ranks'
+import type { PoolClient, QueryResultRow } from 'pg'
 import type { DatabaseQueryResult } from '../config/database.js'
 import { query, transaction } from '../config/database.js'
 import { logger } from '../utils/logger.js'
@@ -62,11 +62,19 @@ const TIER_META: Record<string, { icon: string; color: string }> = {
   Worldbreaker: { icon: '☄️', color: '#8B0000' },
 }
 
-export const SKILL_TIERS: SkillTier[] = RANKS.map((r: { name: string; minRating: number }, i: number) => {
-  const nextMin = i < RANKS.length - 1 ? RANKS[i + 1].minRating : 10000
-  const meta = TIER_META[r.name] || { icon: '🏅', color: '#666' }
-  return { name: r.name, minRating: r.minRating, maxRating: nextMin - 1, icon: meta.icon, color: meta.color }
-})
+export const SKILL_TIERS: SkillTier[] = RANKS.map(
+  (r: { name: string; minRating: number }, i: number) => {
+    const nextMin = i < RANKS.length - 1 ? RANKS[i + 1].minRating : 10000
+    const meta = TIER_META[r.name] || { icon: '🏅', color: '#666' }
+    return {
+      name: r.name,
+      minRating: r.minRating,
+      maxRating: nextMin - 1,
+      icon: meta.icon,
+      color: meta.color,
+    }
+  },
+)
 
 export class EloService {
   private calculateKFactor(

@@ -49,17 +49,12 @@ export class MapAssetWorker {
           queue.name,
           async (job: Job<{ batchSize?: number; minAgeMinutes?: number }>) => {
             if (job.name && job.name !== 'map-assets:purge') return null
-            await this.runOnce(
-              'interval',
-              {
-                ...(typeof job.data?.batchSize === 'number'
-                  ? { batchSize: job.data.batchSize }
-                  : {}),
-                ...(typeof job.data?.minAgeMinutes === 'number'
-                  ? { minAgeMinutes: job.data.minAgeMinutes }
-                  : {}),
-              },
-            )
+            await this.runOnce('interval', {
+              ...(typeof job.data?.batchSize === 'number' ? { batchSize: job.data.batchSize } : {}),
+              ...(typeof job.data?.minAgeMinutes === 'number'
+                ? { minAgeMinutes: job.data.minAgeMinutes }
+                : {}),
+            })
             return { ok: true }
           },
           { connection },
@@ -83,9 +78,12 @@ export class MapAssetWorker {
     }
 
     if (!initialized) {
-      logger.warn('Failed to initialize map-assets scheduler after retries; falling back to setInterval', {
-        error: lastError instanceof Error ? lastError.message : lastError,
-      })
+      logger.warn(
+        'Failed to initialize map-assets scheduler after retries; falling back to setInterval',
+        {
+          error: lastError instanceof Error ? lastError.message : lastError,
+        },
+      )
       if (DEFAULT_INTERVAL_MS > 0) {
         this.timer = setInterval(() => {
           this.runOnce('interval').catch((error) => {

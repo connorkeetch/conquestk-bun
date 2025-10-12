@@ -1,17 +1,20 @@
 #!/usr/bin/env node
+
 // Benchmark simulateBattle throughput for TS vs WASM engines.
 // Writes JSON to stdout and to docs/bench/bench-battle.json when possible.
 
-import { performance } from 'node:perf_hooks'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 import { setEngine, simulateBattle } from '@conquestk/shared/odds'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min }
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
 
 async function benchEngine(kind, N) {
   setEngine(kind)
@@ -20,7 +23,7 @@ async function benchEngine(kind, N) {
   for (let i = 0; i < N; i++) {
     const att = randInt(5, 40)
     const def = randInt(5, 35)
-    const seedHi = (0xABCD0000 ^ i) >>> 0
+    const seedHi = (0xabcd0000 ^ i) >>> 0
     const seedLo = (0x12345678 ^ (i * 1103515245)) >>> 0
     const t0 = performance.now()
     await simulateBattle({ seedHi, seedLo, attArmies: att, defArmies: def })
@@ -45,4 +48,7 @@ async function main() {
   } catch {}
 }
 
-main().catch((e) => { console.error(e); process.exit(1) })
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

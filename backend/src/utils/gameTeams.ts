@@ -24,4 +24,3 @@ export function arePlayersTeammates(
   if (!teamA || !teamB) return false
   return teamA === teamB
 }
-

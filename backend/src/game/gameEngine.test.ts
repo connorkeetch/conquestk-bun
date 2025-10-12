@@ -531,7 +531,9 @@ describe('GameEngine', () => {
       const hillState = gameState.kingOfTheHillState!
       expect(hillState.currentHillTerritoryId).toBe('territory-3')
 
-      const hill = gameState.board.find((territory) => territory.id === hillState.currentHillTerritoryId)
+      const hill = gameState.board.find(
+        (territory) => territory.id === hillState.currentHillTerritoryId,
+      )
       expect(hill?.ownerId).toBe('neutral')
       expect(hill?.armies).toBe(9)
     })
@@ -545,7 +547,12 @@ describe('GameEngine', () => {
           rotationInterval: null,
         },
       }
-      let gameState = gameEngine.initializeGame('room-hold', players, staticHillConfig, mapOverrides)
+      let gameState = gameEngine.initializeGame(
+        'room-hold',
+        players,
+        staticHillConfig,
+        mapOverrides,
+      )
 
       const hillId = gameState.kingOfTheHillState?.currentHillTerritoryId
       expect(hillId).toBeDefined()

@@ -146,7 +146,9 @@ const findImageFile = (
 
 async function resolveCreatorUserId(explicit?: string): Promise<string> {
   if (explicit) return explicit
-  const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
+  const { query } = (await import(
+    '../config/database.js'
+  )) as typeof import('../config/database.js')
   const admin = await query<{ id: string }>(
     'SELECT id FROM users WHERE is_admin = TRUE ORDER BY created_at ASC LIMIT 1',
   )
@@ -157,7 +159,9 @@ async function resolveCreatorUserId(explicit?: string): Promise<string> {
 }
 
 async function resolveAdminUserId(): Promise<string> {
-  const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
+  const { query } = (await import(
+    '../config/database.js'
+  )) as typeof import('../config/database.js')
   const admin = await query<{ id: string }>(
     'SELECT id FROM users WHERE is_admin = TRUE ORDER BY created_at ASC LIMIT 1',
   )
@@ -240,7 +244,9 @@ async function run(): Promise<void> {
       }
 
       // Skip if a map or draft with this name already exists (default behavior)
-      const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
+      const { query } = (await import(
+        '../config/database.js'
+      )) as typeof import('../config/database.js')
       const existingMap = await query<{ id: string }>(
         'SELECT id FROM maps WHERE LOWER(name) = LOWER($1) LIMIT 1',
         [data.name.trim()],
@@ -550,14 +556,12 @@ async function run(): Promise<void> {
         // Post-insert row counts (authoritative from DB)
         try {
           const { query } = (await import('../config/database.js')) as any
-          const t = await query(
-            'SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1',
-            [created.id],
-          )
-          const c = await query(
-            'SELECT COUNT(*) AS c FROM map_sectors WHERE map_id = $1',
-            [created.id],
-          )
+          const t = await query('SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1', [
+            created.id,
+          ])
+          const c = await query('SELECT COUNT(*) AS c FROM map_sectors WHERE map_id = $1', [
+            created.id,
+          ])
           const a = await query(
             'SELECT COUNT(*) AS c FROM territory_adjacencies WHERE map_id = $1',
             [created.id],
@@ -626,7 +630,9 @@ async function run(): Promise<void> {
     if (endpoint && bucket && publicBase) {
       const oldPrefix = `${endpoint}/${bucket}`
       const like = `${oldPrefix}/%`
-      const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
+      const { query } = (await import(
+        '../config/database.js'
+      )) as typeof import('../config/database.js')
 
       // Update maps table
       const mapsToUpdate = await query<{ total: string }>(

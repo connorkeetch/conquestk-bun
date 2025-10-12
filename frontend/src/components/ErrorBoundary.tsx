@@ -114,7 +114,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             </p>
 
             {/* Show error details in development */}
-            {(typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'development') && (
+            {typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'development' && (
               <details className="text-left text-sm text-muted mb-4">
                 <summary className="cursor-pointer text-red-300 hover:text-red-200">
                   Error Details (Dev Only)

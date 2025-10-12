@@ -50,7 +50,15 @@ describe('isParticipantInRoom', () => {
   const baseGame = {
     roomId: 'r1',
     players: [
-      { id: 'u1', username: 'U1', color: '#f00', armies: 0, territories: [], cards: [], isEliminated: false },
+      {
+        id: 'u1',
+        username: 'U1',
+        color: '#f00',
+        armies: 0,
+        territories: [],
+        cards: [],
+        isEliminated: false,
+      },
     ],
     currentPlayer: 'u1',
     phase: 'reinforcement',
@@ -76,4 +84,3 @@ describe('isParticipantInRoom', () => {
     expect(isParticipantInRoom(baseRoom, baseGame, 'u9')).toBe(false)
   })
 })
-

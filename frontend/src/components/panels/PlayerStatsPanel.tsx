@@ -42,17 +42,17 @@ export default function PlayerStatsPanel({
       roomStatus === 'completed' ||
       roomStatus === 'abandoned'
     // Check membership from live game or room roster (pre-hydration)
-    const isMemberInGame = ((currentGame?.players || []) as Array<{ userId?: string; id: string }>).some(
-      (p) => (p.userId ?? p.id) === user.id,
-    )
-    const isMemberInRoom = ((currentRoom.players || []) as Array<{ userId?: string; id: string }>).some(
-      (p) => (p.userId ?? p.id) === user.id,
-    )
+    const isMemberInGame = (
+      (currentGame?.players || []) as Array<{ userId?: string; id: string }>
+    ).some((p) => (p.userId ?? p.id) === user.id)
+    const isMemberInRoom = (
+      (currentRoom.players || []) as Array<{ userId?: string; id: string }>
+    ).some((p) => (p.userId ?? p.id) === user.id)
     const isMember = isMemberInGame || isMemberInRoom
     // Use game state to determine elimination when available
-    const player = ((currentGame?.players || []) as Array<{ userId?: string; id: string; isEliminated?: boolean }>).find(
-      (p) => (p.userId ?? p.id) === user.id,
-    )
+    const player = (
+      (currentGame?.players || []) as Array<{ userId?: string; id: string; isEliminated?: boolean }>
+    ).find((p) => (p.userId ?? p.id) === user.id)
     const isEliminated = Boolean(player?.isEliminated)
     return isActive && isMember && !isEliminated && !gameOver
   }, [user, currentRoom, currentGame])

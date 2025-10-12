@@ -1,7 +1,7 @@
-import type React from 'react'
-import { RANK_COLORS } from '../constants/colors'
 // Shared ranks come from the shared package (ESM named exports)
 import * as ranksModule from '@conquestk/shared/constants/ranks'
+import type React from 'react'
+import { RANK_COLORS } from '../constants/colors'
 
 export interface ConquestRank {
   name: string
@@ -51,7 +51,8 @@ const COLOR_BY_NAME: Record<string, string> = {
   Worldbreaker: RANK_COLORS.WORLDBREAKER.base,
 }
 
-const SHARED_RANKS = (ranksModule as unknown as { RANKS?: Array<{ name: string; minRating: number }> }).RANKS || []
+const SHARED_RANKS =
+  (ranksModule as unknown as { RANKS?: Array<{ name: string; minRating: number }> }).RANKS || []
 
 export const CONQUEST_RANKS: ConquestRank[] = SHARED_RANKS.map((r) => ({
   name: r.name,

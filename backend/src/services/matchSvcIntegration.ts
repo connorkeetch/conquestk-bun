@@ -1,8 +1,8 @@
-import type { Server } from 'socket.io'
-import { logger } from '../utils/logger.js'
-import { getRedisClient } from '../config/redis.js'
-import RedisPkg from 'ioredis'
 import { MatchSvcClient } from '@conquestk/match-client'
+import RedisPkg from 'ioredis'
+import type { Server } from 'socket.io'
+import { getRedisClient } from '../config/redis.js'
+import { logger } from '../utils/logger.js'
 
 const baseUrl = process.env.MATCHSVC_URL || 'http://localhost:8085'
 const hmac = process.env.MATCHSVC_HMAC_SECRET
@@ -11,7 +11,11 @@ export const matchClient = new MatchSvcClient({ baseUrl, hmacSecret: hmac })
 
 export async function matchPresenceOnline(userId: string, connectionId: string, roomId?: string) {
   try {
-    await matchClient.presenceOnline({ user_id: userId, connection_id: connectionId, ...(roomId ? { room_id: roomId } : {}) })
+    await matchClient.presenceOnline({
+      user_id: userId,
+      connection_id: connectionId,
+      ...(roomId ? { room_id: roomId } : {}),
+    })
   } catch (e) {
     logger.debug('matchsvc presenceOnline failed (best-effort)', { error: (e as Error)?.message })
   }
@@ -27,7 +31,11 @@ export async function matchPresenceOffline(userId: string, connectionId: string)
 
 export async function matchPresenceMove(userId: string, fromRoomId?: string, toRoomId?: string) {
   try {
-    await matchClient.presenceMove({ user_id: userId, ...(fromRoomId ? { from_room_id: fromRoomId } : {}), ...(toRoomId ? { to_room_id: toRoomId } : {}) })
+    await matchClient.presenceMove({
+      user_id: userId,
+      ...(fromRoomId ? { from_room_id: fromRoomId } : {}),
+      ...(toRoomId ? { to_room_id: toRoomId } : {}),
+    })
   } catch (e) {
     logger.debug('matchsvc presenceMove failed (best-effort)', { error: (e as Error)?.message })
   }
@@ -101,4 +109,3 @@ export async function startMatchSvcSubscriber(io: Server) {
     logger.warn('matchsvc subscriber initialization failed', { error: (e as Error)?.message })
   }
 }
-

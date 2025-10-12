@@ -1,7 +1,7 @@
 import { GameEngine } from '../game/gameEngine.js'
-import { arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js'
 import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game.js'
+import { arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js'
 import { filterStateForPlanner } from './fogService.js'
 
 type FallbackReason = 'stubbed' | 'timeout' | 'aborted'
@@ -71,9 +71,10 @@ class AIDecisionService {
             | { fogOfWar?: 'off' | 'adjacent' | 'persistent' }
             | undefined
         )?.fogOfWar ?? 'off'
-      const effectiveState = fogMode === 'off'
-        ? request.gameState
-        : filterStateForPlanner(request.gameState, request.player.id)
+      const effectiveState =
+        fogMode === 'off'
+          ? request.gameState
+          : filterStateForPlanner(request.gameState, request.player.id)
 
       const plannedActions = await this.generatePlan({ ...request, gameState: effectiveState })
 
@@ -132,7 +133,7 @@ class AIDecisionService {
         return await this.generateGrandmasterPlan(request)
       default:
         return []
-      }
+    }
   }
 
   private async generateCommanderPlan(request: DecisionRequest): Promise<GameAction[]> {
@@ -201,7 +202,12 @@ class AIDecisionService {
 
     // 3) Attack: choose a high-value border within priority sector
     if (phase === 'attack') {
-      const attack = await this.findCommanderAttack(gameState, player.id, budget, request.difficulty)
+      const attack = await this.findCommanderAttack(
+        gameState,
+        player.id,
+        budget,
+        request.difficulty,
+      )
       if (attack) {
         if (!push(attack)) return actions
       }
@@ -272,7 +278,14 @@ class AIDecisionService {
       .filter(([k]) => k !== 'unknown')
       .sort((a, b) => b[1] - a[1])[0]?.[0]
 
-    const candidates: Array<{ from: string; to: string; score: number; armies: number; sectorBonus: number; isCapital: number }> = []
+    const candidates: Array<{
+      from: string
+      to: string
+      score: number
+      armies: number
+      sectorBonus: number
+      isCapital: number
+    }> = []
     for (const src of owned) {
       if (src.armies <= 3) continue
       for (const nid of src.adjacentTerritories) {
@@ -285,12 +298,26 @@ class AIDecisionService {
         const isCapital = tgt.isCapital === true ? 2 : 0
         const score = advantage * 2 + sectorBonus + isCapital
         if (advantage >= 1) {
-          candidates.push({ from: src.id, to: tgt.id, score, armies: attackDice, sectorBonus, isCapital })
+          candidates.push({
+            from: src.id,
+            to: tgt.id,
+            score,
+            armies: attackDice,
+            sectorBonus,
+            isCapital,
+          })
         } else if (
           advantage === 0 &&
           (budget.minAttackOddsByTier?.commander ?? 0.68) <= 0.68 // only very marginal equal-odds
         ) {
-          candidates.push({ from: src.id, to: tgt.id, score: score - 1, armies: attackDice, sectorBonus, isCapital })
+          candidates.push({
+            from: src.id,
+            to: tgt.id,
+            score: score - 1,
+            armies: attackDice,
+            sectorBonus,
+            isCapital,
+          })
         }
       }
     }
@@ -298,13 +325,18 @@ class AIDecisionService {
       const { evaluateCandidatesAdapter } = await import('./aiEvalAdapter.js')
       const state = {
         currentPlayerId: playerId,
-        territories: gameState.board.map((t) => ({ id: t.id, ownerId: t.ownerId || null, armies: Math.max(0, t.armies | 0) })),
+        territories: gameState.board.map((t) => ({
+          id: t.id,
+          ownerId: t.ownerId || null,
+          armies: Math.max(0, t.armies | 0),
+        })),
       }
       const evalCands = candidates.map((c) => ({ kind: 'attack' as const, from: c.from, to: c.to }))
       const scores = await evaluateCandidatesAdapter(state, evalCands, { difficulty })
       for (let i = 0; i < candidates.length; i++) {
         const p = scores[i] ?? 0
-        candidates[i]!.score = p * 100 + candidates[i]!.sectorBonus * 2 + candidates[i]!.isCapital * 3
+        candidates[i]!.score =
+          p * 100 + candidates[i]!.sectorBonus * 2 + candidates[i]!.isCapital * 3
       }
     } catch {
       // keep heuristic scores

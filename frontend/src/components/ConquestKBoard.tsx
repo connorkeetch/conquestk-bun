@@ -16,11 +16,11 @@ import {
 } from '../store/gameSlice'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { AssassinationContract } from './game/AssassinationContract'
-// import { GamePhaseControls } from './GamePhaseControls'
-import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
 // MapHeaderBar removed; floating zoom now in-map
 // MapSidebar removed; all zoom controls moved to header
 import { ConquestKMap } from './game/ConquestKMap'
+// import { GamePhaseControls } from './GamePhaseControls'
+import { KingOfTheHillPanel } from './game/KingOfTheHillPanel'
 import type { TerritoryDisplay, TerritoryDisplayMap } from './game/territoryDisplay'
 import { createTerritoryDisplayMap, normaliseModifierMap } from './game/territoryDisplay'
 

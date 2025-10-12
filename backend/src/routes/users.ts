@@ -1,7 +1,7 @@
+import { getRankForRating, RANKS } from '@conquestk/shared/constants/ranks'
 import bcrypt from 'bcryptjs'
 import { type Request, type Response, Router } from 'express'
 import { query } from '../config/database.js'
-import { RANKS, getRankForRating } from '@conquestk/shared/constants/ranks'
 import { PREMIUM_COLOR_KEYS } from '../constants/premium.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { profileService } from '../services/profileService.js'
@@ -187,7 +187,8 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     const user = result.rows[0]
     const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
-    const nextRank = RANKS.find((candidate: { minRating: number }) => candidate.minRating > rank.minRating) ?? null
+    const nextRank =
+      RANKS.find((candidate: { minRating: number }) => candidate.minRating > rank.minRating) ?? null
     const gamesPlayed = user.games_played || 0
     const wins = user.games_won || 0
     const recordedLosses: number | null = user.games_lost ?? null
@@ -265,7 +266,8 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     const user = result.rows[0]
     const elo = user.skill_rating || 800
     const rank = getConquestRank(elo)
-    const nextRank = RANKS.find((candidate: { minRating: number }) => candidate.minRating > rank.minRating) ?? null
+    const nextRank =
+      RANKS.find((candidate: { minRating: number }) => candidate.minRating > rank.minRating) ?? null
     const gamesPlayed = user.games_played || 0
     const wins = user.games_won || 0
     const recordedLosses: number | null = user.games_lost ?? null
@@ -402,7 +404,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     // Validate and accept tagline from the preselected list
     if (typeof tagline === 'string') {
-      const { isAllowedTagline } = await import('../constants/profileTaglines.js') as {
+      const { isAllowedTagline } = (await import('../constants/profileTaglines.js')) as {
         isAllowedTagline: (v: unknown) => v is string
       }
       const trimmed = tagline.trim()

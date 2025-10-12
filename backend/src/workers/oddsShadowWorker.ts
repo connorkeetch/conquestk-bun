@@ -13,16 +13,8 @@ type Payload = {
 }
 
 async function run() {
-  const {
-    start,
-    count,
-    attMin,
-    attMax,
-    defMin,
-    defMax,
-    seedHi,
-    seedLo,
-  } = (workerData || {}) as Payload
+  const { start, count, attMin, attMax, defMin, defMax, seedHi, seedLo } = (workerData ||
+    {}) as Payload
 
   setEngine('shadow')
   let divergences = 0
@@ -49,4 +41,3 @@ async function run() {
 }
 
 void run()
-

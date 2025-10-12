@@ -51,9 +51,17 @@ const ActiveGamesDropdown: React.FC = () => {
             currentTurnUsername?: string | null
           }
         >
-        const map: Record<string, { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string }> = {}
+        const map: Record<
+          string,
+          { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string }
+        > = {}
         for (const [id, t] of Object.entries(metaObj)) {
-          const entry: { expiresAt?: number; bank?: number; queueAhead?: number; currentName?: string } = {}
+          const entry: {
+            expiresAt?: number
+            bank?: number
+            queueAhead?: number
+            currentName?: string
+          } = {}
           const expires = t.turnExpiresAt ? Date.parse(t.turnExpiresAt) : null
           if (expires !== null) entry.expiresAt = expires
           if (typeof t.timeBankSecondsRemaining === 'number') {

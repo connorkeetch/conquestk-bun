@@ -1,5 +1,5 @@
-import { describe, expect, it } from '@jest/globals'
 import type { GameDelta } from '@conquestk/shared/types'
+import { describe, expect, it } from '@jest/globals'
 import { DeltaBuilder } from '../types/deltaUpdates.js'
 
 describe('DeltaBuilder compatibility with shared GameDelta', () => {

@@ -17,9 +17,7 @@ if (process.env.SENTRY_DSN) {
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
     // Release tracking (helpful for tracking which version has issues)
-    ...(process.env.npm_package_version
-      ? { release: process.env.npm_package_version }
-      : {}),
+    ...(process.env.npm_package_version ? { release: process.env.npm_package_version } : {}),
 
     // Security - don't send PII in production unless explicitly needed
     sendDefaultPii: process.env.NODE_ENV !== 'production',

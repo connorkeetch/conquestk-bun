@@ -2,7 +2,6 @@ import { treasureMetrics } from '../services/metricsService.js'
 import territoryModifierService, {
   type GameTerritoryModifier,
 } from '../services/territoryModifierService.js'
-import { getPlayerTeam as utilGetPlayerTeam, arePlayersTeammates as utilArePlayersTeammates } from '../utils/gameTeams.js'
 import type {
   AttackAction,
   BattleResult,
@@ -21,6 +20,10 @@ import type {
   TradeCardsAction,
   TreasureConfig,
 } from '../types/game.js'
+import {
+  arePlayersTeammates as utilArePlayersTeammates,
+  getPlayerTeam as utilGetPlayerTeam,
+} from '../utils/gameTeams.js'
 import {
   drawTreasure,
   ensureTreasureState,
@@ -219,7 +222,9 @@ export class GameEngine {
       case 'fortify':
         return { gameState: this.handleFortify(newState, action) }
       case 'transfer_conquest': {
-        const { fromTerritoryId, toTerritoryId, armies } = (action as import('../types/game.js').TransferConquestAction).payload
+        const { fromTerritoryId, toTerritoryId, armies } = (
+          action as import('../types/game.js').TransferConquestAction
+        ).payload
         const updated = this.transferConquestArmies(
           newState,
           action.playerId,
@@ -630,8 +635,8 @@ export class GameEngine {
       : config?.eligibleTerritoryIds
 
     const eligibleSet = new Set<string>(
-      (eligibleSource && eligibleSource.length > 0 ? eligibleSource : territoryIds).filter((id: string) =>
-        territoryIdSet.has(id),
+      (eligibleSource && eligibleSource.length > 0 ? eligibleSource : territoryIds).filter(
+        (id: string) => territoryIdSet.has(id),
       ),
     )
 

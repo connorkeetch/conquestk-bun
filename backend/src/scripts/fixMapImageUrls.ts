@@ -31,7 +31,9 @@ const parseArgs = (): Options => {
 
 async function run() {
   const opts = parseArgs()
-  const { query } = (await import('../config/database.js')) as typeof import('../config/database.js')
+  const { query } = (await import(
+    '../config/database.js'
+  )) as typeof import('../config/database.js')
 
   const endpoint = process.env.ASSET_ENDPOINT?.replace(/\/$/, '')
   const bucket = process.env.ASSET_BUCKET?.replace(/\/$/, '')

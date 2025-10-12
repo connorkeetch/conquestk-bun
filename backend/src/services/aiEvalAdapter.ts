@@ -1,5 +1,8 @@
+import {
+  computeConquestProbability,
+  evaluateCandidates as wasmEvaluate,
+} from '@conquestk/shared/odds'
 import { logger } from '../utils/logger.js'
-import { evaluateCandidates as wasmEvaluate, computeConquestProbability } from '@conquestk/shared/odds'
 
 export type EvalEngine = 'ts' | 'wasm' | 'shadow'
 
@@ -56,9 +59,14 @@ function scoreCandidatesTs(
     if (c.kind === 'attack') {
       const from = byId.get(c.from)
       const to = byId.get(c.to)
-      if (from && to && from.ownerId === state.currentPlayerId && to.ownerId !== state.currentPlayerId) {
+      if (
+        from &&
+        to &&
+        from.ownerId === state.currentPlayerId &&
+        to.ownerId !== state.currentPlayerId
+      ) {
         const att = Math.max(0, (from.armies | 0) - 1)
-        const def = Math.max(0, (to.armies | 0))
+        const def = Math.max(0, to.armies | 0)
         out.push(computeConquestProbability(att, def))
       } else out.push(0)
     } else out.push(0)

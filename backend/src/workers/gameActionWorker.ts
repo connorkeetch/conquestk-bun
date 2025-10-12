@@ -180,13 +180,11 @@ export class GameActionWorker {
       const computedReadableDelay =
         typeof process.env.AI_READABLE_DELAY_MS === 'string'
           ? Math.max(0, parseInt(process.env.AI_READABLE_DELAY_MS, 10) || 0)
-          : budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs
+          : (budgetOverrides?.readableDelayMs ?? baseBudget.readableDelayMs)
       const effectiveBudget: DecisionBudget = {
         ...baseBudget,
         ...(budgetOverrides || {}),
-        ...(computedReadableDelay !== undefined
-          ? { readableDelayMs: computedReadableDelay }
-          : {}),
+        ...(computedReadableDelay !== undefined ? { readableDelayMs: computedReadableDelay } : {}),
       }
 
       const streamEnabled = (process.env.AI_STREAM_ACTIONS ?? 'true').toLowerCase() !== 'false'
@@ -307,7 +305,7 @@ export class GameActionWorker {
             const last = updated.lastBattleResult
             if (last) {
               try {
-              const battleDelta: import('@conquestk/shared/types/delta').GameDelta =
+                const battleDelta: import('@conquestk/shared/types/delta').GameDelta =
                   DeltaBuilder.battleResult(
                     gameId,
                     last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
@@ -385,16 +383,13 @@ export class GameActionWorker {
               )
               await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
               if (updated.phase !== prevPhase) {
-              await this.deltaEmitter.emitPhaseChange(
-                gameId,
-                {
+                await this.deltaEmitter.emitPhaseChange(gameId, {
                   phase: updated.phase,
                   currentPlayer: updated.currentPlayer,
                   turn: updated.turn,
                   reinforcementArmies: Number(postBank),
                   ...(updated.version !== undefined ? { version: updated.version } : {}),
-                },
-              )
+                })
               }
             } catch {
               // Fallback to snapshot
@@ -653,7 +648,9 @@ export class GameActionWorker {
 
         case 'transfer_conquest': {
           // Post-conquest transfer: emit concise territory deltas
-          const payload = (action as Extract<import('../types/game.js').GameAction, { type: 'transfer_conquest' }>).payload as { fromTerritoryId: string; toTerritoryId: string; armies: number }
+          const payload = (
+            action as Extract<import('../types/game.js').GameAction, { type: 'transfer_conquest' }>
+          ).payload as { fromTerritoryId: string; toTerritoryId: string; armies: number }
           const transfer = await this.gameService.transferConquestArmies(
             gameId,
             playerId,
@@ -754,9 +751,11 @@ export class GameActionWorker {
                 ? (action as { payload?: { cards?: unknown[] } }).payload?.cards?.length
                 : Array.isArray(
                       (action as { payload?: { treasureSet?: unknown[] } }).payload?.treasureSet,
-                  )
-                  ? ((action as { payload?: { treasureSet?: unknown[] } }).payload
-                      ?.treasureSet as unknown[]).length
+                    )
+                  ? (
+                      (action as { payload?: { treasureSet?: unknown[] } }).payload
+                        ?.treasureSet as unknown[]
+                    ).length
                   : undefined
               const fullLog = {
                 ...baseLog,
@@ -781,7 +780,7 @@ export class GameActionWorker {
                 ? postPlayer?.mustCashInTreasures
                 : undefined
             const { emitFogFilteredDelta } = await import('../services/fogService.js')
-              const playerDelta = DeltaBuilder.playerUpdate(
+            const playerDelta = DeltaBuilder.playerUpdate(
               gameId,
               playerId,
               {
@@ -981,7 +980,7 @@ export class GameActionWorker {
 
     // Emit a consolidated fortify result delta for logging/UX purposes
     try {
-              const fortifyDelta: import('@conquestk/shared/types/delta').GameDelta = {
+      const fortifyDelta: import('@conquestk/shared/types/delta').GameDelta = {
         type: 'FORTIFY_RESULT',
         roomId: gameId,
         timestamp: Date.now(),

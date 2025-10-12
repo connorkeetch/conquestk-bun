@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { API_URL } from '../config'
 import { adminService } from '../services/adminService'
 import { apiClient } from '../services/api'
-import { API_URL } from '../config'
 
 type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
 
@@ -157,16 +157,14 @@ export default function AdminQueues() {
                 try {
                   // Ask backend to set a short-lived HttpOnly cookie for the UI path.
                   // withCredentials is required for the browser to accept Set-Cookie on CORS responses in dev.
-                  await apiClient.post('/admin/queues/ui/grant', undefined, { withCredentials: true })
+                  await apiClient.post('/admin/queues/ui/grant', undefined, {
+                    withCredentials: true,
+                  })
 
                   // Open Bull Board on the backend origin to ensure the cookie is sent in dev (5173 -> 5001).
                   window.open(bullBoardUrl, '_blank', 'noopener')
                 } catch (e) {
-                  alert(
-                    e instanceof Error
-                      ? e.message
-                      : 'Failed to prepare access for Bull Board',
-                  )
+                  alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
                 }
               }}
               className="px-3 py-2 text-sm rounded bg-purple-600 hover:brightness-110"

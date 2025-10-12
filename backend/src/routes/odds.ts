@@ -1,5 +1,5 @@
-import express from 'express'
 import { getEngine as getOddsEngine } from '@conquestk/shared/odds'
+import express from 'express'
 
 const router = express.Router()
 
@@ -19,7 +19,14 @@ async function checkWasmAvailability() {
 router.get('/status', async (_req, res) => {
   const engine = getOddsEngine()
   const wasm = await checkWasmAvailability()
-  res.json({ success: true, data: { engine, wasmAvailable: wasm.available, wasmVersion: wasm.available ? wasm.version : undefined } })
+  res.json({
+    success: true,
+    data: {
+      engine,
+      wasmAvailable: wasm.available,
+      wasmVersion: wasm.available ? wasm.version : undefined,
+    },
+  })
 })
 
 export default router
