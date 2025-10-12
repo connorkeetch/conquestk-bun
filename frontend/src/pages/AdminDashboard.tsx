@@ -560,6 +560,58 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Match Service */}
+        <div className="glass-box mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-semibold">Match Service</h2>
+            <button
+              type="button"
+              onClick={() => void loadDashboardData({ showLoader: false })}
+              className="text-sm px-3 py-1 rounded bg-primary hover:brightness-110"
+            >
+              Refresh
+            </button>
+          </div>
+          {matchStatus ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <div className="text-sm text-muted">Health</div>
+                <div className={matchStatus.ok ? 'text-green-400' : 'text-red-400'}>
+                  {matchStatus.service.health}
+                </div>
+                <div className="text-xs text-muted">Subscriber: {matchStatus.subscriber?.active ? 'active' : 'inactive'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted">Presence Online</div>
+                <div className="text-primary-soft text-xl">
+                  {matchStatus.metrics?.presenceOnline ?? 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted">Matches Formed</div>
+                <div className="text-primary-soft text-xl">
+                  {matchStatus.metrics?.matchesFormedTotal ?? 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted">Queue Depths</div>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {Object.entries(matchStatus.metrics?.queueDepth ?? {}).map(([mode, val]) => (
+                    <span key={mode} className="text-xs bg-surface-2 px-2 py-1 rounded">
+                      {mode}: {val}
+                    </span>
+                  ))}
+                  {Object.keys(matchStatus.metrics?.queueDepth ?? {}).length === 0 && (
+                    <span className="text-xs text-muted">none</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted">No match service data.</div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             {/* Admin Tools */}
