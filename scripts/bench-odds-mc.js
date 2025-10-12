@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+// Benchmark monte_carlo throughput for TS vs WASM.
+// Writes JSON to stdout and docs/bench/bench-mc.json.
+
+import { performance } from 'node:perf_hooks'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { setEngine, monteCarlo } from '@conquestk/shared/odds'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+function cases() {
+  return [
+    { att: 20, def: 15 },
+    { att: 35, def: 30 },
+    { att: 10, def: 8 },
+    { att: 50, def: 40 },
+  ]
+}
+
+async function benchEngine(kind, trials) {
+  setEngine(kind)
+  const items = cases()
+  const start = performance.now()
+  for (let i = 0; i < items.length; i++) {
+    const { att, def } = items[i]
+    const seedHi = (0xF00D0000 ^ i) >>> 0
+    const seedLo = (0xBEEF5678 ^ (i * 1103515245)) >>> 0
+    await monteCarlo({ attArmies: att, defArmies: def, trials, seedHi, seedLo })
+  }
+  const total = performance.now() - start
+  // Effective rolls per second approximated by (items * trials)/total
+  const opsPerSec = (items.length * trials) / (total / 1000)
+  return { engine: kind, totalMs: total, opsPerSec }
+}
+
+async function main() {
+  const trials = Number(process.env.MC_TRIALS || 50000)
+  const ts = await benchEngine('ts', trials)
+  const wasm = await benchEngine('wasm', trials)
+  const payload = { kind: 'mc', trials, ts, wasm, timestamp: new Date().toISOString() }
+  console.log(JSON.stringify(payload))
+  try {
+    const outDir = path.resolve(__dirname, '../docs/bench')
+    mkdirSync(outDir, { recursive: true })
+    writeFileSync(path.join(outDir, 'bench-mc.json'), JSON.stringify(payload, null, 2))
+  } catch {}
+}
+
+main().catch((e) => { console.error(e); process.exit(1) })

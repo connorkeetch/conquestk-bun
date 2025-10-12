@@ -1,0 +1,15 @@
+{
+  "kind": "mc",
+  "trials": 50000,
+  "ts": {
+    "engine": "ts",
+    "totalMs": 1092.7884139999999,
+    "opsPerSec": 183018.04579710707
+  },
+  "wasm": {
+    "engine": "wasm",
+    "totalMs": 203.736627,
+    "opsPerSec": 981659.5226149494
+  },
+  "timestamp": "2025-10-12T03:53:06.252Z"
+}
