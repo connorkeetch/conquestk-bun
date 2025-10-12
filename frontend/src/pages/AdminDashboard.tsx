@@ -97,7 +97,11 @@ export default function AdminDashboard() {
     service: { url: string; health: string; statusCode?: number }
     auth: { configured: boolean; test: string; statusCode?: number }
     subscriber: { active: boolean }
-    metrics?: { queueDepth?: Record<string, number>; matchesFormedTotal?: number; presenceOnline?: number } | null
+    metrics?: {
+      queueDepth?: Record<string, number>
+      matchesFormedTotal?: number
+      presenceOnline?: number
+    } | null
     ts: string
   }>(null)
 
@@ -579,7 +583,9 @@ export default function AdminDashboard() {
                 <div className={matchStatus.ok ? 'text-green-400' : 'text-red-400'}>
                   {matchStatus.service.health}
                 </div>
-                <div className="text-xs text-muted">Subscriber: {matchStatus.subscriber?.active ? 'active' : 'inactive'}</div>
+                <div className="text-xs text-muted">
+                  Subscriber: {matchStatus.subscriber?.active ? 'active' : 'inactive'}
+                </div>
               </div>
               <div>
                 <div className="text-sm text-muted">Presence Online</div>

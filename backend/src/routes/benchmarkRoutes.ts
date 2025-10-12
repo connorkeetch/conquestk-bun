@@ -1,11 +1,6 @@
 import os from 'node:os'
 import { Worker } from 'node:worker_threads'
-import {
-  getEngine as getOddsEngine,
-  setEngine as setOddsEngine,
-  setLogger as setOddsLogger,
-  simulateBattle as simulateBattleOdds,
-} from '@conquestk/shared/odds'
+import { getEngine as getOddsEngine, setEngine as setOddsEngine } from '@conquestk/shared/odds'
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { oddsMetrics } from '../services/metricsService.js'

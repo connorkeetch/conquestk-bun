@@ -478,10 +478,18 @@ class AdminService {
   async getMatchSvcStatus(): Promise<{
     ok: boolean
     service: { url: string; health: string; statusCode?: number }
-    auth: { configured: boolean; test: 'ok' | 'unauthorized' | 'skipped' | 'error'; statusCode?: number }
+    auth: {
+      configured: boolean
+      test: 'ok' | 'unauthorized' | 'skipped' | 'error'
+      statusCode?: number
+    }
     redis: { healthy: boolean; message: string }
     subscriber: { active: boolean }
-    metrics?: { queueDepth?: Record<string, number>; matchesFormedTotal?: number; presenceOnline?: number } | null
+    metrics?: {
+      queueDepth?: Record<string, number>
+      matchesFormedTotal?: number
+      presenceOnline?: number
+    } | null
     ts: string
   }> {
     const response = await apiClient.get(`${this.matchsvcUrl}/status`)

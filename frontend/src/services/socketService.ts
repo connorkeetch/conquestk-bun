@@ -844,7 +844,9 @@ class SocketService {
         ...(payload.currentTurnUserId !== undefined
           ? { currentTurnUserId: payload.currentTurnUserId ?? null }
           : {}),
-        ...(payload.turnExpiresAt !== undefined ? { turnExpiresAt: payload.turnExpiresAt ?? null } : {}),
+        ...(payload.turnExpiresAt !== undefined
+          ? { turnExpiresAt: payload.turnExpiresAt ?? null }
+          : {}),
         ...(typeof (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
           .timeBankSecondsRemaining !== 'undefined'
           ? {
@@ -865,8 +867,10 @@ class SocketService {
           (payload as Record<string, unknown>).statusMessageLevel === 'warn' ||
           (payload as Record<string, unknown>).statusMessageLevel === 'info')
           ? {
-              statusMessageLevel: (payload as Record<string, unknown>)
-                .statusMessageLevel as 'error' | 'info' | 'warn',
+              statusMessageLevel: (payload as Record<string, unknown>).statusMessageLevel as
+                | 'error'
+                | 'info'
+                | 'warn',
             }
           : {}),
         ...(typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
@@ -1016,8 +1020,10 @@ class SocketService {
           (payload as Record<string, unknown>).statusMessageLevel === 'warn' ||
           (payload as Record<string, unknown>).statusMessageLevel === 'info')
           ? {
-              statusMessageLevel: (payload as Record<string, unknown>)
-                .statusMessageLevel as 'error' | 'info' | 'warn',
+              statusMessageLevel: (payload as Record<string, unknown>).statusMessageLevel as
+                | 'error'
+                | 'info'
+                | 'warn',
             }
           : {}),
         ...(typeof (payload as Record<string, unknown>).usingTimeBank === 'boolean'
