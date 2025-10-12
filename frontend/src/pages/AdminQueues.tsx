@@ -157,12 +157,18 @@ export default function AdminQueues() {
                 try {
                   // Ask backend to set a short-lived HttpOnly cookie for the UI path.
                   // withCredentials is required for the browser to accept Set-Cookie on CORS responses in dev.
-                  await apiClient.post('/admin/queues/ui/grant', undefined, {
-                    withCredentials: true,
-                  })
+                  const resp = await apiClient.post<{ success: boolean; code?: string }>(
+                    '/admin/queues/ui/grant',
+                    undefined,
+                    { withCredentials: true },
+                  )
 
-                  // Open Bull Board on the backend origin to ensure the cookie is sent in dev (5173 -> 5001).
-                  window.open(bullBoardUrl, '_blank', 'noopener')
+                  // Prefer the GET-based accept flow for reliability in prod
+                  const code = (resp.data as any)?.code as string | undefined
+                  const url = code
+                    ? `${bullBoardUrl}/accept?code=${encodeURIComponent(code)}`
+                    : bullBoardUrl
+                  window.open(url, '_blank', 'noopener')
                 } catch (e) {
                   alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
                 }
