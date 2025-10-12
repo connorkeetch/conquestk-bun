@@ -50,6 +50,7 @@ export async function startMatchSvcSubscriber(io: Server) {
     }
     const sub = new (RedisPkg as unknown as typeof import('ioredis').default)(client.options as any)
     await sub.subscribe('matchsvc:events')
+    _subscriberActive = true
     sub.on('message', async (_channel: string, message: string) => {
       try {
         const payload = JSON.parse(message) as { type: string; [k: string]: unknown }
@@ -108,4 +109,9 @@ export async function startMatchSvcSubscriber(io: Server) {
   } catch (e) {
     logger.warn('matchsvc subscriber initialization failed', { error: (e as Error)?.message })
   }
+}
+
+let _subscriberActive = false
+export function isMatchSvcSubscriberActive(): boolean {
+  return _subscriberActive
 }

@@ -58,6 +58,7 @@ import mapWorkflowRoutes from './routes/mapWorkflow.js'
 import messagesRoutes from './routes/messages.js'
 import notificationRoutes from './routes/notifications.js'
 import oddsRoutes from './routes/odds.js'
+import matchsvcRoutes from './routes/matchsvc.js'
 import performanceRoutes from './routes/performanceRoutes.js'
 import { createPreferencesRouter } from './routes/preferences.js'
 import profileRoutes from './routes/profile.js'
@@ -366,6 +367,7 @@ app.use('/api/queues', queueRoutes)
 app.use('/api/performance', performanceRoutes)
 app.use('/api/benchmark', benchmarkRoutes)
 app.use('/api/odds', oddsRoutes)
+app.use('/api/matchsvc', matchsvcRoutes)
 // Mount Bull Board UI behind admin auth at /api/admin/queues/ui
 try {
   const bullBoardRouter = bullBoardRouterFactory()
