@@ -20,24 +20,41 @@ pub fn simulate_step(att_dice: u8, def_dice: u8, rng: &mut Xoshiro128pp) -> Step
     debug_assert!(att_dice >= 1 && att_dice <= 3);
     debug_assert!(def_dice >= 1 && def_dice <= 2);
 
-    let mut a = [0u8; 3];
-    let mut d = [0u8; 2];
-    for i in 0..att_dice as usize {
-        a[i] = roll_die(rng);
-    }
-    for i in 0..def_dice as usize {
-        d[i] = roll_die(rng);
-    }
-    let a_slice = &mut a[..att_dice as usize];
-    let d_slice = &mut d[..def_dice as usize];
-    sort_desc(a_slice);
-    sort_desc(d_slice);
+    // Counting sort approach: tally dice faces for each side (1..6)
+    let mut ac = [0u8; 7];
+    let mut dc = [0u8; 7];
+    for _ in 0..att_dice { ac[roll_die(rng) as usize] += 1; }
+    for _ in 0..def_dice { dc[roll_die(rng) as usize] += 1; }
 
-    let pairs = att_dice.min(def_dice) as usize;
+    // Extract top two dice (descending) for each side by walking counts
+    let mut atop = [0u8; 2];
+    let mut dtop = [0u8; 2];
+    let mut ai = 0usize;
+    let mut di = 0usize;
+    for face in (1..=6).rev() {
+        let mut cnt = ac[face as usize];
+        while cnt > 0 && ai < 2 {
+            atop[ai] = face as u8;
+            ai += 1;
+            cnt -= 1;
+        }
+        let mut cntd = dc[face as usize];
+        while cntd > 0 && di < 2 {
+            dtop[di] = face as u8;
+            di += 1;
+            cntd -= 1;
+        }
+        if ai >= 2 && di >= 2 { break; }
+    }
+
+    let pairs = usize::min(att_dice as usize, def_dice as usize);
     let mut attacker_losses = 0u8;
     let mut defender_losses = 0u8;
-    for i in 0..pairs {
-        if a_slice[i] <= d_slice[i] { attacker_losses += 1; } else { defender_losses += 1; }
+    if pairs >= 1 {
+        if atop[0] <= dtop[0] { attacker_losses += 1; } else { defender_losses += 1; }
+    }
+    if pairs >= 2 {
+        if atop[1] <= dtop[1] { attacker_losses += 1; } else { defender_losses += 1; }
     }
     StepOutcome { attacker_losses, defender_losses }
 }
@@ -58,4 +75,3 @@ mod tests {
         }
     }
 }
-

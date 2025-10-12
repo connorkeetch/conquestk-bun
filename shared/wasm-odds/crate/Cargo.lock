@@ -677,6 +677,7 @@ name = "wasm-odds"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "once_cell",
  "proptest",
  "serde",
  "serde-wasm-bindgen",

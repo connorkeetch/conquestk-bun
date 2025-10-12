@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
 
 // Exact transition probabilities for a single engagement based on dice counts.
 // Enumerates all dice outcomes (up to 6^5 = 7776) and returns probability of each loss pair.
@@ -32,22 +33,40 @@ fn compare_highest(mut a: Vec<u8>, mut d: Vec<u8>) -> (u8, u8) {
     (al, dl)
 }
 
-fn transitions(att_dice: u8, def_dice: u8) -> Vec<Trans> {
-    let a = dice_combos(att_dice as usize);
-    let d = dice_combos(def_dice as usize);
-    let total = (a.len() * d.len()) as f64;
-    let mut map: HashMap<(u8, u8), u32> = HashMap::new();
-    for av in &a {
-        for dv in &d {
-            let (al, dl) = compare_highest(av.clone(), dv.clone());
-            *map.entry((al, dl)).or_insert(0) += 1;
+static PRECOMP_TRANSITIONS: Lazy<[[Vec<Trans>; 3]; 2]> = Lazy::new(|| {
+    // Indexing: [def_dice-1][att_dice-1]
+    let mut arr: [[Vec<Trans>; 3]; 2] = [
+        [Vec::new(), Vec::new(), Vec::new()],
+        [Vec::new(), Vec::new(), Vec::new()],
+    ];
+    for att_dice in 1..=3u8 {
+        for def_dice in 1..=2u8 {
+            let a = dice_combos(att_dice as usize);
+            let d = dice_combos(def_dice as usize);
+            let total = (a.len() * d.len()) as f64;
+            let mut map: HashMap<(u8, u8), u32> = HashMap::new();
+            for av in &a {
+                for dv in &d {
+                    let (al, dl) = compare_highest(av.clone(), dv.clone());
+                    *map.entry((al, dl)).or_insert(0) += 1;
+                }
+            }
+            let mut out = Vec::new();
+            for ((al, dl), count) in map.into_iter() {
+                out.push(Trans { a_loss: al, d_loss: dl, p: (count as f64) / total });
+            }
+            // Filter zero-prob entries (unlikely) and sort for stable order
+            out.retain(|t| t.p > 0.0);
+            out.sort_by(|x, y| y.p.partial_cmp(&x.p).unwrap());
+            arr[(def_dice - 1) as usize][(att_dice - 1) as usize] = out;
         }
     }
-    let mut out = Vec::new();
-    for ((al, dl), count) in map.into_iter() {
-        out.push(Trans { a_loss: al, d_loss: dl, p: (count as f64) / total });
-    }
-    out
+    arr
+});
+
+#[inline]
+fn get_transitions(att_dice: u8, def_dice: u8) -> &'static [Trans] {
+    &PRECOMP_TRANSITIONS[(def_dice - 1) as usize][(att_dice - 1) as usize]
 }
 
 pub fn exact_win_probability(att: u16, def: u16) -> f64 {
@@ -60,7 +79,7 @@ pub fn exact_win_probability(att: u16, def: u16) -> f64 {
         let att_dice = (a - 1).min(3) as u8;
         let def_dice = d.min(2) as u8;
         let mut p = 0.0;
-        for t in transitions(att_dice, def_dice) {
+        for t in get_transitions(att_dice, def_dice) {
             let na = a.saturating_sub(t.a_loss as u16);
             let nd = d.saturating_sub(t.d_loss as u16);
             p += t.p * win_prob(na, nd, memo);
@@ -90,4 +109,3 @@ mod tests {
         assert!(p2 + 1e-9 >= p1);
     }
 }
-
