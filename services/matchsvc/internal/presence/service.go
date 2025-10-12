@@ -6,7 +6,6 @@ import (
     "fmt"
     "time"
 
-    "github.com/conquestk/matchsvc/pkg/config"
     "github.com/conquestk/matchsvc/pkg/metrics"
     "github.com/redis/go-redis/v9"
     "github.com/rs/zerolog/log"
