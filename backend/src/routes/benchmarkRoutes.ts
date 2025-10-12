@@ -306,6 +306,82 @@ router.post('/odds-shadow-verify', authenticateToken, async (req, res): Promise<
   }
 })
 
+// Benchmark AI evaluation throughput (TS vs WASM) on randomized candidate sets
+router.post('/ai-eval-bench', authenticateToken, async (req, res): Promise<void> => {
+  try {
+    const { sets = 50, candidatesPer = 200, territories = 120 } = req.body || {}
+    const { evaluateCandidates: wasmEvaluate, computeConquestProbability } = await import('@conquestk/shared/odds')
+
+    const mkState = () => {
+      const terr = Array.from({ length: territories }, (_, i) => ({
+        id: `t${i}`,
+        ownerId: i % 3 === 0 ? 'A' : i % 3 === 1 ? 'B' : 'C',
+        armies: (i % 10) + 1,
+      }))
+      return { territories: terr, currentPlayerId: 'A' }
+    }
+
+    const mkCandidates = () => {
+      const arr: Array<{ kind: 'attack'; from: string; to: string }> = []
+      for (let i = 0; i < candidatesPer; i++) {
+        const from = `t${(i * 7) % territories}`
+        const to = `t${(i * 13 + 5) % territories}`
+        if (from !== to) arr.push({ kind: 'attack', from, to })
+      }
+      return arr
+    }
+
+    const measure = async (fn: () => Promise<void> | void) => {
+      const t0 = Date.now()
+      await fn()
+      return Date.now() - t0
+    }
+
+    // TS baseline
+    const tsMs = await measure(async () => {
+      for (let s = 0; s < sets; s++) {
+        const st = mkState()
+        const cands = mkCandidates()
+        const byId = new Map(st.territories.map((t) => [t.id, t]))
+        // Compute all scores
+        for (const c of cands) {
+          const from = byId.get(c.from)
+          const to = byId.get(c.to)
+          if (!from || !to) continue
+          if (from.ownerId !== st.currentPlayerId || to.ownerId === st.currentPlayerId) continue
+          const att = Math.max(0, from.armies - 1)
+          const def = Math.max(0, to.armies)
+          // eslint-disable-next-line no-unused-expressions
+          computeConquestProbability(att, def)
+        }
+      }
+    })
+
+    // WASM eval (batch per set)
+    const wasmMs = await measure(async () => {
+      for (let s = 0; s < sets; s++) {
+        const st = mkState()
+        const cands = mkCandidates()
+        // eslint-disable-next-line no-await-in-loop
+        await wasmEvaluate(st, cands)
+      }
+    })
+
+    const totalCandidates = sets * candidatesPer
+    const result = {
+      sets,
+      candidatesPer,
+      territories,
+      ts: { totalMs: tsMs, candidatesPerSec: (totalCandidates / tsMs) * 1000 },
+      wasm: { totalMs: wasmMs, candidatesPerSec: (totalCandidates / wasmMs) * 1000 },
+    }
+    res.json({ success: true, data: result })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to run AI eval benchmark')
+    res.status(500).json({ success: false, error: 'Failed to run AI eval benchmark' })
+  }
+})
+
 // Get detailed test results
 router.get('/results/:testId', authenticateToken, async (req, res): Promise<void> => {
   try {

@@ -71,6 +71,17 @@ The CI job installs Rust + wasm-pack and runs `npm run odds:test` on Linux. Benc
   - `ODDS_SHADOW_SEED_HI=0xA1B2C3D4`, `ODDS_SHADOW_SEED_LO=0x0F1E2D3C`
 - Metrics updated after each run: `odds_shadow_*` as above.
 
+## AI Eval Engine (WASM)
+
+- Purpose: run the AI’s candidate scoring (hot loops) in Rust/WASM for speed and determinism.
+- Adapter: backend uses a small adapter that takes a simplified state and candidate list and returns scores.
+- Env flag: `AI_EVAL_ENGINE=ts|wasm|shadow`
+  - `ts`: score in TypeScript (status quo)
+  - `wasm`: score via WASM; falls back to TS if unavailable
+  - `shadow`: compute both, log divergences, return TS result (safe rollout)
+- Admin Benchmark: `POST /api/benchmark/ai-eval-bench` → runs randomized sets and reports candidates/sec for TS vs WASM
+- Integration scope: starts by scoring commander attack candidates; deploy/fortify and deeper EV heuristics can be added incrementally.
+
 ## Dev Cheatsheet (Rust/WASM)
 
 - Install toolchain (one-time):

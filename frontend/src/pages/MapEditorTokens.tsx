@@ -430,31 +430,36 @@ const withNormalizedPosition = (
 
 const normalizeTerritoryModifierEntry = (
   value: Record<string, unknown>,
-): TerritoryModifierConfig => ({
-  templateId: isString(value.templateId)
-    ? value.templateId
+): TerritoryModifierConfig => {
+  const templateId = isString(value.templateId)
+    ? (value.templateId as string)
     : isString(value.template_id)
-      ? value.template_id
-      : undefined,
-  name: isString(value.name) && value.name.trim() ? value.name.trim() : 'Strategic Territory',
-  icon: isString(value.icon) && value.icon.trim() ? value.icon.trim() : '✨',
-  color: isString(value.color) && value.color.trim() ? value.color.trim() : '#a855f7',
-  defenseBonus: toNumber(value.defenseBonus ?? value.defense_bonus, 0),
-  attackBonus: toNumber(value.attackBonus ?? value.attack_bonus, 0),
-  troopBonus: toNumber(
-    value.troopBonus ?? value.troop_generation_bonus ?? value.troopGenerationBonus,
-    0,
-  ),
-  movementRestriction: toBoolean(
-    value.movementRestriction ?? value.movement_restriction ?? value.movementrestriction,
-    false,
-  ),
-  supplyLineBonus: toBoolean(
-    value.supplyLineBonus ?? value.supply_line_bonus ?? value.supplylinebonus,
-    false,
-  ),
-  notes: isString(value.notes) ? value.notes : undefined,
-})
+      ? (value.template_id as string)
+      : undefined
+
+  const base: TerritoryModifierConfig = {
+    name: isString(value.name) && value.name.trim() ? (value.name as string).trim() : 'Strategic Territory',
+    icon: isString(value.icon) && value.icon.trim() ? (value.icon as string).trim() : '✨',
+    color: isString(value.color) && value.color.trim() ? (value.color as string).trim() : '#a855f7',
+    defenseBonus: toNumber(value.defenseBonus ?? value.defense_bonus, 0),
+    attackBonus: toNumber(value.attackBonus ?? value.attack_bonus, 0),
+    troopBonus: toNumber(
+      value.troopBonus ?? value.troop_generation_bonus ?? value.troopGenerationBonus,
+      0,
+    ),
+    movementRestriction: toBoolean(
+      value.movementRestriction ?? value.movement_restriction ?? value.movementrestriction,
+      false,
+    ),
+    supplyLineBonus: toBoolean(
+      value.supplyLineBonus ?? value.supply_line_bonus ?? value.supplylinebonus,
+      false,
+    ),
+  }
+  const withTemplate = templateId ? { templateId } : {}
+  const withNotes = isString(value.notes) ? { notes: value.notes as string } : {}
+  return { ...base, ...withTemplate, ...withNotes }
+}
 
 const normalizeTerritoryModifiers = (input: unknown): Record<string, TerritoryModifierConfig> => {
   if (typeof input !== 'object' || input === null) return {}
@@ -473,7 +478,6 @@ const normalizeTerritoryModifiers = (input: unknown): Record<string, TerritoryMo
 }
 
 const createDefaultModifier = (): TerritoryModifierConfig => ({
-  templateId: undefined,
   name: 'Strategic Territory',
   icon: '✨',
   color: '#a855f7',
@@ -482,7 +486,6 @@ const createDefaultModifier = (): TerritoryModifierConfig => ({
   troopBonus: 0,
   movementRestriction: false,
   supplyLineBonus: false,
-  notes: undefined,
 })
 
 const parseOptionalRecord = (value: unknown): Record<string, unknown> | null => {
@@ -536,16 +539,19 @@ const normalizeTerritoryRecord = (record: LegacyTerritoryRecord): Territory => {
     toFiniteNumberOrNull(metadata?.y) ??
     0
 
-  return {
-    id: record.id || uuidv4(),
-    name: record.name ?? 'Unnamed Territory',
-    x: Number.isFinite(pixelX) ? pixelX : 0,
-    y: Number.isFinite(pixelY) ? pixelY : 0,
-    normalizedX: normalizedXCandidate !== null ? clamp01(normalizedXCandidate) : undefined,
-    normalizedY: normalizedYCandidate !== null ? clamp01(normalizedYCandidate) : undefined,
-    continentId: record.continent ?? null,
+  const base = {
+    id: (record.id as string) || uuidv4(),
+    name: (record.name as string) ?? 'Unnamed Territory',
+    x: Number.isFinite(pixelX) ? (pixelX as number) : 0,
+    y: Number.isFinite(pixelY) ? (pixelY as number) : 0,
+    continentId: (record.continent as string | null) ?? null,
     armies: 1,
     connections: [] as string[],
+  }
+  return {
+    ...base,
+    ...(normalizedXCandidate !== null ? { normalizedX: clamp01(normalizedXCandidate) } : {}),
+    ...(normalizedYCandidate !== null ? { normalizedY: clamp01(normalizedYCandidate) } : {}),
   }
 }
 
@@ -583,17 +589,20 @@ const normalizeTerritory = (input: unknown): Territory | null => {
   const isCapital = typeof territory.isCapital === 'boolean' ? territory.isCapital : false
   const connections = toStringArray(territory.connections)
 
-  return {
+  const base: Territory = {
     id,
     name,
     x,
     y,
-    normalizedX: normalizedXCandidate !== null ? clamp01(normalizedXCandidate) : undefined,
-    normalizedY: normalizedYCandidate !== null ? clamp01(normalizedYCandidate) : undefined,
     continentId,
     armies,
     isCapital,
     connections,
+  }
+  return {
+    ...base,
+    ...(normalizedXCandidate !== null ? { normalizedX: clamp01(normalizedXCandidate) } : {}),
+    ...(normalizedYCandidate !== null ? { normalizedY: clamp01(normalizedYCandidate) } : {}),
   }
 }
 
@@ -706,7 +715,7 @@ const findCanvasPresetId = (width: number, height: number) =>
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
-const DEFAULT_LABEL_SETTINGS: LabelSettings = {
+  const DEFAULT_LABEL_SETTINGS: Required<LabelSettings> = {
   showLabels: true,
   preset: 'classic',
   fontSize: 14,
@@ -720,12 +729,12 @@ const DEFAULT_LABEL_SETTINGS: LabelSettings = {
 const resolveLabelSettings = (settings?: LabelSettings): LabelSettings => ({
   showLabels: settings?.showLabels ?? DEFAULT_LABEL_SETTINGS.showLabels,
   preset: settings?.preset ?? DEFAULT_LABEL_SETTINGS.preset,
-  fontSize: settings?.fontSize ?? DEFAULT_LABEL_SETTINGS.fontSize,
-  fontFamily: settings?.fontFamily ?? DEFAULT_LABEL_SETTINGS.fontFamily,
-  textColor: settings?.textColor ?? DEFAULT_LABEL_SETTINGS.textColor,
-  showBackground: settings?.showBackground ?? DEFAULT_LABEL_SETTINGS.showBackground,
-  backgroundColor: settings?.backgroundColor ?? DEFAULT_LABEL_SETTINGS.backgroundColor,
-  backgroundOpacity: settings?.backgroundOpacity ?? DEFAULT_LABEL_SETTINGS.backgroundOpacity,
+  fontSize: (settings?.fontSize ?? DEFAULT_LABEL_SETTINGS.fontSize) as number,
+  fontFamily: (settings?.fontFamily ?? DEFAULT_LABEL_SETTINGS.fontFamily) as string,
+  textColor: (settings?.textColor ?? DEFAULT_LABEL_SETTINGS.textColor) as string,
+  showBackground: (settings?.showBackground ?? DEFAULT_LABEL_SETTINGS.showBackground) as boolean,
+  backgroundColor: (settings?.backgroundColor ?? DEFAULT_LABEL_SETTINGS.backgroundColor) as string,
+  backgroundOpacity: (settings?.backgroundOpacity ?? DEFAULT_LABEL_SETTINGS.backgroundOpacity) as number,
 })
 
 const reportError = (message: string, error: unknown) => {
@@ -769,7 +778,6 @@ export default function MapEditorTokens() {
     description: '',
     minPlayers: 2,
     maxPlayers: 12,
-    imageUrl: undefined,
     territories: [],
     continents: [],
     territoryModifiers: {},
@@ -1523,19 +1531,19 @@ export default function MapEditorTokens() {
           withNormalizedPosition(territory, mapWidth, mapHeight),
         )
 
-        return {
+        const base = {
           ...prev,
-          name: isString(map.name) ? map.name : prev.name,
-          description: isString(map.description) ? map.description : '',
+          name: isString(map.name) ? (map.name as string) : prev.name,
+          description: isString(map.description) ? (map.description as string) : '',
           minPlayers,
           maxPlayers,
-          imageUrl,
           territories: normalizedTerritories,
           continents,
           mapWidth,
           mapHeight,
           territoryModifiers,
         }
+        return imageUrl ? ({ ...base, imageUrl } as MapState) : (base as MapState)
       })
 
       // If we have an image URL, set dimensions
@@ -1728,7 +1736,7 @@ export default function MapEditorTokens() {
           withNormalizedPosition(territory, mapWidth, mapHeight),
         )
 
-        return {
+        const base = {
           ...prev,
           name: draft.name ?? prev.name,
           description: draft.description || '',
@@ -1740,11 +1748,11 @@ export default function MapEditorTokens() {
           mapHeight,
           imageWidth: draft.imageWidth || prev.imageWidth,
           imageHeight: draft.imageHeight || prev.imageHeight,
-          imageUrl: imageUrl || prev.imageUrl,
           territories: normalizedTerritories,
           continents,
           territoryModifiers,
         }
+        return imageUrl ? ({ ...base, imageUrl } as MapState) : (base as MapState)
       })
 
       setCapitalAssignments(draft.capitalAssignments || {})
@@ -2396,23 +2404,25 @@ export default function MapEditorTokens() {
       }
 
       const draftPayload: MapDraftPayload = {
-        id: draftId ?? undefined,
+        ...(draftId ? { id: draftId } : {}),
         name: state.name,
-        description: state.description,
+        ...(state.description ? { description: state.description } : {}),
         data: {
           name: state.name,
-          description: state.description,
+          ...(state.description ? { description: state.description } : {}),
           minPlayers: state.minPlayers,
           maxPlayers: state.maxPlayers,
           width: state.mapWidth,
           height: state.mapHeight,
-          image: imageBase64
+          ...(imageBase64
             ? {
-                data: imageBase64,
-                mimeType: imageMimeType || 'image/png',
-                filename: 'map-background.png',
+                image: {
+                  data: imageBase64,
+                  mimeType: imageMimeType || 'image/png',
+                  filename: 'map-background.png',
+                },
               }
-            : undefined,
+            : {}),
           capitalAssignments,
           territoryModifiers: state.territoryModifiers,
         },
@@ -2420,12 +2430,12 @@ export default function MapEditorTokens() {
         continents: state.continents,
         adjacencies: adjacencyList,
         capitalAssignments,
-        imageUrl: imageBase64 ? undefined : state.imageUrl,
+        imageUrl: imageBase64 ? null : (state.imageUrl ?? null),
         imageWidth: state.imageWidth,
         imageHeight: state.imageHeight,
         tags: [],
         isPublic: false,
-        parentMapId: publishedMapId ?? undefined,
+        ...(publishedMapId ? { parentMapId: publishedMapId } : {}),
       }
 
       const response = await mapWorkflowApi.saveDraft(draftPayload)
@@ -2589,10 +2599,9 @@ export default function MapEditorTokens() {
         setState((prev) => {
           const mapWidth = mapData.width ?? prev.mapWidth
           const mapHeight = mapData.height ?? prev.mapHeight
-          return {
+          const base = {
             ...prev,
             name: mapData.name || 'Imported Map',
-            imageUrl: mapData.imageUrl || prev.imageUrl,
             mapWidth,
             mapHeight,
             imageWidth: mapData.width ?? prev.imageWidth,
@@ -2605,6 +2614,7 @@ export default function MapEditorTokens() {
             selectedTerritoryId: null,
             draggedTerritoryId: null,
           }
+          return mapData.imageUrl ? ({ ...base, imageUrl: mapData.imageUrl } as MapState) : (base as MapState)
         })
 
         alert('Map imported successfully!')
@@ -2769,8 +2779,11 @@ export default function MapEditorTokens() {
       territoryModifiers: {
         ...prev.territoryModifiers,
         [selectedModifierTerritoryId]: {
-          ...modifierDraft,
-          notes: sanitizedNotes,
+          ...(() => {
+            const { notes: _omit, ...rest } = modifierDraft
+            return rest
+          })(),
+          ...(sanitizedNotes ? { notes: sanitizedNotes } : {}),
         },
       },
     }))
@@ -3054,7 +3067,10 @@ export default function MapEditorTokens() {
                       type="button"
                       onClick={() => {
                         if (confirm('Remove the background image?')) {
-                          setState((prev) => ({ ...prev, imageUrl: undefined }))
+                          setState((prev) => {
+                            const { imageUrl: _omit, ...rest } = prev
+                            return rest as MapState
+                          })
                         }
                       }}
                       className="px-3 py-2 bg-red-600 hover:bg-red-700 rounded"
@@ -4349,7 +4365,7 @@ export default function MapEditorTokens() {
                       description: '',
                       minPlayers: 2,
                       maxPlayers: 12,
-                      imageUrl: undefined,
+                      // omit imageUrl property to avoid setting undefined
                       territories: [],
                       continents: [],
                       territoryModifiers: {},
@@ -4921,7 +4937,6 @@ export default function MapEditorTokens() {
                     y={territory.y}
                     armies={territory.armies}
                     color={continent?.color || '#808080'} // Gray for unassigned
-                    outlineColor={continent?.color} // Continent color for outline
                     shape="circle"
                     isSelected={state.selectedTerritoryId === territory.id}
                     isDragging={state.draggedTerritoryId === territory.id}
