@@ -53,11 +53,10 @@ type GetRoomRosterResponse struct {
 
 type Service struct {
     rdb *redis.Client
-    cfg config.Config
 }
 
-func NewService(rdb *redis.Client, cfg config.Config) *Service {
-    return &Service{rdb: rdb, cfg: cfg}
+func NewService(rdb *redis.Client) *Service {
+    return &Service{rdb: rdb}
 }
 
 const (

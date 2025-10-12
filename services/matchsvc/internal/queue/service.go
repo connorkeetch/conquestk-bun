@@ -43,12 +43,12 @@ type PollResponse struct {
 }
 
 type Service struct {
-    rdb *redis.Client
-    cfg config.Config
+    rdb        *redis.Client
+    defaultTTL int // seconds
 }
 
-func NewService(rdb *redis.Client, cfg config.Config) *Service {
-    return &Service{rdb: rdb, cfg: cfg}
+func NewService(rdb *redis.Client, defaultTTL int) *Service {
+    return &Service{rdb: rdb, defaultTTL: defaultTTL}
 }
 
 type ticketDoc struct {
@@ -89,7 +89,7 @@ func (s *Service) Enqueue(ctx context.Context, req EnqueueRequest) (any, int, er
         return nil, 400, fmt.Errorf("user_id and mode required")
     }
     id := randomID(8)
-    ttl := s.cfg.DefaultTicketTimeout
+    ttl := s.defaultTTL
     if req.TimeoutS != nil && *req.TimeoutS > 0 {
         ttl = *req.TimeoutS
     }
@@ -155,22 +155,22 @@ func (s *Service) PollMatch(ctx context.Context, req PollRequest) (any, int, err
 
 // Matcher groups tickets into 2-player matches per mode (minimal viable) and publishes events.
 type Matcher struct {
-    rdb  *redis.Client
-    qsvc *Service
-    msvc MatchSaver
-    cfg  config.Config
+    rdb        *redis.Client
+    qsvc       *Service
+    msvc       MatchSaver
+    intervalMs int
 }
 
 type MatchSaver interface {
     SaveMatch(ctx context.Context, mode string, players []string) (string, error)
 }
 
-func NewMatcher(rdb *redis.Client, qsvc *Service, msvc MatchSaver, cfg config.Config) *Matcher {
-    return &Matcher{rdb: rdb, qsvc: qsvc, msvc: msvc, cfg: cfg}
+func NewMatcher(rdb *redis.Client, qsvc *Service, msvc MatchSaver, intervalMs int) *Matcher {
+    return &Matcher{rdb: rdb, qsvc: qsvc, msvc: msvc, intervalMs: intervalMs}
 }
 
 func (m *Matcher) Run(ctx context.Context) {
-    ticker := time.NewTicker(time.Duration(m.cfg.MatchLoopIntervalMS) * time.Millisecond)
+    ticker := time.NewTicker(time.Duration(m.intervalMs) * time.Millisecond)
     defer ticker.Stop()
     for {
         select {

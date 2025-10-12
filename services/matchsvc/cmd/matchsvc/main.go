@@ -16,6 +16,7 @@ import (
     "github.com/conquestk/matchsvc/pkg/logging"
     "github.com/conquestk/matchsvc/pkg/metrics"
     redispkg "github.com/conquestk/matchsvc/pkg/redis"
+    transport "github.com/conquestk/matchsvc/transport"
     "github.com/rs/zerolog/log"
 )
 
@@ -40,8 +41,8 @@ func main() {
     }
 
     // Services
-    pres := presence.NewService(rdb, cfg)
-    qsvc := queue.NewService(rdb, cfg)
+    pres := presence.NewService(rdb)
+    qsvc := queue.NewService(rdb, cfg.DefaultTicketTimeout)
     msvc := match.NewService(rdb)
     var rsvc *ratings.Service
     if ratingsRepo != nil {
@@ -49,12 +50,12 @@ func main() {
     }
 
     // Start background matcher
-    matcher := queue.NewMatcher(rdb, qsvc, msvc, cfg)
+    matcher := queue.NewMatcher(rdb, qsvc, msvc, cfg.MatchLoopIntervalMS)
     go matcher.Run(ctx)
 
     mux := http.NewServeMux()
     metrics.Register(mux)
-    transport := config.NewHTTPServer(mux, cfg, pres, qsvc, msvc, rsvc)
+    transport := transport.NewHTTPServer(mux, cfg, pres, qsvc, msvc, rsvc)
 
     srv := &http.Server{
         Addr:              ":" + cfg.HTTPPort,
@@ -80,4 +81,3 @@ func main() {
     _ = log.Logger
     _ = os.Stdout.Sync()
 }
-
