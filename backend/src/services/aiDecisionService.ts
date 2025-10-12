@@ -201,7 +201,7 @@ class AIDecisionService {
 
     // 3) Attack: choose a high-value border within priority sector
     if (phase === 'attack') {
-      const attack = await this.findCommanderAttack(gameState, player.id, budget)
+      const attack = await this.findCommanderAttack(gameState, player.id, budget, request.difficulty)
       if (attack) {
         if (!push(attack)) return actions
       }
@@ -257,6 +257,7 @@ class AIDecisionService {
     gameState: GameState,
     playerId: string,
     budget: DecisionBudget,
+    difficulty: AIDifficulty,
   ): Promise<GameAction | null> {
     const owned = gameState.board.filter((t) => t.ownerId === playerId)
     if (owned.length === 0) return null
@@ -300,7 +301,7 @@ class AIDecisionService {
         territories: gameState.board.map((t) => ({ id: t.id, ownerId: t.ownerId || null, armies: Math.max(0, t.armies | 0) })),
       }
       const evalCands = candidates.map((c) => ({ kind: 'attack' as const, from: c.from, to: c.to }))
-      const scores = await evaluateCandidatesAdapter(state, evalCands, { difficulty: request.difficulty })
+      const scores = await evaluateCandidatesAdapter(state, evalCands, { difficulty })
       for (let i = 0; i < candidates.length; i++) {
         const p = scores[i] ?? 0
         candidates[i]!.score = p * 100 + candidates[i]!.sectorBonus * 2 + candidates[i]!.isCapital * 3

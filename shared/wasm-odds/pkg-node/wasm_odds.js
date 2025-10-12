@@ -265,10 +265,11 @@ exports.exact_odds_matrix = function(max_att, max_def) {
 /**
  * @param {any} state
  * @param {any} candidates
+ * @param {any} opts
  * @returns {any}
  */
-exports.ai_evaluate = function(state, candidates) {
-    const ret = wasm.ai_evaluate(state, candidates);
+exports.ai_evaluate = function(state, candidates, opts) {
+    const ret = wasm.ai_evaluate(state, candidates, opts);
     return ret;
 };
 

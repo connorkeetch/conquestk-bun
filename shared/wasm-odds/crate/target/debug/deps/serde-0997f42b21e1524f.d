@@ -1,0 +1,12 @@
+/home/connorkeetch/projects/conquestk/risk-game/shared/wasm-odds/crate/target/debug/deps/serde-0997f42b21e1524f.d: /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/connorkeetch/projects/conquestk/risk-game/shared/wasm-odds/crate/target/debug/build/serde-639e73c8ec6398ef/out/private.rs
+
+/home/connorkeetch/projects/conquestk/risk-game/shared/wasm-odds/crate/target/debug/deps/libserde-0997f42b21e1524f.rmeta: /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/connorkeetch/projects/conquestk/risk-game/shared/wasm-odds/crate/target/debug/build/serde-639e73c8ec6398ef/out/private.rs
+
+/home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/connorkeetch/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/connorkeetch/projects/conquestk/risk-game/shared/wasm-odds/crate/target/debug/build/serde-639e73c8ec6398ef/out/private.rs:
+
+# env-dep:OUT_DIR=/home/connorkeetch/projects/conquestk/risk-game/shared/wasm-odds/crate/target/debug/build/serde-639e73c8ec6398ef/out

@@ -64,7 +64,8 @@ npm run build
 
 Single-line (POSIX sh compatible):
 ```
-set -eu; curl -sSf https://sh.rustup.rs | sh -s -- -y; export PATH="$HOME/.cargo/bin:$PATH"; curl -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh; rustc --version; cargo --version; wasm-pack --version; npm run odds:build; npm run build
+
+
 ```
 
 - Start Command:
@@ -124,6 +125,12 @@ SLACK_NOTIFICATIONS_ENABLED=false
 SLACK_WEBHOOK_URL=[Slack webhook]
 DISCORD_NOTIFICATIONS_ENABLED=false
 DISCORD_WEBHOOK_URL=[Discord webhook]
+
+# Engines (Odds + AI evaluation)
+# Use 'ts' in production unless you've validated WASM stability in staging.
+# Options: ts | wasm | shadow (shadow computes both + logs divergence, returns TS)
+ODDS_ENGINE=ts
+AI_EVAL_ENGINE=ts
 ```
 
 ### Staging Environment Differences
@@ -131,6 +138,9 @@ DISCORD_WEBHOOK_URL=[Discord webhook]
 NODE_ENV=staging
 CORS_ORIGIN=https://dev.conquestk.com
 FRONTEND_URL=https://dev.conquestk.com
+# Safe rollout defaults in staging
+ODDS_ENGINE=shadow
+AI_EVAL_ENGINE=shadow
 ```
 
 > If `FRONTEND_URL` is unset, the backend falls back to the incoming request origin. Always set it explicitly for production and staging so verification/password reset emails generate correct links.
