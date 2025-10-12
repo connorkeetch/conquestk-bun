@@ -70,11 +70,11 @@ export class MaintenanceWorker {
         await queue.upsertJobScheduler('maintenance:prune', { every: intervalMs })
         await queue.upsertJobScheduler('maintenance:refresh-skill-leaderboard', {
           pattern: '0 4 * * *',
-        } as any)
+        } as unknown as { pattern?: string; every?: number })
         // Nightly odds shadow verification if enabled
         await queue.upsertJobScheduler('maintenance:odds-shadow-verify', {
           pattern: process.env.ODDS_SHADOW_CRON || '30 3 * * *',
-        } as any)
+        } as unknown as { pattern?: string; every?: number })
 
         const Redis = (await import('ioredis')).default
         const redis = (await import('../config/redis.js')).getRedisClient()
@@ -213,9 +213,11 @@ export class MaintenanceWorker {
       const passThrough = (entry: unknown) => logger.info('odds', entry as Record<string, unknown>)
       setOddsLogger((entry) => {
         try {
-          const e = entry as any
-          if (e?.tag === 'odds-divergence') divergences++
-        } catch {}
+          const e = entry as { tag?: unknown }
+          if ((e.tag as string | undefined) === 'odds-divergence') divergences++
+        } catch {
+          // ignore log parse issues
+        }
         passThrough(entry)
       })
       setOddsEngine('shadow')

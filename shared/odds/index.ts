@@ -19,6 +19,11 @@ async function getWasmEngine() {
 
 // Persistent eval-state handle cache keyed by ordered territory id signature
 const __stateHandleCache = new Map<string, number>()
+const __indexMapCache = new Map<string, Map<string, number>>()
+const __bufferPool = new Map<
+  string,
+  { owned: Uint8Array; armies: Uint16Array; pairs: Uint32Array }
+>()
 async function __getOrInitHandle(signature: string, ids: string[]) {
   const mod = await getWasmEngine()
   let h = __stateHandleCache.get(signature)
@@ -29,9 +34,44 @@ async function __getOrInitHandle(signature: string, ids: string[]) {
   return h
 }
 
+function __getIndexMap(signature: string, ids: string[]) {
+  let m = __indexMapCache.get(signature)
+  if (!m) {
+    m = new Map(ids.map((id, i) => [id, i]))
+    __indexMapCache.set(signature, m)
+  }
+  return m
+}
+
+function __getBuffers(signature: string, T: number, pairCount: number) {
+  let entry = __bufferPool.get(signature)
+  const needPairsLen = pairCount * 2
+  if (
+    !entry ||
+    entry.owned.length !== T ||
+    entry.armies.length !== T ||
+    entry.pairs.length !== needPairsLen
+  ) {
+    entry = {
+      owned: new Uint8Array(T),
+      armies: new Uint16Array(T),
+      pairs: new Uint32Array(needPairsLen),
+    }
+    __bufferPool.set(signature, entry)
+  }
+  return entry
+}
+
 export type Engine = 'ts' | 'wasm' | 'shadow'
 
-let engine: Engine = (typeof process !== 'undefined' && (process as any)?.env?.ODDS_ENGINE) || 'ts'
+let engine: Engine = (() => {
+  if (typeof process !== 'undefined') {
+    const envObj = (process as unknown as { env?: Record<string, unknown> }).env
+    const val = typeof envObj?.ODDS_ENGINE === 'string' ? (envObj.ODDS_ENGINE as string) : undefined
+    if (val === 'ts' || val === 'wasm' || val === 'shadow') return val
+  }
+  return 'ts'
+})()
 let logger: ((entry: unknown) => void) | null = null
 
 export function setEngine(e: Engine) {
@@ -193,15 +233,19 @@ export async function monteCarlo(params: {
     return tsr as unknown as WMonteCarloResult
   }
   // Compare wins/losses; allow small epsilon on probabilities but sequence should match exactly here
-  if (wsr && Math.abs((tsr as any).wins - (wsr as any).wins) !== 0) {
-    logger?.({
-      tag: 'odds-divergence',
-      kind: 'mc',
-      seed: { seedHi, seedLo },
-      params: { attArmies, defArmies, trials },
-      ts: tsr,
-      wasm: wsr,
-    })
+  if (wsr) {
+    const tsWins = (tsr as unknown as { wins?: number }).wins ?? 0
+    const wsWins = (wsr as unknown as { wins?: number }).wins ?? 0
+    if (Math.abs(tsWins - wsWins) !== 0) {
+      logger?.({
+        tag: 'odds-divergence',
+        kind: 'mc',
+        seed: { seedHi, seedLo },
+        params: { attArmies, defArmies, trials },
+        ts: tsr,
+        wasm: wsr,
+      })
+    }
   }
   return tsr as unknown as WMonteCarloResult
 }
@@ -250,16 +294,17 @@ export async function evaluateCandidates(
       const handle = await __getOrInitHandle(signature, ids)
 
       const T = state.territories.length
-      const owned = new Uint8Array(T)
-      const armies = new Uint16Array(T)
+      const n = candidates.length
+      const buffers = __getBuffers(signature, T, n)
+      const owned = buffers.owned
+      const armies = buffers.armies
       for (let i = 0; i < T; i++) {
-        const t = state.territories[i]!
+        const t = state.territories[i] ?? { id: '', ownerId: null, armies: 0 }
         owned[i] = t.ownerId === state.currentPlayerId ? 1 : 0
         armies[i] = (t.armies | 0) as number
       }
-      const byId = new Map(state.territories.map((t, i) => [t.id, i]))
-      const n = candidates.length
-      const pairs = new Uint32Array(n * 2)
+      const byId = __getIndexMap(signature, ids)
+      const pairs = buffers.pairs
       for (let i = 0; i < n; i++) {
         const c = candidates[i] as Extract<EvalCandidate, { kind: 'attack' }>
         const fi = byId.get(c.from)

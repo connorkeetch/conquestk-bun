@@ -2,6 +2,35 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { type AdminActivityLog, adminService, type FeatureFlag } from '../services/adminService'
 
+const Sparkline = ({ points }: { points: Array<{ ts: number; rate: number }> }) => {
+  if (!points || points.length === 0) return null
+  const width = 140
+  const height = 36
+  const pad = 2
+  const xs = points.map((p) => p.ts)
+  const ys = points.map((p) => p.rate)
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  const maxY = Math.max(0.001, Math.max(...ys))
+  const normX = (x: number) => pad + ((x - minX) / Math.max(1, maxX - minX)) * (width - pad * 2)
+  const normY = (y: number) => height - pad - (y / maxY) * (height - pad * 2)
+  const d = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${normX(p.ts).toFixed(1)} ${normY(p.rate).toFixed(1)}`)
+    .join(' ')
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label="Recent rates sparkline"
+    >
+      <title>Recent rates sparkline</title>
+      <path d={d} fill="none" stroke="currentColor" strokeOpacity={0.7} strokeWidth={1.5} />
+    </svg>
+  )
+}
+
 interface SystemStatus {
   timestamp: string
   database: {
@@ -104,29 +133,6 @@ export default function AdminDashboard() {
     } | null
     ts: string
   }>(null)
-
-  const Sparkline = ({ points }: { points: Array<{ ts: number; rate: number }> }) => {
-    if (!points || points.length === 0) return null
-    const width = 140
-    const height = 36
-    const pad = 2
-    const xs = points.map((p) => p.ts)
-    const ys = points.map((p) => p.rate)
-    const minX = Math.min(...xs)
-    const maxX = Math.max(...xs)
-    // const minY = 0
-    const maxY = Math.max(0.001, Math.max(...ys))
-    const normX = (x: number) => pad + ((x - minX) / Math.max(1, maxX - minX)) * (width - pad * 2)
-    const normY = (y: number) => height - pad - (y / maxY) * (height - pad * 2)
-    const d = points
-      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${normX(p.ts).toFixed(1)} ${normY(p.rate).toFixed(1)}`)
-      .join(' ')
-    return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden>
-        <path d={d} fill="none" stroke="currentColor" strokeOpacity={0.7} strokeWidth={1.5} />
-      </svg>
-    )
-  }
 
   const fetchActivityLogs = useCallback(async () => {
     try {

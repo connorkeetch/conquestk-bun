@@ -106,10 +106,15 @@ export async function aiEvalAttacksWithHandle(
   pairs: Uint32Array,
 ): Promise<Float64Array> {
   const api = await getApi()
-  return api.ai_eval_attacks_with_handle(handle, ownedByCurrent, armies, pairs) as unknown as Float64Array
+  return api.ai_eval_attacks_with_handle(
+    handle,
+    ownedByCurrent,
+    armies,
+    pairs,
+  ) as unknown as Float64Array
 }
 
 export async function freeEvalState(handle: number): Promise<void> {
   const api = await getApi()
-  return api.free_eval_state(handle) as unknown as void
+  return api.free_eval_state(handle) as unknown as undefined
 }

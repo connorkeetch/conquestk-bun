@@ -67,10 +67,12 @@ function simulateStepInternal(attDice: number, defDice: number, rng: Xoshiro128p
   a.sort((x, y) => y - x)
   d.sort((x, y) => y - x)
   const pairs = Math.min(a.length, d.length)
-  let al = 0,
-    dl = 0
+  let al = 0
+  let dl = 0
   for (let i = 0; i < pairs; i++) {
-    if (a[i]! <= d[i]!) al++
+    const av = a[i] ?? 0
+    const dv = d[i] ?? 0
+    if (av <= dv) al++
     else dl++
   }
   return { attacker_losses: al, defender_losses: dl }
@@ -124,8 +126,8 @@ export function monteCarlo(
   seedLo: number,
 ) {
   const driver = new Xoshiro128pp(seedHi, seedLo)
-  let wins = 0,
-    losses = 0
+  let wins = 0
+  let losses = 0
   const attHist = new Array(attArmies + 1).fill(0)
   const defHist = new Array(defArmies + 1).fill(0)
   for (let i = 0; i < trials; i++) {

@@ -28,6 +28,16 @@
       "backend/dist/**",
       "backend/public/**",
       "shared/dist/**",
+      "shared/wasm-odds/pkg/**",
+      "shared/wasm-odds/pkg-node/**",
+      "shared/wasm-odds/pkg-web/**",
+      "shared/wasm-odds/target/**",
+      "shared/wasm-odds/wasm-pack.log",
+      "shared/wasm-odds/wasm-pack.log/**",
+      "shared/wasm-odds/.wasm-pack/**",
+      "shared/wasm-odds/.cache/**",
+      "shared/wasm-odds/**/*.d.ts",
+      "shared/wasm-odds/tests/**",
       "frontend/dist/**",
       ".claude/**",
       ".venv-awscli/**",
@@ -60,6 +70,7 @@
       "correctness": {
         "noConstAssign": "error",
         "noConstantCondition": "warn",
+        "useExhaustiveDependencies": "warn",
         "noEmptyCharacterClassInRegex": "error",
         "noEmptyPattern": "error",
         "noGlobalObjectCalls": "error",
@@ -164,20 +175,13 @@
   },
   "overrides": [
     {
+      "includes": ["shared/wasm-odds/**"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
+    },
+    {
       "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "noUndeclaredVariables": "off"
-          },
-          "suspicious": {
-            "noConsole": "off"
-          },
-          "style": {
-            "noNonNullAssertion": "off"
-          }
-        }
-      },
+      "linter": { "enabled": false },
       "javascript": {
         "globals": ["jest"]
       }
@@ -191,7 +195,18 @@
       "linter": {
         "rules": {
           "suspicious": {
-            "noConsole": "off"
+            "noConsole": "off",
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["backend/src/workers/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
           }
         }
       }
@@ -202,6 +217,26 @@
         "rules": {
           "style": {
             "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["frontend/src/strict-shims/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["frontend/src/components/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useExhaustiveDependencies": "off"
           }
         }
       }

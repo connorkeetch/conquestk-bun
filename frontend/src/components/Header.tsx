@@ -124,7 +124,6 @@ export default function Header() {
   }
 
   // Close notification dropdown on route change
-  /* biome-ignore lint/correctness/useExhaustiveDependencies: run on route changes */
   useEffect(() => {
     setIsNotifDropdownOpen(false)
     // Only depends on path changes

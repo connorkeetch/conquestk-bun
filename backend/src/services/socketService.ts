@@ -4,8 +4,15 @@ import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database.js'
 import { setupChatHandlers } from '../socket/chatHandlers.js'
-import { DeltaBuilder } from '../types/deltaUpdates.js'
-import type { GamePlayer, GameState, SerializedGameState, Territory } from '../types/game.js'
+import type {
+  AttackAction,
+  DeployAction,
+  FortifyAction,
+  GamePlayer,
+  GameState,
+  SerializedGameState,
+  Territory,
+} from '../types/game.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { logger } from '../utils/logger.js'
 import { gameStateCache } from './cacheService.js'
@@ -122,7 +129,7 @@ function emitGameUpdateToRoom(
   io.to(channel).emit('game-update', payload)
 }
 
-function emitGameDeltaBatchToRoom(
+function _emitGameDeltaBatchToRoom(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   channel: string,
   deltas: GameDelta[],
@@ -628,8 +635,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 await gameActionProcessor.processDeployment(
                   data.roomId,
                   userId,
-                  (normalizedAction as any).payload.territoryId,
-                  (normalizedAction as any).payload.armies,
+                  (normalizedAction as DeployAction).payload.territoryId,
+                  (normalizedAction as DeployAction).payload.armies,
                   socket.id,
                 )
                 break
@@ -638,9 +645,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 await gameActionProcessor.processAttack(
                   data.roomId,
                   userId,
-                  (normalizedAction as any).payload.fromTerritoryId,
-                  (normalizedAction as any).payload.toTerritoryId,
-                  (normalizedAction as any).payload?.armies,
+                  (normalizedAction as AttackAction).payload.fromTerritoryId,
+                  (normalizedAction as AttackAction).payload.toTerritoryId,
+                  (normalizedAction as AttackAction).payload?.armies,
                   socket.id,
                 )
                 break
@@ -649,9 +656,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 await gameActionProcessor.processFortify(
                   data.roomId,
                   userId,
-                  (normalizedAction as any).payload.fromTerritoryId,
-                  (normalizedAction as any).payload.toTerritoryId,
-                  (normalizedAction as any).payload.armies,
+                  (normalizedAction as FortifyAction).payload.fromTerritoryId,
+                  (normalizedAction as FortifyAction).payload.toTerritoryId,
+                  (normalizedAction as FortifyAction).payload.armies,
                   socket.id,
                 )
                 break
@@ -668,9 +675,12 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 await gameActionProcessor.processTransferConquest(
                   data.roomId,
                   userId,
-                  (normalizedAction as any).payload.fromTerritoryId,
-                  (normalizedAction as any).payload.toTerritoryId,
-                  (normalizedAction as any).payload.armies,
+                  (normalizedAction as import('../types/game.js').TransferConquestAction).payload
+                    .fromTerritoryId,
+                  (normalizedAction as import('../types/game.js').TransferConquestAction).payload
+                    .toTerritoryId,
+                  (normalizedAction as import('../types/game.js').TransferConquestAction).payload
+                    .armies,
                   socket.id,
                 )
                 break

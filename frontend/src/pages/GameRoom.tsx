@@ -2035,7 +2035,7 @@ export default function GameRoom() {
                                 ...base,
                                 ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
                                 ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
-                              } as any
+                              } as unknown as Player
                             })
                       }
                       {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
@@ -2385,8 +2385,8 @@ export default function GameRoom() {
                                     treasures: [],
                                   }
                                   return pl.teamId != null
-                                    ? ({ ...base, teamId: pl.teamId } as any)
-                                    : (base as any)
+                                    ? ({ ...base, teamId: pl.teamId } as unknown as Player)
+                                    : (base as unknown as Player)
                                 })
                           }
                           {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}
@@ -2945,7 +2945,7 @@ export default function GameRoom() {
                             ...base,
                             ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
                             ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
-                          } as any
+                          } as unknown as Player
                         })
                   }
                   {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}

@@ -11,13 +11,13 @@ export function isParticipantInRoom(
     if (!uid) return false
     if (room?.hostId && room.hostId === uid) return true
     if (Array.isArray(room?.players)) {
-      for (const p of room!.players!) {
+      for (const p of room?.players || []) {
         const pid = (p.userId ?? p.id) as string | undefined
         if (pid && pid === uid) return true
       }
     }
     if (Array.isArray(game?.players)) {
-      for (const gp of game!.players!) {
+      for (const gp of game?.players || []) {
         if (gp.id === uid) return true
       }
     }

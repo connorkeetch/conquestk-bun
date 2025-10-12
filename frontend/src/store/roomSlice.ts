@@ -70,7 +70,8 @@ const roomSlice = createSlice({
         const merged: Partial<GameRoom> = { ...state.currentRoom, ...rest }
         if (players !== undefined) {
           // Only overwrite players when explicitly provided
-          ;(merged as GameRoom).players = players!
+          const pl = players as NonNullable<GameRoom['players']>
+          ;(merged as GameRoom).players = pl
         }
         state.currentRoom = merged as GameRoom
       }
@@ -79,7 +80,8 @@ const roomSlice = createSlice({
       if (roomIndex !== -1) {
         const mergedList: Partial<GameRoom> = { ...state.rooms[roomIndex], ...rest }
         if (players !== undefined) {
-          ;(mergedList as GameRoom).players = players!
+          const pl = players as NonNullable<GameRoom['players']>
+          ;(mergedList as GameRoom).players = pl
         }
         state.rooms[roomIndex] = mergedList as GameRoom
       }

@@ -335,8 +335,9 @@ class AIDecisionService {
       const scores = await evaluateCandidatesAdapter(state, evalCands, { difficulty })
       for (let i = 0; i < candidates.length; i++) {
         const p = scores[i] ?? 0
-        candidates[i]!.score =
-          p * 100 + candidates[i]!.sectorBonus * 2 + candidates[i]!.isCapital * 3
+        const c = candidates[i]
+        if (!c) continue
+        c.score = p * 100 + c.sectorBonus * 2 + c.isCapital * 3
       }
     } catch {
       // keep heuristic scores
