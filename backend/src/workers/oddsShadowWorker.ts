@@ -20,9 +20,11 @@ async function run() {
   let divergences = 0
   setLogger((entry) => {
     try {
-      const e = entry as any
-      if (e?.tag === 'odds-divergence') divergences++
-    } catch {}
+      const e = entry as { tag?: unknown }
+      if ((e.tag as string | undefined) === 'odds-divergence') divergences++
+    } catch {
+      // ignore log parse issues
+    }
   })
 
   const range = attMax - attMin + 1

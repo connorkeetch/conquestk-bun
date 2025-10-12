@@ -164,7 +164,9 @@ export default function AdminQueues() {
                   )
 
                   // Prefer the GET-based accept flow for reliability in prod
-                  const code = (resp.data as any)?.code as string | undefined
+                  const code = (resp.data as unknown as { code?: unknown })?.code as
+                    | string
+                    | undefined
                   const url = code
                     ? `${bullBoardUrl}/accept?code=${encodeURIComponent(code)}`
                     : bullBoardUrl

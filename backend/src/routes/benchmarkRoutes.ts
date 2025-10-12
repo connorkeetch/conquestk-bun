@@ -309,7 +309,14 @@ router.post('/odds-shadow-verify', authenticateToken, async (req, res): Promise<
 // Benchmark AI evaluation throughput (TS vs WASM) on randomized candidate sets
 router.post('/ai-eval-bench', authenticateToken, async (req, res): Promise<void> => {
   try {
-    const { sets = 50, candidatesPer = 200, territories = 120 } = req.body || {}
+    const {
+      sets = 50,
+      candidatesPer = 200,
+      territories = 120,
+      warmupRuns = 3,
+      measureRuns = 5,
+      pureCompute = false,
+    } = req.body || {}
     const { evaluateCandidates: wasmEvaluate, computeConquestProbability } = await import(
       '@conquestk/shared/odds'
     )
@@ -333,19 +340,74 @@ router.post('/ai-eval-bench', authenticateToken, async (req, res): Promise<void>
       return arr
     }
 
-    const measure = async (fn: () => Promise<void> | void) => {
-      const t0 = Date.now()
-      await fn()
-      return Date.now() - t0
+    const hrNow = () => process.hrtime.bigint()
+    const toMs = (ns: bigint) => Number(ns) / 1_000_000
+    const median = (arr: number[]) => {
+      if (arr.length === 0) return 0
+      const a = [...arr].sort((x, y) => x - y)
+      const mid = Math.floor(a.length / 2)
+      if (a.length % 2) {
+        return a[mid] ?? 0
+      }
+      const left = a[mid - 1] ?? 0
+      const right = a[mid] ?? 0
+      return (left + right) / 2
     }
 
-    // TS baseline
-    const tsMs = await measure(async () => {
+    // Optional pure-compute typed arrays (reused across runs)
+    let ids: string[] = []
+    let armiesArr: Uint16Array | null = null
+    let ownedArr: Uint8Array | null = null
+    let pairsArr: Uint32Array | null = null
+    let wasmHandle: number | null = null
+
+    if (pureCompute) {
+      ids = Array.from({ length: territories }, (_, i) => `t${i}`)
+      armiesArr = new Uint16Array(territories)
+      ownedArr = new Uint8Array(territories)
+      for (let i = 0; i < territories; i++) {
+        armiesArr[i] = (i % 10) + 1
+        ownedArr[i] = i % 3 === 0 ? 1 : 0 // 'A' owns every 3rd
+      }
+      pairsArr = new Uint32Array(candidatesPer * 2)
+      for (let i = 0; i < candidatesPer; i++) {
+        const fromIdx = (i * 7) % territories
+        const toIdx = (i * 13 + 5) % territories
+        pairsArr[i * 2] = fromIdx >>> 0
+        pairsArr[i * 2 + 1] = toIdx >>> 0
+      }
+      try {
+        // Prefer direct wasmEngine handle API when available
+        const wasmEngine = await import('@conquestk/shared/odds/wasmEngine')
+        wasmHandle = await wasmEngine.initEvalState(ids)
+      } catch {
+        wasmHandle = null
+      }
+    }
+
+    // TS measurement function
+    const runTs = async () => {
+      if (pureCompute && armiesArr && ownedArr && pairsArr) {
+        // Compute-only loop using typed arrays, no state/candidate building
+        let acc = 0
+        for (let s = 0; s < sets; s++) {
+          for (let i = 0; i < candidatesPer; i++) {
+            const f = pairsArr[i * 2]
+            const t = pairsArr[i * 2 + 1]
+            if (f >= territories || t >= territories) continue
+            if (!ownedArr[f] || ownedArr[t]) continue
+            const att = Math.max(0, (armiesArr[f] | 0) - 1)
+            const def = Math.max(0, armiesArr[t] | 0)
+            acc += computeConquestProbability(att, def)
+          }
+        }
+        return acc
+      }
+      // Original path: build simple state/candidates and run pure TS scoring
       for (let s = 0; s < sets; s++) {
         const st = mkState()
         const cands = mkCandidates()
         const byId = new Map(st.territories.map((t) => [t.id, t]))
-        // Compute all scores
         for (const c of cands) {
           const from = byId.get(c.from)
           const to = byId.get(c.to)
@@ -357,25 +419,81 @@ router.post('/ai-eval-bench', authenticateToken, async (req, res): Promise<void>
           computeConquestProbability(att, def)
         }
       }
-    })
+      return 0
+    }
 
-    // WASM eval (batch per set)
-    const wasmMs = await measure(async () => {
+    // WASM measurement function
+    const runWasm = async () => {
+      if (pureCompute && wasmHandle != null && armiesArr && ownedArr && pairsArr) {
+        try {
+          const wasmEngine = await import('@conquestk/shared/odds/wasmEngine')
+          // One call per set to keep parity with non-pure path
+          let acc = 0
+          for (let s = 0; s < sets; s++) {
+            const res = await wasmEngine.aiEvalAttacksWithHandle(
+              wasmHandle,
+              ownedArr,
+              armiesArr,
+              pairsArr,
+            )
+            // consume a value to avoid DCE
+            acc += Number(res[0] || 0)
+          }
+          return acc
+        } catch {
+          // Fallback to facade path
+        }
+      }
       for (let s = 0; s < sets; s++) {
         const st = mkState()
         const cands = mkCandidates()
         // eslint-disable-next-line no-await-in-loop
         await wasmEvaluate(st, cands)
       }
-    })
+      return 0
+    }
+
+    // Warmups
+    for (let i = 0; i < warmupRuns; i++) {
+      await runTs()
+      await runWasm()
+    }
+
+    // Measured runs with hrtime
+    const tsRuns: number[] = []
+    const wasmRuns: number[] = []
+    for (let i = 0; i < measureRuns; i++) {
+      const t0 = hrNow()
+      // eslint-disable-next-line no-await-in-loop
+      await runTs()
+      tsRuns.push(toMs(hrNow() - t0))
+
+      const w0 = hrNow()
+      // eslint-disable-next-line no-await-in-loop
+      await runWasm()
+      wasmRuns.push(toMs(hrNow() - w0))
+    }
 
     const totalCandidates = sets * candidatesPer
+    const tsMedian = median(tsRuns)
+    const wasmMedian = median(wasmRuns)
     const result = {
       sets,
       candidatesPer,
       territories,
-      ts: { totalMs: tsMs, candidatesPerSec: (totalCandidates / tsMs) * 1000 },
-      wasm: { totalMs: wasmMs, candidatesPerSec: (totalCandidates / wasmMs) * 1000 },
+      warmupRuns,
+      measureRuns,
+      pureCompute: Boolean(pureCompute),
+      ts: {
+        runsMs: tsRuns,
+        medianMs: tsMedian,
+        candidatesPerSec: (totalCandidates / tsMedian) * 1000,
+      },
+      wasm: {
+        runsMs: wasmRuns,
+        medianMs: wasmMedian,
+        candidatesPerSec: (totalCandidates / wasmMedian) * 1000,
+      },
     }
     res.json({ success: true, data: result })
   } catch (error) {
