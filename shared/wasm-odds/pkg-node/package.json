@@ -1,0 +1,11 @@
+{
+  "name": "wasm-odds",
+  "version": "0.1.0",
+  "files": [
+    "wasm_odds_bg.wasm",
+    "wasm_odds.js",
+    "wasm_odds.d.ts"
+  ],
+  "main": "wasm_odds.js",
+  "types": "wasm_odds.d.ts"
+}
