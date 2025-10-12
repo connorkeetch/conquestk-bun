@@ -22,6 +22,7 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
+          components: rustfmt, clippy
 
       - name: Setup wasm-pack (latest)
         uses: jetli/wasm-pack-action@v0.4.0
@@ -43,6 +44,14 @@ jobs:
 
       - name: Build WASM package
         run: npm run odds:build
+
+      - name: Rust format check
+        working-directory: shared/wasm-odds/crate
+        run: cargo fmt --all -- --check
+
+      - name: Clippy lint (deny warnings)
+        working-directory: shared/wasm-odds/crate
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Run odds tests (Rust + TS)
         run: npm run odds:test

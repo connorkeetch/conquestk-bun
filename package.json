@@ -47,7 +47,10 @@
     "scan:requires": "node scripts/codemods/scan-requires.mjs --target backend/src",
     "odds:build": "cd shared/wasm-odds && npm run build",
     "odds:test": "cd shared/wasm-odds && npm run build && npm run test:rs && npm run test:ts && cd ../../ && npm run build:shared && vitest run -c tests/vitest.odds.config.ts",
-    "odds:bench": "cd shared/wasm-odds && npm run build && npm run bench:rs && node ../../scripts/bench-odds.js && node ../../scripts/bench-odds-mc.js && node ../../scripts/update-odds-bench-docs.js"
+    "odds:bench": "cd shared/wasm-odds && npm run build && npm run bench:rs && node ../../scripts/bench-odds.js && node ../../scripts/bench-odds-mc.js && node ../../scripts/update-odds-bench-docs.js",
+    "odds:lint:rs": "cd shared/wasm-odds && npm run lint:rs",
+    "odds:fmt:check": "cd shared/wasm-odds && npm run fmt:check",
+    "odds:fmt:write": "cd shared/wasm-odds && npm run fmt:write"
   },
   "repository": {
     "type": "git",
