@@ -42,14 +42,15 @@ export default function AdminGames() {
       setError(null)
 
       const offset = (currentPage - 1) * limit
-      const result = await adminService.getGames({
+      const params = {
         limit,
         offset,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        search: searchTerm || undefined,
         sortBy,
         sortDir,
-      })
+        ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        ...(searchTerm ? { search: searchTerm } : {}),
+      }
+      const result = await adminService.getGames(params)
 
       setGames(result.games)
       setTotalGames(result.total)

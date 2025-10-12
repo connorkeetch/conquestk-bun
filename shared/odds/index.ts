@@ -4,6 +4,7 @@
 import * as tsEngine from './tsEngine.js'
 import type { BattleResult as TSBattleResult, StepResult as TSStepResult } from './tsEngine.js'
 import type { BattleResult as WBattleResult, StepResult as WStepResult, MonteCarloResult as WMonteCarloResult } from '../wasm-odds/types.js'
+import { computeConquestProbability } from '../utils/battleOdds.js'
 
 // Avoid eagerly importing the WASM engine. Dynamic import prevents crashes
 // when '@conquestk/wasm-odds' is not present on environments that use the TS engine.
@@ -112,3 +113,18 @@ export async function monteCarlo(params: { attArmies: number; defArmies: number;
 
 // Exact/DP odds from existing TS implementation, exposed for callers
 export { computeConquestOdds, computeConquestProbability } from '../utils/battleOdds.js'
+
+export async function exactOddsMatrix(maxAtt: number, maxDef: number): Promise<number[][]> {
+  try {
+    return await (await getWasmEngine()).exactOddsMatrix(maxAtt, maxDef)
+  } catch {
+    // Fallback to TS DP for each cell
+    const out: number[][] = Array.from({ length: maxAtt + 1 }, () => Array(maxDef + 1).fill(0))
+    for (let a = 0; a <= maxAtt; a++) {
+      for (let d = 0; d <= maxDef; d++) {
+        out[a]![d] = computeConquestProbability(a, d)
+      }
+    }
+    return out
+  }
+}

@@ -7,6 +7,7 @@ export const simulate_battle: (a: number, b: number, c: number, d: number, e: an
 export const monte_carlo: (a: number, b: number, c: number, d: number, e: number) => any;
 export const odds_matrix: (a: number, b: number, c: number, d: number, e: number) => any;
 export const exact_odds: (a: number, b: number) => number;
+export const exact_odds_matrix: (a: number, b: number) => any;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_export_2: WebAssembly.Table;

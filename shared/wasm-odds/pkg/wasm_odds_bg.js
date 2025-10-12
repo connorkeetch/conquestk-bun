@@ -247,6 +247,16 @@ export function exact_odds(att_armies, def_armies) {
     return ret;
 }
 
+/**
+ * @param {number} max_att
+ * @param {number} max_def
+ * @returns {any}
+ */
+export function exact_odds_matrix(max_att, max_def) {
+    const ret = wasm.exact_odds_matrix(max_att, max_def);
+    return ret;
+}
+
 export function __wbg_Error_e17e777aac105295(arg0, arg1) {
     const ret = Error(getStringFromWasm0(arg0, arg1));
     return ret;

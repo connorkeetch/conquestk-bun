@@ -147,6 +147,7 @@ export interface SystemStatus {
 class AdminService {
   private baseUrl = '/admin'
   private performanceUrl = '/performance'
+  private benchmarkUrl = '/benchmark'
 
   // ============= ADMIN INFO =============
 
@@ -428,6 +429,25 @@ class AdminService {
     const response = await apiClient.get(`${this.performanceUrl}/metrics/odds-history`, {
       params: { hours },
     })
+    return response.data?.data ?? response.data
+  }
+
+  async runOddsShadowVerify(body: {
+    trials?: number
+    attMin?: number
+    attMax?: number
+    defMin?: number
+    defMax?: number
+    seedHi?: number
+    seedLo?: number
+  } = {}): Promise<{
+    trials: number
+    divergences: number
+    divergenceRate: number
+    durationMs: number
+    opsPerSec: number
+  }> {
+    const response = await apiClient.post(`${this.benchmarkUrl}/odds-shadow-verify`, body)
     return response.data?.data ?? response.data
   }
 

@@ -83,7 +83,8 @@
     "frontend",
     "backend",
     "shared",
-    "shared/wasm-odds"
+    "shared/wasm-odds",
+    "shared/match-client"
   ],
   "overrides": {
     "simple-swizzle": "0.2.2",

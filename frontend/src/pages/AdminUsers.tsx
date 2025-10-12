@@ -244,8 +244,10 @@ const AdminUsers: React.FC = () => {
             return {
               ...current,
               isVip: enableVip,
-              vipReason: enableVip ? trimmedNotes || current.vipReason : undefined,
-              vipGrantedAt: enableVip ? new Date().toISOString() : undefined,
+              ...(enableVip && trimmedNotes
+                ? { vipReason: trimmedNotes }
+                : {}),
+              ...(enableVip ? { vipGrantedAt: new Date().toISOString() } : {}),
             }
           }
           case 'admin':
@@ -324,10 +326,10 @@ const AdminUsers: React.FC = () => {
             : 'They will lose access to VIP-only content immediately.',
           confirmLabel: enabling ? 'Grant VIP access' : 'Remove VIP access',
           confirmVariant: enabling ? 'primary' : 'secondary',
-          notesLabel: enabling ? 'VIP notes (optional)' : undefined,
-          notesPlaceholder: enabling
-            ? 'Share why this player is receiving VIP treatment...'
-            : undefined,
+          ...(enabling ? { notesLabel: 'VIP notes (optional)' } : {}),
+          ...(enabling
+            ? { notesPlaceholder: 'Share why this player is receiving VIP treatment...' }
+            : {}),
           notesRequired: false,
         }
       }
@@ -855,7 +857,11 @@ const AdminUsers: React.FC = () => {
       toast.success('Updated premium tier')
       await loadUsers()
       if (selectedUser?.id === userId) {
-        setSelectedUser({ ...selectedUser, premiumTier: tier as User['premiumTier'] })
+        setSelectedUser((prev) =>
+          prev
+            ? { ...prev, premiumTier: tier as Exclude<User['premiumTier'], undefined> }
+            : prev,
+        )
       }
     } catch (err) {
       const message = getErrorMessage(err)
