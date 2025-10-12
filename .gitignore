@@ -11,6 +11,7 @@ dist/
 build/
 frontend/dist/
 backend/dist/
+backend/dist-esm/
 
 # Environment variables
 .env
