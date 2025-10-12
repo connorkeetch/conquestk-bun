@@ -70,3 +70,45 @@ The CI job installs Rust + wasm-pack and runs `npm run odds:test` on Linux. Benc
   - `ODDS_SHADOW_DEF_MIN=5`, `ODDS_SHADOW_DEF_MAX=35`
   - `ODDS_SHADOW_SEED_HI=0xA1B2C3D4`, `ODDS_SHADOW_SEED_LO=0x0F1E2D3C`
 - Metrics updated after each run: `odds_shadow_*` as above.
+
+## Dev Cheatsheet (Rust/WASM)
+
+- Install toolchain (one-time):
+  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  - source "$HOME/.cargo/env"
+  - rustup show (verifies install; rust-toolchain.toml pins `stable` + wasm32 target)
+  - Install wasm-pack (latest): https://rustwasm.github.io/wasm-pack/installer/
+
+- Build and test from repo root:
+  - Build WASM pkg: `npm run odds:build`
+  - Rust tests: `cd shared/wasm-odds && npm run test:rs`
+  - WASM interop + shadow parity: `npm run odds:test`
+  - Full build (frontend + backend + shared): `npm run build`
+
+- Lint and format (Rust):
+  - Check formatting: `npm run odds:fmt:check`
+  - Auto-format: `npm run odds:fmt:write`
+  - Lint (deny warnings): `npm run odds:lint:rs`
+
+- Benchmarks (optional):
+  - Run Criterion + Node benches and update docs: `npm run odds:bench`
+  - Results land in `docs/bench/*.json` and the block below.
+
+<!-- BENCH:START -->
+### Latest Benchmarks
+
+- Battle: N=10000 (timestamp 2025-10-12T03:53:04.934Z)
+  - TS ops/sec: 193621.4, p95: 0.01ms
+  - WASM ops/sec: 190791.1, p95: 0.01ms
+- Monte Carlo: trials=50000 (timestamp 2025-10-12T03:53:06.252Z)
+  - TS effective trials/sec: 183018.0
+  - WASM effective trials/sec: 981659.5
+<!-- BENCH:END -->
+
+
+- Troubleshooting:
+  - Update toolchain: `rustup update`
+  - Clean build: `cd shared/wasm-odds/crate && cargo clean`
+  - wasm-opt not found: install Binaryen (`wasm-pack` bundles it on CI; locally use your package manager or Binaryen releases). The build will continue without it but optimization is skipped.
+  - SIMD not taking effect in browsers: ensure modern browser and that your deployment isn’t stripping WASM features. Node builds always include simd128; browsers fall back if unsupported.
+  - Targets: we build both `bundler` (for Vite) and `nodejs` (for backend). The TS loader auto-selects the right one at runtime.
