@@ -89,19 +89,16 @@ export default function AdminDashboard() {
   const [cacheClearing, setCacheClearing] = useState(false)
   const [runningOddsVerify, setRunningOddsVerify] = useState(false)
   const [runningAiBench, setRunningAiBench] = useState(false)
-  const [aiBenchResult, setAiBenchResult] = useState<
-    | null
-    | {
-        sets: number
-        candidatesPer: number
-        territories: number
-        warmupRuns: number
-        measureRuns: number
-        pureCompute: boolean
-        ts: { runsMs: number[]; medianMs: number; candidatesPerSec: number }
-        wasm: { runsMs: number[]; medianMs: number; candidatesPerSec: number }
-      }
-  >(null)
+  const [aiBenchResult, setAiBenchResult] = useState<null | {
+    sets: number
+    candidatesPer: number
+    territories: number
+    warmupRuns: number
+    measureRuns: number
+    pureCompute: boolean
+    ts: { runsMs: number[]; medianMs: number; candidatesPerSec: number }
+    wasm: { runsMs: number[]; medianMs: number; candidatesPerSec: number }
+  }>(null)
   const [aiBenchConfig, setAiBenchConfig] = useState({
     sets: 50,
     candidatesPer: 200,
@@ -233,14 +230,24 @@ export default function AdminDashboard() {
         pureCompute: aiBenchConfig.pureCompute,
       })
       setAiBenchResult(result)
-      toast.success(`AI eval (median): TS ${Math.round(result.ts.candidatesPerSec).toLocaleString()} cps, WASM ${Math.round(result.wasm.candidatesPerSec).toLocaleString()} cps`, { id: 'ai-bench' })
+      toast.success(
+        `AI eval (median): TS ${Math.round(result.ts.candidatesPerSec).toLocaleString()} cps, WASM ${Math.round(result.wasm.candidatesPerSec).toLocaleString()} cps`,
+        { id: 'ai-bench' },
+      )
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to run AI eval benchmark'
       toast.error(msg, { id: 'ai-bench' })
     } finally {
       setRunningAiBench(false)
     }
-  }, [])
+  }, [
+    aiBenchConfig.sets,
+    aiBenchConfig.candidatesPer,
+    aiBenchConfig.territories,
+    aiBenchConfig.warmupRuns,
+    aiBenchConfig.measureRuns,
+    aiBenchConfig.pureCompute,
+  ])
 
   useEffect(() => {
     void loadDashboardData()
@@ -695,7 +702,10 @@ export default function AdminDashboard() {
                         min={1}
                         value={aiBenchConfig.candidatesPer}
                         onChange={(e) =>
-                          setAiBenchConfig((c) => ({ ...c, candidatesPer: Number(e.target.value) || 1 }))
+                          setAiBenchConfig((c) => ({
+                            ...c,
+                            candidatesPer: Number(e.target.value) || 1,
+                          }))
                         }
                         className="w-24 bg-surface-2 text-[color:var(--color-text)] rounded px-2 py-1 border border-border/60"
                       />
@@ -707,7 +717,10 @@ export default function AdminDashboard() {
                         min={10}
                         value={aiBenchConfig.territories}
                         onChange={(e) =>
-                          setAiBenchConfig((c) => ({ ...c, territories: Number(e.target.value) || 10 }))
+                          setAiBenchConfig((c) => ({
+                            ...c,
+                            territories: Number(e.target.value) || 10,
+                          }))
                         }
                         className="w-24 bg-surface-2 text-[color:var(--color-text)] rounded px-2 py-1 border border-border/60"
                       />
@@ -719,7 +732,10 @@ export default function AdminDashboard() {
                         min={0}
                         value={aiBenchConfig.warmupRuns}
                         onChange={(e) =>
-                          setAiBenchConfig((c) => ({ ...c, warmupRuns: Number(e.target.value) || 0 }))
+                          setAiBenchConfig((c) => ({
+                            ...c,
+                            warmupRuns: Number(e.target.value) || 0,
+                          }))
                         }
                         className="w-20 bg-surface-2 text-[color:var(--color-text)] rounded px-2 py-1 border border-border/60"
                       />
@@ -731,7 +747,10 @@ export default function AdminDashboard() {
                         min={1}
                         value={aiBenchConfig.measureRuns}
                         onChange={(e) =>
-                          setAiBenchConfig((c) => ({ ...c, measureRuns: Number(e.target.value) || 1 }))
+                          setAiBenchConfig((c) => ({
+                            ...c,
+                            measureRuns: Number(e.target.value) || 1,
+                          }))
                         }
                         className="w-20 bg-surface-2 text-[color:var(--color-text)] rounded px-2 py-1 border border-border/60"
                       />
@@ -750,15 +769,14 @@ export default function AdminDashboard() {
                   {aiBenchResult && (
                     <div className="mt-2 text-xs text-muted space-y-1">
                       <div>
-                        TS median: {Math.round(aiBenchResult.ts.candidatesPerSec).toLocaleString()} cps (
-                        {aiBenchResult.ts.medianMs.toFixed(2)} ms) · WASM median:{' '}
+                        TS median: {Math.round(aiBenchResult.ts.candidatesPerSec).toLocaleString()}{' '}
+                        cps ({aiBenchResult.ts.medianMs.toFixed(2)} ms) · WASM median:{' '}
                         {Math.round(aiBenchResult.wasm.candidatesPerSec).toLocaleString()} cps (
                         {aiBenchResult.wasm.medianMs.toFixed(2)} ms)
                       </div>
                       <div className="opacity-80">
-                        Runs (ms): TS [
-                        {aiBenchResult.ts.runsMs.map((n) => n.toFixed(1)).join(', ')}] · WASM [
-                        {aiBenchResult.wasm.runsMs.map((n) => n.toFixed(1)).join(', ')}]
+                        Runs (ms): TS [{aiBenchResult.ts.runsMs.map((n) => n.toFixed(1)).join(', ')}
+                        ] · WASM [{aiBenchResult.wasm.runsMs.map((n) => n.toFixed(1)).join(', ')}]
                       </div>
                     </div>
                   )}

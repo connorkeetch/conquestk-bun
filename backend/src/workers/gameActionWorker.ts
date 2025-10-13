@@ -34,9 +34,21 @@ export class GameActionWorker {
   private queueName: string
   private gameService: GameService
   private deltaEmitter: DeltaEmitter
-  private io: Server<ClientToServerEvents, ServerToClientEvents>
+  private io: Server<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    Record<string, unknown>,
+    { userId?: string }
+  >
 
-  constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
+  constructor(
+    io: Server<
+      ClientToServerEvents,
+      ServerToClientEvents,
+      Record<string, unknown>,
+      { userId?: string }
+    >,
+  ) {
     this.gameService = new GameService()
     this.deltaEmitter = new DeltaEmitter(io)
     this.io = io

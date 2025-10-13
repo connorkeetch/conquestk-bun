@@ -13,15 +13,15 @@ type HealthResult = {
 }
 
 const endpoints = [
-  { label: 'Core Health', path: '/health', auth: false },
-  { label: 'API Health', path: '/api/health', auth: false },
-  { label: 'Queues Health', path: '/api/queues/health', auth: true },
-  { label: 'Queues Stats', path: '/api/queues/stats', auth: true },
-  { label: 'Performance Detailed', path: '/api/performance/health/detailed', auth: true },
-  { label: 'Performance Metrics', path: '/api/performance/metrics', auth: true },
-  { label: 'Performance Alerts', path: '/api/performance/alerts?active=true', auth: true },
-  { label: 'Odds/WASM Status', path: '/api/odds/status', auth: false },
-  { label: 'Match Service', path: '/api/matchsvc/status', auth: false },
+  // Use API client baseURL ("/api" in production). Do NOT prefix paths with "/api" here.
+  { label: 'API Health', path: '/health', auth: false },
+  { label: 'Queues Health', path: '/queues/health', auth: true },
+  { label: 'Queues Stats', path: '/queues/stats', auth: true },
+  { label: 'Performance Detailed', path: '/performance/health/detailed', auth: true },
+  { label: 'Performance Metrics', path: '/performance/metrics', auth: true },
+  { label: 'Performance Alerts', path: '/performance/alerts?active=true', auth: true },
+  { label: 'Odds/WASM Status', path: '/odds/status', auth: false },
+  { label: 'Match Service', path: '/matchsvc/status', auth: false },
 ]
 
 function StatusPill({ ok }: { ok: boolean }) {
