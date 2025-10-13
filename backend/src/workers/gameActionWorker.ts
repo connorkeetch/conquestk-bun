@@ -819,7 +819,7 @@ export class GameActionWorker {
                     .map((idx) => Number(idx))
                     .filter((idx) => Number.isFinite(idx))
                     .map((idx) => hand[idx])
-                    .filter((m): m is string => typeof m === 'string')
+                    .map((m) => String(m))
                 }
               } catch {
                 /* ignore */

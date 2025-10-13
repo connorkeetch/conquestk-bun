@@ -5,9 +5,11 @@ type RedisFromOptionsCtor = new (opts: RedisOptions) => IORedis
 type RedisFromUrlCtor = new (url: string, opts?: RedisOptions) => IORedis
 
 export function createRedisFromOptions(opts: RedisOptions): IORedis {
-  return new RedisPkg(opts)
+  const RedisCtor = RedisPkg as unknown as RedisFromOptionsCtor
+  return new RedisCtor(opts)
 }
 
 export function createRedisFromUrl(url: string, opts?: RedisOptions): IORedis {
-  return new RedisPkg(url, opts)
+  const RedisCtor = RedisPkg as unknown as RedisFromUrlCtor
+  return new RedisCtor(url, opts)
 }
