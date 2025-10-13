@@ -96,7 +96,7 @@ import {
 } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import { addClientLog, hydrateFromStorage, setDice } from '../store/uiRoomSlice'
-import type { AIDifficulty, Player as PlayerType, PlayerColor } from '../types/game'
+import type { AIDifficulty, PlayerColor, Player as PlayerType } from '../types/game'
 // import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { formatStatus, hostDisplay, seatUsage } from '../utils/lobby'
 
@@ -2571,7 +2571,7 @@ export default function GameRoom() {
                                 ...base,
                                 ...(pl.isAi !== undefined ? { isAi: Boolean(pl.isAi) } : {}),
                                 ...(pl.teamId !== undefined ? { teamId: pl.teamId } : {}),
-                              } as any
+                              } as unknown as PlayerType
                             })
                       }
                       {...(currentGame ? { currentPlayerId: currentGame.currentPlayer } : {})}

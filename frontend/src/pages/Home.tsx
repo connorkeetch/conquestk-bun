@@ -125,7 +125,8 @@ const Home: React.FC = () => {
 
           {/* Tighter Value Proposition */}
           <p className="mt-3 mx-auto max-w-[52ch] text-white/80 text-center text-lg md:text-xl">
-            Rewrite borders with a straight face. ConquestK notarizes every triumphant march and embarrassing retreat.
+            Rewrite borders with a straight face. ConquestK notarizes every triumphant march and
+            embarrassing retreat.
           </p>
 
           {/* Clearer Primary Action */}
@@ -233,7 +234,8 @@ const Home: React.FC = () => {
               <span className="text-white">Choose your theatre</span>
             </h2>
             <p className="text-muted text-sm">
-              Ladder sweat, casual treaties, or clan scrims—we have a lobby staged for every flavor of ambition.
+              Ladder sweat, casual treaties, or clan scrims—we have a lobby staged for every flavor
+              of ambition.
             </p>
           </div>
 
@@ -271,7 +273,8 @@ const Home: React.FC = () => {
               <span className="text-white">Why conquerors linger</span>
             </h2>
             <p className="text-muted text-sm">
-              Built for rulers who crave receipts, tools, and uptime when the invasion clock hits zero.
+              Built for rulers who crave receipts, tools, and uptime when the invasion clock hits
+              zero.
             </p>
           </div>
 
@@ -321,7 +324,8 @@ const Home: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-heading mb-2">Stack the capital</h3>
               <p className="text-muted text-sm">
-                Fortify strongholds, guard borders, and leave just enough bait to lure overeager liberators.
+                Fortify strongholds, guard borders, and leave just enough bait to lure overeager
+                liberators.
               </p>
             </div>
 
@@ -331,7 +335,8 @@ const Home: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-heading mb-2">Bully the odds</h3>
               <p className="text-muted text-sm">
-                Blitz when the dice favor you, turtle when they don’t, and rotate fronts before the neighbors smell weakness.
+                Blitz when the dice favor you, turtle when they don’t, and rotate fronts before the
+                neighbors smell weakness.
               </p>
             </div>
 
@@ -341,7 +346,8 @@ const Home: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-heading mb-2">Publish the victory</h3>
               <p className="text-muted text-sm">
-                Cash cards, trigger domination, and screenshot the scoreboard before rivals claim it was “a learning scrim”.
+                Cash cards, trigger domination, and screenshot the scoreboard before rivals claim it
+                was “a learning scrim”.
               </p>
             </div>
           </div>
@@ -356,7 +362,8 @@ const Home: React.FC = () => {
               High command is asking: whose banner flies tonight?
             </h2>
             <p className="mt-4 text-white/80 text-base md:text-lg">
-              The live beta is online. Rally your council, draft a fresh map, or queue solo and walk away with new provinces.
+              The live beta is online. Rally your council, draft a fresh map, or queue solo and walk
+              away with new provinces.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               {isAuthenticated ? (
