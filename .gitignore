@@ -198,6 +198,10 @@ maps-package.zip
 # Map import working directory (local only)
 map-uploads/
 
+# Health report artifacts (generated)
+scripts/output/
+backend/health-reports/
+
 # Windows ADS metadata files that can appear from downloads
 *.Zone.Identifier
 
