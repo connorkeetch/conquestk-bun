@@ -9,6 +9,16 @@ import { queueService } from '../services/queueService.js'
 import { getJwtSecrets, signJwt, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 
+// Derive a safe cookie domain for apex cookies in prod (avoid on localhost)
+const getCookieDomain = (host: string | undefined): string | undefined => {
+  if (!host) return undefined
+  const h = host.toLowerCase().split(':')[0]
+  if (h === 'localhost' || h === '127.0.0.1') return undefined
+  const parts = h.split('.')
+  if (parts.length < 2) return undefined
+  return parts.slice(-2).join('.')
+}
+
 // Export grant/accept routes separately so they can be mounted BEFORE the Bull Board router
 export const createGrantRoute = () => {
   const router = Router()
@@ -341,11 +351,7 @@ export const createBullBoardRouter = () => {
   const basicUser = (process.env.BULL_BOARD_BASIC_AUTH_USER || '').trim()
   const basicPass = (process.env.BULL_BOARD_BASIC_AUTH_PASS || '').trim()
   if (basicUser && basicPass) {
-    const basicAuthMw = (
-      req: Parameters<typeof router.use>[0] extends string ? never : any,
-      res: any,
-      next: any,
-    ) => {
+    const basicAuthMw = (req: any, res: any, next: any) => {
       const hdr = req.headers['authorization'] as string | undefined
       if (!hdr || !hdr.startsWith('Basic ')) {
         res.set('WWW-Authenticate', 'Basic realm="Bull Board"')
