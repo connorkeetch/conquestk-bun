@@ -1,6 +1,6 @@
 {
   "baseUrl": "http://localhost:5001",
-  "generatedAt": "2025-10-13T14:53:41.346Z",
+  "generatedAt": "2025-10-13T15:33:00.342Z",
   "results": [
     {
       "name": "api-health",
@@ -10,7 +10,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 22,
-      "error": "api-health timed out after 1000ms or failed: fetch failed"
+      "error": "api-health timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "health",
@@ -20,7 +20,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 2,
-      "error": "health timed out after 1000ms or failed: fetch failed"
+      "error": "health timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "queues-ping",
@@ -29,8 +29,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 3,
-      "error": "queues-ping timed out after 1000ms or failed: fetch failed"
+      "durationMs": 2,
+      "error": "queues-ping timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "odds-status",
@@ -40,7 +40,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 2,
-      "error": "odds-status timed out after 1000ms or failed: fetch failed"
+      "error": "odds-status timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "matchsvc-status",
@@ -49,8 +49,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 2,
-      "error": "matchsvc-status timed out after 1000ms or failed: fetch failed"
+      "durationMs": 1,
+      "error": "matchsvc-status timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-dashboard",
@@ -59,8 +59,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 2,
-      "error": "perf-dashboard timed out after 1000ms or failed: fetch failed"
+      "durationMs": 1,
+      "error": "perf-dashboard timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-metrics",
@@ -69,8 +69,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 1,
-      "error": "perf-metrics timed out after 1000ms or failed: fetch failed"
+      "durationMs": 0,
+      "error": "perf-metrics timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-metrics-history",
@@ -80,7 +80,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "perf-metrics-history timed out after 1000ms or failed: fetch failed"
+      "error": "perf-metrics-history timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-odds-history",
@@ -90,7 +90,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "perf-odds-history timed out after 1000ms or failed: fetch failed"
+      "error": "perf-odds-history timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-alerts-active",
@@ -100,7 +100,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "perf-alerts-active timed out after 1000ms or failed: fetch failed"
+      "error": "perf-alerts-active timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-health-detailed",
@@ -109,8 +109,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 0,
-      "error": "perf-health-detailed timed out after 1000ms or failed: fetch failed"
+      "durationMs": 1,
+      "error": "perf-health-detailed timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-cache-stats",
@@ -119,8 +119,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 0,
-      "error": "perf-cache-stats timed out after 1000ms or failed: fetch failed"
+      "durationMs": 1,
+      "error": "perf-cache-stats timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-db-stats",
@@ -130,7 +130,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "perf-db-stats timed out after 1000ms or failed: fetch failed"
+      "error": "perf-db-stats timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-cdn-stats",
@@ -140,7 +140,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "perf-cdn-stats timed out after 1000ms or failed: fetch failed"
+      "error": "perf-cdn-stats timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-optimization-recs",
@@ -149,8 +149,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 0,
-      "error": "perf-optimization-recs timed out after 1000ms or failed: fetch failed"
+      "durationMs": 1,
+      "error": "perf-optimization-recs timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "perf-report",
@@ -159,8 +159,8 @@
       "method": "GET",
       "statusCode": 0,
       "ok": false,
-      "durationMs": 0,
-      "error": "perf-report timed out after 1000ms or failed: fetch failed"
+      "durationMs": 1,
+      "error": "perf-report timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "queues-health",
@@ -170,7 +170,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "queues-health timed out after 1000ms or failed: fetch failed"
+      "error": "queues-health timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "queues-stats",
@@ -180,7 +180,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "queues-stats timed out after 1000ms or failed: fetch failed"
+      "error": "queues-stats timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "queues-dashboard",
@@ -190,7 +190,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "queues-dashboard timed out after 1000ms or failed: fetch failed"
+      "error": "queues-dashboard timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "admin-status",
@@ -200,7 +200,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 1,
-      "error": "admin-status timed out after 1000ms or failed: fetch failed"
+      "error": "admin-status timed out after 900ms or failed: fetch failed"
     },
     {
       "name": "admin-system-status",
@@ -210,7 +210,7 @@
       "statusCode": 0,
       "ok": false,
       "durationMs": 0,
-      "error": "admin-system-status timed out after 1000ms or failed: fetch failed"
+      "error": "admin-system-status timed out after 900ms or failed: fetch failed"
     }
   ]
 }

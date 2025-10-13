@@ -67,6 +67,12 @@ const AdminLayout: React.FC = () => {
       icon: <Server className="w-4 h-4" />,
       exact: false,
     },
+    {
+      path: '/admin/health',
+      label: 'Health',
+      icon: <Activity className="w-4 h-4" />,
+      exact: false,
+    },
   ]
 
   if (loading) {

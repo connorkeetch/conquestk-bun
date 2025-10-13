@@ -63,6 +63,7 @@ const AdminGames = lazyWithRetry(() => import('./pages/AdminGames'))
 const AdminGameDetails = lazyWithRetry(() => import('./pages/AdminGameDetails'))
 const AdminMapReview = lazyWithRetry(() => import('./pages/AdminMapReview'))
 const AdminQueues = lazyWithRetry(() => import('./pages/AdminQueues'))
+const AdminHealth = lazyWithRetry(() => import('./pages/AdminHealth'))
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'))
 const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'))
 
@@ -754,6 +755,20 @@ function App() {
                   }
                 >
                   <AdminQueues />
+                </Suspense>
+              }
+            />
+            <Route
+              path="health"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="p-6">
+                      <div className="text-muted">Loading...</div>
+                    </div>
+                  }
+                >
+                  <AdminHealth />
                 </Suspense>
               }
             />

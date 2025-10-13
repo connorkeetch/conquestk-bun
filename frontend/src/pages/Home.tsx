@@ -48,7 +48,7 @@ const Home: React.FC = () => {
 
   const gameExperiences: GameExperience[] = [
     {
-      icon: '📊',
+      icon: '⚔️',
       title: 'Ranked War Rooms',
       description:
         'Ready-check, deploy, and climb CP ladders on servers that notarize every contested die and border skirmish.',
@@ -58,7 +58,7 @@ const Home: React.FC = () => {
       icon: '🏰',
       title: 'Custom Map Sieges',
       description:
-        'Spin up lobbies on official rotations or community fever dreams with capital rules, alliances, and fog-of-war skulduggery.',
+        'Spin up lobbies on official rotations or community fever dreams with capitals, alliances, and fog-of-war.',
       meta: 'Up to 12 commanders per battlefield',
     },
     {
@@ -66,7 +66,14 @@ const Home: React.FC = () => {
       title: 'Creator Foundry',
       description:
         'Draft, iterate, and submit fresh arenas with version history, reviewer feedback, and instant staging previews.',
-      meta: 'Moderation workflow built straight into the editor',
+      meta: 'Moderation workflow built into the editor',
+    },
+    {
+      icon: '🧠',
+      title: 'AI & Spectator Mode',
+      description:
+        'Watch grandmasters duel or face adaptive commanders who study your tactics, then replay every blunder in clarity.',
+      meta: 'Machine rivals and replays for study and showdowns',
     },
   ]
 
@@ -78,33 +85,42 @@ const Home: React.FC = () => {
 
   const highlights: Highlight[] = [
     {
-      title: 'Receipts of domination',
+      title: 'Audited to the bone',
       description:
-        'Every treaty, betrayal, and improbable roll is filed so you can put rivals on trial in the war room minutes later.',
+        'Every treaty, roll, and territory swing is stamped and queryable. Arguing about dice becomes a spectator sport.',
       bullets: [
-        'Authoritative archives track territory swings, card cash-ins, and bonus math in real time.',
-        'Rank ladders recalculate CP, streaks, and hidden MMR the moment the final stronghold falls.',
-        'Lifecycle enforcement keeps lobbies honest from ready-check to coronation.',
+        'Authoritative logs for attacks, card cash-ins, bonuses, and fortify paths in real time.',
+        'Rank ladders recalc CP, streaks, and hidden MMR on match close.',
+        'Exportable match reports and per-turn diffs for post-war tribunals.',
       ],
     },
     {
-      title: 'Creator logistics',
+      title: 'Fair play enforced',
       description:
-        'Prototype a continent at breakfast and ship it to the rotation before dinner with an editor built for cartographers.',
+        'Lobbies run with ready-checks, AFK rules, and anti-collusion signals so wins actually mean something.',
       bullets: [
-        'Visual editor wrangles territories, sectors, and adjacency matrices without touching JSON.',
-        'Review queues capture inline feedback, approvals, and rejection reasons automatically.',
-        'Asset lifecycle sweeps staging buckets so your CDN only serves fresh propaganda.',
+        'Ready-check, turn timers, and lifecycle rules applied server-side.',
+        'Identity-tied comms, report flows, and review queues for disputes.',
+        'Fog-of-war, alliances, and capitals implemented as server rules, not client vibes.',
       ],
     },
     {
-      title: 'Commander creature comforts',
+      title: 'Built for load',
       description:
-        'Alerts, comms, and accessibility are tuned for war councils that stretch past midnight.',
+        'Real-time sockets and CDN assets keep the map snappy even when twelve egos pile in at once.',
       bullets: [
-        'Push notifications, turn pings, and ready-check reminders prevent AFK disasters.',
-        'Chat, clans, and reporting tools tie every message to an authenticated identity.',
-        'Theme presets, audio cues, and contrast-friendly overlays keep fog-of-war legible.',
+        'Delta streaming for state; no “full refresh” nonsense mid-siege.',
+        'Optimized map tiles and assets; cache-busted, CDN-served.',
+        'Scales to 12 commanders per battlefield without stalling animations.',
+      ],
+    },
+    {
+      title: 'Comforts for commanders',
+      description: 'Play into the wee hours without frying your retinas or your friendships.',
+      bullets: [
+        'Push notifications, turn pings, and ready-check reminders.',
+        'Theme presets, audio cues, and contrast-friendly overlays.',
+        'Chat, clans, and moderation tools tied to verified accounts.',
       ],
     },
   ]
@@ -119,14 +135,13 @@ const Home: React.FC = () => {
           <h1 className="mt-2 text-[clamp(2rem,3.8vw,3.5rem)] font-bold leading-tight text-white text-center">
             Welcome to the{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-violet-400">
-              Conquest Council
+              Conquest
             </span>
           </h1>
 
           {/* Tighter Value Proposition */}
           <p className="mt-3 mx-auto max-w-[52ch] text-white/80 text-center text-lg md:text-xl">
-            Rewrite borders with a straight face. ConquestK notarizes every triumphant march and
-            embarrassing retreat.
+            Rewrite borders. ConquestK notarizes every triumphant march and embarrassing retreat.
           </p>
 
           {/* Clearer Primary Action */}
@@ -183,7 +198,7 @@ const Home: React.FC = () => {
                 </span>
               </h2>
               <p className="text-xl text-muted max-w-2xl mx-auto">
-                Deploy armies • Capture capitals • Announce your supremacy before the ink dries
+                Deploy armies • Capture Territories • Conquer your opposition
               </p>
             </div>
           </div>
@@ -234,8 +249,8 @@ const Home: React.FC = () => {
               <span className="text-white">Choose your theatre</span>
             </h2>
             <p className="text-muted text-sm">
-              Ladder sweat, casual treaties, or clan scrims—we have a lobby staged for every flavor
-              of ambition.
+              Climb the Conquest Ladder, play a casual game, or start a clan war—we have a lobby
+              staged for every flavor of ambition.
             </p>
           </div>
 
@@ -273,8 +288,7 @@ const Home: React.FC = () => {
               <span className="text-white">Why conquerors linger</span>
             </h2>
             <p className="text-muted text-sm">
-              Built for rulers who crave receipts, tools, and uptime when the invasion clock hits
-              zero.
+              Built for rulers who crave strategy, tools, and options.
             </p>
           </div>
 
@@ -346,8 +360,7 @@ const Home: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-heading mb-2">Publish the victory</h3>
               <p className="text-muted text-sm">
-                Cash cards, trigger domination, and screenshot the scoreboard before rivals claim it
-                was “a learning scrim”.
+                Cash in treasures, claim domination, and rise to glory.
               </p>
             </div>
           </div>
@@ -362,8 +375,8 @@ const Home: React.FC = () => {
               High command is asking: whose banner flies tonight?
             </h2>
             <p className="mt-4 text-white/80 text-base md:text-lg">
-              The live beta is online. Rally your council, draft a fresh map, or queue solo and walk
-              away with new provinces.
+              The beta is online. Rally your council, draft a fresh map, or queue solo and walk away
+              with new provinces.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               {isAuthenticated ? (
@@ -378,7 +391,7 @@ const Home: React.FC = () => {
               ) : (
                 <>
                   <Link to="/register" className="btn-primary btn-lg w-full sm:w-auto">
-                    Sign the Enlistment Papers
+                    Start your Conquest →
                   </Link>
                   <Link to="/learn" className="btn-secondary btn-lg w-full sm:w-auto">
                     Review Field Manual

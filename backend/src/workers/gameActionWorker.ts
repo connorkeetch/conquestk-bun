@@ -761,7 +761,8 @@ export class GameActionWorker {
                 ...(maybeCards ? { cards: maybeCards } : {}),
                 ...(typeof cardsLen === 'number' ? { cardCount: cardsLen } : {}),
               }
-              await this.gameService.appendLog(gameId, [fullLog as any])
+              type GameLogEntryType = Parameters<GameService['appendLog']>[1][number]
+              await this.gameService.appendLog(gameId, [fullLog as unknown as GameLogEntryType])
             }
           } catch (logErr) {
             logger.debug('Skipped appending treasure cash log', {

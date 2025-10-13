@@ -422,8 +422,7 @@ export class GameActionProcessor {
           updated.version,
         )
         // Attach concise territory updates so clients immediately reflect armies/ownership
-        // biome-ignore lint/suspicious/noExplicitAny: extending delta payload for client convenience
-        ;(battleDelta as any).changes = [
+        ;(battleDelta as unknown as { changes: unknown[] }).changes = [
           (await import('../types/deltaUpdates.js')).DeltaBuilder.territoryUpdate(
             gameId,
             last.fromTerritory.id,

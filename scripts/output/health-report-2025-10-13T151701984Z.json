@@ -1,6 +1,6 @@
 {
   "baseUrl": "https://conquestk.com",
-  "generatedAt": "2025-10-13T14:59:53.437Z",
+  "generatedAt": "2025-10-13T15:17:05.434Z",
   "results": [
     {
       "name": "api-health",
@@ -9,7 +9,7 @@
       "method": "GET",
       "statusCode": 200,
       "ok": true,
-      "durationMs": 2576,
+      "durationMs": 2454,
       "bodyType": "json",
       "body": {
         "status": "OK",
@@ -21,7 +21,7 @@
         "databaseUrl": "configured",
         "redisUrl": "configured",
         "sentry": "configured",
-        "timestamp": "2025-10-13T14:59:52.497Z"
+        "timestamp": "2025-10-13T15:17:04.679Z"
       }
     },
     {
@@ -31,7 +31,7 @@
       "method": "GET",
       "statusCode": 200,
       "ok": true,
-      "durationMs": 2552,
+      "durationMs": 2233,
       "bodyType": "json",
       "body": {
         "status": "OK",
@@ -43,7 +43,7 @@
         "databaseUrl": "configured",
         "redisUrl": "configured",
         "sentry": "configured",
-        "timestamp": "2025-10-13T14:59:52.498Z"
+        "timestamp": "2025-10-13T15:17:04.481Z"
       }
     },
     {
@@ -53,11 +53,11 @@
       "method": "GET",
       "statusCode": 200,
       "ok": true,
-      "durationMs": 2548,
+      "durationMs": 2227,
       "bodyType": "json",
       "body": {
         "status": "healthy",
-        "timestamp": "2025-10-13T14:59:52.496Z"
+        "timestamp": "2025-10-13T15:17:04.480Z"
       }
     },
     {
@@ -67,7 +67,7 @@
       "method": "GET",
       "statusCode": 200,
       "ok": true,
-      "durationMs": 324,
+      "durationMs": 183,
       "bodyType": "json",
       "body": {
         "success": true,
@@ -85,7 +85,7 @@
       "method": "GET",
       "statusCode": 200,
       "ok": true,
-      "durationMs": 256,
+      "durationMs": 300,
       "bodyType": "json",
       "body": {
         "ok": false,
@@ -106,7 +106,7 @@
           "active": true
         },
         "metrics": null,
-        "ts": "2025-10-13T14:59:52.762Z"
+        "ts": "2025-10-13T15:17:04.981Z"
       }
     },
     {
@@ -116,7 +116,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 159,
+      "durationMs": 121,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -129,7 +129,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 156,
+      "durationMs": 120,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -142,7 +142,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 158,
+      "durationMs": 119,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -155,7 +155,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 202,
+      "durationMs": 205,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -168,7 +168,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 203,
+      "durationMs": 195,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -181,7 +181,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 207,
+      "durationMs": 193,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -194,7 +194,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 208,
+      "durationMs": 193,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -207,7 +207,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 347,
+      "durationMs": 115,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -220,7 +220,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 193,
+      "durationMs": 114,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -233,7 +233,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 192,
+      "durationMs": 111,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -246,7 +246,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 193,
+      "durationMs": 110,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -259,7 +259,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 172,
+      "durationMs": 176,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -272,7 +272,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 53,
+      "durationMs": 174,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -285,7 +285,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 175,
+      "durationMs": 170,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -298,7 +298,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 175,
+      "durationMs": 168,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"
@@ -311,7 +311,7 @@
       "method": "GET",
       "statusCode": 403,
       "ok": false,
-      "durationMs": 165,
+      "durationMs": 198,
       "bodyType": "json",
       "body": {
         "message": "Invalid token"

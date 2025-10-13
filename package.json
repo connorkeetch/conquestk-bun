@@ -52,7 +52,8 @@
     "odds:lint:rs": "cd shared/wasm-odds && npm run lint:rs",
     "odds:fmt:check": "cd shared/wasm-odds && npm run fmt:check",
     "odds:fmt:write": "cd shared/wasm-odds && npm run fmt:write",
-    "health:report": "node scripts/api-health-check.mjs"
+    "health:report": "node scripts/api-health-check.mjs",
+    "health:publish": "node scripts/api-health-check.mjs --publish"
   },
   "repository": {
     "type": "git",

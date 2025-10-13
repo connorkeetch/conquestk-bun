@@ -273,15 +273,22 @@ function serializeGameStateForClient(
     ...(t.coordinates ? { coordinates: t.coordinates } : {}),
   })) as Territory[]
 
-  const cfg = (s.gameConfig ?? ({} as unknown)) as import('../types/game.js').GameConfiguration
-  const gameConfig = {
-    movementType: cfg?.movementType,
-    allowTeamPlay: cfg?.allowTeamPlay,
-    teamMode: cfg?.teamMode,
-    numberOfTeams: cfg?.numberOfTeams,
-    mapId: cfg?.mapId,
-    fogOfWar: cfg?.fogOfWar,
-    treasureConfig: cfg?.treasureConfig,
+  const cfg: import('../types/game.js').GameConfiguration = s.gameConfig
+  const gameConfig: import('../types/game.js').GameConfiguration = {
+    movementType: cfg.movementType,
+    allowTeamPlay: cfg.allowTeamPlay,
+    teamMode: cfg.teamMode,
+    numberOfTeams: cfg.numberOfTeams ?? null,
+    maxPlayers: cfg.maxPlayers,
+    mapId: cfg.mapId,
+    gameMode: cfg.gameMode,
+    sectorBonuses: cfg.sectorBonuses,
+    continentBonuses: cfg.continentBonuses,
+    useTerritoryModifiers: cfg.useTerritoryModifiers,
+    modifierDistribution: cfg.modifierDistribution,
+    fogOfWar: cfg.fogOfWar,
+    treasureConfig: cfg.treasureConfig,
+    kingOfTheHill: cfg.kingOfTheHill,
   }
 
   const base: SerializedGameState = {
@@ -291,34 +298,31 @@ function serializeGameStateForClient(
     turn: s.turn,
     players,
     board,
-    gameConfig: gameConfig as unknown as SerializedGameState['gameConfig'],
-    ...((s as unknown as SerializedGameState).kingOfTheHillState
-      ? { kingOfTheHillState: (s as unknown as SerializedGameState).kingOfTheHillState }
-      : {}),
-    ...((s as unknown as SerializedGameState).assassinationTargets
-      ? { assassinationTargets: (s as unknown as SerializedGameState).assassinationTargets }
-      : {}),
-    cards: Array.isArray((s as unknown as SerializedGameState).cards)
-      ? (s as unknown as SerializedGameState).cards
-      : [],
-    ...((s as unknown as SerializedGameState).movementTracking
-      ? { movementTracking: (s as unknown as SerializedGameState).movementTracking }
-      : {}),
+    gameConfig,
+    ...(s.kingOfTheHillState ? { kingOfTheHillState: s.kingOfTheHillState } : {}),
+    ...(s.assassinationTargets ? { assassinationTargets: s.assassinationTargets } : {}),
+    cards: Array.isArray(s.cards) ? s.cards : [],
+    ...(s.movementTracking ? { movementTracking: s.movementTracking } : {}),
   }
 
   // Include territory modifiers when present (convert Map to plain object)
-  const territoryModifiersAny = (state as unknown as { territoryModifiers?: unknown })
-    .territoryModifiers
-  if (territoryModifiersAny instanceof Map) {
+  const hasModifiers = (obj: unknown): obj is { territoryModifiers: unknown } =>
+    Boolean(obj && typeof obj === 'object' && 'territoryModifiers' in obj)
+
+  if (hasModifiers(state) && state.territoryModifiers instanceof Map) {
     const obj = Object.fromEntries(
-      territoryModifiersAny.entries(),
+      state.territoryModifiers.entries(),
     ) as SerializedGameState['territoryModifiers']
     return { ...base, territoryModifiers: obj }
   }
-  if (territoryModifiersAny && !(territoryModifiersAny instanceof Map)) {
+  if (
+    hasModifiers(state) &&
+    state.territoryModifiers &&
+    !(state.territoryModifiers instanceof Map)
+  ) {
     return {
       ...base,
-      territoryModifiers: territoryModifiersAny as SerializedGameState['territoryModifiers'],
+      territoryModifiers: state.territoryModifiers as SerializedGameState['territoryModifiers'],
     }
   }
   return base
@@ -953,8 +957,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           if (!room) throw new Error('Room not found')
           if (room.hostId !== userId) throw new Error('Only the host can decide replacement')
 
-          const pending = (room as unknown as { replacementPendingUserId?: string | null })
-            .replacementPendingUserId
+          const pending = room.replacementPendingUserId ?? null
           if (!pending || pending !== targetUserId)
             throw new Error('No pending replacement for user')
 
@@ -971,7 +974,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               import('../types/game.js').SerializedGameState
             >(roomId)
             if (!stateRaw) throw new Error('Game state not found')
-            const state = { ...stateRaw }
+            const state: import('../types/game.js').SerializedGameState = { ...stateRaw }
             const idx = state.players.findIndex((p) => p.id === targetUserId)
             if (idx < 0) throw new Error('Player not found in game state')
             state.players[idx] = {
@@ -980,10 +983,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               aiDifficulty: aiDifficulty ?? 'recruit',
             }
             // Persist to DB + cache for durability
-            await gameService.saveSnapshot(
-              roomId,
-              state as unknown as import('../types/game.js').SerializedGameState,
-            )
+            await gameService.saveSnapshot(roomId, state)
             // Persist on room_players for visibility in room state
             await query(
               `UPDATE room_players SET is_ai = TRUE, ai_difficulty = COALESCE($3, 'recruit') WHERE room_id = $1 AND user_id = $2`,
