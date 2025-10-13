@@ -36,19 +36,29 @@ async function benchEngine(kind, N) {
 }
 
 async function main() {
+  const args = new Set(process.argv.slice(2))
+  const quiet = args.has('--quiet') || process.env.QUIET === '1'
   const N = Number(process.env.BENCH_N || 10000)
   const ts = await benchEngine('ts', N)
   const wasm = await benchEngine('wasm', N)
   const payload = { kind: 'battle', N, ts, wasm, timestamp: new Date().toISOString() }
-  console.log(JSON.stringify(payload))
+  if (!quiet) {
+    console.log(JSON.stringify(payload))
+  }
   try {
     const outDir = path.resolve(__dirname, '../docs/bench')
     mkdirSync(outDir, { recursive: true })
     writeFileSync(path.join(outDir, 'bench-battle.json'), JSON.stringify(payload, null, 2))
-  } catch {}
+  } catch {
+    // ignore write errors in CI or ephemeral environments
+  }
 }
 
 main().catch((e) => {
-  console.error(e)
+  const args = new Set(process.argv.slice(2))
+  const quiet = args.has('--quiet') || process.env.QUIET === '1'
+  if (!quiet) {
+    console.error(e)
+  }
   process.exit(1)
 })
