@@ -40,8 +40,6 @@ import {
   testDatabaseConnection,
   testMigrationFiles,
 } from './debugStartup.js'
-import { requireAdmin } from './middleware/adminAuth.js'
-import { authenticateTokenFromCookie } from './middleware/authFromCookie.js'
 import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter.js'
 import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js'
 import adminRoutes from './routes/admin.js'
@@ -353,19 +351,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
-// Serve static health reports (if present) under Bull Board UI cookie auth
-try {
-  const healthReportsDir = path.join(__dirname, '../health-reports')
-  app.use(
-    '/api/admin/queues/ui/health-reports',
-    authenticateTokenFromCookie,
-    requireAdmin,
-    express.static(healthReportsDir),
-  )
-  logger.info('📊 Health reports static mounted at /api/admin/queues/ui/health-reports')
-} catch (e) {
-  logger.warn('Health reports static mount failed', getErrorMessage(e))
-}
+// Static reports mount removed — reports are no longer served from the app
 
 // Mount Bull Board UI before adminRoutes so /accept isn't intercepted by /api/admin auth middleware
 try {
