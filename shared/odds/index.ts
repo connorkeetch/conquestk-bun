@@ -100,8 +100,12 @@ export async function simulateStep(params: {
       const wasmEngine = await getWasmEngine()
       return wasmEngine.simulateStep(seedHi, seedLo, attDice, defDice)
     } catch (e) {
-      if (typeof console !== 'undefined')
-        console.warn('[odds] WASM engine unavailable; falling back to TS', (e as Error)?.message)
+      logger?.({
+        tag: 'odds-warn',
+        kind: 'step',
+        message: 'WASM engine unavailable; falling back to TS',
+        error: (e as Error)?.message,
+      })
       return tsEngine.simulateStep(seedHi, seedLo, attDice, defDice)
     }
   }
@@ -111,11 +115,12 @@ export async function simulateStep(params: {
   try {
     wsr = await (await getWasmEngine()).simulateStep(seedHi, seedLo, attDice, defDice)
   } catch (e) {
-    if (typeof console !== 'undefined')
-      console.warn(
-        '[odds] WASM engine unavailable in shadow mode; using TS only',
-        (e as Error)?.message,
-      )
+    logger?.({
+      tag: 'odds-warn',
+      kind: 'step',
+      message: 'WASM engine unavailable in shadow mode; using TS only',
+      error: (e as Error)?.message,
+    })
     return tsr
   }
   if (
@@ -148,8 +153,12 @@ export async function simulateBattle(params: {
       const wasmEngine = await getWasmEngine()
       return wasmEngine.simulateBattle(seedHi, seedLo, attArmies, defArmies, policy)
     } catch (e) {
-      if (typeof console !== 'undefined')
-        console.warn('[odds] WASM engine unavailable; falling back to TS', (e as Error)?.message)
+      logger?.({
+        tag: 'odds-warn',
+        kind: 'battle',
+        message: 'WASM engine unavailable; falling back to TS',
+        error: (e as Error)?.message,
+      })
       return tsEngine.simulateBattle(seedHi, seedLo, attArmies, defArmies, policy)
     }
   }
@@ -160,11 +169,12 @@ export async function simulateBattle(params: {
   try {
     wsr = await (await getWasmEngine()).simulateBattle(seedHi, seedLo, attArmies, defArmies, policy)
   } catch (e) {
-    if (typeof console !== 'undefined')
-      console.warn(
-        '[odds] WASM engine unavailable in shadow mode; using TS only',
-        (e as Error)?.message,
-      )
+    logger?.({
+      tag: 'odds-warn',
+      kind: 'battle',
+      message: 'WASM engine unavailable in shadow mode; using TS only',
+      error: (e as Error)?.message,
+    })
     return tsr
   }
   if (wsr) {
@@ -207,8 +217,12 @@ export async function monteCarlo(params: {
       const wasmEngine = await getWasmEngine()
       return wasmEngine.monteCarlo(attArmies, defArmies, trials, seedHi, seedLo)
     } catch (e) {
-      if (typeof console !== 'undefined')
-        console.warn('[odds] WASM engine unavailable; falling back to TS', (e as Error)?.message)
+      logger?.({
+        tag: 'odds-warn',
+        kind: 'mc',
+        message: 'WASM engine unavailable; falling back to TS',
+        error: (e as Error)?.message,
+      })
       return tsEngine.monteCarlo(
         attArmies,
         defArmies,
@@ -225,11 +239,12 @@ export async function monteCarlo(params: {
   try {
     wsr = await (await getWasmEngine()).monteCarlo(attArmies, defArmies, trials, seedHi, seedLo)
   } catch (e) {
-    if (typeof console !== 'undefined')
-      console.warn(
-        '[odds] WASM engine unavailable in shadow mode; using TS only',
-        (e as Error)?.message,
-      )
+    logger?.({
+      tag: 'odds-warn',
+      kind: 'mc',
+      message: 'WASM engine unavailable in shadow mode; using TS only',
+      error: (e as Error)?.message,
+    })
     return tsr as unknown as WMonteCarloResult
   }
   // Compare wins/losses; allow small epsilon on probabilities but sequence should match exactly here
@@ -261,7 +276,8 @@ export async function exactOddsMatrix(maxAtt: number, maxDef: number): Promise<n
     const out: number[][] = Array.from({ length: maxAtt + 1 }, () => Array(maxDef + 1).fill(0))
     for (let a = 0; a <= maxAtt; a++) {
       for (let d = 0; d <= maxDef; d++) {
-        out[a]![d] = computeConquestProbability(a, d)
+        if (!out[a]) out[a] = []
+        out[a][d] = computeConquestProbability(a, d)
       }
     }
     return out
