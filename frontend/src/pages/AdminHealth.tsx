@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '@/services/api'
-import { logger } from '@/utils/logger'
 
 type HealthResult = {
   label: string
@@ -48,7 +47,6 @@ export default function AdminHealth() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [results, setResults] = useState<HealthResult[]>([])
   const [lastRunAt, setLastRunAt] = useState<string | null>(null)
-  const [linkBusy, setLinkBusy] = useState(false)
 
   const run = useCallback(async () => {
     setLoading(true)
@@ -129,20 +127,6 @@ export default function AdminHealth() {
     return { total, ok }
   }, [results])
 
-  const openStaticReports = async () => {
-    try {
-      setLinkBusy(true)
-      // Mint short-lived UI cookie scoped to /api/admin/queues/ui
-      await api.post('/admin/queues/ui/grant')
-      // Open the static index in a new tab
-      window.open('/api/admin/queues/ui/health-reports', '_blank', 'noopener')
-    } catch (e) {
-      logger.error('Failed to open static reports', e)
-      alert('Could not open static reports. Are you logged in as an admin?')
-    } finally {
-      setLinkBusy(false)
-    }
-  }
 
   return (
     <div className="p-4 md:p-6">
@@ -154,15 +138,6 @@ export default function AdminHealth() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="text-sm text-sky-300/90 hover:text-sky-200 disabled:opacity-50 underline"
-            onClick={openStaticReports}
-            disabled={linkBusy}
-            title="Open static health reports (HTML/MD/JSON)"
-          >
-            {linkBusy ? 'Opening…' : 'Static Reports'}
-          </button>
           <label className="flex items-center gap-2 text-sm text-white/80">
             <input
               type="checkbox"
