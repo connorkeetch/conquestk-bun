@@ -1042,6 +1042,7 @@ export class GameLifecycleService {
       const delay = Math.max(0, Math.trunc(options?.delayMs ?? 300))
 
       const queue = queueService.getGameActionQueue()
+      const safeId = String(idKey).replace(/[^a-zA-Z0-9_-]/g, '_')
       await queue.add(
         'execute-ai-turn',
         {
@@ -1054,7 +1055,7 @@ export class GameLifecycleService {
           idempotencyKey: idKey,
         },
         {
-          jobId: idKey,
+          jobId: safeId,
           delay,
           attempts: 1,
           removeOnFail: true,

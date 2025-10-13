@@ -118,6 +118,23 @@ export class CDNService {
       })
     }
 
+    // Seed from PUBLIC_ASSET_BASE_URL and VITE_ASSET_BASE_URL if set, so health checks work
+    // even when CDN_* envs are not configured explicitly.
+    const publicAssetBase = process.env.PUBLIC_ASSET_BASE_URL
+    if (publicAssetBase) {
+      // Avoid duplicates if it equals the primary URL
+      if (!this.providers.some((p) => p.baseUrl === publicAssetBase)) {
+        this.providers.push({ name: 'asset-base', baseUrl: publicAssetBase, regions: ['global'] })
+      }
+    }
+
+    const viteAssetBase = process.env.VITE_ASSET_BASE_URL
+    if (viteAssetBase) {
+      if (!this.providers.some((p) => p.baseUrl === viteAssetBase)) {
+        this.providers.push({ name: 'vite-asset-base', baseUrl: viteAssetBase, regions: ['global'] })
+      }
+    }
+
     // Regional CDNs for game-specific optimizations
     const regionalCDNs = process.env.CDN_REGIONAL_URLS
     if (regionalCDNs) {
@@ -407,7 +424,20 @@ export class CDNService {
     }
   }
 
-  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details: CDNHealthDetails }> {
+  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy' | 'not_configured'; details: CDNHealthDetails }> {
+    // If no providers are configured, surface a neutral status so overall health isn't degraded
+    if (this.providers.length === 0) {
+      return {
+        status: 'not_configured',
+        details: {
+          totalProviders: 0,
+          healthyProviders: 0,
+          metrics: this.getMetrics(),
+          checks: [],
+        },
+      }
+    }
+
     const healthChecks = await Promise.allSettled<ProviderHealthCheck>(
       this.providers.map(async (provider) => {
         try {
@@ -419,9 +449,13 @@ export class CDNService {
             signal: AbortSignal.timeout(5000),
           })
 
+          // Consider 2xx as healthy, and also 4xx as reachable (domain responds),
+          // only treat 5xx or network errors as unhealthy.
+          const isHealthy = response.ok || (response.status >= 400 && response.status < 500)
+
           return {
             provider: provider.name,
-            healthy: response.ok,
+            healthy: isHealthy,
             responseTime: Date.now() - startTime,
           }
         } catch (error) {
