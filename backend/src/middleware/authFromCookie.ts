@@ -53,6 +53,14 @@ export const authenticateTokenFromCookie: RequestHandler = (
   const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
   // Broaden cookie path so it applies to all API subpaths reliably behind proxies/CDNs
   const uiCookiePath = '/api'
+  const getCookieDomain = (host: string | undefined): string | undefined => {
+    if (!host) return undefined
+    const h = host.toLowerCase().split(':')[0]
+    if (h === 'localhost' || h === '127.0.0.1') return undefined
+    const parts = h.split('.')
+    if (parts.length < 2) return undefined
+    return parts.slice(-2).join('.')
+  }
 
   const tryMintUiCookieFromPayload = (payload: unknown) => {
     if (!secrets.length) return false
@@ -61,13 +69,18 @@ export const authenticateTokenFromCookie: RequestHandler = (
       payload && typeof payload === 'object' ? (payload as { userId?: unknown }).userId : undefined
     if (typeof userId !== 'string' || userId.length === 0) return false
     const uiToken = signJwt({ userId }, { expiresIn: '15m' })
-    res.cookie('auth_token', uiToken, {
+    const cookieDomain = getCookieDomain(req.hostname)
+    const cookieOpts = {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',
       path: uiCookiePath,
       maxAge: 15 * 60 * 1000,
-    })
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
+    } as const
+    // Set both names to avoid WAF/collision edge cases
+    res.cookie('ck_bb_auth', uiToken, cookieOpts)
+    res.cookie('auth_token', uiToken, cookieOpts)
     // Also set Authorization header for this request
     req.headers.authorization = `Bearer ${uiToken}`
     return true
@@ -106,7 +119,7 @@ export const authenticateTokenFromCookie: RequestHandler = (
   }
 
   const cookies = parseCookie(req.headers.cookie)
-  const token = cookies.auth_token || cookies.token
+  const token = cookies.ck_bb_auth || cookies.auth_token || cookies.token
   if (!token) {
     // Add debug logging to help diagnose cookie issues
     logger.warn('authFromCookie: no token found', {
