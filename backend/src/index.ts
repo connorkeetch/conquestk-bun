@@ -46,7 +46,11 @@ import adminRoutes from './routes/admin.js'
 import adminQueuesRoutes from './routes/adminQueues.js'
 import { authRoutes } from './routes/auth.js'
 import benchmarkRoutes from './routes/benchmarkRoutes.js'
-import bullBoardRouterFactory, { createAcceptRoute, createGrantRoute } from './routes/bullBoard.js'
+import bullBoardRouterFactory, {
+  createAcceptRoute,
+  createGrantRoute,
+  createLoginRoute,
+} from './routes/bullBoard.js'
 import clanRoutes from './routes/clans.js'
 import featureFlagsRoutes from './routes/featureFlags.js'
 import friendsRoutes from './routes/friends.js'
@@ -209,6 +213,7 @@ initializeRedis()
       try {
         app.use(createGrantRoute())
         app.use(createAcceptRoute())
+        app.use(createLoginRoute())
         logger.info('✅ Bull Board grant/accept routes mounted')
         const bullBoardRouter = bullBoardRouterFactory()
         app.use(bullBoardRouter)

@@ -162,6 +162,113 @@ export const createAcceptRoute = () => {
   return router
 }
 
+export const createLoginRoute = () => {
+  const router = Router()
+
+  // Dedicated login endpoint outside the UI base path so guards can't intercept.
+  // Accepts either a short-lived grant `code` or a raw `access_token`.
+  router.get('/api/admin/queues/login', async (req, res) => {
+    try {
+      const secrets = getJwtSecrets()
+      if (!secrets.length) {
+        logger.error('BullBoard login: missing JWT secrets', {
+          ip: req.ip,
+          ua: req.get('User-Agent'),
+        })
+        res.status(500).send('Server configuration error')
+        return
+      }
+
+      const { code, access_token: accessToken } = (req.query || {}) as {
+        code?: string
+        access_token?: string
+      }
+
+      let userId: string | undefined
+
+      if (typeof code === 'string' && code.length > 0) {
+        try {
+          const decoded = verifyJwtWithAnySecret<{ purpose?: string; userId?: string }>(
+            code,
+            secrets,
+          ).payload
+          if (decoded?.purpose === 'bull_board_ui' && typeof decoded.userId === 'string') {
+            userId = decoded.userId
+          } else {
+            logger.warn('BullBoard login: invalid grant payload', { decoded })
+          }
+        } catch (e) {
+          logger.warn('BullBoard login: grant verification failed', {
+            error: (e as Error)?.message,
+          })
+        }
+      }
+
+      if (!userId && typeof accessToken === 'string' && accessToken.length > 0) {
+        try {
+          const decoded = verifyJwtWithAnySecret<{ userId?: string }>(accessToken, secrets).payload
+          if (decoded && typeof decoded.userId === 'string') {
+            userId = decoded.userId
+          }
+        } catch (e) {
+          logger.warn('BullBoard login: access_token verification failed', {
+            error: (e as Error)?.message,
+          })
+        }
+      }
+
+      // As a final fallback, accept Authorization header if present
+      if (!userId) {
+        const auth = req.headers.authorization
+        const bearer = auth?.startsWith('Bearer ') ? auth.slice('Bearer '.length) : undefined
+        if (bearer) {
+          try {
+            const decoded = verifyJwtWithAnySecret<{ userId?: string }>(bearer, secrets).payload
+            if (decoded && typeof decoded.userId === 'string') {
+              userId = decoded.userId
+            }
+          } catch (e) {
+            logger.warn('BullBoard login: header token verification failed', {
+              error: (e as Error)?.message,
+            })
+          }
+        }
+      }
+
+      if (!userId) {
+        res.status(401).send('Access token required')
+        return
+      }
+
+      // Ensure the user is still an admin
+      const { adminService } = await import('../services/adminService.js')
+      const isAdmin = await adminService.isAdmin(userId)
+      if (!isAdmin) {
+        res.status(403).send('Admin required')
+        return
+      }
+
+      const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
+      const uiToken = signJwt({ userId }, { expiresIn: '15m' })
+      const cookiePath = '/api/admin/queues'
+      res.cookie('auth_token', uiToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: cookiePath,
+        maxAge: 15 * 60 * 1000,
+      })
+      logger.info('BullBoard login: UI cookie minted', { userId, path: cookiePath })
+      res.redirect('/api/admin/queues/ui')
+    } catch (e) {
+      logger.error('BullBoard login: unexpected failure', { error: (e as Error)?.message })
+      res.status(500).send('Failed to login to Bull Board')
+    }
+  })
+
+  return router
+}
+
 export const createBullBoardRouter = () => {
   const router = Router()
 
