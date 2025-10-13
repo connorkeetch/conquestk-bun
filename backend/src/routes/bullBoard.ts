@@ -28,10 +28,11 @@ export const createBullBoardRouter = () => {
   const adapters: readonly BullMQAdapter[] = queues
   createBullBoard({ queues: adapters, serverAdapter })
 
-  // IMPORTANT: Define grant/accept routes BEFORE the middleware so they're evaluated first
+  // CRITICAL: Define grant/accept on parent path to avoid middleware interception
+  // The middleware at router.use(basePath, ...) would catch these if defined under basePath
   // Helper endpoint to set a short-lived HttpOnly token cookie for the Bull Board UI.
   // This enables opening the board in a new tab where headers aren't attached.
-  router.post(`${basePath}/grant`, authenticateToken, requireAdmin, async (req, res) => {
+  router.post('/api/admin/queues/ui/grant', authenticateToken, requireAdmin, async (req, res) => {
     try {
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
       const secrets = getJwtSecrets()
@@ -73,7 +74,7 @@ export const createBullBoardRouter = () => {
   })
 
   // Accept a short-lived grant code and mint a UI cookie, then redirect to the Bull Board UI
-  router.get(`${basePath}/accept`, async (req, res) => {
+  router.get('/api/admin/queues/ui/accept', async (req, res) => {
     logger.info('BullBoard accept: endpoint reached', {
       ip: req.ip,
       ua: req.get('User-Agent'),
