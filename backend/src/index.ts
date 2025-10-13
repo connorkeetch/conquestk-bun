@@ -355,7 +355,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 // Serve static health reports (if present) under Bull Board UI cookie auth
 try {
-  const healthReportsDir = path.join(__dirname, '../../health-reports')
+  const healthReportsDir = path.join(__dirname, '../health-reports')
   app.use(
     '/api/admin/queues/ui/health-reports',
     authenticateTokenFromCookie,
