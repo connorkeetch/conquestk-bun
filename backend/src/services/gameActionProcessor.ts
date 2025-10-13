@@ -209,12 +209,12 @@ export class GameActionProcessor {
     const job = await queueService.addGameAction({
       gameId,
       playerId,
-      action: {
+      action: ((): import('../types/game.js').TransferConquestAction => ({
         type: 'transfer_conquest',
         roomId: gameId,
         playerId,
         payload: { fromTerritoryId, toTerritoryId, armies },
-      } as unknown as import('../types/game.js').TransferConquestAction,
+      }))(),
       socketId,
     })
 
@@ -426,30 +426,71 @@ export class GameActionProcessor {
     const last = updated.lastBattleResult
     if (last) {
       try {
-        const battleDelta: import('@conquestk/shared/types/delta').GameDelta = (
-          await import('../types/deltaUpdates.js')
-        ).DeltaBuilder.battleResult(
-          gameId,
-          last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
-          updated.version,
-        )
-        // Attach concise territory updates so clients immediately reflect armies/ownership
-        ;(battleDelta as unknown as { changes: unknown[] }).changes = [
-          (await import('../types/deltaUpdates.js')).DeltaBuilder.territoryUpdate(
-            gameId,
-            last.fromTerritory.id,
-            { armies: last.fromTerritory.armies },
-            updated.version,
-          ),
-          (await import('../types/deltaUpdates.js')).DeltaBuilder.territoryUpdate(
-            gameId,
-            last.toTerritory.id,
-            { armies: last.toTerritory.armies, ownerId: last.toTerritory.ownerId ?? undefined },
-            updated.version,
-          ),
-        ]
-        const { emitFogFilteredDelta } = await import('./fogService.js')
-        await emitFogFilteredDelta(this.io, gameId, battleDelta)
+        const { DeltaBuilder } = await import('../types/deltaUpdates.js')
+        const toPayload = (val: unknown): import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'] | null => {
+          if (!val || typeof val !== 'object') return null
+          const obj = val as Record<string, unknown>
+          const f = obj['fromTerritory']
+          const t = obj['toTerritory']
+          const aL = obj['attackerLosses']
+          const dL = obj['defenderLosses']
+          const aD = obj['attackerDice']
+          const dD = obj['defenderDice']
+          const c = obj['conquered']
+          const ok =
+            typeof f === 'object' && f !== null &&
+            typeof (f as Record<string, unknown>)['id'] === 'string' &&
+            typeof (f as Record<string, unknown>)['armies'] === 'number' &&
+            typeof t === 'object' && t !== null &&
+            typeof (t as Record<string, unknown>)['id'] === 'string' &&
+            typeof (t as Record<string, unknown>)['armies'] === 'number' &&
+            Array.isArray(aD) && aD.every((n) => typeof n === 'number') &&
+            Array.isArray(dD) && dD.every((n) => typeof n === 'number') &&
+            typeof aL === 'number' && typeof dL === 'number' && typeof c === 'boolean'
+          if (!ok) return null
+          const tRec = t as Record<string, unknown>
+          return {
+            fromTerritory: {
+              id: String((f as Record<string, unknown>)['id']),
+              armies: Number((f as Record<string, unknown>)['armies']),
+            },
+            toTerritory: {
+              id: String(tRec['id']),
+              armies: Number(tRec['armies']),
+              ...(typeof tRec['ownerId'] === 'string' || tRec['ownerId'] === null
+                ? { ownerId: tRec['ownerId'] as string | null }
+                : {}),
+            },
+            attackerLosses: Number(aL),
+            defenderLosses: Number(dL),
+            attackerDice: aD as number[],
+            defenderDice: dD as number[],
+            conquered: Boolean(c),
+          }
+        }
+        const payload = toPayload(last)
+        if (payload) {
+          const battleDelta = DeltaBuilder.battleResult(gameId, payload, updated.version)
+          const withChanges: import('@conquestk/shared/types/delta').BattleResultDelta & { changes?: import('@conquestk/shared/types/delta').GameDelta[] } = {
+            ...battleDelta,
+            changes: [
+              DeltaBuilder.territoryUpdate(
+                gameId,
+                payload.fromTerritory.id,
+                { armies: payload.fromTerritory.armies },
+                updated.version,
+              ),
+              DeltaBuilder.territoryUpdate(
+                gameId,
+                payload.toTerritory.id,
+                { armies: payload.toTerritory.armies, ownerId: payload.toTerritory.ownerId ?? undefined },
+                updated.version,
+              ),
+            ],
+          }
+          const { emitFogFilteredDelta } = await import('./fogService.js')
+          await emitFogFilteredDelta(this.io, gameId, withChanges)
+        }
       } catch (e) {
         logger.debug('Failed to emit fog-filtered battle delta in inline attack', {
           gameId,

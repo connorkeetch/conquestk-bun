@@ -75,8 +75,7 @@ export async function initializeRedis(): Promise<RedisClients> {
     }
 
     // Main Redis client for general use
-    const RedisCtor = RedisPkg as unknown as new (url: string, options?: RedisOptions) => IORedis
-    redisClient = new RedisCtor(finalRedisUrl, {
+    redisClient = new RedisPkg(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'main',
     })

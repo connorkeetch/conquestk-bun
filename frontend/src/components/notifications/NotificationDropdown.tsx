@@ -105,7 +105,7 @@ export default function NotificationDropdown({
       {/* Dropdown panel */}
       <div
         ref={containerRef}
-        className="pointer-events-auto absolute right-2 top-16 w-[360px] max-h-[70vh] overflow-hidden rounded-lg shadow-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)]"
+        className="pointer-events-auto absolute right-2 top-16 w-[360px] max-h-[70vh] overflow-hidden rounded-lg shadow-2xl border border-[color:var(--modal-border)] bg-[color:var(--modal-bg)]"
       >
         <div className="px-4 py-3 border-b border-[color:var(--panel-border)] flex items-center justify-between">
           <div className="flex items-center gap-2">

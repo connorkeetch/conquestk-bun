@@ -48,8 +48,7 @@ export async function startMatchSvcSubscriber(io: Server) {
       logger.warn('matchsvc subscriber disabled (Redis not available)')
       return
     }
-    const RedisCtor = RedisPkg as unknown as typeof import('ioredis').default
-    const sub = new RedisCtor(client.options as unknown as Record<string, unknown>)
+    const sub = new RedisPkg(client.options)
     await sub.subscribe('matchsvc:events')
     _subscriberActive = true
     sub.on('message', async (_channel: string, message: string) => {
