@@ -836,7 +836,7 @@ const ProfilePage: React.FC = () => {
                 >
                   {profile.username}
                 </h1>
-                <p className="text-xs sm:text-sm uppercase tracking-[0.45em] text-muted">
+                <p className="text-xs sm:text-sm uppercase tracking-[0.2em] sm:tracking-[0.45em] text-muted break-words whitespace-normal">
                   {profile.tagline && profile.tagline.trim().length > 0
                     ? profile.tagline
                     : premiumColorEntry
@@ -981,8 +981,8 @@ const ProfilePage: React.FC = () => {
                   </div>
                 ) : profile.bio && profile.bio.trim().length > 0 ? (
                   <div className="p-4 rounded-xl bg-surface-2/60 border border-white/10 backdrop-blur-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-muted text-base leading-relaxed whitespace-pre-line flex-1">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <p className="text-muted text-base leading-relaxed whitespace-pre-line break-words flex-1">
                         {profile.bio}
                       </p>
                       <button
@@ -996,8 +996,8 @@ const ProfilePage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="p-4 rounded-xl bg-surface-2/60 border border-dashed border-white/10 backdrop-blur-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-muted text-base leading-relaxed">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <p className="text-muted text-base leading-relaxed break-words">
                         Introduce yourself to other commanders. Add a short bio to share your
                         playstyle and favorite strategies.
                       </p>
@@ -1013,7 +1013,7 @@ const ProfilePage: React.FC = () => {
                 )
               ) : profile.bio && profile.bio.trim().length > 0 ? (
                 <div className="p-4 rounded-xl bg-surface-2/60 border border-white/10 backdrop-blur-sm">
-                  <p className="text-muted text-base leading-relaxed whitespace-pre-line">
+                  <p className="text-muted text-base leading-relaxed whitespace-pre-line break-words">
                     {profile.bio}
                   </p>
                 </div>
