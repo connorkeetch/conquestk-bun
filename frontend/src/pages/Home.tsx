@@ -178,7 +178,8 @@ const Home: React.FC = () => {
                       shadow-[inset_0_1px_0_0_rgba(255,255,255,.06)]
                       flex items-center justify-center overflow-hidden"
             style={{
-              backgroundImage: `url('${heroBackground}')`,
+              // Try CDN/asset path first, then fall back to a bundled public image
+              backgroundImage: `url('${heroBackground}'), url('/og.png')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
