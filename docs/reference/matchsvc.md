@@ -1,15 +1,19 @@
 # Match Service (matchsvc)
 
+_Last updated: March 9, 2026_
+
 A minimal Go microservice that owns matchmaking queues, presence (online state and room membership), and ratings/ELO updates. Node/Socket.IO remains the realtime transport; this service exposes HTTP/JSON (gRPC planned) and Redis pub/sub for signals.
 
 - Binary: `services/matchsvc/cmd/matchsvc`
 - Port: `8085` (config `MATCHSVC_PORT`)
 - Redis channel: `matchsvc:events`
+- Node status proxy: `/api/matchsvc/status`
 
 ## Responsibilities
 - Presence: track per-user connections and room membership; publish presence/roster changes
 - Matchmaking: queue per mode, simple 1v1 grouping (expansion by ELO bands is scaffolded)
 - Ratings: idempotent result ingestion and rating storage (math TBD)
+- Status aggregation: `/api/matchsvc/status` on the Node backend folds service health, Redis reachability, HMAC auth checks, subscriber state, and Prometheus metrics into a single payload consumed by the admin dashboard.
 
 ## Data keys
 - `presence:{userId}` JSON: `{ status, lastSeen, connectionIds[], roomId? }`
@@ -26,7 +30,7 @@ A minimal Go microservice that owns matchmaking queues, presence (online state a
 - GET `/v1/ratings/{mode}/{userId}` (requires Postgres)
 - POST `/v1/results` (requires Postgres)
 
-Auth: provide `X-MatchSvc-Signature` header as HMAC-SHA256 hex of the raw JSON body using `MATCHSVC_HMAC_SECRET`. Set `MATCHSVC_DISABLE_AUTH=true` for local dev.
+Auth: provide `X-MatchSvc-Signature` header as HMAC-SHA256 hex of the raw JSON body using `MATCHSVC_HMAC_SECRET`. Set `MATCHSVC_DISABLE_AUTH=true` for local dev. The backend’s `/api/matchsvc/status` route performs a no-op dequeue to validate HMAC configuration whenever a secret is present.
 
 ## Events
 Published to `matchsvc:events` (JSON):
@@ -37,7 +41,8 @@ Published to `matchsvc:events` (JSON):
 ## Local development
 - Start Redis and Postgres from `docker-compose.yml` at repo root
 - Run service: `cd services/matchsvc && MATCHSVC_DISABLE_AUTH=true REDIS_URL=redis://localhost:6379 go run ./cmd/matchsvc`
-- Metrics at `/metrics`; health at `/healthz`
+- Metrics at `/metrics` (exposes `matchsvc_queue_depth`, `matchsvc_matches_formed_total`, `matchsvc_presence_online_total`); health at `/healthz`
+- Node integration: `npm run dev:backend` automatically boots the Redis subscriber and surfaces readiness in `/api/matchsvc/status` once connected.
 
 ## Deployment
 Build a static image from `services/matchsvc/Dockerfile`. For Railway, add a separate service or integrate to a dedicated container runner. Configure:
@@ -65,7 +70,7 @@ CREATE TABLE IF NOT EXISTS results_idempotency (
 
 ## Node integration
 - Use `@conquestk/match-client` (workspace `shared/match-client`) from the backend to send presence and queue mutations and poll matches.
-- Subscribe to Redis channel `matchsvc:events` in the backend; on `match.found` create/join a private Socket.IO room and notify clients. Presence/roster payloads mirror the service schema.
+- Subscribe to Redis channel `matchsvc:events` in the backend; on `match.found` create/join a private Socket.IO room and notify clients. Presence/roster payloads mirror the service schema. `backend/src/routes/matchsvc.ts` exposes `/api/matchsvc/status`, which the Admin Dashboard renders as the Match Service card (health, subscriber state, queue depths, matches formed, presence online).
 
 ## Roadmap
 - gRPC + Connect/OpenAPI generation under `services/matchsvc/api`

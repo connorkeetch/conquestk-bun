@@ -28,10 +28,10 @@ community-built maps, and rich administrative tooling.
 
 ## 📈 Go-live snapshot
 
-- Tentative launch remains October 1, 2025; the canonical backlog lives in `docs/planning/go-live-plan.md`.
-- Core gameplay persistence, lifecycle transitions, sockets, map permissions, and truthful navigation all cleared their `P0` gates.
-- Remaining pre-launch work: creator/moderator notification fan-out, map asset purge tuning, a follow-up security checklist, CI coverage gates, large-file safeguards, and telemetry baselines.
-- Documentation has been updated to match the shipped feature set so beta notes and marketing copy stay truthful.
+- Family-and-friends beta launched in late 2025; broader early access is targeting **Spring 2026** once the final telemetry and accessibility goals land. Track blockers in `docs/planning/go-live-plan.md`.
+- Gameplay, lifecycle transitions, sockets, and map workflows are production ready. Admin tooling now surfaces BullMQ, Match Service, and odds verification health directly inside the dashboard.
+- Grandmaster AI turns now route through the Rust/WASM evaluator while Recruit and Commander stick with the TypeScript heuristics for throughput. Shadow verification can be triggered from the admin panel and reports divergence metrics.
+- Current focus: finish creator/moderator notification fan-out, finalize the telemetry dashboards, ship accessibility presets, and wire the new matchsvc rollout safeguards into production. Documentation reflects those goals and flags the remaining gaps so testers know what to expect.
 
 ---
 

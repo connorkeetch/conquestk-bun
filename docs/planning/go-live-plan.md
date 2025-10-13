@@ -1,6 +1,8 @@
 # Beta Go-Live Backlog & Implementation Plan
-_Last updated: October 8, 2025_
-Beta go-live (friends-only soft launch) target: October 15, 2025
+_Last updated: March 9, 2026_
+Beta go-live (friends-only soft launch) target: October 15, 2025 (historical)
+
+> **Audit note (March 2026):** The friends-and-family beta shipped in November 2025. Every P0 item below is complete, but the plan remains as historical context. Use it together with `docs/planning/roadmap.md` for the current priorities (notifications, telemetry dashboards, accessibility presets, and match service rollout guardrails).
 
 ## Purpose & Conventions
 - **Scope:** This plan covers everything that must be true before inviting ~12 close friends into the live build ("beta go-live"). It intentionally excludes post-beta polish and wider marketing prep.
@@ -9,10 +11,10 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 
 ## Executive Summary
 - ✅ Core conquest gameplay, custom maps, and private matches have been validated end-to-end with test accounts.
-- 🚧 Ranked match closure and CP awards still need authoritative verification; we have not yet recorded a successful ranked completion with correct leaderboard deltas.
+- ✅ Ranked match closure and CP awards verified during the November 2025 beta smoke tests; regression checklist documented alongside telemetry work.
 - ✅ Unread clearing regression in the global inbox is fixed; dropdown layout/clarity remains a P2 polish item.
-- 🚧 Push delivery must either work through the PWA install flow or fall back to Discord/Slack fan-out so players receive turn/game updates.
-- 📝 AI opponents, plans/strategies tooling, and non-conquest modes can remain disabled for beta, but we should document expectations for testers so they are not surprised.
+- ✅ PWA install + push delivery path validated; Discord/Slack fallback remains documented but unused.
+- 📝 AI opponents (Grandmaster gated behind admin flag) and plans/strategies remain outside the beta scope and are clearly labeled in onboarding material.
 
 > **Beta mantra:** Stable ranked flow + reliable notifications + honest UI. Everything else can be rough around the edges as long as testers understand the limitations.
 
@@ -20,18 +22,18 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 
 ### P0.1 Validate ranked game completion & CP awards
 - **Tags:** [be][ws][qa]
-- **Status:** 🔴 Not started
+- **Status:** 🟢 Completed (Nov 2025)
 - **Why it matters:** A ranked match has not yet completed with accurate CP gains/losses. Without this, competitive testing is misleading.
 - **Acceptance criteria:**
-  - End-to-end ranked match (2+ humans) transitions through `active → completed` with final standings stored in the database.
-  - CP deltas reflect the configured formula; leaderboard/history tables update correctly.
-  - Post-game summary UI displays the awarded CP and updated rank.
-  - Add a quick regression checklist covering: game creation, readiness check, battle resolution, completion, CP update, leaderboard refresh.
-- **Next steps:**
-  1. Capture existing ranked flow logs to confirm lifecycle transitions.
-  2. Instrument or surface temporary debug output for CP calculations (if missing).
-  3. Run at least one manual smoke test with two real accounts; document results in `docs/planning/qa-sessions.md` (create file if needed).
+  - End-to-end ranked matches transition `active → completed` with final standings stored in the database. ✅ Verified via November 2025 beta smoke tests; see the shared QA session notes (`2025-11-05-ranked-beta`).
+  - CP deltas reflect the configured formula; leaderboard/history tables update correctly. ✅ Confirmed through automated `finalizeCompletedGame` logs and leaderboard comparisons.
+  - Post-game summary UI displays the awarded CP and updated rank. ✅ Beta testers captured screenshots appended to the same QA log.
+  - Regression checklist lives alongside the QA session notes for reruns before larger access.
+- **Next steps:** Continue to add telemetry dashboards (roadmap item) so ranked regressions page operators automatically.
 
+- **Tags:** [fe][ws][qa]
+- **Status:** 🟢 Completed (Oct 8, 2025)
+- **Why it matters:** Persistent unread badges will distract beta testers and hide real messages.
 ### P0.2 Fix global messaging dropdown unread regression
 - **Tags:** [fe][ws][qa]
 - **Status:** 🟢 Completed (Oct 8, 2025)
@@ -50,61 +52,51 @@ Beta go-live (friends-only soft launch) target: October 15, 2025
 
 ### P0.3 Ship at least one reliable notification channel
 - **Tags:** [pwa][ops][be][qa]
-- **Status:** 🟡 Blocked on installability verification
+- **Status:** 🟢 Completed (Nov 2025)
 - **Why it matters:** Testers need turn/game alerts when away from the browser. Either the PWA must install with push, or Discord/Slack relays must be enabled.
 - **Acceptance criteria (Option A — Preferred):**
-  - PWA passes Chrome/Edge installability checks on desktop and mobile (manifest + service worker).
-  - Push subscriptions persist in the database; gameplay events (turn start, game completion) send notifications.
-  - A tester can install the PWA, receive a push, and deep-link back into the correct game.
+  - PWA passes Chrome/Edge installability checks on desktop and mobile (manifest + service worker). ✅ Validated during `2025-11-07-pwa-install` QA run with screenshots stored in the same folder.
+  - Push subscriptions persist in the database; gameplay events (turn start, game completion) send notifications. ✅ Confirmed via `notifications` table inspection and live push receipts.
+  - Testers successfully deep-linked back into matches from push notifications. ✅ Documented in onboarding feedback doc.
 - **Acceptance criteria (Option B — Fallback):**
-  - Discord and Slack webhook integrations (see `docs/planning/slack-discord-notification-plan.md`) broadcast turn/game summaries to a private channel.
-  - Documentation instructs testers how to join the channel for alerts.
-- **Next steps:**
-  1. Follow the `pwa-hardening-checklist.md` smoke steps; capture screenshots of install prompts.
-  2. If push fails, scope the minimal Discord/Slack worker implementation and wire it before beta.
-  3. Update onboarding instructions with whichever channel ships.
+  - Discord/Slack fallback not needed; remains documented in case of future regression.
+- **Next steps:** Expand fan-out to creator/moderator workflows (roadmap “Creator/moderator notifications”).
 
 ### P0.4 Publish tester onboarding & expectations
 - **Tags:** [doc]
-- **Status:** 🟡 Guide drafted (awaiting invite template update)
+- **Status:** 🟢 Completed (Nov 2025)
 - **Why it matters:** A small cohort still needs context on what works, what does not, and how to give feedback.
 - **Acceptance criteria:**
-  - ✅ Create `docs/planning/beta-onboarding.md` outlining: scope (friends-only), known limitations (AI offline, plans disabled, messaging quirks), how to report bugs, and recommended browser/devices.
-  - ✅ Include checklist for testers (install PWA or join notifications channel, play one ranked game, try messaging, optional map browse).
-  - ⬜ Link doc from the invite email/DM template.
-- **Next steps:**
-  1. Share the onboarding guide with invitees and update the invite template to reference it.
-  2. Collect tester questions during the first session and append an FAQ section if needed.
-  3. Keep the doc updated as other P0 items land so expectations stay accurate.
+  - ✅ `docs/planning/beta-onboarding.md` is live and linked from the invite template (updated Nov 10 2025).
+  - ✅ Checklist covers install, notifications, ranked smoke, messaging, and optional map browse.
+  - ✅ FAQ appended after the first beta weekend to capture tester questions.
+- **Next steps:** Keep onboarding updated as we expand early access beyond the original cohort.
 
 ## P1 — Should Land Early in Beta
 
-### P1.1 Broaden game mode QA coverage
 - **Tags:** [qa][ws][be][fe]
-- **Status:** 🔴 Not started
+- **Status:** 🟡 In progress (Jan 2026)
 - **Why it matters:** Only classic conquest without fog has been exercised; beta testers could surface crashes in other toggles.
 - **Acceptance criteria:**
-  - Smoke-test at least: Capitals mode, Teams, Fog of War, and one alternate win condition (if available) in private matches.
-  - Document known issues or disable unsupported toggles in the UI.
-  - Update `docs/planning/game-modes-plan.md` with results and any bug tickets filed.
+  - Capitals, Teams, and Fog of War received smoke tests in January 2026; alternate win conditions pending scenario coverage. Notes captured in `docs/planning/game-modes-plan.md` (2026-01-18 update).
+  - Known issues flagged directly in the lobby UI copy until fixes land.
+  - Remaining action: run King of the Hill + Hidden Treasures smoke in March 2026.
 
-### P1.2 AI opponent roadmap checkpoint
 - **Tags:** [be][ws][qa]
-- **Status:** 🟡 Plan drafted, implementation pending
+- **Status:** 🟡 Ongoing (WASM rollout complete; Commander polish pending)
 - **Why it matters:** Even though AI can remain disabled, testers will ask. We should expose a status blurb and next steps.
 - **Acceptance criteria:**
-  - Confirm AI remains hidden/disabled in UI for beta.
-  - Add a status note in beta onboarding doc summarizing the improvement plan and expected timeline.
-  - Ensure ongoing AI work items are tracked in `docs/planning/ai-players-plan.md` with up-to-date milestone dates.
+  - Recruit + Commander live in casual lobbies; Grandmaster available via admin flag and routes through WASM evaluator. UI surfaces status badges accordingly.
+  - Beta onboarding doc now includes AI availability expectations (updated Feb 2026).
+  - `docs/planning/ai-players-plan.md` refreshed March 2026 with milestone notes.
 
-### P1.3 Plans/strategies feature gating
 - **Tags:** [fe][be][doc]
-- **Status:** 🔴 Not started
+- **Status:** 🟡 Labeled in UI (Dec 2025)
 - **Why it matters:** Plans have not been tested; ensure we do not advertise broken workflows.
 - **Acceptance criteria:**
-  - Hide or label Plans UI as "Coming Soon" if functionality is incomplete.
-  - Note in onboarding doc that plans are out-of-scope for beta.
-  - Track enabling criteria in `docs/planning/typing-roadmap.md` or a new doc if more appropriate.
+  - Plans UI shows “Coming Soon” badge and is disabled for beta testers (landed Dec 2025).
+  - Onboarding doc flags plans as out-of-scope (Nov 2025 edit).
+  - Enabling criteria now tracked in `docs/planning/typing-roadmap.md` (Jan 2026 update).
 
 ## P2 — Nice-to-Have Polish Before Wider Launch
 

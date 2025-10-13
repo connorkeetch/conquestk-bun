@@ -26,10 +26,6 @@ export const createBullBoardRouter = () => {
 
   createBullBoard({ queues: queues as unknown as readonly never[], serverAdapter })
 
-  // Guard the UI behind admin auth
-  // Accept auth via Bearer header (if present) or an HttpOnly cookie (auth_token)
-  router.use(basePath, authenticateTokenFromCookie, requireAdmin, serverAdapter.getRouter())
-
   // Helper endpoint to set a short-lived HttpOnly token cookie for the Bull Board UI.
   // This enables opening the board in a new tab where headers aren't attached.
   router.post('/api/admin/queues/ui/grant', authenticateToken, requireAdmin, async (req, res) => {
@@ -107,6 +103,11 @@ export const createBullBoardRouter = () => {
       res.status(500).send('Failed to accept grant')
     }
   })
+  // Guard the UI behind admin auth. Accept auth via Bearer header (if present) or
+  // an HttpOnly cookie (auth_token). This must be registered after the grant/accept
+  // helpers so that users without a cookie can redeem a grant code successfully.
+  router.use(basePath, authenticateTokenFromCookie, requireAdmin, serverAdapter.getRouter())
+
   return router
 }
 

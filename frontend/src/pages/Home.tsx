@@ -17,24 +17,24 @@ const Home: React.FC = () => {
 
   const features: Feature[] = [
     {
-      icon: '⚔️',
+      icon: '🛡️',
       title: 'Authoritative Warfare',
       description:
-        'Server-enforced dice rolls, combat logs, and anti-cheese guardrails keep every invasion legit.',
+        'Dice are audited, treaties are logged, and the server plays referee so every march across the border is indisputable.',
       status: 'available',
     },
     {
-      icon: '🎨',
-      title: 'War Forge',
+      icon: '🗺️',
+      title: 'Cartographer’s Arsenal',
       description:
-        'Build and publish worlds with the same tooling our map moderators wield—bonuses, adjacencies, the whole arsenal.',
+        'Sketch continents, wire bonuses, and publish new fronts with the exact moderation workflow our map wardens rely on.',
       status: 'available',
     },
     {
-      icon: '👥',
-      title: '12-Player Chaos',
+      icon: '🤝',
+      title: 'Diplomacy Optional',
       description:
-        'Party up with alliances, betrayals, and simultaneous screams as sockets synchronize every move.',
+        'Queue with allies or queue with frenemies—the lobby keeps receipts when “temporary” truces become eternal grudges.',
       status: 'available',
     },
   ]
@@ -48,24 +48,24 @@ const Home: React.FC = () => {
 
   const gameExperiences: GameExperience[] = [
     {
-      icon: '🛡️',
+      icon: '📊',
       title: 'Ranked War Rooms',
       description:
-        'Ready-check, deploy, and grind CP on servers that document every die you throw and every territory you torch.',
-      meta: 'Live delta streaming keeps the carnage in sync',
+        'Ready-check, deploy, and climb CP ladders on servers that notarize every contested die and border skirmish.',
+      meta: 'Live delta streaming keeps every empire honest',
     },
     {
-      icon: '🗺️',
+      icon: '🏰',
       title: 'Custom Map Sieges',
       description:
-        'Spin up lobbies on official rotations or community fever dreams with capital rules, alliances, and fog of war toggles.',
+        'Spin up lobbies on official rotations or community fever dreams with capital rules, alliances, and fog-of-war skulduggery.',
       meta: 'Up to 12 commanders per battlefield',
     },
     {
-      icon: '🏗️',
+      icon: '🛠️',
       title: 'Creator Foundry',
       description:
-        'Draft, iterate, and submit new arenas with full version history, reviewer feedback, and instant staging previews.',
+        'Draft, iterate, and submit fresh arenas with version history, reviewer feedback, and instant staging previews.',
       meta: 'Moderation workflow built straight into the editor',
     },
   ]
@@ -78,19 +78,19 @@ const Home: React.FC = () => {
 
   const highlights: Highlight[] = [
     {
-      title: 'Battle telemetry',
+      title: 'Receipts of domination',
       description:
-        'Our servers notarize every die, treaty, and betrayal so post-game tribunals can replay the carnage frame-by-frame.',
+        'Every treaty, betrayal, and improbable roll is filed so you can put rivals on trial in the war room minutes later.',
       bullets: [
         'Authoritative archives track territory swings, card cash-ins, and bonus math in real time.',
         'Rank ladders recalculate CP, streaks, and hidden MMR the moment the final stronghold falls.',
-        'Lifecycle enforcement keeps lobbies honest from ready-check to victory parade.',
+        'Lifecycle enforcement keeps lobbies honest from ready-check to coronation.',
       ],
     },
     {
       title: 'Creator logistics',
       description:
-        'Moderated pipelines let you prototype a continent in the morning and ship it to the rotation before dinner.',
+        'Prototype a continent at breakfast and ship it to the rotation before dinner with an editor built for cartographers.',
       bullets: [
         'Visual editor wrangles territories, sectors, and adjacency matrices without touching JSON.',
         'Review queues capture inline feedback, approvals, and rejection reasons automatically.',
@@ -98,9 +98,9 @@ const Home: React.FC = () => {
       ],
     },
     {
-      title: 'Commander quality of life',
+      title: 'Commander creature comforts',
       description:
-        'Stay locked in with alerts, comms, and accessibility tuned for war councils and night-owls alike.',
+        'Alerts, comms, and accessibility are tuned for war councils that stretch past midnight.',
       bullets: [
         'Push notifications, turn pings, and ready-check reminders prevent AFK disasters.',
         'Chat, clans, and reporting tools tie every message to an authenticated identity.',
@@ -108,56 +108,6 @@ const Home: React.FC = () => {
       ],
     },
   ]
-
-  type RoadmapStatus = 'complete' | 'in-progress' | 'up-next'
-
-  interface RoadmapItem {
-    title: string
-    status: RoadmapStatus
-    description: string
-  }
-
-  const roadmap: RoadmapItem[] = [
-    {
-      title: 'Live multiplayer core',
-      status: 'complete',
-      description:
-        'Sockets stream deltas in milliseconds while lifecycle rules boot deserters and archive the aftermath.',
-    },
-    {
-      title: 'Map authoring security',
-      status: 'in-progress',
-      description:
-        'Role-based locks, audit trails, and collaborator approvals are hardening the community map pipeline.',
-    },
-    {
-      title: 'Creator notifications',
-      status: 'in-progress',
-      description:
-        'Push alerts and socket toasts are rolling out so reviewers and authors get verdicts instantly.',
-    },
-    {
-      title: 'Advanced game modes',
-      status: 'up-next',
-      description:
-        'Assassin contracts, Zombie Apocalypse, and King of the Hill await final balance passes before deployment.',
-    },
-  ]
-
-  const roadmapStatusStyles: Record<RoadmapStatus, { label: string; classes: string }> = {
-    complete: {
-      label: 'Shipped',
-      classes: 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30',
-    },
-    'in-progress': {
-      label: 'In progress',
-      classes: 'bg-sky-500/15 text-sky-300 border border-sky-400/30',
-    },
-    'up-next': {
-      label: 'Up next',
-      classes: 'bg-amber-500/15 text-amber-300 border border-amber-400/30',
-    },
-  }
 
   return (
     <div className="min-h-screen">
@@ -169,14 +119,13 @@ const Home: React.FC = () => {
           <h1 className="mt-2 text-[clamp(2rem,3.8vw,3.5rem)] font-bold leading-tight text-white text-center">
             Welcome to the{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-violet-400">
-              Galactic War Council
+              Conquest Council
             </span>
           </h1>
 
           {/* Tighter Value Proposition */}
           <p className="mt-3 mx-auto max-w-[52ch] text-white/80 text-center text-lg md:text-xl">
-            Draft orders, break treaties, and steamroll the map—ConquestK tracks every glorious{' '}
-            betrayal for history.
+            Rewrite borders with a straight face. ConquestK notarizes every triumphant march and embarrassing retreat.
           </p>
 
           {/* Clearer Primary Action */}
@@ -184,7 +133,7 @@ const Home: React.FC = () => {
             {isAuthenticated ? (
               <>
                 <Link to="/lobby" className="btn-primary btn-lg">
-                  ⚡ Deploy Troops →
+                  ⚡ Launch Campaign →
                 </Link>
                 <Link to="/map-editor" className="btn-secondary btn-lg">
                   Forge a Map
@@ -193,7 +142,7 @@ const Home: React.FC = () => {
             ) : (
               <>
                 <Link to="/register" className="btn-primary btn-lg">
-                  Enlist Today →
+                  Plot Your Coup →
                 </Link>
                 <Link to="/login" className="btn-secondary btn-lg">
                   Veteran Login
@@ -229,11 +178,11 @@ const Home: React.FC = () => {
             <div className="relative z-10 text-center px-8">
               <h2 className="text-3xl md:text-5xl font-bold mb-4">
                 <span className="bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
-                  CONQUER THE WORLD
+                  CONQUER OR BE CONQUERED
                 </span>
               </h2>
               <p className="text-xl text-muted max-w-2xl mx-auto">
-                Deploy armies • Capture capitals • Trigger global domination alerts
+                Deploy armies • Capture capitals • Announce your supremacy before the ink dries
               </p>
             </div>
           </div>
@@ -245,7 +194,7 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">
-              <span className="text-white">Battlefield Systems</span>
+              <span className="text-white">Campaign toolkit</span>
             </h2>
           </div>
 
@@ -281,11 +230,10 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              <span className="text-white">Play your way</span>
+              <span className="text-white">Choose your theatre</span>
             </h2>
             <p className="text-muted text-sm">
-              Ladder sweat, casual treaties, or clan scrims—we have a lobby ready for every flavor
-              of conquest.
+              Ladder sweat, casual treaties, or clan scrims—we have a lobby staged for every flavor of ambition.
             </p>
           </div>
 
@@ -320,11 +268,10 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              <span className="text-white">Why commanders stay</span>
+              <span className="text-white">Why conquerors linger</span>
             </h2>
             <p className="text-muted text-sm">
-              Built for commanders who crave receipts, tools, and uptime when the invasion clock
-              hits zero.
+              Built for rulers who crave receipts, tools, and uptime when the invasion clock hits zero.
             </p>
           </div>
 
@@ -355,48 +302,15 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Roadmap Snapshot */}
-      <section className="relative z-10 section-spacing-sm">
-        <div className="container mx-auto px-6 max-w-5xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              <span className="text-white">Roadmap snapshot</span>
-            </h2>
-            <p className="text-muted text-sm">
-              We broadcast the roadmap so you know what the engineering corps is weaponizing next.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {roadmap.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-xl border border-border bg-surface-2/40 p-5 md:p-6 flex flex-col md:flex-row md:items-center md:gap-6"
-              >
-                <div className="flex items-center gap-3 mb-4 md:mb-0">
-                  <span className="text-white text-lg font-medium">{item.title}</span>
-                  <span
-                    className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full ${roadmapStatusStyles[item.status].classes}`}
-                  >
-                    {roadmapStatusStyles[item.status].label}
-                  </span>
-                </div>
-                <p className="text-sm text-white/70 md:flex-1">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* How It Works - Streamlined */}
       <section className="relative z-10 section-spacing-sm">
         <div className="container mx-auto px-6 max-w-5xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              <span className="text-white">How to Dominate</span>
+              <span className="text-white">How to seize the map</span>
             </h2>
             <p className="text-muted text-sm">
-              Master these three fundamentals to keep your troops cheering instead of mutinying.
+              Memorize these three pillars before you start renaming continents after yourself.
             </p>
           </div>
 
@@ -405,10 +319,9 @@ const Home: React.FC = () => {
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 1
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Deploy Like a Menace</h3>
+              <h3 className="text-lg font-medium text-heading mb-2">Stack the capital</h3>
               <p className="text-muted text-sm">
-                Stack capitals, guard borders, and leave just enough bait to lure foolish
-                counterattacks.
+                Fortify strongholds, guard borders, and leave just enough bait to lure overeager liberators.
               </p>
             </div>
 
@@ -416,10 +329,9 @@ const Home: React.FC = () => {
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 2
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Roll the Bones</h3>
+              <h3 className="text-lg font-medium text-heading mb-2">Bully the odds</h3>
               <p className="text-muted text-sm">
-                Blitz when the odds peak, turtle when the dice betray you, and rotate fronts before
-                the map catches fire.
+                Blitz when the dice favor you, turtle when they don’t, and rotate fronts before the neighbors smell weakness.
               </p>
             </div>
 
@@ -427,10 +339,9 @@ const Home: React.FC = () => {
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 3
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Broadcast Supremacy</h3>
+              <h3 className="text-lg font-medium text-heading mb-2">Publish the victory</h3>
               <p className="text-muted text-sm">
-                Cash cards, trigger domination, and screen-cap the results before rivals spin the
-                narrative.
+                Cash cards, trigger domination, and screenshot the scoreboard before rivals claim it was “a learning scrim”.
               </p>
             </div>
           </div>
@@ -442,11 +353,10 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="rounded-2xl border border-border bg-surface-2/60 p-8 md:p-12 text-center">
             <h2 className="text-3xl font-bold text-white">
-              Command wants to know: are you invading tonight?
+              High command is asking: whose banner flies tonight?
             </h2>
             <p className="mt-4 text-white/80 text-base md:text-lg">
-              The live beta is online. Rally your squad, draft a fresh map, or queue solo and claim
-              the top of the CP charts.
+              The live beta is online. Rally your council, draft a fresh map, or queue solo and walk away with new provinces.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               {isAuthenticated ? (

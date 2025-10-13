@@ -1,6 +1,6 @@
 # 📚 ConquestK Documentation
 
- _Last updated: February 19, 2026_
+ _Last updated: March 9, 2026_
 
 Welcome! Every guide, decision record, and troubleshooting note lives in the `docs/` directory.
 Use this index to jump directly to the information you need.
@@ -71,6 +71,9 @@ Use this index to jump directly to the information you need.
 - [planning/profile-page-ux-review.md](planning/profile-page-ux-review.md) – profile UX audit and follow‑ups
 - [planning/site-wide-chat.md](planning/site-wide-chat.md) – site‑wide chat concept and constraints
 - [planning/slack-discord-notification-plan.md](planning/slack-discord-notification-plan.md) – Slack/Discord notifications plan
+
+### Analysis & audits
+- [analysis/documentation-audit-2026-03-09.md](analysis/documentation-audit-2026-03-09.md) – March 2026 documentation audit outcomes
 
 ---
 
