@@ -1,6 +1,7 @@
 import type { GameDelta } from '@conquestk/shared/types/delta'
-import type { Server } from 'socket.io'
+import type { RemoteSocket, Server } from 'socket.io'
 import type { GameState, SerializedGameState } from '../types/game.js'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { logger } from '../utils/logger.js'
 import { GameService } from './gameService.js'
 import { socketPayloadMetrics } from './metricsService.js'
@@ -95,22 +96,20 @@ function filterDeltaForMask(delta: GameDelta, mask: Set<string>): GameDelta | nu
   return delta
 }
 
+type SocketData = { userId?: string }
+
 export async function emitFogFilteredDelta(
-  io: Server,
+  io: Server<ClientToServerEvents, ServerToClientEvents, Record<string, unknown>, SocketData>,
   roomId: string,
   delta: GameDelta,
   state?: GameState,
 ): Promise<void> {
   // Fetch sockets in room
   const channel = `${ROOM_PREFIX}${roomId}`
-  let sockets: Array<{ id: string; data?: Record<string, unknown> }>
+  let sockets: Array<RemoteSocket<ServerToClientEvents, SocketData>>
   try {
     // fetchSockets is the preferred way
-    // biome-ignore lint/suspicious/noExplicitAny: socket.io types
-    sockets = (await (io as any).in(channel).fetchSockets()) as Array<{
-      id: string
-      data?: Record<string, unknown>
-    }>
+    sockets = await io.in(channel).fetchSockets()
   } catch {
     // Fallback: if the test/mocks don't implement .in().fetchSockets(), broadcast as-is
     try {
@@ -154,9 +153,7 @@ export async function emitFogFilteredDelta(
 
   // Compute masks per viewer and emit filtered deltas
   for (const s of sockets) {
-    // RemoteSocket exposes 'data' not arbitrary properties
-    // biome-ignore lint/suspicious/noExplicitAny: RemoteSocket .data is generic
-    const viewerId = (s as any).data?.userId as string | undefined
+    const viewerId = s.data?.userId
     if (!viewerId) {
       // Fallback: if viewer identity is missing, emit unfiltered delta to avoid silent drops
       try {
@@ -210,25 +207,22 @@ function serializeForClient(state: GameState | SerializedGameState): SerializedG
 }
 
 export async function emitRevealSnapshot(
-  io: Server,
+  io: Server<ClientToServerEvents, ServerToClientEvents, Record<string, unknown>, SocketData>,
   roomId: string,
   viewerId: string,
   state?: GameState,
 ): Promise<void> {
   const channel = `${ROOM_PREFIX}${roomId}`
-  let sockets: Array<{ id: string; data?: Record<string, unknown> }>
+  let sockets: Array<
+    RemoteSocket<ServerToClientEvents, ClientToServerEvents, Record<string, unknown>, SocketData>
+  >
   try {
-    // biome-ignore lint/suspicious/noExplicitAny: socket.io types
-    sockets = (await (io as any).in(channel).fetchSockets()) as Array<{
-      id: string
-      data?: Record<string, unknown>
-    }>
+    sockets = await io.in(channel).fetchSockets()
   } catch {
     return
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: RemoteSocket .data is generic at runtime
-  const target = sockets.find((s) => (s as any).data?.userId === viewerId)
+  const target = sockets.find((s) => s.data?.userId === viewerId)
   if (!target) return
 
   const gameState = state ?? (await new GameService().getGameState(roomId))

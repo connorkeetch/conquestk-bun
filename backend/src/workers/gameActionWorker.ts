@@ -312,7 +312,7 @@ export class GameActionWorker {
                     updated.version,
                   )
                 const { emitFogFilteredDelta } = await import('../services/fogService.js')
-                await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
+                await emitFogFilteredDelta(this.io, gameId, battleDelta)
               } catch {
                 // best-effort; clients will converge on next snapshot
               }
@@ -381,7 +381,7 @@ export class GameActionWorker {
                 },
                 updated.version,
               )
-              await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
+              await emitFogFilteredDelta(this.io, gameId, playerDelta)
               if (updated.phase !== prevPhase) {
                 await this.deltaEmitter.emitPhaseChange(gameId, {
                   phase: updated.phase,
@@ -619,7 +619,7 @@ export class GameActionWorker {
                 ),
               ]
               const { emitFogFilteredDelta } = await import('../services/fogService.js')
-              await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
+              await emitFogFilteredDelta(this.io, gameId, battleDelta)
             } catch (e) {
               logger.debug('Failed to emit fog-filtered battle delta in worker attack', {
                 roomId: gameId,
@@ -668,7 +668,7 @@ export class GameActionWorker {
             ]
             const { emitFogFilteredDelta } = await import('../services/fogService.js')
             for (const d of updates) {
-              await emitFogFilteredDelta(this.io as unknown as Server, gameId, d)
+              await emitFogFilteredDelta(this.io, gameId, d)
             }
           } catch {
             // best-effort
@@ -789,7 +789,7 @@ export class GameActionWorker {
               },
               version,
             )
-            await emitFogFilteredDelta(this.io as unknown as Server, gameId, playerDelta)
+            await emitFogFilteredDelta(this.io, gameId, playerDelta)
 
             // If phase changed (commonly to reinforcement), emit phase change with bank as reinforcementArmies
             if (newPhase !== currentState.phase) {
@@ -848,7 +848,7 @@ export class GameActionWorker {
       // Broadcast delta update if needed
       if (shouldBroadcast && delta) {
         const { emitFogFilteredDelta } = await import('../services/fogService.js')
-        await emitFogFilteredDelta(this.io as unknown as Server, gameId, delta)
+        await emitFogFilteredDelta(this.io, gameId, delta)
       }
 
       const result: ProcessGameActionResult = {
@@ -992,7 +992,7 @@ export class GameActionWorker {
         playerId,
       }
       const { emitFogFilteredDelta } = await import('../services/fogService.js')
-      await emitFogFilteredDelta(this.io as unknown as Server, gameId, fortifyDelta)
+      await emitFogFilteredDelta(this.io, gameId, fortifyDelta)
     } catch (_e) {
       // Non-fatal: fortify summary is best-effort
     }

@@ -243,7 +243,7 @@ export class GameActionProcessor {
       const { DeltaBuilder } = await import('../types/deltaUpdates.js')
       const { emitFogFilteredDelta } = await import('./fogService.js')
       await emitFogFilteredDelta(
-        this.io as unknown as Server,
+        this.io,
         gameId,
         DeltaBuilder.territoryUpdate(
           gameId,
@@ -253,7 +253,7 @@ export class GameActionProcessor {
         ),
       )
       await emitFogFilteredDelta(
-        this.io as unknown as Server,
+        this.io,
         gameId,
         DeltaBuilder.territoryUpdate(
           gameId,

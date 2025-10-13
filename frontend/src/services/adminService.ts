@@ -462,13 +462,23 @@ class AdminService {
   }
 
   async runAiEvalBench(
-    body: { sets?: number; candidatesPer?: number; territories?: number } = {},
+    body: {
+      sets?: number
+      candidatesPer?: number
+      territories?: number
+      warmupRuns?: number
+      measureRuns?: number
+      pureCompute?: boolean
+    } = {},
   ): Promise<{
     sets: number
     candidatesPer: number
     territories: number
-    ts: { totalMs: number; candidatesPerSec: number }
-    wasm: { totalMs: number; candidatesPerSec: number }
+    warmupRuns: number
+    measureRuns: number
+    pureCompute: boolean
+    ts: { runsMs: number[]; medianMs: number; candidatesPerSec: number }
+    wasm: { runsMs: number[]; medianMs: number; candidatesPerSec: number }
   }> {
     const response = await apiClient.post(`${this.benchmarkUrl}/ai-eval-bench`, body)
     return response.data?.data ?? response.data
