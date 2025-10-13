@@ -347,9 +347,9 @@ export const createBullBoardRouter = () => {
   const adapters: readonly BullMQAdapter[] = queues
   createBullBoard({ queues: adapters, serverAdapter })
 
-  // Optional Basic Auth fallback for dev: set BULL_BOARD_BASIC_AUTH_USER and BULL_BOARD_BASIC_AUTH_PASS
-  const basicUser = (process.env.BULL_BOARD_BASIC_AUTH_USER || '').trim()
-  const basicPass = (process.env.BULL_BOARD_BASIC_AUTH_PASS || '').trim()
+  // Optional Basic Auth fallback for dev: set BULL_BOARD_BASIC_AUTH_USR and BULL_BOARD_BASIC_AUTH_PWD
+  const basicUser = (process.env.BULL_BOARD_BASIC_AUTH_USR || '').trim()
+  const basicPass = (process.env.BULL_BOARD_BASIC_AUTH_PWD || '').trim()
   if (basicUser && basicPass) {
     const basicAuthMw = (req: any, res: any, next: any) => {
       const hdr = req.headers['authorization'] as string | undefined
