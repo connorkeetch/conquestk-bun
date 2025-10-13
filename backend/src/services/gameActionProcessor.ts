@@ -427,38 +427,46 @@ export class GameActionProcessor {
     if (last) {
       try {
         const { DeltaBuilder } = await import('../types/deltaUpdates.js')
-        const toPayload = (val: unknown): import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'] | null => {
+        const toPayload = (
+          val: unknown,
+        ): import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'] | null => {
           if (!val || typeof val !== 'object') return null
           const obj = val as Record<string, unknown>
-          const f = obj['fromTerritory']
-          const t = obj['toTerritory']
-          const aL = obj['attackerLosses']
-          const dL = obj['defenderLosses']
-          const aD = obj['attackerDice']
-          const dD = obj['defenderDice']
-          const c = obj['conquered']
+          const f = obj.fromTerritory
+          const t = obj.toTerritory
+          const aL = obj.attackerLosses
+          const dL = obj.defenderLosses
+          const aD = obj.attackerDice
+          const dD = obj.defenderDice
+          const c = obj.conquered
           const ok =
-            typeof f === 'object' && f !== null &&
-            typeof (f as Record<string, unknown>)['id'] === 'string' &&
-            typeof (f as Record<string, unknown>)['armies'] === 'number' &&
-            typeof t === 'object' && t !== null &&
-            typeof (t as Record<string, unknown>)['id'] === 'string' &&
-            typeof (t as Record<string, unknown>)['armies'] === 'number' &&
-            Array.isArray(aD) && aD.every((n) => typeof n === 'number') &&
-            Array.isArray(dD) && dD.every((n) => typeof n === 'number') &&
-            typeof aL === 'number' && typeof dL === 'number' && typeof c === 'boolean'
+            typeof f === 'object' &&
+            f !== null &&
+            typeof (f as Record<string, unknown>).id === 'string' &&
+            typeof (f as Record<string, unknown>).armies === 'number' &&
+            typeof t === 'object' &&
+            t !== null &&
+            typeof (t as Record<string, unknown>).id === 'string' &&
+            typeof (t as Record<string, unknown>).armies === 'number' &&
+            Array.isArray(aD) &&
+            aD.every((n) => typeof n === 'number') &&
+            Array.isArray(dD) &&
+            dD.every((n) => typeof n === 'number') &&
+            typeof aL === 'number' &&
+            typeof dL === 'number' &&
+            typeof c === 'boolean'
           if (!ok) return null
           const tRec = t as Record<string, unknown>
           return {
             fromTerritory: {
-              id: String((f as Record<string, unknown>)['id']),
-              armies: Number((f as Record<string, unknown>)['armies']),
+              id: String((f as Record<string, unknown>).id),
+              armies: Number((f as Record<string, unknown>).armies),
             },
             toTerritory: {
-              id: String(tRec['id']),
-              armies: Number(tRec['armies']),
-              ...(typeof tRec['ownerId'] === 'string' || tRec['ownerId'] === null
-                ? { ownerId: tRec['ownerId'] as string | null }
+              id: String(tRec.id as string),
+              armies: Number(tRec.armies as number),
+              ...(typeof tRec.ownerId === 'string' || tRec.ownerId === null
+                ? { ownerId: tRec.ownerId as string | null }
                 : {}),
             },
             attackerLosses: Number(aL),
@@ -471,7 +479,9 @@ export class GameActionProcessor {
         const payload = toPayload(last)
         if (payload) {
           const battleDelta = DeltaBuilder.battleResult(gameId, payload, updated.version)
-          const withChanges: import('@conquestk/shared/types/delta').BattleResultDelta & { changes?: import('@conquestk/shared/types/delta').GameDelta[] } = {
+          const withChanges: import('@conquestk/shared/types/delta').BattleResultDelta & {
+            changes?: import('@conquestk/shared/types/delta').GameDelta[]
+          } = {
             ...battleDelta,
             changes: [
               DeltaBuilder.territoryUpdate(
@@ -483,7 +493,10 @@ export class GameActionProcessor {
               DeltaBuilder.territoryUpdate(
                 gameId,
                 payload.toTerritory.id,
-                { armies: payload.toTerritory.armies, ownerId: payload.toTerritory.ownerId ?? undefined },
+                {
+                  armies: payload.toTerritory.armies,
+                  ownerId: payload.toTerritory.ownerId ?? undefined,
+                },
                 updated.version,
               ),
             ],

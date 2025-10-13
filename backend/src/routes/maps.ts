@@ -729,9 +729,7 @@ router.post(
       if (req.body.metadata) {
         metadata = parseJsonField<MapMetadataPayload | null>(req.body.metadata, null)
         if (metadata) {
-          const sectorsLen = Array.isArray((metadata as unknown as { sectors?: unknown[] }).sectors)
-            ? ((metadata as unknown as { sectors?: unknown[] }).sectors as unknown[]).length
-            : 0
+          const sectorsLen = Array.isArray(metadata.sectors) ? metadata.sectors.length : 0
           logger.info('Parsed metadata:', {
             territories: metadata.territories?.length || 0,
             sectors: sectorsLen,
@@ -963,7 +961,15 @@ router.post(
         userId,
         isAdmin: Boolean(req.user?.isAdmin),
       })
-      const bodyWithSectors = req.body as unknown as { sectorId?: string; continentId?: string }
+      const rec =
+        req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {}
+      const maybeSector =
+        (typeof (rec as Record<string, unknown>).sectorId === 'string'
+          ? (rec.sectorId as string)
+          : undefined) ??
+        (typeof (rec as Record<string, unknown>).continentId === 'string'
+          ? (rec.continentId as string)
+          : undefined)
       const baseTerritory = {
         mapId: req.params.mapId,
         territoryId: req.body.territoryId,
@@ -976,9 +982,7 @@ router.post(
       }
       const territory = await mapService.createTerritory({
         ...baseTerritory,
-        ...(bodyWithSectors.sectorId || bodyWithSectors.continentId
-          ? { sectorId: (bodyWithSectors.sectorId ?? bodyWithSectors.continentId) as string }
-          : {}),
+        ...(maybeSector ? { sectorId: maybeSector } : {}),
       })
 
       return res.status(201).json(territory)
