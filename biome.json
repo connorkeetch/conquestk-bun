@@ -242,17 +242,6 @@
       }
     },
     {
-      "includes": ["scripts/**/*.js"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noConsole": "off",
-            "noEmptyBlockStatements": "off"
-          }
-        }
-      }
-    },
-    {
       "includes": ["shared/dist/**"],
       "linter": { "enabled": false },
       "formatter": { "enabled": false }
