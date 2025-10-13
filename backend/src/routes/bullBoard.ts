@@ -64,7 +64,7 @@ export const createAcceptRoute = () => {
   const router = Router()
   const basePath = '/api/admin/queues/ui'
 
-  // Accept a short-lived grant code and mint a UI cookie, then redirect to the Bull Board UI
+  // Accept a short-lived grant code and mint a UI cookie, then navigate to the Bull Board UI
   router.get(`${basePath}/accept`, async (req, res) => {
     logger.info('BullBoard accept: endpoint reached', {
       ip: req.ip,
@@ -148,7 +148,15 @@ export const createAcceptRoute = () => {
         userId: decoded.userId,
         path: cookiePath,
       })
-      res.redirect(basePath)
+      // Use HTML meta-refresh instead of 302 to avoid any proxy that might strip Set-Cookie on redirects
+      res
+        .status(200)
+        .set('Content-Type', 'text/html; charset=utf-8')
+        .send(
+          `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=${basePath}" />` +
+            `<title>Redirecting…</title></head><body>Redirecting to Bull Board… ` +
+            `<a href="${basePath}">Continue</a></body></html>`,
+        )
     } catch (_e) {
       logger.error('BullBoard accept: unexpected failure', {
         ip: req.ip,
@@ -169,6 +177,7 @@ export const createLoginRoute = () => {
   // Accepts either a short-lived grant `code` or a raw `access_token`.
   router.get('/api/admin/queues/login', async (req, res) => {
     try {
+      const basePath = '/api/admin/queues/ui'
       const secrets = getJwtSecrets()
       if (!secrets.length) {
         logger.error('BullBoard login: missing JWT secrets', {
@@ -259,7 +268,15 @@ export const createLoginRoute = () => {
         maxAge: 15 * 60 * 1000,
       })
       logger.info('BullBoard login: UI cookie minted', { userId, path: cookiePath })
-      res.redirect('/api/admin/queues/ui')
+      // Use HTML meta-refresh instead of 302 to avoid any proxy that might strip Set-Cookie on redirects
+      res
+        .status(200)
+        .set('Content-Type', 'text/html; charset=utf-8')
+        .send(
+          `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=${basePath}" />` +
+            `<title>Redirecting…</title></head><body>Redirecting to Bull Board… ` +
+            `<a href="${basePath}">Continue</a></body></html>`,
+        )
     } catch (e) {
       logger.error('BullBoard login: unexpected failure', { error: (e as Error)?.message })
       res.status(500).send('Failed to login to Bull Board')
