@@ -46,7 +46,7 @@ import adminRoutes from './routes/admin.js'
 import adminQueuesRoutes from './routes/adminQueues.js'
 import { authRoutes } from './routes/auth.js'
 import benchmarkRoutes from './routes/benchmarkRoutes.js'
-import bullBoardRouterFactory from './routes/bullBoard.js'
+import bullBoardRouterFactory, { createAcceptRoute, createGrantRoute } from './routes/bullBoard.js'
 import clanRoutes from './routes/clans.js'
 import featureFlagsRoutes from './routes/featureFlags.js'
 import friendsRoutes from './routes/friends.js'
@@ -205,10 +205,14 @@ initializeRedis()
       await workerManager.initialize()
       logger.info('✅ WorkerManager created and initialized after Redis connection')
       // Mount Bull Board UI after workers/queues are initialized to avoid 404
+      // IMPORTANT: Mount grant/accept routes FIRST so they're not caught by the middleware
       try {
+        app.use(createGrantRoute())
+        app.use(createAcceptRoute())
+        logger.info('✅ Bull Board grant/accept routes mounted')
         const bullBoardRouter = bullBoardRouterFactory()
         app.use(bullBoardRouter)
-        logger.info('✅ Bull Board mounted at /api/admin/queues/ui')
+        logger.info('✅ Bull Board UI mounted at /api/admin/queues/ui')
       } catch (e) {
         logger.warn('⚠️ Failed to mount Bull Board after init:', getErrorMessage(e))
       }
