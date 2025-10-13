@@ -927,9 +927,8 @@ router.get(
         'SELECT turn_stats FROM game_states WHERE room_id = $1',
         [gameId],
       )
-      const arr = Array.isArray(result.rows?.[0]?.turn_stats)
-        ? (result.rows[0]?.turn_stats as unknown[])
-        : []
+      const tsVal = result.rows?.[0]?.turn_stats
+      const arr = Array.isArray(tsVal) ? tsVal : []
       res.json({ turnStats: arr, count: arr.length })
     } catch (error) {
       handleRouteError(error, req, 'Failed to get turn stats', 500, {
@@ -953,9 +952,8 @@ router.get(
         'SELECT game_log FROM game_states WHERE room_id = $1',
         [gameId],
       )
-      const arr = Array.isArray(result.rows?.[0]?.game_log)
-        ? (result.rows[0]?.game_log as unknown[])
-        : []
+      const glVal = result.rows?.[0]?.game_log
+      const arr = Array.isArray(glVal) ? glVal : []
       res.json({ entries: arr, count: arr.length })
     } catch (error) {
       handleRouteError(error, req, 'Failed to get game log', 500, {
@@ -983,7 +981,7 @@ router.get(
       let seed: string | null = null
       let source: 'log' | 'state' | null = null
 
-      const logArr = Array.isArray(row?.game_log) ? (row?.game_log as unknown[]) : []
+      const logArr = Array.isArray(row?.game_log) ? row!.game_log! : []
       // Look for the most recent RNG entry in the log
       for (let i = logArr.length - 1; i >= 0; i--) {
         const entry = logArr[i] as Record<string, unknown>
@@ -999,8 +997,11 @@ router.get(
 
       if (!seed) {
         // Fallback to serialized state
-        const data = row?.game_data as Record<string, unknown> | null
-        const s = data && typeof data === 'object' ? (data.combatRngSeed as unknown) : null
+        const data = row?.game_data
+        let s: unknown = null
+        if (data && typeof data === 'object' && 'combatRngSeed' in (data as Record<string, unknown>)) {
+          s = (data as Record<string, unknown>)['combatRngSeed']
+        }
         if (typeof s === 'string' && s.trim().length > 0) {
           seed = s
           source = 'state'
@@ -2349,11 +2350,9 @@ router.post(
 
       // Clear map service cache if it exists
       const { mapService } = await import('../services/mapService.js')
-      if (
-        mapService &&
-        typeof (mapService as unknown as { clearCache?: () => void }).clearCache === 'function'
-      ) {
-        ;(mapService as unknown as { clearCache: () => void }).clearCache()
+      const maybeClear = (mapService as { clearCache?: () => void }).clearCache
+      if (typeof maybeClear === 'function') {
+        maybeClear.call(mapService)
       }
 
       // Clear any Redis cache if configured

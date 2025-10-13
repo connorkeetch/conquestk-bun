@@ -438,9 +438,12 @@ export class MapService {
               },
             }),
             // Accept either sectorId or legacy continentId
-            (territory as unknown as { sectorId?: string }).sectorId ||
-              (territory as unknown as { continentId?: string }).continentId ||
-              null,
+            ((): string | null => {
+              const rec = territory as Record<string, unknown>
+              const a = rec['sectorId']
+              const b = rec['continentId']
+              return typeof a === 'string' ? a : typeof b === 'string' ? b : null
+            })(),
             territory.isCapital === true,
             JSON.stringify(assignedPlayers),
           ],
@@ -1027,9 +1030,11 @@ export class MapService {
           territoryData.mapId,
           territoryData.name,
           JSON.stringify(territoryData.boundaryCoords || []),
-          (territoryData as unknown as { sectorId?: string; continentId?: string }).sectorId ||
-            (territoryData as unknown as { continentId?: string }).continentId ||
-            null,
+          ((
+            (territoryData as { sectorId?: string }).sectorId ??
+            (territoryData as { continentId?: string }).continentId ??
+            null
+          ) as string | null),
           false, // is_capital default
         ],
       )
@@ -1065,10 +1070,14 @@ export class MapService {
         updateFields.push(`name = $${++paramCount}`)
         updateValues.push(updates.name)
       }
-      const updSector = updates as unknown as { sectorId?: string; continentId?: string }
-      if (updSector.sectorId !== undefined || updSector.continentId !== undefined) {
+      const updRec = updates as Record<string, unknown>
+      const upA = updRec['sectorId']
+      const upB = updRec['continentId']
+      if (upA !== undefined || upB !== undefined) {
         updateFields.push(`sector = $${++paramCount}`)
-        updateValues.push(updSector.sectorId ?? updSector.continentId ?? null)
+        updateValues.push(
+          typeof upA === 'string' ? upA : typeof upB === 'string' ? upB : null,
+        )
       }
       if (updates.boundaryCoords) {
         updateFields.push(`polygon_data = $${++paramCount}`)

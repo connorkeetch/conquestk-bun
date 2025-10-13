@@ -75,7 +75,8 @@ export async function initializeRedis(): Promise<RedisClients> {
     }
 
     // Main Redis client for general use
-    redisClient = new RedisPkg(finalRedisUrl, {
+    const RedisCtor = RedisPkg as unknown as new (url: string, options?: RedisOptions) => IORedis
+    redisClient = new RedisCtor(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'main',
     })
@@ -113,11 +114,12 @@ export async function initializeRedis(): Promise<RedisClients> {
       }
     })
 
-    redisClient.on('ready', () => {
+    const rc = redisClient!
+    rc.on('ready', () => {
       logger.info('✅ Redis client ready')
     })
 
-    redisClient.on('close', () => {
+    rc.on('close', () => {
       logger.warn('Redis client connection closed')
     })
 
@@ -133,14 +135,14 @@ export async function initializeRedis(): Promise<RedisClients> {
     // Test connection with extended timeout for Railway
     try {
       await Promise.race([
-        redisClient.connect(),
+        rc.connect(),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Connection timeout after 15s')), 15000),
         ),
       ])
 
       // Test basic operations
-      await redisClient.ping()
+      await rc.ping()
       logger.info('✅ Redis connection established and verified')
 
       return { redisClient }

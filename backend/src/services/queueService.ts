@@ -462,7 +462,10 @@ export class QueueService {
         ? {
             id: lastFailedJob.id ?? 'unknown',
             reason:
-              (lastFailedJob as unknown as FailedJobSnapshot).failedReason || 'Unknown failure',
+              ((): string => {
+                const r = (lastFailedJob as { failedReason?: unknown }).failedReason
+                return typeof r === 'string' && r.length > 0 ? r : 'Unknown failure'
+              })(),
             failedAt: new Date(
               (lastFailedJob.finishedOn ?? lastFailedJob.processedOn ?? lastFailedJob.timestamp) ||
                 Date.now(),
@@ -750,9 +753,9 @@ export class QueueService {
       })
     }
     // We keep error logging on the Queue instance if available.
-    ;(queue as unknown as { on?: (event: string, cb: (err: unknown) => void) => void }).on?.(
-      'error',
-      (queueError: unknown) => {
+    const maybeOn = (queue as { on?: (event: string, cb: (err: unknown) => void) => void }).on
+    if (typeof maybeOn === 'function') {
+      maybeOn.call(queue, 'error', (queueError: unknown) => {
         const normalized = this.formatQueueError(queueError)
         const { logNow, occurrences } = this.shouldLogQueueError(queue.name, normalized.message)
 
@@ -770,8 +773,8 @@ export class QueueService {
           ...normalized,
           occurrences,
         })
-      },
-    )
+      })
+    }
   }
 
   private async moveToDeadLetter(

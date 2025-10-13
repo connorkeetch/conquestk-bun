@@ -25,7 +25,8 @@ export const createBullBoardRouter = () => {
     new BullMQAdapter(queueService.getMapAssetQueue()),
   ]
 
-  createBullBoard({ queues: queues as unknown as readonly never[], serverAdapter })
+  const adapters: readonly BullMQAdapter[] = queues
+  createBullBoard({ queues: adapters, serverAdapter })
 
   // Helper endpoint to set a short-lived HttpOnly token cookie for the Bull Board UI.
   // This enables opening the board in a new tab where headers aren't attached.
