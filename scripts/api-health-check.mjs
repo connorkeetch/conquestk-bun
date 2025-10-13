@@ -5,6 +5,7 @@
  * API Health/Status Aggregator
  * - Hits core health/metrics endpoints (public + authenticated) and prints a summary.
  * - Saves a full JSON report to scripts/output/health-report-<timestamp>.json
+ * - Also writes Markdown and HTML summaries next to the JSON by default
  *
  * Usage examples:
  *  node scripts/api-health-check.mjs --base https://conquestk.com --token <JWT>
@@ -19,6 +20,11 @@
  *  --include-debug          Include /debug endpoints (default: false)
  *  --include-benchmark      Include benchmark status endpoint (default: false)
  *  --output <path>          Output JSON path (default: scripts/output/health-report-<ts>.json)
+ *  --markdown <path>        Output Markdown path (default: <output>.md)
+ *  --md <path>              Alias for --markdown
+ *  --html <path>            Output HTML path (default: <output>.html)
+ *  --no-markdown            Disable Markdown summary output
+ *  --no-html                Disable HTML summary output
  */
 
 const { mkdir, writeFile } = await import('node:fs/promises')
@@ -57,6 +63,11 @@ const OUTPUT_DIR = path.join('scripts', 'output')
 const TS = new Date().toISOString().replace(/[:.]/g, '')
 const DEFAULT_OUTPUT = path.join(OUTPUT_DIR, `health-report-${TS}.json`)
 const OUTPUT_PATH = argv.output || process.env.OUTPUT || DEFAULT_OUTPUT
+const OUTPUT_BASE = OUTPUT_PATH.replace(/\.json$/i, '')
+const WRITE_MARKDOWN = !(argv['no-markdown'] || process.env.NO_MARKDOWN)
+const WRITE_HTML = !(argv['no-html'] || process.env.NO_HTML)
+const MD_PATH = argv.markdown || argv.md || process.env.MARKDOWN || `${OUTPUT_BASE}.md`
+const HTML_PATH = argv.html || process.env.HTML || `${OUTPUT_BASE}.html`
 
 function hr(ms) {
   return `${ms.toFixed(0)}ms`
@@ -258,6 +269,128 @@ function printSummary(base, results) {
   console.log('')
 }
 
+function renderMarkdown(baseUrl, results) {
+  const summary = summarize(results)
+  const okMark = (ok) => (ok ? '✔' : '✖')
+  const lines = []
+  lines.push(`# ConquestK API Health Report`)
+  lines.push('')
+  lines.push(`- Generated: ${new Date().toISOString()}`)
+  lines.push(`- Base URL: ${baseUrl}`)
+  lines.push('')
+  for (const cat of Object.keys(summary)) {
+    const s = summary[cat]
+    lines.push(`## ${cat} — ${s.ok}/${s.total} OK`)
+    lines.push('')
+    lines.push('| Endpoint | Status | Code | Time | Notes |')
+    lines.push('|---|---:|---:|---:|---|')
+    for (const r of results.filter((x) => x.category === cat)) {
+      const code = r.statusCode || 'ERR'
+      const notes = r.ok ? '' : (r.error || (typeof r.body === 'object' && r.body && (r.body.error || r.body.message)) || '')
+      lines.push(`| \
+${r.path} | ${okMark(r.ok)} | ${code} | ${hr(r.durationMs)} | ${String(notes || '').replace(/\n/g, ' ')} |`)
+    }
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function renderHtml(baseUrl, results) {
+  const summary = summarize(results)
+  const okMark = (ok) => (ok ? '✔' : '✖')
+  const cats = Object.keys(summary)
+  const sections = cats
+    .map((cat) => {
+      const s = summary[cat]
+      const rows = results
+        .filter((x) => x.category === cat)
+        .map((r) => {
+          const code = r.statusCode || 'ERR'
+          const note = r.ok
+            ? ''
+            : escapeHtml(
+                r.error || (typeof r.body === 'object' && r.body && (r.body.error || r.body.message)) || ''
+              )
+          return `
+            <tr class="${r.ok ? 'ok' : 'fail'}">
+              <td class="path">${escapeHtml(r.path)}</td>
+              <td class="status">${okMark(r.ok)}</td>
+              <td class="code">${code}</td>
+              <td class="time">${hr(r.durationMs)}</td>
+              <td class="note">${note}</td>
+            </tr>
+          `
+        })
+        .join('\n')
+      return `
+        <section>
+          <h2>${escapeHtml(cat)} — ${s.ok}/${s.total} OK</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Endpoint</th><th>Status</th><th>Code</th><th>Time</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `
+    })
+    .join('\n')
+
+  const allOk = results.every((r) => r.ok)
+  const overall = allOk ? 'OK' : 'Issues Detected'
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ConquestK API Health Report</title>
+    <style>
+      :root { --ok: #0a7a3d; --fail: #b00020; --fg: #111; --bg: #fff; --muted: #666; --row: #f8f9fa; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: var(--fg); background: var(--bg); margin: 0; padding: 24px; }
+      h1 { margin: 0 0 8px; }
+      header { margin-bottom: 16px; }
+      .meta { color: var(--muted); font-size: 14px; }
+      section { margin: 20px 0 28px; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+      thead th { position: sticky; top: 0; background: #fff; }
+      tr:nth-child(even) { background: var(--row); }
+      td.status { font-weight: 700; }
+      tr.ok td.status { color: var(--ok); }
+      tr.fail td.status { color: var(--fail); }
+      td.code, td.time { white-space: nowrap; }
+      .badge { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 12px; margin-left: 6px; }
+      .badge.ok { background: #e6f4ea; color: var(--ok); }
+      .badge.fail { background: #fde7eb; color: var(--fail); }
+      footer { margin-top: 24px; color: var(--muted); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ConquestK API Health Report <span class="badge ${allOk ? 'ok' : 'fail'}">${overall}</span></h1>
+      <div class="meta">Generated ${escapeHtml(new Date().toISOString())} · Base ${escapeHtml(baseUrl)}</div>
+    </header>
+    ${sections}
+    <footer>Generated by scripts/api-health-check.mjs</footer>
+  </body>
+</html>`
+}
+
 async function main() {
   const loginResult = await loginIfRequested().catch((e) => {
     console.error(String(e && e.message ? e.message : e))
@@ -284,6 +417,16 @@ async function main() {
   await writeFile(OUTPUT_PATH, JSON.stringify({ baseUrl: BASE_URL, generatedAt: new Date().toISOString(), results }, null, 2), 'utf8')
   printSummary(BASE_URL, results)
   console.log(`Saved full JSON report to: ${OUTPUT_PATH}`)
+  if (WRITE_MARKDOWN) {
+    const md = renderMarkdown(BASE_URL, results)
+    await writeFile(MD_PATH, md, 'utf8')
+    console.log(`Saved Markdown summary to: ${MD_PATH}`)
+  }
+  if (WRITE_HTML) {
+    const html = renderHtml(BASE_URL, results)
+    await writeFile(HTML_PATH, html, 'utf8')
+    console.log(`Saved HTML summary to: ${HTML_PATH}`)
+  }
   if (!token) {
     console.log('Note: Authenticated endpoints may show 401/403 without a token.')
   }
@@ -293,4 +436,3 @@ main().catch((e) => {
   console.error('Fatal error:', e)
   process.exit(1)
 })
-

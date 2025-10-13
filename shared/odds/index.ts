@@ -279,7 +279,8 @@ export async function exactOddsMatrix(maxAtt: number, maxDef: number): Promise<n
     // Fallback to TS DP for each cell (avoid undefined indices under noUncheckedIndexedAccess)
     const out: number[][] = new Array(maxAtt + 1)
     for (let a = 0; a <= maxAtt; a++) {
-      const row: number[] = (out[a] = new Array<number>(maxDef + 1))
+      out[a] = new Array<number>(maxDef + 1)
+      const row = out[a] as number[]
       for (let d = 0; d <= maxDef; d++) {
         row[d] = computeConquestProbability(a, d)
       }

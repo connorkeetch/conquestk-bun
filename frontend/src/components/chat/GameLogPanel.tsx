@@ -1344,6 +1344,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     playerColor,
     flushAggregate,
     clientLogs,
+    game?.players,
   ])
 
   return (

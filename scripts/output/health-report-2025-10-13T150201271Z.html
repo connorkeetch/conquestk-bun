@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ConquestK API Health Report</title>
+    <style>
+      :root { --ok: #0a7a3d; --fail: #b00020; --fg: #111; --bg: #fff; --muted: #666; --row: #f8f9fa; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: var(--fg); background: var(--bg); margin: 0; padding: 24px; }
+      h1 { margin: 0 0 8px; }
+      header { margin-bottom: 16px; }
+      .meta { color: var(--muted); font-size: 14px; }
+      section { margin: 20px 0 28px; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+      thead th { position: sticky; top: 0; background: #fff; }
+      tr:nth-child(even) { background: var(--row); }
+      td.status { font-weight: 700; }
+      tr.ok td.status { color: var(--ok); }
+      tr.fail td.status { color: var(--fail); }
+      td.code, td.time { white-space: nowrap; }
+      .badge { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 12px; margin-left: 6px; }
+      .badge.ok { background: #e6f4ea; color: var(--ok); }
+      .badge.fail { background: #fde7eb; color: var(--fail); }
+      footer { margin-top: 24px; color: var(--muted); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ConquestK API Health Report <span class="badge fail">Issues Detected</span></h1>
+      <div class="meta">Generated 2025-10-13T15:02:01.302Z · Base http://localhost:5001</div>
+    </header>
+    
+        <section>
+          <h2>core — 0/2 OK</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Endpoint</th><th>Status</th><th>Code</th><th>Time</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                
+            <tr class="fail">
+              <td class="path">/api/health</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">23ms</td>
+              <td class="note">api-health timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/health</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">3ms</td>
+              <td class="note">health timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+              </tbody>
+            </table>
+          </div>
+        </section>
+      
+
+        <section>
+          <h2>queues — 0/4 OK</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Endpoint</th><th>Status</th><th>Code</th><th>Time</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                
+            <tr class="fail">
+              <td class="path">/api/queues/ping</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">2ms</td>
+              <td class="note">queues-ping timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/queues/health</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">queues-health timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/queues/stats</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">queues-stats timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/queues/dashboard</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">queues-dashboard timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+              </tbody>
+            </table>
+          </div>
+        </section>
+      
+
+        <section>
+          <h2>odds — 0/1 OK</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Endpoint</th><th>Status</th><th>Code</th><th>Time</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                
+            <tr class="fail">
+              <td class="path">/api/odds/status</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">2ms</td>
+              <td class="note">odds-status timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+              </tbody>
+            </table>
+          </div>
+        </section>
+      
+
+        <section>
+          <h2>matchsvc — 0/1 OK</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Endpoint</th><th>Status</th><th>Code</th><th>Time</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                
+            <tr class="fail">
+              <td class="path">/api/matchsvc/status</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">matchsvc-status timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+              </tbody>
+            </table>
+          </div>
+        </section>
+      
+
+        <section>
+          <h2>performance — 0/11 OK</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Endpoint</th><th>Status</th><th>Code</th><th>Time</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                
+            <tr class="fail">
+              <td class="path">/api/performance/dashboard</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-dashboard timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/metrics</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">0ms</td>
+              <td class="note">perf-metrics timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/metrics/history?hours=24</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">0ms</td>
+              <td class="note">perf-metrics-history timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/metrics/odds-history?hours=24</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-odds-history timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/alerts?active=true</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-alerts-active timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/health/detailed</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-health-detailed timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/cache/stats</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-cache-stats timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/database/stats</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">0ms</td>
+              <td class="note">perf-db-stats timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/cdn/stats</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-cdn-stats timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/optimization/recommendations</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-optimization-recs timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/performance/report?hours=24</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">perf-report timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+              </tbody>
+            </table>
+          </div>
+        </section>
+      
+
+        <section>
+          <h2>admin — 0/2 OK</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Endpoint</th><th>Status</th><th>Code</th><th>Time</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                
+            <tr class="fail">
+              <td class="path">/api/admin/status</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">1ms</td>
+              <td class="note">admin-status timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+
+            <tr class="fail">
+              <td class="path">/api/admin/system/status</td>
+              <td class="status">✖</td>
+              <td class="code">ERR</td>
+              <td class="time">0ms</td>
+              <td class="note">admin-system-status timed out after 1200ms or failed: fetch failed</td>
+            </tr>
+          
+              </tbody>
+            </table>
+          </div>
+        </section>
+      
+    <footer>Generated by scripts/api-health-check.mjs</footer>
+  </body>
+</html>

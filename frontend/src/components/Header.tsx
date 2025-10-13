@@ -126,8 +126,9 @@ export default function Header() {
   // Close notification dropdown on route change
   useEffect(() => {
     setIsNotifDropdownOpen(false)
-    // Only depends on path changes
-  }, [location])
+    // Reference pathname to satisfy exhaustive-deps while still reacting to route changes
+    void location.pathname
+  }, [location.pathname])
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)

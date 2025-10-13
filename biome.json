@@ -38,6 +38,7 @@
       "shared/wasm-odds/.cache/**",
       "shared/wasm-odds/**/*.d.ts",
       "shared/wasm-odds/tests/**",
+      "shared/match-client/dist/**",
       "frontend/dist/**",
       ".claude/**",
       ".venv-awscli/**",
@@ -232,17 +233,12 @@
       }
     },
     {
-      "includes": ["frontend/src/components/**/*.tsx"],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "useExhaustiveDependencies": "off"
-          }
-        }
-      }
+      "includes": ["shared/dist/**"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
     },
     {
-      "includes": ["shared/dist/**"],
+      "includes": ["shared/match-client/dist/**"],
       "linter": { "enabled": false },
       "formatter": { "enabled": false }
     }

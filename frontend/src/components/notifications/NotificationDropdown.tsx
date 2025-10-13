@@ -52,7 +52,7 @@ export default function NotificationDropdown({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isOpen])
+  }, [isOpen, onEscape])
 
   const onOutside = useEffectEvent(() => {
     onClose()
@@ -70,7 +70,7 @@ export default function NotificationDropdown({
     }
     window.addEventListener('mousedown', onClick)
     return () => window.removeEventListener('mousedown', onClick)
-  }, [isOpen, triggerRef])
+  }, [isOpen, triggerRef, onOutside])
 
   // Do not auto-mark as read on open; users can mark per-item or use the button
 
