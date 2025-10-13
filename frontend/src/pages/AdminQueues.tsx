@@ -155,23 +155,33 @@ export default function AdminQueues() {
               type="button"
               onClick={async () => {
                 try {
+                  const raw = localStorage.getItem('token') || ''
+                  const token = raw && raw !== 'null' && raw !== 'undefined' ? raw : ''
+                  if (token) {
+                    // Prefer direct login via access_token to avoid any proxy/redirect cookie quirks
+                    window.location.assign(
+                      `/api/admin/queues/login?access_token=${encodeURIComponent(token)}`,
+                    )
+                    return
+                  }
+
+                  // Fallback: use grant flow to mint a short-lived code
                   const resp = await apiClient.post<{ success: boolean; code?: string }>(
                     '/admin/queues/ui/grant',
                     undefined,
                     { withCredentials: true },
                   )
-
                   const code = (resp.data as unknown as { code?: unknown })?.code as
                     | string
                     | undefined
+                  if (code) {
+                    window.location.assign(
+                      `/api/admin/queues/login?code=${encodeURIComponent(code)}`,
+                    )
+                    return
+                  }
 
-                  // Use dedicated login endpoint outside the guard; same-tab navigation avoids popups
-                  const target = code
-                    ? `/api/admin/queues/login?code=${encodeURIComponent(code)}`
-                    : `/api/admin/queues/login?access_token=${encodeURIComponent(
-                        localStorage.getItem('token') || '',
-                      )}`
-                  window.location.assign(target)
+                  alert('Failed to prepare access for Bull Board')
                 } catch (e) {
                   alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
                 }
