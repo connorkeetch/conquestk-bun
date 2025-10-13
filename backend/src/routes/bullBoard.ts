@@ -2,11 +2,11 @@ import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { ExpressAdapter } from '@bull-board/express'
 import { Router } from 'express'
-import jwt from 'jsonwebtoken'
 import { requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
 import authenticateTokenFromCookie from '../middleware/authFromCookie.js'
 import { queueService } from '../services/queueService.js'
+import { getJwtSecrets, signJwt, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 
 export const createBullBoardRouter = () => {
@@ -33,8 +33,8 @@ export const createBullBoardRouter = () => {
   router.post('/api/admin/queues/ui/grant', authenticateToken, requireAdmin, async (req, res) => {
     try {
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
-      const jwtSecret = process.env.JWT_SECRET
-      if (!jwtSecret) {
+      const secrets = getJwtSecrets()
+      if (!secrets.length) {
         res.status(500).json({ success: false, message: 'Server configuration error' })
         return
       }
@@ -44,12 +44,12 @@ export const createBullBoardRouter = () => {
         purpose: 'bull_board_ui',
         userId: req.userId,
       }
-      const grantCode = jwt.sign(grantPayload, jwtSecret, { expiresIn: '60s' })
+      const grantCode = signJwt(grantPayload, { expiresIn: '60s' })
 
       // Also set an HttpOnly cookie immediately for XHR-based checks
       // Scope cookie narrowly to the Bull Board UI path
       // Create a short-lived UI token
-      const uiToken = jwt.sign({ userId: req.userId }, jwtSecret, { expiresIn: '15m' })
+      const uiToken = signJwt({ userId: req.userId }, { expiresIn: '15m' })
       res.cookie('auth_token', uiToken, {
         httpOnly: true,
         secure: isProd,
@@ -68,8 +68,8 @@ export const createBullBoardRouter = () => {
   router.get('/api/admin/queues/ui/accept', async (req, res) => {
     try {
       const { code } = (req.query || {}) as { code?: string }
-      const jwtSecret = process.env.JWT_SECRET
-      if (!jwtSecret) {
+      const secrets = getJwtSecrets()
+      if (!secrets.length) {
         logger.error('BullBoard accept: missing JWT_SECRET', {
           ip: req.ip,
           ua: req.get('User-Agent'),
@@ -87,7 +87,10 @@ export const createBullBoardRouter = () => {
       }
       let decoded: { purpose?: string; userId?: string } | null = null
       try {
-        decoded = jwt.verify(code, jwtSecret) as { purpose?: string; userId?: string }
+        decoded = verifyJwtWithAnySecret<{ purpose?: string; userId?: string }>(
+          code,
+          secrets,
+        ).payload
       } catch (e) {
         logger.warn('BullBoard accept: grant verification failed', {
           ip: req.ip,
@@ -123,7 +126,7 @@ export const createBullBoardRouter = () => {
       }
 
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
-      const uiToken = jwt.sign({ userId: decoded.userId }, jwtSecret, { expiresIn: '15m' })
+      const uiToken = signJwt({ userId: decoded.userId }, { expiresIn: '15m' })
       res.cookie('auth_token', uiToken, {
         httpOnly: true,
         secure: isProd,

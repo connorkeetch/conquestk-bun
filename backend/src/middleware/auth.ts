@@ -4,6 +4,7 @@ import { query } from '../config/database.js'
 import { clanService } from '../services/clanService.js'
 import type { RequestUser } from '../types/express.js'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js'
+import { getJwtSecrets, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 
 type AuthTokenPayload = jwt.JwtPayload & {
@@ -33,20 +34,16 @@ export const authenticateToken: RequestHandler = async (
     return
   }
 
-  const jwtSecret = process.env.JWT_SECRET
-  if (!jwtSecret) {
-    logger.error('FATAL: JWT_SECRET environment variable is not set')
+  const secrets = getJwtSecrets()
+  if (!secrets.length) {
+    logger.error('FATAL: JWT secrets are not set')
     res.status(500).json({ message: 'Server configuration error' })
     return
   }
 
   try {
-    const decoded = jwt.verify(token, jwtSecret)
-    if (
-      !decoded ||
-      typeof decoded !== 'object' ||
-      typeof (decoded as AuthTokenPayload).userId !== 'string'
-    ) {
+    const { payload: decoded } = verifyJwtWithAnySecret<AuthTokenPayload>(token, secrets)
+    if (!decoded || typeof decoded !== 'object' || typeof decoded.userId !== 'string') {
       logger.warn('Token verification succeeded but payload was invalid')
       res.status(403).json({ message: 'Invalid token payload' })
       return
