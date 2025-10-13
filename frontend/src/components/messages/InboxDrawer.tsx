@@ -210,7 +210,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isOpen])
+  }, [isOpen, onEscape])
 
   const sortedConversations = useMemo(() => {
     return [...conversations].sort(
