@@ -4,7 +4,13 @@ import type { Server } from 'socket.io'
 import { getRedisClient } from '../config/redis.js'
 import { logger } from '../utils/logger.js'
 
-const baseUrl = process.env.MATCHSVC_URL || 'http://localhost:8085'
+const normalizeBaseUrl = (u: string | undefined): string => {
+  const raw = (u || 'http://localhost:8085').trim()
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`
+  return withScheme.replace(/\/+$/, '')
+}
+
+const baseUrl = normalizeBaseUrl(process.env.MATCHSVC_URL)
 const hmac = process.env.MATCHSVC_HMAC_SECRET
 
 export const matchClient = new MatchSvcClient({ baseUrl, hmacSecret: hmac })
