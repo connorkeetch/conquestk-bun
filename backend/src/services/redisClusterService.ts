@@ -137,7 +137,22 @@ export class RedisClusterService {
   }
 
   private getClient(): IORedis | Cluster | null {
-    return this.isClusterMode ? this.cluster : this.fallbackClient
+    // If running in cluster mode, prefer the cluster instance
+    if (this.isClusterMode) return this.cluster
+
+    // If we already have a fallback client, use it
+    if (this.fallbackClient) return this.fallbackClient
+
+    // Lazily attach the centralized Redis client if available. This allows
+    // health checks and metrics to work even if initialize() wasn't called
+    // explicitly for this service.
+    const centralized = getRedisClient()
+    if (centralized) {
+      this.fallbackClient = centralized
+      return this.fallbackClient
+    }
+
+    return null
   }
 
   // Advanced caching methods with automatic tier management

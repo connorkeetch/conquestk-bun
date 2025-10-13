@@ -51,7 +51,8 @@ export const authenticateTokenFromCookie: RequestHandler = (
 
   const secrets = getJwtSecrets()
   const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
-  const uiCookiePath = '/api/admin/queues'
+  // Broaden cookie path so it applies to all API subpaths reliably behind proxies/CDNs
+  const uiCookiePath = '/api'
 
   const tryMintUiCookieFromPayload = (payload: unknown) => {
     if (!secrets.length) return false
@@ -77,6 +78,10 @@ export const authenticateTokenFromCookie: RequestHandler = (
     try {
       const decoded = verifyJwtWithAnySecret(queryGrantCode, secrets).payload
       if (tryMintUiCookieFromPayload(decoded)) {
+        logger.info('authFromCookie: UI cookie minted via grant code', {
+          path: req.path,
+          originalUrl: req.originalUrl,
+        })
         return authenticateToken(req, res, next)
       }
     } catch {
@@ -89,6 +94,10 @@ export const authenticateTokenFromCookie: RequestHandler = (
     try {
       const decoded = verifyJwtWithAnySecret(queryAccessToken, secrets).payload
       if (tryMintUiCookieFromPayload(decoded)) {
+        logger.info('authFromCookie: UI cookie minted via access_token', {
+          path: req.path,
+          originalUrl: req.originalUrl,
+        })
         return authenticateToken(req, res, next)
       }
     } catch {

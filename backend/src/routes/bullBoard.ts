@@ -37,7 +37,7 @@ export const createGrantRoute = () => {
       // Use broader path scope to cover all Bull Board subpaths
       // Create a short-lived UI token
       const uiToken = signJwt({ userId: req.userId }, { expiresIn: '15m' })
-      const cookiePath = '/api/admin/queues'
+      const cookiePath = '/api'
       res.cookie('auth_token', uiToken, {
         httpOnly: true,
         secure: isProd,
@@ -134,7 +134,7 @@ export const createAcceptRoute = () => {
 
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
       const uiToken = signJwt({ userId: decoded.userId }, { expiresIn: '15m' })
-      const cookiePath = '/api/admin/queues'
+      const cookiePath = '/api'
       res.cookie('auth_token', uiToken, {
         httpOnly: true,
         secure: isProd,
@@ -178,6 +178,14 @@ export const createLoginRoute = () => {
   router.get('/api/admin/queues/login', async (req, res) => {
     try {
       const basePath = '/api/admin/queues/ui'
+      logger.info('BullBoard login: request received', {
+        ip: req.ip,
+        ua: req.get('User-Agent'),
+        hasCode: typeof (req.query as Record<string, unknown>)?.code === 'string',
+        hasAccessToken:
+          typeof (req.query as Record<string, unknown>)?.access_token === 'string',
+        hasAuthHeader: Boolean(req.headers.authorization),
+      })
       const secrets = getJwtSecrets()
       if (!secrets.length) {
         logger.error('BullBoard login: missing JWT secrets', {
@@ -203,6 +211,7 @@ export const createLoginRoute = () => {
           ).payload
           if (decoded?.purpose === 'bull_board_ui' && typeof decoded.userId === 'string') {
             userId = decoded.userId
+            logger.info('BullBoard login: user verified via grant code', { userId })
           } else {
             logger.warn('BullBoard login: invalid grant payload', { decoded })
           }
@@ -218,6 +227,7 @@ export const createLoginRoute = () => {
           const decoded = verifyJwtWithAnySecret<{ userId?: string }>(accessToken, secrets).payload
           if (decoded && typeof decoded.userId === 'string') {
             userId = decoded.userId
+            logger.info('BullBoard login: user verified via access_token', { userId })
           }
         } catch (e) {
           logger.warn('BullBoard login: access_token verification failed', {
@@ -259,7 +269,7 @@ export const createLoginRoute = () => {
 
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
       const uiToken = signJwt({ userId }, { expiresIn: '15m' })
-      const cookiePath = '/api/admin/queues'
+      const cookiePath = '/api'
       res.cookie('auth_token', uiToken, {
         httpOnly: true,
         secure: isProd,
