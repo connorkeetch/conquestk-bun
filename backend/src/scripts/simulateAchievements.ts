@@ -92,7 +92,14 @@ async function simulate() {
 
   // Report unlocked achievements for p1
   const { unlocked } = await profileService.getAchievements(p1.id)
-  const names = (unlocked as unknown as Array<{ name?: string }>).map((u) => u.name ?? 'unknown')
+  const toName = (u: unknown): string =>
+    typeof u === 'object' &&
+    u !== null &&
+    'name' in u &&
+    typeof (u as { name?: unknown }).name === 'string'
+      ? (u as { name: string }).name
+      : 'unknown'
+  const names = (Array.isArray(unlocked) ? unlocked : []).map(toName)
   logger.info('Unlocked achievements for player1:', { names })
 }
 
