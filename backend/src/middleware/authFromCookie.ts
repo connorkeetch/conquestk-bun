@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
-import jwt from 'jsonwebtoken'
+import { getJwtSecrets, signJwt, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { authenticateToken } from './auth.js'
 
 // Lightweight cookie parser to avoid bringing a new dependency just for this case
@@ -48,17 +48,17 @@ export const authenticateTokenFromCookie: RequestHandler = (
   const queryGrantCode =
     typeof q.code === 'string' && q.code.length > 0 ? (q.code as string) : undefined
 
-  const jwtSecret = process.env.JWT_SECRET
+  const secrets = getJwtSecrets()
   const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
   const uiCookiePath = '/api/admin/queues/ui'
 
   const tryMintUiCookieFromPayload = (payload: unknown) => {
-    if (!jwtSecret) return false
+    if (!secrets.length) return false
     // Accept payloads that include a userId
     const userId =
       payload && typeof payload === 'object' ? (payload as { userId?: unknown }).userId : undefined
     if (typeof userId !== 'string' || userId.length === 0) return false
-    const uiToken = jwt.sign({ userId }, jwtSecret, { expiresIn: '15m' })
+    const uiToken = signJwt({ userId }, { expiresIn: '15m' })
     res.cookie('auth_token', uiToken, {
       httpOnly: true,
       secure: isProd,
@@ -72,9 +72,9 @@ export const authenticateTokenFromCookie: RequestHandler = (
   }
 
   // Prefer redeeming a grant code first if present
-  if (queryGrantCode && jwtSecret) {
+  if (queryGrantCode && secrets.length) {
     try {
-      const decoded = jwt.verify(queryGrantCode, jwtSecret)
+      const decoded = verifyJwtWithAnySecret(queryGrantCode, secrets).payload
       if (tryMintUiCookieFromPayload(decoded)) {
         return authenticateToken(req, res, next)
       }
@@ -84,9 +84,9 @@ export const authenticateTokenFromCookie: RequestHandler = (
   }
 
   // Next, accept an access token directly via query param
-  if (queryAccessToken && jwtSecret) {
+  if (queryAccessToken && secrets.length) {
     try {
-      const decoded = jwt.verify(queryAccessToken, jwtSecret)
+      const decoded = verifyJwtWithAnySecret(queryAccessToken, secrets).payload
       if (tryMintUiCookieFromPayload(decoded)) {
         return authenticateToken(req, res, next)
       }
