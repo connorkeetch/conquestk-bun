@@ -276,12 +276,12 @@ export async function exactOddsMatrix(maxAtt: number, maxDef: number): Promise<n
   try {
     return await (await getWasmEngine()).exactOddsMatrix(maxAtt, maxDef)
   } catch {
-    // Fallback to TS DP for each cell
-    const out: number[][] = Array.from({ length: maxAtt + 1 }, () => Array(maxDef + 1).fill(0))
+    // Fallback to TS DP for each cell (avoid undefined indices under noUncheckedIndexedAccess)
+    const out: number[][] = new Array(maxAtt + 1)
     for (let a = 0; a <= maxAtt; a++) {
+      const row: number[] = (out[a] = new Array<number>(maxDef + 1))
       for (let d = 0; d <= maxDef; d++) {
-        if (!out[a]) out[a] = []
-        out[a][d] = computeConquestProbability(a, d)
+        row[d] = computeConquestProbability(a, d)
       }
     }
     return out

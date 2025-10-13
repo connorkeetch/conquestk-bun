@@ -41,7 +41,7 @@ export default function ReportUserModal({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [open, onEscape])
 
   const onOutside = useEffectEvent(() => {
     onClose()
@@ -55,7 +55,7 @@ export default function ReportUserModal({
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
-  }, [open])
+  }, [open, onOutside])
 
   useEffect(() => {
     if (open) {
