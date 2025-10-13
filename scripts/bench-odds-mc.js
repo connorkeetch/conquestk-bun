@@ -45,7 +45,7 @@ async function main() {
   const wasm = await benchEngine('wasm', trials)
   const payload = { kind: 'mc', trials, ts, wasm, timestamp: new Date().toISOString() }
   if (!quiet) {
-    console.log(JSON.stringify(payload))
+    process.stdout.write(`${JSON.stringify(payload)}\n`)
   }
   try {
     const outDir = path.resolve(__dirname, '../docs/bench')
@@ -60,7 +60,8 @@ main().catch((e) => {
   const args = new Set(process.argv.slice(2))
   const quiet = args.has('--quiet') || process.env.QUIET === '1'
   if (!quiet) {
-    console.error(e)
+    const msg = e && typeof e === 'object' && 'stack' in e ? e.stack : String(e)
+    process.stderr.write(`${msg}\n`)
   }
   process.exit(1)
 })
