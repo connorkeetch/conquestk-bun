@@ -144,6 +144,24 @@ const findImageFile = (
   return null
 }
 
+// Type helpers
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+
+const asFiniteNumber = (v: unknown): number | undefined =>
+  typeof v === 'number' && Number.isFinite(v) ? v : undefined
+
+const pickNumber = (obj: unknown, key: string): number | undefined =>
+  isRecord(obj) ? asFiniteNumber(obj[key]) : undefined
+
+const pickArray = (obj: Record<string, unknown>, ...keys: string[]): unknown[] | undefined => {
+  for (const k of keys) {
+    const v = obj[k]
+    if (Array.isArray(v)) return v
+  }
+  return undefined
+}
+
 async function resolveCreatorUserId(explicit?: string): Promise<string> {
   if (explicit) return explicit
   const { query } = (await import(
@@ -315,37 +333,32 @@ async function run(): Promise<void> {
         height?: number
       }
 
-      const canvasDims = data as unknown as { canvas_width?: number; canvas_height?: number }
+      const rawTerritories: Array<Record<string, unknown>> = Array.isArray(data.territories)
+        ? data.territories.filter(isRecord)
+        : []
+      const rawAdjacencies: Array<Record<string, unknown>> = Array.isArray(data.adjacencies)
+        ? data.adjacencies.filter(isRecord)
+        : []
 
       const metadata: ImportMetadata = {
-        territories: (Array.isArray(data.territories)
-          ? (data.territories as unknown[])
-          : []) as MetadataTerritoryInput[],
+        territories: [],
         sectors: (() => {
           const grp = data as { sectors?: unknown[]; continents?: unknown[] }
           if (Array.isArray(grp.sectors)) return grp.sectors as MetadataSectorInput[]
           if (Array.isArray(grp.continents)) return grp.continents as MetadataSectorInput[]
           return [] as MetadataSectorInput[]
         })(),
-        adjacencies: (Array.isArray(data.adjacencies)
-          ? (data.adjacencies as unknown[])
-          : []) as MetadataAdjacencyInput[],
+        adjacencies: [],
         capitalAssignments: data.capitalAssignments || {},
         territoryModifiers: (data.territoryModifiers || undefined) as
           | Record<string, TerritoryModifierMetadata>
           | undefined,
         width:
-          typeof canvasDims.canvas_width === 'number'
-            ? canvasDims.canvas_width
-            : typeof data.width === 'number'
-              ? data.width
-              : imageWidth,
+          pickNumber(data, 'canvas_width') ??
+          (typeof data.width === 'number' ? data.width : imageWidth),
         height:
-          typeof canvasDims.canvas_height === 'number'
-            ? canvasDims.canvas_height
-            : typeof data.height === 'number'
-              ? data.height
-              : imageHeight,
+          pickNumber(data, 'canvas_height') ??
+          (typeof data.height === 'number' ? data.height : imageHeight),
       }
 
       // CSV ingest mode (World-Classic folder style)
@@ -380,7 +393,15 @@ async function run(): Promise<void> {
             y: Number(r[idxY] ?? '0') || 0,
           }))
           .filter((t) => t.id && t.name)
-        metadata.territories = territories as unknown as MetadataTerritoryInput[]
+        metadata.territories = territories.map<MetadataTerritoryInput>((t) => ({
+          id: t.id,
+          name: t.name,
+          x: t.x,
+          y: t.y,
+          connections: Array.isArray(t.connections)
+            ? t.connections.filter((s): s is string => typeof s === 'string')
+            : undefined,
+        }))
       }
 
       if (csvAdj) {
@@ -395,7 +416,10 @@ async function run(): Promise<void> {
         const adjs: ImportAdjacency[] = rows
           .map((r) => ({ from: r[idxFrom], to: r[idxTo] }))
           .filter((a) => typeof a.from === 'string' && typeof a.to === 'string')
-        metadata.adjacencies = adjs as unknown as MetadataAdjacencyInput[]
+        metadata.adjacencies = adjs.map<MetadataAdjacencyInput>((a) => ({
+          from: a.from,
+          to: a.to,
+        }))
       }
 
       // Optionally create sectors from regions + bonuses if provided
@@ -426,30 +450,44 @@ async function run(): Promise<void> {
       }
 
       // Normalize connections/adjacencies for compatibility
-      const normTerritories = Array.isArray(metadata.territories)
-        ? metadata.territories.map((t) => {
-            const rec = t as Record<string, unknown>
-            const connections = rec.connections
-            if (rec && !Array.isArray(connections)) {
-              const neighbors = Array.isArray(rec.neighbors)
-                ? (rec.neighbors as unknown[])
-                : Array.isArray((rec as { neighbours?: unknown[] }).neighbours)
-                  ? ((rec as { neighbours?: unknown[] }).neighbours as unknown[])
-                  : Array.isArray((rec as { links?: unknown[] }).links)
-                    ? ((rec as { links?: unknown[] }).links as unknown[])
-                    : Array.isArray((rec as { adjacent?: unknown[] }).adjacent)
-                      ? ((rec as { adjacent?: unknown[] }).adjacent as unknown[])
-                      : undefined
-              if (Array.isArray(neighbors)) {
-                return {
-                  ...rec,
-                  connections: neighbors.filter((x) => typeof x === 'string') as string[],
-                }
+      // If no CSV territories provided, derive connections from alternate keys on raw input
+      const baseTerritories: MetadataTerritoryInput[] =
+        metadata.territories.length > 0
+          ? metadata.territories
+          : rawTerritories.map((rec) => {
+              const obj: MetadataTerritoryInput = {
+                id: typeof rec.id === 'string' ? rec.id : undefined,
+                name: typeof rec.name === 'string' ? rec.name : undefined,
+                ...(asFiniteNumber(rec.x) !== undefined ? { x: rec.x as number } : {}),
+                ...(asFiniteNumber(rec.y) !== undefined ? { y: rec.y as number } : {}),
+                ...(typeof rec.sectorId === 'string'
+                  ? { sectorId: rec.sectorId }
+                  : typeof (rec as { continentId?: unknown }).continentId === 'string'
+                    ? { sectorId: (rec as { continentId: string }).continentId }
+                    : {}),
+                ...(typeof rec.isCapital === 'boolean' ? { isCapital: rec.isCapital } : {}),
+                ...(asFiniteNumber((rec as { normalizedX?: unknown }).normalizedX) !== undefined
+                  ? { normalizedX: (rec as { normalizedX: number }).normalizedX }
+                  : {}),
+                ...(asFiniteNumber((rec as { normalizedY?: unknown }).normalizedY) !== undefined
+                  ? { normalizedY: (rec as { normalizedY: number }).normalizedY }
+                  : {}),
               }
-            }
-            return t
-          })
-        : []
+              const neighbors = pickArray(
+                rec,
+                'connections',
+                'neighbors',
+                'neighbours',
+                'links',
+                'adjacent',
+              )
+              if (Array.isArray(neighbors)) {
+                obj.connections = neighbors.filter((x): x is string => typeof x === 'string')
+              }
+              return obj
+            })
+
+      const normTerritories = baseTerritories
 
       const normAdjacencies = (() => {
         const pairs: Array<{ from: string; to: string }> = []
@@ -468,9 +506,10 @@ async function run(): Promise<void> {
           pairs.push({ from: t, to: f })
         }
 
-        const raw: Array<Record<string, unknown>> = Array.isArray(metadata.adjacencies)
-          ? (metadata.adjacencies as Array<Record<string, unknown>>)
-          : []
+        const raw: Array<Record<string, unknown>> =
+          metadata.adjacencies.length > 0
+            ? metadata.adjacencies.map((a) => ({ ...a }))
+            : rawAdjacencies
         if (raw.length > 0) {
           for (const a of raw) {
             if (!a || typeof a !== 'object') continue
