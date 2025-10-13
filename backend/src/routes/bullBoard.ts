@@ -212,6 +212,101 @@ export const createAcceptRoute = () => {
   return router
 }
 
+export const createDebugRoute = () => {
+  const router = Router()
+  const basePath = '/api/admin/queues/ui'
+
+  const parseCookie = (cookieHeader: string | undefined): Record<string, string> => {
+    const out: Record<string, string> = {}
+    if (!cookieHeader) return out
+    const parts = cookieHeader.split(';')
+    for (const part of parts) {
+      const [rawKey, ...rest] = part.split('=')
+      if (!rawKey || rest.length === 0) continue
+      const key = rawKey.trim()
+      const value = rest.join('=').trim()
+      try {
+        out[key] = decodeURIComponent(value)
+      } catch {
+        out[key] = value
+      }
+    }
+    return out
+  }
+
+  // Admin-only diagnostics that do NOT depend on the Bull Board UI cookie.
+  // Requires standard Authorization header and admin role.
+  router.get(`${basePath}/debug`, authenticateToken, requireAdmin, (req, res) => {
+    try {
+      const cookies = parseCookie(req.headers.cookie)
+      const secrets = getJwtSecrets()
+
+      const tryVerify = (token?: string) => {
+        if (!token) return { ok: false }
+        try {
+          const { payload } = verifyJwtWithAnySecret<{ userId?: string }>(token, secrets)
+          return { ok: true, userId: typeof payload.userId === 'string' ? payload.userId : undefined }
+        } catch (e) {
+          return { ok: false, error: (e as Error)?.message }
+        }
+      }
+
+      const bearer =
+        req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
+          ? req.headers.authorization.slice('Bearer '.length)
+          : undefined
+      const q = req.query as Record<string, unknown>
+      const qAccess = [q.access_token, q.accessToken, q.token].find(
+        (v) => typeof v === 'string' && v.length > 0,
+      ) as string | undefined
+      const qCode = typeof q.code === 'string' && q.code.length > 0 ? (q.code as string) : undefined
+
+      const info = {
+        hasCookieHeader: Boolean(req.headers.cookie),
+        cookieKeys: Object.keys(cookies),
+        cookiesPresent: {
+          __Host_ck_bb: Boolean(cookies['__Host-ck-bb']),
+          ck_bb_auth: Boolean(cookies.ck_bb_auth),
+          auth_token: Boolean(cookies.auth_token),
+          token: Boolean(cookies.token),
+        },
+        decoded: {
+          hostCookie: tryVerify(cookies['__Host-ck-bb']),
+          ckBbAuth: tryVerify(cookies.ck_bb_auth),
+          authToken: tryVerify(cookies.auth_token),
+          queryAccessToken: tryVerify(qAccess),
+          headerBearer: tryVerify(bearer),
+          grantCode: (() => {
+            if (!qCode) return { ok: false }
+            try {
+              const { payload } = verifyJwtWithAnySecret<{ purpose?: string; userId?: string }>(
+                qCode,
+                secrets,
+              )
+              return { ok: true, purpose: payload?.purpose, userId: payload?.userId }
+            } catch (e) {
+              return { ok: false, error: (e as Error)?.message }
+            }
+          })(),
+        },
+        req: {
+          method: req.method,
+          path: req.path,
+          originalUrl: req.originalUrl,
+          ip: req.ip,
+          ua: req.get('User-Agent') || null,
+        },
+      }
+
+      res.json({ success: true, info })
+    } catch (e) {
+      res.status(500).json({ success: false, error: (e as Error)?.message || 'debug failed' })
+    }
+  })
+
+  return router
+}
+
 export const createLoginRoute = () => {
   const router = Router()
 
