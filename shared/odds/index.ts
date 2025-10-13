@@ -72,7 +72,11 @@ let engine: Engine = (() => {
   }
   return 'ts'
 })()
-let logger: ((entry: unknown) => void) | null = null
+// Default to a no-op logger to avoid console noise in dev/test
+const __noopLogger = (_entry: unknown) => {
+  /* noop */
+}
+let logger: (entry: unknown) => void = __noopLogger
 
 export function setEngine(e: Engine) {
   engine = e
@@ -81,7 +85,7 @@ export function getEngine(): Engine {
   return engine
 }
 export function setLogger(fn: (entry: unknown) => void) {
-  logger = fn
+  logger = typeof fn === 'function' ? fn : __noopLogger
 }
 
 export type StepResult = TSStepResult
