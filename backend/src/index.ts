@@ -353,14 +353,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 // Static reports mount removed — reports are no longer served from the app
 
-// Mount Bull Board UI before adminRoutes so /accept isn't intercepted by /api/admin auth middleware
-try {
-  const bullBoardRouter = bullBoardRouterFactory()
-  app.use(bullBoardRouter)
-  logger.info('✅ Bull Board mounted early at /api/admin/queues/ui')
-} catch (_e) {
-  // If queues are not initialized yet, Bull Board will become available later after init
-}
+// Bull Board is mounted after WorkerManager initialization (see Redis init block)
+// to ensure queues exist before the UI tries to access them
 
 // API Routes
 app.use('/api/auth', authRoutes)

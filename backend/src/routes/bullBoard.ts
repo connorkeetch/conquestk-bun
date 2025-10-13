@@ -39,12 +39,13 @@ export const createBullBoardRouter = () => {
         return
       }
 
-      // Issue a short-lived, UI-scoped grant code that can be redeemed via GET to set the cookie
+      // Issue a grant code that can be redeemed via GET to set the cookie
+      // Use 5 minutes to allow for slower manual navigation in production
       const grantPayload = {
         purpose: 'bull_board_ui',
         userId: req.userId,
       }
-      const grantCode = signJwt(grantPayload, { expiresIn: '60s' })
+      const grantCode = signJwt(grantPayload, { expiresIn: '5m' })
 
       // Also set an HttpOnly cookie immediately for XHR-based checks
       // Use broader path scope to cover all Bull Board subpaths
@@ -102,8 +103,9 @@ export const createBullBoardRouter = () => {
           ip: req.ip,
           ua: req.get('User-Agent'),
           error: (e as Error)?.message,
+          codeSnippet: code?.substring(0, 50),
         })
-        res.status(401).send('Invalid or expired code')
+        res.status(401).send('Invalid or expired code - please try again')
         return
       }
       if (!decoded || decoded.purpose !== 'bull_board_ui' || !decoded.userId) {
