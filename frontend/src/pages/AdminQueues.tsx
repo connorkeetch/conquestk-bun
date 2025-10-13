@@ -170,7 +170,16 @@ export default function AdminQueues() {
                   const url = code
                     ? `${bullBoardUrl}/accept?code=${encodeURIComponent(code)}`
                     : bullBoardUrl
-                  window.open(url, '_blank', 'noopener')
+
+                  console.log('[Bull Board] Opening URL:', url)
+                  console.log('[Bull Board] Has code:', !!code)
+                  console.log('[Bull Board] Response:', resp.data)
+
+                  const newWindow = window.open(url, '_blank', 'noopener')
+                  if (!newWindow) {
+                    console.error('[Bull Board] Popup blocked!')
+                    alert('Popup blocked! Please allow popups for this site and try again.')
+                  }
                 } catch (e) {
                   alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
                 }
