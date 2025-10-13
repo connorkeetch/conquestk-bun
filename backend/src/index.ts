@@ -208,21 +208,16 @@ initializeRedis()
     try {
       await workerManager.initialize()
       logger.info('✅ WorkerManager created and initialized after Redis connection')
-      // Optionally mount Bull Board UI after workers/queues are initialized
-      // Enable by setting BULL_BOARD_ENABLED=true
+      // Mount Bull Board UI after workers/queues are initialized to avoid 404
+      // IMPORTANT: Mount grant/accept/login routes FIRST so they're not caught by the middleware
       try {
-        const enableBullBoard = String(process.env.BULL_BOARD_ENABLED || '').toLowerCase() === 'true'
-        if (enableBullBoard) {
-          app.use(createGrantRoute())
-          app.use(createAcceptRoute())
-          app.use(createLoginRoute())
-          logger.info('✅ Bull Board grant/accept routes mounted')
-          const bullBoardRouter = bullBoardRouterFactory()
-          app.use(bullBoardRouter)
-          logger.info('✅ Bull Board UI mounted at /api/admin/queues/ui')
-        } else {
-          logger.info('ℹ️ Bull Board is disabled (BULL_BOARD_ENABLED!=true)')
-        }
+        app.use(createGrantRoute())
+        app.use(createAcceptRoute())
+        app.use(createLoginRoute())
+        logger.info('✅ Bull Board grant/accept routes mounted')
+        const bullBoardRouter = bullBoardRouterFactory()
+        app.use(bullBoardRouter)
+        logger.info('✅ Bull Board UI mounted at /api/admin/queues/ui')
       } catch (e) {
         logger.warn('⚠️ Failed to mount Bull Board after init:', getErrorMessage(e))
       }
