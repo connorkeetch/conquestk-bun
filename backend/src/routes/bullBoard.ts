@@ -13,6 +13,14 @@ import { logger } from '../utils/logger.js'
 export const createGrantRoute = () => {
   const router = Router()
   const basePath = '/api/admin/queues/ui'
+  const getCookieDomain = (host: string | undefined): string | undefined => {
+    if (!host) return undefined
+    const h = host.toLowerCase().split(':')[0]
+    if (h === 'localhost' || h === '127.0.0.1') return undefined
+    const parts = h.split('.')
+    if (parts.length < 2) return undefined
+    return parts.slice(-2).join('.')
+  }
 
   // Helper endpoint to set a short-lived HttpOnly token cookie for the Bull Board UI.
   // This enables opening the board in a new tab where headers aren't attached.
@@ -38,17 +46,22 @@ export const createGrantRoute = () => {
       // Create a short-lived UI token
       const uiToken = signJwt({ userId: req.userId }, { expiresIn: '15m' })
       const cookiePath = '/api'
-      res.cookie('auth_token', uiToken, {
+      const cookieDomain = getCookieDomain(req.hostname)
+      const cookieOpts = {
         httpOnly: true,
         secure: isProd,
-        sameSite: 'lax',
+        sameSite: 'lax' as const,
         path: cookiePath,
         // Short lifetime to reduce risk; Bull Board sessions are brief
         maxAge: 15 * 60 * 1000, // 15 minutes
-      })
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      }
+      res.cookie('ck_bb_auth', uiToken, cookieOpts)
+      res.cookie('auth_token', uiToken, cookieOpts)
       logger.info('Bull Board grant: cookie set', {
         userId: req.userId,
         path: cookiePath,
+        domain: cookieDomain,
         ip: req.ip,
       })
       res.json({ success: true, code: grantCode })
@@ -135,18 +148,23 @@ export const createAcceptRoute = () => {
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
       const uiToken = signJwt({ userId: decoded.userId }, { expiresIn: '15m' })
       const cookiePath = '/api'
-      res.cookie('auth_token', uiToken, {
+      const cookieDomain = getCookieDomain(req.hostname)
+      const cookieOpts = {
         httpOnly: true,
         secure: isProd,
-        sameSite: 'lax',
+        sameSite: 'lax' as const,
         path: cookiePath,
         maxAge: 15 * 60 * 1000,
-      })
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      }
+      res.cookie('ck_bb_auth', uiToken, cookieOpts)
+      res.cookie('auth_token', uiToken, cookieOpts)
       logger.info('BullBoard accept: UI cookie minted', {
         ip: req.ip,
         ua: req.get('User-Agent'),
         userId: decoded.userId,
         path: cookiePath,
+        domain: cookieDomain,
       })
       // Use HTML meta-refresh instead of 302 to avoid any proxy that might strip Set-Cookie on redirects
       res
@@ -270,14 +288,18 @@ export const createLoginRoute = () => {
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
       const uiToken = signJwt({ userId }, { expiresIn: '15m' })
       const cookiePath = '/api'
-      res.cookie('auth_token', uiToken, {
+      const cookieDomain = getCookieDomain(req.hostname)
+      const cookieOpts = {
         httpOnly: true,
         secure: isProd,
-        sameSite: 'lax',
+        sameSite: 'lax' as const,
         path: cookiePath,
         maxAge: 15 * 60 * 1000,
-      })
-      logger.info('BullBoard login: UI cookie minted', { userId, path: cookiePath })
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      }
+      res.cookie('ck_bb_auth', uiToken, cookieOpts)
+      res.cookie('auth_token', uiToken, cookieOpts)
+      logger.info('BullBoard login: UI cookie minted', { userId, path: cookiePath, domain: cookieDomain })
       // Use HTML meta-refresh instead of 302 to avoid any proxy that might strip Set-Cookie on redirects
       res
         .status(200)
@@ -315,6 +337,33 @@ export const createBullBoardRouter = () => {
   const adapters: readonly BullMQAdapter[] = queues
   createBullBoard({ queues: adapters, serverAdapter })
 
+  // Optional Basic Auth fallback for dev: set BULL_BOARD_BASIC_AUTH_USER and BULL_BOARD_BASIC_AUTH_PASS
+  const basicUser = (process.env.BULL_BOARD_BASIC_AUTH_USER || '').trim()
+  const basicPass = (process.env.BULL_BOARD_BASIC_AUTH_PASS || '').trim()
+  if (basicUser && basicPass) {
+    const basicAuthMw = (
+      req: Parameters<typeof router.use>[0] extends string ? never : any,
+      res: any,
+      next: any,
+    ) => {
+      const hdr = req.headers['authorization'] as string | undefined
+      if (!hdr || !hdr.startsWith('Basic ')) {
+        res.set('WWW-Authenticate', 'Basic realm="Bull Board"')
+        return res.status(401).send('Authentication required')
+      }
+      const decoded = Buffer.from(hdr.slice('Basic '.length), 'base64').toString('utf8')
+      const idx = decoded.indexOf(':')
+      const u = idx >= 0 ? decoded.slice(0, idx) : decoded
+      const p = idx >= 0 ? decoded.slice(idx + 1) : ''
+      if (u === basicUser && p === basicPass) return next()
+      res.set('WWW-Authenticate', 'Basic realm="Bull Board"')
+      return res.status(401).send('Invalid credentials')
+    }
+    router.use(basePath, basicAuthMw, serverAdapter.getRouter())
+    logger.info('Bull Board UI protected with Basic Auth fallback (env)')
+    return router
+  }
+
   // Guard the UI behind admin auth. Accept auth via Bearer header (if present) or
   // an HttpOnly cookie (auth_token). Explicitly skip the grant/accept helpers to
   // avoid accidental 401s during the bootstrap flow, even if Express ordering varies.
@@ -347,6 +396,8 @@ export const createBullBoardRouter = () => {
           pathStartsWithAccept: p.startsWith('/accept'),
           pathStartsWithGrant: p.startsWith('/grant'),
         },
+        hasCookieHeader: Boolean(req.headers.cookie),
+        hasAuthHeader: Boolean(req.headers.authorization),
       })
 
       // Skip auth for grant/accept bootstrap endpoints — ensure we bypass the rest of this chain
