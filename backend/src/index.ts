@@ -50,6 +50,7 @@ import bullBoardRouterFactory, {
   createAcceptRoute,
   createGrantRoute,
   createLoginRoute,
+  createDebugRoute,
 } from './routes/bullBoard.js'
 import clanRoutes from './routes/clans.js'
 import featureFlagsRoutes from './routes/featureFlags.js'
@@ -64,6 +65,8 @@ import messagesRoutes from './routes/messages.js'
 import notificationRoutes from './routes/notifications.js'
 import oddsRoutes from './routes/odds.js'
 import performanceRoutes from './routes/performanceRoutes.js'
+import { databaseClusterService } from './services/databaseClusterService.js'
+import { cdnService } from './services/cdnService.js'
 import { createPreferencesRouter } from './routes/preferences.js'
 import profileRoutes from './routes/profile.js'
 import queueRoutes from './routes/queueRoutes.js'
@@ -169,6 +172,20 @@ try {
 } catch (e) {
   logger.warn('Failed to configure odds engine; using defaults', { error: (e as Error)?.message })
 }
+
+// Initialize ancillary monitoring services (non-blocking)
+void (async () => {
+  try {
+    await databaseClusterService.initialize()
+  } catch (e) {
+    logger.warn('⚠️ DatabaseClusterService init failed; health will show not_configured', getErrorMessage(e))
+  }
+  try {
+    await cdnService.initialize()
+  } catch (e) {
+    logger.warn('⚠️ CDN service init failed; health will show not_configured', getErrorMessage(e))
+  }
+})()
 
 // Initialize Redis asynchronously and set up adapter if successful
 initializeRedis()
