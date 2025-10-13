@@ -60,7 +60,7 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       window.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = originalOverflow
     }
-  }, [isOpen])
+  }, [isOpen, onEscape])
 
   const handleBackdropClick = useCallback(() => {
     onClose()

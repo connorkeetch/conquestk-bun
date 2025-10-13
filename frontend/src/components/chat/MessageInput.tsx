@@ -115,7 +115,7 @@ export default function MessageInput({
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showEmojiPicker])
+  }, [showEmojiPicker, closeEmojiPicker])
 
   const charactersRemaining = maxLength - message.length
   const isNearLimit = charactersRemaining < 50

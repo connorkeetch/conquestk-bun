@@ -60,7 +60,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen])
+  }, [isOpen, onEscape])
 
   // Handle clicking outside modal
   const onOutsideClick = useEffectEvent(() => {
@@ -77,7 +77,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isOpen])
+  }, [isOpen, onOutsideClick])
 
   if (!isOpen) return null
 

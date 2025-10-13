@@ -108,7 +108,7 @@ export default function PlayerProfileModal({
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = 'unset'
     }
-  }, [open])
+  }, [open, onEscape])
 
   const onOutside = useEffectEvent(() => {
     onClose()
@@ -122,7 +122,7 @@ export default function PlayerProfileModal({
     }
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [open])
+  }, [open, onOutside])
 
   const rank = profile ? getConquestRank(profile.elo) : null
   const rankTierInfo = profile

@@ -23,7 +23,7 @@ export default function ReactionPicker({ onReact, onClose, position }: ReactionP
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [onOutside])
 
   // Close on Escape key
   const onEscape = useEffectEvent(() => {
@@ -35,7 +35,7 @@ export default function ReactionPicker({ onReact, onClose, position }: ReactionP
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [])
+  }, [onEscape])
 
   const handleReaction = (emoji: string) => {
     onReact(emoji)
