@@ -367,6 +367,15 @@ try {
   logger.warn('Health reports static mount failed', getErrorMessage(e))
 }
 
+// Mount Bull Board UI before adminRoutes so /accept isn't intercepted by /api/admin auth middleware
+try {
+  const bullBoardRouter = bullBoardRouterFactory()
+  app.use(bullBoardRouter)
+  logger.info('✅ Bull Board mounted early at /api/admin/queues/ui')
+} catch (_e) {
+  // If queues are not initialized yet, Bull Board will become available later after init
+}
+
 // API Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/game', gameRoutes)
@@ -390,13 +399,6 @@ app.use('/api/performance', performanceRoutes)
 app.use('/api/benchmark', benchmarkRoutes)
 app.use('/api/odds', oddsRoutes)
 app.use('/api/matchsvc', matchsvcRoutes)
-// Mount Bull Board UI behind admin auth at /api/admin/queues/ui
-try {
-  const bullBoardRouter = bullBoardRouterFactory()
-  app.use(bullBoardRouter)
-} catch (_e) {
-  // If queues are not initialized yet, Bull Board will become available later after init
-}
 app.use('/api/preferences', createPreferencesRouter(getPool()))
 
 // Simple test endpoint that doesn't require database
