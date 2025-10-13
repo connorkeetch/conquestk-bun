@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg'
+import { URL } from 'node:url'
 import { logger } from '../utils/logger.js'
 
 interface DatabaseNode {
@@ -67,14 +68,51 @@ export class DatabaseClusterService {
       logger.info('🔄 Initializing Database Cluster Service...')
 
       // Initialize primary database
-      await this.addDatabaseNode({
-        id: 'primary',
-        host: this.getEnvValue('DB_HOST', 'localhost'),
-        port: parseInt(this.getEnvValue('DB_PORT', '5432'), 10),
-        database: this.getEnvValue('DB_NAME', 'risk_game'),
-        role: 'primary',
-        weight: 100,
-      })
+      const databaseUrl = process.env.DATABASE_URL
+      if (databaseUrl) {
+        // Parse DATABASE_URL to populate node details for monitoring
+        try {
+          const u = new URL(databaseUrl)
+          const host = u.hostname
+          const port = u.port ? parseInt(u.port, 10) : 5432
+          const database = u.pathname.replace(/^\//, '') || 'postgres'
+          const user = decodeURIComponent(u.username || 'postgres')
+          const password = decodeURIComponent(u.password || '')
+          const isRailway = databaseUrl.includes('railway')
+          await this.addDatabaseNode({
+            id: 'primary',
+            host,
+            port,
+            database,
+            role: 'primary',
+            weight: 100,
+            // Prefer connection string (inherits all flags, ssl, etc.)
+            connectionString: databaseUrl,
+            user,
+            password,
+            ssl: isRailway || process.env.NODE_ENV === 'production',
+          })
+        } catch (e) {
+          logger.warn('Failed to parse DATABASE_URL for cluster service, falling back to DB_* vars', e)
+          await this.addDatabaseNode({
+            id: 'primary',
+            host: this.getEnvValue('DB_HOST', 'localhost'),
+            port: parseInt(this.getEnvValue('DB_PORT', '5432'), 10),
+            database: this.getEnvValue('DB_NAME', 'risk_game'),
+            role: 'primary',
+            weight: 100,
+          })
+        }
+      } else {
+        await this.addDatabaseNode({
+          id: 'primary',
+          host: this.getEnvValue('DB_HOST', 'localhost'),
+          port: parseInt(this.getEnvValue('DB_PORT', '5432'), 10),
+          database: this.getEnvValue('DB_NAME', 'risk_game'),
+          role: 'primary',
+          weight: 100,
+        })
+      }
 
       // Initialize read replicas if configured
       const replicaNodes = process.env.DB_REPLICAS
@@ -120,21 +158,33 @@ export class DatabaseClusterService {
       | 'connectionCount'
       | 'queryCount'
       | 'avgResponseTime'
-    >,
+    > & { user?: string; password?: string; connectionString?: string; ssl?: boolean },
   ): Promise<void> {
-    const poolConfig: PoolConfig = {
-      host: nodeConfig.host,
-      port: nodeConfig.port,
-      database: nodeConfig.database,
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD,
-      max: nodeConfig.role === 'primary' ? 20 : 15, // More connections for primary
+    const basePoolConfig = {
+      max: nodeConfig.role === 'primary' ? 20 : 15,
       min: nodeConfig.role === 'primary' ? 5 : 2,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
       statement_timeout: this.config.queryTimeout,
       query_timeout: this.config.queryTimeout,
-    }
+    } as PoolConfig
+
+    const poolConfig: PoolConfig = nodeConfig.connectionString
+      ? {
+          ...basePoolConfig,
+          connectionString: nodeConfig.connectionString,
+          ssl: nodeConfig.ssl ? { rejectUnauthorized: false } : undefined,
+          application_name: 'conquestk-db-cluster',
+        }
+      : {
+          ...basePoolConfig,
+          host: nodeConfig.host,
+          port: nodeConfig.port,
+          database: nodeConfig.database,
+          user: nodeConfig.user || process.env.DB_USER || 'postgres',
+          password: nodeConfig.password || process.env.DB_PASSWORD,
+          application_name: 'conquestk-db-cluster',
+        }
 
     const pool = new Pool(poolConfig)
 
@@ -413,7 +463,33 @@ export class DatabaseClusterService {
     }
   }
 
-  async healthCheck(): Promise<{ status: 'healthy' | 'degraded'; details: DatabaseHealthDetails }> {
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'degraded' | 'not_configured'
+    details: DatabaseHealthDetails
+  }> {
+    // If the service hasn't been initialized and no nodes configured, treat as not configured
+    if (this.nodes.size === 0) {
+      return {
+        status: 'not_configured',
+        details: {
+          totalNodes: 0,
+          healthyNodes: 0,
+          primaryHealthy: false,
+          metrics: {
+            ...this.getMetrics(),
+            // Ensure nodes array is empty and counters are zeroed to avoid confusion
+            totalQueries: 0,
+            successfulQueries: 0,
+            failedQueries: 0,
+            avgResponseTime: 0,
+            slowQueries: 0,
+            connectionErrors: 0,
+            nodes: [],
+          },
+        },
+      }
+    }
+
     const healthyNodes = Array.from(this.nodes.values()).filter((node) => node.isHealthy)
     const hasHealthyPrimary = healthyNodes.some((node) => node.role === 'primary')
 

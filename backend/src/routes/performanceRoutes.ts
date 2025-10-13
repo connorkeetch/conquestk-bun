@@ -153,11 +153,13 @@ router.get('/health/detailed', authenticateToken, async (req, res) => {
       cdn: extractResult(cdnHealth),
     }
 
-    const overallStatus = Object.values(health).every((h) => h.status === 'healthy')
-      ? 'healthy'
-      : Object.values(health).some((h) => h.status === 'critical')
-        ? 'critical'
-        : 'degraded'
+    // Treat 'not_configured' as neutral (does not degrade overall health)
+    const statuses = Object.values(health).map((h) => h.status)
+    const allHealthyOrNeutral = statuses.every(
+      (s) => s === 'healthy' || s === 'not_configured',
+    )
+    const anyCritical = statuses.some((s) => s === 'critical')
+    const overallStatus = allHealthyOrNeutral ? 'healthy' : anyCritical ? 'critical' : 'degraded'
 
     res.json({
       success: true,

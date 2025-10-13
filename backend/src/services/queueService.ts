@@ -140,6 +140,17 @@ export class QueueService {
   private isInitialized = false
   private readonly queueReadyTimeoutMs = Number(process.env.QUEUE_READY_TIMEOUT_MS ?? 15000)
 
+  // BullMQ prohibits ":" in custom job IDs because it interferes with key names.
+  // Normalize any potentially unsafe characters to "_" for Redis key safety.
+  private sanitizeJobId(id: string): string {
+    try {
+      // Keep alphanumerics, dash and underscore; replace others with underscore
+      return String(id).replace(/[^a-zA-Z0-9_-]/g, '_')
+    } catch {
+      return 'job_' + Date.now()
+    }
+  }
+
   private resolveQueue<Key extends QueueConfigKey>(key: Key): Queue | null {
     return (this.queues.get(key) as Queue | undefined) ?? null
   }
@@ -260,9 +271,12 @@ export class QueueService {
     }
 
     return queue.add('process-game-action', payload, {
-      jobId: idempotencyKey,
+      jobId: this.sanitizeJobId(idempotencyKey),
       priority: this.getActionPriority(job.action),
       delay: 0,
+      attempts: 1, // Real-time actions shouldn't retry on validation errors
+      removeOnFail: true,
+      removeOnComplete: 10,
     })
   }
 
@@ -276,7 +290,7 @@ export class QueueService {
     if (!queue) return false
 
     try {
-      const job = await queue.getJob(jobId)
+      const job = await queue.getJob(this.sanitizeJobId(jobId))
       if (job) {
         await job.remove()
         return true
@@ -311,7 +325,7 @@ export class QueueService {
     }
 
     return queue.add('process-game-action', payload, {
-      jobId: idempotencyKey,
+      jobId: this.sanitizeJobId(idempotencyKey),
       delay: Math.max(0, Math.trunc(delayMs)),
       attempts: 1,
       removeOnFail: true,
@@ -337,7 +351,7 @@ export class QueueService {
     }
 
     return queue.add('cleanup-game', payload, {
-      jobId: idempotencyKey,
+      jobId: this.sanitizeJobId(idempotencyKey),
       priority: 1, // Low priority
       delay: job.reason === 'timeout' ? 30000 : 0, // 30s delay for timeouts
     })
@@ -349,7 +363,7 @@ export class QueueService {
     const queue = this.resolveQueue('gameActions')
     if (!queue) return false
     try {
-      const job = await queue.getJob(jobId)
+      const job = await queue.getJob(this.sanitizeJobId(jobId))
       if (!job) return false
       await job.changeDelay(Math.max(0, Math.trunc(delayMs)))
       return true
