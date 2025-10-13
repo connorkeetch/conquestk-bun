@@ -9,30 +9,14 @@ import { queueService } from '../services/queueService.js'
 import { getJwtSecrets, signJwt, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 
-export const createBullBoardRouter = () => {
+// Export grant/accept routes separately so they can be mounted BEFORE the Bull Board router
+export const createGrantRoute = () => {
   const router = Router()
-
-  const serverAdapter = new ExpressAdapter()
-  // Mount behind API prefix so production proxy forwards it
   const basePath = '/api/admin/queues/ui'
-  serverAdapter.setBasePath(basePath)
 
-  const queues = [
-    new BullMQAdapter(queueService.getGameActionQueue()),
-    new BullMQAdapter(queueService.getCleanupQueue()),
-    new BullMQAdapter(queueService.getAnalyticsQueue()),
-    new BullMQAdapter(queueService.getMaintenanceQueue()),
-    new BullMQAdapter(queueService.getMapAssetQueue()),
-  ]
-
-  const adapters: readonly BullMQAdapter[] = queues
-  createBullBoard({ queues: adapters, serverAdapter })
-
-  // CRITICAL: Define grant/accept on parent path to avoid middleware interception
-  // The middleware at router.use(basePath, ...) would catch these if defined under basePath
   // Helper endpoint to set a short-lived HttpOnly token cookie for the Bull Board UI.
   // This enables opening the board in a new tab where headers aren't attached.
-  router.post('/api/admin/queues/ui/grant', authenticateToken, requireAdmin, async (req, res) => {
+  router.post(`${basePath}/grant`, authenticateToken, requireAdmin, async (req, res) => {
     try {
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
       const secrets = getJwtSecrets()
@@ -73,8 +57,15 @@ export const createBullBoardRouter = () => {
     }
   })
 
+  return router
+}
+
+export const createAcceptRoute = () => {
+  const router = Router()
+  const basePath = '/api/admin/queues/ui'
+
   // Accept a short-lived grant code and mint a UI cookie, then redirect to the Bull Board UI
-  router.get('/api/admin/queues/ui/accept', async (req, res) => {
+  router.get(`${basePath}/accept`, async (req, res) => {
     logger.info('BullBoard accept: endpoint reached', {
       ip: req.ip,
       ua: req.get('User-Agent'),
@@ -167,6 +158,29 @@ export const createBullBoardRouter = () => {
       res.status(500).send('Failed to accept grant')
     }
   })
+
+  return router
+}
+
+export const createBullBoardRouter = () => {
+  const router = Router()
+
+  const serverAdapter = new ExpressAdapter()
+  // Mount behind API prefix so production proxy forwards it
+  const basePath = '/api/admin/queues/ui'
+  serverAdapter.setBasePath(basePath)
+
+  const queues = [
+    new BullMQAdapter(queueService.getGameActionQueue()),
+    new BullMQAdapter(queueService.getCleanupQueue()),
+    new BullMQAdapter(queueService.getAnalyticsQueue()),
+    new BullMQAdapter(queueService.getMaintenanceQueue()),
+    new BullMQAdapter(queueService.getMapAssetQueue()),
+  ]
+
+  const adapters: readonly BullMQAdapter[] = queues
+  createBullBoard({ queues: adapters, serverAdapter })
+
   // Guard the UI behind admin auth. Accept auth via Bearer header (if present) or
   // an HttpOnly cookie (auth_token). Explicitly skip the grant/accept helpers to
   // avoid accidental 401s during the bootstrap flow, even if Express ordering varies.
