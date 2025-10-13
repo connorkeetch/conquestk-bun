@@ -1,4 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
+import jwt from 'jsonwebtoken'
 import { authenticateToken } from './auth.js'
 
 // Lightweight cookie parser to avoid bringing a new dependency just for this case
@@ -33,6 +34,65 @@ export const authenticateTokenFromCookie: RequestHandler = (
   const existing = req.headers.authorization
   if (existing?.startsWith('Bearer ')) {
     return authenticateToken(req, res, next)
+  }
+
+  // Accept token/grant via query string for UI flows where the browser cannot attach headers
+  // Supported params (case-sensitive): access_token, accessToken, token, code
+  // - If a short-lived grant `code` is provided, verify and mint a UI-scoped token cookie
+  // - If an access token is provided, verify and mint a UI-scoped token cookie
+  // Either path avoids relying on headers and enables subsequent XHR calls from the UI
+  const q = req.query as Record<string, unknown>
+  const queryAccessToken = [q.access_token, q.accessToken, q.token].find(
+    (v) => typeof v === 'string' && v.length > 0,
+  ) as string | undefined
+  const queryGrantCode =
+    typeof q.code === 'string' && q.code.length > 0 ? (q.code as string) : undefined
+
+  const jwtSecret = process.env.JWT_SECRET
+  const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
+  const uiCookiePath = '/api/admin/queues/ui'
+
+  const tryMintUiCookieFromPayload = (payload: unknown) => {
+    if (!jwtSecret) return false
+    // Accept payloads that include a userId
+    const userId =
+      payload && typeof payload === 'object' ? (payload as { userId?: unknown }).userId : undefined
+    if (typeof userId !== 'string' || userId.length === 0) return false
+    const uiToken = jwt.sign({ userId }, jwtSecret, { expiresIn: '15m' })
+    res.cookie('auth_token', uiToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      path: uiCookiePath,
+      maxAge: 15 * 60 * 1000,
+    })
+    // Also set Authorization header for this request
+    req.headers.authorization = `Bearer ${uiToken}`
+    return true
+  }
+
+  // Prefer redeeming a grant code first if present
+  if (queryGrantCode && jwtSecret) {
+    try {
+      const decoded = jwt.verify(queryGrantCode, jwtSecret)
+      if (tryMintUiCookieFromPayload(decoded)) {
+        return authenticateToken(req, res, next)
+      }
+    } catch {
+      // fall through to access token/cookie paths
+    }
+  }
+
+  // Next, accept an access token directly via query param
+  if (queryAccessToken && jwtSecret) {
+    try {
+      const decoded = jwt.verify(queryAccessToken, jwtSecret)
+      if (tryMintUiCookieFromPayload(decoded)) {
+        return authenticateToken(req, res, next)
+      }
+    } catch {
+      // fall through to cookie path
+    }
   }
 
   const cookies = parseCookie(req.headers.cookie)
