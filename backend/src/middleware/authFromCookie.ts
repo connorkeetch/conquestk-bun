@@ -97,7 +97,12 @@ export const authenticateTokenFromCookie: RequestHandler = (
         })
         return authenticateToken(req, res, next)
       }
-    } catch {
+    } catch (e) {
+      logger.warn('authFromCookie: grant code verification failed', {
+        path: req.path,
+        originalUrl: req.originalUrl,
+        error: e instanceof Error ? e.message : String(e),
+      })
       // fall through to access token/cookie paths
     }
   }
@@ -113,13 +118,18 @@ export const authenticateTokenFromCookie: RequestHandler = (
         })
         return authenticateToken(req, res, next)
       }
-    } catch {
+    } catch (e) {
+      logger.warn('authFromCookie: access_token verification failed', {
+        path: req.path,
+        originalUrl: req.originalUrl,
+        error: e instanceof Error ? e.message : String(e),
+      })
       // fall through to cookie path
     }
   }
 
   const cookies = parseCookie(req.headers.cookie)
-  const token = cookies.ck_bb_auth || cookies.auth_token || cookies.token
+  const token = cookies['__Host-ck-bb'] || cookies.ck_bb_auth || cookies.auth_token || cookies.token
   if (!token) {
     // Add debug logging to help diagnose cookie issues
     logger.warn('authFromCookie: no token found', {

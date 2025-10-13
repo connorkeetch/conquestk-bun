@@ -68,6 +68,13 @@ export const createGrantRoute = () => {
       }
       res.cookie('ck_bb_auth', uiToken, cookieOpts)
       res.cookie('auth_token', uiToken, cookieOpts)
+      res.cookie('__Host-ck-bb', uiToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 15 * 60 * 1000,
+      })
       logger.info('Bull Board grant: cookie set', {
         userId: req.userId,
         path: cookiePath,
@@ -169,6 +176,13 @@ export const createAcceptRoute = () => {
       }
       res.cookie('ck_bb_auth', uiToken, cookieOpts)
       res.cookie('auth_token', uiToken, cookieOpts)
+      res.cookie('__Host-ck-bb', uiToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 15 * 60 * 1000,
+      })
       logger.info('BullBoard accept: UI cookie minted', {
         ip: req.ip,
         ua: req.get('User-Agent'),
@@ -309,6 +323,13 @@ export const createLoginRoute = () => {
       }
       res.cookie('ck_bb_auth', uiToken, cookieOpts)
       res.cookie('auth_token', uiToken, cookieOpts)
+      res.cookie('__Host-ck-bb', uiToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 15 * 60 * 1000,
+      })
       logger.info('BullBoard login: UI cookie minted', { userId, path: cookiePath, domain: cookieDomain })
       // Use HTML meta-refresh instead of 302 to avoid any proxy that might strip Set-Cookie on redirects
       res
@@ -347,28 +368,7 @@ export const createBullBoardRouter = () => {
   const adapters: readonly BullMQAdapter[] = queues
   createBullBoard({ queues: adapters, serverAdapter })
 
-  // Optional Basic Auth fallback for dev: set BULL_BOARD_BASIC_AUTH_USR and BULL_BOARD_BASIC_AUTH_PWD
-  const basicUser = (process.env.BULL_BOARD_BASIC_AUTH_USR || '').trim()
-  const basicPass = (process.env.BULL_BOARD_BASIC_AUTH_PWD || '').trim()
-  if (basicUser && basicPass) {
-    const basicAuthMw = (req: any, res: any, next: any) => {
-      const hdr = req.headers['authorization'] as string | undefined
-      if (!hdr || !hdr.startsWith('Basic ')) {
-        res.set('WWW-Authenticate', 'Basic realm="Bull Board"')
-        return res.status(401).send('Authentication required')
-      }
-      const decoded = Buffer.from(hdr.slice('Basic '.length), 'base64').toString('utf8')
-      const idx = decoded.indexOf(':')
-      const u = idx >= 0 ? decoded.slice(0, idx) : decoded
-      const p = idx >= 0 ? decoded.slice(idx + 1) : ''
-      if (u === basicUser && p === basicPass) return next()
-      res.set('WWW-Authenticate', 'Basic realm="Bull Board"')
-      return res.status(401).send('Invalid credentials')
-    }
-    router.use(basePath, basicAuthMw, serverAdapter.getRouter())
-    logger.info('Bull Board UI protected with Basic Auth fallback (env)')
-    return router
-  }
+  // Removed Basic Auth fallback; continue with JWT/cookie guard only.
 
   // Guard the UI behind admin auth. Accept auth via Bearer header (if present) or
   // an HttpOnly cookie (auth_token). Explicitly skip the grant/accept helpers to
