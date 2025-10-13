@@ -12,9 +12,21 @@ import { queueService } from './queueService.js'
 export class GameActionProcessor {
   private gameService: GameService
   private deltaEmitter: DeltaEmitter
-  private io: Server<ClientToServerEvents, ServerToClientEvents>
+  private io: Server<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    Record<string, unknown>,
+    { userId?: string }
+  >
 
-  constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
+  constructor(
+    io: Server<
+      ClientToServerEvents,
+      ServerToClientEvents,
+      Record<string, unknown>,
+      { userId?: string }
+    >,
+  ) {
     this.gameService = new GameService()
     this.deltaEmitter = new DeltaEmitter(io)
     this.io = io
@@ -437,7 +449,7 @@ export class GameActionProcessor {
           ),
         ]
         const { emitFogFilteredDelta } = await import('./fogService.js')
-        await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
+        await emitFogFilteredDelta(this.io, gameId, battleDelta)
       } catch (e) {
         logger.debug('Failed to emit fog-filtered battle delta in inline attack', {
           gameId,

@@ -70,6 +70,7 @@ import termsRoutes from './routes/terms.js'
 import userRoutes from './routes/users.js'
 import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js'
 import { setupSocketHandlers } from './services/socketService.js'
+import type { ClientToServerEvents, ServerToClientEvents } from './types/shared.js'
 import { getErrorMessage, toKnownError } from './utils/errorHelpers.js'
 import { ensureTablesExist } from './utils/initTables.js'
 import { logger } from './utils/logger.js'
@@ -141,7 +142,12 @@ const corsOptions = {
 }
 
 // Initialize Socket.io first
-const io = new Server(server, {
+const io: Server<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  Record<string, unknown>,
+  { userId?: string }
+> = new Server(server, {
   cors: corsOptions,
   // Enable connection state recovery for client resilience on brief disconnects
   connectionStateRecovery: {},

@@ -30,20 +30,28 @@ export interface ActionResult {
  * Handles all delta broadcasts in a consistent way across worker and inline paths
  */
 export class DeltaEmitter {
-  private io: Server<ClientToServerEvents, ServerToClientEvents>
-  private emitFogFilteredDelta:
-    | ((
-        io: Server,
-        roomId: string,
-        delta: import('@conquestk/shared/types/delta').GameDelta,
-      ) => Promise<void>)
-    | null = null
+  // Socket.io server with typed SocketData (for userId on sockets)
+  private io: Server<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    Record<string, unknown>,
+    { userId?: string }
+  >
+  // Lazily-loaded fog emitter kept as optional, resolved via getEmitter()
+  private emitFogFilteredDelta?: typeof import('./fogService.js')['emitFogFilteredDelta']
 
-  constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
+  constructor(
+    io: Server<
+      ClientToServerEvents,
+      ServerToClientEvents,
+      Record<string, unknown>,
+      { userId?: string }
+    >,
+  ) {
     this.io = io
   }
 
-  private async getEmitter() {
+  private async getEmitter(): Promise<typeof import('./fogService.js')['emitFogFilteredDelta']> {
     if (!this.emitFogFilteredDelta) {
       const { emitFogFilteredDelta } = await import('./fogService.js')
       this.emitFogFilteredDelta = emitFogFilteredDelta
@@ -73,7 +81,7 @@ export class DeltaEmitter {
           },
           result.version,
         )
-        await emitter(this.io as unknown as Server, gameId, playerDelta)
+        await emitter(this.io, gameId, playerDelta)
       }
 
       // Emit phase change if occurred
@@ -86,7 +94,7 @@ export class DeltaEmitter {
           result.phaseChanged.reinforcementArmies,
           result.version,
         )
-        await emitter(this.io as unknown as Server, gameId, phaseDelta)
+        await emitter(this.io, gameId, phaseDelta)
       }
 
       // Emit territory update
@@ -99,7 +107,7 @@ export class DeltaEmitter {
           },
           result.version,
         )
-        await emitter(this.io as unknown as Server, gameId, territoryDelta)
+        await emitter(this.io, gameId, territoryDelta)
       }
     } catch (error) {
       logger.warn('Failed to emit deployment deltas', {
@@ -136,7 +144,7 @@ export class DeltaEmitter {
         result.version,
       )
 
-      await emitter(this.io as unknown as Server, gameId, phaseDelta)
+      await emitter(this.io, gameId, phaseDelta)
     } catch (error) {
       logger.warn('Failed to emit phase change delta', {
         gameId,
@@ -167,7 +175,7 @@ export class DeltaEmitter {
           },
           result.version,
         )
-        await emitter(this.io as unknown as Server, gameId, fromDelta)
+        await emitter(this.io, gameId, fromDelta)
       }
 
       // Emit to territory update
@@ -180,7 +188,7 @@ export class DeltaEmitter {
           },
           result.version,
         )
-        await emitter(this.io as unknown as Server, gameId, toDelta)
+        await emitter(this.io, gameId, toDelta)
       }
 
       // Emit phase change if occurred
@@ -193,7 +201,7 @@ export class DeltaEmitter {
           result.phaseChanged.reinforcementArmies,
           result.version,
         )
-        await emitter(this.io as unknown as Server, gameId, phaseDelta)
+        await emitter(this.io, gameId, phaseDelta)
       }
     } catch (error) {
       logger.warn('Failed to emit fortify deltas', {
@@ -212,7 +220,7 @@ export class DeltaEmitter {
   async emitRevealTo(gameId: string, viewerId: string, state?: GameState): Promise<void> {
     try {
       const { emitRevealSnapshot } = await import('./fogService.js')
-      await emitRevealSnapshot(this.io as unknown as Server, gameId, viewerId, state)
+      await emitRevealSnapshot(this.io, gameId, viewerId, state)
     } catch (error) {
       logger.warn('Failed to emit targeted reveal snapshot', {
         gameId,

@@ -1,6 +1,6 @@
 import type { GameDelta } from '@conquestk/shared/types/delta'
 import type { RemoteSocket, Server } from 'socket.io'
-import type { GameState, SerializedGameState } from '../types/game.js'
+import type { GameState, GameTerritoryModifier, SerializedGameState } from '../types/game.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { logger } from '../utils/logger.js'
 import { GameService } from './gameService.js'
@@ -197,11 +197,22 @@ export function filterStateForPlanner(state: GameState, viewerId: string): GameS
   return filterFullStateForViewer(state, viewerId)
 }
 
+function hasMapTerritoryModifiers(
+  s: GameState | SerializedGameState,
+): s is GameState & { territoryModifiers: Map<string, GameTerritoryModifier> } {
+  return Boolean(
+    s &&
+      typeof s === 'object' &&
+      'territoryModifiers' in s &&
+      (s as GameState).territoryModifiers instanceof Map,
+  )
+}
+
 function serializeForClient(state: GameState | SerializedGameState): SerializedGameState {
-  const territoryModifiers = (state as GameState).territoryModifiers
-  if (territoryModifiers instanceof Map) {
+  if (hasMapTerritoryModifiers(state)) {
+    const { territoryModifiers, ...rest } = state
     const obj = Object.fromEntries(territoryModifiers.entries())
-    return { ...(state as GameState), territoryModifiers: obj } as unknown as SerializedGameState
+    return { ...rest, territoryModifiers: obj }
   }
   return state as SerializedGameState
 }
@@ -213,9 +224,7 @@ export async function emitRevealSnapshot(
   state?: GameState,
 ): Promise<void> {
   const channel = `${ROOM_PREFIX}${roomId}`
-  let sockets: Array<
-    RemoteSocket<ServerToClientEvents, ClientToServerEvents, Record<string, unknown>, SocketData>
-  >
+  let sockets: Array<RemoteSocket<ServerToClientEvents, SocketData>>
   try {
     sockets = await io.in(channel).fetchSockets()
   } catch {

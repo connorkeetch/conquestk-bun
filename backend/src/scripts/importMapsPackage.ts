@@ -185,8 +185,9 @@ const normalizeImageUrl = (url?: string): string | undefined => {
 
 async function extractZip(zipPath: string): Promise<string> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const AdmZip: any = (await import('adm-zip')).default as any
+    const { default: AdmZip } = (await import('adm-zip')) as {
+      default: typeof import('adm-zip')['default']
+    }
     const tempDir = path.join(os.tmpdir(), `maps-import-${randomUUID()}`)
     fs.mkdirSync(tempDir, { recursive: true })
     const zip = new AdmZip(zipPath)
@@ -555,7 +556,9 @@ async function run(): Promise<void> {
 
         // Post-insert row counts (authoritative from DB)
         try {
-          const { query } = (await import('../config/database.js')) as any
+          const { query } = (await import(
+            '../config/database.js'
+          )) as typeof import('../config/database.js')
           const t = await query('SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1', [
             created.id,
           ])
@@ -581,7 +584,7 @@ async function run(): Promise<void> {
             const adminId = await resolveAdminUserId()
             const { default: mapWorkflowService } = (await import(
               '../services/mapWorkflowService.js'
-            )) as any
+            )) as typeof import('../services/mapWorkflowService.js')
             await mapWorkflowService.approveMap(created.id, adminId, {
               notes: 'Auto-approved by import script',
             })
@@ -597,7 +600,7 @@ async function run(): Promise<void> {
         if (opts.draftOnFail) {
           const { default: mapWorkflowService } = (await import(
             '../services/mapWorkflowService.js'
-          )) as any
+          )) as typeof import('../services/mapWorkflowService.js')
           const draft = await mapWorkflowService.saveDraft(userId as string, {
             name: data.name,
             description: data.description || undefined,
