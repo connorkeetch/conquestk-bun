@@ -549,7 +549,7 @@ async function run(): Promise<void> {
       if (opts.forceDraft) {
         const { default: mapWorkflowService } = (await import(
           '../services/mapWorkflowService.js'
-        )) as any
+        )) as typeof import('../services/mapWorkflowService.js')
         const draft = await mapWorkflowService.saveDraft(userId as string, {
           name: data.name,
           description: data.description || undefined,
