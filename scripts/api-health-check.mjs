@@ -68,6 +68,8 @@ const WRITE_MARKDOWN = !(argv['no-markdown'] || process.env.NO_MARKDOWN)
 const WRITE_HTML = !(argv['no-html'] || process.env.NO_HTML)
 const MD_PATH = argv.markdown || argv.md || process.env.MARKDOWN || `${OUTPUT_BASE}.md`
 const HTML_PATH = argv.html || process.env.HTML || `${OUTPUT_BASE}.html`
+const PUBLISH = Boolean(argv.publish || process.env.PUBLISH_STATIC)
+const PUBLISH_DIR = argv['publish-dir'] || process.env.PUBLISH_DIR || path.join('backend', 'health-reports')
 
 function hr(ms) {
   return `${ms.toFixed(0)}ms`
@@ -413,22 +415,42 @@ async function main() {
     }
   }
 
-  await mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {})
-  await writeFile(OUTPUT_PATH, JSON.stringify({ baseUrl: BASE_URL, generatedAt: new Date().toISOString(), results }, null, 2), 'utf8')
-  printSummary(BASE_URL, results)
-  console.log(`Saved full JSON report to: ${OUTPUT_PATH}`)
-  if (WRITE_MARKDOWN) {
-    const md = renderMarkdown(BASE_URL, results)
-    await writeFile(MD_PATH, md, 'utf8')
-    console.log(`Saved Markdown summary to: ${MD_PATH}`)
-  }
-  if (WRITE_HTML) {
-    const html = renderHtml(BASE_URL, results)
-    await writeFile(HTML_PATH, html, 'utf8')
-    console.log(`Saved HTML summary to: ${HTML_PATH}`)
+  await writeOutputs({
+    dir: OUTPUT_DIR,
+    outputPath: OUTPUT_PATH,
+    mdPath: MD_PATH,
+    htmlPath: HTML_PATH,
+    writeMd: WRITE_MARKDOWN,
+    writeHtml: WRITE_HTML,
+    baseUrl: BASE_URL,
+    results,
+  })
+
+  if (PUBLISH) {
+    const base = path.basename(OUTPUT_BASE)
+    const publishBaseJson = path.join(PUBLISH_DIR, `${base}.json`)
+    const publishBaseMd = path.join(PUBLISH_DIR, `${base}.md`)
+    const publishBaseHtml = path.join(PUBLISH_DIR, `${base}.html`)
+    await writeOutputs({
+      dir: PUBLISH_DIR,
+      outputPath: publishBaseJson,
+      mdPath: publishBaseMd,
+      htmlPath: publishBaseHtml,
+      writeMd: true,
+      writeHtml: true,
+      baseUrl: BASE_URL,
+      results,
+    })
+    console.log(`Published static report under: ${PUBLISH_DIR}`)
   }
   if (!token) {
     console.log('Note: Authenticated endpoints may show 401/403 without a token.')
+  }
+  // Refresh directory index
+  try {
+    await writeIndexPage()
+  } catch (e) {
+    console.warn('Failed to write health index page:', e && e.message ? e.message : e)
   }
 }
 
@@ -436,3 +458,121 @@ main().catch((e) => {
   console.error('Fatal error:', e)
   process.exit(1)
 })
+
+async function listReports() {
+  const fs = await import('node:fs/promises')
+  const { readdir, readFile } = fs
+  const files = await readdir(OUTPUT_DIR).catch(() => [])
+  const jsons = files.filter((f) => /^health-report-.*\.json$/i.test(f))
+  const items = []
+  for (const f of jsons) {
+    try {
+      const p = path.join(OUTPUT_DIR, f)
+      const raw = await readFile(p, 'utf8')
+      const obj = JSON.parse(raw)
+      const base = f.replace(/\.json$/i, '')
+      const html = files.includes(`${base}.html`) ? `${base}.html` : null
+      const md = files.includes(`${base}.md`) ? `${base}.md` : null
+      items.push({
+        json: f,
+        html,
+        md,
+        generatedAt: obj.generatedAt || null,
+        baseUrl: obj.baseUrl || null,
+      })
+    } catch {}
+  }
+  items.sort((a, b) => String(b.generatedAt || '').localeCompare(String(a.generatedAt || '')))
+  return items
+}
+
+function renderIndexHtml(items) {
+  const latest = items[0]
+  const rows = items
+    .map((it) => {
+      const ts = it.generatedAt ? new Date(it.generatedAt).toLocaleString() : 'unknown'
+      const links = [
+        it.html ? `<a href="${encodeURI(it.html)}">HTML</a>` : '',
+        it.md ? `<a href="${encodeURI(it.md)}">MD</a>` : '',
+        `<a href="${encodeURI(it.json)}">JSON</a>`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      return `<tr><td>${ts}</td><td>${it.baseUrl ? escapeHtml(it.baseUrl) : ''}</td><td>${links}</td></tr>`
+    })
+    .join('\n')
+  const latestLinks = latest
+    ? [
+        latest.html ? `<a class="btn" href="${encodeURI(latest.html)}">Open Latest HTML</a>` : '',
+        latest.md ? `<a class="btn" href="${encodeURI(latest.md)}">Latest MD</a>` : '',
+        `<a class="btn" href="${encodeURI(latest.json)}">Latest JSON</a>`,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : ''
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ConquestK Health Reports</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 24px; }
+      h1 { margin: 0 0 12px; }
+      .muted { color: #666; }
+      .actions { margin: 12px 0 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+      .btn { display: inline-block; padding: 8px 12px; background: #111827; color: #fff; text-decoration: none; border-radius: 8px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; }
+      thead th { position: sticky; top: 0; background: #fff; }
+      tr:nth-child(even) { background: #f8f9fa; }
+    </style>
+  </head>
+  <body>
+    <h1>ConquestK Health Reports</h1>
+    <div class="muted">Directory: scripts/output</div>
+    <div class="actions">
+      ${latestLinks}
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Generated</th><th>Base URL</th><th>Links</th></tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  </body>
+  </html>`
+}
+
+async function writeIndexPage() {
+  const items = await listReports()
+  const html = renderIndexHtml(items)
+  await writeFile(path.join(OUTPUT_DIR, 'index.html'), html, 'utf8')
+  if (PUBLISH) {
+    try {
+      await mkdir(PUBLISH_DIR, { recursive: true })
+      await writeFile(path.join(PUBLISH_DIR, 'index.html'), html, 'utf8')
+    } catch {}
+  }
+}
+
+async function writeOutputs({ dir, outputPath, mdPath, htmlPath, writeMd, writeHtml, baseUrl, results }) {
+  await mkdir(dir, { recursive: true }).catch(() => {})
+  await writeFile(outputPath, JSON.stringify({ baseUrl, generatedAt: new Date().toISOString(), results }, null, 2), 'utf8')
+  printSummary(baseUrl, results)
+  console.log(`Saved full JSON report to: ${outputPath}`)
+  if (writeMd) {
+    const md = renderMarkdown(baseUrl, results)
+    await writeFile(mdPath, md, 'utf8')
+    console.log(`Saved Markdown summary to: ${mdPath}`)
+  }
+  if (writeHtml) {
+    const html = renderHtml(baseUrl, results)
+    await writeFile(htmlPath, html, 'utf8')
+    console.log(`Saved HTML summary to: ${htmlPath}`)
+  }
+}

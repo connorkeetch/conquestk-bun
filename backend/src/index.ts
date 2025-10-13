@@ -40,6 +40,8 @@ import {
   testDatabaseConnection,
   testMigrationFiles,
 } from './debugStartup.js'
+import { requireAdmin } from './middleware/adminAuth.js'
+import { authenticateTokenFromCookie } from './middleware/authFromCookie.js'
 import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter.js'
 import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js'
 import adminRoutes from './routes/admin.js'
@@ -345,6 +347,20 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
+// Serve static health reports (if present) under Bull Board UI cookie auth
+try {
+  const healthReportsDir = path.join(__dirname, '../../health-reports')
+  app.use(
+    '/api/admin/queues/ui/health-reports',
+    authenticateTokenFromCookie,
+    requireAdmin,
+    express.static(healthReportsDir),
+  )
+  logger.info('📊 Health reports static mounted at /api/admin/queues/ui/health-reports')
+} catch (e) {
+  logger.warn('Health reports static mount failed', getErrorMessage(e))
+}
+
 // API Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/game', gameRoutes)
@@ -631,11 +647,7 @@ if (process.env.NODE_ENV !== 'production') {
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
 if (isProductionLike) {
   ;(async () => {
-    const fsNs = (await import('node:fs')) as unknown as
-      | typeof import('node:fs')
-      | { default: typeof import('node:fs') }
-
-    const fsModule: typeof import('node:fs') = 'default' in fsNs ? fsNs.default : fsNs
+    const fsModule = await import('node:fs')
     const { existsSync, readdirSync } = fsModule
     const frontendPath = path.join(__dirname, '../public')
 

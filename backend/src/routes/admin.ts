@@ -2348,11 +2348,12 @@ router.post(
       // For example, if you have a map cache or user cache:
 
       // Clear map service cache if it exists
-      const { mapService } = (await import('../services/mapService.js')) as unknown as {
-        mapService: { clearCache?: () => void }
-      }
-      if (mapService && typeof mapService.clearCache === 'function') {
-        mapService.clearCache()
+      const { mapService } = await import('../services/mapService.js')
+      if (
+        mapService &&
+        typeof (mapService as unknown as { clearCache?: () => void }).clearCache === 'function'
+      ) {
+        ;(mapService as unknown as { clearCache: () => void }).clearCache()
       }
 
       // Clear any Redis cache if configured

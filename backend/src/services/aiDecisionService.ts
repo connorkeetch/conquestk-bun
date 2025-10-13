@@ -164,11 +164,19 @@ class AIDecisionService {
         const nearCap = hand.length >= Math.max(3, norm.handCap - 1)
         if ((mustCash || nearCap) && sets.length > 0) {
           const first = sets[0]
+          const triplet: [number, number, number] | null =
+            Array.isArray(first.indices) && first.indices.length === 3
+              ? [
+                  Number(first.indices[0]) | 0,
+                  Number(first.indices[1]) | 0,
+                  Number(first.indices[2]) | 0,
+                ]
+              : null
           push({
             type: 'trade_cards',
             roomId,
             playerId: player.id,
-            payload: { treasureSet: first.indices as unknown as [number, number, number] },
+            payload: triplet ? { treasureSet: triplet } : {},
           })
           // Commander may place reinforcements next (handled below) without ending turn
         }
