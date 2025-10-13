@@ -47,16 +47,22 @@ export const createBullBoardRouter = () => {
       const grantCode = signJwt(grantPayload, { expiresIn: '60s' })
 
       // Also set an HttpOnly cookie immediately for XHR-based checks
-      // Scope cookie narrowly to the Bull Board UI path
+      // Use broader path scope to cover all Bull Board subpaths
       // Create a short-lived UI token
       const uiToken = signJwt({ userId: req.userId }, { expiresIn: '15m' })
+      const cookiePath = '/api/admin/queues'
       res.cookie('auth_token', uiToken, {
         httpOnly: true,
         secure: isProd,
         sameSite: 'lax',
-        path: basePath,
+        path: cookiePath,
         // Short lifetime to reduce risk; Bull Board sessions are brief
         maxAge: 15 * 60 * 1000, // 15 minutes
+      })
+      logger.info('Bull Board grant: cookie set', {
+        userId: req.userId,
+        path: cookiePath,
+        ip: req.ip,
       })
       res.json({ success: true, code: grantCode })
     } catch (_e) {
@@ -127,18 +133,19 @@ export const createBullBoardRouter = () => {
 
       const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
       const uiToken = signJwt({ userId: decoded.userId }, { expiresIn: '15m' })
+      const cookiePath = '/api/admin/queues'
       res.cookie('auth_token', uiToken, {
         httpOnly: true,
         secure: isProd,
         sameSite: 'lax',
-        path: basePath,
+        path: cookiePath,
         maxAge: 15 * 60 * 1000,
       })
       logger.info('BullBoard accept: UI cookie minted', {
         ip: req.ip,
         ua: req.get('User-Agent'),
         userId: decoded.userId,
-        path: basePath,
+        path: cookiePath,
       })
       res.redirect(basePath)
     } catch (_e) {
@@ -156,10 +163,19 @@ export const createBullBoardRouter = () => {
   router.use(
     basePath,
     (req, res, next) => {
-      const url = req.originalUrl || ''
-      if (url.startsWith(`${basePath}/accept`) || url.startsWith(`${basePath}/grant`)) {
+      const url = req.originalUrl || req.url || ''
+      // Skip auth for grant/accept bootstrap endpoints
+      if (url.includes('/accept') || url.includes('/grant')) {
         return next()
       }
+      // Log for debugging
+      logger.debug('Bull Board UI auth check', {
+        url,
+        path: req.path,
+        originalUrl: req.originalUrl,
+        hasCookie: Boolean(req.headers.cookie),
+        cookieSnippet: req.headers.cookie?.substring(0, 50),
+      })
       return authenticateTokenFromCookie(req, res, next)
     },
     requireAdmin,
