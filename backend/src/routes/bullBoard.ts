@@ -7,6 +7,7 @@ import { requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
 import authenticateTokenFromCookie from '../middleware/authFromCookie.js'
 import { queueService } from '../services/queueService.js'
+import { logger } from '../utils/logger.js'
 
 export const createBullBoardRouter = () => {
   const router = Router()
@@ -68,15 +69,41 @@ export const createBullBoardRouter = () => {
       const { code } = (req.query || {}) as { code?: string }
       const jwtSecret = process.env.JWT_SECRET
       if (!jwtSecret) {
+        logger.error('BullBoard accept: missing JWT_SECRET', {
+          ip: req.ip,
+          ua: req.get('User-Agent'),
+        })
         res.status(500).send('Server configuration error')
         return
       }
       if (!code) {
+        logger.warn('BullBoard accept: missing grant code', {
+          ip: req.ip,
+          ua: req.get('User-Agent'),
+        })
         res.status(400).send('Missing code')
         return
       }
-      const decoded = jwt.verify(code, jwtSecret) as { purpose?: string; userId?: string }
+      let decoded: { purpose?: string; userId?: string } | null = null
+      try {
+        decoded = jwt.verify(code, jwtSecret) as { purpose?: string; userId?: string }
+      } catch (e) {
+        logger.warn('BullBoard accept: grant verification failed', {
+          ip: req.ip,
+          ua: req.get('User-Agent'),
+          error: (e as Error)?.message,
+        })
+        res.status(401).send('Invalid or expired code')
+        return
+      }
       if (!decoded || decoded.purpose !== 'bull_board_ui' || !decoded.userId) {
+        logger.warn('BullBoard accept: invalid grant payload', {
+          ip: req.ip,
+          ua: req.get('User-Agent'),
+          hasDecoded: Boolean(decoded),
+          purpose: decoded?.purpose,
+          hasUserId: Boolean(decoded?.userId),
+        })
         res.status(403).send('Invalid code')
         return
       }
@@ -85,6 +112,11 @@ export const createBullBoardRouter = () => {
       const { adminService } = await import('../services/adminService.js')
       const isAdmin = await adminService.isAdmin(decoded.userId)
       if (!isAdmin) {
+        logger.warn('BullBoard accept: user is not admin', {
+          ip: req.ip,
+          ua: req.get('User-Agent'),
+          userId: decoded.userId,
+        })
         res.status(403).send('Admin required')
         return
       }
@@ -98,15 +130,37 @@ export const createBullBoardRouter = () => {
         path: basePath,
         maxAge: 15 * 60 * 1000,
       })
+      logger.info('BullBoard accept: UI cookie minted', {
+        ip: req.ip,
+        ua: req.get('User-Agent'),
+        userId: decoded.userId,
+        path: basePath,
+      })
       res.redirect(basePath)
     } catch (_e) {
+      logger.error('BullBoard accept: unexpected failure', {
+        ip: req.ip,
+        ua: req.get('User-Agent'),
+        error: (_e as Error)?.message,
+      })
       res.status(500).send('Failed to accept grant')
     }
   })
   // Guard the UI behind admin auth. Accept auth via Bearer header (if present) or
-  // an HttpOnly cookie (auth_token). This must be registered after the grant/accept
-  // helpers so that users without a cookie can redeem a grant code successfully.
-  router.use(basePath, authenticateTokenFromCookie, requireAdmin, serverAdapter.getRouter())
+  // an HttpOnly cookie (auth_token). Explicitly skip the grant/accept helpers to
+  // avoid accidental 401s during the bootstrap flow, even if Express ordering varies.
+  router.use(
+    basePath,
+    (req, res, next) => {
+      const url = req.originalUrl || ''
+      if (url.startsWith(`${basePath}/accept`) || url.startsWith(`${basePath}/grant`)) {
+        return next()
+      }
+      return authenticateTokenFromCookie(req, res, next)
+    },
+    requireAdmin,
+    serverAdapter.getRouter(),
+  )
 
   return router
 }
