@@ -82,6 +82,76 @@ export class GameActionWorker {
     this.io.to(channel).emit('game-update', payload)
   }
 
+  private toBattleResultPayload(
+    last: unknown,
+  ): import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'] | null {
+    if (!last || typeof last !== 'object') return null
+    const obj = last as Record<string, unknown>
+    const from = obj['fromTerritory']
+    const to = obj['toTerritory']
+    const attackerLosses = obj['attackerLosses']
+    const defenderLosses = obj['defenderLosses']
+    const attackerDice = obj['attackerDice']
+    const defenderDice = obj['defenderDice']
+    const conquered = obj['conquered']
+
+    const fromOk =
+      typeof from === 'object' &&
+      from !== null &&
+      typeof (from as Record<string, unknown>)['id'] === 'string' &&
+      typeof (from as Record<string, unknown>)['armies'] === 'number'
+    const toOk =
+      typeof to === 'object' &&
+      to !== null &&
+      typeof (to as Record<string, unknown>)['id'] === 'string' &&
+      typeof (to as Record<string, unknown>)['armies'] === 'number'
+    const diceOk =
+      Array.isArray(attackerDice) && attackerDice.every((n) => typeof n === 'number') &&
+      Array.isArray(defenderDice) && defenderDice.every((n) => typeof n === 'number')
+    if (
+      !fromOk ||
+      !toOk ||
+      typeof attackerLosses !== 'number' ||
+      typeof defenderLosses !== 'number' ||
+      !diceOk ||
+      typeof conquered !== 'boolean'
+    ) {
+      return null
+    }
+    const toRec = to as Record<string, unknown>
+    const pending = obj['pendingConquestFor']
+    const gameEnded = obj['gameEnded']
+    const winner = obj['winner']
+    const eliminated = obj['eliminatedPlayers']
+
+    return {
+      fromTerritory: {
+        id: String((from as Record<string, unknown>)['id']),
+        armies: Number((from as Record<string, unknown>)['armies']),
+      },
+      toTerritory: {
+        id: String(toRec['id']),
+        armies: Number(toRec['armies']),
+        ...(typeof toRec['ownerId'] === 'string' || toRec['ownerId'] === null
+          ? { ownerId: toRec['ownerId'] as string | null }
+          : {}),
+      },
+      attackerLosses: Number(attackerLosses),
+      defenderLosses: Number(defenderLosses),
+      attackerDice: attackerDice as number[],
+      defenderDice: defenderDice as number[],
+      conquered: Boolean(conquered),
+      ...(typeof pending === 'string' || pending === null
+        ? { pendingConquestFor: pending as string | null }
+        : {}),
+      ...(typeof gameEnded === 'boolean' ? { gameEnded } : {}),
+      ...(typeof winner === 'string' ? { winner } : {}),
+      ...(Array.isArray(eliminated) && eliminated.every((v) => typeof v === 'string')
+        ? { eliminatedPlayers: eliminated as string[] }
+        : {}),
+    }
+  }
+
   async initialize(): Promise<void> {
     const processJob = async (job: Job): Promise<unknown> => {
       if (job.name === 'process-game-action') {
@@ -317,14 +387,15 @@ export class GameActionWorker {
             const last = updated.lastBattleResult
             if (last) {
               try {
-                const battleDelta: import('@conquestk/shared/types/delta').GameDelta =
-                  DeltaBuilder.battleResult(
-                    gameId,
-                    last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
-                    updated.version,
-                  )
-                const { emitFogFilteredDelta } = await import('../services/fogService.js')
-                await emitFogFilteredDelta(this.io, gameId, battleDelta)
+                const payload = this.toBattleResultPayload(last)
+                if (payload) {
+                  const battleDelta = DeltaBuilder.battleResult(gameId, payload, updated.version)
+                  const withChanges: import('@conquestk/shared/types/delta').BattleResultDelta & {
+                    changes?: import('@conquestk/shared/types/delta').GameDelta[]
+                  } = battleDelta
+                  const { emitFogFilteredDelta } = await import('../services/fogService.js')
+                  await emitFogFilteredDelta(this.io, gameId, withChanges)
+                }
               } catch {
                 // best-effort; clients will converge on next snapshot
               }
@@ -605,33 +676,36 @@ export class GameActionWorker {
           const last = updated.lastBattleResult
           if (last) {
             try {
-              const battleDelta: GameDelta = DeltaBuilder.battleResult(
-                gameId,
-                last as unknown as import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'],
-                updated.version,
-              )
-              // Attach concise territory updates so clients immediately reflect armies/ownership
-              ;(battleDelta as unknown as { changes: unknown[] }).changes = [
-                DeltaBuilder.territoryUpdate(
-                  gameId,
-                  last.fromTerritory.id,
-                  { armies: last.fromTerritory.armies },
-                  updated.version,
-                ),
-                DeltaBuilder.territoryUpdate(
-                  gameId,
-                  last.toTerritory.id,
-                  {
-                    armies: last.toTerritory.armies,
-                    ...(last.toTerritory.ownerId !== undefined
-                      ? { ownerId: last.toTerritory.ownerId }
-                      : {}),
-                  },
-                  updated.version,
-                ),
-              ]
-              const { emitFogFilteredDelta } = await import('../services/fogService.js')
-              await emitFogFilteredDelta(this.io, gameId, battleDelta)
+              const payload = this.toBattleResultPayload(last)
+              if (payload) {
+                const battleDelta = DeltaBuilder.battleResult(gameId, payload, updated.version)
+                const withChanges: import('@conquestk/shared/types/delta').BattleResultDelta & {
+                  changes?: import('@conquestk/shared/types/delta').GameDelta[]
+                } = {
+                  ...battleDelta,
+                  changes: [
+                    DeltaBuilder.territoryUpdate(
+                      gameId,
+                      payload.fromTerritory.id,
+                      { armies: payload.fromTerritory.armies },
+                      updated.version,
+                    ),
+                    DeltaBuilder.territoryUpdate(
+                      gameId,
+                      payload.toTerritory.id,
+                      {
+                        armies: payload.toTerritory.armies,
+                        ...(payload.toTerritory.ownerId !== undefined
+                          ? { ownerId: payload.toTerritory.ownerId ?? undefined }
+                          : {}),
+                      },
+                      updated.version,
+                    ),
+                  ],
+                }
+                const { emitFogFilteredDelta } = await import('../services/fogService.js')
+                await emitFogFilteredDelta(this.io, gameId, withChanges)
+              }
             } catch (e) {
               logger.debug('Failed to emit fog-filtered battle delta in worker attack', {
                 roomId: gameId,
@@ -740,11 +814,12 @@ export class GameActionWorker {
                 const sel = (action as { payload?: { treasureSet?: number[] } }).payload
                   ?.treasureSet
                 if (before && Array.isArray(before.treasures) && Array.isArray(sel)) {
+                  const hand = before.treasures
                   cardNames = sel
                     .map((idx) => Number(idx))
                     .filter((idx) => Number.isFinite(idx))
-                    .map((idx) => (before.treasures as unknown[])[idx])
-                    .map((m) => String(m))
+                    .map((idx) => hand[idx])
+                    .filter((m): m is string => typeof m === 'string')
                 }
               } catch {
                 /* ignore */
@@ -756,17 +831,11 @@ export class GameActionWorker {
                 troops: gained,
               }
               const maybeCards = cardNames && cardNames.length === 3 ? cardNames : undefined
-              const cardsLen = Array.isArray(
-                (action as { payload?: { cards?: unknown[] } }).payload?.cards,
-              )
-                ? (action as { payload?: { cards?: unknown[] } }).payload?.cards?.length
-                : Array.isArray(
-                      (action as { payload?: { treasureSet?: unknown[] } }).payload?.treasureSet,
-                    )
-                  ? (
-                      (action as { payload?: { treasureSet?: unknown[] } }).payload
-                        ?.treasureSet as unknown[]
-                    ).length
+              const a = action as Extract<import('../types/game.js').GameAction, { type: 'trade_cards' }>
+              const cardsLen = Array.isArray(a.payload?.cards)
+                ? a.payload?.cards.length
+                : Array.isArray(a.payload?.treasureSet)
+                  ? a.payload?.treasureSet.length
                   : undefined
               const fullLog = {
                 ...baseLog,
@@ -774,7 +843,8 @@ export class GameActionWorker {
                 ...(typeof cardsLen === 'number' ? { cardCount: cardsLen } : {}),
               }
               type GameLogEntryType = Parameters<GameService['appendLog']>[1][number]
-              await this.gameService.appendLog(gameId, [fullLog as unknown as GameLogEntryType])
+              const entry: GameLogEntryType = fullLog as GameLogEntryType
+              await this.gameService.appendLog(gameId, [entry])
             }
           } catch (logErr) {
             logger.debug('Skipped appending treasure cash log', {

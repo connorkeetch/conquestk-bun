@@ -1702,14 +1702,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
         {/* 10. Select Map - Now spans 2 columns */}
         <div className="lg:col-span-2">
-          <div className="panel transition-shadow duration-200 hover:shadow-[var(--shadow-2)] p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
-              <span className="text-2xl bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-                {getStepNumber(10)}
-              </span>
-              <span className="text-[color:var(--heading)]">Select Map</span>
-            </h2>
-
+          <OptionCard number={getStepNumber(10)} title="Select Map" className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Map List */}
               <div className="lg:col-span-1">
@@ -1961,7 +1954,7 @@ const CreateGamePage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </OptionCard>
         </div>
       </div>
 
