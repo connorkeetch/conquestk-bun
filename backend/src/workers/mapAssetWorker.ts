@@ -8,7 +8,10 @@ interface PurgeOptions {
   minAgeMinutes?: number
 }
 
-const DEFAULT_INTERVAL_MS = Number(process.env.MAP_ASSET_PURGE_INTERVAL_MS ?? 15 * 60 * 1000)
+// Default to once per week; can be overridden via MAP_ASSET_PURGE_INTERVAL_MS
+const DEFAULT_INTERVAL_MS = Number(
+  process.env.MAP_ASSET_PURGE_INTERVAL_MS ?? 7 * 24 * 60 * 60 * 1000,
+)
 
 export class MapAssetWorker {
   private timer: NodeJS.Timeout | null = null
