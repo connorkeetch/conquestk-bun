@@ -155,31 +155,23 @@ export default function AdminQueues() {
               type="button"
               onClick={async () => {
                 try {
-                  // Ask backend to set a short-lived HttpOnly cookie for the UI path.
-                  // withCredentials is required for the browser to accept Set-Cookie on CORS responses in dev.
                   const resp = await apiClient.post<{ success: boolean; code?: string }>(
                     '/admin/queues/ui/grant',
                     undefined,
                     { withCredentials: true },
                   )
 
-                  // Prefer the GET-based accept flow for reliability in prod
                   const code = (resp.data as unknown as { code?: unknown })?.code as
                     | string
                     | undefined
-                  const url = code
-                    ? `${bullBoardUrl}/accept?code=${encodeURIComponent(code)}`
-                    : bullBoardUrl
 
-                  console.log('[Bull Board] Opening URL:', url)
-                  console.log('[Bull Board] Has code:', !!code)
-                  console.log('[Bull Board] Response:', resp.data)
-
-                  const newWindow = window.open(url, '_blank', 'noopener')
-                  if (!newWindow) {
-                    console.error('[Bull Board] Popup blocked!')
-                    alert('Popup blocked! Please allow popups for this site and try again.')
-                  }
+                  // Use dedicated login endpoint outside the guard; same-tab navigation avoids popups
+                  const target = code
+                    ? `/api/admin/queues/login?code=${encodeURIComponent(code)}`
+                    : `/api/admin/queues/login?access_token=${encodeURIComponent(
+                        localStorage.getItem('token') || '',
+                      )}`
+                  window.location.assign(target)
                 } catch (e) {
                   alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
                 }
