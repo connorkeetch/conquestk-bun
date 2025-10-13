@@ -1,5 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import { getJwtSecrets, signJwt, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
+import { logger } from '../utils/logger.js'
 import { authenticateToken } from './auth.js'
 
 // Lightweight cookie parser to avoid bringing a new dependency just for this case
@@ -50,7 +51,7 @@ export const authenticateTokenFromCookie: RequestHandler = (
 
   const secrets = getJwtSecrets()
   const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
-  const uiCookiePath = '/api/admin/queues/ui'
+  const uiCookiePath = '/api/admin/queues'
 
   const tryMintUiCookieFromPayload = (payload: unknown) => {
     if (!secrets.length) return false
@@ -98,6 +99,14 @@ export const authenticateTokenFromCookie: RequestHandler = (
   const cookies = parseCookie(req.headers.cookie)
   const token = cookies.auth_token || cookies.token
   if (!token) {
+    // Add debug logging to help diagnose cookie issues
+    logger.warn('authFromCookie: no token found', {
+      path: req.path,
+      originalUrl: req.originalUrl,
+      hasCookieHeader: Boolean(req.headers.cookie),
+      cookieKeys: Object.keys(cookies),
+      ip: req.ip,
+    })
     res.status(401).json({ message: 'Access token required' })
     return
   }
