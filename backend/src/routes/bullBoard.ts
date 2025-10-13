@@ -163,10 +163,19 @@ export const createBullBoardRouter = () => {
   router.use(
     basePath,
     (req, res, next) => {
-      const url = req.originalUrl || req.url || ''
-      // Skip auth for grant/accept bootstrap endpoints
-      if (url.includes('/accept') || url.includes('/grant')) {
-        return next()
+      const url = req.originalUrl || ''
+      const rel = req.url || ''
+      const p = req.path || ''
+      // Skip auth for grant/accept bootstrap endpoints — ensure we bypass the rest of this chain
+      if (
+        url.startsWith(`${basePath}/accept`) ||
+        url.startsWith(`${basePath}/grant`) ||
+        rel.startsWith('/accept') ||
+        rel.startsWith('/grant') ||
+        p.startsWith('/accept') ||
+        p.startsWith('/grant')
+      ) {
+        return next('route')
       }
       // Log for debugging
       logger.debug('Bull Board UI auth check', {
