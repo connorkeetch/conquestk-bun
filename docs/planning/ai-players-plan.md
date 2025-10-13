@@ -1,5 +1,5 @@
 # AI-Controlled Players (Opponents) Implementation Plan
-_Last updated: September 24, 2025_
+_Last updated: March 9, 2026_
 
 ## Why this matters
 - Keep lobbies alive with solo and co‑op when friends are offline.
@@ -24,11 +24,12 @@ _Last updated: September 24, 2025_
 **Out of scope for launch**: campaigns, hybrid human+AI co-piloting, machine-learned policies.
 
 ## Current status
-- Lobby creation accepts AI opponent payloads behind feature flags and returns enriched player metadata to clients.
+- Lobby creation accepts AI opponent payloads (Recruit, Commander, Grandmaster) and returns enriched player metadata to clients.
 - Game room UI displays AI badges, hides DM tabs for non-human seats, and team assignment supports AI slots.
-- Socket `player-joined` / `player-left` events now include AI identifiers, difficulty, and readiness while `ensureAiReadyStates` keeps AI opponents auto-ready after lobby roster changes.
-- Hosts can adjust AI rosters from the lobby (add/remove or change difficulty) via the new `/ai-opponents` endpoint, keeping sockets in sync.
-- Added regression coverage for socket payloads, AI readiness hydration, and Redux room state to lock in the lobby behaviour.
+- Socket `player-joined` / `player-left` events include AI identifiers, difficulty, and readiness while `ensureAiReadyStates` keeps AI opponents auto-ready after lobby roster changes.
+- Hosts can adjust AI rosters from the lobby (add/remove or change difficulty) via the `/ai-opponents` endpoint, keeping sockets in sync.
+- Grandmaster difficulty routes through the Rust/WASM evaluator with persistent handles and typed-array bulk odds. Recruit and Commander remain on the TypeScript heuristic path for throughput; shadow verification compares both implementations from the admin dashboard.
+- Added regression coverage for socket payloads, AI readiness hydration, WASM loader contracts, and Redux room state to lock in the lobby behaviour.
 
 ## User‑facing experience
 1. **Creation**: hosts can add AI per seat and set difficulty; async and real‑time supported.
@@ -55,7 +56,7 @@ _Last updated: September 24, 2025_
      signal?: AbortSignal
    }
    ```
-3. **Runtime strategy**: TypeScript heuristics for Recruit/Commander. Evaluate Rust/Go worker for Grandmaster only if Node cannot meet budgets. Use gRPC or JSON over queue with strict SLAs.
+3. **Runtime strategy**: TypeScript heuristics for Recruit/Commander. Rust/WASM evaluator handles Grandmaster today with persistent state handles and bulk odds APIs; evaluate a dedicated service only if budgets regress.
 4. **Safety**: per‑turn action caps, timeouts with safe fallback (fortify + end turn), fog‑of‑war filtered inputs, stable JSON schema with versioning, centralized RNG seeds.
 
 ## Difficulty model
@@ -85,9 +86,9 @@ Async: may exceed target averages with queue persistence but still bounded by ca
 ## Implementation phases
 - **Phase 0 – Discovery**: audit engine and sockets; define telemetry; spec decision interface.
 - **Phase 1 – Foundations**: schema migrations, lobby and API surface, aiDecisionService stub, flags, tests for AI‑triggered turn progression.
-- **Phase 2 – Recruit MVP**: deterministic heuristics (baseline reinforcement/attack/fortify pipeline now in TypeScript service); async persistence of queued actions; authoritative battle worker; staged rollout.
-- **Phase 3 – Commander**: threat scoring, 2‑ply pruning, card timing, improved fortify; profiling and budgets.
-- **Phase 4 – Grandmaster**: simulations + opponent modelling; optional Rust/Go worker via queue; personality weights.
+- **Phase 2 – Recruit MVP** ✅ (Oct 2025): deterministic heuristics (baseline reinforcement/attack/fortify pipeline) in the TypeScript service; async persistence of queued actions; authoritative battle worker; staged rollout complete.
+- **Phase 3 – Commander** ✅ (Dec 2025): threat scoring, shallow lookahead, card timing, improved fortify; profiling meets budget on the TypeScript path.
+- **Phase 4 – Grandmaster** 🟡 (Mar 2026): Monte Carlo search + typed-array odds running in Rust/WASM with persistent handles; opponent modelling weights under active tuning before general release.
 - **Phase 5 – Polish & rollout**: avatars/badges, spectator‑friendly logs, rate‑limiters, dashboards; enable tiers sequentially.
 
 ## Testing
@@ -110,6 +111,6 @@ Async: may exceed target averages with queue persistence but still bounded by ca
 - Battle worker reactivation, BullMQ queue reliability, Redis monitoring, AI strings and localization.
 
 ## Next steps
-1. Expose AI opponent controls in the Create Game and lobby management UI (difficulty picker, slot counts) gated by the existing feature flags.
-2. Profile decision complexity on max-player maps to validate Recruit/Commander TypeScript strategies meet turn budgets.
-3. Finalize message contracts for `aiDecisionService` and any cross-language bridge ahead of Commander tier work.
+1. Finalize Grandmaster opponent modelling weights and divergence thresholds before wider release.
+2. Extend telemetry to capture WASM handle churn, decision depth, and fallback counts per tier.
+3. Document the admin runbook for disabling individual AI tiers and restoring cached WASM handles during incidents.

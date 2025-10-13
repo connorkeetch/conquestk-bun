@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-03-09 — Match Service observability & AI eval hardening
+
+Summary
+- Added `/api/matchsvc/status` on the Node backend to aggregate health, Redis reachability, subscriber readiness, HMAC auth validation, and Prometheus metrics from the Go match service. The Admin Dashboard now renders a dedicated card showing health, matches formed, presence online, and per-mode queue depths.
+- Promoted the match service status data to the frontend admin dashboard with a refresh action so operators can inspect queue pressure without leaving the app.
+- Upgraded the Rust/WASM AI evaluator to support persistent handles and bulk typed-array odds calculation. Grandmaster difficulty now routes through the WASM engine exclusively, while Recruit/Commander stick with the TypeScript heuristics to preserve throughput.
+- Hardened the shared `@conquestk/match-client` so `hmacSecret` is always a concrete string under exact optional property typing.
+
+Operational checks
+- Verify `/api/matchsvc/status` returns `ok: true` when the Go service, Redis, and subscriber are healthy, and that metrics include queue depth and totals.
+- Confirm the Admin Dashboard’s Match Service card displays health, subscriber state, presence total, matches formed, and queue chips per mode.
+- Trigger `Run Odds Shadow Verification` from the Admin Dashboard and confirm divergence metrics update alongside WASM odds.
+
 ## 2025-09-29 — Terminology Update: Continents → Sectors
 
 Summary

@@ -1,6 +1,6 @@
 # Architecture & Technical Details
 
-_Last updated: March 7, 2026_
+_Last updated: March 9, 2026_
 
 ## Stack Overview
 - **Frontend:** React 19 + Vite 7 + Redux Toolkit + Tailwind CSS v4, written in TypeScript (`frontend/`).
@@ -18,6 +18,7 @@ _Last updated: March 7, 2026_
 - Map workflows span `mapService.ts`, `mapWorkflowService.ts`, and `mapApprovalService.ts`, with permission checks centralized in `mapPermissionService.ts` so creator, collaborator, and admin roles stay aligned.
 - Authentication combines session cookies and JWT validation in `backend/src/middleware/auth.ts`; request-scoped user context is required for any mutating route.
 - Socket.io authentication and event wiring live in `backend/src/services/socketService.ts`. Authenticated sockets join `user:{id}` and `clan:{clanId}` rooms, register chat handlers via `backend/src/socket/chatHandlers.ts`, and enqueue gameplay actions through the shared `queueService` with inline fallbacks handled by `GameActionProcessor`.
+- The backend proxies the Go `matchsvc` via `backend/src/routes/matchsvc.ts`, which folds health, Redis, subscriber state, and Prometheus metrics into a single `/api/matchsvc/status` payload for the admin dashboard. Presence, queue events, and match found notifications stream into Node through `backend/src/services/matchSvcIntegration.ts` once Redis is healthy.
 - Realtime rooms follow the `game:{roomId}` convention via helpers in `socketService.ts` (`getGameChannel`) and `backend/src/services/socketRegistry.ts`, so workers, lifecycle services, and reconnect logic target the same identifiers.
 
 ### Workers & Queues
@@ -29,7 +30,7 @@ _Last updated: March 7, 2026_
   - `maintenanceWorker.ts` removes expired notifications and password reset tokens via `maintenanceService` and runs a nightly refresh of the skill leaderboard cache so `/api/skills/leaderboards/skill` stays hot with up‑to‑date wins/losses.
 - `workerManager.ts` bootstraps the queue service, initializes every worker in parallel, and exposes health/stats APIs consumed by `/api/queues` routes and the `/api/health` probe.
 - Periodic tasks (maintenance and map asset purges) use BullMQ Job Schedulers on dedicated queues (`maintenance`, `map-assets`) with Workers handling `maintenance:prune` and `map-assets:purge` jobs. This replaces ad-hoc setInterval timers and is resilient across scaled instances.
-- `queueService` gracefully degrades when Redis is unavailable and can fall back to inline execution through `GameActionProcessor`, so gameplay remains responsive even without background workers.
+- `queueService` gracefully degrades when Redis is unavailable and can fall back to inline execution through `GameActionProcessor`, so gameplay remains responsive even without background workers. `matchSvcIntegration.startSubscriber` is launched alongside workers and reports readiness to `/api/matchsvc/status` so operators know when Redis pub/sub is delivering presence and match events.
 - Job idempotency helpers (`jobIdempotencyService.ts`) and metrics instrumentation (`metricsService.ts`) keep retries observable and safe.
 
 ### Real‑Time Game Deltas
@@ -90,7 +91,7 @@ _Last updated: March 7, 2026_
 ## Deployment & Operations
 - Production (https://conquestk.com) and staging (Railway dev branch) deploy from the monorepo via npm scripts. `npm run build` produces frontend + backend bundles; `npm start` runs migrations then boots Express.
 - Logging centralizes through `backend/src/utils/logger.ts`, emitting structured JSON with request IDs. `/health` surfaces database, Redis, and queue status plus configuration hints for Sentry/connection strings.
-- Observability includes battle application metrics, queue health, cleanup summaries, and Hidden Treasures counters exposed via `metricsService.ts`. Frontend errors post to the backend log pipeline until dashboards land.
+- Observability includes battle application metrics, queue health, cleanup summaries, Hidden Treasures counters, and Match Service data. `/api/matchsvc/status` exposes service health, HMAC auth checks, subscriber state, queue depths, match totals, and live presence counts pulled from the Go Prometheus endpoint so the admin dashboard can visualize it without operators hitting the service directly. Frontend errors post to the backend log pipeline until dashboards land.
 
 ## Launch Readiness Caveats
 - **B2 – Creator & reviewer notifications:** Web push storage and gameplay turn pushes are live; map approval + DM push fan-out is under active development and must be validated end-to-end.

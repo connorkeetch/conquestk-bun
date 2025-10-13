@@ -1,6 +1,6 @@
 # 🧭 ConquestK Roadmap
 
-_Last updated: September 21, 2025_
+_Last updated: March 9, 2026_
 
 ## How to use this document
 - **Purpose:** capture the active product strategy so we are not maintaining scattered TODO files.
@@ -8,31 +8,26 @@ _Last updated: September 21, 2025_
 - **Updates:** refresh this file whenever we finish a milestone, change ownership, or reprioritise major workstreams.
 
 ## ✅ Recent milestones
-Progress over the summer 2025 cycle that is now in production:
-- **Authoritative battle archival & rankings:** the battle worker now calls `applyBattleResult` end-to-end, persisting to `game_results`/`player_game_results`, updating ELO, and exposing battle metrics for alerting.
-- **Lifecycle state machine & ready-check:** lobby → initializing → active → completed transitions are enforced server-side, with ready-check broadcasts and automatic game archival on completion.
-- **Real-time delta streaming:** the frontend consumes live deltas over the canonical `game:<roomId>` channel, replacing fixture data and keeping the Redux store authoritative.
-- **Capitals & sector parity:** backend sector bonuses, capital assignments, and team logic now drive both reinforcement math and UI messaging for custom and classic maps.
-- **Web push notification foundation:** durable subscription storage, turn/game notifications, and service worker handling landed; approvals/DM fan-out remain on the backlog.
-- **Navigation & audio truthfulness:** tournament stubs were removed, and turn notification sound aliases keep legacy keys functioning without regressions.
-- **King of the Hill mode:** players can now create KOTH games with configurable victory points, neutral defenders, and rotating hills. Backend awards points at round-end, handles hill rotation, and UI displays scoreboard with live standings and hill overlay.
+Highlights from the Winter 2026 cycle that are live in production:
+- **Match Service observability:** `/api/matchsvc/status` aggregates health, Redis, subscriber state, and Prometheus metrics so the Admin Dashboard can display queue depth, matches formed, and live presence without leaving the app.
+- **Admin dashboard uplift:** BullMQ stats, match service health, and odds verification now surface in one view with refresh actions and CTA links to queue tools.
+- **AI evaluator hardening:** Grandmaster difficulty exclusively uses the Rust/WASM evaluator with persistent handles and typed-array bulk odds while Recruit/Commander stick with the fast TypeScript heuristics for throughput.
+- **Exact optional typing rollout:** shared clients (including `@conquestk/match-client`) now satisfy `exactOptionalPropertyTypes`, keeping the repo type-clean with stricter TS compiler settings.
 
-## 🔄 In progress (Fall 2025 focus)
+## 🔄 In progress (Spring 2026 focus)
 | Stream | Owner | Key deliverables |
 | --- | --- | --- |
-| **Map authoring security** | Connor | Lock down continent/territory/adjacency routes so only creators/collaborators mutate drafts; audit approval endpoints for proper authZ. |
-| **Play hub truthfulness** | Connor | Gate or reroute Quick Match/Ranked/AI cards until real flows exist, and surface links to the working lobby experience. |
-| **Chat source of truth** | Connor | Replace `localStorage` chat identity with authenticated Redux state and broadcast edit/delete events to every participant. |
-| **Player stats surfaces** | Connor | Wire profile + header metrics to the new `player_stats`, game history, and leaderboard data instead of placeholder values. |
-| **Worker safety hardening** | Connor | Finish BullMQ queue enablement by wiring modifier cleanup, dead-letter monitoring, and idempotent job handling before toggling queues on. |
+| **Creator/moderator notifications** | Connor | Finish socket + push fan-out for map approvals/DMs and document the operational runbook. |
+| **Telemetry dashboards** | Connor | Ship the Prometheus/Grafana deck that covers queue depth, matchsvc, AI divergence, and battle latency. |
+| **Accessibility presets** | Connor | Finalize the colorblind theme presets, document them, and wire the toggle into settings before early access. |
+| **Match Service rollout guardrails** | Connor | Harden alerting, subscriber health detection, and the emergency disable path before exposing matchmaking in production. |
 
 ## 🎯 Next-up backlog (ready for sprint planning)
-- **Approval notifications:** extend the push/websocket system so creators/moderators get map workflow updates once authZ is enforced.
-- **Map asset lifecycle:** ship the background purge for soft-deleted thumbnails/uploads and expose admin recovery tooling.
-- **Audio polish:** prune duplicate legacy files, lazy-load infrequent SFX, and add accessibility cues for key moments.
-- **Analytics & telemetry:** implement the funnel/latency dashboards outlined in the go-live plan to monitor play completion and approval throughput.
-- **Documentation pass:** finish the public API reference outline and contributing guide once the above systems stabilize.
-- **Clan progression follow-through:** expose the new `clan:progress` socket contract to mobile/minimal clients, surface contribution deltas in the clan activity feed, and review XP multipliers once live telemetry lands.
+- **Map asset lifecycle:** finish the R2 purge flow, add recovery tooling, and expose run metrics so failures page operators.
+- **Audio polish:** prune duplicate legacy files, lazy-load infrequent SFX, and add accessibility cues for key gameplay beats.
+- **Public API reference:** publish the REST + socket docs draft once matchsvc and notification contracts settle.
+- **Clan progression follow-through:** expose the `clan:progress` socket contract to lightweight clients and surface contribution deltas in the clan activity feed with live XP multipliers.
+- **Queue automation smoke tests:** add Jest/Playwright coverage that exercises matchsvc queue/dequeue and verifies admin dashboard signals.
 
 ## 🔭 Future opportunities (longer-term)
 - **Advanced game modes:** Zombie Apocalypse, Sudden Death, Battle Royale, Fog of War enhancements.
