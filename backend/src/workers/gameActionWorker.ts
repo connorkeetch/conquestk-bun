@@ -87,27 +87,29 @@ export class GameActionWorker {
   ): import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'] | null {
     if (!last || typeof last !== 'object') return null
     const obj = last as Record<string, unknown>
-    const from = obj['fromTerritory']
-    const to = obj['toTerritory']
-    const attackerLosses = obj['attackerLosses']
-    const defenderLosses = obj['defenderLosses']
-    const attackerDice = obj['attackerDice']
-    const defenderDice = obj['defenderDice']
-    const conquered = obj['conquered']
+    const from = obj.fromTerritory
+    const to = obj.toTerritory
+    const attackerLosses = obj.attackerLosses
+    const defenderLosses = obj.defenderLosses
+    const attackerDice = obj.attackerDice
+    const defenderDice = obj.defenderDice
+    const conquered = obj.conquered
 
     const fromOk =
       typeof from === 'object' &&
       from !== null &&
-      typeof (from as Record<string, unknown>)['id'] === 'string' &&
-      typeof (from as Record<string, unknown>)['armies'] === 'number'
+      typeof (from as Record<string, unknown>).id === 'string' &&
+      typeof (from as Record<string, unknown>).armies === 'number'
     const toOk =
       typeof to === 'object' &&
       to !== null &&
-      typeof (to as Record<string, unknown>)['id'] === 'string' &&
-      typeof (to as Record<string, unknown>)['armies'] === 'number'
+      typeof (to as Record<string, unknown>).id === 'string' &&
+      typeof (to as Record<string, unknown>).armies === 'number'
     const diceOk =
-      Array.isArray(attackerDice) && attackerDice.every((n) => typeof n === 'number') &&
-      Array.isArray(defenderDice) && defenderDice.every((n) => typeof n === 'number')
+      Array.isArray(attackerDice) &&
+      attackerDice.every((n) => typeof n === 'number') &&
+      Array.isArray(defenderDice) &&
+      defenderDice.every((n) => typeof n === 'number')
     if (
       !fromOk ||
       !toOk ||
@@ -119,21 +121,21 @@ export class GameActionWorker {
       return null
     }
     const toRec = to as Record<string, unknown>
-    const pending = obj['pendingConquestFor']
-    const gameEnded = obj['gameEnded']
-    const winner = obj['winner']
-    const eliminated = obj['eliminatedPlayers']
+    const pending = obj.pendingConquestFor
+    const gameEnded = obj.gameEnded
+    const winner = obj.winner
+    const eliminated = obj.eliminatedPlayers
 
     return {
       fromTerritory: {
-        id: String((from as Record<string, unknown>)['id']),
-        armies: Number((from as Record<string, unknown>)['armies']),
+        id: String((from as Record<string, unknown>).id),
+        armies: Number((from as Record<string, unknown>).armies),
       },
       toTerritory: {
-        id: String(toRec['id']),
-        armies: Number(toRec['armies']),
-        ...(typeof toRec['ownerId'] === 'string' || toRec['ownerId'] === null
-          ? { ownerId: toRec['ownerId'] as string | null }
+        id: String(toRec.id as string),
+        armies: Number(toRec.armies as number),
+        ...(typeof toRec.ownerId === 'string' || toRec.ownerId === null
+          ? { ownerId: toRec.ownerId as string | null }
           : {}),
       },
       attackerLosses: Number(attackerLosses),
@@ -831,7 +833,10 @@ export class GameActionWorker {
                 troops: gained,
               }
               const maybeCards = cardNames && cardNames.length === 3 ? cardNames : undefined
-              const a = action as Extract<import('../types/game.js').GameAction, { type: 'trade_cards' }>
+              const a = action as Extract<
+                import('../types/game.js').GameAction,
+                { type: 'trade_cards' }
+              >
               const cardsLen = Array.isArray(a.payload?.cards)
                 ? a.payload?.cards.length
                 : Array.isArray(a.payload?.treasureSet)

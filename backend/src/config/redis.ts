@@ -114,7 +114,7 @@ export async function initializeRedis(): Promise<RedisClients> {
       }
     })
 
-    const rc = redisClient!
+    const rc = redisClient as IORedis
     rc.on('ready', () => {
       logger.info('✅ Redis client ready')
     })

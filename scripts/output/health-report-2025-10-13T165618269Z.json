@@ -1,0 +1,321 @@
+{
+  "baseUrl": "https://conquestk.com",
+  "generatedAt": "2025-10-13T16:56:21.986Z",
+  "results": [
+    {
+      "name": "api-health",
+      "category": "core",
+      "path": "/api/health",
+      "method": "GET",
+      "statusCode": 200,
+      "ok": true,
+      "durationMs": 2720,
+      "bodyType": "json",
+      "body": {
+        "status": "OK",
+        "server": "running",
+        "database": "connected",
+        "redis": "connected",
+        "queues": "healthy",
+        "environment": "production",
+        "databaseUrl": "configured",
+        "redisUrl": "configured",
+        "sentry": "configured",
+        "timestamp": "2025-10-13T16:56:21.077Z"
+      }
+    },
+    {
+      "name": "health",
+      "category": "core",
+      "path": "/health",
+      "method": "GET",
+      "statusCode": 200,
+      "ok": true,
+      "durationMs": 2508,
+      "bodyType": "json",
+      "body": {
+        "status": "OK",
+        "server": "running",
+        "database": "connected",
+        "redis": "connected",
+        "queues": "healthy",
+        "environment": "production",
+        "databaseUrl": "configured",
+        "redisUrl": "configured",
+        "sentry": "configured",
+        "timestamp": "2025-10-13T16:56:20.877Z"
+      }
+    },
+    {
+      "name": "queues-ping",
+      "category": "queues",
+      "path": "/api/queues/ping",
+      "method": "GET",
+      "statusCode": 200,
+      "ok": true,
+      "durationMs": 2498,
+      "bodyType": "json",
+      "body": {
+        "status": "healthy",
+        "timestamp": "2025-10-13T16:56:20.876Z"
+      }
+    },
+    {
+      "name": "odds-status",
+      "category": "odds",
+      "path": "/api/odds/status",
+      "method": "GET",
+      "statusCode": 200,
+      "ok": true,
+      "durationMs": 327,
+      "bodyType": "json",
+      "body": {
+        "success": true,
+        "data": {
+          "engine": "wasm",
+          "wasmAvailable": true,
+          "wasmVersion": "wasm-odds 0.1.0"
+        }
+      }
+    },
+    {
+      "name": "matchsvc-status",
+      "category": "matchsvc",
+      "path": "/api/matchsvc/status",
+      "method": "GET",
+      "statusCode": 200,
+      "ok": true,
+      "durationMs": 298,
+      "bodyType": "json",
+      "body": {
+        "ok": false,
+        "service": {
+          "url": "conquestk-344ba5ab.railway.internal",
+          "health": "fail",
+          "statusCode": 0
+        },
+        "auth": {
+          "configured": true,
+          "test": "error"
+        },
+        "redis": {
+          "healthy": true,
+          "message": "Redis is healthy"
+        },
+        "subscriber": {
+          "active": true
+        },
+        "metrics": null,
+        "ts": "2025-10-13T16:56:21.380Z"
+      }
+    },
+    {
+      "name": "perf-dashboard",
+      "category": "performance",
+      "path": "/api/performance/dashboard",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 140,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-metrics",
+      "category": "performance",
+      "path": "/api/performance/metrics",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 133,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-metrics-history",
+      "category": "performance",
+      "path": "/api/performance/metrics/history?hours=24",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 132,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-odds-history",
+      "category": "performance",
+      "path": "/api/performance/metrics/odds-history?hours=24",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 198,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-alerts-active",
+      "category": "performance",
+      "path": "/api/performance/alerts?active=true",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 202,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-health-detailed",
+      "category": "performance",
+      "path": "/api/performance/health/detailed",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 200,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-cache-stats",
+      "category": "performance",
+      "path": "/api/performance/cache/stats",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 197,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-db-stats",
+      "category": "performance",
+      "path": "/api/performance/database/stats",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 122,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-cdn-stats",
+      "category": "performance",
+      "path": "/api/performance/cdn/stats",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 129,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-optimization-recs",
+      "category": "performance",
+      "path": "/api/performance/optimization/recommendations",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 123,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "perf-report",
+      "category": "performance",
+      "path": "/api/performance/report?hours=24",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 121,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "queues-health",
+      "category": "queues",
+      "path": "/api/queues/health",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 163,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "queues-stats",
+      "category": "queues",
+      "path": "/api/queues/stats",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 166,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "queues-dashboard",
+      "category": "queues",
+      "path": "/api/queues/dashboard",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 160,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "admin-status",
+      "category": "admin",
+      "path": "/api/admin/status",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 160,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    },
+    {
+      "name": "admin-system-status",
+      "category": "admin",
+      "path": "/api/admin/system/status",
+      "method": "GET",
+      "statusCode": 403,
+      "ok": false,
+      "durationMs": 198,
+      "bodyType": "json",
+      "body": {
+        "message": "Invalid token"
+      }
+    }
+  ]
+}

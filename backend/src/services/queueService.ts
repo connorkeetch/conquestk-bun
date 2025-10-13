@@ -8,13 +8,7 @@ import { createRedisFromOptions } from '../utils/redisFactory.js'
 
 // Note: BullMQ sampling uses getJobs on states; no extra inspection types needed.
 
-interface FailedJobSnapshot {
-  id?: string
-  failedReason?: string
-  finishedOn?: number
-  processedOn?: number
-  timestamp?: number
-}
+// (removed unused FailedJobSnapshot interface)
 
 // BullMQ does not expose the same inspect helpers as Bull.
 // We'll use getJobs with specific states for sampling where needed.
@@ -461,11 +455,10 @@ export class QueueService {
       const lastFailed = lastFailedJob
         ? {
             id: lastFailedJob.id ?? 'unknown',
-            reason:
-              ((): string => {
-                const r = (lastFailedJob as { failedReason?: unknown }).failedReason
-                return typeof r === 'string' && r.length > 0 ? r : 'Unknown failure'
-              })(),
+            reason: ((): string => {
+              const r = (lastFailedJob as { failedReason?: unknown }).failedReason
+              return typeof r === 'string' && r.length > 0 ? r : 'Unknown failure'
+            })(),
             failedAt: new Date(
               (lastFailedJob.finishedOn ?? lastFailedJob.processedOn ?? lastFailedJob.timestamp) ||
                 Date.now(),

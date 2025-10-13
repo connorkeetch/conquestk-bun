@@ -981,7 +981,8 @@ router.get(
       let seed: string | null = null
       let source: 'log' | 'state' | null = null
 
-      const logArr = Array.isArray(row?.game_log) ? row!.game_log! : []
+      const gl = row?.game_log
+      const logArr = Array.isArray(gl) ? gl : []
       // Look for the most recent RNG entry in the log
       for (let i = logArr.length - 1; i >= 0; i--) {
         const entry = logArr[i] as Record<string, unknown>
@@ -999,8 +1000,12 @@ router.get(
         // Fallback to serialized state
         const data = row?.game_data
         let s: unknown = null
-        if (data && typeof data === 'object' && 'combatRngSeed' in (data as Record<string, unknown>)) {
-          s = (data as Record<string, unknown>)['combatRngSeed']
+        if (
+          data &&
+          typeof data === 'object' &&
+          'combatRngSeed' in (data as Record<string, unknown>)
+        ) {
+          s = (data as Record<string, unknown>).combatRngSeed
         }
         if (typeof s === 'string' && s.trim().length > 0) {
           seed = s
