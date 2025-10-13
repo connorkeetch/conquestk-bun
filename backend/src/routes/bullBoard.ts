@@ -73,6 +73,12 @@ export const createBullBoardRouter = () => {
 
   // Accept a short-lived grant code and mint a UI cookie, then redirect to the Bull Board UI
   router.get('/api/admin/queues/ui/accept', async (req, res) => {
+    logger.info('BullBoard accept: endpoint reached', {
+      ip: req.ip,
+      ua: req.get('User-Agent'),
+      hasCode: Boolean(req.query?.code),
+      hasCookie: Boolean(req.headers.cookie),
+    })
     try {
       const { code } = (req.query || {}) as { code?: string }
       const secrets = getJwtSecrets()
@@ -168,25 +174,39 @@ export const createBullBoardRouter = () => {
       const url = req.originalUrl || ''
       const rel = req.url || ''
       const p = req.path || ''
-      // Skip auth for grant/accept bootstrap endpoints — ensure we bypass the rest of this chain
-      if (
+
+      const shouldSkip =
         url.startsWith(`${basePath}/accept`) ||
         url.startsWith(`${basePath}/grant`) ||
         rel.startsWith('/accept') ||
         rel.startsWith('/grant') ||
         p.startsWith('/accept') ||
         p.startsWith('/grant')
-      ) {
+
+      logger.info('Bull Board middleware check', {
+        url,
+        rel,
+        path: p,
+        basePath,
+        shouldSkip,
+        checks: {
+          urlStartsWithAccept: url.startsWith(`${basePath}/accept`),
+          urlStartsWithGrant: url.startsWith(`${basePath}/grant`),
+          relStartsWithAccept: rel.startsWith('/accept'),
+          relStartsWithGrant: rel.startsWith('/grant'),
+          pathStartsWithAccept: p.startsWith('/accept'),
+          pathStartsWithGrant: p.startsWith('/grant'),
+        },
+      })
+
+      // Skip auth for grant/accept bootstrap endpoints — ensure we bypass the rest of this chain
+      if (shouldSkip) {
+        logger.info('Bull Board: skipping auth via next(route)')
         return next('route')
       }
+
       // Log for debugging
-      logger.debug('Bull Board UI auth check', {
-        url,
-        path: req.path,
-        originalUrl: req.originalUrl,
-        hasCookie: Boolean(req.headers.cookie),
-        cookieSnippet: req.headers.cookie?.substring(0, 50),
-      })
+      logger.debug('Bull Board UI: applying auth check')
       return authenticateTokenFromCookie(req, res, next)
     },
     requireAdmin,
