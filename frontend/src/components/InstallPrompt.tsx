@@ -104,12 +104,12 @@ export default function InstallPrompt() {
   // iOS coachmark
   if (iosVisible && !deferredPrompt) {
     return (
-      <div className="fixed inset-x-0 bottom-3 z-40 mx-auto w-[92%] sm:w-[420px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] shadow-xl p-3 flex items-center gap-3 text-sm">
+      <div className="fixed inset-x-0 bottom-3 z-40 mx-auto w-[92%] sm:w-[420px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] shadow-xl p-3 flex flex-col gap-3 sm:flex-row sm:items-center text-sm">
         <div className="flex-1">
           <div className="font-semibold mb-0.5">Install Conquest K</div>
           <div className="text-muted">Tap Share → "Add to Home Screen"</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-stretch gap-2 sm:items-center sm:ml-auto">
           <button
             type="button"
             className="px-3 py-1.5 rounded-md bg-[color:var(--surface-2)] hover:bg-[color:var(--surface-3)]"
@@ -125,13 +125,15 @@ export default function InstallPrompt() {
             Okay
           </button>
         </div>
-        <button
-          type="button"
-          className="ml-2 text-xs text-muted hover:text-[color:var(--text)]"
-          onClick={dontAskAgain}
-        >
-          Don’t ask again
-        </button>
+        <div className="flex sm:block">
+          <button
+            type="button"
+            className="text-xs text-muted hover:text-[color:var(--text)] sm:ml-2 text-left"
+            onClick={dontAskAgain}
+          >
+            Don’t ask again
+          </button>
+        </div>
       </div>
     )
   }
@@ -139,12 +141,12 @@ export default function InstallPrompt() {
   // Chrome/Android prompt
   if (visible && deferredPrompt) {
     return (
-      <div className="fixed inset-x-0 bottom-3 z-40 mx-auto w-[92%] sm:w-[420px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] shadow-xl p-3 flex items-center gap-3 text-sm">
+      <div className="fixed inset-x-0 bottom-3 z-40 mx-auto w-[92%] sm:w-[420px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] shadow-xl p-3 flex flex-col gap-3 sm:flex-row sm:items-center text-sm">
         <div className="flex-1">
           <div className="font-semibold mb-0.5">Install Conquest K</div>
           <div className="text-muted">Use the app fullscreen and get faster launch</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-stretch gap-2 sm:items-center sm:ml-auto">
           <button
             type="button"
             className="px-3 py-1.5 rounded-md bg-[color:var(--surface-2)] hover:bg-[color:var(--surface-3)]"
@@ -168,13 +170,15 @@ export default function InstallPrompt() {
             Install
           </button>
         </div>
-        <button
-          type="button"
-          className="ml-2 text-xs text-muted hover:text-[color:var(--text)]"
-          onClick={dontAskAgain}
-        >
-          Don’t ask again
-        </button>
+        <div className="flex sm:block">
+          <button
+            type="button"
+            className="text-xs text-muted hover:text-[color:var(--text)] sm:ml-2 text-left"
+            onClick={dontAskAgain}
+          >
+            Don’t ask again
+          </button>
+        </div>
       </div>
     )
   }

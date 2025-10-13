@@ -740,13 +740,13 @@ const CreateGamePage: React.FC = () => {
     <div className="min-h-screen p-6">
       {/* Header with integrated game name */}
       <div className="max-w-7xl mx-auto mb-6">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-2">
               <h1 className="text-3xl font-bold text-primary-soft">Create New Game</h1>
               {/* Small game name box next to header */}
-              <div className="flex items-start gap-2">
-                <div className="flex flex-col w-64">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:gap-2">
+                <div className="flex flex-col w-full sm:w-64">
                   <input
                     type="text"
                     placeholder={useAutoName ? generateSmartName() : 'Game name'}
@@ -766,7 +766,10 @@ const CreateGamePage: React.FC = () => {
                     {Math.max(0, 50 - (gameName?.length ?? 0))} left
                   </div>
                 </div>
-                <label className="flex items-center cursor-pointer" title="Auto-generate game name">
+                <label
+                  className="mt-2 inline-flex items-center sm:mt-0 cursor-pointer"
+                  title="Auto-generate game name"
+                >
                   <input
                     type="checkbox"
                     checked={useAutoName}
@@ -793,9 +796,11 @@ const CreateGamePage: React.FC = () => {
               )}
             </p>
           </div>
-          <Link to="/lobby" className="btn btn-secondary">
-            ← Back to Lobby
-          </Link>
+          <div>
+            <Link to="/lobby" className="btn btn-secondary w-full md:w-auto text-center">
+              ← Back to Lobby
+            </Link>
+          </div>
         </div>
       </div>
 

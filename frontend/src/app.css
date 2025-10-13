@@ -1519,6 +1519,7 @@ kbd {
   top: 100%;
   margin-top: 0.5rem;
   min-width: 12rem;
+  max-width: calc(100vw - 1rem);
   background: var(--modal-bg);
   border: 1px solid var(--modal-border);
   border-radius: var(--radius-md);
@@ -1543,6 +1544,7 @@ kbd {
   border: none;
   background: none;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
 .dropdown-item:hover,
