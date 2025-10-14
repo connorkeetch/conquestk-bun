@@ -151,6 +151,73 @@ export class QueueService {
     }
   }
 
+  // Generic job listing by state (admin diagnostics)
+  async listJobsByState(
+    key: QueueConfigKey,
+    state: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed',
+    opts?: { offset?: number; limit?: number },
+  ): Promise<
+    Array<{
+      id: string
+      name: string
+      state: typeof state
+      timestamp: string
+      attemptsMade: number
+      returnvalue?: unknown
+      failedReason?: string
+      progress?: number | Record<string, unknown>
+    }>
+  > {
+    const queue = this.queues.get(key)
+    if (!queue) return []
+    const offset = Math.max(0, Math.trunc(opts?.offset ?? 0))
+    const limit = Math.max(1, Math.min(200, Math.trunc(opts?.limit ?? 50)))
+    const end = offset + limit - 1
+    try {
+      const jobs = await queue.getJobs([state], offset, end)
+      return jobs.map((j) => ({
+        id: String(j.id ?? ''),
+        name: j.name || 'job',
+        state,
+        timestamp: new Date((j.timestamp as number) || Date.now()).toISOString(),
+        attemptsMade: (j.attemptsMade as number) ?? 0,
+        returnvalue: (j as { returnvalue?: unknown }).returnvalue,
+        failedReason: (j as { failedReason?: string }).failedReason,
+        progress: j.progress as number | Record<string, unknown>,
+      }))
+    } catch (e) {
+      logger.warn('Failed to list jobs by state', {
+        queue: queue.name,
+        state,
+        error: e instanceof Error ? e.message : e,
+      })
+      return []
+    }
+  }
+
+  // Retry a failed job by id on a given queue
+  async retryJob(
+    key: QueueConfigKey,
+    id: string | number,
+  ): Promise<{ retried: boolean; message?: string }> {
+    const queue = this.queues.get(key)
+    if (!queue) return { retried: false, message: 'Queue not found' }
+    try {
+      const job = await queue.getJob(String(id))
+      if (!job) return { retried: false, message: 'Job not found' }
+      // BullMQ requires job to be in failed/delayed state to retry
+      await job.retry()
+      return { retried: true }
+    } catch (e) {
+      logger.warn('Failed to retry job', {
+        queue: queue.name,
+        id,
+        error: e instanceof Error ? e.message : e,
+      })
+      return { retried: false, message: e instanceof Error ? e.message : String(e) }
+    }
+  }
+
   private resolveQueue<Key extends QueueConfigKey>(key: Key): Queue | null {
     return (this.queues.get(key) as Queue | undefined) ?? null
   }
