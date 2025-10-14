@@ -204,6 +204,12 @@ const ENV_VARIABLES: EnvVariable[] = [
     required: false,
     description: 'HMAC secret for signing matchsvc requests',
   },
+  {
+    name: 'USE_MATCHSVC',
+    required: false,
+    defaultValue: 'false',
+    description: 'Enable the external Go matchsvc (true) or use built-in TS presence (false)',
+  },
 ]
 
 export function validateEnvironmentVariables(): void {

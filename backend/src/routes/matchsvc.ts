@@ -1,12 +1,13 @@
 import { MatchSvcClient } from '@conquestk/match-client'
 import { Router } from 'express'
-import { checkRedisHealth } from '../config/redis.js'
+import { checkRedisHealth, getRedisClient } from '../config/redis.js'
 import { isMatchSvcSubscriberActive } from '../services/matchSvcIntegration.js'
 import { logger } from '../utils/logger.js'
 
 const router = Router()
 
 router.get('/status', async (_req, res) => {
+  const USE_MATCHSVC = String(process.env.USE_MATCHSVC || '').toLowerCase() === 'true'
   const normalizeBaseUrl = (u: string | undefined): string => {
     const raw = (u || 'http://localhost:8085').trim()
     const withScheme = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`
@@ -15,7 +16,39 @@ router.get('/status', async (_req, res) => {
   const baseUrl = normalizeBaseUrl(process.env.MATCHSVC_URL)
   const hmac = process.env.MATCHSVC_HMAC_SECRET
 
-  // 1) Health check
+  // If disabled, surface local presence-only metrics
+  if (!USE_MATCHSVC) {
+    const redisHealth = await checkRedisHealth().catch(() => ({ healthy: false, message: 'error' }))
+    let online = 0
+    try {
+      const r = getRedisClient()
+      if (r) {
+        online = await r.scard('presence:online:users')
+      }
+    } catch {
+      // ignore
+    }
+    const payload = {
+      ok: redisHealth.healthy,
+      service: {
+        url: 'local',
+        health: redisHealth.healthy ? 'ok' : 'fail',
+        statusCode: redisHealth.healthy ? 200 : 0,
+      },
+      auth: { configured: false, test: 'skipped' as const, statusCode: undefined },
+      redis: redisHealth,
+      subscriber: { active: false },
+      metrics: {
+        presenceOnline: online,
+        matchesFormedTotal: 0,
+        queueDepth: {} as Record<string, number>,
+      },
+      ts: new Date().toISOString(),
+    }
+    return res.json(payload)
+  }
+
+  // 1) Health check (remote matchsvc)
   let health = 'unknown'
   let healthCode: number | undefined
   try {

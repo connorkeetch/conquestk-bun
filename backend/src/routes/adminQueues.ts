@@ -6,14 +6,8 @@ import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 
-// Apply admin auth only to this router's API endpoints, not to the Bull Board UI path.
-// Important: this router is mounted at "/api/admin/queues" which also prefixes the Bull Board UI
-// ("/api/admin/queues/ui"). Guard only our JSON endpoints so UI requests reach the dedicated
-// Bull Board middleware without being intercepted here.
-router.use(['/dlq', '/dlq/*', '/jobs', '/jobs/*'], authenticateToken, requireAdmin)
-
 // GET /api/admin/queues/dlq?queue=gameActions&offset=0&limit=50
-router.get('/dlq', async (req, res) => {
+router.get('/dlq', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const _q = String(
       req.query.queue || '',
@@ -31,7 +25,7 @@ router.get('/dlq', async (req, res) => {
 })
 
 // POST /api/admin/queues/dlq/requeue { queue: 'gameActions', jobId: '...' }
-router.post('/dlq/requeue', async (req, res) => {
+router.post('/dlq/requeue', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const key =
       (req.body?.queue as 'gameActions' | 'gameCleanup' | 'analyticsEvents') || 'gameActions'
@@ -49,7 +43,7 @@ router.post('/dlq/requeue', async (req, res) => {
 })
 
 // GET /api/admin/queues/jobs?queue=gameActions&state=active&offset=0&limit=50
-router.get('/jobs', async (req, res) => {
+router.get('/jobs', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const key =
       (req.query.queue as
@@ -71,7 +65,7 @@ router.get('/jobs', async (req, res) => {
 })
 
 // POST /api/admin/queues/jobs/retry { queue: 'gameActions', jobId: '...' }
-router.post('/jobs/retry', async (req, res) => {
+router.post('/jobs/retry', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const key =
       (req.body?.queue as
