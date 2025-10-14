@@ -45,6 +45,17 @@ BB_USERNAME=admin                   # Dashboard login username
 BB_PASSWORD=strong-password         # Dashboard login password
 COOKIE_SECRET=random-32-char-string # Generate with: openssl rand -base64 32
 PORT=3000                           # Server port (Railway auto-provides)
+
+# Optional fallbacks (supported by the service)
+# Use these only if your platform exposes discrete values instead of REDIS_URL
+REDIS_PUBLIC_URL=                   # External TLS endpoint (if not using private reference)
+REDIS_HOST=
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_TLS=false                     # Set to true when using a TLS endpoint (rediss://)
+Notes:
+- Prefer setting `REDIS_URL` as a Railway Reference to the Redis add-on.
+- If your Redis host is internal-only (e.g., `redis.railway.internal`), this service must live in the same Railway project with the Redis add-on linked. Otherwise, use a public TLS endpoint and set `REDIS_TLS=true`.
 ```
 
 ## Railway Deployment
@@ -73,6 +84,11 @@ In Railway, use a **reference** to Redis (not a hardcoded URL):
 ```
 REDIS_URL → Add Reference → Select Redis service → REDIS_URL
 ```
+
+If you see `ENOTFOUND redis.railway.internal` in logs, the service isn’t on the same private network as Redis:
+- Ensure Bull Board is in the same Railway project as your Redis add-on.
+- Add the Redis service as a dependency (Variables → Add Reference → Redis → REDIS_URL).
+- Alternatively, use the Redis service’s public TLS endpoint: set `REDIS_PUBLIC_URL` (or `REDIS_HOST`/`REDIS_PASSWORD` with `REDIS_TLS=true`).
 
 ## Monitored Queues
 
