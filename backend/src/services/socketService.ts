@@ -273,23 +273,40 @@ function serializeGameStateForClient(
     ...(t.coordinates ? { coordinates: t.coordinates } : {}),
   })) as Territory[]
 
-  const cfg: import('../types/game.js').GameConfiguration = s.gameConfig
-  const gameConfig: import('../types/game.js').GameConfiguration = {
-    movementType: cfg.movementType,
-    allowTeamPlay: cfg.allowTeamPlay,
-    teamMode: cfg.teamMode,
-    numberOfTeams: cfg.numberOfTeams ?? null,
-    maxPlayers: cfg.maxPlayers,
-    mapId: cfg.mapId,
-    gameMode: cfg.gameMode,
-    sectorBonuses: cfg.sectorBonuses,
-    continentBonuses: cfg.continentBonuses,
-    useTerritoryModifiers: cfg.useTerritoryModifiers,
-    modifierDistribution: cfg.modifierDistribution,
-    fogOfWar: cfg.fogOfWar,
-    treasureConfig: cfg.treasureConfig,
-    kingOfTheHill: cfg.kingOfTheHill,
-  }
+  const cfg = s.gameConfig
+  const gameConfig: import('../types/game.js').GameConfiguration = cfg
+    ? {
+        movementType: cfg.movementType,
+        allowTeamPlay: cfg.allowTeamPlay,
+        teamMode: cfg.teamMode,
+        numberOfTeams: cfg.numberOfTeams ?? null,
+        maxPlayers: cfg.maxPlayers,
+        mapId: cfg.mapId,
+        gameMode: cfg.gameMode,
+        sectorBonuses: cfg.sectorBonuses,
+        continentBonuses: cfg.continentBonuses,
+        useTerritoryModifiers: cfg.useTerritoryModifiers,
+        modifierDistribution: cfg.modifierDistribution,
+        fogOfWar: cfg.fogOfWar,
+        treasureConfig: cfg.treasureConfig,
+        kingOfTheHill: cfg.kingOfTheHill,
+      }
+    : {
+        movementType: 'classic_adjacent',
+        allowTeamPlay: false,
+        teamMode: 'none',
+        numberOfTeams: null,
+        maxPlayers: Array.isArray(s.players) ? s.players.length : 0,
+        mapId: 'unknown',
+        gameMode: 'classic',
+        sectorBonuses: [],
+        continentBonuses: [],
+        useTerritoryModifiers: false,
+        modifierDistribution: 'none',
+        fogOfWar: 'off',
+        treasureConfig: undefined as unknown as import('../types/game.js').TreasureConfig,
+        kingOfTheHill: undefined as unknown as import('../types/game.js').KingOfTheHillConfig,
+      }
 
   const base: SerializedGameState = {
     roomId: s.roomId,

@@ -17,6 +17,7 @@ module.exports = {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@conquestk/shared/(.*)$': '<rootDir>/../shared/$1',
+    '^@conquestk/match-client$': '<rootDir>/src/test/mocks/matchClient.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/test/setupTests.cjs'],

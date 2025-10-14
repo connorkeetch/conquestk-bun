@@ -5,6 +5,7 @@ import { adminService } from '../services/adminService'
 import apiClient from '../services/api'
 
 type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
+type JobState = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
 
 export default function AdminQueues() {
   const selectId = useId()
@@ -64,6 +65,18 @@ export default function AdminQueues() {
     }>
   >([])
   const [jobsLoading, setJobsLoading] = useState(false)
+  const [jobState, setJobState] = useState<JobState>('active')
+  const [details, setDetails] = useState<null | {
+    id: string
+    name: string
+    state: JobState
+    timestamp: string
+    attemptsMade: number
+    failedReason?: string
+    progress?: number | Record<string, unknown>
+    returnvalue?: unknown
+  }>(null)
+  const [transientLimit, setTransientLimit] = useState<number>(50)
 
   const loadDlq = useCallback(async () => {
     try {
@@ -82,12 +95,12 @@ export default function AdminQueues() {
   const loadRecentJobs = useCallback(async () => {
     try {
       setJobsLoading(true)
-      const [active, failed] = await Promise.all([
-        adminService.getJobs({ queue: selectedQueue, state: 'active', limit: 25 }),
+      const [primary, failed] = await Promise.all([
+        adminService.getJobs({ queue: selectedQueue, state: jobState, limit: 25 }),
         adminService.getJobs({ queue: selectedQueue, state: 'failed', limit: 25 }),
       ])
       setRecentActive(
-        (active.items ?? []).map((j) => ({
+        (primary.items ?? []).map((j) => ({
           id: j.id,
           name: j.name,
           timestamp: j.timestamp,
@@ -111,7 +124,7 @@ export default function AdminQueues() {
     } finally {
       setJobsLoading(false)
     }
-  }, [selectedQueue])
+  }, [selectedQueue, jobState])
 
   const loadStats = useCallback(async () => {
     try {
@@ -251,6 +264,15 @@ export default function AdminQueues() {
     }
   }
 
+  const onRetryTransient = async () => {
+    try {
+      await adminService.retryTransientDlq({ queue: selectedQueue, limit: transientLimit })
+      await loadDlq()
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed to retry transient jobs')
+    }
+  }
+
   return (
     <div className="p-6">
       <AdminPageHeader
@@ -357,14 +379,39 @@ export default function AdminQueues() {
               ))}
             </select>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadDlq()}
-            className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80 disabled:opacity-60"
-            disabled={loading}
-          >
-            {loading ? 'Loading...' : 'Refresh DLQ'}
-          </button>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor={`${selectId}-transient-limit`}
+              className="text-xs text-muted"
+              title="Retry DLQ jobs with transient errors (e.g., timeouts)"
+            >
+              Transient limit
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={200}
+              id={`${selectId}-transient-limit`}
+              value={transientLimit}
+              onChange={(e) => setTransientLimit(Number.parseInt(e.target.value || '50', 10))}
+              className="w-20 px-2 py-1 text-sm rounded bg-surface-2 border border-border"
+            />
+            <button
+              type="button"
+              onClick={() => void onRetryTransient()}
+              className="px-3 py-2 text-sm rounded bg-primary hover:brightness-110"
+            >
+              Retry Transient
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadDlq()}
+              className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80 disabled:opacity-60"
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Refresh DLQ'}
+            </button>
+          </div>
         </div>
 
         {error ? (
@@ -416,7 +463,20 @@ export default function AdminQueues() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-box-lg">
           <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold">Recent Active</div>
+            <div className="flex items-center gap-2">
+              <div className="font-semibold">Recent Jobs</div>
+              <select
+                value={jobState}
+                onChange={(e) => setJobState(e.target.value as JobState)}
+                className="px-2 py-1 rounded bg-surface-2 border border-border text-sm"
+                title="Select queue state"
+              >
+                <option value="active">Active</option>
+                <option value="waiting">Waiting</option>
+                <option value="delayed">Delayed</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
             <button
               type="button"
               className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80 disabled:opacity-60"
@@ -435,8 +495,9 @@ export default function AdminQueues() {
                   <tr className="text-left text-muted border-b border-border">
                     <th className="py-2 pr-4">Job ID</th>
                     <th className="py-2 pr-4">Name</th>
-                    <th className="py-2 pr-4">Started</th>
+                    <th className="py-2 pr-4">Timestamp</th>
                     <th className="py-2 pr-4">Attempts</th>
+                    <th className="py-2 pr-4">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -446,6 +507,24 @@ export default function AdminQueues() {
                       <td className="py-2 pr-4">{j.name}</td>
                       <td className="py-2 pr-4">{new Date(j.timestamp).toLocaleString()}</td>
                       <td className="py-2 pr-4">{j.attemptsMade}</td>
+                      <td className="py-2 pr-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDetails({
+                              id: j.id,
+                              name: j.name,
+                              state: jobState,
+                              timestamp: j.timestamp,
+                              attemptsMade: j.attemptsMade,
+                              progress: j.progress,
+                            })
+                          }
+                          className="px-2 py-1 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80"
+                        >
+                          View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -497,6 +576,22 @@ export default function AdminQueues() {
                         >
                           Retry
                         </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDetails({
+                              id: j.id,
+                              name: j.name,
+                              state: 'failed',
+                              timestamp: j.timestamp,
+                              attemptsMade: j.attemptsMade,
+                              failedReason: j.failedReason,
+                            })
+                          }
+                          className="ml-2 px-2 py-1 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80"
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -506,6 +601,68 @@ export default function AdminQueues() {
           )}
         </div>
       </div>
+
+      {/* Details modal */}
+      {details && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="w-[min(92vw,720px)] max-h-[80vh] overflow-auto rounded-lg bg-surface-1 border border-border p-4 shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-semibold">Job Details</div>
+              <button
+                type="button"
+                onClick={() => setDetails(null)}
+                className="px-2 py-1 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80"
+                aria-label="Close"
+              >
+                Close
+              </button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-muted">ID:</span>{' '}
+                <span className="font-mono">{details.id}</span>
+              </div>
+              <div>
+                <span className="text-muted">Name:</span> {details.name}
+              </div>
+              <div>
+                <span className="text-muted">State:</span> {details.state}
+              </div>
+              <div>
+                <span className="text-muted">Timestamp:</span>{' '}
+                {new Date(details.timestamp).toLocaleString()}
+              </div>
+              <div>
+                <span className="text-muted">Attempts:</span> {details.attemptsMade}
+              </div>
+              {details.failedReason ? (
+                <div>
+                  <span className="text-muted">Failed Reason:</span>{' '}
+                  <span className="break-words">{details.failedReason}</span>
+                </div>
+              ) : null}
+              {typeof details.progress !== 'undefined' ? (
+                <div>
+                  <span className="text-muted">Progress:</span>{' '}
+                  <span className="break-words font-mono text-xs">
+                    {typeof details.progress === 'number'
+                      ? details.progress
+                      : JSON.stringify(details.progress)}
+                  </span>
+                </div>
+              ) : null}
+              {typeof (details as { returnvalue?: unknown }).returnvalue !== 'undefined' ? (
+                <div>
+                  <span className="text-muted">Return Value:</span>{' '}
+                  <span className="break-words font-mono text-xs">
+                    {JSON.stringify((details as { returnvalue?: unknown }).returnvalue)}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
