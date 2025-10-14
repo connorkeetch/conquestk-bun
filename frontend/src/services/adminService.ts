@@ -1,3 +1,4 @@
+import type { AdminQueuesHealth, AdminQueuesStats } from '@conquestk/shared/types/admin'
 import { apiClient } from './api'
 
 export interface AdminUser {
@@ -394,29 +395,14 @@ class AdminService {
   }
 
   // ============= QUEUES (Admin) =============
-
-  async getQueueStats(): Promise<{
-    initialized: boolean
-    queues: Record<
-      string,
-      {
-        waiting: number
-        active: number
-        completed: number
-        failed: number
-        delayed: number
-        deadLetter: number
-        stalled: number
-        isPaused: boolean
-        oldestWaitingMs: number | null
-        avgProcessingMs: number | null
-        warnings: string[]
-      }
-    >
-    timestamp: string
-  }> {
+  async getQueueStats(): Promise<AdminQueuesStats> {
     const response = await apiClient.get(`/queues/stats`)
-    return response.data?.data ?? response.data
+    return (response.data?.data ?? response.data) as AdminQueuesStats
+  }
+
+  async getQueueHealth(): Promise<AdminQueuesHealth> {
+    const response = await apiClient.get(`/queues/health`)
+    return response.data as AdminQueuesHealth
   }
 
   // ============= ODDS METRICS (Performance) =============

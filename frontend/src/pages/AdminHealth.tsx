@@ -1,4 +1,6 @@
+import type { AdminQueuesHealth, AdminQueuesStats } from '@conquestk/shared/types/admin'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { adminService } from '@/services/adminService'
 import api from '@/services/api'
 
 type HealthResult = {
@@ -58,6 +60,31 @@ export default function AdminHealth() {
     }): Promise<HealthResult> => {
       const t0 = Date.now()
       try {
+        // Prefer service wrappers for admin endpoints
+        if (e.label === 'Queues Health') {
+          const data = await adminService.getQueueHealth()
+          const dt = Date.now() - t0
+          return {
+            label: e.label,
+            path: e.path,
+            ok: !!data.success,
+            statusCode: data.success ? 200 : 503,
+            durationMs: dt,
+            data,
+          }
+        }
+        if (e.label === 'Queues Stats') {
+          const data = await adminService.getQueueStats()
+          const dt = Date.now() - t0
+          return {
+            label: e.label,
+            path: e.path,
+            ok: true,
+            statusCode: 200,
+            durationMs: dt,
+            data,
+          }
+        }
         const resp = await api.get(e.path)
         const dt = Date.now() - t0
         return {
@@ -191,27 +218,8 @@ export default function AdminHealth() {
             )
           }
 
-          type QueueStatsLite = {
-            waiting?: number
-            failed?: number
-            active?: number
-            completed?: number
-            warnings?: unknown
-            [k: string]: unknown
-          }
-
           const renderQueuesHealth = () => {
-            const d = (r.data ?? {}) as {
-              success?: boolean
-              status?: string
-              details?: {
-                workers?: { initialized?: boolean }
-                queues?: Record<string, QueueStatsLite>
-                redis?: string
-                queueServiceInitialized?: boolean
-              }
-              timestamp?: string
-            }
+            const d = (r.data ?? {}) as AdminQueuesHealth
             const queues = d.details?.queues || {}
             const names = Object.keys(queues)
             const totals = names.reduce(
@@ -261,15 +269,8 @@ export default function AdminHealth() {
           }
 
           const renderQueuesStats = () => {
-            const d = (r.data ?? {}) as {
-              success?: boolean
-              data?: {
-                initialized?: boolean
-                queues?: Record<string, QueueStatsLite>
-                timestamp?: string
-              }
-            }
-            const queues = d.data?.queues || {}
+            const d = (r.data ?? {}) as AdminQueuesStats
+            const queues = d.queues || {}
             const names = Object.keys(queues)
             const totals = names.reduce(
               (acc, name) => {
