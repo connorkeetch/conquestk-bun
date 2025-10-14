@@ -226,7 +226,8 @@ export default function AdminHealth() {
                 <div>Workers initialized: {String(d.details?.workers?.initialized ?? false)}</div>
                 {d.details?.redis ? <div>Redis: {d.details.redis}</div> : null}
                 <div>
-                  Queues total — waiting {totals.waiting}, active {totals.active}, failed {totals.failed}
+                  Queues total — waiting {totals.waiting}, active {totals.active}, failed{' '}
+                  {totals.failed}
                 </div>
                 <div>Queues with warnings: {totals.warned}</div>
                 {warnedList.length > 0 ? (
@@ -348,19 +349,19 @@ export default function AdminHealth() {
                 {!r.ok && r.error ? <div className="mt-1 text-red-400">{r.error}</div> : null}
               </div>
 
-              {r.ok && r.data ? (
-                r.label === 'API Health' ? (
-                  renderApiHealth()
-                ) : r.label === 'Queues Health' ? (
-                  renderQueuesHealth()
-                ) : r.label === 'Queues Stats' ? (
-                  renderQueuesStats()
-                ) : r.label === 'Match Service' ? (
-                  renderMatchSvc()
-                ) : r.label === 'Performance Alerts' ? (
-                  renderPerformanceAlerts()
-                ) : null
-              ) : null}
+              {r.ok && r.data
+                ? r.label === 'API Health'
+                  ? renderApiHealth()
+                  : r.label === 'Queues Health'
+                    ? renderQueuesHealth()
+                    : r.label === 'Queues Stats'
+                      ? renderQueuesStats()
+                      : r.label === 'Match Service'
+                        ? renderMatchSvc()
+                        : r.label === 'Performance Alerts'
+                          ? renderPerformanceAlerts()
+                          : null
+                : null}
             </Card>
           )
         })}

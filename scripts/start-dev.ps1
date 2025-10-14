@@ -46,7 +46,7 @@ if (-not $SkipSetup) {
     Write-Info "Running setup check..."
     
     try {
-        $setupResult = & node setup-check.js
+        $setupResult = & node scripts/setup-check.cjs
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Setup check found issues. Continuing anyway..."
             if ($Verbose) {

@@ -4,6 +4,7 @@
   With --start, attempts to start services via Docker Compose when available.
 */
 
+// CJS entrypoint (migrated for root ESM)
 const fs = require('node:fs')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')

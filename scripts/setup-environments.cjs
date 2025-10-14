@@ -6,6 +6,7 @@
   - Ensures .gitignore ignores .env.local files
 */
 
+// CJS entrypoint (migrated for root ESM)
 const fs = require('node:fs')
 const path = require('node:path')
 
