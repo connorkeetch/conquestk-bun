@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+// Note: Avoid import.meta usage here so Jest (CJS) can parse this module
 import { DeleteObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import { logger } from './logger.js'
@@ -13,10 +13,10 @@ const region = process.env.ASSET_REGION?.trim() || 'auto'
 const publicBaseUrl = process.env.PUBLIC_ASSET_BASE_URL?.trim().replace(/\/$/, '')
 const mapUploadsOverride = process.env.MAP_UPLOADS_DIR?.trim()
 
-// ESM-safe __dirname for this module
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const LOCAL_ROOT = path.join(__dirname, '../../uploads')
+// Resolve a stable uploads root without relying on ESM-only APIs.
+// Prefer working-directory relative paths so both dev server and Jest work.
+const cwd = process.cwd()
+const LOCAL_ROOT = path.join(cwd, path.basename(cwd) === 'backend' ? 'uploads' : 'backend/uploads')
 
 const isRemoteEnabled = Boolean(bucket && accessKeyId && secretAccessKey && endpoint)
 

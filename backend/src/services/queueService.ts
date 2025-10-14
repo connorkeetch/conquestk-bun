@@ -147,7 +147,7 @@ export class QueueService {
       // Keep alphanumerics, dash and underscore; replace others with underscore
       return String(id).replace(/[^a-zA-Z0-9_-]/g, '_')
     } catch {
-      return 'job_' + Date.now()
+      return `job_${Date.now()}`
     }
   }
 

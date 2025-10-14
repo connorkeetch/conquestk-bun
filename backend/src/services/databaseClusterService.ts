@@ -1,5 +1,5 @@
-import { Pool, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg'
 import { URL } from 'node:url'
+import { Pool, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg'
 import { logger } from '../utils/logger.js'
 
 interface DatabaseNode {
@@ -93,7 +93,10 @@ export class DatabaseClusterService {
             ssl: isRailway || process.env.NODE_ENV === 'production',
           })
         } catch (e) {
-          logger.warn('Failed to parse DATABASE_URL for cluster service, falling back to DB_* vars', e)
+          logger.warn(
+            'Failed to parse DATABASE_URL for cluster service, falling back to DB_* vars',
+            e,
+          )
           await this.addDatabaseNode({
             id: 'primary',
             host: this.getEnvValue('DB_HOST', 'localhost'),
