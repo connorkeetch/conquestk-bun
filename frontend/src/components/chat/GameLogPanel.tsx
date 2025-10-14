@@ -1388,7 +1388,42 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           entries?: Array<Record<string, unknown>>
         }
         if (!p || p.roomId !== gameId) return
-        const entries = Array.isArray(p.entries) ? p.entries : []
+        const entries = Array.isArray(p.entries)
+          ? (p.entries as Array<Record<string, unknown>>)
+          : []
+
+        // Precompute per-engagement movedArmies and eliminated players from BATTLE entries
+        const engagementMeta = new Map<
+          string,
+          {
+            movedArmies?: number
+            eliminated?: string[]
+            attackerId?: string
+            defenderId?: string | undefined
+          }
+        >()
+        for (const e of entries) {
+          const et = String((e as { type?: string }).type || '')
+          if (et !== 'BATTLE') continue
+          const be = e as unknown as {
+            engagementId?: string
+            movedArmies?: number
+            eliminatedPlayers?: string[]
+            attackerId?: string
+            defenderId?: string | null
+            conquered?: boolean
+          }
+          if (!be.conquered) continue
+          const key = be.engagementId || ''
+          if (!key) continue
+          engagementMeta.set(key, {
+            movedArmies: typeof be.movedArmies === 'number' ? be.movedArmies : undefined,
+            eliminated: Array.isArray(be.eliminatedPlayers) ? be.eliminatedPlayers : [],
+            attackerId: be.attackerId,
+            defenderId: be.defenderId || undefined,
+          })
+        }
+
         for (const e of entries) {
           const er = e as Record<string, unknown>
           const type = String((er.type as string) || 'BATTLE')
@@ -1601,6 +1636,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             const killed = toSafeInt(totals.defender, 0)
             const lost = toSafeInt(totals.attacker, 0)
             const conquered = Boolean((er as { conquered?: boolean }).conquered)
+            const engagementId = String((er as { engagementId?: string }).engagementId || '')
             const withCounts =
               Number.isFinite(initFrom) && Number.isFinite(initTo)
                 ? { from: `${from} - ${initFrom}`, to: `${to} - ${initTo}` }
@@ -1635,6 +1671,77 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               `${withCounts.from} (${attackerName}) attacked ${withCounts.to}${defenderName ? ` (${defenderName})` : ''}${conquered ? ' conquering it,' : ''} killing ${killed}, losing ${lost}.${oddsText}`,
               ts,
             )
+
+            // If conquered, also print an "occupied with N" line using movedArmies from the BATTLE in this batch
+            if (conquered) {
+              let moved: number | undefined
+              let eliminated: string[] = []
+              if (engagementId && engagementMeta.has(engagementId)) {
+                const meta = engagementMeta.get(engagementId)
+                if (meta) {
+                  moved = typeof meta.movedArmies === 'number' ? meta.movedArmies : undefined
+                  eliminated = Array.isArray(meta.eliminated) ? (meta.eliminated as string[]) : []
+                }
+              }
+              if (typeof moved === 'number' && moved > 0) {
+                addRich(
+                  <>
+                    {from} (
+                    <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                      {attackerName}
+                    </span>
+                    ) occupied {to} with {moved} troops.
+                  </>,
+                  `${from} (${attackerName}) occupied ${to} with ${moved} troops.`,
+                  ts,
+                )
+              }
+              // Print elimination lines if present
+              if (Array.isArray(eliminated) && eliminated.length > 0) {
+                for (const defeatedId of eliminated) {
+                  const defeatedName = playerName.get(defeatedId) || defeatedId
+                  addRich(
+                    <>
+                      <span
+                        className="font-semibold"
+                        style={{ color: playerColor.get(defeatedId) }}
+                      >
+                        {defeatedName}
+                      </span>{' '}
+                      was conquered by{' '}
+                      <span
+                        className="font-semibold"
+                        style={{ color: playerColor.get(attackerId) }}
+                      >
+                        {attackerName}
+                      </span>
+                      .
+                    </>,
+                    `${defeatedName} was conquered by ${attackerName}.`,
+                    ts,
+                  )
+                }
+              }
+            }
+            continue
+          }
+          if (type === 'RATING') {
+            const userId = String((er as { userId?: string }).userId || '')
+            const name = playerName.get(userId) || userId
+            const change = toSafeInt((er as { change?: number }).change, 0)
+            if (change !== 0) {
+              const verb = change > 0 ? 'gained' : 'lost'
+              addRich(
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(userId) }}>
+                    {name}
+                  </span>{' '}
+                  {verb} {Math.abs(change)} rating.
+                </>,
+                `${name} ${verb} ${Math.abs(change)} rating.`,
+                ts,
+              )
+            }
             continue
           }
           if (type === 'BATTLE') {

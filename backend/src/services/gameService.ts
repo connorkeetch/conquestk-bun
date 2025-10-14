@@ -2,6 +2,7 @@ import { query, transaction } from '../config/database.js'
 import { GameEngine } from '../game/gameEngine.js'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js'
 import { loadMapForEngine } from '../game/mapLoader.js'
+import { assertInvariants } from '../game/stateMachine.js'
 import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans.js'
 import { DeltaBuilder } from '../types/deltaUpdates.js'
 import type {
@@ -15,6 +16,7 @@ import type {
   SerializedGameState,
   Territory,
 } from '../types/game.js'
+import { getPlayerTeam as utilGetPlayerTeam } from '../utils/gameTeams.js'
 import { logger } from '../utils/logger.js'
 import { type AIDecisionPlan, aiDecisionService, type DecisionBudget } from './aiDecisionService.js'
 import { gameStateCache } from './cacheService.js'
@@ -1195,6 +1197,15 @@ export class GameService {
     const prevHand = Array.isArray(prevTreasures) ? [...prevTreasures] : []
 
     const updatedState = this.gameEngine.advancePhase(gameState)
+    // Enforce invariants post-mutation
+    try {
+      assertInvariants(updatedState)
+    } catch (e) {
+      logger.warn('Invariant violation after endTurn; proceeding to persist for visibility', {
+        roomId,
+        error: e instanceof Error ? e.message : e,
+      })
+    }
 
     // Use longer TTL for finished games
     if (updatedState.phase === 'finished') {
@@ -1953,8 +1964,24 @@ export class GameService {
 
     const playersAfterBattle = this.rebuildPlayersAfterBattle(gameState.players, updatedBoard)
     const activePlayers = playersAfterBattle.filter((player) => !player.isEliminated)
-    const gameEnded = activePlayers.length <= 1
-    const winner = gameEnded ? (activePlayers[0] ?? null) : null
+    // Team-aware terminal detection: one side (team or solo) remaining ends the game
+    let gameEnded = false
+    let winner: GamePlayer | null = null
+    if (activePlayers.length === 0) {
+      gameEnded = true
+      winner = null
+    } else {
+      const distinct = new Set<string>()
+      for (const p of activePlayers) {
+        const teamId = utilGetPlayerTeam(
+          { ...gameState, players: playersAfterBattle } as GameState,
+          p.id,
+        )
+        distinct.add(teamId ? `team:${teamId}` : `player:${p.id}`)
+      }
+      gameEnded = distinct.size <= 1
+      winner = gameEnded ? (activePlayers[0] ?? null) : null
+    }
 
     const lastBattleResult = {
       attackerDice: dice.attacker,
@@ -1994,6 +2021,16 @@ export class GameService {
       conqueredDuringTurn: (gameState.conqueredDuringTurn ?? false) || territoryConquered,
       phase: gameEnded ? 'finished' : gameState.phase,
       currentPlayer: gameEnded && winner ? winner.id : gameState.currentPlayer,
+    }
+
+    // Invariant guard after battle application
+    try {
+      assertInvariants(updatedGameState)
+    } catch (e) {
+      logger.warn('Invariant violation after applyBattleResult', {
+        roomId: gameId,
+        error: e instanceof Error ? e.message : e,
+      })
     }
 
     let serializedState = this.serializeGameState(updatedGameState)

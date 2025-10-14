@@ -1514,9 +1514,19 @@ export class GameEngine {
     // Check for eliminated players first
     this.updateEliminatedPlayers(gameState)
 
-    // Check if game is over (only one player left)
+    // Check if game is over
     const activePlayers = gameState.players.filter((p) => !p.isEliminated)
-    if (activePlayers.length <= 1) {
+    if (gameState.gameConfig?.allowTeamPlay) {
+      const distinct = new Set<string>()
+      for (const p of activePlayers) {
+        const teamId = this.getPlayerTeam(gameState, p.id)
+        distinct.add(teamId ? `team:${teamId}` : `player:${p.id}`)
+      }
+      if (distinct.size <= 1) {
+        this.endGame(gameState, activePlayers[0] || null)
+        return
+      }
+    } else if (activePlayers.length <= 1) {
       this.endGame(gameState, activePlayers[0] || null)
       return
     }
