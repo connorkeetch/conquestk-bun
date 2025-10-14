@@ -7,7 +7,6 @@ import type {
 } from '@conquestk/shared/types/admin'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { adminService } from '@/services/adminService'
-import api from '@/services/api'
 
 type HealthResult = {
   label: string
@@ -165,16 +164,8 @@ export default function AdminHealth() {
             data,
           }
         }
-        const resp = await api.get(e.path)
-        const dt = Date.now() - t0
-        return {
-          label: e.label,
-          path: e.path,
-          ok: resp.status >= 200 && resp.status < 300,
-          statusCode: resp.status,
-          durationMs: dt,
-          data: resp.data,
-        }
+        // No generic fallback; all endpoints should be wrapped above
+        throw new Error('Unhandled endpoint: ' + e.label)
       } catch (err: unknown) {
         const anyErr = err as { response?: { status?: number; data?: unknown }; message?: string }
         const dt = Date.now() - t0
@@ -276,23 +267,22 @@ export default function AdminHealth() {
 
           // Helpers per endpoint for richer detail
           const renderApiHealth = () => {
-            const d = (r.data ?? {}) as Record<string, unknown>
-            const kv = (k: string) => String(d[k] ?? '')
+            const d = (r.data ?? {}) as AdminApiHealth
             return (
               <div className="mt-3 text-xs text-white/80 space-y-1">
-                <div>Server: {kv('server')}</div>
-                <div>DB: {kv('database')}</div>
-                <div>Redis: {kv('redis')}</div>
-                <div>Queues: {kv('queues')}</div>
-                <div className="text-muted">Env: {kv('environment')}</div>
-                {d.databaseError ? (
-                  <div className="text-red-400">DB error: {String(d.databaseError)}</div>
+                <div>Server: {String(d.server ?? '')}</div>
+                <div>DB: {String(d.database ?? '')}</div>
+                <div>Redis: {String(d.redis ?? '')}</div>
+                <div>Queues: {String(d.queues ?? '')}</div>
+                <div className="text-muted">Env: {String(d.environment ?? '')}</div>
+                {d['databaseError'] ? (
+                  <div className="text-red-400">DB error: {String(d['databaseError'])}</div>
                 ) : null}
-                {d.redisError ? (
-                  <div className="text-red-400">Redis error: {String(d.redisError)}</div>
+                {d['redisError'] ? (
+                  <div className="text-red-400">Redis error: {String(d['redisError'])}</div>
                 ) : null}
-                {d.queueError ? (
-                  <div className="text-red-400">Queues error: {String(d.queueError)}</div>
+                {d['queueError'] ? (
+                  <div className="text-red-400">Queues error: {String(d['queueError'])}</div>
                 ) : null}
               </div>
             )
@@ -425,14 +415,75 @@ export default function AdminHealth() {
             )
           }
 
-          const renderPerformanceAlerts = () => (
-            <div className="mt-3 text-sm text-white">
-              Active alerts:{' '}
-              {Array.isArray((r.data as { data?: unknown } | undefined)?.data)
-                ? ((r.data as { data?: unknown } | undefined)?.data as unknown[]).length
-                : 0}
-            </div>
-          )
+          const renderPerformanceDetailed = () => {
+            const d = (r.data ?? {}) as { status?: string; data?: unknown }
+            const data = (d.data ?? {}) as {
+              performance?: { status?: string }
+              redis?: { status?: string }
+              database?: { status?: string }
+              cdn?: { status?: string }
+            }
+            return (
+              <div className="mt-3 text-xs text-white/80 space-y-1">
+                <div>Overall: {String(d.status ?? 'unknown')}</div>
+                <div>Performance: {String(data.performance?.status ?? 'unknown')}</div>
+                <div>Redis: {String(data.redis?.status ?? 'unknown')}</div>
+                <div>Database: {String(data.database?.status ?? 'unknown')}</div>
+                <div>CDN: {String(data.cdn?.status ?? 'unknown')}</div>
+              </div>
+            )
+          }
+
+          const renderPerformanceMetrics = () => {
+            const d = (r.data ?? {}) as {
+              server?: {
+                uptime?: number
+                memoryUsage?: { heapUsed?: number }
+                requestsPerSecond?: number
+              }
+              database?: { avgResponseTime?: number; slowQueries?: number }
+              cache?: { hitRate?: number }
+              queues?: { waitingJobs?: number; failedJobs?: number; processedJobs?: number }
+            }
+            const memMb = d.server?.memoryUsage?.heapUsed
+              ? Math.round((d.server.memoryUsage.heapUsed / 1024 / 1024) * 10) / 10
+              : undefined
+            return (
+              <div className="mt-3 text-xs text-white/80 space-y-1">
+                <div>
+                  Uptime:{' '}
+                  {d.server?.uptime != null
+                    ? `${Math.round((d.server.uptime / 60) * 10) / 10} min`
+                    : 'unknown'}
+                </div>
+                <div>
+                  RPS:{' '}
+                  {d.server?.requestsPerSecond != null
+                    ? d.server.requestsPerSecond.toFixed(2)
+                    : 'unknown'}
+                </div>
+                <div>Memory: {memMb != null ? `${memMb} MB` : 'unknown'}</div>
+                <div>
+                  DB avg rt:{' '}
+                  {d.database?.avgResponseTime != null
+                    ? `${d.database.avgResponseTime} ms`
+                    : 'unknown'}
+                </div>
+                <div>Cache hit: {d.cache?.hitRate != null ? `${d.cache.hitRate}%` : 'unknown'}</div>
+                <div>Queue waiting: {d.queues?.waitingJobs ?? 0}</div>
+                <div>Queue failed: {d.queues?.failedJobs ?? 0}</div>
+              </div>
+            )
+          }
+
+          const renderPerformanceAlerts = () => {
+            const arr = (r.data as unknown[]) || []
+            return (
+              <div className="mt-3 text-sm text-white">
+                Active alerts: {Array.isArray(arr) ? arr.length : 0}
+              </div>
+            )
+          }
 
           return (
             <Card key={r.path} title={title}>
@@ -454,11 +505,15 @@ export default function AdminHealth() {
                     ? renderQueuesHealth()
                     : r.label === 'Queues Stats'
                       ? renderQueuesStats()
-                      : r.label === 'Match Service'
-                        ? renderMatchSvc()
-                        : r.label === 'Performance Alerts'
-                          ? renderPerformanceAlerts()
-                          : null
+                      : r.label === 'Performance Detailed'
+                        ? renderPerformanceDetailed()
+                        : r.label === 'Performance Metrics'
+                          ? renderPerformanceMetrics()
+                          : r.label === 'Performance Alerts'
+                            ? renderPerformanceAlerts()
+                            : r.label === 'Match Service'
+                              ? renderMatchSvc()
+                              : null
                 : null}
             </Card>
           )
