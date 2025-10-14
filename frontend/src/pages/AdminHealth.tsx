@@ -54,6 +54,24 @@ export default function AdminHealth() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [results, setResults] = useState<HealthResult[]>([])
   const [lastRunAt, setLastRunAt] = useState<string | null>(null)
+  const [realtime, setRealtime] = useState<{
+    payloads: {
+      gameUpdate: { count: number; p50: number; p95: number; max: number } | null
+      gameDelta: { count: number; p50: number; p95: number; max: number } | null
+      gameDeltaBatch: { count: number; p50: number; p95: number; max: number } | null
+    }
+    realtime: {
+      accepted: Array<{ metric: string; labels: Record<string, string>; value: number }>
+      byAction: Record<
+        string,
+        {
+          ackMs: { count: number; p50: number; p95: number; max: number }
+          processMs: { count: number; p50: number; p95: number; max: number }
+        }
+      >
+    }
+    ts: string
+  } | null>(null)
 
   const run = useCallback(async () => {
     setLoading(true)
@@ -219,6 +237,30 @@ export default function AdminHealth() {
     return () => clearInterval(id)
   }, [autoRefresh, run])
 
+  // Fetch realtime metrics alongside health checks
+  const loadRealtime = useCallback(async () => {
+    try {
+      const data = await adminService.getRealtimeMetrics()
+      setRealtime(data)
+    } catch {
+      setRealtime(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadRealtime().catch(() => {})
+  }, [loadRealtime])
+
+  useEffect(() => {
+    if (!autoRefresh) return
+    const id = setInterval(() => {
+      loadRealtime().catch(() => {
+        /* ignore */
+      })
+    }, 15000)
+    return () => clearInterval(id)
+  }, [autoRefresh, loadRealtime])
+
   const summary = useMemo(() => {
     const total = results.length
     const ok = results.filter((r) => r.ok).length
@@ -262,6 +304,77 @@ export default function AdminHealth() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {/* Realtime socket/queue metrics */}
+        <Card title="Realtime Metrics">
+          {realtime ? (
+            <div className="text-xs text-white/80 space-y-3">
+              <div>
+                <div className="font-semibold mb-1">Socket payloads (bytes)</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { k: 'gameUpdate', label: 'game-update' },
+                    { k: 'gameDelta', label: 'game-delta' },
+                    { k: 'gameDeltaBatch', label: 'delta-batch' },
+                  ].map((p) => {
+                    const v = (
+                      realtime.payloads as {
+                        [k: string]: { count: number; p50: number; p95: number; max: number } | null
+                      }
+                    )?.[p.k]
+                    return (
+                      <div
+                        key={p.k}
+                        className="bg-surface-3/60 rounded p-2 border border-border/40"
+                      >
+                        <div className="text-muted mb-1">{p.label}</div>
+                        <div className="flex items-center gap-3">
+                          <div>P50: {v?.p50 ?? 0}</div>
+                          <div>P95: {v?.p95 ?? 0}</div>
+                          <div>Max: {v?.max ?? 0}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div className="font-semibold mb-1">Game action latency (ms)</div>
+                <div className="space-y-1">
+                  {Object.entries(realtime.realtime.byAction || {}).map(([name, stats]) => (
+                    <div key={name} className="bg-surface-3/60 rounded p-2 border border-border/40">
+                      <div className="text-muted mb-1">{name}</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <div className="text-white/70">Ack</div>
+                          <div className="flex items-center gap-3">
+                            <div>P50: {stats.ackMs?.p50 ?? 0}</div>
+                            <div>P95: {stats.ackMs?.p95 ?? 0}</div>
+                            <div>Max: {stats.ackMs?.max ?? 0}</div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-white/70">Process</div>
+                          <div className="flex items-center gap-3">
+                            <div>P50: {stats.processMs?.p50 ?? 0}</div>
+                            <div>P95: {stats.processMs?.p95 ?? 0}</div>
+                            <div>Max: {stats.processMs?.max ?? 0}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-muted">
+                Updated: {new Date(realtime.ts).toLocaleTimeString()}
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted text-xs">No realtime metrics yet</div>
+          )}
+        </Card>
         {results.map((r) => {
           let title = r.label
 
