@@ -11,14 +11,12 @@ import Redis from 'ioredis'
 // Environment variables
 const PORT = parseInt(process.env.PORT || '3000', 10)
 // Resolve Redis connection string with sensible fallbacks
-// Priority: REDIS_URL (Railway private) -> REDIS_PUBLIC_URL (external TLS) -> REDIS_PRIVATE_URL (legacy) -> discrete host/port/password -> localhost
+// Priority: REDIS_URL (Railway private) -> REDIS_PUBLIC_URL (external TLS) -> discrete host/port/password -> localhost
 const REDIS_URL = (() => {
   const direct = process.env.REDIS_URL?.trim()
   if (direct) return direct
   const publicUrl = process.env.REDIS_PUBLIC_URL?.trim()
   if (publicUrl) return publicUrl
-  const legacyPrivate = process.env.REDIS_PRIVATE_URL?.trim()
-  if (legacyPrivate) return legacyPrivate
   const host = process.env.REDIS_HOST?.trim()
   const port = (process.env.REDIS_PORT || '6379').trim()
   const pass = process.env.REDIS_PASSWORD?.trim()

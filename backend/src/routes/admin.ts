@@ -208,7 +208,6 @@ router.get('/env/status', async (_req: Request, res: Response) => {
       { name: 'SENTRY_DSN', description: 'Sentry error tracking DSN', recommended: 'prod' },
       { name: 'REDIS_URL', description: 'Redis for sessions/queues/sockets', recommended: 'prod' },
       { name: 'REDIS_PUBLIC_URL' },
-      { name: 'REDIS_PRIVATE_URL' },
       { name: 'REDIS_CLUSTER_NODES' },
       { name: 'REDIS_PASSWORD' },
       { name: 'AI_EVAL_ENGINE', description: 'ts|wasm|shadow (AI eval)' },
