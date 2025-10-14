@@ -191,13 +191,22 @@ export default function AdminHealth() {
             )
           }
 
+          type QueueStatsLite = {
+            waiting?: number
+            failed?: number
+            active?: number
+            completed?: number
+            warnings?: unknown
+            [k: string]: unknown
+          }
+
           const renderQueuesHealth = () => {
             const d = (r.data ?? {}) as {
               success?: boolean
               status?: string
               details?: {
                 workers?: { initialized?: boolean }
-                queues?: Record<string, any>
+                queues?: Record<string, QueueStatsLite>
                 redis?: string
                 queueServiceInitialized?: boolean
               }
@@ -217,8 +226,12 @@ export default function AdminHealth() {
               { waiting: 0, failed: 0, active: 0, warned: 0 },
             )
             const warnedList = names
-              .filter((n) => Array.isArray(queues[n]?.warnings) && queues[n].warnings.length > 0)
-              .map((n) => ({ name: n, warnings: (queues[n].warnings as string[]) || [] }))
+              .filter(
+                (n) =>
+                  Array.isArray(queues[n]?.warnings) &&
+                  (queues[n]?.warnings as unknown[]).length > 0,
+              )
+              .map((n) => ({ name: n, warnings: (queues[n]?.warnings as string[]) || [] }))
               .slice(0, 5)
             return (
               <div className="mt-3 text-xs text-white/80 space-y-1">
@@ -250,7 +263,11 @@ export default function AdminHealth() {
           const renderQueuesStats = () => {
             const d = (r.data ?? {}) as {
               success?: boolean
-              data?: { initialized?: boolean; queues?: Record<string, any>; timestamp?: string }
+              data?: {
+                initialized?: boolean
+                queues?: Record<string, QueueStatsLite>
+                timestamp?: string
+              }
             }
             const queues = d.data?.queues || {}
             const names = Object.keys(queues)
