@@ -45,7 +45,16 @@ const QUEUE_NAMES = [
   'map-assets',
 ]
 
-// Create BullMQ queue instances
+// Queue descriptions for better UI
+const QUEUE_DESCRIPTIONS = {
+  'game-actions': 'Real-time game moves, attacks, fortifies, and AI turns',
+  'game-cleanup': 'Cleanup tasks after games finish',
+  'analytics-events': 'Analytics tracking and metrics',
+  'maintenance': 'Scheduled maintenance and background tasks',
+  'map-assets': 'Map image processing and optimization',
+}
+
+// Create BullMQ queue instances with enhanced configuration
 const queues = QUEUE_NAMES.map((name) => {
   const queue = new Queue(name, {
     connection: redis,
@@ -54,7 +63,17 @@ const queues = QUEUE_NAMES.map((name) => {
 
   console.log(`📋 Registered queue: ${name}`)
 
-  return new BullMQAdapter(queue)
+  // Create adapter with retry enabled and description
+  const adapter = new BullMQAdapter(queue, {
+    readOnlyMode: false,      // Allow all actions (retry, remove, etc.)
+    allowRetries: true,       // Enable retry buttons in UI
+    description: QUEUE_DESCRIPTIONS[name] || '',
+  })
+
+  // Add custom formatter to show job names with queue prefix
+  adapter.setFormatter('name', (job) => `${name} → ${job.name}`)
+
+  return adapter
 })
 
 // Create Fastify server
@@ -109,6 +128,88 @@ server.get('/health', async (request, reply) => {
   }
 })
 
+// Custom metrics endpoint - aggregated stats across all queues
+server.get('/metrics', async (request, reply) => {
+  try {
+    const metrics = {
+      timestamp: new Date().toISOString(),
+      queues: {},
+      totals: {
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 0,
+        delayed: 0,
+      },
+    }
+
+    // Get stats from each queue
+    for (const adapter of queues) {
+      const queue = adapter.queue
+      const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed')
+
+      const queueName = queue.name
+      metrics.queues[queueName] = {
+        waiting: counts.waiting || 0,
+        active: counts.active || 0,
+        completed: counts.completed || 0,
+        failed: counts.failed || 0,
+        delayed: counts.delayed || 0,
+        isPaused: await queue.isPaused(),
+      }
+
+      // Add to totals
+      metrics.totals.waiting += counts.waiting || 0
+      metrics.totals.active += counts.active || 0
+      metrics.totals.completed += counts.completed || 0
+      metrics.totals.failed += counts.failed || 0
+      metrics.totals.delayed += counts.delayed || 0
+    }
+
+    return metrics
+  } catch (error) {
+    reply.code(500)
+    return { error: 'Failed to fetch metrics', message: error.message }
+  }
+})
+
+// Auto-cleanup old jobs - runs every hour
+const AUTO_CLEANUP_INTERVAL = 60 * 60 * 1000 // 1 hour
+const CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+const CLEANUP_COUNT = 1000 // Keep at most 1000 completed jobs per queue
+
+async function cleanupOldJobs() {
+  console.log('🧹 Running auto-cleanup of old jobs...')
+
+  for (const adapter of queues) {
+    const queue = adapter.queue
+    const queueName = queue.name
+
+    try {
+      // Clean completed jobs older than 7 days, keeping last 1000
+      const completedCleaned = await queue.clean(CLEANUP_AGE_MS, CLEANUP_COUNT, 'completed')
+
+      // Clean failed jobs older than 7 days, keeping last 1000
+      const failedCleaned = await queue.clean(CLEANUP_AGE_MS, CLEANUP_COUNT, 'failed')
+
+      const total = completedCleaned.length + failedCleaned.length
+      if (total > 0) {
+        console.log(`  ✅ ${queueName}: cleaned ${total} old jobs (${completedCleaned.length} completed, ${failedCleaned.length} failed)`)
+      }
+    } catch (error) {
+      console.error(`  ❌ ${queueName}: cleanup failed -`, error.message)
+    }
+  }
+
+  console.log('✅ Auto-cleanup complete')
+}
+
+// Start cleanup interval
+const cleanupInterval = setInterval(cleanupOldJobs, AUTO_CLEANUP_INTERVAL)
+
+// Run cleanup on startup after a short delay
+setTimeout(cleanupOldJobs, 30000) // 30 seconds after startup
+
 // Start server
 const start = async () => {
   try {
@@ -130,6 +231,9 @@ const shutdown = async (signal) => {
   console.log(`\n⚠️  ${signal} received, shutting down gracefully...`)
 
   try {
+    // Clear cleanup interval
+    clearInterval(cleanupInterval)
+
     await server.close()
     await redis.quit()
     console.log('✅ Shutdown complete')
