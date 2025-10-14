@@ -76,6 +76,7 @@ import { Server } from 'socket.io'
 import { getPool, initDatabase } from './config/database.js'
 import type { RedisClients } from './config/redis.js'
 import { initializeRedis } from './config/redis.js'
+import { setAiEvalWasmAvailable } from './config/runtimeFlags.js'
 import {
   logStartupDiagnostics,
   testDatabaseConnection,
@@ -326,11 +327,11 @@ void (async () => {
     const mod = (await import(spec)) as { loadWasm: () => Promise<{ version: () => string }> }
     const api = await mod.loadWasm()
     const version = typeof api?.version === 'function' ? api.version() : 'unknown'
-    process.env.AI_EVAL_WASM_AVAILABLE = '1'
+    setAiEvalWasmAvailable(true)
     logger.info('🧠 AI eval: WASM available', { version })
   } catch (e) {
     // Ensure the flag is unset when unavailable
-    delete process.env.AI_EVAL_WASM_AVAILABLE
+    setAiEvalWasmAvailable(false)
     logger.info('🧠 AI eval: WASM unavailable; will use TS', { error: (e as Error)?.message })
   }
 })()

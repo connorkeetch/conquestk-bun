@@ -1,3 +1,4 @@
+import type { AdminQueuesHealth, AdminQueuesStats } from '@conquestk/shared/types/admin'
 import express from 'express'
 import { requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -19,10 +20,11 @@ router.get('/stats', authenticateToken, async (req, res) => {
       return
     }
     const stats = await workerManager.getStats()
-    res.json({
+    const payload: { success: true; data: AdminQueuesStats } = {
       success: true,
       data: stats,
-    })
+    }
+    res.json(payload)
   } catch (error) {
     handleRouteError(error, req, 'Failed to load queue stats')
     res.status(500).json({
@@ -36,15 +38,17 @@ router.get('/health', authenticateToken, async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
-      res.status(503).json({
+      const payload: AdminQueuesHealth & { error: string } = {
         success: false,
         status: 'not-initialized',
         details: {
           workers: { initialized: false },
           queues: {},
         },
+        timestamp: new Date().toISOString(),
         error: 'WorkerManager not initialized',
-      })
+      }
+      res.status(503).json(payload)
       return
     }
 
@@ -61,30 +65,33 @@ router.get('/health', authenticateToken, async (req, res) => {
     const statusCode =
       okStatuses.has(wmHealth.status) && okStatuses.has(qsHealth.status as string) ? 200 : 503
 
-    res.status(statusCode).json({
-      success: statusCode === 200,
-      status:
-        wmHealth.status === 'healthy' && qsHealth.status === 'healthy'
-          ? 'healthy'
-          : okStatuses.has(qsHealth.status as string)
-            ? (qsHealth.status as 'healthy' | 'disabled')
-            : 'unhealthy',
-      details: {
-        workers: (wmHealth.details as { workers?: { initialized?: boolean } }).workers ?? {
-          initialized: false,
-        },
-        queues:
-          (
-            wmHealth.details as {
-              queues?: Record<string, import('../services/queueService.js').QueueStats>
-            }
-          ).queues ?? {},
-        redis: (qsHealth.details as { redis?: string }).redis ?? 'UNKNOWN',
-        queueServiceInitialized:
-          (qsHealth.details as { initialized?: boolean }).initialized ?? false,
+    const status: AdminQueuesHealth['status'] =
+      wmHealth.status === 'healthy' && qsHealth.status === 'healthy'
+        ? 'healthy'
+        : okStatuses.has(qsHealth.status as string)
+          ? (qsHealth.status as 'healthy' | 'disabled')
+          : 'unhealthy'
+
+    const details: AdminQueuesHealth['details'] = {
+      workers: (wmHealth.details as { workers?: { initialized?: boolean } }).workers ?? {
+        initialized: false,
       },
+      queues:
+        (
+          wmHealth.details as {
+            queues?: Record<string, import('../services/queueService.js').QueueStats>
+          }
+        ).queues ?? {},
+      redis: (qsHealth.details as { redis?: string }).redis ?? 'UNKNOWN',
+      queueServiceInitialized: (qsHealth.details as { initialized?: boolean }).initialized ?? false,
+    }
+    const payload: AdminQueuesHealth = {
+      success: statusCode === 200,
+      status,
+      details,
       timestamp: new Date().toISOString(),
-    })
+    }
+    res.status(statusCode).json(payload)
   } catch (error) {
     handleRouteError(error, req, 'Failed to evaluate queue health')
     res.status(500).json({

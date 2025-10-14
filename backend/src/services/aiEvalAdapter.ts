@@ -2,6 +2,7 @@ import {
   computeConquestProbability,
   evaluateCandidates as wasmEvaluate,
 } from '@conquestk/shared/odds'
+import { isAiEvalWasmAvailable } from '../config/runtimeFlags.js'
 import { logger } from '../utils/logger.js'
 
 export type EvalEngine = 'ts' | 'wasm' | 'shadow'
@@ -19,7 +20,7 @@ export async function evaluateCandidatesAdapter(
 ): Promise<number[]> {
   const mode = (process.env.AI_EVAL_ENGINE || 'ts').toLowerCase() as EvalEngine
   const difficulty = (opts?.difficulty || 'commander').toLowerCase()
-  const wasmAvailable = process.env.AI_EVAL_WASM_AVAILABLE === '1'
+  const wasmAvailable = isAiEvalWasmAvailable()
 
   // Gate WASM to grandmaster only to minimize overhead on lighter AIs
   if (difficulty !== 'grandmaster') {

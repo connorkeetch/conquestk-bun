@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: nightly-benches
@@ -31,6 +32,9 @@ jobs:
       - name: Build shared package (for odds facade)
         run: npm run build:shared
 
+      - name: Build WASM (ensure artifacts present)
+        run: npm run odds:build
+
       - name: Run battle bench (TS vs WASM)
         run: |
           BENCH_N=10000 node scripts/bench-odds.js --quiet || BENCH_N=10000 node scripts/bench-odds.js
@@ -42,15 +46,14 @@ jobs:
       - name: Update docs with latest bench results
         run: node scripts/update-odds-bench-docs.js
 
-      - name: Commit changes (if any)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet docs/bench docs/tech/odds-engine.md; then
-            git add docs/bench docs/tech/odds-engine.md
-            git commit -m "chore(bench): update nightly bench results"
-            git push
-          else
-            echo "No bench doc changes to commit"
-          fi
-
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(bench): update nightly bench results [skip ci]"
+          title: "chore(bench): nightly bench results"
+          body: "Automated update of docs/bench and benchmark docs."
+          branch: chore/nightly-bench-results
+          delete-branch: true
+          add-paths: |
+            docs/bench/*
+            docs/tech/odds-engine.md
