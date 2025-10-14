@@ -442,9 +442,21 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }
       next()
     } catch (e) {
-      const err = e as Error
-      logger.warn('Socket auth failed', { message: err.message, name: err.name })
-      next(new Error('Authentication error'))
+      const err = e as Error & { name?: string; message?: string }
+      let reason = 'Authentication error'
+      const name = (err.name || '').toString()
+      const msg = (err.message || '').toString()
+      if (name === 'TokenExpiredError' || /expired/i.test(msg)) {
+        reason = 'Authentication error: token expired'
+      } else if (name === 'JsonWebTokenError') {
+        if (/invalid signature/i.test(msg)) reason = 'Authentication error: invalid signature'
+        else if (/jwt malformed/i.test(msg)) reason = 'Authentication error: malformed token'
+        else reason = 'Authentication error: invalid token'
+      } else if (name === 'NotBeforeError') {
+        reason = 'Authentication error: token not active yet'
+      }
+      logger.warn('Socket auth failed', { name, message: msg })
+      next(new Error(reason))
     }
   })
 
