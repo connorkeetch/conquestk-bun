@@ -72,10 +72,9 @@ router.get('/health', authenticateToken, async (req, res) => {
           ? (qsHealth.status as 'healthy' | 'disabled')
           : 'unhealthy'
 
+    const wmWorkers = (wmHealth.details as { workers?: { initialized?: boolean } }).workers
     const details: AdminQueuesHealth['details'] = {
-      workers: (wmHealth.details as { workers?: { initialized?: boolean } }).workers ?? {
-        initialized: false,
-      },
+      workers: { initialized: Boolean(wmWorkers?.initialized) },
       queues:
         (
           wmHealth.details as {
