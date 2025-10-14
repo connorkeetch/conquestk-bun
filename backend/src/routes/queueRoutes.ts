@@ -54,12 +54,21 @@ router.get('/health', authenticateToken, async (req, res) => {
     // Direct queue service perspective (adds redis ping and init flag)
     const qsHealth = await queueService.healthCheck()
 
-    const statusCode = wmHealth.status === 'healthy' && qsHealth.status === 'healthy' ? 200 : 503
+    // Treat 'disabled' (no Redis/queues) as 200 to avoid noisy failures in environments
+    // where queues are intentionally not running. Also allow a 'degraded' OK in
+    // non-strict mode when queueService reports warnings only.
+    const okStatuses = new Set(['healthy', 'disabled'])
+    const statusCode =
+      okStatuses.has(wmHealth.status) && okStatuses.has(qsHealth.status as string) ? 200 : 503
 
     res.status(statusCode).json({
       success: statusCode === 200,
       status:
-        wmHealth.status === 'healthy' && qsHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
+        wmHealth.status === 'healthy' && qsHealth.status === 'healthy'
+          ? 'healthy'
+          : okStatuses.has(qsHealth.status as string)
+            ? (qsHealth.status as 'healthy' | 'disabled')
+            : 'unhealthy',
       details: {
         workers: (wmHealth.details as { workers?: { initialized?: boolean } }).workers ?? {
           initialized: false,

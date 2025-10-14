@@ -928,9 +928,10 @@ export class QueueService {
       const pingResult = await this.redis.ping()
       const stats = await this.getQueueStats()
       const hasWarnings = Object.values(stats).some((queueStats) => queueStats.warnings.length > 0)
+      const strict = String(process.env.QUEUE_HEALTH_STRICT ?? 'true').toLowerCase() !== 'false'
 
       return {
-        status: pingResult === 'PONG' && !hasWarnings ? 'healthy' : 'unhealthy',
+        status: pingResult === 'PONG' && (!strict || !hasWarnings) ? 'healthy' : 'unhealthy',
         details: {
           redis: pingResult,
           queues: stats,
