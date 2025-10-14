@@ -7,6 +7,7 @@ import { adminService } from '../services/adminService.js'
 import { GameLifecycleService } from '../services/gameLifecycleService.js'
 import { mapService } from '../services/mapService.js'
 import { logger } from '../utils/logger.js'
+import { ENV_VARIABLES } from '../config/validateEnv.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 import { resolveAssetUrl } from '../utils/url.js'
 
@@ -128,6 +129,149 @@ router.get('/me', async (req: Request, res: Response) => {
   } catch (error) {
     handleRouteError(error, req, 'Failed to get admin info', 500, { userId: req.userId })
     res.status(500).json({ error: 'Failed to get admin info' })
+  }
+})
+
+// ============= ENVIRONMENT STATUS =============
+
+router.get('/env/status', async (_req: Request, res: Response) => {
+  try {
+    const required = [] as Array<{
+      name: string
+      required: boolean
+      present: boolean
+      valid: boolean
+      hasDefault: boolean
+      valueEqualsDefault: boolean
+      description?: string
+      issues?: string[]
+    }>
+
+    const issues: string[] = []
+
+    for (const v of ENV_VARIABLES) {
+      const raw = process.env[v.name]
+      const present = typeof raw === 'string' && raw.length > 0
+      const hasDefault = typeof v.defaultValue === 'string'
+      const valueEqualsDefault = present && hasDefault ? raw === v.defaultValue : false
+      const valid = present ? (typeof v.validator === 'function' ? v.validator(raw!) : true) : !v.required
+
+      const itemIssues: string[] = []
+      if (v.required && !present) itemIssues.push('missing')
+      if (present && !valid) itemIssues.push('invalid')
+      if (present && /SECRET|KEY|TOKEN|PASSWORD|HMAC|DSN/i.test(v.name)) {
+        const weak = raw && (raw.length < 16 || /your-|change|default/i.test(raw))
+        if (weak) itemIssues.push('weak_secret')
+      }
+
+      required.push({
+        name: v.name,
+        required: v.required,
+        present,
+        valid,
+        hasDefault,
+        valueEqualsDefault,
+        description: v.description,
+        issues: itemIssues.length ? itemIssues : undefined,
+      })
+
+      for (const i of itemIssues) issues.push(`${v.name}: ${i}`)
+    }
+
+    const OPTIONAL_VARS: Array<{ name: string; description?: string; recommended?: 'dev' | 'prod' | 'both' }> = [
+      { name: 'FRONTEND_URL', description: 'Absolute frontend origin for links', recommended: 'prod' },
+      { name: 'CORS_ORIGIN', description: 'Allowed CORS origin(s)', recommended: 'both' },
+      { name: 'CANONICAL_HOST', description: 'Apex host for 308 redirects', recommended: 'prod' },
+      { name: 'PUBLIC_ASSET_BASE_URL', description: 'Public CDN/base for assets', recommended: 'both' },
+      { name: 'VITE_ASSET_BASE_URL', description: 'Frontend/CDN base for assets', recommended: 'both' },
+      { name: 'SENTRY_DSN', description: 'Sentry error tracking DSN', recommended: 'prod' },
+      { name: 'REDIS_URL', description: 'Redis for sessions/queues/sockets', recommended: 'prod' },
+      { name: 'REDIS_PRIVATE_URL' },
+      { name: 'REDIS_CLUSTER_NODES' },
+      { name: 'REDIS_PASSWORD' },
+      { name: 'AI_EVAL_ENGINE', description: 'ts|wasm|shadow (AI eval)' },
+      { name: 'ODDS_ENGINE', description: 'ts|wasm|shadow (odds)' },
+      { name: 'ODDS_SHADOW_SCHEDULED' },
+      { name: 'ODDS_SHADOW_CRON' },
+      { name: 'ODDS_SHADOW_TRIALS' },
+      { name: 'AI_STREAM_ACTIONS' },
+      { name: 'AI_READABLE_DELAY_MS' },
+      { name: 'EMAIL_ENABLED', recommended: 'both' },
+      { name: 'EMAIL_FROM' },
+      { name: 'EMAIL_FROM_NAME' },
+      { name: 'REQUIRE_EMAIL_VERIFICATION' },
+      { name: 'RESEND_API_KEY', description: 'Resend API key', recommended: 'prod' },
+      { name: 'VAPID_PUBLIC_KEY' },
+      { name: 'VAPID_PRIVATE_KEY' },
+      { name: 'VAPID_EMAIL' },
+      { name: 'ASSET_BUCKET' },
+      { name: 'ASSET_ENDPOINT' },
+      { name: 'ASSET_ACCESS_KEY_ID' },
+      { name: 'ASSET_SECRET_ACCESS_KEY' },
+      { name: 'ASSET_REGION' },
+      { name: 'MAP_UPLOADS_DIR' },
+      { name: 'CDN_PRIMARY_URL' },
+      { name: 'CDN_API_KEY' },
+      { name: 'CDN_REGIONAL_URLS' },
+      { name: 'CDN_GAME_ASSETS_URL' },
+      { name: 'CDN_UPLOAD_ENDPOINT' },
+      { name: 'USE_MATCHSVC' },
+      { name: 'MATCHSVC_URL' },
+      { name: 'MATCHSVC_HMAC_SECRET' },
+      { name: 'BULL_PREFIX' },
+      { name: 'QUEUE_READY_TIMEOUT_MS' },
+      { name: 'QUEUE_HEALTH_STRICT' },
+      { name: 'ENABLE_AUTO_SCALING' },
+      { name: 'MIN_WORKERS' },
+      { name: 'MAX_WORKERS' },
+      { name: 'MAINTENANCE_PRUNE_INTERVAL_MS' },
+      { name: 'NOTIFICATION_RETENTION_DAYS' },
+      { name: 'PRUNE_NOTIFICATIONS_INCLUDE_UNREAD' },
+      { name: 'GAME_MOVE_ARCHIVE_BATCH_SIZE' },
+      { name: 'MEMORY_MONITOR_ENABLED' },
+      { name: 'MEMORY_MONITOR_SNAPSHOT_DIR' },
+      { name: 'SYNC_FEATURE_FLAGS_ON_START' },
+      { name: 'RUN_DEPLOY_ACCOUNT_ENFORCEMENT_ON_START' },
+      { name: 'SKIP_DEPLOY_ACCOUNT_ENFORCEMENT' },
+      { name: 'ENFORCE_DEPLOY_ACCOUNT_CHECK' },
+      { name: 'DEPLOY_ENV' },
+      { name: 'APP_ENV' },
+      { name: 'STARTUP_VERBOSE' },
+      { name: 'TEST_BASE_URL' },
+    ]
+
+    const optional = OPTIONAL_VARS.map((v) => {
+      const raw = process.env[v.name]
+      const present = typeof raw === 'string' && raw.length > 0
+      const isSecret = /SECRET|KEY|TOKEN|PASSWORD|HMAC|DSN/i.test(v.name)
+      const weak = present && isSecret && (raw!.length < 16 || /your-|change|default/i.test(raw!))
+      const issues = [] as string[]
+      if (!present && v.recommended) issues.push(`recommended_${v.recommended}`)
+      if (weak) issues.push('weak_secret')
+      return {
+        name: v.name,
+        present,
+        recommended: v.recommended,
+        description: v.description,
+        issues: issues.length ? issues : undefined,
+      }
+    })
+
+    const env = process.env.NODE_ENV || 'development'
+    const summary = {
+      environment: env,
+      requiredMissing: required.filter((r) => r.required && !r.present).length,
+      requiredInvalid: required.filter((r) => r.present && !r.valid).length,
+      optionalRecommendedMissing: optional.filter(
+        (o) => !o.present && (o.recommended === 'both' || o.recommended === (env === 'development' ? 'dev' : 'prod')),
+      ).length,
+      issues,
+    }
+
+    res.json({ summary, required, optional })
+  } catch (error) {
+    handleRouteError(error, _req, 'Failed to compute env status', 500)
+    res.status(500).json({ error: 'Failed to compute env status' })
   }
 })
 
