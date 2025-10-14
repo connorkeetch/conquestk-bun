@@ -46,12 +46,6 @@ import adminRoutes from './routes/admin.js'
 import adminQueuesRoutes from './routes/adminQueues.js'
 import { authRoutes } from './routes/auth.js'
 import benchmarkRoutes from './routes/benchmarkRoutes.js'
-import bullBoardRouterFactory, {
-  createAcceptRoute,
-  createDebugRoute,
-  createGrantRoute,
-  createLoginRoute,
-} from './routes/bullBoard.js'
 import clanRoutes from './routes/clans.js'
 import featureFlagsRoutes from './routes/featureFlags.js'
 import friendsRoutes from './routes/friends.js'
@@ -234,20 +228,6 @@ initializeRedis()
     try {
       await workerManager.initialize()
       logger.info('✅ WorkerManager created and initialized after Redis connection')
-      // Mount Bull Board UI after workers/queues are initialized to avoid 404
-      // IMPORTANT: Mount grant/accept/login routes FIRST so they're not caught by the middleware
-      try {
-        app.use(createGrantRoute())
-        app.use(createAcceptRoute())
-        app.use(createLoginRoute())
-        app.use(createDebugRoute())
-        logger.info('✅ Bull Board grant/accept routes mounted')
-        const bullBoardRouter = bullBoardRouterFactory()
-        app.use(bullBoardRouter)
-        logger.info('✅ Bull Board UI mounted at /api/admin/queues/ui')
-      } catch (e) {
-        logger.warn('⚠️ Failed to mount Bull Board after init:', getErrorMessage(e))
-      }
     } catch (error) {
       logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error))
     }
@@ -389,8 +369,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 // Static reports mount removed — reports are no longer served from the app
 
-// Bull Board is mounted after WorkerManager initialization (see Redis init block)
-// to ensure queues exist before the UI tries to access them
+// Bull Board is now a separate standalone service - see services/bullboard/
 
 // API Routes
 app.use('/api/auth', authRoutes)
