@@ -6,8 +6,11 @@ import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 
-router.use(authenticateToken)
-router.use(requireAdmin)
+// Apply admin auth only to this router's API endpoints, not to the Bull Board UI path.
+// Important: this router is mounted at "/api/admin/queues" which also prefixes the Bull Board UI
+// ("/api/admin/queues/ui"). Guard only our JSON endpoints so UI requests reach the dedicated
+// Bull Board middleware without being intercepted here.
+router.use(['/dlq', '/dlq/*', '/jobs', '/jobs/*'], authenticateToken, requireAdmin)
 
 // GET /api/admin/queues/dlq?queue=gameActions&offset=0&limit=50
 router.get('/dlq', async (req, res) => {
