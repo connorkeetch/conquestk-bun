@@ -10,7 +10,26 @@ import Redis from 'ioredis'
 
 // Environment variables
 const PORT = parseInt(process.env.PORT || '3000', 10)
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
+// Resolve Redis connection string with sensible fallbacks
+// Priority: REDIS_URL (Railway private) -> REDIS_PUBLIC_URL (external TLS) -> REDIS_PRIVATE_URL (legacy) -> discrete host/port/password -> localhost
+const REDIS_URL = (() => {
+  const direct = process.env.REDIS_URL?.trim()
+  if (direct) return direct
+  const publicUrl = process.env.REDIS_PUBLIC_URL?.trim()
+  if (publicUrl) return publicUrl
+  const legacyPrivate = process.env.REDIS_PRIVATE_URL?.trim()
+  if (legacyPrivate) return legacyPrivate
+  const host = process.env.REDIS_HOST?.trim()
+  const port = (process.env.REDIS_PORT || '6379').trim()
+  const pass = process.env.REDIS_PASSWORD?.trim()
+  const useTls = /^(1|true)$/i.test(process.env.REDIS_TLS || process.env.REDIS_USE_TLS || '')
+  if (host) {
+    const proto = useTls ? 'rediss' : 'redis'
+    const auth = pass ? `:${encodeURIComponent(pass)}@` : ''
+    return `${proto}://${auth}${host}:${port}`
+  }
+  return 'redis://localhost:6379'
+})()
 const BULL_PREFIX = process.env.BULL_PREFIX || 'bull'
 const BB_USERNAME = process.env.BB_USERNAME || 'admin'
 const BB_PASSWORD = process.env.BB_PASSWORD || 'admin'
@@ -23,9 +42,16 @@ console.log(`🔑 Username: ${BB_USERNAME}`)
 console.log(`🏷️  Bull Prefix: ${BULL_PREFIX}`)
 
 // Create Redis connection
-const redis = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: null,
+const redis = new Redis(REDIS_URL.includes('family=') ? REDIS_URL : `${REDIS_URL}${REDIS_URL.includes('?') ? '&' : '?'}family=0`, {
+  // Align with backend's Redis hardening for Railway/private networking
+  family: 0,
   enableReadyCheck: false,
+  lazyConnect: true,
+  connectTimeout: 10000,
+  commandTimeout: 5000,
+  // Keep low to avoid UI hangs while still being resilient
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => Math.min(times * 50, 2000),
 })
 
 redis.on('error', (err) => {
@@ -82,6 +108,28 @@ const server = Fastify({
     level: process.env.LOG_LEVEL || 'info',
   },
 })
+
+// In hosted Railway environments, allow a short wait for the private network
+if (
+  process.env.NODE_ENV === 'production' ||
+  process.env.NODE_ENV === 'staging' ||
+  process.env.RAILWAY_ENVIRONMENT ||
+  process.env.RAILWAY_PROJECT_ID ||
+  REDIS_URL.includes('railway.internal')
+) {
+  console.log('🚂 Railway environment detected — waiting 15s for network init…')
+  await new Promise((r) => setTimeout(r, 15000))
+}
+
+// Establish the Redis connection up-front so the UI reflects status immediately
+try {
+  await Promise.race([
+    redis.connect(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Redis connect timeout after 15s')), 15000)),
+  ])
+} catch (err) {
+  console.error('🔴 Initial Redis connect failed:', err?.message || err)
+}
 
 // Register cookie support (required for basic auth)
 await server.register(fastifyCookie, {

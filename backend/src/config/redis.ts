@@ -12,7 +12,9 @@ export interface RedisClients {
  * Initialize Redis clients for different purposes
  */
 export async function initializeRedis(): Promise<RedisClients> {
-  const redisUrl = process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL
+  // Prefer Railway private reference. Fall back to a public TLS URL if provided, then legacy var.
+  const redisUrl =
+    process.env.REDIS_URL || process.env.REDIS_PUBLIC_URL || process.env.REDIS_PRIVATE_URL
 
   if (!redisUrl) {
     logger.warn('Redis URL not configured, using in-memory fallback')
