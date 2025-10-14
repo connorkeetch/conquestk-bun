@@ -1,6 +1,7 @@
 // IMPORTANT: Import Sentry instrumentation before anything else
 import './instrument.js'
 
+import os from 'node:os'
 import * as Sentry from '@sentry/node'
 import dotenv from 'dotenv'
 
@@ -14,6 +15,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging')
 }
 
 import { ENV_VARIABLES, validateEnvironmentVariables } from './config/validateEnv.js'
+import { getJwtSecrets, hashSecret } from './utils/jwtHelpers.js'
 
 try {
   validateEnvironmentVariables()
@@ -60,6 +62,21 @@ try {
 } catch (e) {
   // Non-fatal: best-effort logging only
   logger.debug('Env status logging skipped', { error: (e as Error)?.message })
+}
+
+// Log JWT secret fingerprints (no secret values)
+try {
+  const secrets = getJwtSecrets()
+  const fingerprints = secrets.map((s) => hashSecret(s))
+  logger.info('🔐 JWT secret fingerprints', {
+    instancePid: process.pid,
+    instanceHost: typeof os.hostname === 'function' ? os.hostname() : 'unknown',
+    count: fingerprints.length,
+    primary: fingerprints[0] ?? null,
+    extras: fingerprints.slice(1),
+  })
+} catch (e) {
+  logger.warn('Could not log JWT secret fingerprints', { error: (e as Error)?.message })
 }
 
 import { createServer } from 'node:http'
