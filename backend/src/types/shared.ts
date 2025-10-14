@@ -233,6 +233,7 @@ export interface ServerToClientEvents {
   'game-update': (gameState: SerializedGameState) => void
   'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting
   'game-delta-batch': (deltas: GameDelta[]) => void
+  'log:append': (payload: { roomId: string; entries: Array<Record<string, unknown>> }) => void
   'clan:progress': (payload: ClanProgressionSocketPayload) => void
   'message.new': (payload: ConversationMessageEventPayload) => void
   'conversation.message.new': (payload: ConversationMessageEventPayload) => void
@@ -331,31 +332,7 @@ export interface ClientToServerEvents {
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
   'player:resign': (data: { roomId: string }) => void
-  deployArmies: (
-    data: { roomId: string; territoryId: string; armies: number },
-    callback?: (response: { ok: boolean; queued?: boolean; version?: number }) => void,
-  ) => void
-  attack: (data: {
-    roomId: string
-    fromTerritoryId: string
-    toTerritoryId: string
-    armies?: number
-  }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
-  fortify: (data: {
-    roomId: string
-    fromTerritoryId: string
-    toTerritoryId: string
-    armies: number
-  }) => void
-  transferConquestArmies: (data: {
-    roomId: string
-    fromTerritoryId: string
-    toTerritoryId: string
-    armies: number
-  }) => void
-  undoFortify: (data: { roomId: string }) => void
-  endTurn: (data: { roomId: string }) => void
   'turn:begin': (data: { roomId: string }) => void
   goBackToReinforcement: (data: { roomId: string }) => void
   'host:replacement': (data: {

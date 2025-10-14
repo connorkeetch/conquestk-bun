@@ -692,35 +692,8 @@ export interface ClientToServerEvents {
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
   'player:resign': (data: { roomId: string }) => void
-  deployArmies: (
-    data: { roomId: string; territoryId: string; armies: number },
-    callback?: (response: { ok: boolean; queued?: boolean; version?: number }) => void,
-  ) => void
-  attack: (
-    data: {
-      roomId: string
-      fromTerritoryId: string
-      toTerritoryId: string
-      armies?: number
-    },
-    callback?: (response: { ok: boolean; queued?: boolean }) => void,
-  ) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
-  fortify: (data: {
-    roomId: string
-    fromTerritoryId: string
-    toTerritoryId: string
-    armies: number
-  }) => void
-  endTurn: (data: { roomId: string }) => void
   'turn:begin': (data: { roomId: string }) => void
-  transferConquestArmies: (data: {
-    roomId: string
-    fromTerritoryId: string
-    toTerritoryId: string
-    armies: number
-  }) => void
-  undoFortify: (data: { roomId: string }) => void
   'host:replacement': (data: {
     roomId: string
     targetUserId: string
