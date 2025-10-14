@@ -1,4 +1,10 @@
-import type { AdminQueuesHealth, AdminQueuesStats } from '@conquestk/shared/types/admin'
+import type {
+  AdminApiHealth,
+  AdminMatchSvcStatus,
+  AdminOddsStatus,
+  AdminQueuesHealth,
+  AdminQueuesStats,
+} from '@conquestk/shared/types/admin'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { adminService } from '@/services/adminService'
 import api from '@/services/api'
@@ -61,6 +67,19 @@ export default function AdminHealth() {
       const t0 = Date.now()
       try {
         // Prefer service wrappers for admin endpoints
+        if (e.label === 'API Health') {
+          const data = await adminService.getApiHealth()
+          const dt = Date.now() - t0
+          const ok = String((data as AdminApiHealth).status || '').toUpperCase() === 'OK'
+          return {
+            label: e.label,
+            path: e.path,
+            ok,
+            statusCode: ok ? 200 : 503,
+            durationMs: dt,
+            data,
+          }
+        }
         if (e.label === 'Queues Health') {
           const data = await adminService.getQueueHealth()
           const dt = Date.now() - t0
@@ -81,6 +100,67 @@ export default function AdminHealth() {
             path: e.path,
             ok: true,
             statusCode: 200,
+            durationMs: dt,
+            data,
+          }
+        }
+        if (e.label === 'Performance Detailed') {
+          const data = await adminService.getPerformanceHealthDetailed()
+          const dt = Date.now() - t0
+          return {
+            label: e.label,
+            path: e.path,
+            ok: !!(data as { success?: boolean }).success,
+            statusCode: (data as { success?: boolean }).success ? 200 : 503,
+            durationMs: dt,
+            data,
+          }
+        }
+        if (e.label === 'Performance Metrics') {
+          const data = await adminService.getPerformanceMetrics()
+          const dt = Date.now() - t0
+          return {
+            label: e.label,
+            path: e.path,
+            ok: true,
+            statusCode: 200,
+            durationMs: dt,
+            data,
+          }
+        }
+        if (e.label === 'Performance Alerts') {
+          const data = await adminService.getPerformanceAlerts(true)
+          const dt = Date.now() - t0
+          const ok = Array.isArray(data)
+          return {
+            label: e.label,
+            path: e.path,
+            ok,
+            statusCode: ok ? 200 : 503,
+            durationMs: dt,
+            data,
+          }
+        }
+        if (e.label === 'Match Service') {
+          const data = await adminService.getMatchSvcStatus()
+          const dt = Date.now() - t0
+          return {
+            label: e.label,
+            path: e.path,
+            ok: !!(data as AdminMatchSvcStatus).ok,
+            statusCode: (data as AdminMatchSvcStatus).ok ? 200 : 503,
+            durationMs: dt,
+            data,
+          }
+        }
+        if (e.label === 'Odds/WASM Status') {
+          const data = await adminService.getOddsStatus()
+          const dt = Date.now() - t0
+          return {
+            label: e.label,
+            path: e.path,
+            ok: !!(data as AdminOddsStatus).success,
+            statusCode: (data as AdminOddsStatus).success ? 200 : 503,
             durationMs: dt,
             data,
           }
