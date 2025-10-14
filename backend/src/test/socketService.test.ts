@@ -269,13 +269,20 @@ describe('socketService event handlers', () => {
     queueServiceMocks.addGameAction.mockResolvedValue({ id: 'job-123' })
 
     const { socket } = initialiseHandlers()
-    const attackHandler = getSocketHandler(socket, 'attack')
+    const handler = getSocketHandler(socket, 'game-action')
 
-    await attackHandler({
+    await handler({
       roomId: 'room-42',
-      fromTerritoryId: 'territory-a',
-      toTerritoryId: 'territory-b',
-      armies: 3,
+      action: {
+        type: 'attack',
+        roomId: 'room-42',
+        playerId: 'user-1',
+        payload: {
+          fromTerritoryId: 'territory-a',
+          toTerritoryId: 'territory-b',
+          armies: 3,
+        },
+      },
     })
 
     expect(queueService.addGameAction).toHaveBeenCalledWith(
@@ -296,13 +303,16 @@ describe('socketService event handlers', () => {
 
   it('sends fortify updates as coalesced deltas after processing', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
-    const fortifyHandler = getSocketHandler(socket, 'fortify')
+    const handler = getSocketHandler(socket, 'game-action')
 
-    await fortifyHandler({
+    await handler({
       roomId: 'room-99',
-      fromTerritoryId: 'from',
-      toTerritoryId: 'to',
-      armies: 5,
+      action: {
+        type: 'fortify',
+        roomId: 'room-99',
+        playerId: 'user-1',
+        payload: { fromTerritoryId: 'from', toTerritoryId: 'to', armies: 5 },
+      },
     })
 
     expect(mockGameServiceInstance.processFortify).toHaveBeenCalledWith(
@@ -326,9 +336,12 @@ describe('socketService event handlers', () => {
 
   it('broadcasts phase changes via unified game-delta on end turn', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
-    const endTurnHandler = getSocketHandler(socket, 'endTurn')
+    const handler = getSocketHandler(socket, 'game-action')
 
-    await endTurnHandler({ roomId: 'room-end' })
+    await handler({
+      roomId: 'room-end',
+      action: { type: 'end_turn', roomId: 'room-end', playerId: 'user-1' },
+    })
 
     expect(mockGameServiceInstance.endTurn).toHaveBeenCalledWith('room-end', 'user-1')
 
@@ -350,13 +363,16 @@ describe('socketService event handlers', () => {
     queueServiceMocks.addGameAction.mockResolvedValue(null)
 
     const { socket, io } = initialiseHandlers()
-    const attackHandler = getSocketHandler(socket, 'attack')
+    const handler = getSocketHandler(socket, 'game-action')
 
-    await attackHandler({
+    await handler({
       roomId: 'room-degraded',
-      fromTerritoryId: 'a',
-      toTerritoryId: 'b',
-      armies: 1,
+      action: {
+        type: 'attack',
+        roomId: 'room-degraded',
+        playerId: 'user-1',
+        payload: { fromTerritoryId: 'a', toTerritoryId: 'b', armies: 1 },
+      },
     })
 
     expect(queueService.addGameAction).toHaveBeenCalled()
@@ -368,19 +384,22 @@ describe('socketService event handlers', () => {
     queueServiceMocks.addGameAction.mockRejectedValue(new Error('queue offline'))
 
     const { socket } = initialiseHandlers()
-    const attackHandler = getSocketHandler(socket, 'attack')
+    const handler = getSocketHandler(socket, 'game-action')
 
-    await attackHandler({
+    await handler({
       roomId: 'room-failure',
-      fromTerritoryId: 'x',
-      toTerritoryId: 'y',
-      armies: 2,
+      action: {
+        type: 'attack',
+        roomId: 'room-failure',
+        playerId: 'user-1',
+        payload: { fromTerritoryId: 'x', toTerritoryId: 'y', armies: 2 },
+      },
     })
 
     expect(socket.emit).toHaveBeenCalledWith(
       'error',
       expect.objectContaining({
-        event: 'attack',
+        event: 'game-action',
         message: expect.stringContaining('queue offline'),
       }),
     )

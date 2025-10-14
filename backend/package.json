@@ -32,7 +32,6 @@
     "migrate:status": "ts-node src/scripts/checkSchema.ts",
     "migrate:squash": "ts-node src/scripts/squashMigrations.ts",
     "notify": "ts-node src/scripts/notify.ts",
-    "repair:game-state": "ts-node src/scripts/repairGameState.ts",
     "backfill:conversation-read": "ts-node src/scripts/backfillConversationReadState.ts",
     "flags:check": "ts-node src/scripts/checkFeatureFlags.ts",
     "flags:sync": "ts-node src/scripts/checkFeatureFlags.ts --apply",

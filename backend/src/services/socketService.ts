@@ -789,63 +789,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
+    // (dev) No legacy endTurn event; use unified 'game-action' with type 'end_turn'
+
     // Deprecated 'transferConquestArmies' removed; clients should use 'game-action' with type 'transfer_conquest'
 
-    // Legacy direct events (compat): map to unified game-action
-    socket.on(
-      'attack',
-      withErrorHandler(
-        socket,
-        'attack',
-        async (data: {
-          roomId: string
-          fromTerritoryId: string
-          toTerritoryId: string
-          armies?: number
-        }) => {
-          const userId = requireUserId(socket)
-          await queueService.addGameAction({
-            gameId: data.roomId,
-            playerId: userId,
-            action: {
-              type: 'attack',
-              roomId: data.roomId,
-              playerId: userId,
-              payload: {
-                fromTerritoryId: data.fromTerritoryId,
-                toTerritoryId: data.toTerritoryId,
-                ...(typeof data.armies === 'number' ? { armies: data.armies } : {}),
-              },
-            },
-            socketId: socket.id,
-          })
-        },
-      ),
-    )
-
-    socket.on(
-      'fortify',
-      withErrorHandler(
-        socket,
-        'fortify',
-        async (data: {
-          roomId: string
-          fromTerritoryId: string
-          toTerritoryId: string
-          armies: number
-        }) => {
-          const userId = requireUserId(socket)
-          await gameActionProcessor.processFortify(
-            data.roomId,
-            userId,
-            data.fromTerritoryId,
-            data.toTerritoryId,
-            data.armies,
-            socket.id,
-          )
-        },
-      ),
-    )
     // Player resigns: neutralize their territories and mark eliminated
     socket.on(
       'player:resign',
@@ -968,21 +915,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
-    socket.on(
-      'goBackToReinforcement',
-      withErrorHandler(socket, 'goBackToReinforcement', async (data) => {
-        logger.warn('DEPRECATED_SOCKET_EVENT', {
-          event: 'goBackToReinforcement',
-          prefer: 'game-action',
-        })
-        if (!data || !data.roomId) {
-          throw new Error('Invalid go-back data')
-        }
-
-        const userId = requireUserId(socket)
-        await gameActionProcessor.processGoBack(data.roomId, userId, socket.id)
-      }),
-    )
+    // (dev) Remove legacy 'goBackToReinforcement' event; use unified 'game-action'
 
     socket.on(
       'chat-message',
