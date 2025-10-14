@@ -62,6 +62,7 @@ class SocketService {
   private pendingConfirmTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private pendingAttackAcks: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private lastAttackEmitAt: Map<string, number> = new Map()
+  private lastAuthToastAt: number | null = null
 
   connect() {
     // Reset any pending fetch tracking on a fresh connection attempt
@@ -358,21 +359,41 @@ class SocketService {
     this.socket.on('connect_error', (err) => {
       // Reflect disconnect state immediately
       store.dispatch(setConnectionStatus('disconnected'))
-      const msg = (err && (err as Error).message) || 'Connection error'
-      // Only show session-expired prompt for actual auth failures from server middleware
-      if (
-        msg === 'Authentication error' ||
-        msg === 'Server configuration error' ||
-        /unauthoriz/i.test(msg)
-      ) {
-        try {
-          toast.error('Session expired. Please sign in again to restore realtime updates.', {
-            id: 'session-expired',
-            position: 'bottom-center',
-            duration: 6000,
-          })
-        } catch {
-          // no-op
+      const raw = (err && (err as Error).message) || 'Connection error'
+      const msg = String(raw)
+      const lower = msg.toLowerCase()
+      // Throttle auth toasts to once every 30s
+      const now = Date.now()
+      const canToast = !this.lastAuthToastAt || now - this.lastAuthToastAt > 30_000
+      const toastOpts = { id: 'socket-auth', position: 'bottom-center' as const, duration: 6000 }
+
+      // Only surface message for real auth/config failures
+      if (canToast) {
+        if (lower.includes('token expired')) {
+          toast.error(
+            'Session expired. Please sign in again to restore realtime updates.',
+            toastOpts,
+          )
+          this.lastAuthToastAt = now
+        } else if (
+          lower.includes('invalid signature') ||
+          lower.includes('malformed token') ||
+          lower.includes('invalid token')
+        ) {
+          toast.error('Authentication failed. Please sign out and sign in again.', toastOpts)
+          this.lastAuthToastAt = now
+        } else if (lower.includes('server configuration error')) {
+          toast.error(
+            'Realtime temporarily unavailable (server config). Please try again shortly.',
+            toastOpts,
+          )
+          this.lastAuthToastAt = now
+        } else if (lower.includes('authentication error') || /unauthoriz/.test(lower)) {
+          toast.error(
+            'Authentication error. Please sign in again to restore realtime updates.',
+            toastOpts,
+          )
+          this.lastAuthToastAt = now
         }
       }
     })
