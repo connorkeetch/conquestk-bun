@@ -156,11 +156,27 @@ export class GameActionWorker {
 
   async initialize(): Promise<void> {
     const processJob = async (job: Job): Promise<unknown> => {
+      const started = Date.now()
       if (job.name === 'process-game-action') {
-        return this.processGameAction(job as Job<GameActionJob>)
+        const res = await this.processGameAction(job as Job<GameActionJob>)
+        try {
+          const { realtimeMetrics } = await import('../services/metricsService.js')
+          const actionType = (job.data as GameActionJob).action?.type || 'unknown'
+          realtimeMetrics.recordProcess(actionType, Date.now() - started)
+        } catch {
+          /* ignore */
+        }
+        return res
       }
       if (job.name === 'execute-ai-turn') {
-        return this.processAiTurn(job)
+        const res = await this.processAiTurn(job)
+        try {
+          const { realtimeMetrics } = await import('../services/metricsService.js')
+          realtimeMetrics.recordProcess('ai_turn', Date.now() - started)
+        } catch {
+          /* ignore */
+        }
+        return res
       }
       logger.warn('Received unknown job for game-actions queue', { name: job.name, id: job.id })
       return null

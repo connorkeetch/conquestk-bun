@@ -642,104 +642,131 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
     socket.on(
       'game-action',
-      withErrorHandler(socket, 'game-action', async (data) => {
-        if (!data || !data.roomId || !data.action) {
-          throw new Error('Invalid game action data')
-        }
+      withErrorHandler(
+        socket,
+        'game-action',
+        async (data, ack?: (r: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void) => {
+          if (!data || !data.roomId || !data.action) {
+            throw new Error('Invalid game action data')
+          }
 
-        const userId = requireUserId(socket)
-        const channel = getGameChannel(data.roomId)
-        const normalizedAction = { ...data.action, roomId: data.roomId, playerId: userId }
+          const userId = requireUserId(socket)
+          const channel = getGameChannel(data.roomId)
+          const normalizedAction = { ...data.action, roomId: data.roomId, playerId: userId }
 
-        // Queue the game action for processing
-        const job = await queueService.addGameAction({
-          gameId: data.roomId,
-          playerId: userId,
-          action: normalizedAction,
-          socketId: socket.id,
-        })
-
-        if (job) {
-          logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
-            jobId: job.id,
+          const t0 = Date.now()
+          // Queue the game action for processing
+          const job = await queueService.addGameAction({
+            gameId: data.roomId,
             playerId: userId,
+            action: normalizedAction,
+            socketId: socket.id,
           })
-        } else {
-          logger.info(
-            `Processing game action inline (no queue): ${normalizedAction.type} for game ${data.roomId}`,
-            { playerId: userId },
-          )
 
-          try {
-            switch (normalizedAction.type) {
-              case 'deploy': {
-                await gameActionProcessor.processDeployment(
-                  data.roomId,
-                  userId,
-                  (normalizedAction as DeployAction).payload.territoryId,
-                  (normalizedAction as DeployAction).payload.armies,
-                  socket.id,
-                )
-                break
-              }
-              case 'attack': {
-                await gameActionProcessor.processAttack(
-                  data.roomId,
-                  userId,
-                  (normalizedAction as AttackAction).payload.fromTerritoryId,
-                  (normalizedAction as AttackAction).payload.toTerritoryId,
-                  (normalizedAction as AttackAction).payload?.armies,
-                  socket.id,
-                )
-                break
-              }
-              case 'fortify': {
-                await gameActionProcessor.processFortify(
-                  data.roomId,
-                  userId,
-                  (normalizedAction as FortifyAction).payload.fromTerritoryId,
-                  (normalizedAction as FortifyAction).payload.toTerritoryId,
-                  (normalizedAction as FortifyAction).payload.armies,
-                  socket.id,
-                )
-                break
-              }
-              case 'end_turn': {
-                await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id)
-                break
-              }
-              case 'go_back_to_reinforcement': {
-                await gameActionProcessor.processGoBack(data.roomId, userId, socket.id)
-                break
-              }
-              case 'transfer_conquest': {
-                await gameActionProcessor.processTransferConquest(
-                  data.roomId,
-                  userId,
-                  (normalizedAction as import('../types/game.js').TransferConquestAction).payload
-                    .fromTerritoryId,
-                  (normalizedAction as import('../types/game.js').TransferConquestAction).payload
-                    .toTerritoryId,
-                  (normalizedAction as import('../types/game.js').TransferConquestAction).payload
-                    .armies,
-                  socket.id,
-                )
-                break
-              }
-              default: {
-                const updatedState = await gameService.processGameAction(normalizedAction, userId)
-                const serialized = serializeGameStateForClient(updatedState)
-                if (serialized) {
-                  emitGameUpdateToRoom(io, channel, serialized)
-                }
-                break
+          if (job) {
+            logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
+              jobId: job.id,
+              playerId: userId,
+            })
+            try {
+              const { realtimeMetrics } = await import('./metricsService.js')
+              realtimeMetrics.recordAck(data.action.type, Date.now() - t0)
+            } catch {
+              /* ignore */
+            }
+            if (typeof ack === 'function') {
+              try {
+                ack({ ok: true, queued: true, acceptedAt: Date.now() })
+              } catch {
+                /* ignore */
               }
             }
-          } catch (inlineError) {
-            handleSocketError(socket, 'game-action:inline', inlineError)
+          } else {
+            logger.info(
+              `Processing game action inline (no queue): ${normalizedAction.type} for game ${data.roomId}`,
+              { playerId: userId },
+            )
+
+            try {
+              const { realtimeMetrics } = await import('./metricsService.js')
+              realtimeMetrics.recordAck(normalizedAction.type, Date.now() - t0)
+              if (typeof ack === 'function') {
+                try {
+                  ack({ ok: true, queued: false, acceptedAt: Date.now() })
+                } catch {
+                  /* ignore */
+                }
+              }
+              switch (normalizedAction.type) {
+                case 'deploy': {
+                  await gameActionProcessor.processDeployment(
+                    data.roomId,
+                    userId,
+                    (normalizedAction as DeployAction).payload.territoryId,
+                    (normalizedAction as DeployAction).payload.armies,
+                    socket.id,
+                  )
+                  break
+                }
+                case 'attack': {
+                  await gameActionProcessor.processAttack(
+                    data.roomId,
+                    userId,
+                    (normalizedAction as AttackAction).payload.fromTerritoryId,
+                    (normalizedAction as AttackAction).payload.toTerritoryId,
+                    (normalizedAction as AttackAction).payload?.armies,
+                    socket.id,
+                  )
+                  break
+                }
+                case 'fortify': {
+                  await gameActionProcessor.processFortify(
+                    data.roomId,
+                    userId,
+                    (normalizedAction as FortifyAction).payload.fromTerritoryId,
+                    (normalizedAction as FortifyAction).payload.toTerritoryId,
+                    (normalizedAction as FortifyAction).payload.armies,
+                    socket.id,
+                  )
+                  break
+                }
+                case 'end_turn': {
+                  await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id)
+                  break
+                }
+                case 'go_back_to_reinforcement': {
+                  await gameActionProcessor.processGoBack(data.roomId, userId, socket.id)
+                  break
+                }
+                case 'transfer_conquest': {
+                  await gameActionProcessor.processTransferConquest(
+                    data.roomId,
+                    userId,
+                    (normalizedAction as import('../types/game.js').TransferConquestAction).payload
+                      .fromTerritoryId,
+                    (normalizedAction as import('../types/game.js').TransferConquestAction).payload
+                      .toTerritoryId,
+                    (normalizedAction as import('../types/game.js').TransferConquestAction).payload
+                      .armies,
+                    socket.id,
+                  )
+                  break
+                }
+                default: {
+                  const updatedState = await gameService.processGameAction(normalizedAction, userId)
+                  const serialized = serializeGameStateForClient(updatedState)
+                  if (serialized) {
+                    emitGameUpdateToRoom(io, channel, serialized)
+                  }
+                  break
+                }
+              }
+            } catch (inlineError) {
+              handleSocketError(socket, 'game-action:inline', inlineError)
+            }
           }
-        }
-      }),
+        },
+      ),
     )
 
     // Deployment phase - migrated to use queue system

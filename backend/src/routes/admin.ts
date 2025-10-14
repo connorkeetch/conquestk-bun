@@ -2564,3 +2564,18 @@ router.post(
 )
 
 export default router
+// Lightweight realtime metrics for Socket.IO/game actions
+router.get('/realtime-metrics', async (_req: Request, res: Response) => {
+  try {
+    const { realtimeMetrics, socketPayloadMetrics } = await import('../services/metricsService.js')
+    const payloads = {
+      gameUpdate: socketPayloadMetrics.snapshot('game-update'),
+      gameDelta: socketPayloadMetrics.snapshot('game-delta'),
+      gameDeltaBatch: socketPayloadMetrics.snapshot('game-delta-batch'),
+    }
+    const realtime = realtimeMetrics.snapshot()
+    res.json({ ok: true, payloads, realtime, ts: new Date().toISOString() })
+  } catch (e) {
+    res.status(500).json({ ok: false, error: (e as Error)?.message || 'failed' })
+  }
+})

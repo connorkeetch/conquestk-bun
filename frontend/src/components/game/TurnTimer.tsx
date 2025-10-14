@@ -79,9 +79,21 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
   const activeBankSeconds =
     usingTimeBank && expiresAt ? Math.max(0, Math.ceil((expiresAt - now) / 1000)) : null
 
+  // If base timer has expired but we still have a bank balance (and server hasn't flipped
+  // usingTimeBank yet), show a flashing Timebank label immediately.
+  const baseTimerExpired = Boolean(expiresAt && now >= expiresAt)
+  const bankAvailable = typeof availableBankSeconds === 'number' && availableBankSeconds > 0
+  const bankPending = baseTimerExpired && bankAvailable && !usingTimeBank
+  const showBankLabel = usingTimeBank || bankPending
+  const bankSecondsDisplay = usingTimeBank
+    ? activeBankSeconds
+    : bankPending
+      ? availableBankSeconds
+      : null
+
   const displaySeconds =
-    usingTimeBank && typeof activeBankSeconds === 'number' ? activeBankSeconds : totalSeconds
-  const timerClass = usingTimeBank
+    showBankLabel && typeof bankSecondsDisplay === 'number' ? bankSecondsDisplay : totalSeconds
+  const timerClass = showBankLabel
     ? 'text-xs tabular-nums text-red-400 font-semibold animate-pulse'
     : `text-xs tabular-nums ${color}`
 
@@ -105,20 +117,22 @@ export function TurnTimer({ className = '', showBank = true }: Props) {
       ) : (
         <>
           <div className={timerClass}>
-            {usingTimeBank ? `Bank ${formatWorded(displaySeconds)}` : formatWorded(displaySeconds)}
+            {showBankLabel
+              ? `Timebank: ${formatWorded(displaySeconds)}`
+              : formatWorded(displaySeconds)}
           </div>
           {showBank &&
-            !usingTimeBank &&
+            !showBankLabel &&
             typeof availableBankSeconds === 'number' &&
             availableBankSeconds > 0 && (
               <span className="chip text-[10px]" title="Time bank remaining">
                 +{formatWorded(availableBankSeconds)}
               </span>
             )}
-          {showBank && usingTimeBank && (
+          {showBank && showBankLabel && (
             <span
               className="chip text-[10px] text-red-200 bg-red-500/20 animate-pulse"
-              title="Time bank active"
+              title={usingTimeBank ? 'Time bank active' : 'Time bank activating'}
             >
               Time bank
             </span>
