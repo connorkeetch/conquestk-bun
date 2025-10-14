@@ -107,7 +107,17 @@ REQUIRE_EMAIL_VERIFICATION=true
 RESEND_API_KEY=[Resend API key]  # or provide SMTP_* credentials instead
 
 # Redis & caching
-REDIS_URL=[Railway Redis addon URL]
+# Prefer Railway private networking via a Variable Reference.
+REDIS_URL=[Railway Redis add-on private URL]
+
+# Optional: if you must use the public endpoint instead of the private network
+# (for services outside the Railway project or custom networking), set:
+# REDIS_PUBLIC_URL=[rediss://… public TLS URL from the Redis add-on]
+
+# Notes
+# - Use REDIS_URL (private) for services within the same Railway project.
+# - Only use REDIS_PUBLIC_URL when private DNS isn’t available.
+# - Keep BULL_PREFIX consistent across backend and Bull Board (default: "bull").
 
 # Logging & telemetry
 LOG_LEVEL=info
@@ -155,6 +165,12 @@ openssl rand -base64 32  # JWT and session secrets
 ### Health Checks
 - Production: https://conquestk.com/api/health (behind proxy)
 - Staging: https://dev.conquestk.com/health
+
+### Bull Board (Queues UI)
+- Bull Board runs as a separate Railway service. See `services/bullboard/README.md`.
+- Set `REDIS_URL` via Variable Reference to the same Redis used by the backend (and the same `BULL_PREFIX`).
+- Health: `GET https://<bullboard-domain>/health` (Basic Auth)
+- Metrics: `GET https://<bullboard-domain>/metrics` (Basic Auth)
 
 ### Odds Engine Status
 - Endpoint: `/api/odds/status` (no auth)
