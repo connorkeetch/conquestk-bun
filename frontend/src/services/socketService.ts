@@ -157,7 +157,7 @@ class SocketService {
       } finally {
         this.pendingConfirmTimers.delete(roomId)
       }
-    }, 1200)
+    }, 600)
     this.pendingConfirmTimers.set(roomId, timer)
   }
 
@@ -182,6 +182,35 @@ class SocketService {
         }
       },
     )
+
+    // Optimistic UI update: adjust local state immediately for a smoother feel
+    try {
+      const state = store.getState()
+      const current = state.game.currentGame
+      const userId = state.auth.user?.id
+      if (!current || current.roomId !== roomId || !userId) return
+      // Only allow optimistic update during reinforcement on your turn
+      if (current.phase !== 'reinforcement' || current.currentPlayer !== userId) return
+
+      const idx = current.board.findIndex((t) => t.id === territoryId)
+      if (idx === -1) return
+
+      // Apply in-memory update and dispatch
+      const next = { ...current, board: [...current.board] }
+      const target = { ...next.board[idx] }
+      target.armies = (target.armies ?? 0) + armies
+      // Assume ownership remains the same; server will correct if illegal
+      next.board[idx] = target as (typeof next.board)[number]
+
+      // Reduce local reinforcement pool if available
+      const currentPool = state.game.reinforcementArmies ?? 0
+      const newPool = Math.max(0, currentPool - armies)
+
+      store.dispatch(updateGameState(next as unknown as GameState))
+      store.dispatch(setReinforcementArmies(newPool))
+    } catch {
+      // best-effort optimistic update only
+    }
   }
 
   attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
