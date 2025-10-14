@@ -210,6 +210,13 @@ const ENV_VARIABLES: EnvVariable[] = [
     defaultValue: 'false',
     description: 'Enable the external Go matchsvc (true) or use built-in TS presence (false)',
   },
+  {
+    name: 'QUEUE_HEALTH_STRICT',
+    required: false,
+    defaultValue: 'true',
+    description:
+      'If false, queue health reports healthy when Redis responds even if warnings exist (degraded OK)',
+  },
 ]
 
 export function validateEnvironmentVariables(): void {
