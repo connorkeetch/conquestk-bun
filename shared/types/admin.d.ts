@@ -40,3 +40,4 @@ export interface AdminQueuesHealth {
   }
   timestamp: string
 }
+
