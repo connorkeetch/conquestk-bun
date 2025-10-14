@@ -9,6 +9,10 @@ This service provides a web dashboard showing:
 - Job statuses (waiting, active, completed, failed, delayed)
 - Failed job details and error messages
 - Queue health and performance metrics
+- **Retry buttons** for failed jobs directly in the UI
+- **Pause/Resume controls** for each queue
+- **Custom metrics endpoint** with aggregated statistics
+- **Automatic cleanup** of old jobs (runs hourly)
 
 **Live Dashboard**: https://bullboard-production-e18d.up.railway.app
 
@@ -107,14 +111,75 @@ Visit `https://your-url.railway.app/health` (requires login):
 }
 ```
 
+### Custom Metrics Endpoint
+Visit `https://your-url.railway.app/metrics` (requires login) for aggregated queue statistics:
+```json
+{
+  "timestamp": "2025-10-14T09:34:12.345Z",
+  "queues": {
+    "game-actions": {
+      "waiting": 5,
+      "active": 2,
+      "completed": 1234,
+      "failed": 3,
+      "delayed": 0,
+      "isPaused": false
+    }
+  },
+  "totals": {
+    "waiting": 15,
+    "active": 4,
+    "completed": 5678,
+    "failed": 12,
+    "delayed": 0
+  }
+}
+```
+
+## Features
+
+### Automatic Job Cleanup
+
+The service automatically cleans up old jobs to prevent database bloat:
+- Runs every **1 hour** (starting 30 seconds after service startup)
+- Removes jobs older than **7 days**
+- Keeps the most recent **1000 completed** and **1000 failed** jobs per queue
+- Logs cleanup results to help monitor performance
+
+Check the Railway logs to see cleanup activity:
+```
+🧹 Running auto-cleanup of old jobs...
+  ✅ game-actions: cleaned 245 old jobs (200 completed, 45 failed)
+  ✅ analytics-events: cleaned 89 old jobs (89 completed, 0 failed)
+✅ Auto-cleanup complete
+```
+
+### Queue Descriptions
+
+Each queue has a helpful description shown in the UI:
+- **game-actions**: Real-time game moves, attacks, fortifies, and AI turns
+- **game-cleanup**: Cleanup tasks after games finish
+- **analytics-events**: Analytics tracking and metrics
+- **maintenance**: Scheduled maintenance and background tasks
+- **map-assets**: Map image processing and optimization
+
+### Enhanced UI Controls
+
+The Bull Board UI includes:
+- **Retry buttons** for failed jobs (enabled via `allowRetries: true`)
+- **Pause/Resume** controls for each queue
+- **Job name formatting** with queue prefix for clarity
+- **Queue statistics** showing waiting, active, completed, failed, and delayed counts
+
 ## Updating Queues
 
 To add/remove queues:
 
 1. Edit `services/bullboard/index.js`
-2. Update `QUEUE_NAMES` array (line 33)
-3. Commit and push
-4. Railway auto-redeploys
+2. Update `QUEUE_NAMES` array (line 40)
+3. Optionally add description to `QUEUE_DESCRIPTIONS` (line 48)
+4. Commit and push
+5. Railway auto-redeploys
 
 ## Technology Stack
 
