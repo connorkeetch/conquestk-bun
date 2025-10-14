@@ -2572,12 +2572,31 @@ export class GameService {
   ): PlayerRankingSummary[] {
     const eliminationOrder = this.buildEliminationOrder(battleLog)
     const playersById = new Map(players.map((player) => [player.id, player]))
-    const winner = players.find((player) => !player.isEliminated) ?? null
-
-    const orderedIds: string[] = []
-    if (winner) {
-      orderedIds.push(winner.id)
+    // Determine winning side: in team play, all players on the last remaining side
+    // are winners (even if eliminated earlier). In FFA, winner is the last active player.
+    const active = players.filter((p) => !p.isEliminated)
+    let winningSideKey: string | null = null
+    if (active.length > 0) {
+      if ((playersById.values().next().value as GamePlayer | undefined)?.teamId !== undefined) {
+        // Team-aware: choose the first active player's side as canonical winning side
+        const first = active[0]
+        const teamId = (first as { teamId?: number | null }).teamId
+        winningSideKey = teamId ? `team:${teamId}` : `player:${first.id}`
+      } else {
+        winningSideKey = `player:${active[0].id}`
+      }
     }
+
+    const isOnWinningSide = (p: GamePlayer): boolean => {
+      if (!winningSideKey) return false
+      const teamId = (p as { teamId?: number | null }).teamId
+      const key = teamId ? `team:${teamId}` : `player:${p.id}`
+      return key === winningSideKey
+    }
+
+    // Winners first (preserve original players order), then elimination order, then remaining
+    const winnersFirst = players.filter(isOnWinningSide).map((p) => p.id)
+    const orderedIds: string[] = [...winnersFirst]
 
     for (const eliminated of eliminationOrder) {
       if (!orderedIds.includes(eliminated) && playersById.has(eliminated)) {
@@ -2603,7 +2622,7 @@ export class GameService {
       return {
         userId: playerId,
         position: index + 1,
-        isWinner: winner?.id === playerId,
+        isWinner: player ? isOnWinningSide(player) : false,
         eliminated: stats.eliminated ?? player?.isEliminated ?? true,
         territories: stats.territories,
         armies: stats.armies,

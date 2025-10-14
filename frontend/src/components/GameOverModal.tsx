@@ -424,6 +424,16 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
     territoriesByPlayer.set(t.ownerId, (territoriesByPlayer.get(t.ownerId) ?? 0) + 1)
     armiesByPlayer.set(t.ownerId, (armiesByPlayer.get(t.ownerId) ?? 0) + t.armies)
   }
+  const idToPlayer = new Map(players.map((p) => [p.id, p]))
+  const allowTeamPlay = Boolean(
+    (game as unknown as { gameConfig?: { allowTeamPlay?: boolean } })?.gameConfig?.allowTeamPlay,
+  )
+  const activePlayers = players.filter((p) => !p.isEliminated)
+  const winningTeamId: number | null =
+    allowTeamPlay && activePlayers.length > 0
+      ? ((activePlayers[0] as unknown as { teamId?: number | null }).teamId ?? null)
+      : null
+
   const entries = players.map((p) => ({
     id: p.id,
     name: p.username,
@@ -432,6 +442,11 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
     armies: armiesByPlayer.get(p.id) ?? 0,
     eliminated: p.isEliminated,
     eliminatedTurn: elimTurn[p.id] ?? null,
+    teamWinner:
+      allowTeamPlay && winningTeamId !== null
+        ? ((idToPlayer.get(p.id) as unknown as { teamId?: number | null })?.teamId ?? null) ===
+          winningTeamId
+        : false,
     cp:
       typeof cpDelta[p.id] === 'number'
         ? cpDelta[p.id]
@@ -456,6 +471,14 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
               />
               <div className={`font-medium ${e.eliminated ? 'opacity-80' : ''}`}>
                 {idx + 1}. {e.name} {e.eliminated ? <span title="Eliminated">💀</span> : null}
+                {e.eliminated && e.teamWinner ? (
+                  <span
+                    className="ml-2 inline-flex items-center gap-1 rounded bg-[color:var(--surface-2)] px-2 py-0.5 text-[10px] text-success border border-[color:var(--panel-border)]"
+                    title="Your team won"
+                  >
+                    🏆 Team Victory
+                  </span>
+                ) : null}
                 {typeof e.cp === 'number' ? (
                   <span
                     className={`ml-2 text-[10px] ${e.cp >= 0 ? 'text-green-400' : 'text-red-400'}`}
