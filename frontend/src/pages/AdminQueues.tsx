@@ -135,88 +135,26 @@ export default function AdminQueues() {
     }
   }, [])
 
-  const backendOrigin = useMemo(() => {
-    return API_URL.startsWith('http') ? API_URL.replace(/\/?api$/, '') : window.location.origin
-  }, [])
-
-  const bullBoardUrl = useMemo(() => `${backendOrigin}/api/admin/queues/ui`, [backendOrigin])
+  // Bull Board is now a standalone service
+  const bullBoardUrl = 'https://bullboard-production-e18d.up.railway.app/?status=active'
 
   const checkBullBoard = useCallback(async () => {
     try {
       setBbStatus('checking')
-      // Ensure UI cookie is set and valid for the UI path
-      await apiClient.post('/admin/queues/ui/grant', undefined, { withCredentials: true })
-      const response = await apiClient.get('/admin/queues/ui', {
-        withCredentials: true,
-        validateStatus: () => true,
-        responseType: 'text',
-      })
-      const status = response.status
-      if (status === 200) setBbStatus('ok')
-      else if (status === 401) setBbStatus('unauthorized')
-      else if (status === 403) setBbStatus('forbidden')
-      else if (status === 404) setBbStatus('not_found')
-      else setBbStatus('error')
-    } catch {
-      setBbStatus('error')
-    }
-  }, [])
-
-  const openBullBoard = useCallback(async () => {
-    const raw = localStorage.getItem('token') || ''
-    const token = raw && raw !== 'null' && raw !== 'undefined' ? raw : ''
-
-    try {
-      setBbStatus('checking')
-      const response = await fetch(bullBoardUrl, {
-        method: 'GET',
-        credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-
-      if (response.status === 200) {
+      const response = await fetch(bullBoardUrl, { method: 'HEAD' })
+      if (response.ok) {
         setBbStatus('ok')
-        window.location.assign(bullBoardUrl)
-        return
-      }
-
-      if (response.status === 401) {
-        setBbStatus('unauthorized')
-        if (token) {
-          window.location.assign(`${bullBoardUrl}?access_token=${encodeURIComponent(token)}`)
-          return
-        }
-      } else if (response.status === 403) {
-        setBbStatus('forbidden')
-        alert('Bull Board rejected the request (403). Ensure your account is still an admin.')
-        return
-      } else if (response.status === 404) {
-        setBbStatus('not_found')
-        alert('Bull Board UI is not deployed (404).')
-        return
       } else {
         setBbStatus('error')
       }
     } catch {
       setBbStatus('error')
     }
+  }, [bullBoardUrl])
 
-    try {
-      const resp = await apiClient.post<{ success: boolean; code?: string }>(
-        '/admin/queues/ui/grant',
-        undefined,
-        { withCredentials: true },
-      )
-      const code = (resp.data as unknown as { code?: unknown })?.code as string | undefined
-      if (code) {
-        window.location.assign(`/api/admin/queues/login?code=${encodeURIComponent(code)}`)
-        return
-      }
-
-      alert('Failed to prepare access for Bull Board')
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
-    }
+  const openBullBoard = useCallback(() => {
+    // Bull Board is now a separate service, just open it in a new tab
+    window.open(bullBoardUrl, '_blank', 'noopener,noreferrer')
   }, [bullBoardUrl])
 
   useEffect(() => {
@@ -296,9 +234,7 @@ export default function AdminQueues() {
             </div>
             <button
               type="button"
-              onClick={() => {
-                void openBullBoard()
-              }}
+              onClick={openBullBoard}
               className="px-3 py-2 text-sm rounded bg-purple-600 hover:brightness-110"
             >
               Open Bull Board
