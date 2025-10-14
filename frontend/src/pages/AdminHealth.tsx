@@ -165,7 +165,7 @@ export default function AdminHealth() {
           }
         }
         // No generic fallback; all endpoints should be wrapped above
-        throw new Error('Unhandled endpoint: ' + e.label)
+        throw new Error(`Unhandled endpoint: ${e.label}`)
       } catch (err: unknown) {
         const anyErr = err as { response?: { status?: number; data?: unknown }; message?: string }
         const dt = Date.now() - t0
@@ -275,14 +275,14 @@ export default function AdminHealth() {
                 <div>Redis: {String(d.redis ?? '')}</div>
                 <div>Queues: {String(d.queues ?? '')}</div>
                 <div className="text-muted">Env: {String(d.environment ?? '')}</div>
-                {d['databaseError'] ? (
-                  <div className="text-red-400">DB error: {String(d['databaseError'])}</div>
+                {d.databaseError ? (
+                  <div className="text-red-400">DB error: {String(d.databaseError)}</div>
                 ) : null}
-                {d['redisError'] ? (
-                  <div className="text-red-400">Redis error: {String(d['redisError'])}</div>
+                {d.redisError ? (
+                  <div className="text-red-400">Redis error: {String(d.redisError)}</div>
                 ) : null}
-                {d['queueError'] ? (
-                  <div className="text-red-400">Queues error: {String(d['queueError'])}</div>
+                {d.queueError ? (
+                  <div className="text-red-400">Queues error: {String(d.queueError)}</div>
                 ) : null}
               </div>
             )

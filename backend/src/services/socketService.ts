@@ -769,91 +769,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       ),
     )
 
-    // Deployment phase - migrated to use queue system
-    socket.on(
-      'deployArmies',
-      withErrorHandler(
-        socket,
-        'deployArmies',
-        async (
-          data,
-          ack?: (response: { ok: boolean; queued?: boolean; version?: number }) => void,
-        ) => {
-          logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'deployArmies', prefer: 'game-action' })
-          if (!data || !data.roomId || !data.territoryId || typeof data.armies !== 'number') {
-            throw new Error('Invalid deployment data')
-          }
-
-          const userId = requireUserId(socket)
-
-          // Authorization check: verify player is in the room
-          const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-          if (!hasAccess) {
-            throw new Error('Unauthorized: You are not a member of this game')
-          }
-
-          // Process via unified processor (handles queue vs inline internally)
-          const outcome = await gameActionProcessor.processDeployment(
-            data.roomId,
-            userId,
-            data.territoryId,
-            data.armies,
-            socket.id,
-          )
-          if (typeof ack === 'function') {
-            ack({
-              ok: true,
-              queued: outcome.mode === 'queued',
-              ...(outcome.result?.version !== undefined ? { version: outcome.result.version } : {}),
-            })
-          }
-        },
-      ),
-    )
-
-    // Attack phase - always route through GameActionProcessor/GameEngine
-    socket.on(
-      'attack',
-      withErrorHandler(
-        socket,
-        'attack',
-        async (data, ack?: (r: { ok: boolean; queued?: boolean }) => void) => {
-          logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'attack', prefer: 'game-action' })
-          if (!data || !data.roomId || !data.fromTerritoryId || !data.toTerritoryId) {
-            throw new Error('Invalid attack data')
-          }
-
-          const userId = requireUserId(socket)
-
-          // Authorization check: verify player is in the room
-          const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-          if (!hasAccess) {
-            throw new Error('Unauthorized: You are not a member of this game')
-          }
-
-          // If client doesn't specify armies, let downstream logic use the territory's
-          // available armies to determine dice (max 3/2). Avoid defaulting to 1.
-          const armies: number | undefined =
-            typeof data.armies === 'number' ? data.armies : undefined
-          const outcome = await gameActionProcessor.processAttack(
-            data.roomId,
-            userId,
-            data.fromTerritoryId,
-            data.toTerritoryId,
-            armies,
-            socket.id,
-          )
-          if (typeof ack === 'function') {
-            try {
-              ack({ ok: true, queued: outcome.mode === 'queued' })
-            } catch {
-              // ignore ack errors
-            }
-          }
-        },
-      ),
-    )
-
     // Capital warning check
     socket.on(
       'checkCapitalAttack',
@@ -875,94 +790,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     )
 
     // Deprecated 'transferConquestArmies' removed; clients should use 'game-action' with type 'transfer_conquest'
-
-    // Fortification phase
-    socket.on(
-      'fortify',
-      withErrorHandler(socket, 'fortify', async (data) => {
-        logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'fortify', prefer: 'game-action' })
-        if (
-          !data ||
-          !data.roomId ||
-          !data.fromTerritoryId ||
-          !data.toTerritoryId ||
-          typeof data.armies !== 'number'
-        ) {
-          throw new Error('Invalid fortification data')
-        }
-
-        const userId = requireUserId(socket)
-
-        // Authorization check: verify player is in the room
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) {
-          throw new Error('Unauthorized: You are not a member of this game')
-        }
-
-        await gameActionProcessor.processFortify(
-          data.roomId,
-          userId,
-          data.fromTerritoryId,
-          data.toTerritoryId,
-          data.armies,
-          socket.id,
-        )
-      }),
-    )
-
-    // Undo fortify action
-    socket.on(
-      'undoFortify',
-      withErrorHandler(socket, 'undoFortify', async (data) => {
-        logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'undoFortify', prefer: 'game-action' })
-        if (!data || !data.roomId) {
-          throw new Error('Invalid undo fortify data')
-        }
-
-        const userId = requireUserId(socket)
-
-        // Authorization check: verify player is in the room
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) {
-          throw new Error('Unauthorized: You are not a member of this game')
-        }
-
-        // Queue the undo action
-        const job = await queueService.addGameAction({
-          gameId: data.roomId,
-          playerId: userId,
-          action: {
-            type: 'undo_fortify',
-            roomId: data.roomId,
-            playerId: userId,
-            payload: undefined,
-          },
-          socketId: socket.id,
-        })
-
-        if (job) {
-          logger.info(`Queued undo fortify for game ${data.roomId}`, {
-            jobId: job.id,
-          })
-        } else {
-          // Queue disabled/unavailable: execute synchronously
-          await gameService.processGameAction(
-            {
-              type: 'undo_fortify',
-              roomId: data.roomId,
-              playerId: userId,
-              payload: undefined,
-            },
-            userId,
-          )
-          const channel = getGameChannel(data.roomId)
-          const serialized = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
-          if (serialized) {
-            emitGameUpdateToRoom(io, channel, serialized)
-          }
-        }
-      }),
-    )
 
     // Player resigns: neutralize their territories and mark eliminated
     socket.on(
@@ -1072,19 +899,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           }
         },
       ),
-    )
-    // End turn
-    socket.on(
-      'endTurn',
-      withErrorHandler(socket, 'endTurn', async (data) => {
-        logger.warn('DEPRECATED_SOCKET_EVENT', { event: 'endTurn', prefer: 'game-action' })
-        if (!data || !data.roomId) {
-          throw new Error('Invalid end turn data')
-        }
-
-        const userId = requireUserId(socket)
-        await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id)
-      }),
     )
 
     socket.on(

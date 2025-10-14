@@ -46,15 +46,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const game = useAppSelector((s) => s.game.currentGame)
   const clientLogs = useAppSelector((s) => s.uiRoom.clientLogs ?? [])
   const [entries, setEntries] = useState<LogEntry[]>([])
-  const [refreshKey, setRefreshKey] = useState(0)
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
   const lastTurnRef = useRef<number | null>(null)
   const lastRoundRef = useRef<number | null>(null)
   const startedLoggedRef = useRef(false)
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isRefreshingRef = useRef(false)
+  // Removed refresh timers in favor of live 'log:append'
   const fogMode = (game?.gameConfig?.fogOfWar ?? room?.fogOfWar ?? 'off') as
     | 'off'
     | 'adjacent'
@@ -476,7 +474,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 }
               }
             }
-            continue
           }
           // Flush any pending battle aggregation before handling non-battle entries
           flushBf()
@@ -854,17 +851,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [
-    gameId,
-    redact,
-    playerName,
-    territoryName,
-    toSafeInt,
-    game?.phase,
-    room?.status,
-    playerColor,
-    refreshKey,
-  ])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
 
   useEffect(() => {
     const ENABLE_CLIENT_SYNTHESIS = false
@@ -1366,59 +1353,304 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     game?.players,
   ])
 
-  // Authoritative refresh: re-fetch DB log on deltas and enrich resign messages immediately
+  // Live log appends: subscribe to 'log:append' to avoid refetching
   useEffect(() => {
     if (!gameId || redact) return
 
-    const scheduleRefresh = () => {
-      if (isRefreshingRef.current) return
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
-      refreshTimerRef.current = setTimeout(() => {
-        refreshTimerRef.current = null
-        isRefreshingRef.current = true
-        setRefreshKey((v) => v + 1)
-        // End refresh cycle after kicking the backfill
-        setTimeout(() => {
-          isRefreshingRef.current = false
-        }, 50)
-      }, 300)
+    function add(text: string, ts?: Date) {
+      const targetTs = ts ?? new Date()
+      setEntries((prev) => {
+        const windowMs = 2000
+        const dup = prev.some(
+          (e) => e.text === text && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
+        )
+        if (dup) return prev
+        return [{ ts: targetTs, text }, ...prev].slice(0, 500)
+      })
+    }
+    function addRich(rich: ReactNode, textFallback: string, ts?: Date) {
+      const targetTs = ts ?? new Date()
+      setEntries((prev) => {
+        const windowMs = 2000
+        const dup = prev.some(
+          (e) =>
+            e.text === textFallback && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
+        )
+        if (dup) return prev
+        return [{ ts: targetTs, text: textFallback, rich }, ...prev].slice(0, 500)
+      })
     }
 
-    const onDelta: Parameters<typeof socketService.on<'game-delta'>>[1] = (delta) => {
-      const d = delta as unknown as GameDelta
-      if (!d || (d as { roomId?: string }).roomId !== gameId) return
-      scheduleRefresh()
-      if ((d as { type?: string }).type === 'SYSTEM_MESSAGE') {
-        try {
-          const sm = d as SystemMessageDelta & { playerId?: string }
-          const text = String(sm.text || '')
-          if (/resigned/i.test(text)) {
-            const pid = (sm as { playerId?: string }).playerId || ''
-            if (pid) {
-              const name = playerName.get(pid) || pid
-              setEntries((prev) =>
-                [
-                  {
-                    ts: new Date(sm.timestamp),
-                    text: `${name} resigned. Territories are now neutral.`,
-                  },
-                  ...prev,
-                ].slice(0, 500),
+    const onLogAppend: Parameters<typeof socketService.on<'log:append'>>[1] = (payload) => {
+      try {
+        const p = payload as unknown as {
+          roomId?: string
+          entries?: Array<Record<string, unknown>>
+        }
+        if (!p || p.roomId !== gameId) return
+        const entries = Array.isArray(p.entries) ? p.entries : []
+        for (const e of entries) {
+          const er = e as Record<string, unknown>
+          const type = String((er.type as string) || 'BATTLE')
+          const ts = new Date(String(er.timestamp ?? Date.now()))
+          if (type === 'LIFECYCLE') {
+            const ev = String(er.event)
+            if (ev === 'CREATED') add('Game created.', ts)
+            else if (ev === 'STARTED') add('Game started.', ts)
+            else if (ev === 'COMPLETED') add('Game finished.', ts)
+            continue
+          }
+          if (type === 'RESIGN') {
+            const pid = String((er.playerId as string) || '')
+            const name = playerName.get(pid) || pid || 'A player'
+            addRich(
+              <>
+                <span className="font-semibold" style={{ color: playerColor.get(pid) }}>
+                  {name}
+                </span>{' '}
+                resigned. Territories are now neutral.
+              </>,
+              `${name} resigned. Territories are now neutral.`,
+              ts,
+            )
+            continue
+          }
+          if (type === 'TURN') {
+            const name = playerName.get(String(er.playerId || '')) || String(er.playerId || '')
+            const event = String(er.event)
+            if (event === 'END') {
+              const id = String(er.playerId || '')
+              addRich(
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                    {name}
+                  </span>{' '}
+                  ended the turn.
+                </>,
+                `${name} ended the turn.`,
+                ts,
+              )
+            } else if (event === 'MISSED') {
+              const id = String(er.playerId || '')
+              const reason =
+                (er as { reason?: string }).reason === 'timeout' ? ' (timer expired)' : ''
+              addRich(
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                    {name}
+                  </span>{' '}
+                  missed the turn
+                  {reason ? <span className="whitespace-pre"> (timer expired)</span> : null}.
+                </>,
+                `${name} missed the turn${reason}.`,
+                ts,
+              )
+            } else if (event === 'START') {
+              const reinf = toSafeInt(
+                (er as { reinforcementArmies?: number }).reinforcementArmies,
+                0,
+              )
+              const terrs = toSafeInt((er as { territoryCount?: number }).territoryCount, 0)
+              const id = String(er.playerId || '')
+              if (reinf > 0) {
+                addRich(
+                  <>
+                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                      {name}
+                    </span>{' '}
+                    received {reinf} troops{terrs > 0 ? <> for {terrs} territories</> : null}.
+                  </>,
+                  terrs > 0
+                    ? `${name} received ${reinf} troops for ${terrs} territories.`
+                    : `${name} received ${reinf} troops.`,
+                  ts,
+                )
+              }
+              addRich(
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                    {name}
+                  </span>{' '}
+                  started the turn.
+                </>,
+                `${name} started the turn.`,
+                ts,
               )
             }
+            continue
           }
-        } catch {
-          /* ignore */
+          if (type === 'REINFORCE') {
+            const id = String(er.playerId || '')
+            const name = playerName.get(id) || id
+            const territory =
+              territoryName.get(String(er.territoryId || '')) || String(er.territoryId || '')
+            const change = toSafeInt((er as { armies?: number }).armies, 0)
+            if (change > 0) {
+              addRich(
+                <>
+                  {territory} (
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                    {name}
+                  </span>
+                  ) received {change} {change === 1 ? 'troop' : 'troops'}.
+                </>,
+                `${territory} (${name}) received ${change} ${change === 1 ? 'troop' : 'troops'}.`,
+                ts,
+              )
+            }
+            continue
+          }
+          if (type === 'FORTIFY') {
+            const id = String(er.playerId || '')
+            const name = playerName.get(id) || id
+            const from =
+              territoryName.get(String(er.fromTerritoryId || '')) ||
+              String(er.fromTerritoryId || '')
+            const to =
+              territoryName.get(String(er.toTerritoryId || '')) || String(er.toTerritoryId || '')
+            const moved = toSafeInt((er as { movedArmies?: number }).movedArmies, 0)
+            addRich(
+              <>
+                {to} (
+                <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                  {name}
+                </span>
+                ) was fortified from {from} (
+                <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                  {name}
+                </span>
+                ) with {moved} {moved === 1 ? 'troop' : 'troops'}.
+              </>,
+              `${to} (${name}) was fortified from ${from} (${name}) with ${moved} ${moved === 1 ? 'troop' : 'troops'}.`,
+              ts,
+            )
+            continue
+          }
+          if (type === 'TREASURE') {
+            const id = String(er.userId || '')
+            const name = playerName.get(id) || id
+            addRich(
+              <>
+                <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                  {name}
+                </span>{' '}
+                received a card.
+              </>,
+              `${name} received a card.`,
+              ts,
+            )
+            continue
+          }
+          if (type === 'TREASURE_CASH') {
+            const id = String(er.playerId || '')
+            const name = playerName.get(id) || id
+            const troops = toSafeInt((er as { troops?: number }).troops, 0)
+            if (troops > 0) {
+              addRich(
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                    {name}
+                  </span>{' '}
+                  received {troops} troops for cashing treasures.
+                </>,
+                `${name} received ${troops} troops for cashing treasures.`,
+                ts,
+              )
+            }
+            continue
+          }
+          if (type === 'SECTOR_BONUS') {
+            const id = String(er.playerId || '')
+            const name = playerName.get(id) || id
+            const sector = String((er as { sectorName?: string }).sectorName || 'a sector')
+            const bonus = toSafeInt((er as { bonus?: number }).bonus, 0)
+            if (bonus > 0) {
+              addRich(
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                    {name}
+                  </span>{' '}
+                  received {bonus} troops for holding {sector}.
+                </>,
+                `${name} received ${bonus} troops for holding ${sector}.`,
+                ts,
+              )
+            }
+            continue
+          }
+          if (type === 'ENGAGEMENT_SUMMARY') {
+            const attackerId = String((er as { attackerId?: string }).attackerId || '')
+            const defenderId = (er as { defenderId?: string }).defenderId || undefined
+            const from =
+              territoryName.get(
+                String((er as { attackingTerritoryId?: string }).attackingTerritoryId || ''),
+              ) || String((er as { attackingTerritoryId?: string }).attackingTerritoryId || '')
+            const to =
+              territoryName.get(
+                String((er as { defendingTerritoryId?: string }).defendingTerritoryId || ''),
+              ) || String((er as { defendingTerritoryId?: string }).defendingTerritoryId || '')
+            const attackerName = playerName.get(attackerId) || attackerId || 'Unknown'
+            const defenderName = defenderId ? playerName.get(defenderId) || defenderId : undefined
+            const initFrom = toSafeInt(
+              (er as { initialFromArmies?: number }).initialFromArmies,
+              NaN,
+            )
+            const initTo = toSafeInt((er as { initialToArmies?: number }).initialToArmies, NaN)
+            const totals =
+              (er as { totalLosses?: { attacker?: number; defender?: number } }).totalLosses || {}
+            const killed = toSafeInt(totals.defender, 0)
+            const lost = toSafeInt(totals.attacker, 0)
+            const conquered = Boolean((er as { conquered?: boolean }).conquered)
+            const withCounts =
+              Number.isFinite(initFrom) && Number.isFinite(initTo)
+                ? { from: `${from} - ${initFrom}`, to: `${to} - ${initTo}` }
+                : { from, to }
+            const oddsText =
+              Number.isFinite(initFrom) && Number.isFinite(initTo)
+                ? ` • ≈${Math.round(computeConquestProbability(Math.max(0, initFrom), Math.max(0, initTo)) * 100)}% win`
+                : ''
+            addRich(
+              <>
+                {withCounts.from} (
+                <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
+                  {attackerName}
+                </span>
+                ) attacked {withCounts.to}
+                {defenderName ? (
+                  <>
+                    {' '}
+                    (
+                    <span
+                      className="font-semibold"
+                      style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
+                    >
+                      {defenderName}
+                    </span>
+                    )
+                  </>
+                ) : null}
+                {conquered ? ' conquering it,' : ''} killing {killed}, losing {lost}
+                {oddsText ? oddsText : null}.
+              </>,
+              `${withCounts.from} (${attackerName}) attacked ${withCounts.to}${defenderName ? ` (${defenderName})` : ''}${conquered ? ' conquering it,' : ''} killing ${killed}, losing ${lost}.${oddsText}`,
+              ts,
+            )
+            continue
+          }
+          if (type === 'BATTLE') {
+            // For now, let summary lines carry the aggregated recap; optional: add roll-level lines
+          }
         }
+      } catch {
+        /* ignore */
       }
     }
-    socketService.on('game-delta', onDelta)
+
+    socketService.on('log:append', onLogAppend)
     return () => {
-      socketService.off('game-delta', onDelta)
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
-      refreshTimerRef.current = null
+      socketService.off('log:append', onLogAppend)
     }
-  }, [gameId, redact, playerName])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, playerColor])
 
   return (
     <div className={`flex flex-col h-full min-h-0 bg-surface-1 rounded-lg ${className}`}>

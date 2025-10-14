@@ -1457,7 +1457,8 @@ export class GameService {
     }
   }> {
     // Wrap entire operation in database transaction for atomicity
-    return await transaction(async (client) => {
+    let emitted: GameLogEntry[] = []
+    const result = await transaction(async (client) => {
       const gameState = await this.getGameState(gameId)
       if (!gameState) throw new Error('Game not found')
 
@@ -1536,6 +1537,7 @@ export class GameService {
           `UPDATE game_states SET game_log = $1, last_activity = NOW() WHERE room_id = $2`,
           [JSON.stringify(updated), gameId],
         )
+        emitted = [entry]
       }
 
       let phaseChanged:
@@ -1557,6 +1559,16 @@ export class GameService {
         version: updatedState.version,
       }
     })
+    // Emit appended reinforce log if any
+    try {
+      if (emitted.length > 0) {
+        const io = tryGetSocketServer()
+        if (io) io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
+      }
+    } catch {
+      /* ignore emit errors */
+    }
+    return result
   }
 
   async processFortify(
@@ -1564,7 +1576,8 @@ export class GameService {
     data: { fromTerritoryId: string; toTerritoryId: string; armies: number; playerId: string },
   ): Promise<{ fromArmies: number; toArmies: number }> {
     // Wrap entire operation in database transaction for atomicity
-    return await transaction(async (client) => {
+    let emitted: GameLogEntry[] = []
+    const result = await transaction(async (client) => {
       const cachedState = await gameStateCache.getGameState<SerializedGameState>(gameId)
       if (!cachedState) throw new Error('Game not found')
       const gameState = this.hydrateGameState(cachedState, gameId)
@@ -1637,12 +1650,22 @@ export class GameService {
         [JSON.stringify(updated), gameId],
       )
 
+      emitted = [entry]
       return {
         fromArmies,
         toArmies,
         version: updatedState.version,
       }
     })
+    try {
+      if (emitted.length > 0) {
+        const io = tryGetSocketServer()
+        if (io) io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
+      }
+    } catch {
+      /* ignore emit errors */
+    }
+    return result
   }
 
   async processEndTurn(gameId: string, playerId: string): Promise<{ id: string }> {
@@ -1669,7 +1692,7 @@ export class GameService {
     const reinforcementArmies = this.gameEngine.calculateBaseReinforcementArmies(state, userId)
     const territoryCount = state.board.filter((t) => t.ownerId === userId).length
     let logged = false
-    let _appendedEntry: TurnLogEntry | null = null
+    let appended: GameLogEntry[] = []
     await transaction(async (client) => {
       const existing = await client.query<{ game_log: GameLogEntry[] | null }>(
         'SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE',
@@ -1744,8 +1767,17 @@ export class GameService {
         [roomId, JSON.stringify(updated)],
       )
       logged = true
-      _appendedEntry = entry
+      appended = [entry, ...sectorEntries]
     })
+    // Emit appended TURN/SECTOR logs if any
+    if (logged && appended.length > 0) {
+      try {
+        const io = tryGetSocketServer()
+        if (io) io.to(`game:${roomId}`).emit('log:append', { roomId, entries: appended })
+      } catch {
+        /* ignore */
+      }
+    }
 
     return { logged, reinforcementArmies, turnNumber }
   }
@@ -2024,6 +2056,7 @@ export class GameService {
 
     let persistenceOutcome: { applied: boolean; divergence: number }
     let latestBattleLog: GameLogEntry[] = []
+    let appended: GameLogEntry[] = []
 
     try {
       persistenceOutcome = await transaction(async (client) => {
@@ -2141,6 +2174,7 @@ export class GameService {
           -500,
         )
         latestBattleLog = updatedLog
+        appended = [...preExtra, logEntry, ...extra]
         const roundNumber = this.calculateRoundNumber(updatedGameState)
 
         await client.query(
@@ -2191,6 +2225,15 @@ export class GameService {
     battleMetrics.recordApply(gameId, status, persistenceOutcome.divergence)
 
     if (persistenceOutcome.applied) {
+      // Emit appended battle log entries to subscribers
+      try {
+        if (appended.length > 0) {
+          const io = tryGetSocketServer()
+          if (io) io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: appended })
+        }
+      } catch {
+        /* ignore emit errors */
+      }
       // If players were eliminated, transfer their treasures to the attacker now
       try {
         if (lastBattleResult.eliminatedPlayers && lastBattleResult.eliminatedPlayers.length > 0) {
@@ -3149,5 +3192,17 @@ export class GameService {
         [roomId, JSON.stringify(updated)],
       )
     })
+    // Push append to subscribers for this room
+    try {
+      const io = tryGetSocketServer()
+      if (io && entries.length > 0) {
+        io.to(`game:${roomId}`).emit('log:append', {
+          roomId,
+          entries: entries as unknown as Record<string, unknown>[],
+        })
+      }
+    } catch {
+      // best-effort emit only
+    }
   }
 }

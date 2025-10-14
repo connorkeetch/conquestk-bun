@@ -480,6 +480,7 @@ export interface ServerToClientEvents {
   'game-update': (gameState: GameState) => void
   'game-delta': (delta: GameDelta) => void
   'game-delta-batch': (deltas: GameDelta[]) => void
+  'log:append': (payload: { roomId: string; entries: Array<Record<string, unknown>> }) => void
   'clan:progress': (payload: ClanProgressionSocketPayload) => void
   'message.new': (payload: ConversationMessageEventPayload) => void
   'conversation.message.new': (payload: ConversationMessageEventPayload) => void
