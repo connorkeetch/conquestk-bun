@@ -87,11 +87,11 @@ class SocketService {
       (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
 
     // Cast to typed Socket to enable strong event typing without generics on io()
-    // Force websocket transport in production to avoid polling 502s behind proxies
+    // Prefer WebSocket, but allow polling fallback to avoid reconnect loops behind certain proxies
     this.socket = io(socketUrl, {
       auth: { token },
       path: '/socket.io',
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -343,13 +343,8 @@ class SocketService {
       try {
         const state = store.getState()
         const roomId = state.room.currentRoom?.id ?? state.game.currentGame?.roomId ?? null
-        const userId = state.auth.user?.id
-        const isMember = Boolean(
-          roomId && userId && state.room.currentRoom?.players?.some((p) => p.userId === userId),
-        )
-        if (roomId && isMember) {
-          this.joinRoom(roomId)
-        }
+        // Always attempt to rejoin when a room is active; server validates membership
+        if (roomId) this.joinRoom(roomId)
       } catch {
         // best-effort; if state not accessible, skip rejoin
       }
@@ -357,6 +352,21 @@ class SocketService {
 
     this.socket.on('disconnect', () => {
       store.dispatch(setConnectionStatus('disconnected'))
+    })
+
+    this.socket.on('connect_error', (err) => {
+      // Reflect disconnect state immediately
+      store.dispatch(setConnectionStatus('disconnected'))
+      const msg = (err && (err as Error).message) || 'Connection error'
+      // Common auth failure patterns -> prompt user
+      if (/auth/i.test(msg) || /jwt/i.test(msg)) {
+        try {
+          // Surface a clear message; keep user on page to avoid data loss
+          toast.error('Session expired. Please sign in again to restore realtime updates.')
+        } catch {
+          // no-op
+        }
+      }
     })
 
     this.socket.on('player-joined', (data) => {
