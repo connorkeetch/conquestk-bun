@@ -974,8 +974,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
         if (!hasAccess) throw new Error('Not a member of this game')
 
-        // Neutralize territories and eliminate player
-        await lifecycleService.kickAndNeutralize(data.roomId, userId)
+        // Neutralize territories and eliminate player (mark as resignation)
+        await lifecycleService.kickAndNeutralize(data.roomId, userId, 'resignation')
 
         // Broadcast updated game state
         const channel = getGameChannel(data.roomId)
@@ -984,12 +984,17 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         if (serialized) {
           emitGameUpdateToRoom(io, channel, serialized)
         }
-        // System log message for Game Log panel
+        // System + DB log for resignation
         try {
+          const now = new Date()
+          // Append authoritative RESIGN entry to database log
+          await gameService.appendLog(data.roomId, [
+            { type: 'RESIGN', timestamp: now.toISOString(), playerId: userId },
+          ])
           io.to(channel).emit('game-delta', {
             type: 'SYSTEM_MESSAGE',
             roomId: data.roomId,
-            timestamp: Date.now(),
+            timestamp: now.getTime(),
             text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
             ...(socket.userId ? { playerId: socket.userId } : {}),
           })

@@ -1351,15 +1351,16 @@ export class GameLifecycleService {
   async kickAndNeutralize(
     roomId: string,
     userId: string,
+    reason: 'timeout' | 'resignation' | 'booted' = 'timeout',
   ): Promise<Awaited<ReturnType<GameService['neutralizePlayerAndResolve']>>> {
     const result = await this.gameService.neutralizePlayerAndResolve(roomId, userId)
     // Persist DB flags
     await query(
       `UPDATE room_players
          SET is_kicked = TRUE,
-             elimination_reason = 'timeout'
+             elimination_reason = $3
        WHERE room_id = $1 AND user_id = $2`,
-      [roomId, userId],
+      [roomId, userId, reason],
     )
     return result
   }
