@@ -562,6 +562,22 @@ class AdminService {
     return response.data
   }
 
+  async retryTransientDlq(params: {
+    queue: 'gameActions' | 'gameCleanup' | 'analyticsEvents'
+    limit?: number
+  }): Promise<{ success: boolean; requeued?: number; scanned?: number }> {
+    const toParam = (q: typeof params.queue): string => {
+      if (q === 'gameActions') return 'game-actions'
+      if (q === 'gameCleanup') return 'game-cleanup'
+      return 'analytics-events'
+    }
+    const limit = typeof params.limit === 'number' ? params.limit : 50
+    const response = await apiClient.post(
+      `/queues/dlq/${toParam(params.queue)}/requeue-transient?limit=${limit}`,
+    )
+    return response.data
+  }
+
   // ============= UTILITY METHODS =============
 
   async checkAdminAccess(): Promise<boolean> {
