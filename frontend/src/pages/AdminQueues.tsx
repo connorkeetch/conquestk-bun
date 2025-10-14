@@ -45,6 +45,26 @@ export default function AdminQueues() {
     timestamp: string
   }>(null)
 
+  const [recentActive, setRecentActive] = useState<
+    Array<{
+      id: string
+      name: string
+      timestamp: string
+      attemptsMade: number
+      progress?: number | Record<string, unknown>
+    }>
+  >([])
+  const [recentFailed, setRecentFailed] = useState<
+    Array<{
+      id: string
+      name: string
+      timestamp: string
+      attemptsMade: number
+      failedReason?: string
+    }>
+  >([])
+  const [jobsLoading, setJobsLoading] = useState(false)
+
   const loadDlq = useCallback(async () => {
     try {
       setLoading(true)
@@ -56,6 +76,40 @@ export default function AdminQueues() {
       setDlq([])
     } finally {
       setLoading(false)
+    }
+  }, [selectedQueue])
+
+  const loadRecentJobs = useCallback(async () => {
+    try {
+      setJobsLoading(true)
+      const [active, failed] = await Promise.all([
+        adminService.getJobs({ queue: selectedQueue, state: 'active', limit: 25 }),
+        adminService.getJobs({ queue: selectedQueue, state: 'failed', limit: 25 }),
+      ])
+      setRecentActive(
+        (active.items ?? []).map((j) => ({
+          id: j.id,
+          name: j.name,
+          timestamp: j.timestamp,
+          attemptsMade: j.attemptsMade,
+          progress: j.progress,
+        })),
+      )
+      setRecentFailed(
+        (failed.items ?? []).map((j) => ({
+          id: j.id,
+          name: j.name,
+          timestamp: j.timestamp,
+          attemptsMade: j.attemptsMade,
+          failedReason: j.failedReason,
+        })),
+      )
+    } catch (_e) {
+      // non-fatal for page
+      setRecentActive([])
+      setRecentFailed([])
+    } finally {
+      setJobsLoading(false)
     }
   }, [selectedQueue])
 
@@ -154,7 +208,8 @@ export default function AdminQueues() {
 
   useEffect(() => {
     void loadDlq()
-  }, [loadDlq])
+    void loadRecentJobs()
+  }, [loadDlq, loadRecentJobs])
 
   useEffect(() => {
     void loadStats()
@@ -184,6 +239,15 @@ export default function AdminQueues() {
       alert(e instanceof Error ? e.message : 'Failed to requeue job')
     } finally {
       setRequeueing(null)
+    }
+  }
+
+  const onRetry = async (jobId: string) => {
+    try {
+      await adminService.retryJob({ queue: selectedQueue, jobId })
+      await loadRecentJobs()
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed to retry job')
     }
   }
 
@@ -346,6 +410,101 @@ export default function AdminQueues() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Recent activity */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="glass-box-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold">Recent Active</div>
+            <button
+              type="button"
+              className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80 disabled:opacity-60"
+              disabled={jobsLoading}
+              onClick={() => void loadRecentJobs()}
+            >
+              {jobsLoading ? 'Loading…' : 'Refresh'}
+            </button>
+          </div>
+          {recentActive.length === 0 ? (
+            <div className="text-sm text-muted">No active jobs.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted border-b border-border">
+                    <th className="py-2 pr-4">Job ID</th>
+                    <th className="py-2 pr-4">Name</th>
+                    <th className="py-2 pr-4">Started</th>
+                    <th className="py-2 pr-4">Attempts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentActive.map((j) => (
+                    <tr key={j.id} className="border-b border-border/40">
+                      <td className="py-2 pr-4 font-mono text-xs">{j.id}</td>
+                      <td className="py-2 pr-4">{j.name}</td>
+                      <td className="py-2 pr-4">{new Date(j.timestamp).toLocaleString()}</td>
+                      <td className="py-2 pr-4">{j.attemptsMade}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="glass-box-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold">Recent Failures</div>
+            <button
+              type="button"
+              className="px-3 py-2 text-sm rounded bg-surface-2 border border-border hover:bg-surface-2/80 disabled:opacity-60"
+              disabled={jobsLoading}
+              onClick={() => void loadRecentJobs()}
+            >
+              {jobsLoading ? 'Loading…' : 'Refresh'}
+            </button>
+          </div>
+          {recentFailed.length === 0 ? (
+            <div className="text-sm text-muted">No failures.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted border-b border-border">
+                    <th className="py-2 pr-4">Job ID</th>
+                    <th className="py-2 pr-4">Name</th>
+                    <th className="py-2 pr-4">Failed</th>
+                    <th className="py-2 pr-4">Reason</th>
+                    <th className="py-2 pr-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentFailed.map((j) => (
+                    <tr key={j.id} className="border-b border-border/40">
+                      <td className="py-2 pr-4 font-mono text-xs">{j.id}</td>
+                      <td className="py-2 pr-4">{j.name}</td>
+                      <td className="py-2 pr-4">{new Date(j.timestamp).toLocaleString()}</td>
+                      <td className="py-2 pr-4 max-w-[360px] truncate" title={j.failedReason}>
+                        {j.failedReason}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <button
+                          type="button"
+                          onClick={() => void onRetry(j.id)}
+                          className="px-2 py-1 text-sm rounded bg-primary hover:brightness-110"
+                        >
+                          Retry
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

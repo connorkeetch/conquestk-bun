@@ -45,4 +45,49 @@ router.post('/dlq/requeue', async (req, res) => {
   }
 })
 
+// GET /api/admin/queues/jobs?queue=gameActions&state=active&offset=0&limit=50
+router.get('/jobs', async (req, res) => {
+  try {
+    const key =
+      (req.query.queue as
+        | 'gameActions'
+        | 'gameCleanup'
+        | 'analyticsEvents'
+        | 'maintenance'
+        | 'mapAssets') || 'gameActions'
+    const state =
+      (req.query.state as 'waiting' | 'active' | 'completed' | 'failed' | 'delayed') || 'active'
+    const offset = Number(req.query.offset ?? 0)
+    const limit = Number(req.query.limit ?? 50)
+    const items = await queueService.listJobsByState(key, state, { offset, limit })
+    res.json({ success: true, items })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to list jobs')
+    res.status(500).json({ success: false, error: 'Failed to list jobs' })
+  }
+})
+
+// POST /api/admin/queues/jobs/retry { queue: 'gameActions', jobId: '...' }
+router.post('/jobs/retry', async (req, res) => {
+  try {
+    const key =
+      (req.body?.queue as
+        | 'gameActions'
+        | 'gameCleanup'
+        | 'analyticsEvents'
+        | 'maintenance'
+        | 'mapAssets') || 'gameActions'
+    const jobId = req.body?.jobId
+    if (!jobId) {
+      res.status(400).json({ success: false, error: 'jobId is required' })
+      return
+    }
+    const result = await queueService.retryJob(key, jobId)
+    res.json({ success: result.retried, message: result.message })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to retry job')
+    res.status(500).json({ success: false, error: 'Failed to retry job' })
+  }
+})
+
 export default router

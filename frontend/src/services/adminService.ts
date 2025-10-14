@@ -532,6 +532,36 @@ class AdminService {
     return response.data
   }
 
+  // ============= QUEUE INSPECTION =============
+  async getJobs(params: {
+    queue: 'gameActions' | 'gameCleanup' | 'analyticsEvents'
+    state: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
+    offset?: number
+    limit?: number
+  }): Promise<{
+    success: boolean
+    items: Array<{
+      id: string
+      name: string
+      state: string
+      timestamp: string
+      attemptsMade: number
+      failedReason?: string
+      progress?: number | Record<string, unknown>
+    }>
+  }> {
+    const response = await apiClient.get(`/admin/queues/jobs`, { params })
+    return response.data
+  }
+
+  async retryJob(params: {
+    queue: 'gameActions' | 'gameCleanup' | 'analyticsEvents'
+    jobId: string
+  }): Promise<{ success: boolean; message?: string }> {
+    const response = await apiClient.post(`/admin/queues/jobs/retry`, params)
+    return response.data
+  }
+
   // ============= UTILITY METHODS =============
 
   async checkAdminAccess(): Promise<boolean> {
