@@ -321,11 +321,39 @@ class SocketService {
   }
 
   undoFortify(roomId: string) {
-    this.socket?.emit('undoFortify', { roomId })
+    this.socket?.emit(
+      'game-action',
+      {
+        roomId,
+        action: {
+          type: 'undo_fortify',
+          roomId,
+          playerId: store.getState().auth.user?.id || '',
+          payload: undefined,
+        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+      },
+      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
+        // no-op; server delta will update UI
+      },
+    )
   }
 
   endTurn(roomId: string) {
-    this.socket?.emit('endTurn', { roomId })
+    this.socket?.emit(
+      'game-action',
+      {
+        roomId,
+        action: {
+          type: 'end_turn',
+          roomId,
+          playerId: store.getState().auth.user?.id || '',
+          payload: undefined,
+        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+      },
+      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
+        // no-op; server delta/phase change will update UI
+      },
+    )
   }
 
   beginTurn(roomId: string) {

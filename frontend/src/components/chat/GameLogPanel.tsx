@@ -46,12 +46,15 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const game = useAppSelector((s) => s.game.currentGame)
   const clientLogs = useAppSelector((s) => s.uiRoom.clientLogs ?? [])
   const [entries, setEntries] = useState<LogEntry[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
   const lastTurnRef = useRef<number | null>(null)
   const lastRoundRef = useRef<number | null>(null)
   const startedLoggedRef = useRef(false)
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isRefreshingRef = useRef(false)
   const fogMode = (game?.gameConfig?.fogOfWar ?? room?.fogOfWar ?? 'off') as
     | 'off'
     | 'adjacent'
@@ -226,7 +229,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     [playerColor, playerName],
   )
 
-  // Initialize lastArmies snapshot and seed with Game created
+  // Initialize lastArmies snapshot
   useEffect(() => {
     const snapshot: Record<string, number> = {}
     if (game?.board) {
@@ -234,22 +237,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
     lastArmiesRef.current = snapshot
   }, [game?.board])
-
-  useEffect(() => {
-    if (room?.createdAt) {
-      const createdAt = new Date(room.createdAt)
-      setEntries((prev) => [{ ts: createdAt, text: 'Game created.' }, ...prev])
-    }
-  }, [room?.createdAt])
-
-  // Ensure we show a start entry if the component mounts mid-game
-  useEffect(() => {
-    if (!room) return
-    if (room.status === 'active' && !startedLoggedRef.current) {
-      startedLoggedRef.current = true
-      setEntries((prev) => [{ ts: new Date(), text: 'Game started.' }, ...prev])
-    }
-  }, [room])
+  // Disable client-synthesized lifecycle lines; rely on server log
 
   // Backfill full history only after game ends (avoids 403 during active games)
   useEffect(() => {
@@ -258,7 +246,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       (room?.status as string | undefined) === 'completed' ||
       (room?.status as string | undefined) === 'abandoned'
 
-    if (!gameId || redact || backfillLoadedRef.current) {
+    if (!gameId || redact) {
       return
     }
     // With server-side access opened to any authenticated user,
@@ -640,6 +628,23 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             }
             continue
           }
+          if (type === 'RESIGN') {
+            const id = String((er.playerId as string) || '')
+            const name = nameOf(id) || id || 'A player'
+            formatted.push({
+              ts,
+              text: `${name} resigned. Territories are now neutral.`,
+              rich: (
+                <>
+                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
+                    {name}
+                  </span>{' '}
+                  resigned. Territories are now neutral.
+                </>
+              ),
+            })
+            continue
+          }
           if (type === 'FORTIFY') {
             const name = nameOf(er.playerId as string) || 'Unknown'
             const from = toName(String(er.fromTerritoryId))
@@ -849,9 +854,23 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
+  }, [
+    gameId,
+    redact,
+    playerName,
+    territoryName,
+    toSafeInt,
+    game?.phase,
+    room?.status,
+    playerColor,
+    refreshKey,
+  ])
 
   useEffect(() => {
+    const ENABLE_CLIENT_SYNTHESIS = false
+    if (!ENABLE_CLIENT_SYNTHESIS) {
+      return
+    }
     function add(text: string, ts?: Date, focusTerritories?: string[]) {
       const targetTs = ts ?? new Date()
       setEntries((prev) => {
@@ -1346,6 +1365,60 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     clientLogs,
     game?.players,
   ])
+
+  // Authoritative refresh: re-fetch DB log on deltas and enrich resign messages immediately
+  useEffect(() => {
+    if (!gameId || redact) return
+
+    const scheduleRefresh = () => {
+      if (isRefreshingRef.current) return
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+      refreshTimerRef.current = setTimeout(() => {
+        refreshTimerRef.current = null
+        isRefreshingRef.current = true
+        setRefreshKey((v) => v + 1)
+        // End refresh cycle after kicking the backfill
+        setTimeout(() => {
+          isRefreshingRef.current = false
+        }, 50)
+      }, 300)
+    }
+
+    const onDelta: Parameters<typeof socketService.on<'game-delta'>>[1] = (delta) => {
+      const d = delta as unknown as GameDelta
+      if (!d || (d as { roomId?: string }).roomId !== gameId) return
+      scheduleRefresh()
+      if ((d as { type?: string }).type === 'SYSTEM_MESSAGE') {
+        try {
+          const sm = d as SystemMessageDelta & { playerId?: string }
+          const text = String(sm.text || '')
+          if (/resigned/i.test(text)) {
+            const pid = (sm as { playerId?: string }).playerId || ''
+            if (pid) {
+              const name = playerName.get(pid) || pid
+              setEntries((prev) =>
+                [
+                  {
+                    ts: new Date(sm.timestamp),
+                    text: `${name} resigned. Territories are now neutral.`,
+                  },
+                  ...prev,
+                ].slice(0, 500),
+              )
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    socketService.on('game-delta', onDelta)
+    return () => {
+      socketService.off('game-delta', onDelta)
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+      refreshTimerRef.current = null
+    }
+  }, [gameId, redact, playerName])
 
   return (
     <div className={`flex flex-col h-full min-h-0 bg-surface-1 rounded-lg ${className}`}>

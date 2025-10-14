@@ -182,6 +182,12 @@ type TreasureCashLogEntry = {
   cards?: string[]
 }
 
+type ResignLogEntry = {
+  type: 'RESIGN'
+  timestamp: string
+  playerId: string
+}
+
 type GameLogEntry =
   | BattleLogEntry
   | FortifyLogEntry
@@ -196,6 +202,7 @@ type GameLogEntry =
   | RngLogEntry
   | GameEndLogEntry
   | SectorBonusLogEntry
+  | ResignLogEntry
 
 type PlayerRankingSummary = {
   userId: string
