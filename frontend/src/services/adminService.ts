@@ -160,6 +160,7 @@ class AdminService {
   private benchmarkUrl = '/benchmark'
   private matchsvcUrl = '/matchsvc'
   private oddsUrl = '/odds'
+  private realtimeUrl = '/admin/realtime-metrics'
 
   // ============= ADMIN INFO =============
 
@@ -508,6 +509,29 @@ class AdminService {
   async getOddsStatus(): Promise<AdminOddsStatus> {
     const response = await apiClient.get(`${this.oddsUrl}/status`)
     return response.data as AdminOddsStatus
+  }
+
+  // ============= REALTIME METRICS =============
+  async getRealtimeMetrics(): Promise<{
+    payloads: {
+      gameUpdate: { count: number; p50: number; p95: number; max: number } | null
+      gameDelta: { count: number; p50: number; p95: number; max: number } | null
+      gameDeltaBatch: { count: number; p50: number; p95: number; max: number } | null
+    }
+    realtime: {
+      accepted: Array<{ metric: string; labels: Record<string, string>; value: number }>
+      byAction: Record<
+        string,
+        {
+          ackMs: { count: number; p50: number; p95: number; max: number }
+          processMs: { count: number; p50: number; p95: number; max: number }
+        }
+      >
+    }
+    ts: string
+  }> {
+    const response = await apiClient.get(this.realtimeUrl)
+    return response.data
   }
 
   // ============= API HEALTH (root) =============
