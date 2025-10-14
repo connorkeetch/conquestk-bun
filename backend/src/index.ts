@@ -13,12 +13,53 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging')
   }
 }
 
-import { validateEnvironmentVariables } from './config/validateEnv.js'
+import { validateEnvironmentVariables, ENV_VARIABLES } from './config/validateEnv.js'
 
 try {
   validateEnvironmentVariables()
 } catch (_error) {
   process.exit(1)
+}
+
+// Log concise env status for deploy logs (no secret values)
+try {
+  const env = process.env.NODE_ENV || 'development'
+  const requiredMissing = ENV_VARIABLES.filter(
+    (v) => v.required && !process.env[v.name],
+  ).map((v) => v.name)
+  const requiredInvalid = ENV_VARIABLES.filter((v) => {
+    const raw = process.env[v.name]
+    if (!raw) return false
+    return typeof v.validator === 'function' ? !v.validator(raw) : false
+  }).map((v) => v.name)
+
+  const recommendedForEnv: string[] = []
+  const recommend = (name: string, cond = true) => {
+    if (cond && !process.env[name]) recommendedForEnv.push(name)
+  }
+
+  const isProdLike = env === 'production' || env === 'staging'
+  // High-signal recommendations by environment
+  recommend('FRONTEND_URL', isProdLike)
+  recommend('CANONICAL_HOST', isProdLike)
+  recommend('REDIS_URL', isProdLike)
+  recommend('PUBLIC_ASSET_BASE_URL', true)
+  recommend('VITE_ASSET_BASE_URL', true)
+  recommend('SENTRY_DSN', isProdLike)
+  recommend('RESEND_API_KEY', process.env.EMAIL_ENABLED !== 'false')
+
+  logger.info('📋 Env status summary', {
+    environment: env,
+    requiredMissingCount: requiredMissing.length,
+    requiredInvalidCount: requiredInvalid.length,
+    recommendedMissingCount: recommendedForEnv.length,
+    requiredMissing,
+    requiredInvalid,
+    recommendedMissing: recommendedForEnv,
+  })
+} catch (e) {
+  // Non-fatal: best-effort logging only
+  logger.debug('Env status logging skipped', { error: (e as Error)?.message })
 }
 
 import { createServer } from 'node:http'
