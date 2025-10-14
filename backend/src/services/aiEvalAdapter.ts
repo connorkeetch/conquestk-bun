@@ -19,19 +19,24 @@ export async function evaluateCandidatesAdapter(
 ): Promise<number[]> {
   const mode = (process.env.AI_EVAL_ENGINE || 'ts').toLowerCase() as EvalEngine
   const difficulty = (opts?.difficulty || 'commander').toLowerCase()
+  const wasmAvailable = process.env.AI_EVAL_WASM_AVAILABLE === '1'
 
   // Gate WASM to grandmaster only to minimize overhead on lighter AIs
   if (difficulty !== 'grandmaster') {
     return scoreCandidatesTs(state, candidates)
   }
 
-  if (mode === 'wasm') {
+  if (mode === 'wasm' && wasmAvailable) {
     try {
       return await wasmEvaluate(state, candidates, opts)
     } catch (e) {
       logger.warn('AI eval WASM unavailable; falling back to TS', { error: (e as Error)?.message })
       return scoreCandidatesTs(state, candidates)
     }
+  }
+  if (mode === 'wasm' && !wasmAvailable) {
+    // Explicit gate: only use WASM for grandmaster when detected at startup
+    return scoreCandidatesTs(state, candidates)
   }
   if (mode === 'shadow') {
     let wasmScores: number[] | null = null

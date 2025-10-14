@@ -1,13 +1,13 @@
 import { type NextFunction, type Request, type Response, Router } from 'express'
 import { body, param, query as queryParam, validationResult } from 'express-validator'
 import { query as dbQuery, transaction } from '../config/database.js'
+import { ENV_VARIABLES } from '../config/validateEnv.js'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { adminService } from '../services/adminService.js'
 import { GameLifecycleService } from '../services/gameLifecycleService.js'
 import { mapService } from '../services/mapService.js'
 import { logger } from '../utils/logger.js'
-import { ENV_VARIABLES } from '../config/validateEnv.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 import { resolveAssetUrl } from '../utils/url.js'
 
@@ -152,15 +152,20 @@ router.get('/env/status', async (_req: Request, res: Response) => {
     for (const v of ENV_VARIABLES) {
       const raw = process.env[v.name]
       const present = typeof raw === 'string' && raw.length > 0
+      const rawStr = typeof raw === 'string' ? raw : ''
       const hasDefault = typeof v.defaultValue === 'string'
-      const valueEqualsDefault = present && hasDefault ? raw === v.defaultValue : false
-      const valid = present ? (typeof v.validator === 'function' ? v.validator(raw!) : true) : !v.required
+      const valueEqualsDefault = present && hasDefault ? rawStr === v.defaultValue : false
+      const valid = present
+        ? typeof v.validator === 'function'
+          ? v.validator(rawStr)
+          : true
+        : !v.required
 
       const itemIssues: string[] = []
       if (v.required && !present) itemIssues.push('missing')
       if (present && !valid) itemIssues.push('invalid')
       if (present && /SECRET|KEY|TOKEN|PASSWORD|HMAC|DSN/i.test(v.name)) {
-        const weak = raw && (raw.length < 16 || /your-|change|default/i.test(raw))
+        const weak = rawStr.length < 16 || /your-|change|default/i.test(rawStr)
         if (weak) itemIssues.push('weak_secret')
       }
 
@@ -178,12 +183,28 @@ router.get('/env/status', async (_req: Request, res: Response) => {
       for (const i of itemIssues) issues.push(`${v.name}: ${i}`)
     }
 
-    const OPTIONAL_VARS: Array<{ name: string; description?: string; recommended?: 'dev' | 'prod' | 'both' }> = [
-      { name: 'FRONTEND_URL', description: 'Absolute frontend origin for links', recommended: 'prod' },
+    const OPTIONAL_VARS: Array<{
+      name: string
+      description?: string
+      recommended?: 'dev' | 'prod' | 'both'
+    }> = [
+      {
+        name: 'FRONTEND_URL',
+        description: 'Absolute frontend origin for links',
+        recommended: 'prod',
+      },
       { name: 'CORS_ORIGIN', description: 'Allowed CORS origin(s)', recommended: 'both' },
       { name: 'CANONICAL_HOST', description: 'Apex host for 308 redirects', recommended: 'prod' },
-      { name: 'PUBLIC_ASSET_BASE_URL', description: 'Public CDN/base for assets', recommended: 'both' },
-      { name: 'VITE_ASSET_BASE_URL', description: 'Frontend/CDN base for assets', recommended: 'both' },
+      {
+        name: 'PUBLIC_ASSET_BASE_URL',
+        description: 'Public CDN/base for assets',
+        recommended: 'both',
+      },
+      {
+        name: 'VITE_ASSET_BASE_URL',
+        description: 'Frontend/CDN base for assets',
+        recommended: 'both',
+      },
       { name: 'SENTRY_DSN', description: 'Sentry error tracking DSN', recommended: 'prod' },
       { name: 'REDIS_URL', description: 'Redis for sessions/queues/sockets', recommended: 'prod' },
       { name: 'REDIS_PRIVATE_URL' },
@@ -243,8 +264,10 @@ router.get('/env/status', async (_req: Request, res: Response) => {
     const optional = OPTIONAL_VARS.map((v) => {
       const raw = process.env[v.name]
       const present = typeof raw === 'string' && raw.length > 0
+      const rawStr = typeof raw === 'string' ? raw : ''
       const isSecret = /SECRET|KEY|TOKEN|PASSWORD|HMAC|DSN/i.test(v.name)
-      const weak = present && isSecret && (raw!.length < 16 || /your-|change|default/i.test(raw!))
+      const weak =
+        present && isSecret && (rawStr.length < 16 || /your-|change|default/i.test(rawStr))
       const issues = [] as string[]
       if (!present && v.recommended) issues.push(`recommended_${v.recommended}`)
       if (weak) issues.push('weak_secret')
@@ -263,7 +286,9 @@ router.get('/env/status', async (_req: Request, res: Response) => {
       requiredMissing: required.filter((r) => r.required && !r.present).length,
       requiredInvalid: required.filter((r) => r.present && !r.valid).length,
       optionalRecommendedMissing: optional.filter(
-        (o) => !o.present && (o.recommended === 'both' || o.recommended === (env === 'development' ? 'dev' : 'prod')),
+        (o) =>
+          !o.present &&
+          (o.recommended === 'both' || o.recommended === (env === 'development' ? 'dev' : 'prod')),
       ).length,
       issues,
     }

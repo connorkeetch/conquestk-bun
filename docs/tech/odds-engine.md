@@ -41,6 +41,11 @@ From `@conquestk/shared/odds`:
 
 The CI job installs Rust + wasm-pack and runs `npm run odds:test` on Linux. Benchmarking can be gated to main/nightly if desired.
 
+### Nightly benches
+
+- A GitHub Actions workflow runs nightly to execute the lightweight Node benches and update `docs/bench/*.json` and the benchmark block below.
+- You can also trigger it manually via the Actions tab.
+
 ## Shadow rollout
 
 - Staging uses `ODDS_ENGINE=shadow` by default. Backend wires `setLogger` to the structured logger.

@@ -6,6 +6,7 @@
   - Defender wins ties
   Output: shared/data/combatOutcomes.json with shape number[MAX_A+1][MAX_D+1]
 */
+// CJS entrypoint (migrated for root ESM)
 const fs = require('node:fs')
 const path = require('node:path')
 

@@ -13,7 +13,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging')
   }
 }
 
-import { validateEnvironmentVariables, ENV_VARIABLES } from './config/validateEnv.js'
+import { ENV_VARIABLES, validateEnvironmentVariables } from './config/validateEnv.js'
 
 try {
   validateEnvironmentVariables()
@@ -24,9 +24,9 @@ try {
 // Log concise env status for deploy logs (no secret values)
 try {
   const env = process.env.NODE_ENV || 'development'
-  const requiredMissing = ENV_VARIABLES.filter(
-    (v) => v.required && !process.env[v.name],
-  ).map((v) => v.name)
+  const requiredMissing = ENV_VARIABLES.filter((v) => v.required && !process.env[v.name]).map(
+    (v) => v.name,
+  )
   const requiredInvalid = ENV_VARIABLES.filter((v) => {
     const raw = process.env[v.name]
     if (!raw) return false
@@ -138,7 +138,7 @@ app.use((req, res, next) => {
 
     // Do not redirect Socket.IO handshake/upgrade requests; redirecting the
     // initial GET to /socket.io breaks Engine.IO upgrade and causes reconnect loops.
-    if (req.path && req.path.startsWith('/socket.io')) {
+    if (req.path?.startsWith('/socket.io')) {
       return next()
     }
 

@@ -1,0 +1,56 @@
+name: nightly-benches
+
+on:
+  schedule:
+    - cron: '30 3 * * *' # run daily at 03:30 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-benches
+  cancel-in-progress: false
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package (for odds facade)
+        run: npm run build:shared
+
+      - name: Run battle bench (TS vs WASM)
+        run: |
+          BENCH_N=10000 node scripts/bench-odds.js --quiet || BENCH_N=10000 node scripts/bench-odds.js
+
+      - name: Run Monte Carlo bench (TS vs WASM)
+        run: |
+          MC_TRIALS=50000 node scripts/bench-odds-mc.js --quiet || MC_TRIALS=50000 node scripts/bench-odds-mc.js
+
+      - name: Update docs with latest bench results
+        run: node scripts/update-odds-bench-docs.js
+
+      - name: Commit changes (if any)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet docs/bench docs/tech/odds-engine.md; then
+            git add docs/bench docs/tech/odds-engine.md
+            git commit -m "chore(bench): update nightly bench results"
+            git push
+          else
+            echo "No bench doc changes to commit"
+          fi
+
