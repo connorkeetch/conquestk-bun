@@ -173,6 +173,22 @@ try {
   logger.warn('Failed to configure odds engine; using defaults', { error: (e as Error)?.message })
 }
 
+// Detect WASM availability once at startup for AI eval gating
+void (async () => {
+  try {
+    const spec = '@conquestk/wasm-odds' as string
+    const mod = (await import(spec)) as { loadWasm: () => Promise<{ version: () => string }> }
+    const api = await mod.loadWasm()
+    const version = typeof api?.version === 'function' ? api.version() : 'unknown'
+    process.env.AI_EVAL_WASM_AVAILABLE = '1'
+    logger.info('🧠 AI eval: WASM available', { version })
+  } catch (e) {
+    // Ensure the flag is unset when unavailable
+    delete process.env.AI_EVAL_WASM_AVAILABLE
+    logger.info('🧠 AI eval: WASM unavailable; will use TS', { error: (e as Error)?.message })
+  }
+})()
+
 // Initialize ancillary monitoring services (non-blocking)
 void (async () => {
   try {

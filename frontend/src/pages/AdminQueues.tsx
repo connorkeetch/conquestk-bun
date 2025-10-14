@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
-import { API_URL } from '../config'
 import { adminService } from '../services/adminService'
-import apiClient from '../services/api'
 
 type QueueKey = 'gameActions' | 'gameCleanup' | 'analyticsEvents'
 type JobState = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
@@ -150,12 +148,12 @@ export default function AdminQueues() {
     } catch {
       setBbStatus('error')
     }
-  }, [bullBoardUrl])
+  }, [])
 
   const openBullBoard = useCallback(() => {
     // Bull Board is now a separate service, just open it in a new tab
     window.open(bullBoardUrl, '_blank', 'noopener,noreferrer')
-  }, [bullBoardUrl])
+  }, [])
 
   useEffect(() => {
     void loadDlq()
