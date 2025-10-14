@@ -1,4 +1,13 @@
-import type { AdminQueuesHealth, AdminQueuesStats } from '@conquestk/shared/types/admin'
+import type {
+  AdminApiHealth,
+  AdminMatchSvcStatus,
+  AdminOddsStatus,
+  AdminPerformanceAlert,
+  AdminPerformanceCurrentMetrics,
+  AdminPerformanceDetailedHealth,
+  AdminQueuesHealth,
+  AdminQueuesStats,
+} from '@conquestk/shared/types/admin'
 import { apiClient } from './api'
 
 export interface AdminUser {
@@ -150,6 +159,7 @@ class AdminService {
   private performanceUrl = '/performance'
   private benchmarkUrl = '/benchmark'
   private matchsvcUrl = '/matchsvc'
+  private oddsUrl = '/odds'
 
   // ============= ADMIN INFO =============
 
@@ -405,6 +415,24 @@ class AdminService {
     return response.data as AdminQueuesHealth
   }
 
+  // ============= PERFORMANCE =============
+  async getPerformanceHealthDetailed(): Promise<AdminPerformanceDetailedHealth> {
+    const response = await apiClient.get(`${this.performanceUrl}/health/detailed`)
+    return response.data as AdminPerformanceDetailedHealth
+  }
+
+  async getPerformanceMetrics(): Promise<AdminPerformanceCurrentMetrics> {
+    const response = await apiClient.get(`${this.performanceUrl}/metrics`)
+    return (response.data?.data ?? response.data) as AdminPerformanceCurrentMetrics
+  }
+
+  async getPerformanceAlerts(activeOnly = true): Promise<AdminPerformanceAlert[]> {
+    const response = await apiClient.get(`${this.performanceUrl}/alerts`, {
+      params: { active: String(activeOnly) },
+    })
+    return (response.data?.data ?? response.data) as AdminPerformanceAlert[]
+  }
+
   // ============= ODDS METRICS (Performance) =============
   async getOddsHistory(hours = 24): Promise<{
     points: Array<{
@@ -471,25 +499,21 @@ class AdminService {
   }
 
   // ============= MATCH SERVICE =============
-  async getMatchSvcStatus(): Promise<{
-    ok: boolean
-    service: { url: string; health: string; statusCode?: number }
-    auth: {
-      configured: boolean
-      test: 'ok' | 'unauthorized' | 'skipped' | 'error'
-      statusCode?: number
-    }
-    redis: { healthy: boolean; message: string }
-    subscriber: { active: boolean }
-    metrics?: {
-      queueDepth?: Record<string, number>
-      matchesFormedTotal?: number
-      presenceOnline?: number
-    } | null
-    ts: string
-  }> {
+  async getMatchSvcStatus(): Promise<AdminMatchSvcStatus> {
     const response = await apiClient.get(`${this.matchsvcUrl}/status`)
-    return response.data
+    return response.data as AdminMatchSvcStatus
+  }
+
+  // ============= ODDS =============
+  async getOddsStatus(): Promise<AdminOddsStatus> {
+    const response = await apiClient.get(`${this.oddsUrl}/status`)
+    return response.data as AdminOddsStatus
+  }
+
+  // ============= API HEALTH (root) =============
+  async getApiHealth(): Promise<AdminApiHealth> {
+    const response = await apiClient.get(`/health`)
+    return response.data as AdminApiHealth
   }
 
   async getDeadLetters(params: {
