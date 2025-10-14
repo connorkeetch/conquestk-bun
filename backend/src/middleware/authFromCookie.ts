@@ -44,9 +44,60 @@ export const authenticateTokenFromCookie: RequestHandler = (
   res: Response,
   next: NextFunction,
 ) => {
-  // If an Authorization header is already present, defer to the standard middleware
+  // If an Authorization header is already present, mint a UI cookie so subsequent
+  // Bull Board XHRs (which lack headers) succeed, then authenticate as usual.
   const existing = req.headers.authorization
   if (existing?.startsWith('Bearer ')) {
+    try {
+      const secrets = getJwtSecrets()
+      const bearer = existing.slice('Bearer '.length)
+      if (secrets.length && bearer) {
+        const decoded = verifyJwtWithAnySecret<{ userId?: string }>(bearer, secrets).payload
+        const userId = typeof decoded?.userId === 'string' ? decoded.userId : undefined
+        if (userId) {
+          const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
+          const sameSite = resolveSameSite(req.hostname)
+          const secure = isProd || sameSite === 'none'
+          const uiToken = signJwt({ userId }, { expiresIn: '15m' })
+          const getCookieDomain = (host: string | undefined): string | undefined => {
+            const normalized = normalizeHost(host)
+            if (!normalized || isLocalHost(normalized) || shouldForceHostOnly(normalized))
+              return undefined
+            const parts = normalized.split('.')
+            if (parts.length < 2) return undefined
+            return parts.slice(-2).join('.')
+          }
+          const cookieDomain = getCookieDomain(req.hostname)
+          const cookieOpts = {
+            httpOnly: true,
+            secure,
+            sameSite,
+            path: '/api',
+            maxAge: 15 * 60 * 1000,
+            ...(cookieDomain ? { domain: cookieDomain } : {}),
+          } as const
+          res.cookie('ck_bb_auth', uiToken, cookieOpts)
+          res.cookie('auth_token', uiToken, cookieOpts)
+          res.cookie('__Host-ck-bb', uiToken, {
+            httpOnly: true,
+            secure,
+            sameSite,
+            path: '/',
+            maxAge: 15 * 60 * 1000,
+          })
+          // Do not overwrite Authorization; this request authenticates via header.
+          logger.info('authFromCookie: minted UI cookie from Authorization header', {
+            path: req.path,
+            originalUrl: req.originalUrl,
+          })
+        }
+      }
+    } catch (e) {
+      logger.debug('authFromCookie: failed to mint from Authorization', {
+        error: e instanceof Error ? e.message : String(e),
+      })
+      // proceed to authenticateToken; header will be validated there
+    }
     return authenticateToken(req, res, next)
   }
 
