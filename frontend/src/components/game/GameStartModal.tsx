@@ -33,7 +33,15 @@ export function GameStartModal({ className = '' }: Props) {
 
   const text = pickTextOnColor(myColor)
 
-  // Show when we observe a transition from lobby/initializing -> active for this room
+  // Consider game ready when core state is present (prevents early show on half-loaded state)
+  const isGameReady = useMemo(() => {
+    if (!game) return false
+    const playersReady = Array.isArray(game.players) && game.players.length > 0
+    const boardReady = Array.isArray(game.board) && game.board.length > 0
+    return playersReady && boardReady
+  }, [game])
+
+  // Show when we observe a transition from lobby/initializing -> active for this room, and game state is ready
   useEffect(() => {
     const current = room?.status ?? null
     const prev = prevStatusRef.current
@@ -46,7 +54,7 @@ export function GameStartModal({ className = '' }: Props) {
 
     // Only trigger on a fresh transition into active
     const becameActive = (prev === 'lobby' || prev === 'initializing') && current === 'active'
-    if (!becameActive) return
+    if (!becameActive || !isGameReady) return
 
     const storageKey = `ui.gameStart.seen:${room.id}:${userId}`
     try {
@@ -59,7 +67,7 @@ export function GameStartModal({ className = '' }: Props) {
     } catch {
       setVisible(true)
     }
-  }, [room?.status, room?.id, userId])
+  }, [room?.status, room?.id, userId, isGameReady])
 
   // Avoid stacking with the YourTurn modal for the opening player
   const isOpeningPlayerTurn = useMemo(() => {
@@ -74,6 +82,22 @@ export function GameStartModal({ className = '' }: Props) {
   const handleClose = () => {
     setClosing(true)
     window.setTimeout(() => {
+      // If it's now my active gameplay turn, clear any previously stored turn-intro seen flag
+      // so the YourTurn modal can pop immediately after this modal closes.
+      try {
+        const roomId = game?.roomId ?? null
+        const currentTurn = game?.turn ?? null
+        const phase = game?.phase as string | undefined
+        const myTurn = userId && game?.currentPlayer === userId
+        const isGameplayPhase =
+          phase === 'reinforcement' || phase === 'attack' || phase === 'fortify'
+        if (roomId && currentTurn !== null && myTurn && isGameplayPhase) {
+          localStorage.removeItem(`ui.turnModal.seen:${roomId}:${userId}`)
+        }
+      } catch {
+        /* ignore */
+      }
+
       setVisible(false)
       setClosing(false)
     }, 180)
