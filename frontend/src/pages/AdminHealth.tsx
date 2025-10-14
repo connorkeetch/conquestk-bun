@@ -248,7 +248,9 @@ export default function AdminHealth() {
   }, [])
 
   useEffect(() => {
-    loadRealtime().catch(() => {})
+    loadRealtime().catch(() => {
+      // ignore realtime load errors in health page
+    })
   }, [loadRealtime])
 
   useEffect(() => {
