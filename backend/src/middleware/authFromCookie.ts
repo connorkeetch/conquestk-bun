@@ -22,6 +22,19 @@ const parseCookie = (cookieHeader: string | undefined): Record<string, string> =
   return out
 }
 
+const normalizeHost = (host: string | undefined): string =>
+  host ? host.toLowerCase().split(':')[0] : ''
+
+const isLocalHost = (host: string): boolean => host === 'localhost' || host === '127.0.0.1'
+
+const shouldForceHostOnly = (host: string): boolean =>
+  host.endsWith('.railway.app') || host.endsWith('.railway.internal')
+
+const resolveSameSite = (host: string | undefined): 'lax' | 'none' => {
+  const normalized = normalizeHost(host)
+  return !normalized || isLocalHost(normalized) ? 'lax' : 'none'
+}
+
 /**
  * Authenticate using Bearer token header if present, otherwise fall back to a cookie.
  * Intended for UI routes (like Bull Board) where browser navigation cannot attach headers.
@@ -54,10 +67,9 @@ export const authenticateTokenFromCookie: RequestHandler = (
   // Broaden cookie path so it applies to all API subpaths reliably behind proxies/CDNs
   const uiCookiePath = '/api'
   const getCookieDomain = (host: string | undefined): string | undefined => {
-    if (!host) return undefined
-    const h = host.toLowerCase().split(':')[0]
-    if (h === 'localhost' || h === '127.0.0.1') return undefined
-    const parts = h.split('.')
+    const normalized = normalizeHost(host)
+    if (!normalized || isLocalHost(normalized) || shouldForceHostOnly(normalized)) return undefined
+    const parts = normalized.split('.')
     if (parts.length < 2) return undefined
     return parts.slice(-2).join('.')
   }
@@ -70,10 +82,12 @@ export const authenticateTokenFromCookie: RequestHandler = (
     if (typeof userId !== 'string' || userId.length === 0) return false
     const uiToken = signJwt({ userId }, { expiresIn: '15m' })
     const cookieDomain = getCookieDomain(req.hostname)
+    const sameSite = resolveSameSite(req.hostname)
+    const secure = isProd || sameSite === 'none'
     const cookieOpts = {
       httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax',
+      secure,
+      sameSite,
       path: uiCookiePath,
       maxAge: 15 * 60 * 1000,
       ...(cookieDomain ? { domain: cookieDomain } : {}),
@@ -81,6 +95,13 @@ export const authenticateTokenFromCookie: RequestHandler = (
     // Set both names to avoid WAF/collision edge cases
     res.cookie('ck_bb_auth', uiToken, cookieOpts)
     res.cookie('auth_token', uiToken, cookieOpts)
+    res.cookie('__Host-ck-bb', uiToken, {
+      httpOnly: true,
+      secure,
+      sameSite,
+      path: '/',
+      maxAge: 15 * 60 * 1000,
+    })
     // Also set Authorization header for this request
     req.headers.authorization = `Bearer ${uiToken}`
     return true

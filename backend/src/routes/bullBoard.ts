@@ -9,28 +9,32 @@ import { queueService } from '../services/queueService.js'
 import { getJwtSecrets, signJwt, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 
-// Derive a safe cookie domain for apex cookies in prod (avoid on localhost)
+const normalizeHost = (host: string | undefined): string =>
+  host ? host.toLowerCase().split(':')[0] : ''
+
+const isLocalHost = (host: string): boolean => host === 'localhost' || host === '127.0.0.1'
+
+const shouldForceHostOnly = (host: string): boolean =>
+  host.endsWith('.railway.app') || host.endsWith('.railway.internal')
+
+// Derive a safe cookie domain for apex cookies in prod (avoid on localhost/preview hosts)
 const getCookieDomain = (host: string | undefined): string | undefined => {
-  if (!host) return undefined
-  const h = host.toLowerCase().split(':')[0]
-  if (h === 'localhost' || h === '127.0.0.1') return undefined
-  const parts = h.split('.')
+  const normalized = normalizeHost(host)
+  if (!normalized || isLocalHost(normalized) || shouldForceHostOnly(normalized)) return undefined
+  const parts = normalized.split('.')
   if (parts.length < 2) return undefined
   return parts.slice(-2).join('.')
+}
+
+const resolveSameSite = (host: string | undefined): 'lax' | 'none' => {
+  const normalized = normalizeHost(host)
+  return !normalized || isLocalHost(normalized) ? 'lax' : 'none'
 }
 
 // Export grant/accept routes separately so they can be mounted BEFORE the Bull Board router
 export const createGrantRoute = () => {
   const router = Router()
   const basePath = '/api/admin/queues/ui'
-  const getCookieDomain = (host: string | undefined): string | undefined => {
-    if (!host) return undefined
-    const h = host.toLowerCase().split(':')[0]
-    if (h === 'localhost' || h === '127.0.0.1') return undefined
-    const parts = h.split('.')
-    if (parts.length < 2) return undefined
-    return parts.slice(-2).join('.')
-  }
 
   // Helper endpoint to set a short-lived HttpOnly token cookie for the Bull Board UI.
   // This enables opening the board in a new tab where headers aren't attached.
@@ -57,21 +61,23 @@ export const createGrantRoute = () => {
       const uiToken = signJwt({ userId: req.userId }, { expiresIn: '15m' })
       const cookiePath = '/api'
       const cookieDomain = getCookieDomain(req.hostname)
+      const sameSite = resolveSameSite(req.hostname)
+      const secure = isProd || sameSite === 'none'
       const cookieOpts = {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax' as const,
+        secure,
+        sameSite,
         path: cookiePath,
         // Short lifetime to reduce risk; Bull Board sessions are brief
         maxAge: 15 * 60 * 1000, // 15 minutes
         ...(cookieDomain ? { domain: cookieDomain } : {}),
-      }
+      } as const
       res.cookie('ck_bb_auth', uiToken, cookieOpts)
       res.cookie('auth_token', uiToken, cookieOpts)
       res.cookie('__Host-ck-bb', uiToken, {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
+        secure,
+        sameSite,
         path: '/',
         maxAge: 15 * 60 * 1000,
       })
@@ -79,6 +85,8 @@ export const createGrantRoute = () => {
         userId: req.userId,
         path: cookiePath,
         domain: cookieDomain,
+        sameSite,
+        secure,
         ip: req.ip,
       })
       res.json({ success: true, code: grantCode })
@@ -166,20 +174,22 @@ export const createAcceptRoute = () => {
       const uiToken = signJwt({ userId: decoded.userId }, { expiresIn: '15m' })
       const cookiePath = '/api'
       const cookieDomain = getCookieDomain(req.hostname)
+      const sameSite = resolveSameSite(req.hostname)
+      const secure = isProd || sameSite === 'none'
       const cookieOpts = {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax' as const,
+        secure,
+        sameSite,
         path: cookiePath,
         maxAge: 15 * 60 * 1000,
         ...(cookieDomain ? { domain: cookieDomain } : {}),
-      }
+      } as const
       res.cookie('ck_bb_auth', uiToken, cookieOpts)
       res.cookie('auth_token', uiToken, cookieOpts)
       res.cookie('__Host-ck-bb', uiToken, {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
+        secure,
+        sameSite,
         path: '/',
         maxAge: 15 * 60 * 1000,
       })
@@ -189,15 +199,18 @@ export const createAcceptRoute = () => {
         userId: decoded.userId,
         path: cookiePath,
         domain: cookieDomain,
+        sameSite,
+        secure,
       })
       // Use HTML meta-refresh instead of 302 to avoid any proxy that might strip Set-Cookie on redirects
       res
         .status(200)
         .set('Content-Type', 'text/html; charset=utf-8')
         .send(
-          `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=${basePath}" />` +
-            `<title>Redirecting…</title></head><body>Redirecting to Bull Board… ` +
-            `<a href="${basePath}">Continue</a></body></html>`,
+          `<!DOCTYPE html><html><head><meta charset="utf-8" />` +
+            `<title>Redirecting…</title>` +
+            `<script>setTimeout(function(){ window.location.replace('${basePath}') }, 1000);</script>` +
+            `</head><body>Redirecting to Bull Board… <a href="${basePath}">Continue</a></body></html>`,
         )
     } catch (_e) {
       logger.error('BullBoard accept: unexpected failure', {
@@ -245,16 +258,18 @@ export const createDebugRoute = () => {
         if (!token) return { ok: false }
         try {
           const { payload } = verifyJwtWithAnySecret<{ userId?: string }>(token, secrets)
-          return { ok: true, userId: typeof payload.userId === 'string' ? payload.userId : undefined }
+          return {
+            ok: true,
+            userId: typeof payload.userId === 'string' ? payload.userId : undefined,
+          }
         } catch (e) {
           return { ok: false, error: (e as Error)?.message }
         }
       }
 
-      const bearer =
-        req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
-          ? req.headers.authorization.slice('Bearer '.length)
-          : undefined
+      const bearer = req.headers.authorization?.startsWith('Bearer ')
+        ? req.headers.authorization.slice('Bearer '.length)
+        : undefined
       const q = req.query as Record<string, unknown>
       const qAccess = [q.access_token, q.accessToken, q.token].find(
         (v) => typeof v === 'string' && v.length > 0,
@@ -319,8 +334,7 @@ export const createLoginRoute = () => {
         ip: req.ip,
         ua: req.get('User-Agent'),
         hasCode: typeof (req.query as Record<string, unknown>)?.code === 'string',
-        hasAccessToken:
-          typeof (req.query as Record<string, unknown>)?.access_token === 'string',
+        hasAccessToken: typeof (req.query as Record<string, unknown>)?.access_token === 'string',
         hasAuthHeader: Boolean(req.headers.authorization),
       })
       const secrets = getJwtSecrets()
@@ -408,32 +422,41 @@ export const createLoginRoute = () => {
       const uiToken = signJwt({ userId }, { expiresIn: '15m' })
       const cookiePath = '/api'
       const cookieDomain = getCookieDomain(req.hostname)
+      const sameSite = resolveSameSite(req.hostname)
+      const secure = isProd || sameSite === 'none'
       const cookieOpts = {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax' as const,
+        secure,
+        sameSite,
         path: cookiePath,
         maxAge: 15 * 60 * 1000,
         ...(cookieDomain ? { domain: cookieDomain } : {}),
-      }
+      } as const
       res.cookie('ck_bb_auth', uiToken, cookieOpts)
       res.cookie('auth_token', uiToken, cookieOpts)
       res.cookie('__Host-ck-bb', uiToken, {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
+        secure,
+        sameSite,
         path: '/',
         maxAge: 15 * 60 * 1000,
       })
-      logger.info('BullBoard login: UI cookie minted', { userId, path: cookiePath, domain: cookieDomain })
+      logger.info('BullBoard login: UI cookie minted', {
+        userId,
+        path: cookiePath,
+        domain: cookieDomain,
+        sameSite,
+        secure,
+      })
       // Use HTML meta-refresh instead of 302 to avoid any proxy that might strip Set-Cookie on redirects
       res
         .status(200)
         .set('Content-Type', 'text/html; charset=utf-8')
         .send(
-          `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=${basePath}" />` +
-            `<title>Redirecting…</title></head><body>Redirecting to Bull Board… ` +
-            `<a href="${basePath}">Continue</a></body></html>`,
+          `<!DOCTYPE html><html><head><meta charset="utf-8" />` +
+            `<title>Redirecting…</title>` +
+            `<script>setTimeout(function(){ window.location.replace('${basePath}') }, 1000);</script>` +
+            `</head><body>Redirecting to Bull Board… <a href="${basePath}">Continue</a></body></html>`,
         )
     } catch (e) {
       logger.error('BullBoard login: unexpected failure', { error: (e as Error)?.message })

@@ -155,9 +155,7 @@ router.get('/health/detailed', authenticateToken, async (req, res) => {
 
     // Treat 'not_configured' as neutral (does not degrade overall health)
     const statuses = Object.values(health).map((h) => h.status)
-    const allHealthyOrNeutral = statuses.every(
-      (s) => s === 'healthy' || s === 'not_configured',
-    )
+    const allHealthyOrNeutral = statuses.every((s) => s === 'healthy' || s === 'not_configured')
     const anyCritical = statuses.some((s) => s === 'critical')
     const overallStatus = allHealthyOrNeutral ? 'healthy' : anyCritical ? 'critical' : 'degraded'
 

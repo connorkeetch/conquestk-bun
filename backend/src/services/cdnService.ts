@@ -131,7 +131,11 @@ export class CDNService {
     const viteAssetBase = process.env.VITE_ASSET_BASE_URL
     if (viteAssetBase) {
       if (!this.providers.some((p) => p.baseUrl === viteAssetBase)) {
-        this.providers.push({ name: 'vite-asset-base', baseUrl: viteAssetBase, regions: ['global'] })
+        this.providers.push({
+          name: 'vite-asset-base',
+          baseUrl: viteAssetBase,
+          regions: ['global'],
+        })
       }
     }
 
@@ -424,7 +428,10 @@ export class CDNService {
     }
   }
 
-  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy' | 'not_configured'; details: CDNHealthDetails }> {
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy' | 'not_configured'
+    details: CDNHealthDetails
+  }> {
     // If no providers are configured, surface a neutral status so overall health isn't degraded
     if (this.providers.length === 0) {
       return {

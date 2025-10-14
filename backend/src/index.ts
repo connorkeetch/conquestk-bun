@@ -48,9 +48,9 @@ import { authRoutes } from './routes/auth.js'
 import benchmarkRoutes from './routes/benchmarkRoutes.js'
 import bullBoardRouterFactory, {
   createAcceptRoute,
+  createDebugRoute,
   createGrantRoute,
   createLoginRoute,
-  createDebugRoute,
 } from './routes/bullBoard.js'
 import clanRoutes from './routes/clans.js'
 import featureFlagsRoutes from './routes/featureFlags.js'
@@ -65,14 +65,14 @@ import messagesRoutes from './routes/messages.js'
 import notificationRoutes from './routes/notifications.js'
 import oddsRoutes from './routes/odds.js'
 import performanceRoutes from './routes/performanceRoutes.js'
-import { databaseClusterService } from './services/databaseClusterService.js'
-import { cdnService } from './services/cdnService.js'
 import { createPreferencesRouter } from './routes/preferences.js'
 import profileRoutes from './routes/profile.js'
 import queueRoutes from './routes/queueRoutes.js'
 import skillsRoutes from './routes/skills.js'
 import termsRoutes from './routes/terms.js'
 import userRoutes from './routes/users.js'
+import { cdnService } from './services/cdnService.js'
+import { databaseClusterService } from './services/databaseClusterService.js'
 import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js'
 import { setupSocketHandlers } from './services/socketService.js'
 import type { ClientToServerEvents, ServerToClientEvents } from './types/shared.js'
@@ -178,7 +178,10 @@ void (async () => {
   try {
     await databaseClusterService.initialize()
   } catch (e) {
-    logger.warn('⚠️ DatabaseClusterService init failed; health will show not_configured', getErrorMessage(e))
+    logger.warn(
+      '⚠️ DatabaseClusterService init failed; health will show not_configured',
+      getErrorMessage(e),
+    )
   }
   try {
     await cdnService.initialize()

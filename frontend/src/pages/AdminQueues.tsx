@@ -95,6 +95,63 @@ export default function AdminQueues() {
     }
   }, [])
 
+  const openBullBoard = useCallback(async () => {
+    const raw = localStorage.getItem('token') || ''
+    const token = raw && raw !== 'null' && raw !== 'undefined' ? raw : ''
+
+    try {
+      setBbStatus('checking')
+      const response = await fetch(bullBoardUrl, {
+        method: 'GET',
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+
+      if (response.status === 200) {
+        setBbStatus('ok')
+        window.location.assign(bullBoardUrl)
+        return
+      }
+
+      if (response.status === 401) {
+        setBbStatus('unauthorized')
+        if (token) {
+          window.location.assign(`${bullBoardUrl}?access_token=${encodeURIComponent(token)}`)
+          return
+        }
+      } else if (response.status === 403) {
+        setBbStatus('forbidden')
+        alert('Bull Board rejected the request (403). Ensure your account is still an admin.')
+        return
+      } else if (response.status === 404) {
+        setBbStatus('not_found')
+        alert('Bull Board UI is not deployed (404).')
+        return
+      } else {
+        setBbStatus('error')
+      }
+    } catch {
+      setBbStatus('error')
+    }
+
+    try {
+      const resp = await apiClient.post<{ success: boolean; code?: string }>(
+        '/admin/queues/ui/grant',
+        undefined,
+        { withCredentials: true },
+      )
+      const code = (resp.data as unknown as { code?: unknown })?.code as string | undefined
+      if (code) {
+        window.location.assign(`/api/admin/queues/login?code=${encodeURIComponent(code)}`)
+        return
+      }
+
+      alert('Failed to prepare access for Bull Board')
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
+    }
+  }, [bullBoardUrl])
+
   useEffect(() => {
     void loadDlq()
   }, [loadDlq])
@@ -153,38 +210,8 @@ export default function AdminQueues() {
             </div>
             <button
               type="button"
-              onClick={async () => {
-                try {
-                  const raw = localStorage.getItem('token') || ''
-                  const token = raw && raw !== 'null' && raw !== 'undefined' ? raw : ''
-                  if (token) {
-                    // Prefer direct login via access_token to avoid any proxy/redirect cookie quirks
-                    window.location.assign(
-                      `/api/admin/queues/login?access_token=${encodeURIComponent(token)}`,
-                    )
-                    return
-                  }
-
-                  // Fallback: use grant flow to mint a short-lived code
-                  const resp = await apiClient.post<{ success: boolean; code?: string }>(
-                    '/admin/queues/ui/grant',
-                    undefined,
-                    { withCredentials: true },
-                  )
-                  const code = (resp.data as unknown as { code?: unknown })?.code as
-                    | string
-                    | undefined
-                  if (code) {
-                    window.location.assign(
-                      `/api/admin/queues/login?code=${encodeURIComponent(code)}`,
-                    )
-                    return
-                  }
-
-                  alert('Failed to prepare access for Bull Board')
-                } catch (e) {
-                  alert(e instanceof Error ? e.message : 'Failed to prepare access for Bull Board')
-                }
+              onClick={() => {
+                void openBullBoard()
               }}
               className="px-3 py-2 text-sm rounded bg-purple-600 hover:brightness-110"
             >
