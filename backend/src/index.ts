@@ -196,8 +196,113 @@ const io: Server<
 > = new Server(server, {
   cors: corsOptions,
   // Enable connection state recovery for client resilience on brief disconnects
-  connectionStateRecovery: {},
+  connectionStateRecovery: {
+    // Make recovery window explicit; defaults are short but adequate
+    maxDisconnectionDuration: 2 * 60 * 1000,
+  },
 })
+
+// Log Engine.IO handshake/upgrade issues to aid diagnosis
+io.engine.on('connection_error', (err) => {
+  try {
+    logger.warn('Engine.IO connection error', {
+      code: (err as unknown as { code?: string })?.code,
+      message: (err as Error).message,
+      context: (err as unknown as { context?: unknown })?.context,
+    })
+  } catch {
+    // no-op: avoid throwing from logging path
+  }
+})
+
+// Background Redis re-initialization with backoff (when not available at boot)
+let redisRetryTimer: NodeJS.Timeout | null = null
+let redisRetryAttempts = 0
+
+async function enableRedisBackedFeatures(
+  ioRef: Server<ClientToServerEvents, ServerToClientEvents>,
+  redisClients: RedisClients,
+) {
+  const { redisClient } = redisClients
+
+  // Set up Socket.io Redis Streams adapter if Redis is available
+  if (redisClient) {
+    try {
+      ioRef.adapter(createAdapter(redisClient))
+      logger.info('✅ Socket.io using Redis Streams adapter for multi-server support')
+    } catch (error) {
+      logger.warn(
+        '⚠️ Failed to create Redis Streams adapter, using in-memory adapter:',
+        getErrorMessage(error),
+      )
+    }
+  } else {
+    logger.warn('⚠️ Socket.io using in-memory adapter (single server only)')
+  }
+
+  // Enable Redis session store only if Redis is available
+  if (redisClient) {
+    const { enableRedisSessionStore } = await import('./middleware/session.js')
+    if (enableRedisSessionStore()) {
+      logger.info('✅ Session storage upgraded to Redis')
+    } else {
+      logger.warn('⚠️ Failed to upgrade session storage to Redis')
+    }
+  } else {
+    logger.warn('⚠️ Using in-memory session store (Redis not available)')
+  }
+
+  // Create and initialize WorkerManager AFTER Redis is ready
+  const workerManager = createWorkerManager(ioRef)
+  setWorkerManagerInstance(workerManager)
+  try {
+    await workerManager.initialize()
+    logger.info('✅ WorkerManager created and initialized after Redis connection')
+  } catch (error) {
+    logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error))
+  }
+
+  // Start matchsvc subscriber after Redis is ready
+  if (redisClient) {
+    try {
+      const { startMatchSvcSubscriber } = await import('./services/matchSvcIntegration.js')
+      await startMatchSvcSubscriber(ioRef)
+    } catch (e) {
+      logger.warn('⚠️ Failed to start matchsvc subscriber', getErrorMessage(e))
+    }
+  }
+}
+
+function scheduleRedisRetry(ioRef: Server<ClientToServerEvents, ServerToClientEvents>) {
+  if (redisRetryTimer) return
+  const attempt = async () => {
+    try {
+      const clients = await initializeRedis()
+      if (clients.redisClient) {
+        logger.info('✅ Redis became available, enabling Redis-backed features')
+        if (redisRetryTimer) {
+          clearInterval(redisRetryTimer)
+          redisRetryTimer = null
+        }
+        redisRetryAttempts = 0
+        await enableRedisBackedFeatures(ioRef, clients)
+        return
+      }
+    } catch (e) {
+      logger.warn('Redis retry attempt failed:', getErrorMessage(e))
+    }
+    // Schedule next attempt with capped exponential backoff + jitter
+    redisRetryAttempts += 1
+    const base = Math.min(60_000, 5_000 * 2 ** Math.max(0, redisRetryAttempts - 1))
+    const jitter = Math.floor(Math.random() * 1_000)
+    const delay = base + jitter
+    logger.info(`Next Redis retry in ${Math.round(delay / 1000)}s`)
+    if (redisRetryTimer) clearTimeout(redisRetryTimer)
+    redisRetryTimer = setTimeout(attempt, delay)
+  }
+  // start immediate attempt
+  redisRetryTimer = setTimeout(attempt, 0)
+}
 
 // Configure odds engine (TS/WASM/SHADOW) based on environment
 try {
@@ -250,72 +355,12 @@ void (async () => {
 // Initialize Redis asynchronously and set up adapter if successful
 initializeRedis()
   .then(async (redisClients: RedisClients) => {
-    const { redisClient } = redisClients
-
-    // Set up Socket.io Redis Streams adapter if Redis is available
-    if (redisClient) {
-      try {
-        io.adapter(createAdapter(redisClient))
-        logger.info('✅ Socket.io using Redis Streams adapter for multi-server support')
-      } catch (error) {
-        logger.warn(
-          '⚠️ Failed to create Redis Streams adapter, using in-memory adapter:',
-          getErrorMessage(error),
-        )
-      }
-    } else {
-      logger.warn('⚠️ Socket.io using in-memory adapter (single server only)')
-    }
-
-    // Enable Redis session store only if Redis is available
-    if (redisClient) {
-      const { enableRedisSessionStore } = await import('./middleware/session.js')
-      if (enableRedisSessionStore()) {
-        logger.info('✅ Session storage upgraded to Redis')
-      } else {
-        logger.warn('⚠️ Failed to upgrade session storage to Redis')
-      }
-    } else {
-      logger.warn('⚠️ Using in-memory session store (Redis not available)')
-    }
-
-    // Create and initialize WorkerManager AFTER Redis is ready
-    const workerManager = createWorkerManager(io)
-    setWorkerManagerInstance(workerManager)
-    try {
-      await workerManager.initialize()
-      logger.info('✅ WorkerManager created and initialized after Redis connection')
-    } catch (error) {
-      logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error))
-    }
-
-    // Start matchsvc subscriber after Redis is ready
-    if (redisClient) {
-      try {
-        const { startMatchSvcSubscriber } = await import('./services/matchSvcIntegration.js')
-        await startMatchSvcSubscriber(io)
-      } catch (e) {
-        logger.warn('⚠️ Failed to start matchsvc subscriber', getErrorMessage(e))
-      }
-    }
+    await enableRedisBackedFeatures(io, redisClients)
   })
   .catch((err) => {
-    logger.warn('⚠️ Redis initialization failed, using in-memory adapters:', getErrorMessage(err))
-
-    // Create and initialize WorkerManager even if Redis failed (graceful degradation)
-    const workerManager = createWorkerManager(io)
-    setWorkerManagerInstance(workerManager)
-    workerManager
-      .initialize()
-      .then(() => {
-        logger.info('✅ WorkerManager initialized without Redis (degraded mode)')
-      })
-      .catch((error: unknown) => {
-        logger.error(
-          '❌ Failed to initialize WorkerManager in degraded mode:',
-          getErrorMessage(error),
-        )
-      })
+    logger.warn('⚠️ Redis initialization failed, starting without Redis:', getErrorMessage(err))
+    // Schedule background retries; features will be upgraded when Redis becomes available
+    scheduleRedisRetry(io)
   })
 
 const PORT = process.env.PORT || 5001
@@ -423,10 +468,6 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
-
-// Static reports mount removed — reports are no longer served from the app
-
-// Bull Board is now a separate standalone service - see services/bullboard/
 
 // API Routes
 app.use('/api/auth', authRoutes)

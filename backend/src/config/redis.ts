@@ -62,14 +62,14 @@ export async function initializeRedis(): Promise<RedisClients> {
       connectTimeout: 10000, // 10 seconds for Railway startup
       commandTimeout: 5000,
       lazyConnect: true, // Don't connect immediately
-      maxRetriesPerRequest: 3, // Allow some retries for Railway networking
+      // Keep retrying indefinitely with capped backoff to survive transient outages
+      maxRetriesPerRequest: 3, // retry individual commands a few times
       retryStrategy: (times: number) => {
-        const delay = Math.min(times * 50, 2000)
-        if (times > 3) {
-          logger.error(`Redis connection failed after ${times} attempts, giving up`)
-          return null
+        const max = Number(process.env.REDIS_MAX_RETRY_DELAY_MS || 2000)
+        const delay = Math.min(times * 50, Math.max(100, max))
+        if (times > 1) {
+          logger.warn(`Redis reconnect attempt ${times}, retrying in ${delay}ms`)
         }
-        logger.warn(`Redis connection attempt ${times} failed, retrying in ${delay}ms`)
         return delay
       },
     }
