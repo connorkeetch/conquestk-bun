@@ -91,7 +91,8 @@ class SocketService {
     this.socket = io(socketUrl, {
       auth: { token },
       path: '/socket.io',
-      transports: ['websocket', 'polling'],
+      // Prefer polling-first then upgrade to websocket to be proxy-friendly
+      transports: ['polling', 'websocket'],
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -358,11 +359,18 @@ class SocketService {
       // Reflect disconnect state immediately
       store.dispatch(setConnectionStatus('disconnected'))
       const msg = (err && (err as Error).message) || 'Connection error'
-      // Common auth failure patterns -> prompt user
-      if (/auth/i.test(msg) || /jwt/i.test(msg)) {
+      // Only show session-expired prompt for actual auth failures from server middleware
+      if (
+        msg === 'Authentication error' ||
+        msg === 'Server configuration error' ||
+        /unauthoriz/i.test(msg)
+      ) {
         try {
-          // Surface a clear message; keep user on page to avoid data loss
-          toast.error('Session expired. Please sign in again to restore realtime updates.')
+          toast.error('Session expired. Please sign in again to restore realtime updates.', {
+            id: 'session-expired',
+            position: 'bottom-center',
+            duration: 6000,
+          })
         } catch {
           // no-op
         }
