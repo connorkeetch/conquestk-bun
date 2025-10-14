@@ -101,6 +101,12 @@ app.use((req, res, next) => {
     const isProd = process.env.NODE_ENV === 'production'
     if (!isProd) return next()
 
+    // Do not redirect Socket.IO handshake/upgrade requests; redirecting the
+    // initial GET to /socket.io breaks Engine.IO upgrade and causes reconnect loops.
+    if (req.path && req.path.startsWith('/socket.io')) {
+      return next()
+    }
+
     const headerHost = (req.headers.host || '').toLowerCase()
     if (!headerHost) return next()
 
