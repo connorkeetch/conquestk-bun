@@ -1,5 +1,5 @@
 import type { GameDelta } from '@conquestk/shared/types/delta'
-import * as jwt from 'jsonwebtoken'
+import type * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database.js'
@@ -14,6 +14,7 @@ import type {
   Territory,
 } from '../types/game.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { getJwtSecrets, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 import { gameStateCache } from './cacheService.js'
 import { clanService } from './clanService.js'
@@ -407,35 +408,42 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
   io.use((socket: AuthenticatedSocket, next) => {
     const token = socket.handshake.auth.token
-
     if (!token) {
       return next(new Error('Authentication error'))
     }
 
-    const jwtSecret = process.env.JWT_SECRET
-    if (!jwtSecret) {
-      logger.error('FATAL: JWT_SECRET environment variable is not set')
+    const secrets = getJwtSecrets()
+    if (!secrets.length) {
+      logger.error('FATAL: JWT secrets are not set')
       return next(new Error('Server configuration error'))
     }
 
     try {
-      const decoded = jwt.verify(token, jwtSecret) as {
-        userId: string
-        username: string
+      const { payload } = verifyJwtWithAnySecret<
+        jwt.JwtPayload & { userId: string; sessionId?: string }
+      >(token, secrets)
+      if (!payload || typeof payload.userId !== 'string') {
+        return next(new Error('Authentication error'))
       }
-      socket.userId = decoded.userId
-      socket.username = decoded.username
-      // Mirror userId/username into socket.data for fetchSockets()
-      // so RemoteSocket instances can access them via .data
-      // Mirror into socket.data in a type-safe way for fetchSockets()
+
+      socket.userId = payload.userId
+      // username is optional in our tokens
+      const maybeUsername = (payload as { username?: string }).username
+      if (maybeUsername && typeof maybeUsername === 'string') {
+        socket.username = maybeUsername
+      }
+
+      // Mirror minimal identity into socket.data for fetchSockets()
       const sockWithData = socket as unknown as { data?: Record<string, unknown> }
       sockWithData.data = {
         ...(sockWithData.data ?? {}),
-        userId: decoded.userId,
-        username: decoded.username,
+        userId: payload.userId,
+        ...(maybeUsername ? { username: maybeUsername } : {}),
       }
       next()
-    } catch (_error) {
+    } catch (e) {
+      const err = e as Error
+      logger.warn('Socket auth failed', { message: err.message, name: err.name })
       next(new Error('Authentication error'))
     }
   })
