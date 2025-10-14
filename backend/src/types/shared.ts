@@ -326,7 +326,10 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
-  'game-action': (data: { roomId: string; action: GameAction }) => void
+  'game-action': (
+    data: { roomId: string; action: GameAction },
+    callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
+  ) => void
   'player:resign': (data: { roomId: string }) => void
   deployArmies: (
     data: { roomId: string; territoryId: string; armies: number },

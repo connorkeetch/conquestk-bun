@@ -164,6 +164,40 @@ export class MaintenanceService {
       return { refreshed: false, ranAt }
     }
   }
+
+  /**
+   * Finds active games whose turn has expired and may need a watchdog-triggered timeout.
+   * Returns a list of room ids ordered by the oldest expiry first.
+   */
+  async listExpiredTurnRooms(
+    limit: number = 100,
+  ): Promise<Array<{ roomId: string; turnExpiresAt: string; usingTimeBank: boolean }>> {
+    const result = await query<{
+      id: string
+      turn_expires_at: string | null
+      using_time_bank: boolean | null
+      status: string | null
+    }>(
+      `
+        SELECT gr.id, gr.turn_expires_at, gr.using_time_bank, gr.status
+          FROM game_rooms gr
+         WHERE gr.turn_expires_at IS NOT NULL
+           AND gr.turn_expires_at < NOW()
+           AND COALESCE(gr.status, 'in_progress') IN ('in_progress', 'active')
+         ORDER BY gr.turn_expires_at ASC
+         LIMIT $1
+      `,
+      [Math.max(1, Math.trunc(limit))],
+    )
+
+    return result.rows
+      .filter((r) => typeof r.id === 'string' && r.id.length > 0)
+      .map((r) => ({
+        roomId: r.id,
+        turnExpiresAt: (r.turn_expires_at ?? new Date(0).toISOString()) as string,
+        usingTimeBank: r.using_time_bank === true,
+      }))
+  }
 }
 
 export const maintenanceService = new MaintenanceService()

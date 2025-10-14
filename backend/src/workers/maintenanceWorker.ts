@@ -71,6 +71,10 @@ export class MaintenanceWorker {
         await queue.upsertJobScheduler('maintenance:refresh-skill-leaderboard', {
           pattern: '0 4 * * *',
         } as unknown as { pattern?: string; every?: number })
+        // Turn-timeout watchdog: scans for overdue turns and triggers skip as a safety net
+        await queue.upsertJobScheduler('maintenance:turn-timeout-watchdog', {
+          every: Math.max(30_000, Number(process.env.TURN_TIMEOUT_WATCHDOG_EVERY_MS ?? 60_000)),
+        })
         // Nightly odds shadow verification if enabled
         await queue.upsertJobScheduler('maintenance:odds-shadow-verify', {
           pattern: process.env.ODDS_SHADOW_CRON || '30 3 * * *',
@@ -97,6 +101,10 @@ export class MaintenanceWorker {
               case 'maintenance:refresh-skill-leaderboard':
                 await maintenanceService.refreshSkillLeaderboardCache()
                 return { ok: true }
+              case 'maintenance:turn-timeout-watchdog': {
+                const summary = await this.runTurnTimeoutWatchdog()
+                return { ok: true, ...summary }
+              }
               case 'maintenance:odds-shadow-verify':
                 await this.runOddsShadowVerify()
                 return { ok: true }
@@ -193,6 +201,56 @@ export class MaintenanceWorker {
     }
     logger.info('🧹 Maintenance prune complete', { source, summary })
     return summary
+  }
+
+  /**
+   * Safety net: if a turn's expiry passed but no queue job fired (or a job did a no-op),
+   * trigger the normal timeout handler to advance play.
+   */
+  private async runTurnTimeoutWatchdog(): Promise<{
+    scanned: number
+    triggered: number
+    ranAt: string
+  }> {
+    const ranAt = new Date().toISOString()
+    try {
+      const overdue = await maintenanceService.listExpiredTurnRooms(100)
+      let triggered = 0
+      if (overdue.length > 0) {
+        const { GameLifecycleService } = await import('../services/gameLifecycleService.js')
+        const lifecycle = new GameLifecycleService()
+        for (const r of overdue) {
+          try {
+            await lifecycle.handleTurnTimeout(r.roomId)
+            triggered += 1
+          } catch (e) {
+            logger.warn('Watchdog: failed to handle turn timeout', {
+              roomId: r.roomId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
+        }
+      }
+      if (triggered > 0) {
+        logger.info('🕒 Turn-timeout watchdog triggered timeouts', {
+          scanned: overdue.length,
+          triggered,
+          ranAt,
+        })
+      } else {
+        logger.debug('Turn-timeout watchdog: no overdue turns found', {
+          scanned: overdue.length,
+          ranAt,
+        })
+      }
+      return { scanned: overdue.length, triggered, ranAt }
+    } catch (e) {
+      logger.warn('Turn-timeout watchdog encountered an error', {
+        error: e instanceof Error ? e.message : e,
+        ranAt,
+      })
+      return { scanned: 0, triggered: 0, ranAt }
+    }
   }
 
   private async runOddsShadowVerify() {

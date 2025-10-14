@@ -249,6 +249,57 @@ class SocketPayloadMetrics {
 
 export const socketPayloadMetrics = new SocketPayloadMetrics()
 
+// Realtime latency metrics (server-side view)
+class RealtimeLatencyMetrics {
+  private readonly ackWindow = new RollingWindowStats(500)
+  private readonly processWindow = new RollingWindowStats(500)
+  private readonly acceptedCounter = new CounterMetric('game_action_accepted_total')
+
+  recordAck(actionType: string, ms: number) {
+    if (Number.isFinite(ms) && ms >= 0) {
+      this.ackWindow.record(`ack:${actionType}`, ms)
+      this.acceptedCounter.inc({ action: actionType })
+    }
+  }
+
+  recordProcess(actionType: string, ms: number) {
+    if (Number.isFinite(ms) && ms >= 0) {
+      this.processWindow.record(`proc:${actionType}`, ms)
+    }
+  }
+
+  snapshot() {
+    // Aggregate over known keys by scanning internal maps is not exposed here; we can request per action of interest
+    // Instead, return a compact structure for common actions.
+    const actions = [
+      'deploy',
+      'attack',
+      'fortify',
+      'end_turn',
+      'go_back_to_reinforcement',
+      'transfer_conquest',
+    ]
+    const toStats = (key: string) =>
+      this.ackWindow.getPercentiles(key) || { count: 0, p50: 0, p95: 0, max: 0 }
+    const toStatsP = (key: string) =>
+      this.processWindow.getPercentiles(key) || { count: 0, p50: 0, p95: 0, max: 0 }
+    const byAction = actions.reduce<Record<string, unknown>>((acc, a) => {
+      acc[a] = {
+        ackMs: toStats(`ack:${a}`),
+        processMs: toStatsP(`proc:${a}`),
+      }
+      return acc
+    }, {})
+
+    return {
+      accepted: this.acceptedCounter.snapshot(),
+      byAction,
+    }
+  }
+}
+
+export const realtimeMetrics = new RealtimeLatencyMetrics()
+
 type AITurnMetricRecord = {
   difficulty: AIDifficulty
   fallbackUsed: boolean

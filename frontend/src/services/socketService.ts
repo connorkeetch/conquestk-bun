@@ -170,47 +170,42 @@ class SocketService {
   }
 
   deployArmies(roomId: string, territoryId: string, armies: number) {
-    // Schedule a one-shot convergence fetch if no delta arrives in time
+    // Send via unified action; apply optimistic update on ack
     this.scheduleDeployConfirmFetch(roomId)
     this.socket?.emit(
-      'deployArmies',
-      { roomId, territoryId, armies },
-      (ack?: { ok: boolean; queued?: boolean; version?: number }) => {
-        // If we received an applied version in the ack (inline path), clear timer early
-        if (ack && typeof ack.version === 'number') {
-          this.clearConfirmTimer(roomId)
+      'game-action',
+      {
+        roomId,
+        action: {
+          type: 'deploy',
+          roomId,
+          playerId: store.getState().auth.user?.id || '',
+          payload: { territoryId, armies },
+        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+      },
+      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
+        this.clearConfirmTimer(roomId)
+        try {
+          const state = store.getState()
+          const current = state.game.currentGame
+          const userId = state.auth.user?.id
+          if (!current || current.roomId !== roomId || !userId) return
+          if (current.phase !== 'reinforcement' || current.currentPlayer !== userId) return
+          const idx = current.board.findIndex((t) => t.id === territoryId)
+          if (idx === -1) return
+          const next = { ...current, board: [...current.board] }
+          const target = { ...next.board[idx] }
+          target.armies = (target.armies ?? 0) + armies
+          next.board[idx] = target as (typeof next.board)[number]
+          const currentPool = state.game.reinforcementArmies ?? 0
+          const newPool = Math.max(0, currentPool - armies)
+          store.dispatch(updateGameState(next as unknown as GameState))
+          store.dispatch(setReinforcementArmies(newPool))
+        } catch {
+          /* ignore */
         }
       },
     )
-
-    // Optimistic UI update: adjust local state immediately for a smoother feel
-    try {
-      const state = store.getState()
-      const current = state.game.currentGame
-      const userId = state.auth.user?.id
-      if (!current || current.roomId !== roomId || !userId) return
-      // Only allow optimistic update during reinforcement on your turn
-      if (current.phase !== 'reinforcement' || current.currentPlayer !== userId) return
-
-      const idx = current.board.findIndex((t) => t.id === territoryId)
-      if (idx === -1) return
-
-      // Apply in-memory update and dispatch
-      const next = { ...current, board: [...current.board] }
-      const target = { ...next.board[idx] }
-      target.armies = (target.armies ?? 0) + armies
-      // Assume ownership remains the same; server will correct if illegal
-      next.board[idx] = target as (typeof next.board)[number]
-
-      // Reduce local reinforcement pool if available
-      const currentPool = state.game.reinforcementArmies ?? 0
-      const newPool = Math.max(0, currentPool - armies)
-
-      store.dispatch(updateGameState(next as unknown as GameState))
-      store.dispatch(setReinforcementArmies(newPool))
-    } catch {
-      // best-effort optimistic update only
-    }
   }
 
   attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
@@ -245,10 +240,23 @@ class SocketService {
         ? { roomId, fromTerritoryId, toTerritoryId, armies }
         : { roomId, fromTerritoryId, toTerritoryId }
     this.socket?.emit(
-      'attack',
-      attackPayload as Parameters<ClientToServerEvents['attack']>[0],
+      'game-action',
+      {
+        roomId,
+        action: {
+          type: 'attack',
+          roomId,
+          playerId: store.getState().auth.user?.id || '',
+          payload: attackPayload,
+        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+      },
       () => {
         clear()
+        try {
+          audioService.playEffect('dice')
+        } catch {
+          /* ignore */
+        }
       },
     )
   }
@@ -258,7 +266,40 @@ class SocketService {
   }
 
   fortify(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies: number) {
-    this.socket?.emit('fortify', { roomId, fromTerritoryId, toTerritoryId, armies })
+    this.socket?.emit(
+      'game-action',
+      {
+        roomId,
+        action: {
+          type: 'fortify',
+          roomId,
+          playerId: store.getState().auth.user?.id || '',
+          payload: { fromTerritoryId, toTerritoryId, armies },
+        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+      },
+      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
+        try {
+          const state = store.getState()
+          const current = state.game.currentGame
+          const userId = state.auth.user?.id
+          if (!current || current.roomId !== roomId || !userId) return
+          if (current.phase !== 'fortify' || current.currentPlayer !== userId) return
+          const fromIdx = current.board.findIndex((t) => t.id === fromTerritoryId)
+          const toIdx = current.board.findIndex((t) => t.id === toTerritoryId)
+          if (fromIdx === -1 || toIdx === -1) return
+          const next = { ...current, board: [...current.board] }
+          const from = { ...next.board[fromIdx] }
+          const to = { ...next.board[toIdx] }
+          from.armies = Math.max(0, (from.armies ?? 0) - armies)
+          to.armies = (to.armies ?? 0) + armies
+          next.board[fromIdx] = from as (typeof next.board)[number]
+          next.board[toIdx] = to as (typeof next.board)[number]
+          store.dispatch(updateGameState(next as unknown as GameState))
+        } catch {
+          /* ignore */
+        }
+      },
+    )
   }
 
   transferConquestArmies(
