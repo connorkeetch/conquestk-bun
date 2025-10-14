@@ -45,7 +45,8 @@ router.get('/status', async (_req, res) => {
       },
       ts: new Date().toISOString(),
     }
-    return res.json(payload)
+    res.json(payload)
+    return
   }
 
   // 1) Health check (remote matchsvc)
@@ -137,6 +138,7 @@ router.get('/status', async (_req, res) => {
   }
 
   res.json(payload)
+  return
 })
 
 export default router
