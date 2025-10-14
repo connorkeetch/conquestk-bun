@@ -59,13 +59,16 @@ guide; the hosted Railway port is unreachable from within the sandbox network.
    cd backend && npm run check:schema
 ```
 
-### ❌ Bull Board "Access token required"
-**Problem**: Redirect lands on the Bull Board UI but API calls return 401
-1. Visit `/api/admin/queues/ui/debug` while logged in as an admin.
-2. Confirm `cookiesPresent.__Host_ck_bb`, `ck_bb_auth`, or `auth_token` are `true`.
-3. Check `decoded.headerBearer` or `decoded.queryAccessToken` to make sure the token resolves to a user ID.
-4. If `domain` is blank or mismatched, verify the deployment host isn’t on a `*.railway.app` preview (cookies are now host-scoped).
-5. Use the Admin Queues “Open Bull Board” button to trigger the Authorization header + query-token fallback before retrying manually.
+### ❌ Bull Board is blank (no queues)
+**Problem**: Bull Board loads but shows no queues; logs contain `ENOTFOUND redis.railway.internal`
+1. Ensure Bull Board is deployed in the same Railway project as Redis.
+2. In Bull Board → Variables, set `REDIS_URL` as a Variable Reference to the Redis add-on (do not hardcode)
+3. Verify `BULL_PREFIX` matches the backend (default: `bull`).
+4. If Bull Board cannot use private networking, set `REDIS_PUBLIC_URL` to the add-on’s public TLS URL instead.
+5. Check Bull Board health: `GET /health` (should return `{ status: "healthy", redis: "connected" }`).
+6. Check aggregated queue counts: `GET /metrics`.
+
+> Note: Bull Board now runs as a separate service protected by Basic Auth. The legacy embedded UI and cookie grant flow no longer apply.
 
 ### ❌ "column 'theme' does not exist"
 **Problem**: Missing database columns after deployment
