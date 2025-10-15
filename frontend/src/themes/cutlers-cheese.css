@@ -45,8 +45,7 @@
   --panel-bg-alt: var(--surface-glass-light);
   --panel-border: var(--box-border);
 
-  /* Fun, chunky headline vibe */
-  --font-family-heading: "Chewy", "Georgia", serif;
+  /* Decorative heading font applied when fonts are ready */
 }
 
 @keyframes cutlers-cheese-bubble {
@@ -182,4 +181,8 @@
   box-shadow:
     0 8px 24px rgba(245, 183, 0, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+/* Enable decorative heading font once fonts are ready */
+:root[data-theme="cutlers-cheese"][data-fonts="ready"] {
+  --font-family-heading: "Chewy", "Georgia", serif;
 }

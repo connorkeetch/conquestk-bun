@@ -1,7 +1,7 @@
 /* RetroSpace Theme - Early social media tribute */
 :root[data-theme="retrospace"] {
   --font-family-base: "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
-  --font-family-heading: "Audiowide", "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
+  /* Decorative heading font applied after fonts are ready */
   --color-primary: #0b3aa7; /* Classic Myspace blue */
   --color-primary-soft: #1e4fc4; /* Hover blue */
   --color-secondary: #ffffff; /* Neutral secondary */
@@ -104,6 +104,11 @@
 [data-theme="retrospace"] textarea {
   font-family: "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
   letter-spacing: 0.01em;
+}
+
+/* Enable decorative heading font once fonts are ready */
+:root[data-theme="retrospace"][data-fonts="ready"] {
+  --font-family-heading: "Audiowide", "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
 }
 
 /* RetroSpace button treatments - chunky and flat */
