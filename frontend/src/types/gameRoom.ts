@@ -68,9 +68,7 @@ export interface Player {
   skill_rating?: number
   current_tier?: string | null
   preferred_color?: string | null
-  // camelCase only for UI
-  selectedColor?: string | null
-  // Normalized camelCase used by UI going forward
+  // CamelCase only for UI
   selectedColor?: string | null
   teamId?: number | null
   isAi?: boolean
