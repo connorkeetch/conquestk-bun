@@ -1678,9 +1678,9 @@ kbd {
   mix-blend-mode: screen;
   background: transparent;
   transform-origin: center;
-  transform: scale(1);
+  transform: none;
   transition: opacity 200ms ease;
-  will-change: transform, opacity, background-position;
+  will-change: transform, opacity;
 }
 
 .premium-effect > * {
@@ -1772,8 +1772,8 @@ kbd {
     );
   background-size: 160% 160%, 140% 140%, 160% 160%, 160% 160%;
   animation:
-    dragonfireRotate 6s linear infinite,
-    premiumFlameFlicker 2.4s ease-in-out infinite;
+    dragonfireRotate 12s linear infinite,
+    dragonfirePulse 2.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1838,11 +1838,19 @@ kbd {
 
 @keyframes dragonfireRotate {
   0% {
-    transform: rotate(0deg) scale(1.02);
-    background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+    transform: rotate(0turn);
   }
   100% {
-    transform: rotate(360deg) scale(1.02);
-    background-position: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes dragonfirePulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.95;
   }
 }
