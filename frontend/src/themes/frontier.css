@@ -2,7 +2,7 @@
 :root[data-theme="frontier"] {
   /* Typography: sturdy old-style serif for Western vibe */
   --font-family-base: "Georgia", "Palatino Linotype", "Book Antiqua", "Times New Roman", serif;
-  --font-family-heading: "Rye", "Georgia", "Palatino Linotype", "Times New Roman", serif;
+  /* Decorative heading font applied when fonts are ready */
   --color-primary: #c47e35; /* Saddle-brown primary */
   --color-primary-soft: #e19b4c; /* Sunlit leather hover */
   --color-secondary: #f4d9a0; /* Parchment secondary */
@@ -75,6 +75,11 @@
   --frontier-overlay-opacity: 0.78;
   --frontier-dust-speed: 36s;
   --frontier-parallax-speed: 48s;
+}
+
+/* Enable decorative heading font once fonts are ready */
+:root[data-theme="frontier"][data-fonts="ready"] {
+  --font-family-heading: "Rye", "Georgia", "Palatino Linotype", "Times New Roman", serif;
 }
 
 /* Frontier shimmering heat + dust */

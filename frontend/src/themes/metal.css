@@ -43,8 +43,7 @@
 
   --ck-glow: #ff355e;
 
-  /* Display font: metal-styled headings */
-  --font-family-heading: "Metal Mania", "New Rocker", "Audiowide", var(--font-family-base);
+  /* Decorative heading font applied after fonts are ready (see below) */
 
   --glass-bg: rgba(17, 9, 27, 0.86);
   --glass-bg-light: rgba(27, 16, 39, 0.72);
@@ -172,6 +171,11 @@
     /* biome-ignore lint/complexity/noImportantStyles: Force compositor reset for perf */
     will-change: auto !important;
   }
+}
+
+[data-theme="metal"][data-fonts="ready"] {
+  /* Enable decorative heading font once fonts are ready */
+  --font-family-heading: "Metal Mania", "New Rocker", "Audiowide", var(--font-family-base);
 }
 
 [data-theme="metal"] a:hover {

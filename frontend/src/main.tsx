@@ -43,16 +43,20 @@ try {
 
   // Preload optional data on idle (non-blocking)
   try {
-    const schedule = (fn: () => void) => {
-      const w = window as unknown as { requestIdleCallback?: (cb: () => void) => void }
-      if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(fn)
-      else setTimeout(fn, 100)
-    }
-    schedule(() => {
-      preloadBattleOdds().catch(() => {
-        /* ignore */
+    const run = () => {
+      const schedule = (fn: () => void) => {
+        const w = window as unknown as { requestIdleCallback?: (cb: () => void) => void }
+        if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(fn)
+        else setTimeout(fn, 150)
+      }
+      schedule(() => {
+        preloadBattleOdds().catch(() => {
+          /* ignore */
+        })
       })
-    })
+    }
+    if (document.readyState === 'complete') run()
+    else window.addEventListener('load', run, { once: true })
   } catch {
     /* ignore */
   }
