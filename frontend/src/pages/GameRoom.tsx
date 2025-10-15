@@ -2765,8 +2765,10 @@ export default function GameRoom() {
                   }
                   setMobileDrawerOpen(false)
                 }}
+                title="Close chat"
+                aria-label="Close chat"
               >
-                Close
+                ✕
               </button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-3">
@@ -2909,8 +2911,10 @@ export default function GameRoom() {
                     }
                     setStatsDrawerOpen(false)
                   }}
+                  title="Close stats"
+                  aria-label="Close stats"
                 >
-                  Close
+                  ✕
                 </button>
               </div>
             </div>
@@ -2996,19 +3000,32 @@ export default function GameRoom() {
       {/* Game Room Footer (mobile + desktop) */}
       {currentGame && (
         <GameRoomFooter
-          onChatClick={() =>
-            setMobileDrawerOpen((v) => {
-              const next = !v
-              // If opening chat overlay, ensure stats overlay is closed to avoid overlap
-              if (next && !statsPinned) setStatsDrawerOpen(false)
-              return next
-            })
-          }
+          onChatClick={() => {
+            // Toggle behavior: if pinned, unpin and close; else toggle overlay
+            if (chatPinned) {
+              dispatch(setDrawerPinned({ panelId: 'chat', isPinned: false }))
+              setMobileDrawerOpen(false)
+            } else {
+              setMobileDrawerOpen((v) => {
+                const next = !v
+                if (next && !statsPinned) setStatsDrawerOpen(false)
+                return next
+              })
+            }
+          }}
           onChatHover={prefetchChatPanel}
           onSettingsClick={() => setSettingsModalOpen(true)}
           onStatsClick={() => {
-            setStatsDrawerOpen(true)
-            setMobileDrawerOpen(false)
+            // Toggle behavior: if pinned, unpin; if overlay open, close; else open overlay
+            if (statsPinned) {
+              dispatch(setDrawerPinned({ panelId: 'player-stats', isPinned: false }))
+              setStatsDrawerOpen(false)
+            } else if (statsDrawerOpen) {
+              setStatsDrawerOpen(false)
+            } else {
+              setStatsDrawerOpen(true)
+              setMobileDrawerOpen(false)
+            }
           }}
           onStatsHover={prefetchStatsPanel}
           onLayoutClick={() => setIsEditingLayout((v) => !v)}
@@ -3016,6 +3033,8 @@ export default function GameRoom() {
           isEditingLayout={isEditingLayout}
           isChatPinned={chatPanel?.isPinned ?? false}
           isStatsPinned={statsPanel?.isPinned ?? false}
+          isChatDrawerAvailable={chatPanel?.zone === 'drawer'}
+          isStatsDrawerAvailable={statsPanel?.zone === 'drawer'}
         />
       )}
 
