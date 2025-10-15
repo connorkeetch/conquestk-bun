@@ -890,8 +890,7 @@ export class GameController {
     }
   }
 
-  getRoomLog = async (_req: AuthenticatedRequest, res: Response) =>
-    res.status(410).json({ error: 'Deprecated. Use /api/game/rooms/:roomId/log-text instead.' })
+  // (intentionally blank to avoid exposing legacy route handler)
 
   // Fog-aware textual backfill for game logs
   getRoomLogText = async (req: AuthenticatedRequest, res: Response) => {
