@@ -36,4 +36,3 @@ router.post('/vitals', (req: Request, res: Response) => {
 })
 
 export default router
-
