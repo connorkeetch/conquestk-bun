@@ -3342,20 +3342,7 @@ export class GameService {
     logger.info(`Forcefully removed game ${roomId} from cache`)
   }
 
-  /**
-   * Fetch persisted battle log entries for a game room.
-   * Returns an empty array if none are available.
-   */
-  async getBattleLog(roomId: string): Promise<GameLogEntry[]> {
-    const result = await query<{ game_log: GameLogEntry[] | null }>(
-      'SELECT game_log FROM game_states WHERE room_id = $1',
-      [roomId],
-    )
-    const rows = result.rows
-    if (!rows || rows.length === 0) return []
-    const log = rows[0]?.game_log
-    return Array.isArray(log) ? log : []
-  }
+  // Legacy getBattleLog removed: structured logs moved to append-only game_logs.
 
   async appendLog(roomId: string, entries: GameLogEntry[]): Promise<void> {
     if (!entries || entries.length === 0) return

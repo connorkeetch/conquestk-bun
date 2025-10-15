@@ -405,12 +405,14 @@ export class GameRoomService {
             typeof player.preferred_color === 'string' && player.preferred_color.length > 0
               ? player.preferred_color
               : undefined,
-          selected_color:
-            // @ts-expect-error selected_color may be present from SQL JSON
-            typeof player.selected_color === 'string' && player.selected_color.length > 0
-              ? // @ts-expect-error narrowing SQL shape
-                player.selected_color
-              : undefined,
+          selectedColor:
+            typeof (player as any).selectedColor === 'string' &&
+            (player as any).selectedColor.length > 0
+              ? (player as any).selectedColor
+              : typeof (player as any).selected_color === 'string' &&
+                  (player as any).selected_color.length > 0
+                ? (player as any).selected_color
+                : undefined,
           joinedAt: this.toDate(player.joinedAt) ?? new Date(),
           isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,
           readyAt: this.toDate(player.readyAt) ?? null,
@@ -814,7 +816,6 @@ export class GameRoomService {
                   -- 'current_tier', u.current_tier, -- Column doesn't exist yet
                   'current_tier', NULL,
               'preferred_color', up.preferred_color,
-              'selected_color', rp.selected_color,
               'selectedColor', rp.selected_color,
                   'joinedAt', rp.joined_at,
                   'isReady', rp.is_ready,
