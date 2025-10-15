@@ -5,6 +5,7 @@
 > ConquestK is currently in an active development phase. The service is not publicly live; only Connor and test accounts use it. When choosing between a clean, breaking change and maintaining backwards compatibility, prefer the clean refactor. Migrations can be destructive, legacy shims are unnecessary, and we can reset data as needed during local or staging work.
 
 Agent checklist (read before coding):
+- Open and review `docs/guides/coding-standards.md` before writing or editing any code.
 - Confirm we are operating in development‑only mode (no public users).
 - Prefer deletion of deprecated sockets/routes and legacy code over long‑lived shims.
 - Allow destructive/incompatible migrations; verify locally with `cd backend && npm run migrate` and reseed (`seed:users`) if needed.
