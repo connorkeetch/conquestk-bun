@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { query } from '../config/database.js'
 import { logger } from './logger.js'
 
@@ -302,6 +303,9 @@ export class MigrationTracker {
 
   async validateMigrationIntegrity(filename: string): Promise<boolean> {
     try {
+      // ESM-safe __dirname resolution
+      const __filename = fileURLToPath(import.meta.url)
+      const __dirname = dirname(__filename)
       const migrationPath = join(__dirname, '../../migrations', filename)
       const migrationContent = readFileSync(migrationPath, 'utf8')
       const currentChecksum = this.calculateChecksum(migrationContent)
