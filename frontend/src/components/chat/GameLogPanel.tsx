@@ -1487,6 +1487,31 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               )
               const terrs = toSafeInt((er as { territoryCount?: number }).territoryCount, 0)
               const id = String(er.playerId || '')
+              // Announce round boundary on TURN START when turnNumber implies a new round
+              try {
+                const tn = toSafeInt((er as { turnNumber?: number }).turnNumber, 0)
+                if (tn > 0) {
+                  const activePlayers = (() => {
+                    try {
+                      return Math.max(
+                        1,
+                        ((game?.players || []) as Array<{ isEliminated?: boolean }>).filter(
+                          (p) => !p.isEliminated,
+                        ).length,
+                      )
+                    } catch {
+                      return Math.max(1, (game?.players || []).length || 1)
+                    }
+                  })()
+                  const round = Math.max(1, Math.ceil(tn / activePlayers))
+                  if (!lastRoundRef.current || round > (lastRoundRef.current || 0)) {
+                    add(`Round ${round} started.`, ts)
+                    lastRoundRef.current = round
+                  }
+                }
+              } catch {
+                /* ignore */
+              }
               if (reinf > 0) {
                 addRich(
                   <>
@@ -1757,7 +1782,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       socketService.off('log:append', onLogAppend)
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt, playerColor])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, playerColor, game?.players])
 
   return (
     <div className={`flex flex-col h-full min-h-0 bg-surface-1 rounded-lg ${className}`}>
