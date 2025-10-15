@@ -12,10 +12,7 @@ const api = axios.create({
   baseURL: API_URL,
 })
 
-type RawGameLogResponse = Record<string, unknown> & {
-  log?: Array<Record<string, unknown>>
-  stats?: Array<Record<string, unknown>>
-}
+// legacy RawGameLogResponse removed (deprecated /log route)
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -150,35 +147,7 @@ export const gameService = {
     const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`, { params })
     return response.data.game
   },
-  async getGameLog(
-    roomId: string,
-    options?: { signal?: AbortSignal; limit?: number; before?: string },
-  ): Promise<
-    Record<string, unknown> & {
-      log: Array<Record<string, unknown>>
-      stats?: Array<Record<string, unknown>>
-      earliestTs?: string | null
-    }
-  > {
-    const params: Record<string, string> = {}
-    if (options?.limit && Number.isFinite(options.limit)) params.limit = String(options.limit)
-    if (options?.before) params.before = options.before
-    const cfg: AxiosRequestConfig | undefined = {
-      ...(options?.signal ? { signal: options.signal } : {}),
-      ...(Object.keys(params).length > 0 ? { params } : {}),
-    }
-    const response = await api.get<RawGameLogResponse>(`/game/rooms/${roomId}/log`, cfg)
-    const raw = (response.data ?? {}) as RawGameLogResponse
-    const log = Array.isArray(raw.log) ? raw.log : []
-    const stats = Array.isArray(raw.stats) ? raw.stats : undefined
-    const earliestTs = (response.data as { earliestTs?: string | null })?.earliestTs
-    return {
-      ...raw,
-      log,
-      ...(stats ? { stats } : {}),
-      ...(typeof earliestTs !== 'undefined' ? { earliestTs } : {}),
-    }
-  },
+  // Legacy getGameLog (/log) removed; use getGameTextLog instead.
 
   async getGameTextLog(
     roomId: string,

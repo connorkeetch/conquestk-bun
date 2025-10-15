@@ -1,7 +1,6 @@
 import { computeConquestProbability } from '@conquestk/shared/utils/battleOdds'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
-import { gameService } from '@/services/gameService'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import type { GamePlayer } from '../types/game'
@@ -351,10 +350,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   )
 }
 
-const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
-  className,
-  roomId,
-}) => {
+const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ className }) => {
   const game = useAppSelector((s) => s.game.currentGame)
   const players = game?.players ?? []
   const [elimTurn, setElimTurn] = React.useState<Record<string, number | null>>({})
@@ -363,67 +359,12 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({
   const armiesByPlayer = new Map<string, number>()
 
   React.useEffect(() => {
-    if (!roomId) return undefined
-    let active = true
-    const controller = new AbortController()
-    const run = async () => {
-      try {
-        const resp = await gameService.getGameLog(roomId, { signal: controller.signal })
-        const stats = Array.isArray(resp.stats) ? resp.stats : []
-        const turns: Record<string, number | null> = {}
-        // Initialize with nulls
-        for (const p of players) turns[p.id] = null
-        stats.forEach((snap, idx) => {
-          const turnIndex =
-            typeof (snap as { turn?: number }).turn === 'number' &&
-            (snap as { turn: number }).turn > 0
-              ? (snap as { turn: number }).turn
-              : idx + 1
-          const ps =
-            (snap as { players?: Array<{ id: string; eliminated?: boolean }> }).players || []
-          for (const entry of ps) {
-            if (entry.eliminated && (turns[entry.id] ?? null) === null) {
-              turns[entry.id] = turnIndex
-            }
-          }
-        })
-        if (active) setElimTurn(turns)
-
-        // Attempt to extract rating/CP deltas if backend provided
-        const deltas: Record<string, number> = {}
-        const maybe = resp as unknown as Record<string, unknown>
-        const tryMaps: Array<unknown> = []
-        if (maybe && typeof maybe === 'object') {
-          // Common shapes to try: summary.ratingChanges, ratingChanges, cpDeltaByPlayer, skillRatingDeltas
-          const candidates = [
-            maybe.summary as unknown as Record<string, unknown>,
-            (maybe as Record<string, unknown>).ratingChanges as unknown,
-            (maybe as Record<string, unknown>).cpDeltaByPlayer as unknown,
-            (maybe as Record<string, unknown>).skillRatingDeltas as unknown,
-          ]
-          for (const c of candidates) if (c && typeof c === 'object') tryMaps.push(c)
-        }
-        for (const m of tryMaps) {
-          const obj = m as Record<string, unknown>
-          for (const [k, v] of Object.entries(obj)) {
-            const num = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN
-            if (Number.isFinite(num)) deltas[k] = Math.trunc(num as number)
-          }
-        }
-        if (active) setCpDelta(deltas)
-      } catch (_error) {
-        if (!active || controller.signal.aborted) {
-          return
-        }
-        /* ignore errors; elimination turn info is optional */
-      }
-    }
-    void run()
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [roomId, players])
+    // Optional elimination turn and CP deltas previously fetched via legacy /log; skip for now.
+    setElimTurn((prev) => ({ ...prev }))
+    setCpDelta((prev) => ({ ...prev }))
+    // no deps required; derived from current game state at render time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!game) return null
 
@@ -544,7 +485,8 @@ const PlayerDebrief: React.FC<{
     let active = true
     const run = async () => {
       try {
-        const res = await gameService.getGameLog(roomId, { signal: controller.signal })
+        // Legacy /log removed; skip debrief fetch for now
+        const res = { stats: [] as Array<Record<string, unknown>> }
         if (!active) return
         setStats(Array.isArray(res.stats) ? res.stats : [])
         // Try to glean CP/rating delta for current user
@@ -742,8 +684,8 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     const controller = new AbortController()
     const run = async () => {
       try {
-        const resp = await gameService.getGameLog(roomId, { signal: controller.signal })
-        const entries = Array.isArray(resp?.log) ? (resp.log as LogEntry[]) : []
+        // Legacy /log removed; skip timeline fetch for now
+        const entries: LogEntry[] = []
         if (!active) return
         setLog(entries)
       } catch (_e) {
@@ -1003,9 +945,9 @@ const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
     const controller = new AbortController()
     const run = async () => {
       try {
-        const res = await gameService.getGameLog(roomId, { signal: controller.signal })
+        // Legacy /log removed; skip turn stats fetch for now
         if (!active) return
-        const raw = Array.isArray(res.stats) ? res.stats : []
+        const raw: Array<Record<string, unknown>> = []
         setStats(raw)
         // Default all series visible
         const next: Record<string, boolean> = {}
