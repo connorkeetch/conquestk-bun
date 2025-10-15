@@ -12,7 +12,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      // We defer registration via app code to avoid early main-thread work
+      injectRegister: null,
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',

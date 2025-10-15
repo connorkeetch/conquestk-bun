@@ -1,8 +1,9 @@
 /* Import Tailwind CSS v4 */
 @import "tailwindcss";
 
-/* Import self-hosted heading fonts (Fontsource) */
-@import "./styles/fonts.css";
+/* Theme display fonts are loaded on-demand per theme.
+   See styles/loadThemeFonts.ts and applyTheme() for lazy loading.
+*/
 
 /* Import custom theme configuration */
 @import "./app.css";

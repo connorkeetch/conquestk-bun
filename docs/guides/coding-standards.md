@@ -238,6 +238,18 @@ test: Add tests for ELO calculation
 
 ## 🚀 Implementation in Claude Code
 
+## ⚡ Performance & Lighthouse
+
+- Avoid blocking LCP:
+  - Load theme display fonts on-demand per theme; do not import decorative fonts globally.
+  - Defer service worker registration until after `window.load` to keep the main thread free during first paint.
+  - Do not preload audio on boot; only preload after user interaction/unlock.
+  - Idle-load large optional data (e.g., precomputed odds) using `requestIdleCallback` or a short timeout.
+- Resource hints:
+  - Add `dns-prefetch` and `preconnect` for the CDN origin and enable DNS prefetch via Helmet.
+- Caching:
+  - Serve favicons/logo as `public, max-age=31536000, immutable`.
+
 When Claude Code works on this project, it should:
 
 1. **Validate input** before processing
