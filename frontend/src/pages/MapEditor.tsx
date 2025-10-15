@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { mapWorkflowClient } from '@/services/mapWorkflowClient'
 import { logger } from '@/utils/logger'
+import { serializePolygonEditorStateToDraft } from '@/utils/mapEditorSerializer'
 import ImageCropper from '../components/ImageCropper'
 import TermsModal from '../components/TermsModal'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
@@ -34,6 +36,7 @@ interface EditorState {
   imageScale: number // Scale factor for resizing image
   adjacencies: Array<{ from: string; to: string }>
   firstSelectedTerritory?: string
+  currentDraftId?: string
 }
 
 type NotificationType = 'success' | 'error' | 'warning' | 'info'
@@ -844,65 +847,42 @@ export default function MapEditor() {
     setSaveStatus('saving')
 
     try {
-      // Create or update map
-      const mapData = {
+      if (!polygonEditorEnabled) {
+        setSaveStatus('error')
+        addNotification('Polygon editor workflow is disabled by feature flag.', 'error')
+        return
+      }
+
+      const snapshot = {
         name: mapName,
         description: mapDescription,
+        imageUrl: state.imageUrl,
+        imageWidth: state.imageWidth,
+        imageHeight: state.imageHeight,
+        territories: state.territories.map((t) => ({
+          id: t.territoryId || t.id,
+          name: t.name,
+          boundaryCoords: t.boundaryCoords as unknown as Coordinate[],
+          armyPosition: t.armyPosition as Coordinate,
+          continentId: t.continentId ?? null,
+        })),
+        continents: state.continents.map((c) => ({
+          id: c.id,
+          name: c.name,
+          bonusArmies: c.bonusArmies,
+          color: c.color,
+        })),
+        adjacencies: state.adjacencies.map((a) => ({ from: a.from, to: a.to })),
         isPublic,
         tags: [],
       }
 
-      const savedMap = await mapService.createMap(mapData, imageFile || undefined)
+      const payload = serializePolygonEditorStateToDraft(snapshot)
+      const draft = await mapWorkflowClient.saveDraft(payload)
 
-      // Save continents
-      const savedContinents = []
-      for (const continent of state.continents) {
-        const saved = await mapService.createContinent(savedMap.id, {
-          name: continent.name,
-          bonusArmies: continent.bonusArmies,
-          color: continent.color,
-        })
-        savedContinents.push(saved)
-      }
-
-      // Save territories and collect mapping for adjacencies
-      const savedTerritories = []
-      for (const territory of state.territories) {
-        const continentId = savedContinents.find(
-          (c) => c.name === state.continents.find((sc) => sc.id === territory.continentId)?.name,
-        )?.id
-
-        const saveReq = {
-          mapId: savedMap.id,
-          territoryId: territory.territoryId,
-          name: territory.name,
-          boundaryCoords: territory.boundaryCoords,
-          armyPosition: territory.armyPosition,
-          startingArmies: territory.startingArmies,
-          ...(continentId ? { continentId } : {}),
-        }
-        const savedTerritory = await mapService.createTerritory(saveReq)
-        savedTerritories.push({ editorId: territory.id, savedId: savedTerritory.id })
-      }
-
-      // Save adjacencies
-      for (const adjacency of state.adjacencies) {
-        const fromMapping = savedTerritories.find((t) => t.editorId === adjacency.from)
-        const toMapping = savedTerritories.find((t) => t.editorId === adjacency.to)
-
-        if (fromMapping && toMapping) {
-          await mapService.createAdjacency({
-            fromTerritoryId: fromMapping.savedId,
-            toTerritoryId: toMapping.savedId,
-            connectionType: 'land',
-            isBidirectional: true,
-          })
-        }
-      }
-
-      setState((prev) => ({ ...prev, currentMap: savedMap }))
+      setState((prev) => ({ ...prev, currentDraftId: draft.id }))
       setSaveStatus('saved')
-      addNotification('Map saved successfully! You can manage it from your profile.', 'success')
+      addNotification('Draft saved! You can publish when ready.', 'success')
 
       setTimeout(() => setSaveStatus('idle'), 2000)
     } catch (error: unknown) {
@@ -933,6 +913,25 @@ export default function MapEditor() {
         setSaveStatus('idle')
         setSaveError(null)
       }, 10000) // Longer timeout to read the error
+    }
+  }
+
+  const publishDraft = async () => {
+    if (!polygonEditorEnabled) {
+      addNotification('Polygon editor workflow is disabled by feature flag.', 'error')
+      return
+    }
+    const draftId = state.currentDraftId
+    if (!draftId) {
+      addNotification('Please save your draft before publishing.', 'warning')
+      return
+    }
+    try {
+      await mapWorkflowClient.publishDraft(draftId)
+      addNotification('🎉 Draft published! It has been submitted for review.', 'success')
+    } catch (error) {
+      logger.error('Publish draft error', error)
+      addNotification('Failed to publish draft. Please try again.', 'error')
     }
   }
 
@@ -1375,6 +1374,20 @@ export default function MapEditor() {
                     ? '❌ Error'
                     : '💾 Save Map'}
             </button>
+
+            {polygonEditorEnabled && (
+              <button
+                type="button"
+                onClick={publishDraft}
+                disabled={!state.currentDraftId}
+                className={`px-4 py-2 rounded font-medium ${
+                  state.currentDraftId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600'
+                }`}
+                title={state.currentDraftId ? 'Publish draft for review' : 'Save a draft first'}
+              >
+                🚀 Publish Draft
+              </button>
+            )}
 
             {/* Save Error Display */}
             {saveError && (

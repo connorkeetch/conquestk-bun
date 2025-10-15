@@ -237,7 +237,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   }, [game?.board])
   // Disable client-synthesized lifecycle lines; rely on server log
 
-  // Backfill full history only after game ends (avoids 403 during active games)
+  // Backfill windowed history from the server
   useEffect(() => {
     const isFinished =
       game?.phase === 'finished' ||
@@ -253,7 +253,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     backfillLoadedRef.current = true
     ;(async () => {
       try {
-        const resp = await gameService.getGameLog(gameId)
+        const resp = await gameService.getGameLog(gameId, { limit: 150 })
         // Narrow unknown response shape: either an array or an object with a `log` array
         const r1 = resp as unknown
         const maybeObj = r1 as { log?: unknown[] }

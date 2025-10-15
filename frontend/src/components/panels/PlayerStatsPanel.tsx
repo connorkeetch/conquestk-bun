@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { PlayerStatsTable } from '@/components/game/PlayerStatsTable'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { socketService } from '@/services/socketService'
+import { resignFromGame } from '@/store/gameActions'
 import { addClientLog } from '@/store/uiRoomSlice'
 import type { GamePlayer } from '@/types/game'
 import ResizablePanel from './ResizablePanel'
@@ -88,18 +88,14 @@ export default function PlayerStatsPanel({
       'Are you sure you want to resign? Your territories will immediately become neutral. This cannot be undone.',
     )
     if (!confirmed) return
-    try {
-      socketService.emit('player:resign', { roomId: currentRoom.id })
-      dispatch(
-        addClientLog({
-          text: 'You resigned. Territories are now neutral.',
-          roomId: currentRoom.id,
-        }),
-      )
-      toast.success('Resigned')
-    } catch {
-      /* ignore */
-    }
+    dispatch(resignFromGame(currentRoom.id))
+    dispatch(
+      addClientLog({
+        text: 'You resigned. Territories are now neutral.',
+        roomId: currentRoom.id,
+      }),
+    )
+    toast.success('Resigned')
   }
 
   return (

@@ -83,6 +83,7 @@ import { store } from '../store'
 import {
   endTurn,
   goBackToReinforcement,
+  resignFromGame,
   undoFortify,
   undoLastPlacement,
 } from '../store/gameActions'
@@ -1803,7 +1804,7 @@ export default function GameRoom() {
                 className="btn btn-danger"
                 onClick={() => {
                   try {
-                    socketService.emit('player:resign', { roomId: currentRoom.id })
+                    dispatch(resignFromGame(currentRoom.id))
                     dispatch(
                       addClientLog({
                         text: 'You resigned. Territories are now neutral.',

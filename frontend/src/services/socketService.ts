@@ -123,6 +123,14 @@ class SocketService {
     this.socket?.emit('leave-room', roomId)
   }
 
+  /**
+   * Unified gameplay action entrypoint.
+   *
+   * Do NOT call per-action helpers directly (deployArmies/attack/fortify/etc.).
+   * Those methods are private to preserve client-side optimizations like
+   * throttling, optimistic UI, and confirmation fallbacks. Always route
+   * gameplay through this method (or the Redux thunks that call it).
+   */
   sendGameAction(data: Parameters<ClientToServerEvents['game-action']>[0]) {
     const { roomId, action } = data
     // Route to specialized handlers to preserve throttling and optimistic UI where applicable
@@ -268,7 +276,7 @@ class SocketService {
     }
   }
 
-  deployArmies(roomId: string, territoryId: string, armies: number) {
+  private deployArmies(roomId: string, territoryId: string, armies: number) {
     // Send via unified action; apply optimistic update on ack
     this.scheduleDeployConfirmFetch(roomId)
     this.socket?.emit(
@@ -307,7 +315,7 @@ class SocketService {
     )
   }
 
-  attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
+  private attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
     const key = `${roomId}:${fromTerritoryId}->${toTerritoryId}`
     const now = Date.now()
     const lastAt = this.lastAttackEmitAt.get(key) ?? 0
@@ -360,11 +368,7 @@ class SocketService {
     )
   }
 
-  checkCapitalAttack(roomId: string, targetTerritoryId: string) {
-    this.socket?.emit('checkCapitalAttack', { roomId, targetTerritoryId })
-  }
-
-  fortify(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies: number) {
+  private fortify(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies: number) {
     this.socket?.emit(
       'game-action',
       {
@@ -401,7 +405,7 @@ class SocketService {
     )
   }
 
-  transferConquestArmies(
+  private transferConquestArmies(
     roomId: string,
     fromTerritoryId: string,
     toTerritoryId: string,
@@ -419,7 +423,7 @@ class SocketService {
     })
   }
 
-  undoFortify(roomId: string) {
+  private undoFortify(roomId: string) {
     this.socket?.emit(
       'game-action',
       {
@@ -437,7 +441,7 @@ class SocketService {
     )
   }
 
-  endTurn(roomId: string) {
+  private endTurn(roomId: string) {
     this.socket?.emit(
       'game-action',
       {

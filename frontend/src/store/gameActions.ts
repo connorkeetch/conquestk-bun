@@ -560,6 +560,24 @@ export const tradeTreasureSet = createAsyncThunk(
   },
 )
 
+// Resign from the current game (socket-only; no HTTP fallback available)
+export const resignFromGame = createAsyncThunk(
+  'game/resign',
+  async (roomId: string, { getState, dispatch }) => {
+    const state = getState() as RootState
+    const isConnected = state.uiRoom.connectionStatus === 'connected'
+    if (!isConnected) {
+      dispatch(setError('Cannot resign while offline or disconnected'))
+      return
+    }
+    try {
+      socketService.emit('player:resign', { roomId })
+    } catch (_e) {
+      dispatch(setError('Failed to resign'))
+    }
+  },
+)
+
 // Go back to reinforcement phase action
 export const goBackToReinforcement = createAsyncThunk(
   'game/goBackToReinforcement',
