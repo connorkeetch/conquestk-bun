@@ -3269,7 +3269,33 @@ export class GameService {
       const current = Array.isArray(existing.rows[0]?.game_log)
         ? (existing.rows[0]?.game_log as GameLogEntry[])
         : []
-      const updated = [...current, ...entries].slice(-500)
+      // Deduplicate TURN END/MISSED events per player+turn to avoid double logging
+      const filtered: GameLogEntry[] = []
+      for (const e of entries) {
+        if ((e as { type?: string }).type === 'TURN') {
+          const te = e as unknown as {
+            type: 'TURN'
+            playerId: string
+            event: 'START' | 'END' | 'MISSED'
+            turnNumber?: number
+          }
+          if ((te.event === 'END' || te.event === 'MISSED') && te.turnNumber) {
+            const exists = current.some((x) => {
+              if ((x as { type?: string }).type !== 'TURN') return false
+              const xt = x as unknown as typeof te
+              return (
+                xt.event === te.event &&
+                xt.playerId === te.playerId &&
+                (xt.turnNumber ?? -1) === te.turnNumber
+              )
+            })
+            if (exists) continue
+          }
+        }
+        filtered.push(e)
+      }
+      if (filtered.length === 0) return
+      const updated = [...current, ...filtered].slice(-500)
       await client.query(
         `INSERT INTO game_states (room_id, game_log, last_activity, game_phase, turn_number)
          VALUES ($1, $2, NOW(), 'lobby', 1)
