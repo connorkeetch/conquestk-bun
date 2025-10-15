@@ -4,7 +4,22 @@ import { toast } from 'react-hot-toast'
 import { API_URL } from '@/config'
 import { socketService } from '@/services/socketService'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
-import type { GameAction, GameState, TradeCardsAction } from '../types/game'
+import type { GameState, TradeCardsAction } from '../types/game'
+// Extend shared GameAction with client-only actions
+type SharedGameAction = import('@conquestk/shared').GameAction
+type TransferConquestAction = {
+  type: 'transfer_conquest'
+  roomId: string
+  playerId: string
+  payload: { fromTerritoryId: string; toTerritoryId: string; armies: number }
+}
+type UndoFortifyAction = {
+  type: 'undo_fortify'
+  roomId: string
+  playerId: string
+  payload?: undefined
+}
+export type GameAction = SharedGameAction | TransferConquestAction | UndoFortifyAction
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import {
   addTerritoryAction,

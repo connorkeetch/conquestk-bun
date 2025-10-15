@@ -131,11 +131,15 @@ class SocketService {
    * throttling, optimistic UI, and confirmation fallbacks. Always route
    * gameplay through this method (or the Redux thunks that call it).
    */
-  sendGameAction(data: Parameters<ClientToServerEvents['game-action']>[0]) {
+  // Accept a loose action envelope to support extended client-only action helpers
+  sendGameAction(data: {
+    roomId: string
+    action: { type: string; playerId?: string; payload?: unknown }
+  }) {
     const { roomId, action } = data
     // Route to specialized handlers to preserve throttling and optimistic UI where applicable
     try {
-      switch (action?.type) {
+      switch (String(action?.type)) {
         case 'deploy': {
           const p = (action as { payload?: unknown }).payload
           if (p && typeof p === 'object') {
@@ -231,7 +235,10 @@ class SocketService {
     }
 
     // Generic emit as a fallback
-    this.socket?.emit('game-action', data)
+    this.socket?.emit(
+      'game-action',
+      data as unknown as Parameters<ClientToServerEvents['game-action']>[0],
+    )
   }
 
   // Generic emit for legacy/untyped events

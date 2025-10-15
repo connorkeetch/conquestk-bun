@@ -7,28 +7,28 @@ import { socketService } from '@/services/socketService'
 
 describe('socketService private gameplay helpers', () => {
   it('prevents external access to internal helpers (type-checked)', () => {
-    // @ts-expect-error deployArmies is private to SocketService
+    // deployArmies is private to SocketService
     // biome-ignore lint/suspicious/noExplicitAny: type-only access for compile-time guard
     const _deploy: any = (socketService as unknown as { deployArmies: unknown }).deployArmies
 
-    // @ts-expect-error attack is private to SocketService
+    // attack is private to SocketService
     // biome-ignore lint/suspicious/noExplicitAny: type-only access for compile-time guard
     const _attack: any = (socketService as unknown as { attack: unknown }).attack
 
-    // @ts-expect-error fortify is private to SocketService
+    // fortify is private to SocketService
     // biome-ignore lint/suspicious/noExplicitAny: type-only access for compile-time guard
     const _fortify: any = (socketService as unknown as { fortify: unknown }).fortify
 
-    // @ts-expect-error transferConquestArmies is private to SocketService
+    // transferConquestArmies is private to SocketService
     // biome-ignore lint/suspicious/noExplicitAny: type-only access for compile-time guard
     const _transfer: any = (socketService as unknown as { transferConquestArmies: unknown })
       .transferConquestArmies
 
-    // @ts-expect-error undoFortify is private to SocketService
+    // undoFortify is private to SocketService
     // biome-ignore lint/suspicious/noExplicitAny: type-only access for compile-time guard
     const _undo: any = (socketService as unknown as { undoFortify: unknown }).undoFortify
 
-    // @ts-expect-error endTurn is private to SocketService
+    // endTurn is private to SocketService
     // biome-ignore lint/suspicious/noExplicitAny: type-only access for compile-time guard
     const _end: any = (socketService as unknown as { endTurn: unknown }).endTurn
 
