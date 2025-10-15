@@ -209,12 +209,25 @@ function hasMapTerritoryModifiers(
 }
 
 function serializeForClient(state: GameState | SerializedGameState): SerializedGameState {
+  const s = state as GameState
+  const roundNumber = (() => {
+    try {
+      const active = Math.max(
+        1,
+        s.players.filter((p) => !p.isEliminated).length || s.players.length || 1,
+      )
+      return Math.max(1, Math.ceil(Math.max(1, s.turn) / active))
+    } catch {
+      return Math.max(1, (s as { turn?: number }).turn ?? 1)
+    }
+  })()
+
   if (hasMapTerritoryModifiers(state)) {
     const { territoryModifiers, ...rest } = state
     const obj = Object.fromEntries(territoryModifiers.entries())
-    return { ...rest, territoryModifiers: obj }
+    return { ...(rest as SerializedGameState), territoryModifiers: obj, roundNumber }
   }
-  return state as SerializedGameState
+  return { ...(state as SerializedGameState), roundNumber }
 }
 
 export async function emitRevealSnapshot(

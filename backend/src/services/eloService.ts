@@ -77,93 +77,84 @@ export const SKILL_TIERS: SkillTier[] = RANKS.map(
 )
 
 export class EloService {
-  private calculateKFactor(
-    gamesPlayed: number,
-    currentRating: number,
-    numberOfPlayers: number,
-  ): number {
-    let baseK: number
-    if (gamesPlayed < 30) {
-      baseK = 32
-    } else if (gamesPlayed < 100) {
-      baseK = 24
-    } else {
-      baseK = 16
-    }
+  private static readonly D = 400
+  private static readonly K_BASE = 24
+  private static readonly K_PROVISIONAL = 40 // first 20 ranked games
+  private static readonly R_FLOOR = 800
 
-    const playerAdjustment = numberOfPlayers / 4
-    const adjustedK = baseK * playerAdjustment
-
-    if (currentRating > 1800) {
-      return adjustedK * 0.8
-    }
-    if (currentRating > 1600) {
-      return adjustedK * 0.9
-    }
-
-    return adjustedK
-  }
-
-  private calculateExpectedScore(playerRating: number, opponentRatings: number[]): number {
-    const expectedScores = opponentRatings.map((opponentRating) => {
-      const ratingDiff = (opponentRating - playerRating) / 400
-      return 1 / (1 + 10 ** ratingDiff)
-    })
-
-    return expectedScores.reduce((sum, score) => sum + score, 0) / expectedScores.length
-  }
-
-  private calculateActualScore(position: number, totalPlayers: number): number {
-    if (position === 1) {
-      return 1.0
-    }
-
-    const baseScore = (totalPlayers - position) / (totalPlayers - 1)
-
-    if (position === 2) {
-      return baseScore * 0.75
-    }
-    if (position === 3) {
-      return baseScore * 0.5
-    }
-
-    return baseScore * 0.25
+  private kForPlayer(gamesPlayed: number, nPlayers: number): number {
+    const provisional = gamesPlayed < 20
+    const kUsed = provisional ? EloService.K_PROVISIONAL : EloService.K_BASE
+    return kUsed * Math.sqrt(Math.max(1, nPlayers - 1))
   }
 
   calculateRatingChanges(players: PlayerRating[]): RatingChange[] {
+    if (players.length < 2) {
+      return []
+    }
     if (players.length < 3) {
-      throw new Error('Ranked games require at least 3 players')
+      // Ranked constraints expect >=3; still compute deltas for 1v1 deterministically
+      // to keep function behavior well-defined.
     }
 
-    const changes: RatingChange[] = []
+    const n = players.length
+    const expected = new Map<string, number>()
+    const score = new Map<string, number>()
 
-    for (const player of players) {
-      const opponentRatings = players
-        .filter((p) => p.userId !== player.userId)
-        .map((p) => p.currentRating)
+    for (const i of players) {
+      let eSum = 0
+      let sSum = 0
+      for (const j of players) {
+        if (i.userId === j.userId) continue
+        const e_ij = 1 / (1 + 10 ** ((j.currentRating - i.currentRating) / EloService.D))
+        eSum += e_ij
+        if (i.position < j.position) sSum += 1
+        else if (i.position === j.position) sSum += 0.5
+        else sSum += 0
+      }
+      const denom = Math.max(1, n - 1)
+      expected.set(i.userId, eSum / denom)
+      score.set(i.userId, sSum / denom)
+    }
 
-      const kFactor = this.calculateKFactor(
-        player.gamesPlayed,
-        player.currentRating,
-        players.length,
-      )
-      const expectedScore = this.calculateExpectedScore(player.currentRating, opponentRatings)
-      const actualScore = this.calculateActualScore(player.position, players.length)
-      const ratingChange = Math.round(kFactor * (actualScore - expectedScore))
-      const newRating = Math.max(0, player.currentRating + ratingChange)
-
-      changes.push({
-        userId: player.userId,
-        oldRating: player.currentRating,
+    // Build raw deltas using per-player K scaled by sqrt(n-1)
+    const deltas = players.map((p) => {
+      const k = this.kForPlayer(p.gamesPlayed, n)
+      const e = expected.get(p.userId) ?? 0
+      const s = score.get(p.userId) ?? 0
+      const delta = Math.round(k * (s - e))
+      const newRating = Math.max(EloService.R_FLOOR, Math.round(p.currentRating + delta))
+      return {
+        userId: p.userId,
+        oldRating: p.currentRating,
         newRating,
-        change: ratingChange,
-        expectedScore,
-        actualScore,
-        kFactor,
-      })
+        change: delta,
+        expectedScore: e,
+        actualScore: s,
+        kFactor: k,
+      } as RatingChange
+    })
+
+    // Enforce exact zero-sum after rounding
+    let sum = deltas.reduce((acc, d) => acc + d.change, 0)
+    if (sum !== 0 && deltas.length > 0) {
+      let idx = 0
+      let maxMag = -1
+      for (let i = 0; i < deltas.length; i++) {
+        const mag = Math.abs(deltas[i].change)
+        if (mag > maxMag) {
+          maxMag = mag
+          idx = i
+        }
+      }
+      const d = deltas[idx]
+      const newDelta = d.change - sum
+      const adjustedNew = Math.max(EloService.R_FLOOR, Math.round(d.oldRating + newDelta))
+      deltas[idx] = { ...d, change: newDelta, newRating: adjustedNew }
+      sum = 0
     }
 
-    return changes
+    return deltas
   }
 
   async applyRatingChanges(

@@ -76,7 +76,15 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                     className="px-1 py-2 text-right font-medium text-muted"
                     title="Missed turns (timed out)"
                   >
-                    <span aria-hidden>⏳</span>
+                    <img
+                      src={resolveAssetPath('static/icons/stats/missed.svg')}
+                      alt=""
+                      title="Missed turns (timed out)"
+                      aria-hidden
+                      width={16}
+                      height={16}
+                      className="inline-block align-middle opacity-90"
+                    />
                     <span className="sr-only">Missed</span>
                   </th>
                   <th className="px-2 py-2 text-right font-medium text-muted">

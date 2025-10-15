@@ -193,6 +193,24 @@ export class GameActionProcessor {
     })
 
     await this.deltaEmitter.emitFortifyDeltas(gameId, fromTerritoryId, toTerritoryId, result)
+    // Emit a consolidated fortify result delta for logging/UX parity with worker path
+    try {
+      const fortifyDelta: import('@conquestk/shared/types/delta').GameDelta = {
+        type: 'FORTIFY_RESULT',
+        roomId: gameId,
+        timestamp: Date.now(),
+        fromTerritoryId,
+        toTerritoryId,
+        movedArmies: armies,
+        fromArmies: result.fromArmies ?? 0,
+        toArmies: result.toArmies ?? 0,
+        playerId,
+      }
+      const { emitFogFilteredDelta } = await import('./fogService.js')
+      await emitFogFilteredDelta(this.io, gameId, fortifyDelta)
+    } catch {
+      // Non-fatal: fortify summary is best-effort
+    }
   }
 
   /**

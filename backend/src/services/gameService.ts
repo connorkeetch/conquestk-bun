@@ -24,6 +24,7 @@ import { ClanProgressionServiceError, clanProgressionService } from './clanProgr
 import { clanService } from './clanService.js'
 import type { PlayerRating, RatingChange } from './eloService.js'
 import { eloService } from './eloService.js'
+// Pairwise Elo is now built into eloService; no separate service import
 import { featureFlagService } from './featureFlagService.js'
 import { mapService } from './mapService.js'
 import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
@@ -2864,6 +2865,25 @@ export class GameService {
             }
           }),
         })
+
+        // Structured per-player logs for observability (one line per player)
+        for (const change of ratingChanges) {
+          const input = ratingInputMap.get(change.userId)
+          logger.info('elo_update', {
+            gameId,
+            userId: change.userId,
+            placement: input?.position ?? null,
+            oldRating: change.oldRating,
+            delta: change.change,
+            newRating: change.newRating,
+            expectedScore: Number(change.expectedScore.toFixed(4)),
+            actualScore: Number(change.actualScore.toFixed(4)),
+            kFactor: Number(change.kFactor.toFixed(2)),
+            nPlayers: playerRatings.length,
+            provisional: (input?.gamesPlayed ?? 0) < 20,
+            ranked: isRankedGame,
+          })
+        }
       }
 
       const ratingChangeMap = new Map(ratingChanges.map((change) => [change.userId, change]))

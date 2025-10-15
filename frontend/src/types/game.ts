@@ -64,6 +64,7 @@ export interface GameState extends SharedGameState {
     | Record<string, GameTerritoryModifier>
     | { [territoryId: string]: TerritoryModifier }
   version?: number
+  roundNumber?: number
 }
 
 export interface GamePlayer extends SharedPlayer {

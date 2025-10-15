@@ -271,6 +271,7 @@ export type ModifierDistribution = 'none' | 'sparse' | 'balanced' | 'abundant' |
 
 export type SerializedGameState = Omit<GameState, 'territoryModifiers'> & {
   territoryModifiers?: Record<string, GameTerritoryModifier>
+  roundNumber?: number
 }
 
 export type ProcessActionResult = {
