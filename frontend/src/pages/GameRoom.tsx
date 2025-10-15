@@ -950,7 +950,7 @@ export default function GameRoom() {
   const takenColors = useMemo(() => {
     const set = new Set<string>()
     for (const p of currentRoom?.players ?? []) {
-      const c = (p as { selected_color?: string | null }).selected_color
+      const c = (p as { selectedColor?: string | null }).selectedColor
       if (c && c.length > 0) set.add(c.toUpperCase())
     }
     return set
@@ -2028,12 +2028,8 @@ export default function GameRoom() {
                         currentGame?.players && currentGame.players.length > 0
                           ? currentGame.players
                           : (currentRoom?.players || []).map((pl) => {
-                              const rawColor =
-                                ((pl as { selected_color?: string | null }).selected_color as
-                                  | string
-                                  | null) ||
-                                ((pl.preferred_color as string | null) ?? null) ||
-                                '#9CA3AF'
+                              const rawColor = (pl as { selectedColor?: string | null })
+                                .selectedColor ?? '#9CA3AF'
                               const base = {
                                 id: pl.userId || pl.id,
                                 userId: pl.userId || pl.id,
@@ -2141,20 +2137,11 @@ export default function GameRoom() {
                   mapId={currentRoom.mapId || 'world'}
                   lobbyMode={true}
                   lobbyPlayers={
-                    currentRoom.players?.map((p) => {
-                      const legacy = (() => {
-                        if (p && typeof p === 'object' && 'selected_color' in p) {
-                          const v = (p as { selected_color?: unknown }).selected_color
-                          return typeof v === 'string' ? v : undefined
-                        }
-                        return undefined
-                      })()
-                      return {
-                        id: p.id,
-                        username: p.username,
-                        color: legacy || p.preferred_color || '#9CA3AF',
-                      }
-                    }) || []
+                    currentRoom.players?.map((p) => ({
+                      id: p.id,
+                      username: p.username,
+                      color: (p as { selectedColor?: string | null }).selectedColor || '#9CA3AF',
+                    })) || []
                   }
                   onTerritoryClick={(_territoryId) => {
                     // No interaction in lobby mode
@@ -2388,12 +2375,8 @@ export default function GameRoom() {
                             currentGame?.players && currentGame.players.length > 0
                               ? currentGame.players
                               : (currentRoom?.players || []).map((pl) => {
-                                  const rawColor =
-                                    ((pl as { selected_color?: string | null }).selected_color as
-                                      | string
-                                      | null) ||
-                                    ((pl.preferred_color as string | null) ?? null) ||
-                                    '#9CA3AF'
+                                  const rawColor = (pl as { selectedColor?: string | null })
+                                    .selectedColor ?? '#9CA3AF'
                                   const base = {
                                     id: pl.userId || pl.id,
                                     userId: pl.userId || pl.id,
@@ -2572,12 +2555,8 @@ export default function GameRoom() {
                         currentGame?.players && currentGame.players.length > 0
                           ? currentGame.players
                           : (currentRoom?.players || []).map((pl) => {
-                              const rawColor =
-                                ((pl as { selected_color?: string | null }).selected_color as
-                                  | string
-                                  | null) ||
-                                ((pl.preferred_color as string | null) ?? null) ||
-                                '#9CA3AF'
+                              const rawColor = (pl as { selectedColor?: string | null })
+                                .selectedColor ?? '#9CA3AF'
                               const base = {
                                 id: pl.userId || pl.id,
                                 userId: pl.userId || pl.id,
@@ -2960,12 +2939,8 @@ export default function GameRoom() {
                     currentGame.players && currentGame.players.length > 0
                       ? currentGame.players
                       : (currentRoom?.players || []).map((pl) => {
-                          const rawColor =
-                            ((pl as { selected_color?: string | null }).selected_color as
-                              | string
-                              | null) ||
-                            ((pl.preferred_color as string | null) ?? null) ||
-                            '#9CA3AF'
+                          const rawColor = (pl as { selectedColor?: string | null })
+                            .selectedColor ?? '#9CA3AF'
                           const base = {
                             id: pl.userId || pl.id,
                             userId: pl.userId || pl.id,

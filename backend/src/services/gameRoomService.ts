@@ -815,6 +815,7 @@ export class GameRoomService {
                   'current_tier', NULL,
               'preferred_color', up.preferred_color,
               'selected_color', rp.selected_color,
+              'selectedColor', rp.selected_color,
                   'joinedAt', rp.joined_at,
                   'isReady', rp.is_ready,
                   'readyAt', rp.ready_at,
@@ -1134,6 +1135,10 @@ export class GameRoomService {
             ? null
             : undefined,
       selected_color:
+        typeof row.selected_color === 'string' && row.selected_color.length > 0
+          ? row.selected_color
+          : undefined,
+      selectedColor:
         typeof row.selected_color === 'string' && row.selected_color.length > 0
           ? row.selected_color
           : undefined,

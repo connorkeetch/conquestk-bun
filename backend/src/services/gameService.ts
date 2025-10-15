@@ -1537,16 +1537,8 @@ export class GameService {
       const afterArmies = updatedTerritory?.armies ?? beforeArmies
       const delta = afterArmies - beforeArmies
 
-      // Append log within transaction
+      // Append log (structured entry for transformation → textual moves)
       if (delta !== 0) {
-        const existing = await client.query<{ game_log: ReinforceLogEntry[] | null }>(
-          'SELECT game_log FROM game_states WHERE room_id = $1',
-          [gameId],
-        )
-        const current = Array.isArray(existing.rows[0]?.game_log)
-          ? (existing.rows[0]?.game_log as ReinforceLogEntry[])
-          : []
-
         const entry: ReinforceLogEntry = {
           type: 'REINFORCE',
           timestamp: new Date().toISOString(),
@@ -1555,13 +1547,6 @@ export class GameService {
           armies: delta,
           remainingArmies: Math.max(0, playerAfter?.armies ?? 0),
         }
-
-        const updated = [...current, entry].slice(-500)
-
-        await client.query(
-          `UPDATE game_states SET game_log = $1, last_activity = NOW() WHERE room_id = $2`,
-          [JSON.stringify(updated), gameId],
-        )
         emitted = [entry]
       }
 
@@ -1584,13 +1569,19 @@ export class GameService {
         version: updatedState.version,
       }
     })
-    // Emit appended reinforce log if any
+    // Persist + emit appended reinforce log if any
     try {
       if (emitted.length > 0) {
         const io = tryGetSocketServer()
         if (io) {
           try {
-            const { emitFogAwareForEntries } = await import('./logEmitter.js')
+            const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
+              './logEmitter.js'
+            )
+            await persistFogAwareForEntries(
+              gameId,
+              emitted as unknown as Array<Record<string, unknown>>,
+            )
             await emitFogAwareForEntries(
               io as unknown as import('socket.io').Server<
                 import('../types/shared.js').ClientToServerEvents,
@@ -1664,15 +1655,7 @@ export class GameService {
       const fromArmies = updatedState.board.find((t) => t.id === data.fromTerritoryId)?.armies || 0
       const toArmies = updatedState.board.find((t) => t.id === data.toTerritoryId)?.armies || 0
 
-      // Append log within transaction
-      const existing = await client.query<{ game_log: FortifyLogEntry[] | null }>(
-        'SELECT game_log FROM game_states WHERE room_id = $1',
-        [gameId],
-      )
-      const current = Array.isArray(existing.rows[0]?.game_log)
-        ? (existing.rows[0]?.game_log as FortifyLogEntry[])
-        : []
-
+      // Append log (structured entry for transformation → textual moves)
       const entry: FortifyLogEntry = {
         type: 'FORTIFY',
         timestamp: new Date().toISOString(),
@@ -1683,14 +1666,6 @@ export class GameService {
         fromArmies,
         toArmies,
       }
-
-      const updated = [...current, entry].slice(-500)
-
-      await client.query(
-        `UPDATE game_states SET game_log = $1, last_activity = NOW() WHERE room_id = $2`,
-        [JSON.stringify(updated), gameId],
-      )
-
       emitted = [entry]
       return {
         fromArmies,
@@ -1703,7 +1678,13 @@ export class GameService {
         const io = tryGetSocketServer()
         if (io) {
           try {
-            const { emitFogAwareForEntries } = await import('./logEmitter.js')
+            const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
+              './logEmitter.js'
+            )
+            await persistFogAwareForEntries(
+              gameId,
+              emitted as unknown as Array<Record<string, unknown>>,
+            )
             await emitFogAwareForEntries(
               io as unknown as import('socket.io').Server<
                 import('../types/shared.js').ClientToServerEvents,
@@ -1750,30 +1731,8 @@ export class GameService {
     const territoryCount = state.board.filter((t) => t.ownerId === userId).length
     let logged = false
     let appended: GameLogEntry[] = []
-    await transaction(async (client) => {
-      const existing = await client.query<{ game_log: GameLogEntry[] | null }>(
-        'SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE',
-        [roomId],
-      )
-      const current = Array.isArray(existing.rows[0]?.game_log)
-        ? (existing.rows[0]?.game_log as GameLogEntry[])
-        : []
-
-      const alreadyLogged = current.some((entry) => {
-        if (!entry || typeof entry !== 'object') return false
-        if ((entry as TurnLogEntry).type !== 'TURN') return false
-        const typed = entry as TurnLogEntry
-        return (
-          typed.event === 'START' &&
-          typed.playerId === userId &&
-          (typed.turnNumber ?? turnNumber) === turnNumber
-        )
-      })
-
-      if (alreadyLogged) {
-        return
-      }
-
+    // Build entries without touching legacy game_states.game_log
+    {
       const entry: TurnLogEntry = {
         type: 'TURN',
         timestamp: new Date().toISOString(),
@@ -1816,16 +1775,9 @@ export class GameService {
         return []
       })()
 
-      const updated = [...current, entry, ...sectorEntries].slice(-500)
-      await client.query(
-        `INSERT INTO game_states (room_id, game_log, last_activity, game_phase, turn_number)
-         VALUES ($1, $2, NOW(), 'lobby', 1)
-         ON CONFLICT (room_id) DO UPDATE SET game_log = EXCLUDED.game_log, last_activity = NOW()`,
-        [roomId, JSON.stringify(updated)],
-      )
       logged = true
       appended = [entry, ...sectorEntries]
-    })
+    }
     // Emit appended TURN/SECTOR logs if any
     if (logged && appended.length > 0) {
       try {

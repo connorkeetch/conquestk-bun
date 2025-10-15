@@ -1117,12 +1117,19 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const { gameId } = req.params
-      const result = await dbQuery<{ game_log: unknown[] | null }>(
-        'SELECT game_log FROM game_states WHERE room_id = $1',
+      const result = await dbQuery<{
+        ts: Date
+        move_type: string
+        actor_id: string | null
+        from_territory_id: string | null
+        to_territory_id: string | null
+        payload: unknown
+      }>(
+        `SELECT ts, move_type, actor_id, from_territory_id, to_territory_id, payload
+           FROM game_logs WHERE game_id = $1 ORDER BY ts ASC LIMIT 2000`,
         [gameId],
       )
-      const glVal = result.rows?.[0]?.game_log
-      const arr = Array.isArray(glVal) ? glVal : []
+      const arr = result.rows || []
       res.json({ entries: arr, count: arr.length })
     } catch (error) {
       handleRouteError(error, req, 'Failed to get game log', 500, {
@@ -1142,46 +1149,21 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const { gameId } = req.params
-      const result = await dbQuery<{ game_log: unknown[] | null; game_data: unknown | null }>(
-        'SELECT game_log, game_data FROM game_states WHERE room_id = $1',
+      const result = await dbQuery<{ game_data: unknown | null }>(
+        'SELECT game_data FROM game_states WHERE room_id = $1',
         [gameId],
       )
       const row = result.rows?.[0]
       let seed: string | null = null
-      let source: 'log' | 'state' | null = null
-
-      const gl = row?.game_log
-      const logArr = Array.isArray(gl) ? gl : []
-      // Look for the most recent RNG entry in the log
-      for (let i = logArr.length - 1; i >= 0; i--) {
-        const entry = logArr[i] as Record<string, unknown>
-        if ((entry?.type as string) === 'RNG' && (entry?.scope as string) === 'combat') {
-          const s = entry?.seed
-          if (typeof s === 'string' && s.trim().length > 0) {
-            seed = s
-            source = 'log'
-            break
-          }
-        }
-      }
-
-      if (!seed) {
-        // Fallback to serialized state
-        const data = row?.game_data
-        let s: unknown = null
-        if (
-          data &&
-          typeof data === 'object' &&
-          'combatRngSeed' in (data as Record<string, unknown>)
-        ) {
-          s = (data as Record<string, unknown>).combatRngSeed
-        }
+      let source: 'state' | null = null
+      const data = row?.game_data
+      if (data && typeof data === 'object' && (data as { combatRngSeed?: string }).combatRngSeed) {
+        const s = (data as { combatRngSeed?: string }).combatRngSeed
         if (typeof s === 'string' && s.trim().length > 0) {
           seed = s
           source = 'state'
         }
       }
-
       res.json({ seed, source })
     } catch (error) {
       handleRouteError(error, req, 'Failed to get combat RNG seed', 500, {
