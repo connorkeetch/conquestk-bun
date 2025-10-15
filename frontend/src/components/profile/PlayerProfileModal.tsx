@@ -252,7 +252,7 @@ export default function PlayerProfileModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div
         ref={modalRef}
-        className="w-full max-w-md rounded-xl shadow-2xl border border-white/10 bg-[color:var(--surface-1)] text-white overflow-hidden"
+        className="w-full max-w-md rounded-xl shadow-2xl border border-white/10 bg-[color:var(--surface-1)] text-white"
       >
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-[color:var(--surface-2)]/60">
           <h3 className="text-lg font-semibold">Player Profile</h3>

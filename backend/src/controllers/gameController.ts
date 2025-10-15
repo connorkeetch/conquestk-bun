@@ -921,6 +921,42 @@ export class GameController {
         })(),
       ])
 
+      // Optional pagination params: limit (last N), before (ISO timestamp)
+      const limitParam = (req.query?.limit as string | undefined) ?? undefined
+      const beforeParam = (req.query?.before as string | undefined) ?? undefined
+      const limit = (() => {
+        const n = Number(limitParam)
+        return Number.isFinite(n) && n > 0 ? Math.min(500, Math.trunc(n)) : 150
+      })()
+      const beforeTs = (() => {
+        try {
+          return beforeParam ? new Date(beforeParam) : null
+        } catch {
+          return null
+        }
+      })()
+      const toTime = (v: unknown) => {
+        try {
+          return new Date(String(v)).getTime()
+        } catch {
+          return 0
+        }
+      }
+      const fullLog = Array.isArray(log) ? (log as Array<Record<string, unknown>>) : []
+      const sortedAsc = [...fullLog].sort(
+        (a, b) =>
+          toTime((a as { timestamp?: string }).timestamp) -
+          toTime((b as { timestamp?: string }).timestamp),
+      )
+      const filtered = beforeTs
+        ? sortedAsc.filter(
+            (e) => toTime((e as { timestamp?: string }).timestamp) < beforeTs.getTime(),
+          )
+        : sortedAsc
+      const windowed = filtered.slice(Math.max(0, filtered.length - limit))
+      const earliestTs =
+        sortedAsc.length > 0 ? ((sortedAsc[0] as { timestamp?: string }).timestamp ?? null) : null
+
       // Rating changes (CP delta) map keyed by playerId (user_id)
       let ratingChanges: Record<string, number> = {}
       try {
@@ -955,7 +991,7 @@ export class GameController {
 
       if (fogOn && isActive && !isParticipant) {
         // Redact sensitive fields from log entries while game is active for spectators
-        const redactedLog = (Array.isArray(log) ? log : []).map((entry) => {
+        const redactedLog = windowed.map((entry) => {
           const e = entry as Record<string, unknown>
           const type = (e.type as string | undefined) ?? undefined
           const timestamp = (e.timestamp as string | undefined) ?? undefined
@@ -974,10 +1010,10 @@ export class GameController {
         })
 
         // Do not expose per-turn stats during active fog-of-war games to spectators
-        return res.json({ log: redactedLog, stats: [], ratingChanges: {} })
+        return res.json({ log: redactedLog, stats: [], ratingChanges: {}, earliestTs })
       }
 
-      return res.json({ log, stats, ratingChanges })
+      return res.json({ log: windowed, stats, ratingChanges, earliestTs })
     } catch (error) {
       logger.error('Get room log error:', error)
       return res.status(500).json({ message: 'Internal server error' })
