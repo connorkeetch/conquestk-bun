@@ -470,7 +470,7 @@ export default function AdminHealth() {
             )
             return (
               <div className="mt-3 text-xs text-white/80 space-y-1">
-                <div>Initialized: {String(d.data?.initialized ?? false)}</div>
+                <div>Initialized: {String(d.initialized ?? false)}</div>
                 <div>
                   Totals — waiting {totals.waiting}, active {totals.active}, failed {totals.failed},
                   completed {totals.completed}
