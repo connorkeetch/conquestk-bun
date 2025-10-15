@@ -118,6 +118,7 @@ import messagesRoutes from './routes/messages.js'
 import notificationRoutes from './routes/notifications.js'
 import oddsRoutes from './routes/odds.js'
 import performanceRoutes from './routes/performanceRoutes.js'
+import rumVitalsRoutes from './routes/rumVitals.js'
 import { createPreferencesRouter } from './routes/preferences.js'
 import profileRoutes from './routes/profile.js'
 import queueRoutes from './routes/queueRoutes.js'
@@ -510,6 +511,7 @@ app.use('/api/staging', mapStagingRoutes)
 app.use('/api/feature-flags', featureFlagsRoutes)
 app.use('/api/queues', queueRoutes)
 app.use('/api/performance', performanceRoutes)
+app.use('/api/rum', rumVitalsRoutes)
 app.use('/api/benchmark', benchmarkRoutes)
 app.use('/api/odds', oddsRoutes)
 app.use('/api/matchsvc', matchsvcRoutes)

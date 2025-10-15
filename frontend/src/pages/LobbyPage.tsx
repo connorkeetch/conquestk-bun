@@ -1095,7 +1095,7 @@ const LobbyPage: React.FC = () => {
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-4 cv-auto">
                 {filteredPublicGames.length === 0 ? (
                   <div className="panel text-center py-16">
                     <div className="text-6xl mb-4">🔍</div>
@@ -1325,7 +1325,7 @@ const LobbyPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto cv-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="text-left text-sm text-muted">
