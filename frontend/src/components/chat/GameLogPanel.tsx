@@ -1,6 +1,5 @@
 import type {
   BattleResultDelta,
-  FortifyResultDelta,
   GameDelta,
   PhaseChangeDelta,
   SystemMessageDelta,
@@ -1237,31 +1236,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         }
         return
       }
-      if (d.type === 'FORTIFY_RESULT') {
-        if (redact) return
-        const fr = d as FortifyResultDelta
-        const name = playerName.get(fr.playerId) || fr.playerId
-        const fromName = territoryName.get(fr.fromTerritoryId) || fr.fromTerritoryId
-        const toName = territoryName.get(fr.toTerritoryId) || fr.toTerritoryId
-        const n = toSafeInt(fr.movedArmies, 0)
-        addRich(
-          <>
-            {toName} (
-            <span className="font-semibold" style={{ color: playerColor.get(fr.playerId) }}>
-              {name}
-            </span>
-            ) was fortified from {fromName} (
-            <span className="font-semibold" style={{ color: playerColor.get(fr.playerId) }}>
-              {name}
-            </span>
-            ) with {n} {n === 1 ? 'troop' : 'troops'}.
-          </>,
-          `${toName} (${name}) was fortified from ${fromName} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
-          undefined,
-          [fr.fromTerritoryId, fr.toTerritoryId],
-        )
-        return
-      }
+      // Fortify text lines now come via fog-aware 'game-log:append'/'game-log:batch'.
+      // We intentionally do not synthesize a duplicate line from FORTIFY_RESULT here.
       if (d.type === 'TREASURE_AWARDED') {
         const ta = d as TreasureAwardedDelta
         const name = playerName.get(ta.userId) || ta.userId
@@ -1371,7 +1347,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     territoryName,
     game?.currentPlayer,
     redact,
-    toSafeInt,
     playerColor,
     flushAggregate,
     clientLogs,
