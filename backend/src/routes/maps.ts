@@ -13,6 +13,7 @@ import {
 } from '../services/mapPermissionService.js'
 import { mapService } from '../services/mapService.js'
 import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps.js'
+import { assetExists, extractStorageKeyFromUrl, getPublicAssetUrl } from '../utils/assetStorage.js'
 import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage.js'
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
@@ -503,6 +504,42 @@ router.get(
       // Check if map is public or user owns it
       if (!mapData.map.isPublic && (!req.userId || req.userId !== mapData.map.creatorId)) {
         return res.status(403).json({ error: 'Access denied' })
+      }
+
+      // Attach responsive image variants when available (AVIF/WebP at intrinsic size)
+      try {
+        const key = extractStorageKeyFromUrl(mapData.map.imageUrl || null)
+        if (key) {
+          const base = key.replace(/\.[^.]+$/, '')
+          const avifKey = `${base}.avif`
+          const webpKey = `${base}.webp`
+          const width = mapData.map.imageWidth
+          const height = mapData.map.imageHeight
+          const variants: {
+            avif?: Array<{ url: string; width: number; height?: number }>
+            webp?: Array<{ url: string; width: number; height?: number }>
+          } = {}
+          try {
+            if (await assetExists(avifKey)) {
+              variants.avif = [{ url: getPublicAssetUrl(avifKey), width, height }]
+            }
+          } catch {
+            // ignore
+          }
+          try {
+            if (await assetExists(webpKey)) {
+              variants.webp = [{ url: getPublicAssetUrl(webpKey), width, height }]
+            }
+          } catch {
+            // ignore
+          }
+          if (variants.avif || variants.webp) {
+            // eslint-disable-next-line no-param-reassign
+            mapData.map.imageVariants = variants
+          }
+        }
+      } catch {
+        // ignore variant detection errors
       }
 
       return res.json(mapData)

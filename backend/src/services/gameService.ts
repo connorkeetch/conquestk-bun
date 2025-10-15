@@ -1800,7 +1800,7 @@ export class GameService {
               roomId,
               appended as unknown as Array<Record<string, unknown>>,
             )
-            // Round start banner when new round begins
+            // Round start banner when new round begins; de-duplicate if already emitted
             try {
               const activePlayers = Math.max(
                 1,
@@ -1811,16 +1811,28 @@ export class GameService {
               const isRoundStart = ((turnNumber ?? 1) - 1) % activePlayers === 0
               if (isRoundStart) {
                 const round = Math.max(1, Math.ceil((turnNumber ?? 1) / activePlayers))
-                await emitAndPersistRoundStart(
-                  io as unknown as import('socket.io').Server<
-                    import('../types/shared.js').ClientToServerEvents,
-                    import('../types/shared.js').ServerToClientEvents,
-                    Record<string, unknown>,
-                    { userId?: string }
-                  >,
-                  roomId,
-                  round,
-                )
+                try {
+                  const { query } = await import('../config/database.js')
+                  const check = await query<{ n: string }>(
+                    `SELECT COUNT(*)::text as n FROM game_logs WHERE game_id = $1 AND move_type = 'round_start' AND (payload->>'round')::int = $2`,
+                    [roomId, round],
+                  )
+                  const seen = Number(check.rows[0]?.n || '0') > 0
+                  if (!seen) {
+                    await emitAndPersistRoundStart(
+                      io as unknown as import('socket.io').Server<
+                        import('../types/shared.js').ClientToServerEvents,
+                        import('../types/shared.js').ServerToClientEvents,
+                        Record<string, unknown>,
+                        { userId?: string }
+                      >,
+                      roomId,
+                      round,
+                    )
+                  }
+                } catch {
+                  // if DB check fails, skip banner to avoid spam
+                }
               }
             } catch {
               /* ignore round banner */

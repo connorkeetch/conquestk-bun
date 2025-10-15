@@ -575,6 +575,89 @@ export class GameActionProcessor {
           }
           const { emitFogFilteredDelta } = await import('./fogService.js')
           await emitFogFilteredDelta(this.io, gameId, withChanges)
+
+          // Build textual moves for this battle and co-emit with deltas
+          try {
+            const { emitCombined } = await import('./realtimeEmitter.js')
+            const now = new Date()
+            const attacker = updated.players.find((p) => p.id === playerId)
+            const actorName = attacker?.username || playerId
+            const fromId = payload.fromTerritory.id
+            const toId = payload.toTerritory.id
+            const fromT = updated.board.find((t) => t.id === fromId)
+            const toT = updated.board.find((t) => t.id === toId)
+            const moves: Array<import('./logEmitter.js').DbMove> = [
+              {
+                id: `${now.getTime()}-atk`,
+                game_id: gameId,
+                turn_number: updated.turn,
+                phase: updated.phase,
+                move_type: 'attack',
+                actor_id: playerId,
+                created_at: now,
+                payload: {
+                  actorName,
+                  fromId,
+                  toId,
+                  fromName: fromT?.name,
+                  toName: toT?.name,
+                  fromOwnerName: actorName,
+                  toOwnerName: undefined,
+                  kills: payload.defenderLosses,
+                  losses: payload.attackerLosses,
+                },
+              },
+            ]
+            if (payload.conquered) {
+              moves.push({
+                id: `${now.getTime()}-conq`,
+                game_id: gameId,
+                turn_number: updated.turn,
+                phase: updated.phase,
+                move_type: 'conquer',
+                actor_id: playerId,
+                created_at: now,
+                payload: {
+                  actorName,
+                  fromId,
+                  toId,
+                  fromName: fromT?.name,
+                  toName: toT?.name,
+                  fromOwnerName: actorName,
+                  toOwnerName: undefined,
+                },
+              })
+            }
+            if (Array.isArray((last as { eliminatedPlayers?: unknown[] }).eliminatedPlayers)) {
+              const eliminated = (last as { eliminatedPlayers?: string[] }).eliminatedPlayers ?? []
+              for (const pid of eliminated) {
+                const defeatedName = updated.players.find((p) => p.id === pid)?.username || pid
+                moves.push({
+                  id: `${now.getTime()}-elim-${pid}`,
+                  game_id: gameId,
+                  turn_number: updated.turn,
+                  phase: updated.phase,
+                  move_type: 'player_eliminated',
+                  actor_id: pid,
+                  created_at: now,
+                  payload: { playerName: defeatedName, byName: actorName },
+                })
+              }
+            }
+            await emitCombined(
+              this.io as unknown as import('socket.io').Server<
+                import('../types/shared.js').ClientToServerEvents,
+                import('../types/shared.js').ServerToClientEvents,
+                Record<string, unknown>,
+                { userId?: string }
+              >,
+              gameId,
+              { deltas: [withChanges], moves },
+              updated,
+            )
+          } catch {
+            // best-effort text emission
+          }
         }
       } catch (e) {
         logger.debug('Failed to emit fog-filtered battle delta in inline attack', {

@@ -11,6 +11,10 @@ interface MapCanvasProps {
   children?: React.ReactNode
   // Optional background click: fires when clicking map image/stage (not tokens)
   onBackgroundClick?: (e: React.MouseEvent) => void
+  variants?: {
+    avif?: Array<{ url: string; width: number; height?: number }>
+    webp?: Array<{ url: string; width: number; height?: number }>
+  }
 }
 
 export function MapCanvas({
@@ -19,6 +23,7 @@ export function MapCanvas({
   imageHeight,
   children,
   onBackgroundClick,
+  variants,
 }: MapCanvasProps) {
   const dispatch = useAppDispatch()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -99,20 +104,35 @@ export function MapCanvas({
         }}
       >
         {/* Base image at intrinsic dimensions so token coords align in image pixel space */}
-        <img
-          src={imageUrl}
-          alt="Game map"
-          draggable={false}
-          style={{
-            width: imageWidth,
-            height: imageHeight,
-            maxWidth: 'none',
-            maxHeight: 'none',
-            display: 'block',
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        />
+        <picture>
+          {variants?.avif?.[0]?.url ? (
+            <source type="image/avif" srcSet={variants.avif[0].url} />
+          ) : null}
+          {variants?.webp?.[0]?.url ? (
+            <source type="image/webp" srcSet={variants.webp[0].url} />
+          ) : null}
+          <img
+            src={imageUrl}
+            alt="Game map"
+            draggable={false}
+            /* Reserve intrinsic size to prevent layout shifts and help LCP */
+            width={imageWidth}
+            height={imageHeight}
+            /* Hint browser this is the LCP candidate */
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            style={{
+              width: imageWidth,
+              height: imageHeight,
+              maxWidth: 'none',
+              maxHeight: 'none',
+              display: 'block',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        </picture>
         {/* Children (tokens/overlays) should be absolutely positioned relative to image top-left */}
         {children}
       </div>
