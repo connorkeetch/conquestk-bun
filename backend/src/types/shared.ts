@@ -326,6 +326,9 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
+  // Allow authenticated spectators to subscribe to the room channel for live logs/lifecycle
+  // Server enforces fog-of-war and room visibility policies.
+  'spectate-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
   'game-action': (
     data: { roomId: string; action: GameAction },

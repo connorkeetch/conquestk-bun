@@ -616,6 +616,46 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }),
     )
 
+    // Spectator subscription: join only the room channel for lifecycle + live logs.
+    // Permitted when fog is off for active games, or when the game is completed/abandoned.
+    socket.on(
+      'spectate-room',
+      withErrorHandler(socket, 'spectate-room', async (roomId: string) => {
+        if (!roomId || typeof roomId !== 'string') {
+          throw new Error('Invalid room ID')
+        }
+
+        const normalizedRoomId = /^\d+$/.test(roomId)
+          ? await gameRoomService
+              .getRoomByCode(Number.parseInt(roomId, 10))
+              .then((r) => r?.id ?? '')
+          : roomId
+        if (!normalizedRoomId) throw new Error('Room not found')
+
+        const userId = requireUserId(socket)
+        const room = await gameRoomService.getRoomById(normalizedRoomId)
+        if (!room) throw new Error('Room not found')
+
+        const status = room.status as string
+        const fog = (room.fogOfWar as string | undefined) ?? 'off'
+
+        const isActive = status === 'active'
+        const isFinished = status === 'completed' || status === 'abandoned'
+        const fogOff = fog === 'off'
+
+        if (!(isFinished || (isActive && fogOff))) {
+          throw new Error('Spectating not permitted for this game')
+        }
+
+        // Join only the room channel to receive lifecycle + log:append events (no game deltas)
+        await socket.join(normalizedRoomId)
+        if (!socket.joinedGameRooms) socket.joinedGameRooms = new Set()
+        socket.joinedGameRooms.add(normalizedRoomId)
+
+        logger.info(`User ${userId} spectating room ${normalizedRoomId}`)
+      }),
+    )
+
     socket.on(
       'leave-room',
       withErrorHandler(socket, 'leave-room', async (roomId: string) => {

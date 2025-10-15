@@ -119,6 +119,11 @@ class SocketService {
     this.socket?.emit('join-room', roomId)
   }
 
+  // Subscribe as a spectator to receive live logs and lifecycle (no game deltas)
+  spectateRoom(roomId: string) {
+    this.socket?.emit('spectate-room', roomId)
+  }
+
   leaveRoom(roomId: string) {
     this.socket?.emit('leave-room', roomId)
   }
@@ -549,12 +554,19 @@ class SocketService {
       store.dispatch(loadUnreadSummary())
       store.dispatch(loadInbox())
 
-      // Rejoin active game room on reconnect to restore subscriptions
+      // Rejoin active room on reconnect to restore subscriptions
       try {
         const state = store.getState()
         const roomId = state.room.currentRoom?.id ?? state.game.currentGame?.roomId ?? null
-        // Always attempt to rejoin when a room is active; server validates membership
-        if (roomId) this.joinRoom(roomId)
+        const userId = state.auth.user?.id
+        const players = state.room.currentRoom?.players
+        const isMember = Boolean(
+          userId && Array.isArray(players) && players.some((p) => p.userId === userId || p.id === userId),
+        )
+        if (roomId) {
+          if (isMember) this.joinRoom(roomId)
+          else this.spectateRoom(roomId)
+        }
       } catch {
         // best-effort; if state not accessible, skip rejoin
       }
