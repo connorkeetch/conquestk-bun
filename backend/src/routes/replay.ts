@@ -225,18 +225,7 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
       byTurn.set(row.turn_number, arr)
     }
 
-    // Best-effort structured log for treasure awards
-    let structuredLog: Array<{ type?: string; timestamp?: string }> = []
-    try {
-      const sres = await query<{ game_log: unknown }>(
-        `SELECT game_log FROM game_states WHERE room_id = $1`,
-        [gameId],
-      )
-      const arr = sres.rows[0]?.game_log as unknown as unknown[]
-      if (Array.isArray(arr)) structuredLog = arr as Array<{ type?: string; timestamp?: string }>
-    } catch {
-      // ignore
-    }
+    // No legacy structured log; count awards from game_logs rows we already loaded per turn
 
     // Snapshots map: first reinforcement snapshot per turn and start-of-next-turn
     const firstReinforcementByTurn = new Map<number, ReturnType<typeof extractArmyMap>>()
@@ -370,15 +359,15 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
         }
       }
 
-      // Count treasure awards in this time window
+      // Count treasure awards in this time window from game_logs (move_type: 'card_award')
       try {
-        if (startTs && endTs && structuredLog.length > 0) {
+        if (startTs && endTs) {
           const startN = startTs.getTime()
           const endN = endTs.getTime()
-          // Reassign local accumulator (declared with let)
-          treasuresDrawn = structuredLog.filter((e) => {
-            if ((e?.type ?? '') !== 'TREASURE') return false
-            const ts = e.timestamp ? new Date(String(e.timestamp)).getTime() : NaN
+          const rows = byTurn.get(t) ?? []
+          treasuresDrawn = rows.filter((r) => {
+            if (String(r.move_type) !== 'card_award') return false
+            const ts = r.ts ? new Date(String(r.ts)).getTime() : NaN
             return Number.isFinite(ts) && ts >= startN && ts <= endN
           }).length
         }
