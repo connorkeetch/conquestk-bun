@@ -90,6 +90,8 @@ interface PlayerRow {
   skill_rating?: number | null
   current_tier?: string | null
   preferred_color?: string | null
+  selectedColor?: string | null
+  selected_color?: string | null
   joinedAt: Date | string | null
   isReady?: boolean | null
   readyAt?: Date | string | null
@@ -406,12 +408,11 @@ export class GameRoomService {
               ? player.preferred_color
               : undefined,
           selectedColor:
-            typeof (player as any).selectedColor === 'string' &&
-            (player as any).selectedColor.length > 0
-              ? (player as any).selectedColor
-              : typeof (player as any).selected_color === 'string' &&
-                  (player as any).selected_color.length > 0
-                ? (player as any).selected_color
+            typeof player.selectedColor === 'string' && player.selectedColor.length > 0
+              ? player.selectedColor
+              : typeof player.selected_color === 'string' &&
+                  (player.selected_color as string).length > 0
+                ? (player.selected_color as string)
                 : undefined,
           joinedAt: this.toDate(player.joinedAt) ?? new Date(),
           isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,

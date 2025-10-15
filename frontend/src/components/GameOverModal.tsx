@@ -531,7 +531,7 @@ const PlayerDebrief: React.FC<{
       active = false
       controller.abort()
     }
-  }, [roomId, me, onRatingDelta])
+  }, [me, onRatingDelta])
 
   if (!game || !me) return null
 
@@ -681,15 +681,15 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
   React.useEffect(() => {
     if (!roomId) return undefined
     let active = true
-    const controller = new AbortController()
     const run = async () => {
       try {
-        // Legacy /log removed; skip timeline fetch for now
-        const entries: LogEntry[] = []
+        const resp = await gameService.getGameTextLog(roomId, { limit: 100 })
         if (!active) return
+        const entries = (resp.log || []).map((l) => ({ timestamp: l.t, type: 'LIFECYCLE' })) as unknown as LogEntry[]
         setLog(entries)
+        setError(null)
       } catch (_e) {
-        if (!active || controller.signal.aborted) return
+        if (!active) return
         setError('Unable to load game log')
         setLog([])
       }
@@ -697,7 +697,6 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     void run()
     return () => {
       active = false
-      controller.abort()
     }
   }, [roomId])
 

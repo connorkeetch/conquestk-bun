@@ -168,6 +168,31 @@ export const gameService = {
     return { log }
   },
 
+  // Replay endpoints for post-game insights
+  async getReplaySummary(gameId: string): Promise<{
+    rounds: number
+    turns: number
+    players: Array<{ id: string; username: string; color?: string }>
+    hasFog: boolean
+    mode: string
+    options: Record<string, unknown>
+    createdAt: string | null
+    completedAt: string | null
+  }> {
+    const response = await api.get(`/games/${gameId}/replay/summary`)
+    return response.data
+  },
+
+  async getReplayChunk(
+    gameId: string,
+    fromTurn: number,
+    toTurn: number,
+  ): Promise<{ items: Array<Record<string, unknown>> }> {
+    const params = { fromTurn: String(fromTurn), toTurn: String(toTurn) }
+    const response = await api.get(`/games/${gameId}/replay/chunk`, { params })
+    return response.data as { items: Array<Record<string, unknown>> }
+  },
+
   // Get user's active games (for GameListPage)
   async getUserGames() {
     const response = await api.get('/game/my-games')
