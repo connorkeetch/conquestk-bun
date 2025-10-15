@@ -194,6 +194,13 @@ app.use(cors({ origin: process.env.CLIENT_URL }));
 3. **TEST** migrations locally first
 4. **VALIDATE** schema after migrations
 
+### API Contracts (naming & casing)
+- JSON API responses use camelCase keys exclusively (e.g., `selectedColor`, `playerId`, `turnExpiresAt`).
+- Database schema may remain snake_case (`selected_color`, `preferred_color`). Normalize to camelCase at the API boundary (service/serializer), and do not leak snake_case to clients.
+- WebSocket payloads follow the same rule: camelCase on the wire; normalize server-side.
+- When migrating existing fields, prefer adding a camelCase alias and then removing the snake_case key in the next change window. During the development-only phase, you can remove snake_case promptly once the client is updated.
+- Controllers/services should centralize the field mapping so routes stay consistent. Avoid per-route hand mapping.
+
 ### File Organization
 ```
 src/
