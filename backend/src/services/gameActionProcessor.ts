@@ -192,24 +192,78 @@ export class GameActionProcessor {
       playerId,
     })
 
-    await this.deltaEmitter.emitFortifyDeltas(gameId, fromTerritoryId, toTerritoryId, result)
-    // Emit a consolidated fortify result delta for logging/UX parity with worker path
+    // Co-emit deltas + textual fortify in a single sweep
     try {
-      const fortifyDelta: import('@conquestk/shared/types/delta').GameDelta = {
+      const deltas: import('@conquestk/shared/types/delta').GameDelta[] = []
+      if (typeof result.fromArmies === 'number') {
+        const { DeltaBuilder } = await import('../types/deltaUpdates.js')
+        deltas.push(
+          DeltaBuilder.territoryUpdate(gameId, fromTerritoryId, { armies: result.fromArmies }),
+        )
+      }
+      if (typeof result.toArmies === 'number') {
+        const { DeltaBuilder } = await import('../types/deltaUpdates.js')
+        deltas.push(
+          DeltaBuilder.territoryUpdate(gameId, toTerritoryId, { armies: result.toArmies }),
+        )
+      }
+      deltas.push({
         type: 'FORTIFY_RESULT',
         roomId: gameId,
         timestamp: Date.now(),
         fromTerritoryId,
         toTerritoryId,
         movedArmies: armies,
-        fromArmies: result.fromArmies ?? 0,
-        toArmies: result.toArmies ?? 0,
+        fromArmies: Number(result.fromArmies || 0),
+        toArmies: Number(result.toArmies || 0),
         playerId,
+      } as import('@conquestk/shared/types/delta').FortifyResultDelta)
+
+      // Fortify does not change phase; no PHASE_CHANGE delta here
+
+      const updated = await this.gameService.getGameState(gameId)
+      if (updated) {
+        const actorName = updated.players.find((p) => p.id === playerId)?.username || playerId
+        const fromT = updated.board.find((t) => t.id === fromTerritoryId)
+        const toT = updated.board.find((t) => t.id === toTerritoryId)
+        const move: import('./logEmitter.js').DbMove = {
+          id: `${Date.now()}-fortify`,
+          game_id: gameId,
+          turn_number: updated.turn,
+          phase: updated.phase,
+          move_type: 'fortify',
+          actor_id: playerId,
+          created_at: new Date(),
+          payload: {
+            actorName,
+            fromId: fromTerritoryId,
+            toId: toTerritoryId,
+            fromName: fromT?.name,
+            toName: toT?.name,
+            fromOwnerName: actorName,
+            toOwnerName: actorName,
+            armies,
+          },
+        }
+        const { emitCombined } = await import('./realtimeEmitter.js')
+        const { tryGetSocketServer } = await import('./socketRegistry.js')
+        const io = tryGetSocketServer()
+        if (io) {
+          await emitCombined(
+            io as unknown as import('socket.io').Server<
+              import('../types/shared.js').ClientToServerEvents,
+              import('../types/shared.js').ServerToClientEvents,
+              Record<string, unknown>,
+              { userId?: string }
+            >,
+            gameId,
+            { deltas, moves: [move] },
+            updated,
+          )
+        }
       }
-      const { emitFogFilteredDelta } = await import('./fogService.js')
-      await emitFogFilteredDelta(this.io, gameId, fortifyDelta)
     } catch {
-      // Non-fatal: fortify summary is best-effort
+      // Non-fatal: fortify combined emission is best-effort
     }
   }
 

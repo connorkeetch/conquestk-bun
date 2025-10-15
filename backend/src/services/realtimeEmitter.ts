@@ -15,6 +15,7 @@ export async function emitCombined(
   payload: { deltas?: GameDelta[]; moves?: DbMove[] },
   state?: GameState,
 ): Promise<void> {
+  const BATCH_THRESHOLD = Number.parseInt(process.env.LOG_TEXT_BATCH_THRESHOLD || '2', 10)
   const gameChannel = `game:${roomId}`
   const deltas = Array.isArray(payload.deltas) ? payload.deltas : []
   const moves = Array.isArray(payload.moves) ? payload.moves : []
@@ -26,7 +27,7 @@ export async function emitCombined(
     // Fallback broadcast without fog filtering
     if (deltas.length === 1) io.to(gameChannel).emit('game-delta', deltas[0])
     else if (deltas.length > 1) io.to(gameChannel).emit('game-delta-batch', deltas)
-    if (moves.length > 1) {
+    if (moves.length >= BATCH_THRESHOLD) {
       const items = moves.map((m) => ({
         id: String(m.id),
         t: new Date(m.created_at).toISOString(),
@@ -34,7 +35,12 @@ export async function emitCombined(
         phase: m.phase,
         kind: m.move_type,
         actor: { id: m.actor_id, name: (m.payload?.actorName as string) ?? 'Unknown' },
-        text: renderLogText(m, { canSeeFrom: true, canSeeTo: true, showCounts: true, fogActive: false }),
+        text: renderLogText(m, {
+          canSeeFrom: true,
+          canSeeTo: true,
+          showCounts: true,
+          fogActive: false,
+        }),
       }))
       io.to(gameChannel).emit('game-log:batch', { items })
     } else if (moves.length === 1) {
@@ -46,7 +52,12 @@ export async function emitCombined(
         phase: m.phase,
         kind: m.move_type,
         actor: { id: m.actor_id, name: (m.payload?.actorName as string) ?? 'Unknown' },
-        text: renderLogText(m, { canSeeFrom: true, canSeeTo: true, showCounts: true, fogActive: false }),
+        text: renderLogText(m, {
+          canSeeFrom: true,
+          canSeeTo: true,
+          showCounts: true,
+          fogActive: false,
+        }),
       }
       io.to(gameChannel).emit('game-log:append', base)
     }
@@ -139,7 +150,7 @@ export async function emitCombined(
     }
 
     // Emit log text moves (fog-aware), batched when > 1
-    if (moves.length > 1) {
+    if (moves.length >= BATCH_THRESHOLD) {
       const items = moves.map((m) => {
         const p = m.payload || {}
         const fromId =

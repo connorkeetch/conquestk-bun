@@ -232,7 +232,7 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
         `SELECT game_log FROM game_states WHERE room_id = $1`,
         [gameId],
       )
-      const arr = (sres.rows[0]?.game_log as unknown) as unknown[]
+      const arr = sres.rows[0]?.game_log as unknown as unknown[]
       if (Array.isArray(arr)) structuredLog = arr as Array<{ type?: string; timestamp?: string }>
     } catch {
       // ignore

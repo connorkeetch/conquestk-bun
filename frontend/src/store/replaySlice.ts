@@ -142,7 +142,9 @@ export const selectMapDiff = (s: RootState) => {
     if (delta !== 0) armyChanges.push({ territoryId: id, delta })
   }
   // Paths: prefer server-provided, fallback to fortify in deltas
-  const serverPaths = (item as unknown as { paths?: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }> }).paths
+  const serverPaths = (
+    item as unknown as { paths?: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }> }
+  ).paths
   let paths: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }>
   if (Array.isArray(serverPaths) && serverPaths.length > 0) paths = serverPaths
   else {
