@@ -134,7 +134,7 @@ class AudioService {
     if (this.audioEnabled) {
       this.setupVisibilityListener()
       this.setupUserInteractionListeners()
-      this.tryPreloadSounds()
+      // Do not preload on boot; wait for user interaction/unlock
     } else {
       logger.debug('Audio disabled for current environment; skipping preload')
     }

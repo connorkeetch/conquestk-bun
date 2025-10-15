@@ -7,6 +7,7 @@ import {
 } from '@conquestk/shared/types/themes'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { featureFlagService } from '../services/featureFlagService'
+import { loadThemeFonts } from '../styles/loadThemeFonts'
 
 // Theme Configuration - Metadata Only
 // CSS in app.css handles all actual styling
@@ -229,6 +230,20 @@ export function applyTheme(themeId: string): void {
   const normalizedTheme = normalizeThemeId(themeId)
   document.documentElement.setAttribute('data-theme', normalizedTheme)
   setBackgroundMotionPreference(getBackgroundMotionPreference(), false)
+
+  // Non-blocking: lazy-load decorative fonts for this theme
+  try {
+    const schedule = (fn: () => void) => {
+      const w = window as unknown as { requestIdleCallback?: (cb: () => void) => void }
+      if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(fn)
+      else setTimeout(fn, 0)
+    }
+    schedule(() => {
+      void loadThemeFonts(normalizedTheme)
+    })
+  } catch {
+    // ignore font load errors
+  }
 
   // Optional: persist to cookie for first-paint fallback (behind feature flag)
   try {
@@ -683,7 +698,8 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g fill='none' stroke-linecap='round' stroke-linejoin='round'><path fill='%23EDECF8' d='M32 6c12 0 22 9 22 20 0 7-4 11-7 13v5c0 2-1 3-3 3h-3v3c0 2-1 3-3 3h-6c-2 0-3-1-3-3v-3h-3c-2 0-3-1-3-3v-5c-3-2-7-6-7-13 0-11 10-20 22-20z'/><circle cx='24' cy='30' r='4' fill='%23000'/><circle cx='40' cy='30' r='4' fill='%23000'/><path stroke='%23A8A5C5' stroke-width='2' d='M26 42h12'/><path stroke='%23A8A5C5' stroke-width='2' d='M24 47h16'/></g></svg>",
   )
   // Default shapes set (no guitar pick to avoid "map marker" appearance)
-  const shapes = provided && provided.length > 0 ? provided.map(toDataUrl) : [guitar, horns, skull]
+  const providedList: string[] = Array.isArray(provided) ? provided : []
+  const shapes = providedList.length > 0 ? providedList.map(toDataUrl) : [guitar, horns, skull]
   // Equal weighting across default shapes; provided shapes are also equal weight
   const weights = new Array(shapes.length).fill(1)
 
@@ -714,7 +730,7 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
 
   // Ensure at least one skull is present when using built-in shapes
   // (helps verify visibility without relying on randomness)
-  if (!provided || provided.length === 0) {
+  if (providedList.length === 0) {
     const hasSkull = images.includes(skull)
     if (!hasSkull && images.length > 0) {
       // Replace a random existing shape layer with the skull while keeping its size/position

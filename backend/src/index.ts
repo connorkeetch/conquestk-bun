@@ -449,6 +449,7 @@ app.use(
         frameSrc: ["'none'"],
       },
     },
+    dnsPrefetchControl: { allow: true },
     hsts: {
       maxAge: 31536000,
       includeSubDomains: true,
@@ -799,7 +800,14 @@ if (isProductionLike) {
             res.setHeader('Expires', '0')
           } else if (relativePath === 'sw.js') {
             res.setHeader('Cache-Control', 'no-cache')
-          } else if (relativePath.startsWith('assets/')) {
+          } else if (
+            relativePath.startsWith('assets/') ||
+            /^favicon-\d+x\d+\.png$/.test(relativePath) ||
+            /^apple-touch-icon-\d+\.png$/.test(relativePath) ||
+            /^icon-\d+\.png$/.test(relativePath) ||
+            relativePath === 'safari-pinned-tab.svg' ||
+            relativePath === 'conquest_k_logo.svg'
+          ) {
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
           } else {
             res.setHeader('Cache-Control', 'public, max-age=86400')

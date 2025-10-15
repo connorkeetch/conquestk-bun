@@ -1,6 +1,7 @@
 import { computeConquestProbability } from '@conquestk/shared/utils/battleOdds'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
+import { gameService } from '@/services/gameService'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import type { GamePlayer } from '../types/game'
@@ -475,53 +476,104 @@ const PlayerDebrief: React.FC<{
   const [stats, setStats] = React.useState<Array<Record<string, unknown>> | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [cpChange, setCpChange] = React.useState<number | null>(null)
+  const [contested, setContested] = React.useState<
+    Array<{ id: string; name: string; flips: number }>
+  >([])
+  const [longest, setLongest] = React.useState<{ from: string; to: string; rolls: number } | null>(
+    null,
+  )
   const me = React.useMemo(() => {
     if (!game || !currentUserId) return null
     return game.players.find((p) => p.userId === currentUserId) || null
   }, [game, currentUserId])
 
   React.useEffect(() => {
-    const controller = new AbortController()
     let active = true
     const run = async () => {
       try {
-        // Legacy /log removed; skip debrief fetch for now
-        const res = { stats: [] as Array<Record<string, unknown>> }
-        if (!active) return
-        setStats(Array.isArray(res.stats) ? res.stats : [])
-        // Try to glean CP/rating delta for current user
-        const maybe = res as unknown as Record<string, unknown>
-        const candidates: Array<Record<string, unknown> | undefined> = []
-        if (maybe && typeof maybe === 'object') {
-          const summary = maybe.summary as Record<string, unknown> | undefined
-          if (summary && typeof summary === 'object') candidates.push(summary)
-          const ratingChanges = maybe.ratingChanges as Record<string, unknown> | undefined
-          if (ratingChanges && typeof ratingChanges === 'object') candidates.push(ratingChanges)
-          const cpDeltaByPlayer = maybe.cpDeltaByPlayer as Record<string, unknown> | undefined
-          if (cpDeltaByPlayer && typeof cpDeltaByPlayer === 'object')
-            candidates.push(cpDeltaByPlayer)
-          const skillRatingDeltas = maybe.skillRatingDeltas as Record<string, unknown> | undefined
-          if (skillRatingDeltas && typeof skillRatingDeltas === 'object')
-            candidates.push(skillRatingDeltas)
-        }
-        let delta: number | null = null
-        if (me) {
-          for (const obj of candidates) {
-            if (!obj) continue
-            const raw = obj[me.id] ?? obj[me.userId || '']
-            const num = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN
-            if (Number.isFinite(num)) {
-              delta = Math.trunc(num as number)
-              break
+        if (!game) return
+        const summary = await gameService.getReplaySummary(roomId)
+        const total = Math.max(1, summary.turns)
+        const CHUNK = 25
+        const snaps: Array<Record<string, unknown>> = []
+        const flipsCount: Record<string, number> = {}
+        let bestStreak = { from: '', to: '', rolls: 0 }
+        for (let from = 1; from <= total; from += CHUNK) {
+          const to = Math.min(total, from + CHUNK - 1)
+          const resp = await gameService.getReplayChunk(roomId, from, to)
+          const batch = Array.isArray(resp?.items)
+            ? (resp.items as Array<Record<string, unknown>>)
+            : []
+          for (const it of batch) {
+            // snaps for per-turn maxima
+            const post = ((it as { postArmyMap?: unknown }).postArmyMap ||
+              (it as { preArmyMap?: unknown }).preArmyMap ||
+              {}) as Record<string, { ownerId: string | null; armies: number }>
+            const byPlayer: Record<
+              string,
+              { id: string; territories: number; armies: number; eliminated?: boolean }
+            > = {}
+            for (const [, val] of Object.entries(post)) {
+              const owner = (val?.ownerId ?? null) as string | null
+              const armies = Number(val?.armies || 0)
+              if (!owner) continue
+              if (!byPlayer[owner]) byPlayer[owner] = { id: owner, territories: 0, armies: 0 }
+              byPlayer[owner].territories += 1
+              byPlayer[owner].armies += armies
+            }
+            snaps.push({
+              turn: Number((it as { turnNumber?: number }).turnNumber || 0),
+              players: Object.values(byPlayer),
+            })
+            // contested territories via flips
+            const pre =
+              (it as { preArmyMap?: Record<string, { ownerId: string | null; armies: number }> })
+                .preArmyMap || ({} as Record<string, { ownerId: string | null; armies: number }>)
+            for (const [tid, preVal] of Object.entries(pre)) {
+              const pv = preVal?.ownerId ?? null
+              const nv = (post[tid]?.ownerId ?? null) as string | null
+              if (pv !== nv && nv !== null) flipsCount[tid] = (flipsCount[tid] ?? 0) + 1
+            }
+            // longest engagement: streak of same attack path
+            const paths = Array.isArray((it as { paths?: unknown[] }).paths)
+              ? (it as { paths?: Array<{ from: string; to: string; kind: string }> }).paths || []
+              : []
+            let curFrom = ''
+            let curTo = ''
+            let streak = 0
+            for (const p of paths) {
+              if (p.kind !== 'attack') continue
+              if (p.from === curFrom && p.to === curTo) {
+                streak += 1
+              } else {
+                curFrom = p.from
+                curTo = p.to
+                streak = 1
+              }
+              if (streak > bestStreak.rolls)
+                bestStreak = { from: curFrom, to: curTo, rolls: streak }
             }
           }
         }
-        if (active) {
-          setCpChange(delta)
-          onRatingDelta?.(delta)
-        }
-      } catch (_error) {
-        if (!active || controller.signal.aborted) return
+        if (!active) return
+        setStats(snaps)
+        // contested list top 5
+        const nameOf = (id: string) => game?.board.find((t) => t.id === id)?.name ?? id
+        const sorted = Object.entries(flipsCount)
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
+          .slice(0, 5)
+          .map(([id, flips]) => ({ id, name: nameOf(id), flips: Number(flips) }))
+        setContested(sorted)
+        setLongest(
+          bestStreak.rolls > 1
+            ? { from: nameOf(bestStreak.from), to: nameOf(bestStreak.to), rolls: bestStreak.rolls }
+            : null,
+        )
+        setCpChange(null)
+        onRatingDelta?.(null)
+        setError(null)
+      } catch (_e) {
+        if (!active) return
         setError('Unable to load debrief stats')
         setStats([])
       }
@@ -529,9 +581,8 @@ const PlayerDebrief: React.FC<{
     void run()
     return () => {
       active = false
-      controller.abort()
     }
-  }, [me, onRatingDelta])
+  }, [game, onRatingDelta, roomId])
 
   if (!game || !me) return null
 
@@ -616,6 +667,23 @@ const PlayerDebrief: React.FC<{
             {eliminatedTurn ? `Turn T${eliminatedTurn}` : 'Yes'}
           </li>
         )}
+        {contested.length > 0 && (
+          <li className="sm:col-span-2">
+            <span className="font-semibold text-heading">Most Contested:</span>{' '}
+            {contested.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 ? ', ' : ''}
+                {c.name} ({c.flips})
+              </span>
+            ))}
+          </li>
+        )}
+        {longest && (
+          <li className="sm:col-span-2">
+            <span className="font-semibold text-heading">Longest Engagement:</span> {longest.from} →{' '}
+            {longest.to} ({longest.rolls} rolls)
+          </li>
+        )}
       </ul>
     </div>
   )
@@ -683,15 +751,87 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
     let active = true
     const run = async () => {
       try {
-        const resp = await gameService.getGameTextLog(roomId, { limit: 100 })
-        if (!active) return
-        const entries = (resp.log || []).map((l) => ({ timestamp: l.t, type: 'LIFECYCLE' })) as unknown as LogEntry[]
-        setLog(entries)
-        setError(null)
+        // Load full replay (in chunks) and derive significance per turn
+        const summary = await gameService.getReplaySummary(roomId)
+        const total = Math.max(1, summary.turns)
+        const CHUNK = 25
+        const items: Array<{
+          turnNumber: number
+          stats?: Record<string, unknown>
+          preArmyMap?: Record<string, { ownerId: string | null; armies: number }>
+          postArmyMap?: Record<string, { ownerId: string | null; armies: number }>
+        }> = []
+        for (let from = 1; from <= total; from += CHUNK) {
+          const to = Math.min(total, from + CHUNK - 1)
+          const resp = await gameService.getReplayChunk(roomId, from, to)
+          const batch = Array.isArray(resp?.items)
+            ? (resp.items as Array<Record<string, unknown>>)
+            : []
+          for (const it of batch) {
+            items.push({
+              turnNumber: Number((it as { turnNumber?: number }).turnNumber || 0),
+              stats: (it as { stats?: Record<string, unknown> }).stats,
+              preArmyMap: (
+                it as { preArmyMap?: Record<string, { ownerId: string | null; armies: number }> }
+              ).preArmyMap,
+              postArmyMap: (
+                it as { postArmyMap?: Record<string, { ownerId: string | null; armies: number }> }
+              ).postArmyMap,
+            })
+          }
+        }
+        // Compute significance per turn: ownership flips + casualties + treasure events
+        type KM = { key: string; label: string; detail: string; probability: number }
+        const moments: KM[] = []
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i]
+          const pre = (it.preArmyMap || {}) as Record<
+            string,
+            { ownerId: string | null; armies: number }
+          >
+          const post = (it.postArmyMap || {}) as Record<
+            string,
+            { ownerId: string | null; armies: number }
+          >
+          // ownership flips
+          let flips = 0
+          for (const [tid, preVal] of Object.entries(pre)) {
+            const pv = preVal?.ownerId ?? null
+            const nv = (post[tid]?.ownerId ?? null) as string | null
+            if (pv !== nv && nv !== null) flips += 1
+          }
+          // casualties
+          const st = (it.stats || {}) as {
+            armiesKilled?: number
+            armiesLost?: number
+            treasuresRedeemed?: number
+          }
+          const casualties = Math.max(0, Number(st.armiesKilled || 0) + Number(st.armiesLost || 0))
+          const treasure = Math.max(0, Number(st.treasuresRedeemed || 0))
+          const score = flips * 2 + casualties * 0.02 + treasure * 1
+          if (score > 0) {
+            const label = `Turn ${it.turnNumber}`
+            const detail = `${flips} flips • ${casualties} casualties${treasure ? ` • ${treasure} cash-ins` : ''}`
+            moments.push({ key: `${it.turnNumber}`, label, detail, probability: score })
+          }
+        }
+        // Top moments by score
+        moments.sort((a, b) => b.probability - a.probability)
+        const top = moments.slice(0, 6)
+        // Store as faux LogEntry for display (reuse list style)
+        const entries = top.map((m) => ({
+          type: 'LIFECYCLE',
+          timestamp: String(m.key),
+        })) as unknown as LogEntry[]
+        if (active) {
+          setLog(entries)
+          setError(null)
+        }
       } catch (_e) {
-        if (!active) return
-        setError('Unable to load game log')
-        setLog([])
+        if (active) {
+          setError('Unable to load key moments')
+          setLog([])
+        }
       }
     }
     void run()
@@ -941,19 +1081,45 @@ const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
   React.useEffect(() => {
     if (!roomId) return undefined
     let active = true
-    const controller = new AbortController()
     const run = async () => {
       try {
-        // Legacy /log removed; skip turn stats fetch for now
+        const summary = await gameService.getReplaySummary(roomId)
+        const total = Math.max(1, summary.turns)
+        const CHUNK = 25
+        const snapshots: Array<Record<string, unknown>> = []
+        for (let from = 1; from <= total; from += CHUNK) {
+          const to = Math.min(total, from + CHUNK - 1)
+          const resp = await gameService.getReplayChunk(roomId, from, to)
+          const batch = Array.isArray(resp?.items)
+            ? (resp.items as Array<Record<string, unknown>>)
+            : []
+          for (const it of batch) {
+            const post = ((it as { postArmyMap?: unknown }).postArmyMap ||
+              (it as { preArmyMap?: unknown }).preArmyMap ||
+              {}) as Record<string, { ownerId: string | null; armies: number }>
+            const byPlayer: Record<string, { id: string; territories: number; armies: number }> = {}
+            for (const [, val] of Object.entries(post)) {
+              const owner = (val?.ownerId ?? null) as string | null
+              const armies = Number(val?.armies || 0)
+              if (!owner) continue
+              if (!byPlayer[owner]) byPlayer[owner] = { id: owner, territories: 0, armies: 0 }
+              byPlayer[owner].territories += 1
+              byPlayer[owner].armies += armies
+            }
+            snapshots.push({
+              turn: (it as { turnNumber?: number }).turnNumber || 0,
+              players: Object.values(byPlayer),
+            })
+          }
+        }
         if (!active) return
-        const raw: Array<Record<string, unknown>> = []
-        setStats(raw)
-        // Default all series visible
+        setStats(snapshots)
         const next: Record<string, boolean> = {}
         for (const p of players) next[p.id] = true
         setVisible(next)
+        setError(null)
       } catch (_e) {
-        if (!active || controller.signal.aborted) return
+        if (!active) return
         setError('Unable to load turn stats')
         setStats([])
       }
@@ -961,7 +1127,6 @@ const PostGameCharts: React.FC<{ roomId: string; className?: string }> = ({
     void run()
     return () => {
       active = false
-      controller.abort()
     }
   }, [roomId, players])
 

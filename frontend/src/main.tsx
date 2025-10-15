@@ -10,7 +10,9 @@ import InstallPrompt from './components/InstallPrompt'
 import { store } from './store'
 import './index.css'
 import { preloadBattleOdds } from './bootstrap/preloadBattleOdds'
-import PWAUpdatePrompt from './components/PWAUpdatePrompt'
+
+// Defer PWA registration until after window load to avoid blocking paint
+// We'll lazily import the prompt component after the load event.
 
 // Add comprehensive error logging
 logger.info('[MAIN] Starting React app initialization...')
@@ -36,10 +38,21 @@ try {
   logger.debug('[MAIN] Root element found, creating React root...')
   const root = ReactDOM.createRoot(rootElement)
 
-  // Preload optional data (non-blocking)
-  preloadBattleOdds().catch(() => {
-    // Non-fatal: battle odds preloading can fail in dev without impacting app
-  })
+  // Preload optional data on idle (non-blocking)
+  try {
+    const schedule = (fn: () => void) => {
+      const w = window as unknown as { requestIdleCallback?: (cb: () => void) => void }
+      if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(fn)
+      else setTimeout(fn, 100)
+    }
+    schedule(() => {
+      preloadBattleOdds().catch(() => {
+        /* ignore */
+      })
+    })
+  } catch {
+    /* ignore */
+  }
 
   logger.info('[MAIN] Rendering React app without StrictMode...')
   // Restore full app
@@ -49,7 +62,7 @@ try {
         <BrowserRouter>
           <App />
           <InstallPrompt />
-          <PWAUpdatePrompt />
+          <PWAUpdatePromptLoader />
           <Toaster position="top-right" />
         </BrowserRouter>
       </Provider>
@@ -70,4 +83,22 @@ try {
       </div>
     `
   }
+}
+
+// Lazy loader for the PWA update prompt; imports and mounts after window 'load'
+function PWAUpdatePromptLoader() {
+  const [Comp, setComp] = React.useState<React.ComponentType | null>(null)
+  React.useEffect(() => {
+    const onLoad = () => {
+      import('./components/PWAUpdatePrompt')
+        .then((mod) => setComp(() => mod.default))
+        .catch(() => {
+          /* ignore */
+        })
+    }
+    if (document.readyState === 'complete') onLoad()
+    else window.addEventListener('load', onLoad, { once: true })
+    return () => window.removeEventListener('load', onLoad)
+  }, [])
+  return Comp ? <Comp /> : null
 }

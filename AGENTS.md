@@ -36,6 +36,13 @@ Agent checklist (read before coding):
 - Feature flags and long‑term toggles are not required for most changes. Keep configuration light unless it provides clear development value.
 - Documentation should be updated in the same PR when behaviour changes so future assistants (Codex/Claude) ingest the latest assumptions.
 
+### Performance defaults (Lighthouse)
+- Defer PWA registration until after `window.load`; avoid early injection.
+- Load theme display fonts on-demand per theme; remove global font imports.
+- Do not preload audio on boot; preload only after user interaction/unlock.
+- Idle-load optional large data (e.g., precomputed odds) via `requestIdleCallback` or short timeout.
+- Add resource hints for CDN (`dns-prefetch`/`preconnect`) and enable DNS prefetch in Helmet.
+
 ## Architecture & stack
 - Frontend: React 19, TypeScript, Redux Toolkit, Vite 7, Tailwind CSS v4, socket.io client.
 - Backend: Node.js 24+, Express 5, TypeScript, Socket.io, PostgreSQL (Railway-hosted), Redis, BullMQ for background work.
