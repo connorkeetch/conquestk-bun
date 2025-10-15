@@ -234,6 +234,30 @@ export interface ServerToClientEvents {
   'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting
   'game-delta-batch': (deltas: GameDelta[]) => void
   'log:append': (payload: { roomId: string; entries: Array<Record<string, unknown>> }) => void
+  // Fog-aware, single-tone textual game log
+  'game-log:append': (payload: {
+    roomId?: string
+    id: string
+    t: string
+    turn: number
+    phase: string
+    kind: string
+    actor: { id: string; name: string }
+    text: string
+  }) => void
+  'game-log:batch': (payload: {
+    roomId?: string
+    items: Array<{
+      id: string
+      t: string
+      turn: number
+      phase: string
+      kind: string
+      actor: { id: string; name: string }
+      text: string
+    }>
+  }) => void
+  'game-log:reveal': () => void
   'clan:progress': (payload: ClanProgressionSocketPayload) => void
   'message.new': (payload: ConversationMessageEventPayload) => void
   'conversation.message.new': (payload: ConversationMessageEventPayload) => void

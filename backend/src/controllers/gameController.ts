@@ -1019,6 +1019,125 @@ export class GameController {
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
+
+  // Fog-aware textual backfill for game logs
+  getRoomLogText = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
+      const userId = req.userId
+
+      if (!userId) return res.status(401).json({ message: 'Authentication required' })
+
+      const room = await this.gameRoomService.getRoomById(roomId)
+      if (!room) return res.status(404).json({ message: 'Room not found' })
+
+      // Pagination
+      const limitParam = (req.query?.limit as string | undefined) ?? undefined
+      const beforeParam = (req.query?.before as string | undefined) ?? undefined
+      const limit = (() => {
+        const n = Number(limitParam)
+        return Number.isFinite(n) && n > 0 ? Math.min(500, Math.trunc(n)) : 150
+      })()
+      const beforeTs = (() => {
+        try {
+          return beforeParam ? new Date(beforeParam) : null
+        } catch {
+          return null
+        }
+      })()
+
+      // Windowed read from game_logs
+      const params: unknown[] = [roomId]
+      let idx = 2
+      let sql = `SELECT id, game_id, ts, turn_number, phase, move_type, actor_id, from_territory_id, to_territory_id, payload
+                 FROM game_logs WHERE game_id = $1`
+      if (beforeTs) {
+        sql += ` AND ts < $${idx++}`
+        params.push(beforeTs)
+      }
+      sql += ` ORDER BY ts DESC LIMIT $${idx}`
+      params.push(limit)
+      const result = await query<{
+        id: string
+        game_id: string
+        ts: Date
+        turn_number: number
+        phase: string
+        move_type: string
+        actor_id: string | null
+        from_territory_id: string | null
+        to_territory_id: string | null
+        payload: unknown
+      }>(sql, params)
+
+      // Fog-aware rendering per requesting viewer
+      const { filterFullStateForViewer } = await import('../services/fogService.js')
+      const { renderLogText } = await import('../services/logEmitter.js')
+      const fullState = await this.gameService.getGameState(roomId)
+      const state = fullState ? filterFullStateForViewer(fullState, userId) : null
+
+      // Helper: compute fog booleans for each move
+      const { computeVisibilityMask } = await import('../services/fogService.js')
+      const fogEnabled = Boolean(
+        fullState &&
+          (fullState.gameConfig?.fogOfWar as string | undefined) &&
+          fullState.gameConfig?.fogOfWar !== 'off' &&
+          fullState.phase !== 'finished',
+      )
+      const mask = fullState ? computeVisibilityMask(fullState, userId) : new Set<string>()
+
+      type Move = {
+        id: string
+        game_id: string
+        turn_number: number
+        phase: string
+        move_type: string
+        actor_id: string
+        created_at: string | Date
+        payload: Record<string, unknown>
+      }
+      const toFog = (m: Move) => {
+        if (!fogEnabled)
+          return { canSeeFrom: true, canSeeTo: true, showCounts: true, fogActive: false }
+        const p = m.payload || {}
+        const fromId =
+          (p.fromId as string | undefined) ||
+          (m as unknown as { from_territory_id?: string }).from_territory_id
+        const toId =
+          (p.toId as string | undefined) ||
+          (m as unknown as { to_territory_id?: string }).to_territory_id
+        const canSeeFrom = fromId ? mask.has(fromId) : false
+        const canSeeTo = toId ? mask.has(toId) : false
+        return { canSeeFrom, canSeeTo, showCounts: canSeeFrom && canSeeTo, fogActive: true }
+      }
+
+      const moves: Move[] = result.rows.map((r) => ({
+        id: r.id,
+        game_id: r.game_id,
+        turn_number: r.turn_number,
+        phase: r.phase,
+        move_type: r.move_type,
+        actor_id: (r.actor_id as string | null) || '',
+        created_at: r.ts,
+        payload: (r.payload as unknown) ?? {},
+      }))
+
+      // Sort ascending then return newest-first list of text lines
+      moves.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      const formatted = moves.map((m) => ({
+        id: String(m.id),
+        t: new Date(m.created_at).toISOString(),
+        kind: m.move_type,
+        text: renderLogText(m as unknown as import('../services/logEmitter.js').DbMove, toFog(m)),
+      }))
+      formatted.sort((a, b) => new Date(b.t).getTime() - new Date(a.t).getTime())
+      return res.json({ log: formatted })
+    } catch (error) {
+      logger.error('Get room log-text error:', error)
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
 }
 type CreateRoomRequestBody = {
   name: string

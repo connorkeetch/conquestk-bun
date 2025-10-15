@@ -722,6 +722,17 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     22,
   )
 
+  // Ensure at least one skull is present when using built-in shapes
+  // (helps verify visibility without relying on randomness)
+  if (!provided || provided.length === 0) {
+    const hasSkull = images.includes(skull)
+    if (!hasSkull && images.length > 0) {
+      // Replace a random existing shape layer with the skull while keeping its size/position
+      const idx = Math.floor(Math.random() * images.length)
+      images[idx] = skull
+    }
+  }
+
   // A few soft glows for depth
   const glows = [
     'radial-gradient(220px 180px at 20% 30%, rgba(255, 53, 94, 0.18), transparent)',

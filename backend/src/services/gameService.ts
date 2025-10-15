@@ -1388,7 +1388,7 @@ export class GameService {
 
         // Post-archive follow-ups (achievements, clan XP) mirror battle path
         if (finalization.archived) {
-          // Emit a canonical GAME_END delta to the room
+          // Emit a canonical GAME_END delta + fog-aware text in a single sweep
           try {
             const io = tryGetSocketServer()
             if (io) {
@@ -1404,7 +1404,20 @@ export class GameService {
                 eliminated,
                 (finalSerialized as { version?: number }).version,
               )
-              io.to(`game:${roomId}`).emit('game-delta', delta)
+              const { emitCombined } = await import('./realtimeEmitter.js')
+              const { createGameEndMoves } = await import('./logEmitter.js')
+              const moves = createGameEndMoves(roomId, updatedState, winnerId, eliminated)
+              await emitCombined(
+                io as unknown as import('socket.io').Server<
+                  import('../types/shared.js').ClientToServerEvents,
+                  import('../types/shared.js').ServerToClientEvents,
+                  Record<string, unknown>,
+                  { userId?: string }
+                >,
+                roomId,
+                { deltas: [delta], moves },
+                updatedState,
+              )
             }
           } catch (e) {
             logger.warn('Failed to emit GAME_END delta on endTurn', {
@@ -1576,8 +1589,21 @@ export class GameService {
       if (emitted.length > 0) {
         const io = tryGetSocketServer()
         if (io) {
-          io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
-          io.to(gameId).emit('log:append', { roomId: gameId, entries: emitted })
+          try {
+            const { emitFogAwareForEntries } = await import('./logEmitter.js')
+            await emitFogAwareForEntries(
+              io as unknown as import('socket.io').Server<
+                import('../types/shared.js').ClientToServerEvents,
+                import('../types/shared.js').ServerToClientEvents,
+                Record<string, unknown>,
+                { userId?: string }
+              >,
+              gameId,
+              emitted as unknown as Array<Record<string, unknown>>,
+            )
+          } catch {
+            /* ignore fog-aware emission errors */
+          }
         }
       }
     } catch {
@@ -1676,8 +1702,21 @@ export class GameService {
       if (emitted.length > 0) {
         const io = tryGetSocketServer()
         if (io) {
-          io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
-          io.to(gameId).emit('log:append', { roomId: gameId, entries: emitted })
+          try {
+            const { emitFogAwareForEntries } = await import('./logEmitter.js')
+            await emitFogAwareForEntries(
+              io as unknown as import('socket.io').Server<
+                import('../types/shared.js').ClientToServerEvents,
+                import('../types/shared.js').ServerToClientEvents,
+                Record<string, unknown>,
+                { userId?: string }
+              >,
+              gameId,
+              emitted as unknown as Array<Record<string, unknown>>,
+            )
+          } catch {
+            /* ignore fog-aware emission errors */
+          }
         }
       }
     } catch {
@@ -1792,8 +1831,51 @@ export class GameService {
       try {
         const io = tryGetSocketServer()
         if (io) {
-          io.to(`game:${roomId}`).emit('log:append', { roomId, entries: appended })
-          io.to(roomId).emit('log:append', { roomId, entries: appended })
+          try {
+            const { emitFogAwareForEntries, persistFogAwareForEntries, emitAndPersistRoundStart } =
+              await import('./logEmitter.js')
+            await emitFogAwareForEntries(
+              io as unknown as import('socket.io').Server<
+                import('../types/shared.js').ClientToServerEvents,
+                import('../types/shared.js').ServerToClientEvents,
+                Record<string, unknown>,
+                { userId?: string }
+              >,
+              roomId,
+              appended as unknown as Array<Record<string, unknown>>,
+            )
+            await persistFogAwareForEntries(
+              roomId,
+              appended as unknown as Array<Record<string, unknown>>,
+            )
+            // Round start banner when new round begins
+            try {
+              const activePlayers = Math.max(
+                1,
+                (state.players || []).filter((p) => !p.isEliminated).length ||
+                  state.players.length ||
+                  1,
+              )
+              const isRoundStart = ((turnNumber ?? 1) - 1) % activePlayers === 0
+              if (isRoundStart) {
+                const round = Math.max(1, Math.ceil((turnNumber ?? 1) / activePlayers))
+                await emitAndPersistRoundStart(
+                  io as unknown as import('socket.io').Server<
+                    import('../types/shared.js').ClientToServerEvents,
+                    import('../types/shared.js').ServerToClientEvents,
+                    Record<string, unknown>,
+                    { userId?: string }
+                  >,
+                  roomId,
+                  round,
+                )
+              }
+            } catch {
+              /* ignore round banner */
+            }
+          } catch {
+            /* ignore fog-aware emission errors */
+          }
         }
       } catch {
         /* ignore */
@@ -2277,8 +2359,21 @@ export class GameService {
         if (appended.length > 0) {
           const io = tryGetSocketServer()
           if (io) {
-            io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: appended })
-            io.to(gameId).emit('log:append', { roomId: gameId, entries: appended })
+            try {
+              const { emitFogAwareForEntries } = await import('./logEmitter.js')
+              await emitFogAwareForEntries(
+                io as unknown as import('socket.io').Server<
+                  import('../types/shared.js').ClientToServerEvents,
+                  import('../types/shared.js').ServerToClientEvents,
+                  Record<string, unknown>,
+                  { userId?: string }
+                >,
+                gameId,
+                appended as unknown as Array<Record<string, unknown>>,
+              )
+            } catch {
+              /* ignore fog-aware emission errors */
+            }
           }
         }
       } catch {
@@ -2354,7 +2449,7 @@ export class GameService {
       )
       battleMetrics.clearGame(gameId)
       if (finalization.archived) {
-        // Emit a canonical GAME_END delta to the room
+        // Emit a canonical GAME_END delta + fog-aware text in a single sweep
         try {
           const io = tryGetSocketServer()
           if (io) {
@@ -2370,7 +2465,20 @@ export class GameService {
               eliminated,
               (serializedState as { version?: number }).version,
             )
-            io.to(`game:${gameId}`).emit('game-delta', delta)
+            const { emitCombined } = await import('./realtimeEmitter.js')
+            const { createGameEndMoves } = await import('./logEmitter.js')
+            const moves = createGameEndMoves(gameId, updatedGameState, winnerId, eliminated)
+            await emitCombined(
+              io as unknown as import('socket.io').Server<
+                import('../types/shared.js').ClientToServerEvents,
+                import('../types/shared.js').ServerToClientEvents,
+                Record<string, unknown>,
+                { userId?: string }
+              >,
+              gameId,
+              { deltas: [delta], moves },
+              updatedGameState,
+            )
           }
         } catch (e) {
           logger.warn('Failed to emit GAME_END delta after battle', {
@@ -3299,63 +3407,35 @@ export class GameService {
 
   async appendLog(roomId: string, entries: GameLogEntry[]): Promise<void> {
     if (!entries || entries.length === 0) return
-    await transaction(async (client) => {
-      const existing = await client.query<{ game_log: GameLogEntry[] | null }>(
-        'SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE',
-        [roomId],
-      )
-      const current = Array.isArray(existing.rows[0]?.game_log)
-        ? (existing.rows[0]?.game_log as GameLogEntry[])
-        : []
-      // Deduplicate TURN END/MISSED events per player+turn to avoid double logging
-      const filtered: GameLogEntry[] = []
-      for (const e of entries) {
-        if ((e as { type?: string }).type === 'TURN') {
-          const te = e as unknown as {
-            type: 'TURN'
-            playerId: string
-            event: 'START' | 'END' | 'MISSED'
-            turnNumber?: number
-          }
-          if ((te.event === 'END' || te.event === 'MISSED') && te.turnNumber) {
-            const exists = current.some((x) => {
-              if ((x as { type?: string }).type !== 'TURN') return false
-              const xt = x as unknown as typeof te
-              return (
-                xt.event === te.event &&
-                xt.playerId === te.playerId &&
-                (xt.turnNumber ?? -1) === te.turnNumber
-              )
-            })
-            if (exists) continue
-          }
-        }
-        filtered.push(e)
-      }
-      if (filtered.length === 0) return
-      const updated = [...current, ...filtered].slice(-500)
-      await client.query(
-        `INSERT INTO game_states (room_id, game_log, last_activity, game_phase, turn_number)
-         VALUES ($1, $2, NOW(), 'lobby', 1)
-         ON CONFLICT (room_id) DO UPDATE SET game_log = EXCLUDED.game_log, last_activity = NOW()`,
-        [roomId, JSON.stringify(updated)],
-      )
-    })
-    // Push append to subscribers for this room
+    // No longer write to game_states.game_log (removed). Persist and emit textual moves only.
     try {
       const io = tryGetSocketServer()
-      if (io && entries.length > 0) {
-        io.to(`game:${roomId}`).emit('log:append', {
+      if (io) {
+        const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
+          './logEmitter.js'
+        )
+        await persistFogAwareForEntries(
           roomId,
-          entries: entries as unknown as Record<string, unknown>[],
-        })
-        io.to(roomId).emit('log:append', {
+          entries as unknown as Array<Record<string, unknown>>,
+        )
+        await emitFogAwareForEntries(
+          io as unknown as import('socket.io').Server<
+            import('../types/shared.js').ClientToServerEvents,
+            import('../types/shared.js').ServerToClientEvents,
+            Record<string, unknown>,
+            { userId?: string }
+          >,
           roomId,
-          entries: entries as unknown as Record<string, unknown>[],
-        })
+          entries as unknown as Array<Record<string, unknown>>,
+        )
+        const hasGameEnd = entries.some((e) => (e as { type?: string }).type === 'GAME_END')
+        if (hasGameEnd) {
+          io.to(`game:${roomId}`).emit('game-log:reveal')
+          io.to(roomId).emit('game-log:reveal')
+        }
       }
     } catch {
-      // best-effort emit only
+      // best-effort only
     }
   }
 }

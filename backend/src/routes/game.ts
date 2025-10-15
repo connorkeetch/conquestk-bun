@@ -23,6 +23,7 @@ router.post('/rooms/:roomId/transfer-conquest', gameController.transferConquest)
 router.get('/rooms/:roomId', gameController.getRoomDetails)
 router.get('/rooms/:roomId/state', gameController.getRoomState)
 router.get('/rooms/:roomId/log', gameController.getRoomLog)
+router.get('/rooms/:roomId/log-text', gameController.getRoomLogText)
 router.get('/my-games', gameController.getMyGames)
 router.get('/my-games/meta', gameController.getMyGamesMeta)
 

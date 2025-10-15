@@ -66,6 +66,7 @@ const AdminQueues = lazyWithRetry(() => import('./pages/AdminQueues'))
 const AdminHealth = lazyWithRetry(() => import('./pages/AdminHealth'))
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'))
 const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'))
+const ReplayPage = lazyWithRetry(() => import('./pages/ReplayPage'))
 
 import { applyTheme, getStoredTheme } from './config/themes.config'
 import { FEATURE_FLAGS } from './constants/featureFlags'
@@ -256,6 +257,23 @@ function App() {
               </AuthGuard>
             }
           />
+          <Route
+            path="/replay/:gameId"
+            element={
+              <AuthGuard>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="spinner"></div>
+                    </div>
+                  }
+                >
+                  <ReplayPage />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
+
           <Route
             path="/community"
             element={

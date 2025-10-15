@@ -121,6 +121,7 @@ import performanceRoutes from './routes/performanceRoutes.js'
 import { createPreferencesRouter } from './routes/preferences.js'
 import profileRoutes from './routes/profile.js'
 import queueRoutes from './routes/queueRoutes.js'
+import replayRoutes from './routes/replay.js'
 import skillsRoutes from './routes/skills.js'
 import termsRoutes from './routes/terms.js'
 import userRoutes from './routes/users.js'
@@ -490,6 +491,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 // API Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/game', gameRoutes)
+app.use('/api/games', replayRoutes)
 app.use('/api/maps', mapRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/skills', skillsRoutes)

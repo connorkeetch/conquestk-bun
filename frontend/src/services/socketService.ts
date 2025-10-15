@@ -561,7 +561,9 @@ class SocketService {
         const userId = state.auth.user?.id
         const players = state.room.currentRoom?.players
         const isMember = Boolean(
-          userId && Array.isArray(players) && players.some((p) => p.userId === userId || p.id === userId),
+          userId &&
+            Array.isArray(players) &&
+            players.some((p) => p.userId === userId || p.id === userId),
         )
         if (roomId) {
           if (isMember) this.joinRoom(roomId)

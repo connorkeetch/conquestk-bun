@@ -1394,6 +1394,37 @@ export class GameLifecycleService {
        WHERE room_id = $1 AND user_id = $2`,
       [roomId, userId, reason],
     )
+    // Emit a fog-aware textual kick event (ephemeral; DB log is unchanged)
+    try {
+      const io = (await import('./socketRegistry.js')).tryGetSocketServer()
+      if (io) {
+        const state = await this.gameService.getGameState(roomId)
+        const actorName = state?.players.find((p) => p.id === userId)?.username || userId
+        const move: import('./logEmitter.js').DbMove = {
+          id: `${Date.now()}-${Math.round(Math.random() * 1e6)}`,
+          game_id: roomId,
+          turn_number: state?.turn ?? 0,
+          phase: state?.phase ?? 'reinforcement',
+          move_type: 'player_kicked',
+          actor_id: userId,
+          created_at: new Date(),
+          payload: { playerName: actorName },
+        }
+        const { emitLogAppend } = await import('./logEmitter.js')
+        await emitLogAppend(
+          io as unknown as import('socket.io').Server<
+            import('../types/shared.js').ClientToServerEvents,
+            import('../types/shared.js').ServerToClientEvents,
+            Record<string, unknown>,
+            { userId?: string }
+          >,
+          roomId,
+          move,
+        )
+      }
+    } catch {
+      /* best-effort only */
+    }
     return result
   }
 }
