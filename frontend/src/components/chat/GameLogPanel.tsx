@@ -277,28 +277,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         } catch {
           /* fall through to legacy backfill */
         }
-        const resp = await gameService.getGameLog(gameId, { limit: 150 })
-        // Narrow unknown response shape: either an array or an object with a `log` array
-        const r1 = resp as unknown
-        const maybeObj = r1 as { log?: unknown[] }
-        const raw = Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
-        const statsRaw = (resp as { stats?: unknown[] }).stats
-        const stats = Array.isArray(statsRaw) ? (statsRaw as Array<Record<string, unknown>>) : []
+        // Structured backfill disabled; initialize empty legacy inputs
         if (cancelled) return
-        // Format to display entries; build newest-first
+        // no-op
+        const stats: Array<Record<string, unknown>> = []
         let sawGameEnd = false
         const formatted: LogEntry[] = []
-        // We rely on current maps for names
         const toName = (id: string) => territoryName.get(id) || id
         const nameOf = (id: string | null | undefined) =>
           id ? playerName.get(id) || id : undefined
-        // Sort ascending by timestamp then push and reverse
-        const sorted = [...raw].sort((a, b) => {
-          const ar = a as Record<string, unknown>
-          const br = b as Record<string, unknown>
-          return new Date(String(ar.timestamp)).getTime() - new Date(String(br.timestamp)).getTime()
-        })
-        // Backfill aggregation over BATTLE entries
+        const sorted = [] as Array<Record<string, unknown>>
         type BfAgg = {
           attackerId: string
           defenderId?: string
