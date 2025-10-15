@@ -24,8 +24,9 @@ export function startVitalsRUM(): void {
   if (typeof window === 'undefined' || typeof PerformanceObserver === 'undefined') return
   // Only run in production-like builds
   try {
-    // @ts-expect-error Vite injects env
-    if (!(import.meta?.env?.PROD ?? false)) return
+    // Vite injects env
+    // biome-ignore lint/suspicious/noExplicitAny: build-time env typing varies by toolchain
+    if (!((import.meta as any)?.env?.PROD ?? false)) return
   } catch {
     // best-effort
   }
