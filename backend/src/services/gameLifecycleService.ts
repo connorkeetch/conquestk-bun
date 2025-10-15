@@ -1314,11 +1314,16 @@ export class GameLifecycleService {
       null
     if (strikes >= 3 && targetUserId) {
       try {
+        // Auto-neutralize immediately after 3 missed turns (no host prompt)
         neutralizeOutcome = await this.kickAndNeutralize(roomId, targetUserId)
-        await query(`UPDATE game_rooms SET replacement_pending_user_id = $2 WHERE id = $1`, [
-          roomId,
-          targetUserId,
-        ])
+        // Ensure any stale replacement flag is cleared so UI does not prompt
+        try {
+          await query(`UPDATE game_rooms SET replacement_pending_user_id = NULL WHERE id = $1`, [
+            roomId,
+          ])
+        } catch (_e) {
+          // best-effort: continue
+        }
       } catch (error) {
         logger.warn('Failed to neutralize kicked player after strikes', {
           roomId,

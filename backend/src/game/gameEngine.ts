@@ -808,6 +808,11 @@ export class GameEngine {
       return
     }
 
+    // Prevent double-rotation within the same completed round
+    if (typeof state.lastRotationTurn === 'number' && state.lastRotationTurn === gameState.turn) {
+      return
+    }
+
     // DEBUG: trace KOTH rotation progression during tests
     // console.log('[KOTH] progress start', {
     //   turn: gameState.turn,
@@ -875,6 +880,8 @@ export class GameEngine {
     state.turnsUntilRotation = state.rotationInterval
     state.upcomingHillTerritoryId =
       state.rotationQueue && state.rotationQueue.length > 0 ? state.rotationQueue[0] : null
+    // Record rotation turn to avoid multiple rotations per round
+    state.lastRotationTurn = gameState.turn
   }
 
   private refillHillRotationQueue(gameState: GameState): string[] {

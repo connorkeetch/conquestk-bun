@@ -406,9 +406,50 @@ class AdminService {
   }
 
   // ============= QUEUES (Admin) =============
-  async getQueueStats(): Promise<AdminQueuesStats> {
+  async getQueueStats(): Promise<{
+    initialized: boolean
+    timestamp: string
+    queues: Record<
+      string,
+      {
+        waiting: number
+        active: number
+        completed: number
+        failed: number
+        delayed: number
+        deadLetter: number
+        stalled: number
+        isPaused: boolean
+        oldestWaitingMs: number | null
+        avgProcessingMs: number | null
+        warnings: string[]
+      }
+    >
+  }> {
     const response = await apiClient.get(`/queues/stats`)
-    return (response.data?.data ?? response.data) as AdminQueuesStats
+    const raw = (response.data?.data ?? response.data) as AdminQueuesStats
+    return {
+      initialized: Boolean(raw.initialized),
+      timestamp: String(raw.timestamp || new Date().toISOString()),
+      queues: Object.fromEntries(
+        Object.entries(raw.queues || {}).map(([name, q]) => [
+          name,
+          {
+            waiting: Number(q.waiting || 0),
+            active: Number(q.active || 0),
+            completed: Number(q.completed || 0),
+            failed: Number(q.failed || 0),
+            delayed: Number(q.delayed || 0),
+            deadLetter: Number(q.deadLetter || 0),
+            stalled: Number(q.stalled || 0),
+            isPaused: Boolean(q.isPaused),
+            oldestWaitingMs: q.oldestWaitingMs ?? null,
+            avgProcessingMs: q.avgProcessingMs ?? null,
+            warnings: Array.isArray(q.warnings) ? q.warnings : [],
+          },
+        ]),
+      ),
+    }
   }
 
   async getQueueHealth(): Promise<AdminQueuesHealth> {
