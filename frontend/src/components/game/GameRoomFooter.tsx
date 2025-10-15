@@ -13,6 +13,8 @@ interface GameRoomFooterProps {
   isEditingLayout?: boolean
   isChatPinned?: boolean
   isStatsPinned?: boolean
+  isChatDrawerAvailable?: boolean
+  isStatsDrawerAvailable?: boolean
   className?: string
 }
 
@@ -28,6 +30,8 @@ export default function GameRoomFooter({
   isEditingLayout = false,
   isChatPinned = false,
   isStatsPinned = false,
+  isChatDrawerAvailable = true,
+  isStatsDrawerAvailable = true,
   className = '',
 }: GameRoomFooterProps) {
   const [isMuted, setIsMuted] = useState(() => audioService.isMutedState())
@@ -57,9 +61,18 @@ export default function GameRoomFooter({
                 onClick={onStatsClick}
                 onMouseEnter={onStatsHover}
                 onFocus={onStatsHover}
-                className="flex items-center justify-center gap-2 h-10 min-w-[140px] px-4 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
-                title="Player Stats"
+                className={`flex items-center justify-center gap-2 h-10 min-w-[140px] px-4 rounded-lg border transition-all group ${
+                  isStatsDrawerAvailable
+                    ? 'bg-surface-2 hover:bg-surface-2/80 border-border'
+                    : 'bg-surface-2/50 border-border/50 cursor-not-allowed opacity-60'
+                }`}
+                title={
+                  isStatsDrawerAvailable
+                    ? 'Player Stats'
+                    : 'Stats panel is popped out; return it to the drawer from its header'
+                }
                 aria-label="Player Stats"
+                disabled={!isStatsDrawerAvailable}
               >
                 <span className="text-lg" aria-hidden="true">
                   📊
@@ -74,9 +87,18 @@ export default function GameRoomFooter({
               onClick={onChatClick}
               onMouseEnter={onChatHover}
               onFocus={onChatHover}
-              className="flex items-center justify-center gap-2 h-10 min-w-[140px] px-4 rounded-lg bg-surface-2 hover:bg-surface-2/80 border border-border transition-all group"
-              title="Open Chat & Log"
+              className={`flex items-center justify-center gap-2 h-10 min-w-[140px] px-4 rounded-lg border transition-all group ${
+                isChatDrawerAvailable
+                  ? 'bg-surface-2 hover:bg-surface-2/80 border-border'
+                  : 'bg-surface-2/50 border-border/50 cursor-not-allowed opacity-60'
+              }`}
+              title={
+                isChatDrawerAvailable
+                  ? 'Open Chat & Log'
+                  : 'Chat panel is popped out; return it to the drawer from its header'
+              }
               aria-label="Open Chat & Log"
+              disabled={!isChatDrawerAvailable}
             >
               <span className="text-lg" aria-hidden="true">
                 💬
@@ -187,9 +209,18 @@ export default function GameRoomFooter({
                   onClick={onStatsClick}
                   onMouseEnter={onStatsHover}
                   onFocus={onStatsHover}
-                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-2 border border-border transition-all relative"
-                  title="Player Stats"
+                  className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all relative ${
+                    isStatsDrawerAvailable
+                      ? 'bg-surface-2 border-border'
+                      : 'bg-surface-2/50 border-border/50 cursor-not-allowed opacity-60'
+                  }`}
+                  title={
+                    isStatsDrawerAvailable
+                      ? 'Player Stats'
+                      : 'Stats panel is popped out; return it to the drawer from its header'
+                  }
                   aria-label="Player Stats"
+                  disabled={!isStatsDrawerAvailable}
                 >
                   <span className="text-lg" aria-hidden="true">
                     📊
@@ -213,12 +244,21 @@ export default function GameRoomFooter({
                 onMouseEnter={onChatHover}
                 onFocus={onChatHover}
                 className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all relative ${
-                  isMobileDrawerOpen
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-surface-2 border-border'
+                  isChatDrawerAvailable
+                    ? isMobileDrawerOpen
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-surface-2 border-border'
+                    : 'bg-surface-2/50 border-border/50 cursor-not-allowed opacity-60'
                 }`}
-                title={isMobileDrawerOpen ? 'Close Chat' : 'Open Chat'}
+                title={
+                  isChatDrawerAvailable
+                    ? isMobileDrawerOpen
+                      ? 'Close Chat'
+                      : 'Open Chat'
+                    : 'Chat panel is popped out; return it to the drawer from its header'
+                }
                 aria-label={isMobileDrawerOpen ? 'Close Chat' : 'Open Chat'}
+                disabled={!isChatDrawerAvailable}
               >
                 <span className="text-lg" aria-hidden="true">
                   {isMobileDrawerOpen ? '✕' : '💬'}

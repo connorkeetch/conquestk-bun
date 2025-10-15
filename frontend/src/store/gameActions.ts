@@ -5,6 +5,17 @@ import { API_URL } from '@/config'
 import { socketService } from '@/services/socketService'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
 import type { GameState, TradeCardsAction } from '../types/game'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
+import {
+  addTerritoryAction,
+  selectTargetTerritory,
+  selectTerritory,
+  setError,
+  setPendingAction,
+} from './gameSlice'
+import type { AppDispatch, RootState } from './index'
+import { addClientLog, recordPlacement, removeLastPlacement } from './uiRoomSlice'
+
 // Extend shared GameAction with client-only actions
 type SharedGameAction = import('@conquestk/shared').GameAction
 type TransferConquestAction = {
@@ -20,16 +31,7 @@ type UndoFortifyAction = {
   payload?: undefined
 }
 export type GameAction = SharedGameAction | TransferConquestAction | UndoFortifyAction
-import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
-import {
-  addTerritoryAction,
-  selectTargetTerritory,
-  selectTerritory,
-  setError,
-  setPendingAction,
-} from './gameSlice'
-import type { AppDispatch, RootState } from './index'
-import { addClientLog, recordPlacement, removeLastPlacement } from './uiRoomSlice'
+// end imports
 
 // Unified action emitter: routes game actions over socket when connected,
 // or POSTs to the HTTP fallback when offline/disconnected.
