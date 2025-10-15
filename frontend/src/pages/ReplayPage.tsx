@@ -229,7 +229,7 @@ const ReplayPage: React.FC = () => {
     x: number
     y: number
     armies?: number
-    owner?: string | null
+    owner?: string
   }> = React.useMemo(() => {
     if (!mapTerritories) return []
     const post = currentItem?.postArmyMap ?? {}
@@ -237,14 +237,14 @@ const ReplayPage: React.FC = () => {
     return mapTerritories.map((t) => {
       const snapshot = (post as any)[t.territoryId] ?? (pre as any)[t.territoryId] ?? null
       const armies = snapshot ? Number(snapshot.armies || 0) : 0
-      const owner = snapshot ? (snapshot.ownerId as string | null) : null
+      const owner = (snapshot?.ownerId ?? undefined) as string | undefined
       return {
         id: t.territoryId,
         name: t.name,
         x: t.armyPosition.x,
         y: t.armyPosition.y,
         armies,
-        owner,
+        ...(owner ? { owner } : {}),
       }
     })
   }, [mapTerritories, currentItem?.postArmyMap, currentItem?.preArmyMap])
