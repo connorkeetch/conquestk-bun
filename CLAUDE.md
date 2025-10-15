@@ -99,6 +99,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - JSX uses double quotes; TS/JS uses single quotes and no semicolons.
 - Use the shared path alias `@/` (mapped to each package’s `src/`) consistently across imports.
 - Prefer extending existing abstractions rather than inventing new patterns.
+- API naming contract: JSON responses and WebSocket payloads use camelCase exclusively (e.g., `selectedColor`). Database columns may remain snake_case; normalize to camelCase at the API boundary and do not expose snake_case to clients.
 
 ## Backend notes
 - Routes are mounted under `/api`; add to existing routers before creating new ones.
