@@ -251,19 +251,19 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
                 )}
                 {sectors.length > 0 && (
                   <ul className="mt-3 space-y-3 text-sm">
-                    {sectors.map((continent) => (
+                    {sectors.map((sector) => (
                       <li
-                        key={continent.id}
+                        key={sector.id}
                         className="flex items-center justify-between rounded bg-surface-3 px-3 py-2"
                       >
                         <span className="flex items-center gap-2 text-[color:var(--color-text)]">
                           <span
                             className="inline-block h-3 w-3 rounded-full"
-                            style={{ backgroundColor: continent.color }}
+                            style={{ backgroundColor: sector.color }}
                           />
-                          {continent.name}
+                          {sector.name}
                         </span>
-                        <span className="text-muted">+{continent.bonusArmies} armies</span>
+                        <span className="text-muted">+{sector.bonusArmies} armies</span>
                       </li>
                     ))}
                   </ul>

@@ -69,8 +69,15 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
               <thead className="bg-[color:var(--surface-2)] sticky top-0">
                 <tr className="border-b border-[color:var(--panel-border)] select-none">
                   <th className="px-2 py-2 text-left font-medium text-muted">Player</th>
-                  <th className="px-2 py-2 text-left font-medium text-muted" title="Rank & CP">
+                  <th className="px-1.5 py-2 text-left font-medium text-muted" title="Rank & CP">
                     Rank
+                  </th>
+                  <th
+                    className="px-1 py-2 text-right font-medium text-muted"
+                    title="Missed turns (timed out)"
+                  >
+                    <span aria-hidden>⏳</span>
+                    <span className="sr-only">Missed</span>
                   </th>
                   <th className="px-2 py-2 text-right font-medium text-muted">
                     <img
@@ -189,8 +196,8 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                           </button>
                         </div>
                       </td>
-                      <td className="px-2 py-1.5 whitespace-nowrap">
-                        <div className="flex items-center gap-1 text-xs">
+                      <td className="px-1.5 py-1.5 whitespace-nowrap">
+                        <div className="flex items-center gap-0.5 text-xs">
                           <span
                             style={{ color: rank.color }}
                             title={`${rank.name} (${skillRating} CP)`}
@@ -199,6 +206,11 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                           </span>
                           <span className="text-muted">({skillRating})</span>
                         </div>
+                      </td>
+                      <td className="px-1 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
+                        {typeof (player as { missedTurns?: number }).missedTurns === 'number'
+                          ? Math.max(0, (player as { missedTurns?: number }).missedTurns || 0)
+                          : 0}
                       </td>
                       <td className="px-2 py-1.5 text-right font-mono text-[color:var(--text)] whitespace-nowrap">
                         {player.totalArmies}

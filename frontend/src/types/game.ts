@@ -71,13 +71,14 @@ export interface GamePlayer extends SharedPlayer {
   isCurrentPlayer?: boolean
   isLocalPlayer?: boolean
   skillRating?: number
+  // Number of missed turns for this player in the current room/game
+  missedTurns?: number
 }
 
 export interface Territory extends SharedTerritory {
   // Frontend might have UI-specific properties
   isHighlighted?: boolean
   isSelectable?: boolean
-  continent?: string // Legacy property for backward compatibility
 }
 
 export interface Card extends SharedCard {

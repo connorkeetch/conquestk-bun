@@ -127,9 +127,13 @@ export const PREMIUM_PLAYER_COLORS = {
     description: 'Radioactive power',
   },
   Dragonfire: {
-    gradient: 'linear-gradient(45deg, #DC2626, #FB923C, #FDE047)',
+    // Distinct multi-hue gradient with a molten core feel
+    gradient:
+      'conic-gradient(from 20deg at 50% 50%, #7A0B0B 0%, #DC2626 22%, #FB923C 58%, #FDE047 78%, #DC2626 100%)',
     solid: '#FB923C',
-    effect: 'flame-particles',
+    outline: '#B45309',
+    // Custom effect tailored for tokens and small badges
+    effect: 'dragonfire',
     description: 'Burning conquest',
   },
 } as const
@@ -319,7 +323,7 @@ export const getColorValue = (color: PlayerColor): string => {
     }
   }
 
-  // Check if it's a regular player color (hex value)
+  // If it's one of our standard player colors (exact hex match), return it
   if ((PLAYER_COLORS as readonly string[]).includes(color)) {
     // If colorblind mode is enabled, map to color-blind-friendly palette by index
     try {
@@ -332,6 +336,11 @@ export const getColorValue = (color: PlayerColor): string => {
       // ignore environment issues
     }
     return color
+  }
+
+  // If it's any valid hex color, return as-is rather than falling back to red
+  if (typeof color === 'string' && /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color.trim())) {
+    return color.trim()
   }
 
   // Check if it's a premium color

@@ -1881,7 +1881,7 @@ router.get(
   },
 )
 
-// Update structural map content (territories, continents, adjacencies, modifiers) from editor metadata
+// Update structural map content (territories, sectors (formerly continents), adjacencies, modifiers) from editor metadata
 router.put(
   '/maps/:mapId/content',
   requirePermission('content.edit'),
