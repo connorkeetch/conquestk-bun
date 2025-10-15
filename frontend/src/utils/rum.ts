@@ -7,9 +7,14 @@ function sendBeacon(path: string, data: unknown): void {
   try {
     const url = path.startsWith('http') ? path : `${location.origin}${path}`
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
-    if (navigator.sendBeacon && navigator.sendBeacon(url, blob)) return
+    if (navigator.sendBeacon?.(url, blob)) return
     // Fallback to fetch without blocking unload
-    void fetch(url, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' }, keepalive: true })
+    void fetch(url, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+    })
   } catch {
     // ignore
   }
@@ -37,10 +42,11 @@ export function startVitalsRUM(): void {
 
     const finalize = () => {
       if (!lcp) return
-      const value = (lcp.renderTime || lcp.loadTime || lcp.startTime) || 0
+      const value = lcp.renderTime || lcp.loadTime || lcp.startTime || 0
       // Rudimentary element info without text content
       const tag = lcp.element ? lcp.element.tagName : undefined
-      const id = lcp.element && (lcp.element as HTMLElement).id ? (lcp.element as HTMLElement).id : undefined
+      const id =
+        lcp.element && (lcp.element as HTMLElement).id ? (lcp.element as HTMLElement).id : undefined
       const classes = lcp.element && (lcp.element as HTMLElement).className
       const theme = document.documentElement.getAttribute('data-theme') || undefined
       const payload = {
@@ -67,4 +73,3 @@ export function startVitalsRUM(): void {
     // ignore failures
   }
 }
-

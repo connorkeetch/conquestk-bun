@@ -1,4 +1,4 @@
-import { computeConquestProbability } from '@conquestk/shared/utils/battleOdds'
+import { computeConquestProbability } from '@shared/utils/battleOdds'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { getColorValue, type PlayerColor } from '@/constants/colors'
 import { gameService } from '@/services/gameService'
@@ -780,8 +780,8 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
             })
           }
         }
-        // Compute significance per turn: ownership flips + casualties + treasure events
-        type KM = { key: string; label: string; detail: string; probability: number }
+        // Compute significance per turn: flips, casualties, treasure, and average improbability of conquests
+        type KM = { key: string; label: string; detail: string; score: number }
         const moments: KM[] = []
         for (let i = 0; i < items.length; i++) {
           const it = items[i]
@@ -808,15 +808,52 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
           }
           const casualties = Math.max(0, Number(st.armiesKilled || 0) + Number(st.armiesLost || 0))
           const treasure = Math.max(0, Number(st.treasuresRedeemed || 0))
+
+          // Average improbability across conquests in this turn using attack paths
+          let improbableSum = 0
+          let improbableCount = 0
+          const paths = Array.isArray((it as { paths?: unknown[] }).paths)
+            ? (it as { paths?: Array<{ from: string; to: string; kind: string }> }).paths || []
+            : []
+          for (const p of paths) {
+            if (p.kind !== 'attack') continue
+            const fromId = p.from
+            const toId = p.to
+            const preFrom = pre[fromId]
+            const preTo = pre[toId]
+            const postTo = post[toId]
+            // Only score when a conquest occurred and we have initial stacks
+            if (preFrom && preTo && postTo && preTo.ownerId !== postTo.ownerId) {
+              const a0 = Math.max(0, Number(preFrom.armies || 0))
+              const d0 = Math.max(0, Number(preTo.armies || 0))
+              if (a0 > 0 && d0 > 0) {
+                try {
+                  const pWin = computeConquestProbability(a0, d0)
+                  const improb = Math.max(0, 1 - Math.min(1, Math.max(0, pWin)))
+                  improbableSum += improb
+                  improbableCount += 1
+                } catch {
+                  /* ignore odds errors */
+                }
+              }
+            }
+          }
+          const avgImprob = improbableCount > 0 ? improbableSum / improbableCount : 0
+
           const score = flips * 2 + casualties * 0.02 + treasure * 1
-          if (score > 0) {
+          // Weight average improbability into score (up to +10)
+          const combined = score + avgImprob * 10
+          if (combined > 0) {
             const label = `Turn ${it.turnNumber}`
-            const detail = `${flips} flips • ${casualties} casualties${treasure ? ` • ${treasure} cash-ins` : ''}`
-            moments.push({ key: `${it.turnNumber}`, label, detail, probability: score })
+            const detail =
+              `${flips} flips • ${casualties} casualties` +
+              (treasure ? ` • ${treasure} cash-ins` : '') +
+              (avgImprob > 0 ? ` • avg improbable ${Math.round(avgImprob * 100)}%` : '')
+            moments.push({ key: `${it.turnNumber}`, label, detail, score: combined })
           }
         }
         // Top moments by score
-        moments.sort((a, b) => b.probability - a.probability)
+        moments.sort((a, b) => b.score - a.score)
         const top = moments.slice(0, 6)
         // Store as faux LogEntry for display (reuse list style)
         const entries = top.map((m) => ({
