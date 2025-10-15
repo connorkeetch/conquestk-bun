@@ -589,19 +589,43 @@ export class GameActionProcessor {
       version: (result.gameState as { version?: number }).version,
     })
 
-    // Emit treasure awarded delta first when present for UI logs
+    // Emit treasure awarded delta + textual card_award move when present
     try {
       if (result.treasureAwarded) {
         const { tryGetSocketServer } = await import('./socketRegistry.js')
         const io = tryGetSocketServer()
         if (io) {
-          io.to(`game:${gameId}`).emit('game-delta', {
+          const delta: import('@conquestk/shared/types/delta').GameDelta = {
             type: 'TREASURE_AWARDED',
             roomId: gameId,
             timestamp: Date.now(),
             userId: playerId,
             metal: result.treasureAwarded,
-          } as import('@conquestk/shared/types/delta').GameDelta)
+          }
+          const state = result.gameState
+          const username = state?.players?.find((p) => p.id === playerId)?.username || playerId
+          const move: import('./logEmitter.js').DbMove = {
+            id: `${Date.now()}-award`,
+            game_id: gameId,
+            turn_number: state?.turn ?? 1,
+            phase: state?.phase ?? 'reinforcement',
+            move_type: 'card_award',
+            actor_id: playerId,
+            created_at: new Date(),
+            payload: { actorName: username },
+          }
+          const { emitCombined } = await import('./realtimeEmitter.js')
+          await emitCombined(
+            io as unknown as import('socket.io').Server<
+              import('../types/shared.js').ClientToServerEvents,
+              import('../types/shared.js').ServerToClientEvents,
+              Record<string, unknown>,
+              { userId?: string }
+            >,
+            gameId,
+            { deltas: [delta], moves: [move] },
+            undefined,
+          )
         }
       }
     } catch {

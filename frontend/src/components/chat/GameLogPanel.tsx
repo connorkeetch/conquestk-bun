@@ -46,7 +46,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const game = useAppSelector((s) => s.game.currentGame)
   const clientLogs = useAppSelector((s) => s.uiRoom.clientLogs ?? [])
   const [entries, setEntries] = useState<LogEntry[]>([])
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [_refreshKey, setRefreshKey] = useState(0)
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
@@ -876,17 +876,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [
-    gameId,
-    redact,
-    playerName,
-    territoryName,
-    toSafeInt,
-    game?.phase,
-    room?.status,
-    playerColor,
-    refreshKey,
-  ])
+  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
 
   useEffect(() => {
     const ENABLE_CLIENT_SYNTHESIS = false
@@ -1418,7 +1408,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     const onGameLogBatch: Parameters<typeof socketService.on<'game-log:batch'>>[1] = (payload) => {
       try {
         const items = Array.isArray((payload as unknown as { items?: unknown[] }).items)
-          ? ((payload as unknown as { items: Array<{ text?: string; t?: string }> }).items)
+          ? (payload as unknown as { items: Array<{ text?: string; t?: string }> }).items
           : []
         if (items.length === 0) return
         const windowMs = 2000

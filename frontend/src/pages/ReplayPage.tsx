@@ -1,9 +1,9 @@
 import React from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router-dom'
 import UnifiedMapDisplay from '@/components/UnifiedMapDisplay'
 import { getColorValue } from '@/constants/colors'
-import { useAppSelector } from '@/hooks/redux'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { type MapTerritory, mapService } from '@/services/mapService'
 import {
   fetchReplayChunk,
@@ -17,15 +17,22 @@ import {
 const CHUNK_SIZE = 25
 
 const ReplayPage: React.FC = () => {
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const { gameId } = useParams<{ gameId: string }>()
   const meta = useSelector(selectReplayMeta)
   const currentTurn = useSelector(selectCurrentTurn)
   const diff = useSelector(selectMapDiff)
 
-  const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
+  const [_loading, setLoading] = React.useState(false)
+  const [_error, setError] = React.useState<string | null>(null)
+
+  // Replay cache access must be defined before effects that depend on it
+  const replayState = useAppSelector((s) => s.replay)
+  const cacheKeys = React.useMemo(
+    () => Array.from(replayState.cache.keys()).join(','),
+    [replayState.cache],
+  )
 
   React.useEffect(() => {
     if (!gameId) return
@@ -34,8 +41,8 @@ const ReplayPage: React.FC = () => {
       setLoading(true)
       setError(null)
       try {
-        await dispatch(fetchReplaySummary(gameId) as any)
-      } catch (e) {
+        await dispatch(fetchReplaySummary(gameId))
+      } catch (_e) {
         if (!active) return
         setError('Failed to load replay summary')
       } finally {
@@ -53,7 +60,7 @@ const ReplayPage: React.FC = () => {
     if (!meta || !gameId) return
     const from = 1
     const to = Math.min(meta.turns, CHUNK_SIZE)
-    dispatch(fetchReplayChunk({ gameId, fromTurn: from, toTurn: to }) as any)
+    if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: from, toTurn: to }))
   }, [dispatch, meta, gameId])
 
   const goPrev = React.useCallback(() => {
@@ -62,7 +69,7 @@ const ReplayPage: React.FC = () => {
     dispatch(setCurrentTurn(next))
     const needFrom = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
     const needTo = Math.min(meta.turns, needFrom + CHUNK_SIZE - 1)
-    dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: needFrom, toTurn: needTo }) as any)
+    if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: needFrom, toTurn: needTo }))
   }, [dispatch, meta, currentTurn, gameId])
 
   const goNext = React.useCallback(() => {
@@ -71,7 +78,7 @@ const ReplayPage: React.FC = () => {
     dispatch(setCurrentTurn(next))
     const needFrom = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
     const needTo = Math.min(meta.turns, needFrom + CHUNK_SIZE - 1)
-    dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: needFrom, toTurn: needTo }) as any)
+    if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: needFrom, toTurn: needTo }))
   }, [dispatch, meta, currentTurn, gameId])
 
   // Keyboard shortcuts: ←/→, Shift+←/→ per round, Home/End, PgUp/PgDn by chunk
@@ -90,7 +97,7 @@ const ReplayPage: React.FC = () => {
         dispatch(setCurrentTurn(next))
         const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
         const nt = Math.min(total, nf + CHUNK_SIZE - 1)
-        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+        if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: nf, toTurn: nt }))
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         const step = e.shiftKey ? perRound : 1
@@ -98,30 +105,31 @@ const ReplayPage: React.FC = () => {
         dispatch(setCurrentTurn(next))
         const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
         const nt = Math.min(total, nf + CHUNK_SIZE - 1)
-        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+        if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: nf, toTurn: nt }))
       } else if (e.key === 'Home') {
         e.preventDefault()
         dispatch(setCurrentTurn(1))
-        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: 1, toTurn: Math.min(total, CHUNK_SIZE) }) as any)
+        if (gameId)
+          dispatch(fetchReplayChunk({ gameId, fromTurn: 1, toTurn: Math.min(total, CHUNK_SIZE) }))
       } else if (e.key === 'End') {
         e.preventDefault()
         dispatch(setCurrentTurn(total))
         const nf = Math.floor((total - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
-        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: total }) as any)
+        if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: nf, toTurn: total }))
       } else if (e.key === 'PageUp') {
         e.preventDefault()
         const next = Math.max(1, currentTurn - chunk)
         dispatch(setCurrentTurn(next))
         const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
         const nt = Math.min(total, nf + CHUNK_SIZE - 1)
-        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+        if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: nf, toTurn: nt }))
       } else if (e.key === 'PageDown') {
         e.preventDefault()
         const next = Math.min(total, currentTurn + chunk)
         dispatch(setCurrentTurn(next))
         const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
         const nt = Math.min(total, nf + CHUNK_SIZE - 1)
-        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+        if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: nf, toTurn: nt }))
       }
     }
     window.addEventListener('keydown', onKey)
@@ -141,44 +149,12 @@ const ReplayPage: React.FC = () => {
     if (idx - 1 >= 0) want.push([prevFrom, Math.min(total, prevFrom + CHUNK_SIZE - 1)])
     const nextFrom = (idx + 1) * CHUNK_SIZE + 1
     if (nextFrom <= total) want.push([nextFrom, Math.min(total, nextFrom + CHUNK_SIZE - 1)])
-    const have = new Set(Array.from(replayState.cache.keys()))
+    const have = new Set(cacheKeys ? cacheKeys.split(',').filter(Boolean) : [])
     for (const [from, to] of want) {
       const key = `${from}-${to}`
-      if (!have.has(key)) dispatch(fetchReplayChunk({ gameId, fromTurn: from, toTurn: to }) as any)
+      if (!have.has(key)) dispatch(fetchReplayChunk({ gameId, fromTurn: from, toTurn: to }))
     }
-  }, [dispatch, meta, gameId, currentTurn])
-
-  if (!gameId) {
-    return (
-      <div className="p-6">
-        <div className="text-danger">Missing game id</div>
-      </div>
-    )
-  }
-
-  if (loading && !meta) {
-    return (
-      <div className="p-6">
-        <div className="spinner" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="text-danger">{error}</div>
-      </div>
-    )
-  }
-
-  if (!meta) {
-    return (
-      <div className="p-6">
-        <div className="text-muted">No replay metadata</div>
-      </div>
-    )
-  }
+  }, [dispatch, meta, gameId, currentTurn, cacheKeys])
 
   // Load map geometry to position tokens for replay
   const [mapTerritories, setMapTerritories] = React.useState<MapTerritory[] | null>(null)
@@ -200,21 +176,23 @@ const ReplayPage: React.FC = () => {
     }
   }, [meta?.options?.mapId])
   // meta.players won't have owner territory counts; they are used for colors only
-  const playerColors = Object.fromEntries(
-    meta.players.map((p) => [p.id, getColorValue((p.color as any) || '#94A3B8')]),
-  )
+  const playerColors = React.useMemo(() => {
+    const players = meta?.players ?? []
+    return Object.fromEntries(players.map((p) => [p.id, getColorValue(p.color ?? '#94A3B8')]))
+  }, [meta])
 
   // Controls
   const onTurnSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const n = Math.max(1, Math.min(meta.turns, Math.round(Number(e.target.value))))
+    if (!gameId) return
+    const total = meta?.turns ?? 1
+    const n = Math.max(1, Math.min(total, Math.round(Number(e.target.value))))
     dispatch(setCurrentTurn(n))
     const needFrom = Math.floor((n - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
-    const needTo = Math.min(meta.turns, needFrom + CHUNK_SIZE - 1)
-    dispatch(fetchReplayChunk({ gameId, fromTurn: needFrom, toTurn: needTo }) as any)
+    const needTo = Math.min(total, needFrom + CHUNK_SIZE - 1)
+    dispatch(fetchReplayChunk({ gameId, fromTurn: needFrom, toTurn: needTo }))
   }
 
   // Pull the current turn's pre/post state from replay cache to show tokens
-  const replayState = useAppSelector((s) => s.replay)
   const currentItem = React.useMemo(() => {
     for (const [, items] of replayState.cache) {
       const found = items.find((it) => it.turnNumber === currentTurn)
@@ -232,10 +210,16 @@ const ReplayPage: React.FC = () => {
     owner?: string
   }> = React.useMemo(() => {
     if (!mapTerritories) return []
-    const post = currentItem?.postArmyMap ?? {}
-    const pre = currentItem?.preArmyMap ?? {}
+    const post = (currentItem?.postArmyMap ?? {}) as Record<
+      string,
+      { ownerId?: string | null; armies?: number }
+    >
+    const pre = (currentItem?.preArmyMap ?? {}) as Record<
+      string,
+      { ownerId?: string | null; armies?: number }
+    >
     return mapTerritories.map((t) => {
-      const snapshot = (post as any)[t.territoryId] ?? (pre as any)[t.territoryId] ?? null
+      const snapshot = post[t.territoryId] ?? pre[t.territoryId]
       const armies = snapshot ? Number(snapshot.armies || 0) : 0
       const owner = (snapshot?.ownerId ?? undefined) as string | undefined
       return {
@@ -249,42 +233,50 @@ const ReplayPage: React.FC = () => {
     })
   }, [mapTerritories, currentItem?.postArmyMap, currentItem?.preArmyMap])
 
+  const turnRangeId = React.useId()
+
   return (
     <div className="flex h-full w-full flex-col gap-3 p-3">
       <div className="panel flex items-center gap-3 p-3">
-        <button className="btn" disabled={currentTurn <= 1} onClick={goPrev}>
+        <button type="button" className="btn" disabled={currentTurn <= 1} onClick={goPrev}>
           ⟨ Prev
         </button>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-muted">Turn</label>
+          <label className="text-sm text-muted" htmlFor={turnRangeId}>
+            Turn
+          </label>
           <input
+            id={turnRangeId}
             type="range"
             min={1}
-            max={Math.max(1, meta.turns)}
+            max={Math.max(1, meta?.turns ?? 1)}
             value={currentTurn}
             onChange={onTurnSlider}
             className="w-64"
           />
           <span className="text-sm text-muted">
-            {currentTurn} / {meta.turns}
+            {currentTurn} / {meta?.turns ?? 1}
           </span>
         </div>
-        <button className="btn" disabled={currentTurn >= meta.turns} onClick={goNext}>
+        <button
+          type="button"
+          className="btn"
+          disabled={!meta || currentTurn >= meta.turns}
+          onClick={goNext}
+        >
           Next ⟩
         </button>
         <div className="ml-auto text-sm text-muted">
-          Mode: {meta.mode} • Fog: {meta.hasFog ? 'on' : 'off'}
+          Mode: {meta?.mode ?? 'unknown'} • Fog: {meta?.hasFog ? 'on' : 'off'}
         </div>
       </div>
 
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-w-0 flex-1 rounded-lg border border-border/60 bg-surface-2 p-2">
           <UnifiedMapDisplay
-            mapId={(meta.options.mapId as string) || 'default'}
+            mapId={String(meta?.options?.mapId ?? 'default')}
             territories={territories}
             playerColors={playerColors}
-            onTerritoryClick={() => {}}
-            onTerritoryHover={() => {}}
             selectedTerritoryId={null}
             selectedTargetTerritoryId={null}
             pendingAction={null}
@@ -315,7 +307,7 @@ const ReplayPage: React.FC = () => {
             <div className="text-muted">Loading diff…</div>
           )}
           <div className="mt-4">
-            <button className="btn" onClick={() => navigate(`/room/${gameId}`)}>
+            <button type="button" className="btn" onClick={() => navigate(`/room/${gameId}`)}>
               Back to Match
             </button>
           </div>

@@ -26,14 +26,22 @@ export function DiffOverlay({
     setVisible(true)
     const id = window.setTimeout(() => setVisible(false), fadeMs)
     return () => window.clearTimeout(id)
-  }, [fadeMs, flips.length, armyChanges.length, paths.length])
+  }, [fadeMs])
 
   if (!visible) return null
 
   return (
-    <div className="absolute left-0 top-0 pointer-events-none" style={{ width, height, zIndex: 25 }}>
+    <div
+      className="absolute left-0 top-0 pointer-events-none"
+      style={{ width, height, zIndex: 25 }}
+    >
       {/* Paths */}
-      <svg width={width} height={height} style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
+      <svg
+        width={width}
+        height={height}
+        style={{ position: 'absolute', inset: 0 }}
+        aria-hidden="true"
+      >
         {paths.map((p, idx) => {
           const a = pointMap.get(p.from)
           const b = pointMap.get(p.to)
@@ -42,11 +50,27 @@ export function DiffOverlay({
           return (
             <g key={`${p.from}-${p.to}-${idx}`}>
               <defs>
-                <marker id={`arrow-${p.kind}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <marker
+                  id={`arrow-${p.kind}`}
+                  markerWidth="6"
+                  markerHeight="6"
+                  refX="5"
+                  refY="3"
+                  orient="auto"
+                >
                   <path d="M0,0 L0,6 L6,3 z" fill={color} />
                 </marker>
               </defs>
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={color} strokeWidth={2} markerEnd={`url(#arrow-${p.kind})`} opacity={0.9} />
+              <line
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke={color}
+                strokeWidth={2}
+                markerEnd={`url(#arrow-${p.kind})`}
+                opacity={0.9}
+              />
             </g>
           )
         })}
@@ -84,7 +108,12 @@ export function DiffOverlay({
           <div
             key={`chg-${ch.territoryId}`}
             className={`absolute px-2 py-0.5 text-xs font-bold rounded-full ${positive ? 'bg-green-600/85' : 'bg-red-600/85'} text-white`}
-            style={{ left: p.x + 18, top: p.y - 18, transform: 'translate(-50%,-50%)', animation: 'rk-fade 1.2s ease-out forwards' }}
+            style={{
+              left: p.x + 18,
+              top: p.y - 18,
+              transform: 'translate(-50%,-50%)',
+              animation: 'rk-fade 1.2s ease-out forwards',
+            }}
           >
             {text}
           </div>

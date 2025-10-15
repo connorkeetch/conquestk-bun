@@ -1075,7 +1075,7 @@ export class GameController {
       const { filterFullStateForViewer } = await import('../services/fogService.js')
       const { renderLogText } = await import('../services/logEmitter.js')
       const fullState = await this.gameService.getGameState(roomId)
-      const state = fullState ? filterFullStateForViewer(fullState, userId) : null
+      const _state = fullState ? filterFullStateForViewer(fullState, userId) : null
 
       // Helper: compute fog booleans for each move
       const { computeVisibilityMask } = await import('../services/fogService.js')
