@@ -661,17 +661,14 @@ export default function UnifiedMapDisplay({
         />
         {diffOverlayData && (
           <div className="absolute inset-0">
-            {React.createElement(
-              require('./DiffOverlay').DiffOverlay,
-              {
-                width: mapData.width,
-                height: mapData.height,
-                points: territories.map((t) => ({ id: t.id, x: t.x, y: t.y })),
-                flips: diffOverlayData.ownershipFlips,
-                armyChanges: diffOverlayData.armyChanges,
-                paths: diffOverlayData.paths,
-              },
-            )}
+            {React.createElement(require('./DiffOverlay').DiffOverlay, {
+              width: mapData.width,
+              height: mapData.height,
+              points: territories.map((t) => ({ id: t.id, x: t.x, y: t.y })),
+              flips: diffOverlayData.ownershipFlips,
+              armyChanges: diffOverlayData.armyChanges,
+              paths: diffOverlayData.paths,
+            })}
           </div>
         )}
         {/* Interaction overlays (rings, brackets, arcs) - placed after tokens for visibility */}
