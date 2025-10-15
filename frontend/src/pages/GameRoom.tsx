@@ -2758,7 +2758,12 @@ export default function GameRoom() {
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
-                onClick={() => setMobileDrawerOpen(false)}
+                onClick={() => {
+                  if (chatPanel?.isPinned) {
+                    dispatch(setDrawerPinned({ panelId: 'chat', isPinned: false }))
+                  }
+                  setMobileDrawerOpen(false)
+                }}
               >
                 Close
               </button>
@@ -2897,7 +2902,12 @@ export default function GameRoom() {
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => setStatsDrawerOpen(false)}
+                  onClick={() => {
+                    if (statsPanel?.isPinned) {
+                      dispatch(setDrawerPinned({ panelId: 'player-stats', isPinned: false }))
+                    }
+                    setStatsDrawerOpen(false)
+                  }}
                 >
                   Close
                 </button>

@@ -124,6 +124,105 @@ class SocketService {
   }
 
   sendGameAction(data: Parameters<ClientToServerEvents['game-action']>[0]) {
+    const { roomId, action } = data
+    // Route to specialized handlers to preserve throttling and optimistic UI where applicable
+    try {
+      switch (action?.type) {
+        case 'deploy': {
+          const p = (action as { payload?: unknown }).payload
+          if (p && typeof p === 'object') {
+            const { territoryId, armies } = p as { territoryId?: unknown; armies?: unknown }
+            if (typeof territoryId === 'string' && typeof armies === 'number') {
+              this.deployArmies(roomId, territoryId, armies)
+              return
+            }
+          }
+          break
+        }
+        case 'attack': {
+          const p = (action as { payload?: unknown }).payload
+          if (p && typeof p === 'object') {
+            const { fromTerritoryId, toTerritoryId, armies } = p as {
+              fromTerritoryId?: unknown
+              toTerritoryId?: unknown
+              armies?: unknown
+            }
+            if (typeof fromTerritoryId === 'string' && typeof toTerritoryId === 'string') {
+              this.attack(
+                roomId,
+                fromTerritoryId as string,
+                toTerritoryId as string,
+                typeof armies === 'number' ? (armies as number) : undefined,
+              )
+              return
+            }
+          }
+          break
+        }
+        case 'fortify': {
+          const p = (action as { payload?: unknown }).payload
+          if (p && typeof p === 'object') {
+            const { fromTerritoryId, toTerritoryId, armies } = p as {
+              fromTerritoryId?: unknown
+              toTerritoryId?: unknown
+              armies?: unknown
+            }
+            if (
+              typeof fromTerritoryId === 'string' &&
+              typeof toTerritoryId === 'string' &&
+              typeof armies === 'number'
+            ) {
+              this.fortify(
+                roomId,
+                fromTerritoryId as string,
+                toTerritoryId as string,
+                armies as number,
+              )
+              return
+            }
+          }
+          break
+        }
+        case 'transfer_conquest': {
+          const p = (action as { payload?: unknown }).payload
+          if (p && typeof p === 'object') {
+            const { fromTerritoryId, toTerritoryId, armies } = p as {
+              fromTerritoryId?: unknown
+              toTerritoryId?: unknown
+              armies?: unknown
+            }
+            if (
+              typeof fromTerritoryId === 'string' &&
+              typeof toTerritoryId === 'string' &&
+              typeof armies === 'number'
+            ) {
+              this.transferConquestArmies(
+                roomId,
+                fromTerritoryId as string,
+                toTerritoryId as string,
+                armies as number,
+              )
+              return
+            }
+          }
+          break
+        }
+        case 'undo_fortify': {
+          this.undoFortify(roomId)
+          return
+        }
+        case 'end_turn': {
+          this.endTurn(roomId)
+          return
+        }
+        default:
+          break
+      }
+    } catch {
+      // If routing fails for any reason, fall through to generic emit
+    }
+
+    // Generic emit as a fallback
     this.socket?.emit('game-action', data)
   }
 

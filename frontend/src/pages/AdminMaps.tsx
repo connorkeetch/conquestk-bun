@@ -470,7 +470,7 @@ export const AdminMaps: React.FC = () => {
               sector?: string
               continent?: string
             }
-            const continentValue =
+            const sectorValue =
               groups.sectorId ?? groups.continentId ?? groups.sector ?? groups.continent
 
             if (typeof idValue !== 'string') {
@@ -482,7 +482,7 @@ export const AdminMaps: React.FC = () => {
               name: typeof nameValue === 'string' ? nameValue : undefined,
               x: typeof xValue === 'number' ? xValue : undefined,
               y: typeof yValue === 'number' ? yValue : undefined,
-              sector: typeof continentValue === 'string' ? continentValue : null,
+              sector: typeof sectorValue === 'string' ? sectorValue : null,
               polygon_data: record,
             }
           })

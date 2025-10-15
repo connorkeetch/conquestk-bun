@@ -1123,6 +1123,8 @@ export class GameLifecycleService {
     const client = await getClient()
     let strikes = 0
     let targetUserId: string | null = null
+    let turnNumber: number | null = null
+    let lockToken: string | null = null
     let consumedBankSeconds = 0
     let shouldSkip = false
     // Clear any local fallback timer for this room
@@ -1143,12 +1145,14 @@ export class GameLifecycleService {
         turn_expires_at: Date | null
         turn_timer: number | null
         using_time_bank: boolean
+        turn_number: number | null
       }>(
         `
         SELECT gr.current_turn_user_id,
                gr.turn_expires_at,
                gr.turn_timer,
-               gr.using_time_bank
+               gr.using_time_bank,
+               gr.turn_number
           FROM game_rooms gr
          WHERE gr.id = $1
          FOR UPDATE OF gr
@@ -1162,6 +1166,21 @@ export class GameLifecycleService {
       }
 
       targetUserId = row.current_turn_user_id
+      turnNumber = typeof row.turn_number === 'number' ? Math.trunc(row.turn_number ?? 0) : null
+
+      // Acquire a distributed lock to ensure only one timeout handler runs per room+turn
+      try {
+        if (turnNumber && turnNumber > 0) {
+          const key = `lock:turn-timeout:${roomId}:turn:${turnNumber}`
+          lockToken = await acquireLock(key, 30000)
+          if (!lockToken) {
+            await client.query('ROLLBACK')
+            return
+          }
+        }
+      } catch {
+        // If lock acquisition fails unexpectedly, continue after DB lock — at worst, dedupe protects log
+      }
       const now = new Date()
       if (row.turn_expires_at && row.turn_expires_at > now) {
         await client.query('ROLLBACK')
@@ -1239,6 +1258,14 @@ export class GameLifecycleService {
       return
     } finally {
       client.release()
+      // Release distributed lock
+      try {
+        if (lockToken && turnNumber && turnNumber > 0) {
+          await releaseLock(`lock:turn-timeout:${roomId}:turn:${turnNumber}`, lockToken)
+        }
+      } catch {
+        // ignore
+      }
     }
 
     if (!shouldSkip || !targetUserId) {

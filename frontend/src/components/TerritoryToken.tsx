@@ -8,7 +8,7 @@ export interface TerritoryTokenProps {
   y: number
   armies?: number
   color: string
-  outlineColor?: string // Optional outline color for continent
+  outlineColor?: string // Optional outline color for sector
   shape?: TokenShape
   isSelected?: boolean
   isDragging?: boolean

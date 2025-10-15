@@ -153,7 +153,7 @@ export const selectPlayerStats = createSelector([selectGameState], (gameState) =
 export const selectContinentControl = createSelector([selectGameState], (gameState) => {
   if (!gameState) return []
 
-  // Resolve continent definitions from config (supports sectorBonuses or continentBonuses)
+  // Resolve sector/continent definitions from config (supports sectorBonuses or continentBonuses)
   const continentDefs = ((): Array<{
     id: string
     name: string

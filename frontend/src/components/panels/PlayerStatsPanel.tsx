@@ -33,6 +33,21 @@ export default function PlayerStatsPanel({
   const currentGame = useAppSelector((s) => s.game.currentGame)
   const [activeTab, setActiveTab] = useState<'stats' | 'settings'>('stats')
 
+  // Merge live room roster metadata (e.g., missedTurns) into the provided players list
+  const playersForTable = useMemo(() => {
+    if (!players || players.length === 0) return players
+    const roomPlayerMap = new Map<string, { missedTurns?: number }>()
+    for (const rp of currentRoom?.players || []) {
+      const key = (rp.userId ?? rp.id) as string
+      roomPlayerMap.set(key, { missedTurns: rp.missedTurns ?? 0 })
+    }
+    return players.map((p) => {
+      const key = (p.userId ?? p.id) as string
+      const meta = roomPlayerMap.get(key)
+      return meta ? { ...p, missedTurns: meta.missedTurns ?? 0 } : p
+    })
+  }, [players, currentRoom?.players])
+
   const canResign = useMemo(() => {
     if (!user || !currentRoom) return false
     const roomStatus = currentRoom.status
@@ -124,7 +139,7 @@ export default function PlayerStatsPanel({
           {activeTab === 'stats' ? (
             <div className="p-0">
               <PlayerStatsTable
-                players={players}
+                players={playersForTable}
                 territories={territories}
                 variant={variant}
                 gameFinished={gameFinished}
