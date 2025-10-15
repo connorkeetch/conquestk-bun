@@ -235,6 +235,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
     lastArmiesRef.current = snapshot
   }, [game?.board])
+  // Keep phase/player/turn refs in sync when mounting mid-phase or on reloads
+  useEffect(() => {
+    if (game?.phase) phaseRef.current = game.phase
+  }, [game?.phase])
+  useEffect(() => {
+    if (game?.currentPlayer) lastPlayerRef.current = game.currentPlayer
+  }, [game?.currentPlayer])
+  useEffect(() => {
+    if (typeof game?.turn === 'number') lastTurnRef.current = game.turn
+  }, [game?.turn])
   // Disable client-synthesized lifecycle lines; rely on server log
 
   // Backfill windowed history from the server

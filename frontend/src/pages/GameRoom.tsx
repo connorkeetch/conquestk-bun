@@ -658,7 +658,17 @@ export default function GameRoom() {
     [currentGame?.currentPlayer, currentGame?.players],
   )
   const activePlayerColor = activePlayer?.color ? getColorValue(activePlayer.color) : '#9CA3AF'
-  const roundNumber = Math.max(1, currentGame?.turn ?? 1)
+  // Round number should reflect completed rotations across active (non-eliminated) players.
+  // Keep this in sync with backend GameService.calculateRoundNumber and frontend utils/gameLog.
+  const roundNumber = useMemo(() => {
+    if (typeof currentGame?.roundNumber === 'number') {
+      return Math.max(1, currentGame.roundNumber)
+    }
+    const turn = Math.max(1, currentGame?.turn ?? 1)
+    const players = Array.isArray(currentGame?.players) ? currentGame?.players : []
+    const active = Math.max(1, players.filter((p) => !p.isEliminated).length || players.length || 1)
+    return Math.max(1, Math.ceil(turn / active))
+  }, [currentGame?.roundNumber, currentGame?.turn, currentGame?.players, currentGame])
 
   // Lobby team details omitted in this view
 

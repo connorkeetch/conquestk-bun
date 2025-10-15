@@ -314,6 +314,19 @@ function serializeGameStateForClient(
     phase: s.phase,
     currentPlayer: s.currentPlayer,
     turn: s.turn,
+    // Provide authoritative roundNumber alongside turn for UI parity with DB
+    // Round = ceil(turn / activePlayers) where active excludes eliminated players
+    roundNumber: (() => {
+      try {
+        const active = Math.max(
+          1,
+          s.players.filter((p) => !p.isEliminated).length || s.players.length || 1,
+        )
+        return Math.max(1, Math.ceil(Math.max(1, s.turn) / active))
+      } catch {
+        return Math.max(1, s.turn || 1)
+      }
+    })(),
     players,
     board,
     gameConfig,

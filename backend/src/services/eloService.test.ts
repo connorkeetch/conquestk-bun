@@ -1,4 +1,4 @@
-import { EloService, type PlayerRating, RatingChange } from './eloService.js'
+import { EloService, type PlayerRating } from './eloService.js'
 
 // Mock the database query function
 jest.mock('../config/database', () => ({
@@ -12,162 +12,75 @@ describe('EloService', () => {
     eloService = new EloService()
   })
 
-  describe('calculateRatingChanges', () => {
-    it('should handle a basic 3-player game', () => {
+  describe('calculateRatingChanges (Pairwise Elo)', () => {
+    it('1v1 equal ratings: winner gains ~K/2 (12), loser -12', () => {
       const players: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1000, gamesPlayed: 50, position: 1 }, // Winner
-        { userId: 'p2', currentRating: 1000, gamesPlayed: 50, position: 2 }, // Second
-        { userId: 'p3', currentRating: 1000, gamesPlayed: 50, position: 3 }, // Third
+        { userId: 'p1', currentRating: 1200, gamesPlayed: 20, position: 1 },
+        { userId: 'p2', currentRating: 1200, gamesPlayed: 20, position: 2 },
       ]
-
       const changes = eloService.calculateRatingChanges(players)
-
-      expect(changes).toHaveLength(3)
-
-      // Winner should gain rating
-      const winnerChange = changes.find((c) => c.userId === 'p1')
-      expect(winnerChange!.change).toBeGreaterThan(0)
-
-      // Others should lose rating
-      const secondChange = changes.find((c) => c.userId === 'p2')
-      expect(secondChange!.change).toBeLessThan(0)
-
-      const thirdChange = changes.find((c) => c.userId === 'p3')
-      expect(thirdChange!.change).toBeLessThan(0)
-
-      // Second place should lose less than third
-      expect(Math.abs(secondChange!.change)).toBeLessThan(Math.abs(thirdChange!.change))
-
-      // Sum of all changes should be close to zero (zero-sum game)
-      const totalChange = changes.reduce((sum, c) => sum + c.change, 0)
-      expect(Math.abs(totalChange)).toBeLessThan(3) // Allow small rounding differences
+      const a = changes.find((c) => c.userId === 'p1')!
+      const b = changes.find((c) => c.userId === 'p2')!
+      expect(a.change).toBe(12)
+      expect(b.change).toBe(-12)
+      expect(changes.reduce((s, c) => s + c.change, 0)).toBe(0)
     })
 
-    it('should apply higher K-factor for new players', () => {
-      const newPlayers: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1000, gamesPlayed: 5, position: 1 }, // New player wins
-        { userId: 'p2', currentRating: 1000, gamesPlayed: 100, position: 2 }, // Experienced
-        { userId: 'p3', currentRating: 1000, gamesPlayed: 100, position: 3 }, // Experienced
-      ]
-
-      const experiencedPlayers: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1000, gamesPlayed: 100, position: 1 }, // Experienced wins
-        { userId: 'p2', currentRating: 1000, gamesPlayed: 100, position: 2 },
-        { userId: 'p3', currentRating: 1000, gamesPlayed: 100, position: 3 },
-      ]
-
-      const newPlayerChanges = eloService.calculateRatingChanges(newPlayers)
-      const experiencedChanges = eloService.calculateRatingChanges(experiencedPlayers)
-
-      const newWinnerChange = newPlayerChanges.find((c) => c.userId === 'p1')!.change
-      const expWinnerChange = experiencedChanges.find((c) => c.userId === 'p1')!.change
-
-      // New player should have larger rating change due to higher K-factor
-      expect(Math.abs(newWinnerChange)).toBeGreaterThan(Math.abs(expWinnerChange))
-    })
-
-    it('should handle games with rating disparities correctly', () => {
+    it('3-player equal ratings: ranks 1/2/3 -> [+17, ~0, -17]', () => {
       const players: PlayerRating[] = [
-        { userId: 'p1', currentRating: 800, gamesPlayed: 50, position: 1 }, // Underdog wins
-        { userId: 'p2', currentRating: 1200, gamesPlayed: 50, position: 2 }, // Favorite loses
-        { userId: 'p3', currentRating: 1000, gamesPlayed: 50, position: 3 },
+        { userId: 'p1', currentRating: 1200, gamesPlayed: 20, position: 1 },
+        { userId: 'p2', currentRating: 1200, gamesPlayed: 20, position: 2 },
+        { userId: 'p3', currentRating: 1200, gamesPlayed: 20, position: 3 },
       ]
-
       const changes = eloService.calculateRatingChanges(players)
-
-      const underdogChange = changes.find((c) => c.userId === 'p1')!
-      const favoriteChange = changes.find((c) => c.userId === 'p2')!
-
-      // Underdog should gain rating while favorite loses
-      expect(underdogChange.change).toBeGreaterThan(0)
-      expect(favoriteChange.change).toBeLessThan(0)
-
-      // Underdog gain should outweigh the favorite's loss in magnitude
-      expect(Math.abs(underdogChange.change)).toBeGreaterThan(Math.abs(favoriteChange.change))
+      const p1 = changes.find((c) => c.userId === 'p1')!
+      const p2 = changes.find((c) => c.userId === 'p2')!
+      const p3 = changes.find((c) => c.userId === 'p3')!
+      expect(p1.change).toBe(17)
+      expect(Math.abs(p2.change)).toBeLessThanOrEqual(1)
+      expect(p3.change).toBe(-17)
+      expect(changes.reduce((s, c) => s + c.change, 0)).toBe(0)
     })
 
-    it('should scale K-factor with number of players', () => {
-      const fourPlayers: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1000, gamesPlayed: 50, position: 1 },
-        { userId: 'p2', currentRating: 1000, gamesPlayed: 50, position: 2 },
-        { userId: 'p3', currentRating: 1000, gamesPlayed: 50, position: 3 },
-        { userId: 'p4', currentRating: 1000, gamesPlayed: 50, position: 4 },
-      ]
-
-      const eightPlayers: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1000, gamesPlayed: 50, position: 1 },
-        { userId: 'p2', currentRating: 1000, gamesPlayed: 50, position: 2 },
-        { userId: 'p3', currentRating: 1000, gamesPlayed: 50, position: 3 },
-        { userId: 'p4', currentRating: 1000, gamesPlayed: 50, position: 4 },
-        { userId: 'p5', currentRating: 1000, gamesPlayed: 50, position: 5 },
-        { userId: 'p6', currentRating: 1000, gamesPlayed: 50, position: 6 },
-        { userId: 'p7', currentRating: 1000, gamesPlayed: 50, position: 7 },
-        { userId: 'p8', currentRating: 1000, gamesPlayed: 50, position: 8 },
-      ]
-
-      const fourPlayerChanges = eloService.calculateRatingChanges(fourPlayers)
-      const eightPlayerChanges = eloService.calculateRatingChanges(eightPlayers)
-
-      const fourWinner = fourPlayerChanges.find((c) => c.userId === 'p1')!
-      const eightWinner = eightPlayerChanges.find((c) => c.userId === 'p1')!
-
-      // K-factor should be different based on player count
-      expect(fourWinner.kFactor).toBe(24) // 24 * (4/4) = 24
-      expect(eightWinner.kFactor).toBe(48) // 24 * (8/4) = 48
-    })
-
-    it('should apply position-based adjustments correctly', () => {
+    it('Upset: lower-rated winner vs higher-rated players gains > 17 in 3P', () => {
       const players: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1000, gamesPlayed: 50, position: 1 },
-        { userId: 'p2', currentRating: 1000, gamesPlayed: 50, position: 2 },
-        { userId: 'p3', currentRating: 1000, gamesPlayed: 50, position: 3 },
-        { userId: 'p4', currentRating: 1000, gamesPlayed: 50, position: 4 },
+        { userId: 'p1', currentRating: 1000, gamesPlayed: 20, position: 1 },
+        { userId: 'p2', currentRating: 1300, gamesPlayed: 20, position: 2 },
+        { userId: 'p3', currentRating: 1300, gamesPlayed: 20, position: 3 },
       ]
-
       const changes = eloService.calculateRatingChanges(players)
-
-      const firstPlace = changes.find((c) => c.userId === 'p1')!
-      const secondPlace = changes.find((c) => c.userId === 'p2')!
-      const thirdPlace = changes.find((c) => c.userId === 'p3')!
-      const fourthPlace = changes.find((c) => c.userId === 'p4')!
-
-      // First place should have actual score of 1.0
-      expect(firstPlace.actualScore).toBe(1.0)
-
-      // Position-based adjustments should follow the configured scaling
-      expect(secondPlace.actualScore).toBeCloseTo(0.5, 2)
-
-      // 3rd place gets half of its base share
-      expect(thirdPlace.actualScore).toBeCloseTo(1 / 6, 2)
-
-      // 4th place gets no additional score
-      expect(fourthPlace.actualScore).toBeCloseTo(0, 2)
+      const p1 = changes.find((c) => c.userId === 'p1')!
+      expect(p1.change).toBeGreaterThan(17)
+      expect(changes.reduce((s, c) => s + c.change, 0)).toBe(0)
     })
 
-    it('should never allow rating to go below 0', () => {
-      const players: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1500, gamesPlayed: 50, position: 1 }, // High rated wins
-        { userId: 'p2', currentRating: 100, gamesPlayed: 50, position: 2 }, // Very low rated
-        { userId: 'p3', currentRating: 50, gamesPlayed: 50, position: 3 }, // Extremely low rated
+    it('K scales with sqrt(n-1): 4p > 2p for winner', () => {
+      const two: PlayerRating[] = [
+        { userId: 'a', currentRating: 1200, gamesPlayed: 20, position: 1 },
+        { userId: 'b', currentRating: 1200, gamesPlayed: 20, position: 2 },
       ]
-
-      const changes = eloService.calculateRatingChanges(players)
-
-      // Even with large losses, ratings should not go below 0
-      changes.forEach((change) => {
-        expect(change.newRating).toBeGreaterThanOrEqual(0)
-      })
-    })
-
-    it('should throw error for games with less than 3 players', () => {
-      const players: PlayerRating[] = [
-        { userId: 'p1', currentRating: 1000, gamesPlayed: 50, position: 1 },
-        { userId: 'p2', currentRating: 1000, gamesPlayed: 50, position: 2 },
+      const four: PlayerRating[] = [
+        { userId: 'a', currentRating: 1200, gamesPlayed: 20, position: 1 },
+        { userId: 'b', currentRating: 1200, gamesPlayed: 20, position: 2 },
+        { userId: 'c', currentRating: 1200, gamesPlayed: 20, position: 3 },
+        { userId: 'd', currentRating: 1200, gamesPlayed: 20, position: 4 },
       ]
-
-      expect(() => eloService.calculateRatingChanges(players)).toThrow(
-        'Ranked games require at least 3 players',
+      const c2 = eloService.calculateRatingChanges(two)
+      const c4 = eloService.calculateRatingChanges(four)
+      expect(c4.find((c) => c.userId === 'a')!.change).toBeGreaterThan(
+        c2.find((c) => c.userId === 'a')!.change,
       )
+    })
+
+    it('Clamp floor at 800', () => {
+      const players: PlayerRating[] = [
+        { userId: 'p1', currentRating: 805, gamesPlayed: 100, position: 3 },
+        { userId: 'p2', currentRating: 1500, gamesPlayed: 100, position: 1 },
+        { userId: 'p3', currentRating: 1500, gamesPlayed: 100, position: 2 },
+      ]
+      const changes = eloService.calculateRatingChanges(players)
+      const p1 = changes.find((c) => c.userId === 'p1')!
+      expect(p1.newRating).toBeGreaterThanOrEqual(800)
     })
   })
 
