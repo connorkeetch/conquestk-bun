@@ -310,6 +310,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-3 border-t border-border/60 bg-surface-1/95 px-6 pt-4 backdrop-blur sm:flex-row sm:justify-end"
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
             >
+              {roomId && (
+                <a
+                  href={`/replay/${roomId}`}
+                  className="flex-1 rounded-lg bg-secondary px-4 py-3 font-semibold text-white transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem] text-center"
+                >
+                  ▶ Watch Replay
+                </a>
+              )}
               {onNewGame && (
                 <button
                   type="button"

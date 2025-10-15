@@ -180,6 +180,25 @@ export const gameService = {
     }
   },
 
+  async getGameTextLog(
+    roomId: string,
+    options?: { signal?: AbortSignal; limit?: number; before?: string },
+  ): Promise<{ log: Array<{ id: string; t: string; kind: string; text: string }> }> {
+    const params: Record<string, string> = {}
+    if (options?.limit && Number.isFinite(options.limit)) params.limit = String(options.limit)
+    if (options?.before) params.before = options.before
+    const cfg: AxiosRequestConfig | undefined = {
+      ...(options?.signal ? { signal: options.signal } : {}),
+      ...(Object.keys(params).length > 0 ? { params } : {}),
+    }
+    const response = await api.get(`/game/rooms/${roomId}/log-text`, cfg)
+    const raw = (response.data ?? {}) as { log?: unknown[] }
+    const log = Array.isArray(raw.log)
+      ? (raw.log as Array<{ id: string; t: string; kind: string; text: string }>)
+      : []
+    return { log }
+  },
+
   // Get user's active games (for GameListPage)
   async getUserGames() {
     const response = await api.get('/game/my-games')

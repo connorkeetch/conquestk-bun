@@ -106,6 +106,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - The database is **PostgreSQL-only**—write SQL with native PostgreSQL syntax and `$n` placeholders; avoid MySQL/SQLite idioms such as `?` parameters or `INSERT OR REPLACE`.
 - Asset uploads go through `backend/src/utils/assetStorage.ts`, targeting Cloudflare R2 when the `ASSET_*` variables are configured and falling back to local `/uploads` storage in development.
 - Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/services/socketService.ts` (which wires chat handlers from `backend/src/socket/chatHandlers.ts`).
+- Fog-aware game logs: alongside existing deltas and `log:append` events, the server emits `game-log:append` per viewer with short, single-tone text (fog-filtered). On completion, the server emits `game-log:reveal` so clients refetch full, unredacted history. See `backend/src/services/logEmitter.ts`.
 - Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
 - Development note: during this phase, destructive migrations are acceptable. If local data needs to be reset to unblock a schema change, do so and reseed.
 
@@ -114,6 +115,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket. This keeps queue/inline paths and deltas consistent.
 - Team checks are centralized in `backend/src/utils/gameTeams.ts` and used by both `GameEngine` and AI. Do not reimplement team logic elsewhere.
 - Emit deltas first; snapshots are recovery-only for desyncs.
+ - Logs: textual `game-log:append` is additive and does not replace DB `game_log` writes.
 
 ### Development norms for routing and compatibility
 - Remove deprecated socket events and REST routes promptly after migrating to `game-action`.
@@ -163,6 +165,12 @@ cd backend && npm run make-admin   # promote an account interactively
 - `docs/planning/roadmap.md` & `docs/planning/go-live-plan.md` – active priorities and launch blockers.
 - `docs/planning/codebase-cleanup.md` – technical-debt backlog.
 - `docs/planning/game-room-plan.md` – canonical Game Room UI/UX plan; consult when implementing room, lobby, phases, and timers.
+
+## Game Replay (development)
+- Backend adds read-only replay endpoints under `/api/games/:id/replay/*` built from `game_logs` and `game_state_snapshots`.
+- Frontend includes `/replay/:gameId` and an isolated `replaySlice` for scrubbing completed matches in read-only mode.
+- Chunk ~25 turns per request; compute diffs client-side from pre/post snapshots plus lightweight deltas.
+- Keep payloads small and memoize selectors; no live sockets involved.
 
 ## Environment configuration
 ### Core variables (`backend/.env`)

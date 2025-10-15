@@ -481,6 +481,29 @@ export interface ServerToClientEvents {
   'game-update': (gameState: GameState) => void
   'game-delta': (delta: GameDelta) => void
   'game-delta-batch': (deltas: GameDelta[]) => void
+  'game-log:append': (payload: {
+    roomId?: string
+    id: string
+    t: string
+    turn: number
+    phase: string
+    kind: string
+    actor: { id: string; name: string }
+    text: string
+  }) => void
+  'game-log:batch': (payload: {
+    roomId?: string
+    items: Array<{
+      id: string
+      t: string
+      turn: number
+      phase: string
+      kind: string
+      actor: { id: string; name: string }
+      text: string
+    }>
+  }) => void
+  'game-log:reveal': () => void
   'log:append': (payload: { roomId: string; entries: Array<Record<string, unknown>> }) => void
   'clan:progress': (payload: ClanProgressionSocketPayload) => void
   'message.new': (payload: ConversationMessageEventPayload) => void

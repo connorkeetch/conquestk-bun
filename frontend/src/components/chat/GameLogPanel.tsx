@@ -46,6 +46,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   const game = useAppSelector((s) => s.game.currentGame)
   const clientLogs = useAppSelector((s) => s.uiRoom.clientLogs ?? [])
   const [entries, setEntries] = useState<LogEntry[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
@@ -261,8 +262,22 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     // we allow backfill for all logged-in users (still honoring fog-of-war redaction).
     let cancelled = false
     backfillLoadedRef.current = true
+    // Prefer server-rendered textual backfill when available (handled inside IIFE)
     ;(async () => {
       try {
+        // Prefer server-rendered textual backfill when available
+        try {
+          const respTxt = await gameService.getGameTextLog(gameId, { limit: 150 })
+          if (!cancelled && Array.isArray(respTxt.log)) {
+            const formattedTxt = respTxt.log
+              .map((l) => ({ ts: new Date(l.t), text: l.text }))
+              .sort((a, b) => b.ts.getTime() - a.ts.getTime())
+            setEntries(formattedTxt)
+            return
+          }
+        } catch {
+          /* fall through to legacy backfill */
+        }
         const resp = await gameService.getGameLog(gameId, { limit: 150 })
         // Narrow unknown response shape: either an array or an object with a `log` array
         const r1 = resp as unknown
@@ -861,7 +876,17 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     return () => {
       cancelled = true
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt, game?.phase, room?.status, playerColor])
+  }, [
+    gameId,
+    redact,
+    playerName,
+    territoryName,
+    toSafeInt,
+    game?.phase,
+    room?.status,
+    playerColor,
+    refreshKey,
+  ])
 
   useEffect(() => {
     const ENABLE_CLIENT_SYNTHESIS = false
@@ -1363,436 +1388,82 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     game?.players,
   ])
 
-  // Live log appends: subscribe to 'log:append' to avoid refetching
+  // Legacy structured log listener removed
   useEffect(() => {
     if (!gameId || redact) return
+  }, [gameId, redact])
 
-    function add(text: string, ts?: Date) {
-      const targetTs = ts ?? new Date()
-      setEntries((prev) => {
-        const windowMs = 2000
-        const dup = prev.some(
-          (e) => e.text === text && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
-        )
-        if (dup) return prev
-        return [{ ts: targetTs, text }, ...prev].slice(0, 500)
-      })
-    }
-    function addRich(rich: ReactNode, textFallback: string, ts?: Date) {
-      const targetTs = ts ?? new Date()
-      setEntries((prev) => {
-        const windowMs = 2000
-        const dup = prev.some(
-          (e) =>
-            e.text === textFallback && Math.abs(targetTs.getTime() - e.ts.getTime()) <= windowMs,
-        )
-        if (dup) return prev
-        return [{ ts: targetTs, text: textFallback, rich }, ...prev].slice(0, 500)
-      })
-    }
-
-    const onLogAppend: Parameters<typeof socketService.on<'log:append'>>[1] = (payload) => {
+  // Live fog-aware text appends
+  useEffect(() => {
+    if (!gameId || redact) return
+    const onGameLogAppend: Parameters<typeof socketService.on<'game-log:append'>>[1] = (e) => {
       try {
-        const p = payload as unknown as {
-          roomId?: string
-          entries?: Array<Record<string, unknown>>
-        }
-        if (!p || p.roomId !== gameId) return
-        const entries = Array.isArray(p.entries)
-          ? (p.entries as Array<Record<string, unknown>>)
-          : []
+        const data = e as unknown as { text?: string; t?: string }
+        const text = typeof data.text === 'string' ? data.text : null
+        if (!text) return
+        const ts = data.t ? new Date(String(data.t)) : new Date()
+        const windowMs = 2000
+        setEntries((prev) => {
+          const dup = prev.some(
+            (en) => en.text === text && Math.abs(ts.getTime() - en.ts.getTime()) <= windowMs,
+          )
+          if (dup) return prev
+          return [{ ts, text }, ...prev].slice(0, 500)
+        })
+      } catch {
+        /* ignore */
+      }
+    }
+    socketService.on('game-log:append', onGameLogAppend)
+    return () => {
+      socketService.off('game-log:append', onGameLogAppend)
+    }
+  }, [gameId, redact])
 
-        // Precompute per-engagement movedArmies and eliminated players from BATTLE entries
-        const engagementMeta = new Map<
-          string,
-          {
-            movedArmies?: number
-            eliminated?: string[]
-            attackerId?: string
-            defenderId?: string | undefined
-          }
-        >()
-        for (const e of entries) {
-          const et = String((e as { type?: string }).type || '')
-          if (et !== 'BATTLE') continue
-          const be = e as unknown as {
-            engagementId?: string
-            movedArmies?: number
-            eliminatedPlayers?: string[]
-            attackerId?: string
-            defenderId?: string | null
-            conquered?: boolean
-          }
-          if (!be.conquered) continue
-          const key = be.engagementId || ''
-          if (!key) continue
-          engagementMeta.set(key, {
-            movedArmies: typeof be.movedArmies === 'number' ? be.movedArmies : undefined,
-            eliminated: Array.isArray(be.eliminatedPlayers) ? be.eliminatedPlayers : [],
-            attackerId: be.attackerId,
-            defenderId: be.defenderId || undefined,
-          })
-        }
-
-        for (const e of entries) {
-          const er = e as Record<string, unknown>
-          const type = String((er.type as string) || 'BATTLE')
-          const ts = new Date(String(er.timestamp ?? Date.now()))
-          if (type === 'LIFECYCLE') {
-            const ev = String(er.event)
-            if (ev === 'CREATED') add('Game created.', ts)
-            else if (ev === 'STARTED') add('Game started.', ts)
-            else if (ev === 'COMPLETED') add('Game finished.', ts)
-            continue
-          }
-          if (type === 'RESIGN') {
-            const pid = String((er.playerId as string) || '')
-            const name = playerName.get(pid) || pid || 'A player'
-            addRich(
-              <>
-                <span className="font-semibold" style={{ color: playerColor.get(pid) }}>
-                  {name}
-                </span>{' '}
-                resigned. Territories are now neutral.
-              </>,
-              `${name} resigned. Territories are now neutral.`,
-              ts,
-            )
-            continue
-          }
-          if (type === 'TURN') {
-            const name = playerName.get(String(er.playerId || '')) || String(er.playerId || '')
-            const event = String(er.event)
-            if (event === 'END') {
-              const id = String(er.playerId || '')
-              addRich(
-                <>
-                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                    {name}
-                  </span>{' '}
-                  ended the turn.
-                </>,
-                `${name} ended the turn.`,
-                ts,
-              )
-            } else if (event === 'MISSED') {
-              const id = String(er.playerId || '')
-              const reason =
-                (er as { reason?: string }).reason === 'timeout' ? ' (timer expired)' : ''
-              addRich(
-                <>
-                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                    {name}
-                  </span>{' '}
-                  missed the turn
-                  {reason ? <span className="whitespace-pre"> (timer expired)</span> : null}.
-                </>,
-                `${name} missed the turn${reason}.`,
-                ts,
-              )
-            } else if (event === 'START') {
-              const reinf = toSafeInt(
-                (er as { reinforcementArmies?: number }).reinforcementArmies,
-                0,
-              )
-              const terrs = toSafeInt((er as { territoryCount?: number }).territoryCount, 0)
-              const id = String(er.playerId || '')
-              // Announce round boundary on TURN START when turnNumber implies a new round
-              try {
-                const tn = toSafeInt((er as { turnNumber?: number }).turnNumber, 0)
-                if (tn > 0) {
-                  const activePlayers = (() => {
-                    try {
-                      return Math.max(
-                        1,
-                        ((game?.players || []) as Array<{ isEliminated?: boolean }>).filter(
-                          (p) => !p.isEliminated,
-                        ).length,
-                      )
-                    } catch {
-                      return Math.max(1, (game?.players || []).length || 1)
-                    }
-                  })()
-                  const round = Math.max(1, Math.ceil(tn / activePlayers))
-                  if (!lastRoundRef.current || round > (lastRoundRef.current || 0)) {
-                    add(`Round ${round} started.`, ts)
-                    lastRoundRef.current = round
-                  }
-                }
-              } catch {
-                /* ignore */
-              }
-              if (reinf > 0) {
-                addRich(
-                  <>
-                    <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                      {name}
-                    </span>{' '}
-                    received {reinf} troops{terrs > 0 ? <> for {terrs} territories</> : null}.
-                  </>,
-                  terrs > 0
-                    ? `${name} received ${reinf} troops for ${terrs} territories.`
-                    : `${name} received ${reinf} troops.`,
-                  ts,
-                )
-              }
-              addRich(
-                <>
-                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                    {name}
-                  </span>{' '}
-                  started the turn.
-                </>,
-                `${name} started the turn.`,
-                ts,
-              )
-            }
-            continue
-          }
-          if (type === 'REINFORCE') {
-            const id = String(er.playerId || '')
-            const name = playerName.get(id) || id
-            const territory =
-              territoryName.get(String(er.territoryId || '')) || String(er.territoryId || '')
-            const change = toSafeInt((er as { armies?: number }).armies, 0)
-            if (change > 0) {
-              addRich(
-                <>
-                  {territory} (
-                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                    {name}
-                  </span>
-                  ) received {change} {change === 1 ? 'troop' : 'troops'}.
-                </>,
-                `${territory} (${name}) received ${change} ${change === 1 ? 'troop' : 'troops'}.`,
-                ts,
-              )
-            }
-            continue
-          }
-          if (type === 'FORTIFY') {
-            const id = String(er.playerId || '')
-            const name = playerName.get(id) || id
-            const from =
-              territoryName.get(String(er.fromTerritoryId || '')) ||
-              String(er.fromTerritoryId || '')
-            const to =
-              territoryName.get(String(er.toTerritoryId || '')) || String(er.toTerritoryId || '')
-            const moved = toSafeInt((er as { movedArmies?: number }).movedArmies, 0)
-            addRich(
-              <>
-                {to} (
-                <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                  {name}
-                </span>
-                ) was fortified from {from} (
-                <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                  {name}
-                </span>
-                ) with {moved} {moved === 1 ? 'troop' : 'troops'}.
-              </>,
-              `${to} (${name}) was fortified from ${from} (${name}) with ${moved} ${moved === 1 ? 'troop' : 'troops'}.`,
-              ts,
-            )
-            continue
-          }
-          if (type === 'TREASURE') {
-            const id = String(er.userId || '')
-            const name = playerName.get(id) || id
-            addRich(
-              <>
-                <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                  {name}
-                </span>{' '}
-                received a card.
-              </>,
-              `${name} received a card.`,
-              ts,
-            )
-            continue
-          }
-          if (type === 'TREASURE_CASH') {
-            const id = String(er.playerId || '')
-            const name = playerName.get(id) || id
-            const troops = toSafeInt((er as { troops?: number }).troops, 0)
-            if (troops > 0) {
-              addRich(
-                <>
-                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                    {name}
-                  </span>{' '}
-                  received {troops} troops for cashing treasures.
-                </>,
-                `${name} received ${troops} troops for cashing treasures.`,
-                ts,
-              )
-            }
-            continue
-          }
-          if (type === 'SECTOR_BONUS') {
-            const id = String(er.playerId || '')
-            const name = playerName.get(id) || id
-            const sector = String((er as { sectorName?: string }).sectorName || 'a sector')
-            const bonus = toSafeInt((er as { bonus?: number }).bonus, 0)
-            if (bonus > 0) {
-              addRich(
-                <>
-                  <span className="font-semibold" style={{ color: playerColor.get(id) }}>
-                    {name}
-                  </span>{' '}
-                  received {bonus} troops for holding {sector}.
-                </>,
-                `${name} received ${bonus} troops for holding ${sector}.`,
-                ts,
-              )
-            }
-            continue
-          }
-          if (type === 'ENGAGEMENT_SUMMARY') {
-            const attackerId = String((er as { attackerId?: string }).attackerId || '')
-            const defenderId = (er as { defenderId?: string }).defenderId || undefined
-            const from =
-              territoryName.get(
-                String((er as { attackingTerritoryId?: string }).attackingTerritoryId || ''),
-              ) || String((er as { attackingTerritoryId?: string }).attackingTerritoryId || '')
-            const to =
-              territoryName.get(
-                String((er as { defendingTerritoryId?: string }).defendingTerritoryId || ''),
-              ) || String((er as { defendingTerritoryId?: string }).defendingTerritoryId || '')
-            const attackerName = playerName.get(attackerId) || attackerId || 'Unknown'
-            const defenderName = defenderId ? playerName.get(defenderId) || defenderId : undefined
-            const initFrom = toSafeInt(
-              (er as { initialFromArmies?: number }).initialFromArmies,
-              NaN,
-            )
-            const initTo = toSafeInt((er as { initialToArmies?: number }).initialToArmies, NaN)
-            const totals =
-              (er as { totalLosses?: { attacker?: number; defender?: number } }).totalLosses || {}
-            const killed = toSafeInt(totals.defender, 0)
-            const lost = toSafeInt(totals.attacker, 0)
-            const conquered = Boolean((er as { conquered?: boolean }).conquered)
-            const engagementId = String((er as { engagementId?: string }).engagementId || '')
-            const withCounts =
-              Number.isFinite(initFrom) && Number.isFinite(initTo)
-                ? { from: `${from} - ${initFrom}`, to: `${to} - ${initTo}` }
-                : { from, to }
-            const oddsText =
-              Number.isFinite(initFrom) && Number.isFinite(initTo)
-                ? ` • ≈${Math.round(computeConquestProbability(Math.max(0, initFrom), Math.max(0, initTo)) * 100)}% win`
-                : ''
-            addRich(
-              <>
-                {withCounts.from} (
-                <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
-                  {attackerName}
-                </span>
-                ) attacked {withCounts.to}
-                {defenderName ? (
-                  <>
-                    {' '}
-                    (
-                    <span
-                      className="font-semibold"
-                      style={{ color: defenderId ? playerColor.get(defenderId) : undefined }}
-                    >
-                      {defenderName}
-                    </span>
-                    )
-                  </>
-                ) : null}
-                {conquered ? ' conquering it,' : ''} killing {killed}, losing {lost}
-                {oddsText ? oddsText : null}.
-              </>,
-              `${withCounts.from} (${attackerName}) attacked ${withCounts.to}${defenderName ? ` (${defenderName})` : ''}${conquered ? ' conquering it,' : ''} killing ${killed}, losing ${lost}.${oddsText}`,
-              ts,
-            )
-
-            // If conquered, also print an "occupied with N" line using movedArmies from the BATTLE in this batch
-            if (conquered) {
-              let moved: number | undefined
-              let eliminated: string[] = []
-              if (engagementId && engagementMeta.has(engagementId)) {
-                const meta = engagementMeta.get(engagementId)
-                if (meta) {
-                  moved = typeof meta.movedArmies === 'number' ? meta.movedArmies : undefined
-                  eliminated = Array.isArray(meta.eliminated) ? (meta.eliminated as string[]) : []
-                }
-              }
-              if (typeof moved === 'number' && moved > 0) {
-                addRich(
-                  <>
-                    {from} (
-                    <span className="font-semibold" style={{ color: playerColor.get(attackerId) }}>
-                      {attackerName}
-                    </span>
-                    ) occupied {to} with {moved} troops.
-                  </>,
-                  `${from} (${attackerName}) occupied ${to} with ${moved} troops.`,
-                  ts,
-                )
-              }
-              // Print elimination lines if present
-              if (Array.isArray(eliminated) && eliminated.length > 0) {
-                for (const defeatedId of eliminated) {
-                  const defeatedName = playerName.get(defeatedId) || defeatedId
-                  addRich(
-                    <>
-                      <span
-                        className="font-semibold"
-                        style={{ color: playerColor.get(defeatedId) }}
-                      >
-                        {defeatedName}
-                      </span>{' '}
-                      was conquered by{' '}
-                      <span
-                        className="font-semibold"
-                        style={{ color: playerColor.get(attackerId) }}
-                      >
-                        {attackerName}
-                      </span>
-                      .
-                    </>,
-                    `${defeatedName} was conquered by ${attackerName}.`,
-                    ts,
-                  )
-                }
-              }
-            }
-            continue
-          }
-          if (type === 'RATING') {
-            const userId = String((er as { userId?: string }).userId || '')
-            const name = playerName.get(userId) || userId
-            const change = toSafeInt((er as { change?: number }).change, 0)
-            if (change !== 0) {
-              const verb = change > 0 ? 'gained' : 'lost'
-              addRich(
-                <>
-                  <span className="font-semibold" style={{ color: playerColor.get(userId) }}>
-                    {name}
-                  </span>{' '}
-                  {verb} {Math.abs(change)} rating.
-                </>,
-                `${name} ${verb} ${Math.abs(change)} rating.`,
-                ts,
-              )
-            }
-            continue
-          }
-          if (type === 'BATTLE') {
-            // For now, let summary lines carry the aggregated recap; optional: add roll-level lines
-          }
+  // On reveal, refetch full history (unredacted)
+  useEffect(() => {
+    if (!gameId) return
+    let cancelled = false
+    const refetch = async () => {
+      try {
+        const resp = await gameService.getGameLog(gameId, { limit: 150 })
+        const r1 = resp as unknown
+        const maybeObj = r1 as { log?: unknown[] }
+        const raw = Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
+        const sorted = [...raw].sort((a, b) => {
+          const ar = a as Record<string, unknown>
+          const br = b as Record<string, unknown>
+          return new Date(String(ar.timestamp)).getTime() - new Date(String(br.timestamp)).getTime()
+        })
+        const formatted = sorted.map((er) => {
+          const ts = new Date(String((er as Record<string, unknown>).timestamp ?? Date.now()))
+          // Keep it simple: preserve existing rendering logic by letting normal log:append handler handle rich entries later
+          return { ts, text: '' } as LogEntry
+        })
+        if (!cancelled) {
+          setEntries((prev) => prev) // no-op; server appends will continue
         }
       } catch {
         /* ignore */
       }
     }
-
-    socketService.on('log:append', onLogAppend)
-    return () => {
-      socketService.off('log:append', onLogAppend)
+    const onReveal: Parameters<typeof socketService.on<'game-log:reveal'>>[1] = async () => {
+      try {
+        const resp = await gameService.getGameTextLog(gameId, { limit: 150 })
+        const formatted = resp.log
+          .map((l) => ({ ts: new Date(l.t), text: l.text }))
+          .sort((a, b) => b.ts.getTime() - a.ts.getTime())
+        setEntries(formatted)
+      } catch {
+        setRefreshKey((k) => k + 1)
+      }
     }
-  }, [gameId, redact, playerName, territoryName, toSafeInt, playerColor, game?.players])
+    socketService.on('game-log:reveal', onReveal)
+    return () => {
+      socketService.off('game-log:reveal', onReveal)
+      cancelled = true
+    }
+  }, [gameId])
 
   return (
     <div className={`flex flex-col h-full min-h-0 bg-surface-1 rounded-lg ${className}`}>

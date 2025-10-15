@@ -5,6 +5,7 @@ import gameSlice from './gameSlice'
 import mapViewReducer from './mapViewSlice'
 import messagesReducer from './messagesSlice'
 import panelsReducer from './panelsSlice'
+import replayReducer from './replaySlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
 import uiRoomReducer from './uiRoomSlice'
@@ -22,6 +23,7 @@ export const store = configureStore({
     mapView: mapViewReducer,
     gameInteraction: gameInteractionReducer,
     panels: panelsReducer,
+    replay: replayReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
