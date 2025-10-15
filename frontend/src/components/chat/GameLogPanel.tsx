@@ -1447,33 +1447,9 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
   }, [gameId, redact])
 
-  // On reveal, refetch full history (unredacted)
+  // On reveal, refetch full text history (unredacted)
   useEffect(() => {
     if (!gameId) return
-    let cancelled = false
-    const refetch = async () => {
-      try {
-        const resp = await gameService.getGameLog(gameId, { limit: 150 })
-        const r1 = resp as unknown
-        const maybeObj = r1 as { log?: unknown[] }
-        const raw = Array.isArray(maybeObj.log) ? maybeObj.log : (r1 as unknown[])
-        const sorted = [...raw].sort((a, b) => {
-          const ar = a as Record<string, unknown>
-          const br = b as Record<string, unknown>
-          return new Date(String(ar.timestamp)).getTime() - new Date(String(br.timestamp)).getTime()
-        })
-        const formatted = sorted.map((er) => {
-          const ts = new Date(String((er as Record<string, unknown>).timestamp ?? Date.now()))
-          // Keep it simple: preserve existing rendering logic by letting normal log:append handler handle rich entries later
-          return { ts, text: '' } as LogEntry
-        })
-        if (!cancelled) {
-          setEntries((prev) => prev) // no-op; server appends will continue
-        }
-      } catch {
-        /* ignore */
-      }
-    }
     const onReveal: Parameters<typeof socketService.on<'game-log:reveal'>>[1] = async () => {
       try {
         const resp = await gameService.getGameTextLog(gameId, { limit: 150 })
@@ -1488,7 +1464,6 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     socketService.on('game-log:reveal', onReveal)
     return () => {
       socketService.off('game-log:reveal', onReveal)
-      cancelled = true
     }
   }, [gameId])
 
