@@ -692,15 +692,10 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
   const skull = toDataUrl(
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g fill='none' stroke-linecap='round' stroke-linejoin='round'><path fill='%23EDECF8' d='M32 6c12 0 22 9 22 20 0 7-4 11-7 13v5c0 2-1 3-3 3h-3v3c0 2-1 3-3 3h-6c-2 0-3-1-3-3v-3h-3c-2 0-3-1-3-3v-5c-3-2-7-6-7-13 0-11 10-20 22-20z'/><circle cx='24' cy='30' r='4' fill='%23000'/><circle cx='40' cy='30' r='4' fill='%23000'/><path stroke='%23A8A5C5' stroke-width='2' d='M26 42h12'/><path stroke='%23A8A5C5' stroke-width='2' d='M24 47h16'/></g></svg>",
   )
-  // Optional accents for variety
-  const pick = toDataUrl(
-    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 60'><path fill='%23FF2D95' d='M24 2C12 2 2 12 2 24c0 14 12 24 22 34 10-10 22-20 22-34C46 12 36 2 24 2z'/><circle cx='24' cy='22' r='2' fill='%23fff' fill-opacity='0.75'/></svg>",
-  )
-
-  const shapes =
-    provided && provided.length > 0 ? provided.map(toDataUrl) : [guitar, horns, skull, pick]
-  const weights =
-    provided && provided.length > 0 ? new Array(provided.length).fill(1) : [3, 2, 2, 1]
+  // Default shapes set (no guitar pick to avoid "map marker" appearance)
+  const shapes = provided && provided.length > 0 ? provided.map(toDataUrl) : [guitar, horns, skull]
+  // Equal weighting across default shapes; provided shapes are also equal weight
+  const weights = new Array(shapes.length).fill(1)
 
   const choose = (): string => {
     const sum = weights.reduce((a, b) => a + b, 0)
