@@ -2141,12 +2141,20 @@ export default function GameRoom() {
                   mapId={currentRoom.mapId || 'world'}
                   lobbyMode={true}
                   lobbyPlayers={
-                    currentRoom.players?.map((p) => ({
-                      id: p.id,
-                      username: p.username,
-                      // biome-ignore lint/suspicious/noExplicitAny: Lobby snapshot still exposes legacy snake_case color field
-                      color: (p as any).selected_color || p.preferred_color || '#9CA3AF',
-                    })) || []
+                    currentRoom.players?.map((p) => {
+                      const legacy = (() => {
+                        if (p && typeof p === 'object' && 'selected_color' in p) {
+                          const v = (p as { selected_color?: unknown }).selected_color
+                          return typeof v === 'string' ? v : undefined
+                        }
+                        return undefined
+                      })()
+                      return {
+                        id: p.id,
+                        username: p.username,
+                        color: legacy || p.preferred_color || '#9CA3AF',
+                      }
+                    }) || []
                   }
                   onTerritoryClick={(_territoryId) => {
                     // No interaction in lobby mode

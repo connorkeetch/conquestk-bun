@@ -500,7 +500,12 @@ export class GameActionWorker {
                     }
                   }
                   const { emitCombined } = await import('../services/realtimeEmitter.js')
-                  await emitCombined(this.io as unknown as any, gameId, { deltas: [withChanges], moves }, updated)
+                  await emitCombined(
+                    this.io as unknown as any,
+                    gameId,
+                    { deltas: [withChanges], moves },
+                    updated,
+                  )
                 }
               } catch {
                 // best-effort; clients will converge on next snapshot
@@ -552,15 +557,15 @@ export class GameActionWorker {
               action as Extract<import('../types/game.js').GameAction, { type: 'trade_cards' }>,
               playerId,
             )
-            // Emit concise deltas
+            // Co-emit concise deltas + textual move in one sweep
             try {
               const postPlayer = updated.players.find((p) => p.id === playerId)
               const postBank = postPlayer?.armies ?? prevBank
+              const gained = Math.max(0, Number(postBank) - Number(prevBank))
               const mustCash =
                 typeof postPlayer?.mustCashInTreasures === 'boolean'
                   ? postPlayer?.mustCashInTreasures
                   : undefined
-              const { emitFogFilteredDelta } = await import('../services/fogService.js')
               const playerDelta = DeltaBuilder.playerUpdate(
                 gameId,
                 playerId,
@@ -570,16 +575,37 @@ export class GameActionWorker {
                 },
                 updated.version,
               )
-              await emitFogFilteredDelta(this.io, gameId, playerDelta)
+              const deltas: GameDelta[] = [playerDelta]
               if (updated.phase !== prevPhase) {
-                await this.deltaEmitter.emitPhaseChange(gameId, {
-                  phase: updated.phase,
-                  currentPlayer: updated.currentPlayer,
-                  turn: updated.turn,
-                  reinforcementArmies: Number(postBank),
-                  ...(updated.version !== undefined ? { version: updated.version } : {}),
-                })
+                deltas.push(
+                  DeltaBuilder.phaseChange(
+                    gameId,
+                    updated.phase as 'reinforcement' | 'attack' | 'fortify' | 'finished',
+                    updated.currentPlayer,
+                    updated.turn,
+                    Number(postBank),
+                    updated.version,
+                  ),
+                )
               }
+              const username = postPlayer?.username || playerId
+              const move: import('../services/logEmitter.js').DbMove = {
+                id: `${Date.now()}-trade`,
+                game_id: gameId,
+                turn_number: updated.turn,
+                phase: updated.phase,
+                move_type: 'trade_cards',
+                actor_id: playerId,
+                created_at: new Date(),
+                payload: { actorName: username, bonus: gained },
+              }
+              const { emitCombined } = await import('../services/realtimeEmitter.js')
+              await emitCombined(
+                this.io as unknown as any,
+                gameId,
+                { deltas, moves: [move] },
+                updated,
+              )
             } catch {
               // Fallback to snapshot
               try {
@@ -978,12 +1004,12 @@ export class GameActionWorker {
           try {
             const postPlayer = serialized?.players?.find((p) => p.id === playerId)
             const postBank = postPlayer?.armies ?? prevBank
+            const gainedLocal = Math.max(0, (postBank as number) - prevBank)
             const _mustCash =
               typeof postPlayer?.mustCashInTreasures === 'boolean'
                 ? postPlayer?.mustCashInTreasures
                 : undefined
-            const gained = Math.max(0, (postBank as number) - prevBank)
-            if (gained > 0) {
+            if (gainedLocal > 0) {
               // Try to derive card names from the pre-trade hand and the submitted indices
               let cardNames: string[] | undefined
               try {
@@ -1005,7 +1031,7 @@ export class GameActionWorker {
                 type: 'TREASURE_CASH',
                 timestamp: new Date().toISOString(),
                 playerId,
-                troops: gained,
+                troops: gainedLocal,
               }
               const maybeCards = cardNames && cardNames.length === 3 ? cardNames : undefined
               const a = action as Extract<
@@ -1033,7 +1059,7 @@ export class GameActionWorker {
               error: logErr instanceof Error ? logErr.message : logErr,
             })
           }
-          // Emit concise, fog-filtered deltas: player bank update and optional phase change
+          // Co-emit concise deltas + textual move in one sweep
           try {
             const postPlayer = serialized?.players?.find((p) => p.id === playerId)
             const postBank = postPlayer?.armies ?? prevBank
@@ -1041,7 +1067,6 @@ export class GameActionWorker {
               typeof postPlayer?.mustCashInTreasures === 'boolean'
                 ? postPlayer?.mustCashInTreasures
                 : undefined
-            const { emitFogFilteredDelta } = await import('../services/fogService.js')
             const playerDelta = DeltaBuilder.playerUpdate(
               gameId,
               playerId,
@@ -1051,18 +1076,46 @@ export class GameActionWorker {
               },
               version,
             )
-            await emitFogFilteredDelta(this.io, gameId, playerDelta)
-
-            // If phase changed (commonly to reinforcement), emit phase change with bank as reinforcementArmies
+            const deltas: GameDelta[] = [playerDelta]
             if (newPhase !== currentState.phase) {
-              const payload = {
-                phase: newPhase,
-                currentPlayer: serialized?.currentPlayer ?? playerId,
-                turn: serialized?.turn ?? currentState.turn,
-                reinforcementArmies: Number(postBank),
-                ...(version !== undefined ? { version } : {}),
+              deltas.push(
+                DeltaBuilder.phaseChange(
+                  gameId,
+                  newPhase as 'reinforcement' | 'attack' | 'fortify' | 'finished',
+                  (serialized?.currentPlayer ?? playerId) as string,
+                  (serialized?.turn ?? currentState.turn) as number,
+                  Number(postBank),
+                  version,
+                ),
+              )
+            }
+            // If we computed a positive gain, emit a textual trade summary
+            if (Number(postBank) - Number(prevBank) > 0) {
+              const username = postPlayer?.username || playerId
+              const move: import('../services/logEmitter.js').DbMove = {
+                id: `${Date.now()}-trade`,
+                game_id: gameId,
+                turn_number: (serialized?.turn ?? currentState.turn) as number,
+                phase: (serialized?.phase ?? currentState.phase) as string,
+                move_type: 'trade_cards',
+                actor_id: playerId,
+                created_at: new Date(),
+                payload: {
+                  actorName: username,
+                  bonus: Math.max(0, Number(postBank) - Number(prevBank)),
+                },
               }
-              await this.deltaEmitter.emitPhaseChange(gameId, payload)
+              const { emitCombined } = await import('../services/realtimeEmitter.js')
+              await emitCombined(
+                this.io as unknown as any,
+                gameId,
+                { deltas, moves: [move] },
+                undefined,
+              )
+            } else {
+              // No textual move to include; emit deltas individually
+              const { emitFogFilteredDelta } = await import('../services/fogService.js')
+              for (const d of deltas) await emitFogFilteredDelta(this.io, gameId, d)
             }
           } catch (_e) {
             // Fallback: if delta emission fails, send a full snapshot to avoid desync
@@ -1237,31 +1290,66 @@ export class GameActionWorker {
       playerId,
     })
 
-    // Use unified delta emitter
-    await this.deltaEmitter.emitFortifyDeltas(gameId, fromTerritoryId, toTerritoryId, result)
-
-    // Emit a consolidated fortify result delta for logging/UX purposes
+    // Co-emit deltas + textual fortify in a single sweep
     try {
-      const fortifyDelta: import('@conquestk/shared/types/delta').GameDelta = {
-        type: 'FORTIFY_RESULT',
-        roomId: gameId,
-        timestamp: Date.now(),
-        fromTerritoryId,
-        toTerritoryId,
-        movedArmies: action.payload?.armies || 0,
-        fromArmies: result.fromArmies,
-        toArmies: result.toArmies,
-        playerId,
+      const updated = await this.gameService.getGameState(gameId)
+      if (updated) {
+        const deltas: GameDelta[] = []
+        if (typeof result.fromArmies === 'number') {
+          deltas.push(
+            DeltaBuilder.territoryUpdate(gameId, fromTerritoryId, { armies: result.fromArmies }),
+          )
+        }
+        if (typeof result.toArmies === 'number') {
+          deltas.push(
+            DeltaBuilder.territoryUpdate(gameId, toTerritoryId, { armies: result.toArmies }),
+          )
+        }
+        // Include a concise FORTIFY_RESULT for UI movement tracking
+        deltas.push({
+          type: 'FORTIFY_RESULT',
+          roomId: gameId,
+          timestamp: Date.now(),
+          fromTerritoryId,
+          toTerritoryId,
+          movedArmies: Number(action.payload?.armies || 0),
+          fromArmies: Number(result.fromArmies || 0),
+          toArmies: Number(result.toArmies || 0),
+          playerId,
+        } as import('@conquestk/shared/types/delta').FortifyResultDelta)
+
+        const player = updated.players.find((p) => p.id === playerId)
+        const actorName = player?.username || playerId
+        const fromT = updated.board.find((t) => t.id === fromTerritoryId)
+        const toT = updated.board.find((t) => t.id === toTerritoryId)
+        const move: import('../services/logEmitter.js').DbMove = {
+          id: `${Date.now()}-fortify`,
+          game_id: gameId,
+          turn_number: updated.turn,
+          phase: updated.phase,
+          move_type: 'fortify',
+          actor_id: playerId,
+          created_at: new Date(),
+          payload: {
+            actorName,
+            fromId: fromTerritoryId,
+            toId: toTerritoryId,
+            fromName: fromT?.name,
+            toName: toT?.name,
+            fromOwnerName: actorName,
+            toOwnerName: actorName,
+            armies: Number(action.payload?.armies || 0),
+          },
+        }
+        const { emitCombined } = await import('../services/realtimeEmitter.js')
+        await emitCombined(this.io as unknown as any, gameId, { deltas, moves: [move] }, updated)
       }
-      const { emitFogFilteredDelta } = await import('../services/fogService.js')
-      await emitFogFilteredDelta(this.io, gameId, fortifyDelta)
-    } catch (_e) {
-      // Non-fatal: fortify summary is best-effort
+    } catch {
+      // best-effort; clients will converge on next snapshot
     }
 
-    return DeltaBuilder.territoryUpdate(gameId, toTerritoryId, {
-      armies: result.toArmies,
-    })
+    // Return a minimal delta for caller broadcast fallback (usually ignored)
+    return DeltaBuilder.territoryUpdate(gameId, toTerritoryId, { armies: result.toArmies })
   }
 
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
@@ -1284,7 +1372,32 @@ export class GameActionWorker {
           userId: playerId,
           metal: result.treasureAwarded,
         }
+        // Emit treasure delta immediately for UI cues
         this.io.to(`game:${gameId}`).emit('game-delta', delta)
+        // Also emit a concise textual move for parity with inline path
+        try {
+          const updated = await this.gameService.getGameState(gameId)
+          const username = updated?.players.find((p) => p.id === playerId)?.username || playerId
+          const move: import('../services/logEmitter.js').DbMove = {
+            id: `${Date.now()}-award`,
+            game_id: gameId,
+            turn_number: updated?.turn ?? 1,
+            phase: updated?.phase ?? 'reinforcement',
+            move_type: 'card_award',
+            actor_id: playerId,
+            created_at: new Date(),
+            payload: { actorName: username },
+          }
+          const { emitCombined } = await import('../services/realtimeEmitter.js')
+          await emitCombined(
+            this.io as unknown as any,
+            gameId,
+            { moves: [move] },
+            updated || undefined,
+          )
+        } catch {
+          /* ignore textual move failures */
+        }
       }
     } catch (_e) {
       // best-effort
