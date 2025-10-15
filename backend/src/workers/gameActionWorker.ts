@@ -410,9 +410,102 @@ export class GameActionWorker {
                   const battleDelta = DeltaBuilder.battleResult(gameId, payload, updated.version)
                   const withChanges: import('@conquestk/shared/types/delta').BattleResultDelta & {
                     changes?: import('@conquestk/shared/types/delta').GameDelta[]
-                  } = battleDelta
-                  const { emitFogFilteredDelta } = await import('../services/fogService.js')
-                  await emitFogFilteredDelta(this.io, gameId, withChanges)
+                  } = {
+                    ...battleDelta,
+                    changes: [
+                      DeltaBuilder.territoryUpdate(
+                        gameId,
+                        payload.fromTerritory.id,
+                        { armies: payload.fromTerritory.armies },
+                        updated.version,
+                      ),
+                      DeltaBuilder.territoryUpdate(
+                        gameId,
+                        payload.toTerritory.id,
+                        {
+                          armies: payload.toTerritory.armies,
+                          ...(payload.toTerritory.ownerId !== undefined
+                            ? { ownerId: payload.toTerritory.ownerId ?? undefined }
+                            : {}),
+                        },
+                        updated.version,
+                      ),
+                    ],
+                  }
+                  // Build fog-aware textual moves for this battle
+                  const moves: Array<import('../services/logEmitter.js').DbMove> = []
+                  const now = new Date()
+                  const attacker = updated.players.find((p) => p.id === playerId)
+                  const actorName = attacker?.username || playerId
+                  const fromId = payload.fromTerritory.id
+                  const toId = payload.toTerritory.id
+                  const fromT = updated.board.find((t) => t.id === fromId)
+                  const toT = updated.board.find((t) => t.id === toId)
+                  const prevToOwnerId = (currentState.board.find((t) => t.id === toId)?.ownerId ||
+                    null) as string | null
+                  const prevToOwnerName = prevToOwnerId
+                    ? currentState.players.find((p) => p.id === prevToOwnerId)?.username || prevToOwnerId
+                    : undefined
+                  const fromOwnerName = attacker?.username || playerId
+                  const toOwnerName = prevToOwnerName
+                  moves.push({
+                    id: `${now.getTime()}-atk`,
+                    game_id: gameId,
+                    turn_number: updated.turn,
+                    phase: updated.phase,
+                    move_type: 'attack',
+                    actor_id: playerId,
+                    created_at: now,
+                    payload: {
+                      actorName,
+                      fromId,
+                      toId,
+                      fromName: fromT?.name,
+                      toName: toT?.name,
+                      fromOwnerName,
+                      toOwnerName,
+                      kills: payload.defenderLosses,
+                      losses: payload.attackerLosses,
+                    },
+                  })
+                  if (payload.conquered) {
+                    moves.push({
+                      id: `${now.getTime()}-conq`,
+                      game_id: gameId,
+                      turn_number: updated.turn,
+                      phase: updated.phase,
+                      move_type: 'conquer',
+                      actor_id: playerId,
+                      created_at: now,
+                      payload: {
+                        actorName,
+                        fromId,
+                        toId,
+                        fromName: fromT?.name,
+                        toName: toT?.name,
+                        fromOwnerName,
+                        toOwnerName,
+                      },
+                    })
+                  }
+                  if (Array.isArray(payload.eliminatedPlayers)) {
+                    for (const pid of payload.eliminatedPlayers) {
+                      const defeatedName =
+                        updated.players.find((p) => p.id === pid)?.username || pid
+                      moves.push({
+                        id: `${now.getTime()}-elim-${pid}`,
+                        game_id: gameId,
+                        turn_number: updated.turn,
+                        phase: updated.phase,
+                        move_type: 'player_eliminated',
+                        actor_id: pid,
+                        created_at: now,
+                        payload: { playerName: defeatedName, byName: actorName },
+                      })
+                    }
+                  }
+                  const { emitCombined } = await import('../services/realtimeEmitter.js')
+                  await emitCombined(this.io as unknown as any, gameId, { deltas: [withChanges], moves }, updated)
                 }
               } catch {
                 // best-effort; clients will converge on next snapshot

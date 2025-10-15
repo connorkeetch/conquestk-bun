@@ -70,6 +70,12 @@ interface UnifiedMapDisplayProps {
   adjacency?: Record<string, string[]>
   // Preview mode removes game-only UI/behaviors (e.g., odds popup, redux hover dispatch)
   previewMode?: boolean
+  // Optional diff overlay for replay
+  diffOverlayData?: {
+    ownershipFlips: string[]
+    armyChanges: Array<{ territoryId: string; delta: number }>
+    paths: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }>
+  } | null
 }
 
 export default function UnifiedMapDisplay({
@@ -89,6 +95,7 @@ export default function UnifiedMapDisplay({
   // focus = null,
   adjacency: _adjacency,
   previewMode = false,
+  diffOverlayData = null,
 }: UnifiedMapDisplayProps) {
   const dispatch = useAppDispatch()
   const hoveredTargetId = useAppSelector((s) => s.gameInteraction.hoveredTargetId)
@@ -652,6 +659,21 @@ export default function UnifiedMapDisplay({
           {...(isMyTurn ? { onClick: handleTerritoryActivate } : {})}
           {...(isMyTurn ? { onHover: handleHoverChange } : {})}
         />
+        {diffOverlayData && (
+          <div className="absolute inset-0">
+            {React.createElement(
+              require('./DiffOverlay').DiffOverlay,
+              {
+                width: mapData.width,
+                height: mapData.height,
+                points: territories.map((t) => ({ id: t.id, x: t.x, y: t.y })),
+                flips: diffOverlayData.ownershipFlips,
+                armyChanges: diffOverlayData.armyChanges,
+                paths: diffOverlayData.paths,
+              },
+            )}
+          </div>
+        )}
         {/* Interaction overlays (rings, brackets, arcs) - placed after tokens for visibility */}
         <InteractionOverlay
           width={mapData.width}

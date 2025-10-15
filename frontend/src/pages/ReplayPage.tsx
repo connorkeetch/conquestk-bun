@@ -74,6 +74,80 @@ const ReplayPage: React.FC = () => {
     dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: needFrom, toTurn: needTo }) as any)
   }, [dispatch, meta, currentTurn, gameId])
 
+  // Keyboard shortcuts: ←/→, Shift+←/→ per round, Home/End, PgUp/PgDn by chunk
+  React.useEffect(() => {
+    if (!meta) return
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName || ''
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return
+      const total = meta.turns
+      const perRound = Math.max(1, meta.players.length)
+      const chunk = CHUNK_SIZE
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        const step = e.shiftKey ? perRound : 1
+        const next = Math.max(1, currentTurn - step)
+        dispatch(setCurrentTurn(next))
+        const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
+        const nt = Math.min(total, nf + CHUNK_SIZE - 1)
+        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        const step = e.shiftKey ? perRound : 1
+        const next = Math.min(total, currentTurn + step)
+        dispatch(setCurrentTurn(next))
+        const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
+        const nt = Math.min(total, nf + CHUNK_SIZE - 1)
+        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        dispatch(setCurrentTurn(1))
+        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: 1, toTurn: Math.min(total, CHUNK_SIZE) }) as any)
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        dispatch(setCurrentTurn(total))
+        const nf = Math.floor((total - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
+        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: total }) as any)
+      } else if (e.key === 'PageUp') {
+        e.preventDefault()
+        const next = Math.max(1, currentTurn - chunk)
+        dispatch(setCurrentTurn(next))
+        const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
+        const nt = Math.min(total, nf + CHUNK_SIZE - 1)
+        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+      } else if (e.key === 'PageDown') {
+        e.preventDefault()
+        const next = Math.min(total, currentTurn + chunk)
+        dispatch(setCurrentTurn(next))
+        const nf = Math.floor((next - 1) / CHUNK_SIZE) * CHUNK_SIZE + 1
+        const nt = Math.min(total, nf + CHUNK_SIZE - 1)
+        dispatch(fetchReplayChunk({ gameId: gameId!, fromTurn: nf, toTurn: nt }) as any)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dispatch, meta, currentTurn, gameId])
+
+  // Prefetch neighbor chunks (LRU capped in slice)
+  React.useEffect(() => {
+    if (!meta || !gameId) return
+    const total = meta.turns
+    const idx = Math.floor((currentTurn - 1) / CHUNK_SIZE)
+    const want: Array<[number, number]> = []
+    const curFrom = idx * CHUNK_SIZE + 1
+    const curTo = Math.min(total, curFrom + CHUNK_SIZE - 1)
+    want.push([curFrom, curTo])
+    const prevFrom = (idx - 1) * CHUNK_SIZE + 1
+    if (idx - 1 >= 0) want.push([prevFrom, Math.min(total, prevFrom + CHUNK_SIZE - 1)])
+    const nextFrom = (idx + 1) * CHUNK_SIZE + 1
+    if (nextFrom <= total) want.push([nextFrom, Math.min(total, nextFrom + CHUNK_SIZE - 1)])
+    const have = new Set(Array.from(replayState.cache.keys()))
+    for (const [from, to] of want) {
+      const key = `${from}-${to}`
+      if (!have.has(key)) dispatch(fetchReplayChunk({ gameId, fromTurn: from, toTurn: to }) as any)
+    }
+  }, [dispatch, meta, gameId, currentTurn])
+
   if (!gameId) {
     return (
       <div className="p-6">
@@ -217,6 +291,15 @@ const ReplayPage: React.FC = () => {
             validTargets={[]}
             adjacency={{}}
             previewMode={true}
+            {...(diff
+              ? {
+                  diffOverlayData: {
+                    ownershipFlips: diff.ownershipFlips,
+                    armyChanges: diff.armyChanges,
+                    paths: diff.paths,
+                  },
+                }
+              : {})}
           />
         </div>
 

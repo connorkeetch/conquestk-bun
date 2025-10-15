@@ -84,7 +84,12 @@ const replaySlice = createSlice({
       })
       .addCase(fetchReplayChunk.fulfilled, (state, action) => {
         state.loading = false
-        state.cache.set(action.payload.key, action.payload.items)
+        const key = action.payload.key
+        if (!state.cache.has(key) && state.cache.size >= 5) {
+          const firstKey = state.cache.keys().next().value as string | undefined
+          if (firstKey) state.cache.delete(firstKey)
+        }
+        state.cache.set(key, action.payload.items)
       })
       .addCase(fetchReplayChunk.rejected, (state, action) => {
         state.loading = false
@@ -136,15 +141,17 @@ export const selectMapDiff = (s: RootState) => {
     const delta = (a.armies || 0) - (b.armies || 0)
     if (delta !== 0) armyChanges.push({ territoryId: id, delta })
   }
-  // Paths: derive from deltas (FORTIFY_RESULT) and logs-derived attack deltas
-  const paths: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }> = []
-  for (const d of item.deltas) {
-    if ((d as { type?: string }).type === 'FORTIFY_RESULT') {
-      const f = d as unknown as {
-        fromTerritoryId: string
-        toTerritoryId: string
+  // Paths: prefer server-provided, fallback to fortify in deltas
+  const serverPaths = (item as unknown as { paths?: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }> }).paths
+  let paths: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }>
+  if (Array.isArray(serverPaths) && serverPaths.length > 0) paths = serverPaths
+  else {
+    paths = []
+    for (const d of item.deltas) {
+      if ((d as { type?: string }).type === 'FORTIFY_RESULT') {
+        const f = d as unknown as { fromTerritoryId: string; toTerritoryId: string }
+        paths.push({ from: f.fromTerritoryId, to: f.toTerritoryId, kind: 'fortify' })
       }
-      paths.push({ from: f.fromTerritoryId, to: f.toTerritoryId, kind: 'fortify' })
     }
   }
   return { ownershipFlips, armyChanges, paths }

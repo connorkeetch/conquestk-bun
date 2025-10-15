@@ -26,7 +26,19 @@ export async function emitCombined(
     // Fallback broadcast without fog filtering
     if (deltas.length === 1) io.to(gameChannel).emit('game-delta', deltas[0])
     else if (deltas.length > 1) io.to(gameChannel).emit('game-delta-batch', deltas)
-    for (const m of moves) {
+    if (moves.length > 1) {
+      const items = moves.map((m) => ({
+        id: String(m.id),
+        t: new Date(m.created_at).toISOString(),
+        turn: m.turn_number,
+        phase: m.phase,
+        kind: m.move_type,
+        actor: { id: m.actor_id, name: (m.payload?.actorName as string) ?? 'Unknown' },
+        text: renderLogText(m, { canSeeFrom: true, canSeeTo: true, showCounts: true, fogActive: false }),
+      }))
+      io.to(gameChannel).emit('game-log:batch', { items })
+    } else if (moves.length === 1) {
+      const m = moves[0]
       const base = {
         id: String(m.id),
         t: new Date(m.created_at).toISOString(),
@@ -34,12 +46,7 @@ export async function emitCombined(
         phase: m.phase,
         kind: m.move_type,
         actor: { id: m.actor_id, name: (m.payload?.actorName as string) ?? 'Unknown' },
-        text: renderLogText(m, {
-          canSeeFrom: true,
-          canSeeTo: true,
-          showCounts: true,
-          fogActive: false,
-        }),
+        text: renderLogText(m, { canSeeFrom: true, canSeeTo: true, showCounts: true, fogActive: false }),
       }
       io.to(gameChannel).emit('game-log:append', base)
     }
@@ -131,8 +138,38 @@ export async function emitCombined(
       }
     }
 
-    // Emit log text moves (fog-aware)
-    for (const m of moves) {
+    // Emit log text moves (fog-aware), batched when > 1
+    if (moves.length > 1) {
+      const items = moves.map((m) => {
+        const p = m.payload || {}
+        const fromId =
+          (p.fromId as string | undefined) || (p.attackingTerritoryId as string | undefined)
+        const toId =
+          (p.toId as string | undefined) ||
+          (p.defendingTerritoryId as string | undefined) ||
+          (p.territoryId as string | undefined)
+        const fog: FogView =
+          fogEnabled && mask
+            ? {
+                canSeeFrom: fromId ? mask.has(fromId) : false,
+                canSeeTo: toId ? mask.has(toId) : false,
+                showCounts: (fromId ? mask.has(fromId) : false) && (toId ? mask.has(toId) : false),
+                fogActive: true,
+              }
+            : { canSeeFrom: true, canSeeTo: true, showCounts: true, fogActive: false }
+        return {
+          id: String(m.id),
+          t: new Date(m.created_at).toISOString(),
+          turn: m.turn_number,
+          phase: m.phase,
+          kind: m.move_type,
+          actor: { id: m.actor_id, name: (m.payload?.actorName as string) ?? 'Unknown' },
+          text: renderLogText(m, fog),
+        }
+      })
+      io.to(s.id).emit('game-log:batch', { items })
+    } else if (moves.length === 1) {
+      const m = moves[0]
       const p = m.payload || {}
       const fromId =
         (p.fromId as string | undefined) || (p.attackingTerritoryId as string | undefined)

@@ -1415,8 +1415,35 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       }
     }
     socketService.on('game-log:append', onGameLogAppend)
+    const onGameLogBatch: Parameters<typeof socketService.on<'game-log:batch'>>[1] = (payload) => {
+      try {
+        const items = Array.isArray((payload as unknown as { items?: unknown[] }).items)
+          ? ((payload as unknown as { items: Array<{ text?: string; t?: string }> }).items)
+          : []
+        if (items.length === 0) return
+        const windowMs = 2000
+        setEntries((prev) => {
+          let next = prev
+          for (const it of items) {
+            const text = typeof it.text === 'string' ? it.text : null
+            if (!text) continue
+            const ts = it.t ? new Date(String(it.t)) : new Date()
+            const dup = next.some(
+              (en) => en.text === text && Math.abs(ts.getTime() - en.ts.getTime()) <= windowMs,
+            )
+            if (dup) continue
+            next = [{ ts, text }, ...next].slice(0, 500)
+          }
+          return next
+        })
+      } catch {
+        /* ignore */
+      }
+    }
+    socketService.on('game-log:batch', onGameLogBatch)
     return () => {
       socketService.off('game-log:append', onGameLogAppend)
+      socketService.off('game-log:batch', onGameLogBatch)
     }
   }, [gameId, redact])
 

@@ -225,6 +225,19 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
       byTurn.set(row.turn_number, arr)
     }
 
+    // Best-effort structured log for treasure awards
+    let structuredLog: Array<{ type?: string; timestamp?: string }> = []
+    try {
+      const sres = await query<{ game_log: unknown }>(
+        `SELECT game_log FROM game_states WHERE room_id = $1`,
+        [gameId],
+      )
+      const arr = (sres.rows[0]?.game_log as unknown) as unknown[]
+      if (Array.isArray(arr)) structuredLog = arr as Array<{ type?: string; timestamp?: string }>
+    } catch {
+      // ignore
+    }
+
     // Snapshots map: first reinforcement snapshot per turn and start-of-next-turn
     const firstReinforcementByTurn = new Map<number, ReturnType<typeof extractArmyMap>>()
     const startOfNextTurnMap = new Map<number, ReturnType<typeof extractArmyMap>>()
@@ -250,6 +263,7 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
       playerId: string | null
       phases: Array<'reinforce' | 'attack' | 'fortify'>
       deltas: import('@conquestk/shared/types/delta').GameDelta[]
+      paths: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }>
       stats: {
         conquered: number
         lost: number
@@ -280,13 +294,18 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
       const lost = 0
       let armiesLost = 0
       let armiesKilled = 0
-      const treasuresDrawn = 0
+      let treasuresDrawn = 0
       let treasuresRedeemed = 0
       let treasurePayout = 0
 
       const deltas: import('@conquestk/shared/types/delta').GameDelta[] = []
+      const paths: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }> = []
+      let startTs: Date | null = null
+      let endTs: Date | null = null
       for (const m of moves) {
         const kind = String(m.move_type)
+        if (!startTs || m.ts < startTs) startTs = m.ts
+        if (!endTs || m.ts > endTs) endTs = m.ts
         // Actor: prefer start_turn for the first seen actor
         if (
           !actor &&
@@ -306,6 +325,9 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
           }
           armiesKilled += Math.max(0, Number(p.kills || 0))
           armiesLost += Math.max(0, Number(p.losses || 0))
+          const aFrom = (m.from_territory_id || p.fromId || '') as string
+          const aTo = (m.to_territory_id || p.toId || '') as string
+          if (aFrom && aTo) paths.push({ from: aFrom, to: aTo, kind: 'attack' })
         }
         if (kind === 'conquer') {
           const toId = (m.to_territory_id ||
@@ -338,6 +360,7 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
               toArmies: 0,
               playerId: actor || '',
             } as import('@conquestk/shared/types/delta').FortifyResultDelta)
+            paths.push({ from: p.fromId, to: p.toId, kind: 'fortify' })
           }
         }
         if (kind === 'trade_cards') {
@@ -345,6 +368,22 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
           treasuresRedeemed += Math.max(0, Number(p.cardCount || 0))
           treasurePayout += Math.max(0, Number(p.bonus || 0))
         }
+      }
+
+      // Count treasure awards in this time window
+      try {
+        if (startTs && endTs && structuredLog.length > 0) {
+          const startN = startTs.getTime()
+          const endN = endTs.getTime()
+          // Reassign local accumulator (declared with let)
+          treasuresDrawn = structuredLog.filter((e) => {
+            if ((e?.type ?? '') !== 'TREASURE') return false
+            const ts = e.timestamp ? new Date(String(e.timestamp)).getTime() : NaN
+            return Number.isFinite(ts) && ts >= startN && ts <= endN
+          }).length
+        }
+      } catch {
+        // ignore
       }
 
       // Derive lost territories for actor by scanning opponents' conquests in the same turn
@@ -371,12 +410,13 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
         playerId: actor,
         phases,
         deltas,
+        paths,
         stats: {
           conquered,
           lost,
           armiesLost,
           armiesKilled,
-          treasuresDrawn, // draw tracking not yet persisted in game_logs
+          treasuresDrawn,
           treasuresRedeemed,
           treasurePayout,
         },

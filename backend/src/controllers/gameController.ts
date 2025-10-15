@@ -1120,7 +1120,7 @@ export class GameController {
         move_type: r.move_type,
         actor_id: (r.actor_id as string | null) || '',
         created_at: r.ts,
-        payload: (r.payload as unknown) ?? {},
+        payload: (r.payload ?? {}) as Record<string, unknown>,
       }))
 
       // Sort ascending then return newest-first list of text lines
