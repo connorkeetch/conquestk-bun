@@ -10,6 +10,7 @@ import InstallPrompt from './components/InstallPrompt'
 import { store } from './store'
 import './index.css'
 import { preloadBattleOdds } from './bootstrap/preloadBattleOdds'
+import { startVitalsRUM } from './utils/rum'
 
 // Defer PWA registration until after window load to avoid blocking paint
 // We'll lazily import the prompt component after the load event.
@@ -29,6 +30,8 @@ window.addEventListener('unhandledrejection', (e) => {
 
 try {
   logger.debug('[MAIN] Looking for root element...')
+  // Start minimal RUM for LCP before rendering
+  startVitalsRUM()
   const rootElement = document.getElementById('root')
 
   if (!rootElement) {

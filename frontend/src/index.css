@@ -15,6 +15,15 @@
   }
 }
 
+/* Performance helpers */
+.cv-auto {
+  content-visibility: auto;
+  /* Reserve block-size to reduce layout shifts before rendering */
+  contain-intrinsic-block-size: 1200px;
+  /* Fallback for older browsers */
+  contain-intrinsic-size: 1200px;
+}
+
 /* Root container */
 #root {
   width: 100%;
