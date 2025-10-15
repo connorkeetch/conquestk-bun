@@ -598,6 +598,8 @@ export interface ServerToClientEvents {
   'clan:progress': (payload: ClanProgressionSocketPayload) => void
   'message.new': (payload: ConversationMessageEventPayload) => void
   'conversation.message.new': (payload: ConversationMessageEventPayload) => void
+  // Live game log append events (windowed, server-emitted)
+  'log:append': (payload: { roomId: string; entries: Array<Record<string, unknown>> }) => void
   'conversation.created': (payload: ConversationCreatedPayload) => void
   'conversation.updated': (payload: ConversationUpdatedPayload) => void
   'conversation.members.added': (payload: ConversationMembersAddedPayload) => void
@@ -686,6 +688,8 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
+  // Subscribe as spectator for lifecycle/log streams without game deltas
+  'spectate-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
   'game-action': (
     data: { roomId: string; action: GameAction },

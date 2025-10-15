@@ -993,17 +993,21 @@ export default function GameRoom() {
     }
   }, [dispatch, navigate, roomId])
 
-  // Join the socket room only if the user is a member (or host) and not spectating
+  // Join the socket room if member; otherwise spectate for live logs
   useEffect(() => {
-    if (!roomId || isSpectator || !isMember) {
-      return
+    if (!roomId) return
+    if (isMember) {
+      socketService.joinRoom(roomId)
+      return () => {
+        socketService.leaveRoom(roomId)
+      }
     }
-
-    socketService.joinRoom(roomId)
+    // Spectator path: subscribe to room channel for log:append and lifecycle
+    socketService.spectateRoom(roomId)
     return () => {
       socketService.leaveRoom(roomId)
     }
-  }, [roomId, isMember, isSpectator])
+  }, [roomId, isMember])
 
   useEffect(() => {
     if (!roomId) {

@@ -577,6 +577,7 @@ export interface ServerToClientEvents {
 }
 export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
+  'spectate-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
   'game-action': (
     data: { roomId: string; action: GameAction },
