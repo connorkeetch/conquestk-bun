@@ -2784,8 +2784,11 @@ export class GameService {
         started_at: Date | null
         ended_at: Date | null
         is_ranked: boolean
+        is_private: boolean
+        team_mode: boolean
+        game_mode: string
       }>(
-        'SELECT map_id, started_at, ended_at, is_ranked FROM game_rooms WHERE id = $1 FOR UPDATE',
+        'SELECT map_id, started_at, ended_at, is_ranked, is_private, team_mode, game_mode FROM game_rooms WHERE id = $1 FOR UPDATE',
         [gameId],
       )
 
@@ -2834,14 +2837,34 @@ export class GameService {
         position: ranking.position,
       }))
 
+      // Ranked-only guard: public, >=3 humans, no teams, no AI
+      const humans = players.filter((p) => !p.isAi)
+      const hasAi = players.some((p) => p.isAi)
+      const rankedConstraintsMet =
+        isRankedGame && !room.is_private && !room.team_mode && humans.length >= 3 && !hasAi
+
+      const eloMode = room.game_mode === 'capital' ? 'ranked.capitals' : 'ranked.classic'
+
       let ratingChanges: RatingChange[] = []
       try {
-        ratingChanges = eloService.calculateRatingChanges(playerRatings)
+        ratingChanges = rankedConstraintsMet ? eloService.calculateRatingChanges(playerRatings) : []
       } catch (error) {
         logger.warn('Skipping ELO calculation for game', {
           gameId,
           playerCount: playerRatings.length,
           error: error instanceof Error ? error.message : error,
+        })
+      }
+
+      if (!rankedConstraintsMet) {
+        logger.info('elo_skipped_ranked_constraints', {
+          gameId,
+          isRankedGame,
+          isPrivate: room.is_private,
+          teamMode: room.team_mode,
+          humanCount: humans.length,
+          hasAi,
+          mode: eloMode,
         })
       }
 
@@ -2882,6 +2905,8 @@ export class GameService {
             nPlayers: playerRatings.length,
             provisional: (input?.gamesPlayed ?? 0) < 20,
             ranked: isRankedGame,
+            rankedEligible: rankedConstraintsMet,
+            mode: eloMode,
           })
         }
       }
