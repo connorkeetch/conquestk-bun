@@ -665,18 +665,8 @@ function generateCheeseOverlayCSS(withMotion: boolean): string {
 
 // Dynamic Metal overlay: randomized SVG stamps with subtle motion
 function generateMetalOverlayCSS(withMotion: boolean): string {
-  // Allow runtime-injected SVGs (optional): window.__METAL_SVGS__ = [rawSVG, ...]
-  // Falls back to built-in shapes if not provided.
-  let provided: string[] | undefined
-  try {
-    const w = window as unknown as {
-      __THEME_SVGS__?: { metal?: string[] }
-      __METAL_SVGS__?: string[]
-    }
-    provided = w.__THEME_SVGS__?.metal ?? w.__METAL_SVGS__
-  } catch {
-    provided = undefined
-  }
+  // Mirror Halloween approach: disable runtime injection to avoid drift
+  const provided: string[] | undefined = undefined
 
   const toDataUrl = (raw: string): string => `url("data:image/svg+xml,${encodeURIComponent(raw)}")`
 
