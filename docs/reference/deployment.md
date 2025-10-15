@@ -2,16 +2,20 @@
 
 _Last updated: March 7, 2026_
 
+> Development-only note
+>
+> ConquestK is currently development-only and not publicly live. Staging/production environments are used for internal testing. Target soft launch (friends-and-family) is October 24, 2025 and subject to change. During this phase, migrations can be destructive and data may be reseeded; prioritize clean transitions over long deprecation windows.
+
 ## 🚀 Quick Deploy
 
-### Production Deploy (conquestk.com)
+### Production Deploy (conquestk.com) — internal during development
 ```bash
 git checkout main
 git merge dev
 git push origin main  # GitHub Actions builds, tests, then triggers Railway via webhook
 ```
 
-### Staging Deploy (dev.conquestk.com)
+### Staging Deploy (dev.conquestk.com) — internal during development
 ```bash
 git checkout dev
 git push origin dev  # GitHub Actions builds, tests, then triggers Railway via webhook
@@ -21,6 +25,7 @@ git push origin dev  # GitHub Actions builds, tests, then triggers Railway via w
 >
 > - The repo no longer ships a legacy `railway.json`. Manage services and environment variables directly in the Railway dashboard. Document changes in the dashboard when you update them.
 > - Railway builds from the repository and uses the configured Install/Build/Start commands (Railpack-style). We do not ship a `railway.json`; configure Build/Start in the Railway GUI.
+> - During the dev-only phase, it’s acceptable to promote breaking changes between branches if all affected clients are updated in the same PR.
 
 ## 🧰 Build & Install Strategy
 

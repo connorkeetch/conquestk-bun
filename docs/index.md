@@ -3,6 +3,7 @@
  _Last updated: March 9, 2026_
 
 Welcome! Every guide, decision record, and troubleshooting note lives in the `docs/` directory.
+Note: The project is currently development‑only and not publicly live. Expect breaking changes and destructive migrations during this phase.
 Use this index to jump directly to the information you need.
 
 ---
@@ -16,6 +17,7 @@ Use this index to jump directly to the information you need.
 - Troubleshooting playbook → [operations/troubleshooting.md](operations/troubleshooting.md)
 - Owner expectations & AI usage → [../AGENTS.md](../AGENTS.md)
 - AI assistant guidelines → [../CLAUDE.md](../CLAUDE.md)
+ - Soft launch timeline → [planning/soft-launch-timeline.md](planning/soft-launch-timeline.md)
 - Roadmap & follow-up work → [planning/roadmap.md](planning/roadmap.md)
 - Codebase cleanup tracker → [planning/codebase-cleanup.md](planning/codebase-cleanup.md)
 

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Live Demo](https://img.shields.io/badge/live-conquestk.com-blue)](https://conquestk.com)
+[![Status](https://img.shields.io/badge/status-development--only-orange)](#-development-status)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D24.0-green)](https://nodejs.org)
 [![React](https://img.shields.io/badge/react-19.1-blue)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/typescript-5.9-blue)](https://www.typescriptlang.org)
@@ -18,7 +18,6 @@ community-built maps, and rich administrative tooling.
 
 ## 🔗 Quick links
 
-- **Live game:** [conquestk.com](https://conquestk.com)
 - **Documentation index:** [docs/index.md](docs/index.md)
 - **Architecture overview:** [docs/reference/architecture.md](docs/reference/architecture.md)
 - **Roadmap & follow-up tasks:** [docs/planning/roadmap.md](docs/planning/roadmap.md)
@@ -26,12 +25,12 @@ community-built maps, and rich administrative tooling.
 
 ---
 
-## 📈 Go-live snapshot
+## 📌 Development Status
 
-- Family-and-friends beta launched in late 2025; broader early access is targeting **Spring 2026** once the final telemetry and accessibility goals land. Track blockers in `docs/planning/go-live-plan.md`.
-- Gameplay, lifecycle transitions, sockets, and map workflows are production ready. Admin tooling now surfaces BullMQ, Match Service, and odds verification health directly inside the dashboard.
-- Grandmaster AI turns now route through the Rust/WASM evaluator while Recruit and Commander stick with the TypeScript heuristics for throughput. Shadow verification can be triggered from the admin panel and reports divergence metrics.
-- Current focus: finish creator/moderator notification fan-out, finalize the telemetry dashboards, ship accessibility presets, and wire the new matchsvc rollout safeguards into production. Documentation reflects those goals and flags the remaining gaps so testers know what to expect.
+- ConquestK is in active development and is not publicly live. Access is limited to Connor and test accounts.
+- Breaking changes are expected. Prefer clean refactors over backward compatibility; migrations may be destructive and data can be reseeded locally.
+- Staging/production endpoints are used for internal testing only and may change without notice.
+- For assistant behavior expectations, see the development policy at `AGENTS.md` and `CLAUDE.md`.
 
 ---
 
@@ -160,10 +159,10 @@ conquestk/
 - Installable PWA shell with gameplay push notifications; map approval and DM push fan-out are wrapping up.
 - Leaderboards, profiles, and community pages surfaced directly in the UI.
 
-### Launch readiness
-- Creator/moderator push + in-app notifications (WebSocket + web push) are finalising fan-out logic.
-- Background purge workers are live but failure thresholds are still being tuned for asset cleanup.
-- Security checklist re-run, CI guardrails, large file protections, and telemetry dashboards remain on the polish backlog.
+### Current focus
+- Finalize creator/moderator notification fan-out (web push + sockets).
+- Tune background purge worker thresholds for asset cleanup.
+- Re-run security checklist, tighten CI guardrails, add large file protections, and expand telemetry dashboards.
 
 ### Engineering & tooling
 - End-to-end TypeScript across backend, frontend, and shared packages.
