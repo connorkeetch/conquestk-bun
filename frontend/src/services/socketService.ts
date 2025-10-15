@@ -647,10 +647,7 @@ class SocketService {
           : {}),
         ...(typeof (payload.player as { selectedColor?: string | null }).selectedColor !==
         'undefined'
-          ? {
-              selected_color:
-                (payload.player as { selectedColor?: string | null }).selectedColor ?? null,
-            }
+          ? { selectedColor: (payload.player as { selectedColor?: string | null }).selectedColor ?? null }
           : {}),
       }
 

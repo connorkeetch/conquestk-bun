@@ -152,8 +152,7 @@ export function sanitizeMapData(mapData: Nullable<MapData>): Nullable<MapData> {
   if (sanitized.description) sanitized.description = sanitizeText(sanitized.description)
   if (sanitized.creator) sanitized.creator = sanitizeText(sanitized.creator)
 
-  // Sanitize territory names and sector/continent fields
-  // Note: 'sector' is the canonical field; 'continent' is a legacy fallback
+  // Sanitize territory names and sector fields
   if (Array.isArray(sanitized.territories)) {
     sanitized.territories = sanitized.territories.map((territory) => {
       const sanitizedTerritory: MapTerritory = {
@@ -161,17 +160,11 @@ export function sanitizeMapData(mapData: Nullable<MapData>): Nullable<MapData> {
         name: territory?.name ? sanitizeText(territory.name) : '',
       }
 
-      // Handle sector field: use sector if present, fall back to continent for legacy maps
-      const sectorValue = territory.sector || territory.continent || ''
+      // Sector is the only supported grouping field for territories
+      const sectorValue = territory.sector || ''
       sanitizedTerritory.sector = typeof sectorValue === 'string' ? sanitizeText(sectorValue) : ''
-
-      // Sanitize continent if present (preserve for backward compatibility)
-      if (typeof territory.continent === 'string') {
-        sanitizedTerritory.continent = sanitizeText(territory.continent)
-      } else if ('continent' in sanitizedTerritory) {
-        // Clean up if continent was in spread but not valid
-        delete sanitizedTerritory.continent
-      }
+      // Drop any legacy 'continent' metadata if present
+      if ('continent' in sanitizedTerritory) delete sanitizedTerritory.continent
 
       return sanitizedTerritory
     })

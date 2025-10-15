@@ -69,6 +69,8 @@ export interface Player {
   current_tier?: string | null
   preferred_color?: string | null
   selected_color?: string | null
+  // Normalized camelCase used by UI going forward
+  selectedColor?: string | null
   teamId?: number | null
   isAi?: boolean
   aiDifficulty?: AIDifficulty | null
