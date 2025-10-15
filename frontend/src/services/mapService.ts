@@ -39,6 +39,10 @@ export interface CustomMap {
   imageUrl?: string
   imageWidth: number
   imageHeight: number
+  imageVariants?: {
+    avif?: Array<{ url: string; width: number; height?: number }>
+    webp?: Array<{ url: string; width: number; height?: number }>
+  }
   isPublic: boolean
   isFeatured: boolean
   status: string

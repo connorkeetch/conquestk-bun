@@ -1215,7 +1215,7 @@ export class GameLifecycleService {
         await client.query(
           `UPDATE game_rooms
              SET using_time_bank = TRUE,
-                 turn_expires_at = NOW() + ($3 * INTERVAL '1 second')
+                 turn_expires_at = NOW() + ($2::int * INTERVAL '1 second')
            WHERE id = $1`,
           [roomId, consumedBankSeconds],
         )
