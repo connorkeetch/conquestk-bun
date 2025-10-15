@@ -1575,7 +1575,10 @@ export class GameService {
     try {
       if (emitted.length > 0) {
         const io = tryGetSocketServer()
-        if (io) io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
+        if (io) {
+          io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
+          io.to(gameId).emit('log:append', { roomId: gameId, entries: emitted })
+        }
       }
     } catch {
       /* ignore emit errors */
@@ -1672,7 +1675,10 @@ export class GameService {
     try {
       if (emitted.length > 0) {
         const io = tryGetSocketServer()
-        if (io) io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
+        if (io) {
+          io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: emitted })
+          io.to(gameId).emit('log:append', { roomId: gameId, entries: emitted })
+        }
       }
     } catch {
       /* ignore emit errors */
@@ -1785,7 +1791,10 @@ export class GameService {
     if (logged && appended.length > 0) {
       try {
         const io = tryGetSocketServer()
-        if (io) io.to(`game:${roomId}`).emit('log:append', { roomId, entries: appended })
+        if (io) {
+          io.to(`game:${roomId}`).emit('log:append', { roomId, entries: appended })
+          io.to(roomId).emit('log:append', { roomId, entries: appended })
+        }
       } catch {
         /* ignore */
       }
@@ -2267,7 +2276,10 @@ export class GameService {
       try {
         if (appended.length > 0) {
           const io = tryGetSocketServer()
-          if (io) io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: appended })
+          if (io) {
+            io.to(`game:${gameId}`).emit('log:append', { roomId: gameId, entries: appended })
+            io.to(gameId).emit('log:append', { roomId: gameId, entries: appended })
+          }
         }
       } catch {
         /* ignore emit errors */
@@ -3353,6 +3365,10 @@ export class GameService {
       const io = tryGetSocketServer()
       if (io && entries.length > 0) {
         io.to(`game:${roomId}`).emit('log:append', {
+          roomId,
+          entries: entries as unknown as Record<string, unknown>[],
+        })
+        io.to(roomId).emit('log:append', {
           roomId,
           entries: entries as unknown as Record<string, unknown>[],
         })
