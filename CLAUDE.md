@@ -1,5 +1,22 @@
 # AI Assistant Guide
 
+> Development‑Only Status (Important for Agents)
+>
+> ConquestK is currently in an active development phase. The service is not publicly live; only Connor and test accounts use it. When choosing between a clean, breaking change and maintaining backwards compatibility, prefer the clean refactor. Migrations can be destructive, legacy shims are unnecessary, and we can reset data as needed during local or staging work.
+
+Agent checklist (read before coding):
+- Confirm we are operating in development‑only mode (no public users).
+- Prefer deletion of deprecated sockets/routes and legacy code over long‑lived shims.
+- Allow destructive/incompatible migrations; verify locally with `cd backend && npm run migrate` and reseed (`seed:users`) if needed.
+- Prioritize clarity, type safety, and fewer abstractions over compatibility layers.
+- Update this guide and `CLAUDE.md` together and call out that they stayed in sync.
+
+### Timeline & Rollout
+- Target soft launch (friends-and-family): October 24, 2025 — subject to change.
+- First months after launch will be limited to Connor + close friends; expect a small cohort and no marketing push.
+- Continue favoring clean transitions and destructive migrations during this period; coordinate FE/BE changes in the same PR.
+- As we approach the date, avoid risky multi-step migrations immediately before planned play sessions and include short rollback notes in PRs.
+
 ## Audience & collaboration
 - Connor Keetch owns ConquestK and is the sole developer; he is a data engineer rather than a full-time application coder, so spell out reasoning, risks, and next steps in plain language.
 - Default to asynchronous-friendly updates: call out what changed, why it matters, and anything Connor should verify locally.
@@ -10,6 +27,13 @@
 - ConquestK is a Risk-inspired strategy game with an Express/Node backend (`backend/`), a React 19 + Redux Toolkit frontend (`frontend/`), and shared types/utilities in `shared/`.
 - Local development expects Node.js 24+, npm 10+, access to PostgreSQL, and Redis for socket scaling and sessions.
 - Backend routes live under `backend/src/routes`, with services in `backend/src/services`. Frontend pages are in `frontend/src/pages` with reusable components in `frontend/src/components`.
+
+### Development Phase Policy (how this changes decisions)
+- Breaking changes are acceptable. Prefer clean transitions over backward compatibility.
+- Database migrations may be destructive and fast; data can be reseeded. Do not edit existing migration files—add new ones—but feel free to drop/rename tables/columns when it’s the right design.
+- APIs and sockets: converge on the unified `game-action` path. Remove deprecated events rather than maintaining dual paths when changing behaviour.
+- Feature flags and long‑term toggles are not required for most changes. Keep configuration light unless it provides clear development value.
+- Documentation should be updated in the same PR when behaviour changes so future assistants (Codex/Claude) ingest the latest assumptions.
 
 ## Architecture & stack
 - Frontend: React 19, TypeScript, Redux Toolkit, Vite 7, Tailwind CSS v4, socket.io client.
@@ -83,12 +107,17 @@ cd backend && npm run make-admin   # promote an account interactively
 - Asset uploads go through `backend/src/utils/assetStorage.ts`, targeting Cloudflare R2 when the `ASSET_*` variables are configured and falling back to local `/uploads` storage in development.
 - Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/services/socketService.ts` (which wires chat handlers from `backend/src/socket/chatHandlers.ts`).
 - Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
+- Development note: during this phase, destructive migrations are acceptable. If local data needs to be reset to unblock a schema change, do so and reseed.
 
 ### Action routing & team utils
 - Prefer the unified `game-action` socket for all gameplay actions. Specialized events (`deployArmies`, `attack`, `fortify`, `transferConquestArmies`, `undoFortify`, `endTurn`, `goBackToReinforcement`) are deprecated and routed internally through the same processor for now.
 - New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket. This keeps queue/inline paths and deltas consistent.
 - Team checks are centralized in `backend/src/utils/gameTeams.ts` and used by both `GameEngine` and AI. Do not reimplement team logic elsewhere.
 - Emit deltas first; snapshots are recovery-only for desyncs.
+
+### Development norms for routing and compatibility
+- Remove deprecated socket events and REST routes promptly after migrating to `game-action`.
+- If an event or route name changes, update both backend and frontend in the same PR; no long deprecation windows are required right now.
 
 ## Frontend notes
 - Pages are under `frontend/src/pages`; shared components live in `frontend/src/components`.
