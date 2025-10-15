@@ -278,6 +278,23 @@ export class EloService {
       `,
       values,
     )
+
+    // Update highest_skill_rating and last_ranked_game_at for affected users.
+    // Do this after skill_rating has been updated so GREATEST() reflects the new value.
+    const affectedUserIds = changes.map((change) => change.userId)
+    if (affectedUserIds.length > 0) {
+      await client.query(
+        `
+          UPDATE users
+          SET
+            highest_skill_rating = GREATEST(highest_skill_rating, skill_rating),
+            last_ranked_game_at = NOW(),
+            updated_at = NOW()
+          WHERE id = ANY($1::uuid[])
+        `,
+        [affectedUserIds],
+      )
+    }
   }
 
   getSkillTier(rating: number): SkillTier {

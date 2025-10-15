@@ -3010,6 +3010,35 @@ export class GameService {
         await eloService.applyRatingChanges(gameId, ratingChanges, client)
       }
 
+      // Increment ranked wins/losses for participants in ranked games.
+      if (isRankedGame && playerRankings.length > 0) {
+        const participantIds = playerRankings.map((p) => p.userId)
+        const winnerIds = playerRankings.filter((p) => p.isWinner).map((p) => p.userId)
+        const loserIds = playerRankings.filter((p) => !p.isWinner).map((p) => p.userId)
+
+        if (winnerIds.length > 0) {
+          await client.query(
+            `UPDATE users SET ranked_wins = ranked_wins + 1, updated_at = NOW() WHERE id = ANY($1::uuid[])`,
+            [winnerIds],
+          )
+        }
+
+        if (loserIds.length > 0) {
+          await client.query(
+            `UPDATE users SET ranked_losses = ranked_losses + 1, updated_at = NOW() WHERE id = ANY($1::uuid[])`,
+            [loserIds],
+          )
+        }
+
+        // Update last_ranked_game_at for all participants to reflect recent game
+        if (participantIds.length > 0) {
+          await client.query(
+            `UPDATE users SET last_ranked_game_at = NOW(), updated_at = NOW() WHERE id = ANY($1::uuid[])`,
+            [participantIds],
+          )
+        }
+      }
+
       await eloService.updateLeaderboardCache(client)
       // Expose rating changes for post-transaction logging
       finalRatingChanges = ratingChanges
