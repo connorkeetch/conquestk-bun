@@ -147,6 +147,27 @@ export class MaintenanceWorker {
           })
         }, intervalMs)
       }
+      // Also fallback-schedule the turn-timeout watchdog so AFK turns still progress
+      try {
+        const watchdogEvery = Math.max(
+          30_000,
+          Number(process.env.TURN_TIMEOUT_WATCHDOG_EVERY_MS ?? 60_000),
+        )
+        setInterval(() => {
+          this.runTurnTimeoutWatchdog().catch((error) => {
+            logger.warn('Turn-timeout watchdog (fallback) error', {
+              error: error instanceof Error ? error.message : error,
+            })
+          })
+        }, watchdogEvery)
+        logger.info('✅ Turn-timeout watchdog fallback interval scheduled', {
+          everyMs: watchdogEvery,
+        })
+      } catch (e) {
+        logger.warn('Failed to schedule watchdog fallback interval', {
+          error: e instanceof Error ? e.message : e,
+        })
+      }
       // Nightly fallback: 24h cadence starting one hour from now
       const ONE_DAY_MS = 24 * 60 * 60 * 1000
       this.leaderboardTimer = setTimeout(
