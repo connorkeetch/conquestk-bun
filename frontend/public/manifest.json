@@ -14,16 +14,16 @@
   "background_color": "#0f0f0f",
   "theme_color": "#2563EB",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.45ce345a6b.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.80c31bc93c.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     {
-      "src": "/icon-192-maskable.png",
+      "src": "/icon-192-maskable.45ce345a6b.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-512-maskable.png",
+      "src": "/icon-512-maskable.80c31bc93c.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -32,14 +32,14 @@
   ],
   "screenshots": [
     {
-      "src": "/screenshots/mobile-1080x1920.png",
+      "src": "/screenshots/mobile-1080x1920.39db64a7e9.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "label": "Home, Lobby, and Game Room",
       "form_factor": "narrow"
     },
     {
-      "src": "/screenshots/wide-1920x1080.png",
+      "src": "/screenshots/wide-1920x1080.ac4a72a143.png",
       "sizes": "1920x1080",
       "type": "image/png",
       "label": "Game Room on desktop",
@@ -52,14 +52,14 @@
       "short_name": "Lobby",
       "description": "Browse and join games",
       "url": "/lobby",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icon-192.45ce345a6b.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Create Game",
       "short_name": "Create",
       "description": "Start a new game",
       "url": "/create",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icon-192.45ce345a6b.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

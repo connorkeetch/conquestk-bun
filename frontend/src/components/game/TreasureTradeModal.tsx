@@ -4,6 +4,10 @@ import InfoTooltip from '@/components/InfoTooltip'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { tradeTreasureSet } from '@/store/gameActions'
 import { resolveAssetPath } from '@/utils/assets'
+import bronzeUrl from '@/assets/treasures/bronze.svg?url'
+import silverUrl from '@/assets/treasures/silver.svg?url'
+import goldUrl from '@/assets/treasures/gold.svg?url'
+import diamondUrl from '@/assets/treasures/diamond.svg?url'
 
 type Props = {
   isOpen: boolean
@@ -203,7 +207,13 @@ export function TreasureTradeModal({ isOpen, onClose }: Props) {
       const m = metal.toLowerCase()
       const file =
         m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
-      const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
+      const urlMap: Record<string, string> = {
+        bronze: bronzeUrl,
+        silver: silverUrl,
+        gold: goldUrl,
+        diamond: diamondUrl,
+      }
+      const url = urlMap[file] || resolveAssetPath(`static/icons/treasures/${file}.svg`)
       const diamondBonus = Math.max(0, treasureConfig?.diamondSetBonus ?? 3)
       const title =
         file === 'diamond'
