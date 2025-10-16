@@ -219,8 +219,7 @@ const Home: React.FC = () => {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group min-h-[96px] rounded-xl border border-border bg-surface-2/50 p-5
-                         hover:bg-surface-2/70 hover:-translate-y-0.5 transition will-change-transform"
+                className="panel group min-h-[96px] p-5 hover:-translate-y-0.5 transition will-change-transform"
               >
                 <div className="flex items-start gap-3">
                   <div className="text-2xl flex-shrink-0">{feature.icon}</div>
@@ -259,7 +258,7 @@ const Home: React.FC = () => {
             {gameExperiences.map((experience) => (
               <div
                 key={experience.title}
-                className="rounded-xl border border-border bg-surface-2/60 p-5 flex flex-col gap-4"
+                className="panel p-5 flex flex-col gap-4"
               >
                 <div className="flex items-start gap-3">
                   <span className="text-2xl" aria-hidden="true">
@@ -297,7 +296,7 @@ const Home: React.FC = () => {
             {highlights.map((highlight) => (
               <div
                 key={highlight.title}
-                className="rounded-xl border border-border bg-surface-2/50 p-5 text-left"
+                className="panel p-5 text-left"
               >
                 <h3 className="text-lg font-medium text-white">{highlight.title}</h3>
                 <p className="mt-2 text-sm text-white/70">{highlight.description}</p>
@@ -333,7 +332,7 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-border bg-surface-2/70 p-5 text-center">
+            <div className="panel p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 1
               </div>
@@ -343,8 +342,7 @@ const Home: React.FC = () => {
                 liberators.
               </p>
             </div>
-
-            <div className="rounded-xl border border-border bg-surface-2/70 p-5 text-center">
+            <div className="panel p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 2
               </div>
@@ -354,8 +352,7 @@ const Home: React.FC = () => {
                 neighbors smell weakness.
               </p>
             </div>
-
-            <div className="rounded-xl border border-border bg-surface-2/70 p-5 text-center">
+            <div className="panel p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 3
               </div>
@@ -371,7 +368,7 @@ const Home: React.FC = () => {
       {/* Final CTA */}
       <section className="relative z-10 section-spacing">
         <div className="container mx-auto px-6 max-w-4xl">
-          <div className="rounded-2xl border border-border bg-surface-2/60 p-8 md:p-12 text-center">
+          <div className="panel p-8 md:p-12 text-center">
             <h2 className="text-3xl font-bold text-white">
               High command is asking: whose banner flies tonight?
             </h2>
