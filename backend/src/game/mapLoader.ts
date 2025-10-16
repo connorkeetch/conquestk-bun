@@ -38,20 +38,11 @@ export async function loadMapForEngine(mapId: string): Promise<{
     }
   }
 
-  // Helper for legacy continentId compatibility
-  const getLegacyContinentId = (obj: unknown): string | undefined => {
-    if (obj && typeof obj === 'object' && 'continentId' in obj) {
-      const val = (obj as { continentId?: unknown }).continentId
-      return typeof val === 'string' ? val : undefined
-    }
-    return undefined
-  }
-
   // Adapt territories to engine type
   const territories: Territory[] = dbTerritories.map((t) => ({
     id: t.id,
     name: t.name,
-    sector: t.sectorId ?? getLegacyContinentId(t) ?? 'unknown',
+    sector: t.sectorId ?? 'unknown',
     ownerId: null,
     armies: 0,
     adjacentTerritories: Array.from(adjacencyMap.get(t.id) ?? new Set<string>()),
@@ -64,12 +55,7 @@ export async function loadMapForEngine(mapId: string): Promise<{
     id: c.id,
     name: c.name,
     bonusArmies: c.bonusArmies,
-    territories: dbTerritories
-      .filter((t) => {
-        const sid = t.sectorId ?? getLegacyContinentId(t) ?? ''
-        return sid === c.id || sid === c.name
-      })
-      .map((t) => t.id),
+    territories: dbTerritories.filter((t) => (t.sectorId ?? '') === c.id).map((t) => t.id),
   }))
 
   return { territories, continentBonuses }

@@ -299,7 +299,7 @@ export class GameController {
       try {
         const io = tryGetSocketServer()
         if (io) {
-          io.to(`game:${roomId}`).emit('game-update', result.gameState)
+          io.to(`game:${roomId}`).emit('game:snapshot', result.gameState)
         }
       } catch {
         // ignore broadcast errors

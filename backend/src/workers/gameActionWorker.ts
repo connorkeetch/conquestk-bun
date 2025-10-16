@@ -64,14 +64,14 @@ export class GameActionWorker {
     }
   }
 
-  private emitGameUpdate(channel: string, payload: SerializedGameState) {
+  private emitGameSnapshot(channel: string, payload: SerializedGameState) {
     const bytes = this.computePayloadBytes(payload)
-    socketPayloadMetrics.record('game-update', bytes)
-    if (socketPayloadMetrics.shouldLog('game-update')) {
-      const stats = socketPayloadMetrics.snapshot('game-update')
+    socketPayloadMetrics.record('game:snapshot', bytes)
+    if (socketPayloadMetrics.shouldLog('game:snapshot')) {
+      const stats = socketPayloadMetrics.snapshot('game:snapshot')
       if (stats) {
         logger.info('Socket payload stats', {
-          event: 'game-update',
+          event: 'game:snapshot',
           windowCount: stats.count,
           p50Bytes: stats.p50,
           p95Bytes: stats.p95,
@@ -79,7 +79,7 @@ export class GameActionWorker {
         })
       }
     }
-    this.io.to(channel).emit('game-update', payload)
+    this.io.to(channel).emit('game:snapshot', payload)
   }
 
   private toBattleResultPayload(
@@ -297,7 +297,7 @@ export class GameActionWorker {
         // Emit a full snapshot to ensure clients converge
         const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
         if (serialized) {
-          this.emitGameUpdate(`game:${gameId}`, serialized)
+          this.emitGameSnapshot(`game:${gameId}`, serialized)
         }
       }
 
@@ -616,7 +616,7 @@ export class GameActionWorker {
               // Fallback to snapshot
               try {
                 const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
-                if (serialized) this.emitGameUpdate(`game:${gameId}`, serialized)
+                if (serialized) this.emitGameSnapshot(`game:${gameId}`, serialized)
               } catch (_ee) {
                 /* snapshot fallback failed; will converge on next action */
               }
@@ -629,7 +629,7 @@ export class GameActionWorker {
             try {
               const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
               if (serialized) {
-                this.emitGameUpdate(`game:${gameId}`, serialized)
+                this.emitGameSnapshot(`game:${gameId}`, serialized)
               }
             } catch {
               // ignore
@@ -1126,7 +1126,7 @@ export class GameActionWorker {
           } catch (_e) {
             // Fallback: if delta emission fails, send a full snapshot to avoid desync
             if (serialized) {
-              this.emitGameUpdate(`game:${gameId}`, serialized)
+              this.emitGameSnapshot(`game:${gameId}`, serialized)
             }
           }
           shouldBroadcast = false
@@ -1153,7 +1153,7 @@ export class GameActionWorker {
           // Emit full state update since we don't have a lightweight delta
           const serialized = await gameStateCache.getGameState<SerializedGameState>(gameId)
           if (serialized) {
-            this.emitGameUpdate(`game:${gameId}`, serialized)
+            this.emitGameSnapshot(`game:${gameId}`, serialized)
           }
           // Avoid emitting an extra delta below
           shouldBroadcast = false

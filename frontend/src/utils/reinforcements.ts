@@ -4,9 +4,6 @@ import { getContinentBonusArmies, resolveContinentDefinitions } from './continen
 type BonusConfigInput = Parameters<typeof resolveContinentDefinitions>[0]
 
 const pickConfiguredBonuses = (game: GameState): BonusConfigInput => {
-  if (game.gameConfig?.continentBonuses !== undefined) {
-    return game.gameConfig.continentBonuses ?? []
-  }
   return game.gameConfig?.sectorBonuses ?? []
 }
 

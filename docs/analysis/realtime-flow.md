@@ -30,7 +30,7 @@ Status: Delta batching, sequencing, and fog‑aware text logs are live.
 ## 4) Frontend consumption and convergence
 
 - Listeners: the client handles both `game-delta` and `game-delta-batch`. Each delta runs sequence checks; gaps trigger a best‑effort replay request. Returned deltas are now fog-filtered client-side and applied directly before we consider a fallback snapshot.
-- Delta‑first: snapshots (`game-update`) are ignored during normal play and used for join/reconnect and explicit resyncs only.
+- Delta‑first: snapshots (`game:snapshot`) are ignored during normal play and used for join/reconnect and explicit resyncs only.
 - Defensive checks: we bail out and refetch when applying a delta would reference unknown entities, and we surface a `desync` flag for visibility.
 - Optimism: deploy/fortify apply light optimistic updates on ack to improve responsiveness while still reconciling with authoritative deltas.
 - Health: a heartbeat pings every 5s; high latency is logged and zombie connections force a reconnect. On reconnect we auto‑rejoin and do a one‑shot refetch if Socket.io did not recover the stream.

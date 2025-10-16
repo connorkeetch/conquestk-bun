@@ -123,10 +123,7 @@ export interface GamePlayer {
 export interface Territory {
   id: string
   name: string
-  // Sector (formerly "continent")
   sector: string
-  /** @deprecated use `sector` */
-  continent?: string
   ownerId: string | null
   armies: number
   adjacentTerritories: string[]
@@ -252,10 +249,7 @@ export interface GameConfiguration {
   maxPlayers: number
   mapId?: string
   gameMode?: string
-  // Sector bonuses (formerly continent bonuses)
   sectorBonuses?: SectorBonus[]
-  /** @deprecated use `sectorBonuses` */
-  continentBonuses?: SectorBonus[]
   useTerritoryModifiers?: boolean
   modifierDistribution?: ModifierDistribution
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
