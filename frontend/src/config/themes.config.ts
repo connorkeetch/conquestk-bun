@@ -693,13 +693,17 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
   const horns = toDataUrl(
     "<svg fill='#7B87FF' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><g><g><path d='M384,0c-35.29,0-64,28.71-64,64v25.003c-6.677-2.368-13.855-3.669-21.333-3.669c-16.38,0-31.334,6.192-42.667,16.348 c-11.332-10.156-26.287-16.348-42.667-16.348c-7.478,0-14.656,1.301-21.333,3.669V64c0-35.29-28.71-64-64-64 C92.71,0,64,28.71,64,64v170.667V320c0,105.87,86.13,192,192,192s192-86.13,192-192V64C448,28.71,419.29,0,384,0z M298.666,128 c11.763,0,21.334,9.57,21.334,21.333v67.669c-6.677-2.368-13.855-3.669-21.333-3.669h-21.333v-64h-0.001 C277.333,137.57,286.903,128,298.666,128z M192,149.333C192,137.57,201.57,128,213.333,128s21.333,9.57,21.333,21.333v64H192 V149.333z M106.666,64L106.666,64c0.001-11.763,9.571-21.333,21.334-21.333s21.333,9.57,21.333,21.333v85.333v64h-42.667V64z M405.333,320c0,82.342-66.991,149.333-149.333,149.333S106.667,402.342,106.667,320v-64h64H256h42.667 C310.43,256,320,265.57,320,277.333s-9.57,21.333-21.333,21.333h-128c-11.782,0-21.333,9.552-21.333,21.333 s9.552,21.333,21.333,21.333h128c35.29,0,64-28.709,64-64v-42.667v-85.333V64c0-11.763,9.57-21.333,21.333-21.333 s21.333,9.57,21.333,21.333V320z'/></g></g></svg>",
   )
-  // Simple stylized skull (light fill + dark eyes/mouth)
+  // Replace stylized skull with provided root skull SVG (colored)
   const skull = toDataUrl(
-    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g fill='none' stroke-linecap='round' stroke-linejoin='round'><path fill='#EDECF8' d='M32 6c12 0 22 9 22 20 0 7-4 11-7 13v5c0 2-1 3-3 3h-3v3c0 2-1 3-3 3h-6c-2 0-3-1-3-3v-3h-3c-2 0-3-1-3-3v-5c-3-2-7-6-7-13 0-11 10-20 22-20z'/><circle cx='24' cy='30' r='4' fill='#000'/><circle cx='40' cy='30' r='4' fill='#000'/><path stroke='#A8A5C5' stroke-width='2' d='M26 42h12'/><path stroke='#A8A5C5' stroke-width='2' d='M24 47h16'/></g></svg>",
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><g fill='#EDECF8'><path d='M42,19.9a18,18,0,0,0-36,0A20.5,20.5,0,0,0,8.8,30a5,5,0,0,0,3.1,9h1.5l.7,5.3a2,2,0,0,0,2,1.7H31.9a2,2,0,0,0,2-1.7l.7-5.3h.5a5.1,5.1,0,0,0,3.8-8.4A20.7,20.7,0,0,0,42,19.9ZM34.2,31.7A2.1,2.1,0,0,0,35.5,33a1.2,1.2,0,0,1,.6,1,1,1,0,0,1-1,1H32.8a1.9,1.9,0,0,0-1.9,1.7L30.2,42H17.8l-.7-5.3A1.9,1.9,0,0,0,15.2,35H11.9a1.1,1.1,0,0,1-1.1-1,1,1,0,0,1,1-1,2.3,2.3,0,0,0,1.8-1.2,2.1,2.1,0,0,0-.2-2A17.2,17.2,0,0,1,10,19.9a14,14,0,0,1,28,0,17.1,17.1,0,0,1-3.5,10A2,2,0,0,0,34.2,31.7Z'/><path d='M22,21.9s-6,.1-9-.8v1.4a4.5,4.5,0,0,0,9,0Z'/><path d='M35,21.1c-3,.9-9,.8-9,.8v.6a4.5,4.5,0,0,0,9,0Z'/><path d='M25.7,29a1,1,0,0,0-.9,1.2l.4,2.9a1,1,0,0,0,1.1.9,1,1,0,0,0,.9-1.2l-.4-2.9A1,1,0,0,0,25.7,29Z'/><path d='M22.3,29a1,1,0,0,0-1.1.9l-.4,2.9a1,1,0,0,0,.9,1.2,1,1,0,0,0,1.1-.9l.4-2.9A1,1,0,0,0,22.3,29Z'/></g></svg>"
+  )
+  // Add lightning bolt from root (colored)
+  const bolt = toDataUrl(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='#9FFcff' d='M369.533,177.027h-67.716L367.744,0h-218.25l-37.056,288.551h73.68l-32.431,208.975 c-0.899,5.808,2.342,11.453,7.805,13.606c5.472,2.144,11.686,0.216,14.98-4.642l223.09-329.462H369.533z M198.384,417.302 l24.92-160.612h-74.649l28.879-224.828h144.344l-65.926,177.027h83.56L198.384,417.302z'/></svg>"
   )
   // Default shapes set (no guitar pick to avoid "map marker" appearance)
   const providedList: string[] = Array.isArray(provided) ? provided : []
-  const shapes = providedList.length > 0 ? providedList.map(toDataUrl) : [guitar, horns, skull]
+  const shapes = providedList.length > 0 ? providedList.map(toDataUrl) : [guitar, horns, skull, bolt]
   // Equal weighting across default shapes; provided shapes are also equal weight
   const weights = new Array(shapes.length).fill(1)
 
