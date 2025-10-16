@@ -644,6 +644,12 @@ export class GameActionProcessor {
                 })
               }
             }
+            try {
+              const { persistMoves } = await import('./logEmitter.js')
+              await persistMoves(gameId, moves)
+            } catch {
+              // best-effort persistence of textual moves
+            }
             await emitCombined(
               this.io as unknown as import('socket.io').Server<
                 import('../types/shared.js').ClientToServerEvents,

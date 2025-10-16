@@ -500,6 +500,12 @@ export class GameActionWorker {
                     }
                   }
                   const { emitCombined } = await import('../services/realtimeEmitter.js')
+                  try {
+                    const { persistMoves } = await import('../services/logEmitter.js')
+                    await persistMoves(gameId, moves)
+                  } catch {
+                    // best-effort persistence of textual moves
+                  }
                   await emitCombined(
                     this.io as unknown as any,
                     gameId,

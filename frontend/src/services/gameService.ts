@@ -152,7 +152,15 @@ export const gameService = {
   async getGameTextLog(
     roomId: string,
     options?: { signal?: AbortSignal; limit?: number; before?: string },
-  ): Promise<{ log: Array<{ id: string; t: string; kind: string; text: string }> }> {
+  ): Promise<{
+    log: Array<{
+      id: string
+      t: string
+      kind: string
+      text: string
+      actor?: { id?: string; name?: string }
+    }>
+  }> {
     const params: Record<string, string> = {}
     if (options?.limit && Number.isFinite(options.limit)) params.limit = String(options.limit)
     if (options?.before) params.before = options.before
@@ -163,7 +171,13 @@ export const gameService = {
     const response = await api.get(`/game/rooms/${roomId}/log-text`, cfg)
     const raw = (response.data ?? {}) as { log?: unknown[] }
     const log = Array.isArray(raw.log)
-      ? (raw.log as Array<{ id: string; t: string; kind: string; text: string }>)
+      ? (raw.log as Array<{
+          id: string
+          t: string
+          kind: string
+          text: string
+          actor?: { id?: string; name?: string }
+        }>)
       : []
     return { log }
   },
