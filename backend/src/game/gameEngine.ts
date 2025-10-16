@@ -24,6 +24,7 @@ import {
   arePlayersTeammates as utilArePlayersTeammates,
   getPlayerTeam as utilGetPlayerTeam,
 } from '../utils/gameTeams.js'
+import { logger } from '../utils/logger.js'
 import {
   drawTreasure,
   ensureTreasureState,
@@ -813,13 +814,12 @@ export class GameEngine {
       return
     }
 
-    // DEBUG: trace KOTH rotation progression during tests
-    // console.log('[KOTH] progress start', {
-    //   turn: gameState.turn,
-    //   current: state.currentHillTerritoryId,
-    //   turnsUntilRotation: state.turnsUntilRotation,
-    //   queueHead: state.rotationQueue?.[0],
-    // })
+    logger.debug('KOTH rotation progress checkpoint', {
+      turn: gameState.turn,
+      currentHill: state.currentHillTerritoryId,
+      turnsUntilRotation: state.turnsUntilRotation,
+      queueHead: state.rotationQueue?.[0],
+    })
 
     const remaining =
       typeof state.turnsUntilRotation === 'number'
@@ -842,13 +842,12 @@ export class GameEngine {
       return
     }
 
-    // DEBUG: trace KOTH rotation
-    // console.log('[KOTH] rotate', {
-    //   turn: gameState.turn,
-    //   from: state.currentHillTerritoryId,
-    //   to: state.rotationQueue?.[0],
-    //   queueLen: state.rotationQueue?.length,
-    // })
+    logger.debug('KOTH rotate checkpoint', {
+      turn: gameState.turn,
+      fromHill: state.currentHillTerritoryId,
+      nextHill: state.rotationQueue?.[0],
+      queueLength: state.rotationQueue?.length ?? 0,
+    })
 
     const queue = state.rotationQueue ? [...state.rotationQueue] : []
     if (queue.length === 0) {

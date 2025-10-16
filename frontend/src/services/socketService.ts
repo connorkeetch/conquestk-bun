@@ -61,7 +61,6 @@ class SocketService {
   private lastReadEmitAt: Record<string, number> = {}
   private pendingRoomStateFetches = new Set<string>()
   private lastAuthToastAt: number | null = null
-  private pendingActionRetries: Map<string, number> = new Map()
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null
   private lastPongTime: number = Date.now()
   private connectionLatency: number = 0
@@ -70,6 +69,99 @@ class SocketService {
   private pendingActions: Map<string, Promise<{ ok: boolean; queued?: boolean; error?: string }>> =
     new Map() // Track in-flight actions by idempotency key
   private lastActionEmitAt: Map<string, number> = new Map() // For throttling actions
+  private joiningRooms: Map<string, number> = new Map() // roomId -> attempt count
+  private processDeltaHandler?: (payload: GameDelta) => Promise<void>
+  // Placeholder for future convergence timers (no-op currently)
+  private clearConfirmTimer(_roomId: string) {
+    // intentionally empty; used as a hook for future state-convergence timers
+  }
+
+  /**
+   * Consolidated handler for room lifecycle changes.
+   * Applies lifecycle updates, plays start audio, notifies, prefetches game state,
+   * and prunes archived conversations on completion/abandonment.
+   */
+  private handleRoomLifecycleChange(lifecycle: RoomLifecyclePayload) {
+    const { roomId, status } = lifecycle
+    if (!roomId || !status) return
+
+    // Play start audio on lobby -> active transition for current room
+    try {
+      const previousRoom = store.getState().room.currentRoom
+      if (
+        previousRoom &&
+        previousRoom.id === roomId &&
+        previousRoom.status === 'lobby' &&
+        status === 'active'
+      ) {
+        audioService.playEffect('gamestart')
+        audioService.playMusic()
+      }
+    } catch (error) {
+      logger.warn('Failed to play start audio (best-effort)', { error })
+    }
+
+    // Apply lifecycle changes to Redux
+    store.dispatch(applyLifecycleUpdate(lifecycle))
+
+    // Lightweight notification when game starts (avoid duplicating on current room screen)
+    try {
+      if (status === 'active' && roomId) {
+        const key = `ui.gamestart.notified:${roomId}`
+        const alreadyNotified = (() => {
+          try {
+            return sessionStorage.getItem(key) === '1'
+          } catch (error) {
+            logger.warn('Failed to read game start notification flag', { error })
+            return false
+          }
+        })()
+        const onThisRoomScreen = (() => {
+          try {
+            const path = window.location?.pathname || ''
+            return path.includes(`/room/${roomId}`)
+          } catch (error) {
+            logger.warn('Failed to inspect location for room notification', { error })
+            return false
+          }
+        })()
+        if (!alreadyNotified && !onThisRoomScreen) {
+          notificationService.addNotification({
+            type: 'game_started',
+            title: 'Game started',
+            message: 'Your game is live — jump in!',
+            actionUrl: `/room/${roomId}`,
+            actionLabel: 'Open game',
+            metadata: { gameId: roomId },
+          })
+          try {
+            sessionStorage.setItem(key, '1')
+          } catch (error) {
+            logger.warn('Failed to persist game start notification flag', { error })
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Game start notification flow failed (best-effort)', { error })
+    }
+
+    // Proactively fetch game state when activating/initializing
+    try {
+      const state = store.getState()
+      const loadedRoomId = state.game.currentGame?.roomId ?? null
+      if ((status === 'active' || status === 'initializing') && roomId && roomId !== loadedRoomId) {
+        store.dispatch(fetchGameState({ roomId }))
+      }
+    } catch (error) {
+      logger.warn('Prefetch after lifecycle change failed (best-effort)', { error })
+    }
+
+    // When games end or are abandoned, prune any archived game/team conversations
+    if (status === 'completed' || status === 'abandoned') {
+      const kinds: Array<import('../types/messages').ConversationSummary['kind']> = ['game', 'team']
+      store.dispatch(messagesActions.pruneArchivedConversations({ kinds }))
+    }
+  }
 
   /**
    * HEALTH MONITORING: Start heartbeat to detect zombie connections
@@ -124,7 +216,7 @@ class SocketService {
    */
   getConnectionHealth(): { latency: number; lastPong: number; isHealthy: boolean } {
     const timeSinceLastPong = Date.now() - this.lastPongTime
-    const isHealthy = this.socket?.connected && timeSinceLastPong < 10000
+    const isHealthy = Boolean(this.socket?.connected) && timeSinceLastPong < 10000
 
     return {
       latency: this.connectionLatency,
@@ -219,7 +311,32 @@ class SocketService {
           if (response?.ok) {
             if (response.deltas && response.deltas.length > 0) {
               logger.info('Received missing deltas', { count: response.deltas.length })
-              // Deltas would be applied here if server sent them
+              const handler = this.processDeltaHandler
+              const deltasArray = Array.isArray(response.deltas)
+                ? (response.deltas as unknown[])
+                : []
+              if (handler) {
+                void (async () => {
+                  for (const raw of deltasArray) {
+                    const delta = raw as GameDelta
+                    const rId = (delta as { roomId?: string }).roomId
+                    if (rId) {
+                      const shouldProcess = await this.checkDeltaSequence(rId, delta)
+                      if (!shouldProcess) {
+                        continue
+                      }
+                    }
+                    await handler(delta)
+                  }
+                })().finally(resolve)
+                return
+              }
+              logger.warn('processDeltaHandler not initialized; falling back to full refetch')
+              const state = store.getState()
+              const allowSpectate = !state.room.currentRoom?.players?.some(
+                (p) => p.userId === state.auth.user?.id,
+              )
+              store.dispatch(fetchGameState({ roomId, allowSpectate }))
             } else {
               // Server doesn't have deltas - trigger full state refetch
               logger.info('Server has no cached deltas - refetching full state')
@@ -254,10 +371,14 @@ class SocketService {
       rollback?: () => void
       throttleKey?: string
       throttleMs?: number
+      autoRetryOnTimeout?: boolean
+      maxRetries?: number
     },
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
     const idempotencyKey = options?.idempotencyKey ?? `${roomId}:${action.type}:${Date.now()}`
     const timeoutMs = options?.timeoutMs ?? 5000
+    const autoRetry = options?.autoRetryOnTimeout ?? true
+    const maxRetries = Math.max(1, options?.maxRetries ?? 2)
 
     // THROTTLING: Check if we should throttle this action
     if (options?.throttleKey && options?.throttleMs) {
@@ -294,12 +415,42 @@ class SocketService {
 
     const result = await actionPromise
 
-    // ROLLBACK: Revert optimistic update on failure
-    if (!result.ok && options?.rollback) {
-      try {
-        options.rollback()
-      } catch (error) {
-        logger.error('Rollback failed', { error })
+    if (!result.ok) {
+      const isTimeoutError =
+        typeof result.error === 'string' && result.error.toLowerCase().includes('timeout')
+
+      if (autoRetry && isTimeoutError) {
+        let ack = result
+        for (let attempt = 1; attempt <= maxRetries && !ack.ok; attempt += 1) {
+          const backoff = 500 * 2 ** (attempt - 1)
+          logger.warn('Retrying game action after timeout', {
+            roomId,
+            actionType: action.type,
+            attempt,
+            maxAttempts: maxRetries,
+            backoffMs: backoff,
+          })
+          await new Promise((resolve) => setTimeout(resolve, backoff))
+          ack = await this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
+        }
+
+        if (!ack.ok && options?.rollback) {
+          try {
+            options.rollback()
+          } catch (error) {
+            logger.error('Rollback failed', { error })
+          }
+        }
+
+        return ack
+      }
+
+      if (options?.rollback) {
+        try {
+          options.rollback()
+        } catch (error) {
+          logger.error('Rollback failed', { error })
+        }
       }
     }
 
@@ -343,43 +494,6 @@ class SocketService {
         resolve({ ok: false, error: error instanceof Error ? error.message : 'Unknown error' })
       }
     })
-  }
-
-  /**
-   * RELIABILITY FIX: Retry failed action with exponential backoff
-   */
-  private async retryAction(
-    roomId: string,
-    action: { type: string; playerId?: string; payload?: unknown },
-    attempt = 1,
-    maxAttempts = 3,
-  ): Promise<boolean> {
-    const ack = await this.sendActionWithAck(roomId, action)
-
-    if (ack.ok) {
-      // Success - clear retry counter
-      const key = `${roomId}:${action.type}`
-      this.pendingActionRetries.delete(key)
-      return true
-    }
-
-    // Failed - should we retry?
-    if (attempt < maxAttempts) {
-      const key = `${roomId}:${action.type}`
-      this.pendingActionRetries.set(key, attempt)
-
-      // Exponential backoff: 500ms, 1s, 2s
-      const delay = 500 * 2 ** (attempt - 1)
-      await new Promise((resolve) => setTimeout(resolve, delay))
-
-      logger.warn(`Retrying action ${action.type}, attempt ${attempt + 1}/${maxAttempts}`)
-      return this.retryAction(roomId, action, attempt + 1, maxAttempts)
-    }
-
-    // All retries exhausted
-    logger.error(`Action ${action.type} failed after ${maxAttempts} attempts`)
-    toast.error(`Action failed to send. Please refresh and try again.`)
-    return false
   }
 
   connect() {
@@ -438,12 +552,95 @@ class SocketService {
   }
 
   joinRoom(roomId: string) {
-    this.socket?.emit('join-room', roomId)
+    if (!this.socket) return
+    const attempts = this.joiningRooms.get(roomId) ?? 0
+    if (attempts > 0) return // already attempting
+
+    const maxAttempts = 5
+    const tryJoin = (attempt: number) => {
+      if (!this.socket) return
+      this.joiningRooms.set(roomId, attempt)
+      const backoff = Math.min(300 * 2 ** (attempt - 1), 1500)
+      this.socket.emit(
+        'join-room',
+        roomId,
+        (ack?: {
+          ok?: boolean
+          roomId?: string
+          joinedAt?: number
+          error?: string
+          code?: string
+        }) => {
+          if (ack?.ok) {
+            this.joiningRooms.delete(roomId)
+            return
+          }
+          if (attempt < maxAttempts) {
+            setTimeout(() => tryJoin(attempt + 1), backoff)
+          } else {
+            this.joiningRooms.delete(roomId)
+            // surface a one-off toast to indicate degraded realtime
+            try {
+              toast.error('Failed to join game room. Trying to resync...')
+              const state = store.getState()
+              const allowSpectate = !state.room.currentRoom?.players?.some(
+                (p) => p.userId === state.auth.user?.id,
+              )
+              store.dispatch(fetchGameState({ roomId, allowSpectate }))
+            } catch (error) {
+              logger.warn('Failed to display degraded realtime toast flow', { error })
+            }
+          }
+        },
+      )
+    }
+    tryJoin(1)
   }
 
   // Subscribe as a spectator to receive live logs and lifecycle (no game deltas)
   spectateRoom(roomId: string) {
-    this.socket?.emit('spectate-room', roomId)
+    if (!this.socket) return
+    const key = `spectate:${roomId}`
+    const attempts = this.joiningRooms.get(key) ?? 0
+    if (attempts > 0) return
+
+    const maxAttempts = 5
+    const trySpectate = (attempt: number) => {
+      if (!this.socket) return
+      this.joiningRooms.set(key, attempt)
+      const backoff = Math.min(300 * 2 ** (attempt - 1), 1500)
+      this.socket.emit(
+        'spectate-room',
+        roomId,
+        (ack?: {
+          ok?: boolean
+          roomId?: string
+          joinedAt?: number
+          error?: string
+          code?: string
+        }) => {
+          if (ack?.ok) {
+            this.joiningRooms.delete(key)
+            return
+          }
+          if (attempt < maxAttempts) {
+            setTimeout(() => trySpectate(attempt + 1), backoff)
+          } else {
+            this.joiningRooms.delete(key)
+            try {
+              toast('Spectate connection unstable — fetching latest state', {
+                icon: '🔄',
+                duration: 2000,
+              })
+              store.dispatch(fetchGameState({ roomId, allowSpectate: true }))
+            } catch (error) {
+              logger.warn('Failed to write spectate unstable flag', { error })
+            }
+          }
+        },
+      )
+    }
+    trySpectate(1)
   }
 
   leaveRoom(roomId: string) {
@@ -659,8 +856,8 @@ class SocketService {
           // Play dice sound immediately for instant feedback
           try {
             audioService.playEffect('dice')
-          } catch {
-            /* ignore */
+          } catch (error) {
+            logger.warn('Failed to play dice sound (best-effort)', { error })
           }
         },
       },
@@ -891,7 +1088,7 @@ class SocketService {
         }
       } catch (error) {
         // best-effort; if state not accessible, skip rejoin
-        logger.warn('Failed to rejoin room on reconnect', error)
+        logger.warn('Failed to rejoin room on reconnect', { error })
       }
     })
 
@@ -1003,7 +1200,7 @@ class SocketService {
     })
 
     // Delta update handler - efficient real-time updates
-    const processDelta = (payload: GameDelta) => {
+    const processDelta = async (payload: GameDelta) => {
       const state = store.getState()
       const viewerId = state.auth.user?.id ?? null
       const currentGame = state.game.currentGame
@@ -1125,8 +1322,8 @@ class SocketService {
               conquered: Boolean(br.conquered),
             }),
           )
-        } catch {
-          // best-effort only
+        } catch (error) {
+          logger.warn('Failed to append battle result to UI (best-effort)', { error })
         }
       }
 
@@ -1172,10 +1369,12 @@ class SocketService {
             store.dispatch(updateRoom({ id: payload.roomId, status: 'completed' }))
           }
         }
-      } catch {
-        /* best-effort */
+      } catch (error) {
+        logger.warn('Failed to align room status with end-of-game signals', { error })
       }
     }
+
+    this.processDeltaHandler = processDelta
 
     this.socket.on('game-delta', async (delta) => {
       // RELIABILITY: Check delta sequence before processing
@@ -1186,7 +1385,7 @@ class SocketService {
           return // Skip duplicate
         }
       }
-      processDelta(delta as unknown as GameDelta)
+      await processDelta(delta as unknown as GameDelta)
     })
 
     // Coalesced delta batches (optional optimization)
@@ -1203,7 +1402,7 @@ class SocketService {
             continue // Skip duplicate
           }
         }
-        processDelta(d as unknown as GameDelta)
+        await processDelta(d as unknown as GameDelta)
       }
       // Minimal UX side-effects for the last delta: notify on PHASE_CHANGE and clear placement if needed
       try {
@@ -1230,8 +1429,8 @@ class SocketService {
             store.dispatch(setPlacementServerSpent(0))
           }
         }
-      } catch {
-        // best-effort notification/audio
+      } catch (error) {
+        logger.warn('Failed to process post-batch UX side-effects (best-effort)', { error })
       }
     })
 
@@ -1264,8 +1463,8 @@ class SocketService {
             },
           })
         }
-      } catch {
-        // best-effort only
+      } catch (error) {
+        logger.warn('Failed to handle rating update (best-effort)', { error })
       }
     })
 
@@ -1426,8 +1625,10 @@ class SocketService {
         } else {
           store.dispatch(setPlacementServerSpent(0))
         }
-      } catch {
-        // ignore placement spent reconciliation errors
+      } catch (error) {
+        logger.warn('Failed to reconcile placement spent from server baseline (best-effort)', {
+          error,
+        })
       }
     })
 
@@ -1438,18 +1639,6 @@ class SocketService {
         return
       }
 
-      // drop local archiveConversation calls; we only prune archived later
-
-      const previousRoom = store.getState().room.currentRoom
-      if (
-        previousRoom &&
-        previousRoom.id === payload.roomId &&
-        previousRoom.status === 'lobby' &&
-        payload.status === 'active'
-      ) {
-        audioService.playEffect('gamestart')
-        audioService.playMusic()
-      }
       const lifecyclePayload: RoomLifecyclePayload = {
         roomId: payload.roomId,
         status: payload.status,
@@ -1496,72 +1685,8 @@ class SocketService {
             : null,
         readyStates: payload.readyStates,
       }
-      store.dispatch(applyLifecycleUpdate(lifecyclePayload))
 
-      // Lightweight notification for users not on the Game Room screen
-      try {
-        if (payload.status === 'active' && payload.roomId) {
-          const key = `ui.gamestart.notified:${payload.roomId}`
-          const alreadyNotified = (() => {
-            try {
-              return sessionStorage.getItem(key) === '1'
-            } catch {
-              return false
-            }
-          })()
-          // Only notify if not currently viewing this room
-          const onThisRoomScreen = (() => {
-            try {
-              const path = window.location?.pathname || ''
-              return path.includes(`/room/${payload.roomId}`)
-            } catch {
-              return false
-            }
-          })()
-          if (!alreadyNotified && !onThisRoomScreen) {
-            notificationService.addNotification({
-              type: 'game_started',
-              title: 'Game started',
-              message: 'Your game is live — jump in!',
-              actionUrl: `/room/${payload.roomId}`,
-              actionLabel: 'Open game',
-              metadata: { gameId: payload.roomId },
-            })
-            try {
-              sessionStorage.setItem(key, '1')
-            } catch {
-              /* ignore */
-            }
-          }
-        }
-      } catch {
-        // best-effort only
-      }
-
-      // Proactively fetch game state when lifecycle transitions to active/initializing
-      try {
-        const state = store.getState()
-        const loadedRoomId = state.game.currentGame?.roomId ?? null
-        if (
-          (payload.status === 'active' || payload.status === 'initializing') &&
-          payload.roomId &&
-          payload.roomId !== loadedRoomId
-        ) {
-          store.dispatch(fetchGameState({ roomId: payload.roomId }))
-        }
-      } catch {
-        // best-effort prefetch; ignore errors in proactive flow
-      }
-
-      // When games end or are abandoned, prune any archived game/team conversations
-      if (payload.status === 'completed' || payload.status === 'abandoned') {
-        // Narrow kinds to keep DM/group threads intact
-        const kinds: Array<import('../types/messages').ConversationSummary['kind']> = [
-          'game',
-          'team',
-        ]
-        store.dispatch(messagesActions.pruneArchivedConversations({ kinds }))
-      }
+      this.handleRoomLifecycleChange(lifecyclePayload)
     })
 
     this.socket.on('room-update', (roomData) => {
@@ -1580,16 +1705,6 @@ class SocketService {
         | 'completed'
         | 'paused'
         | 'abandoned'
-
-      if (
-        previousRoom &&
-        previousRoom.id === (payload.id as string | undefined) &&
-        previousRoom.status === 'lobby' &&
-        status === 'active'
-      ) {
-        audioService.playEffect('gamestart')
-        audioService.playMusic()
-      }
 
       const roomId =
         (typeof payload.id === 'string' ? payload.id : undefined) ??
@@ -1650,104 +1765,8 @@ class SocketService {
         // 'players' omitted: room-update payload may not match RoomPlayer shape
       }
 
-      store.dispatch(applyLifecycleUpdate(lifecyclePayload))
-
-      // Proactively fetch game state when we detect room status activation via room-update
-      try {
-        const state = store.getState()
-        const loadedRoomId = state.game.currentGame?.roomId ?? null
-        if (
-          (status === 'active' || status === 'initializing') &&
-          roomId &&
-          roomId !== loadedRoomId
-        ) {
-          store.dispatch(fetchGameState({ roomId }))
-        }
-      } catch {
-        /* ignore */
-      }
-      const roomUpdateBase: Partial<GameRoom> = {
-        id: roomId,
-        status,
-        ...(lifecyclePayload.lifecyclePhase !== undefined
-          ? { lifecyclePhase: lifecyclePayload.lifecyclePhase }
-          : {}),
-        ...(lifecyclePayload.turnNumber !== undefined
-          ? { turnNumber: lifecyclePayload.turnNumber }
-          : {}),
-        ...(lifecyclePayload.currentTurnUserId !== undefined
-          ? { currentTurnUserId: lifecyclePayload.currentTurnUserId ?? null }
-          : {}),
-        ...(lifecyclePayload.turnExpiresAt !== undefined
-          ? { turnExpiresAt: lifecyclePayload.turnExpiresAt }
-          : {}),
-        ...(lifecyclePayload.readyCheckStartedAt !== undefined
-          ? { readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt }
-          : {}),
-        ...(lifecyclePayload.statusMessage !== undefined
-          ? {
-              statusMessage: lifecyclePayload.statusMessage ?? null,
-              statusMessageLevel: lifecyclePayload.statusMessageLevel ?? 'info',
-            }
-          : {}),
-        ...(lifecyclePayload.usingTimeBank !== undefined
-          ? { usingTimeBank: lifecyclePayload.usingTimeBank }
-          : {}),
-        ...(lifecyclePayload.replacementPendingUserId !== undefined
-          ? { replacementPendingUserId: lifecyclePayload.replacementPendingUserId }
-          : {}),
-      }
-
-      // Important: do NOT overwrite players from 'room-update' unless the server explicitly
-      // supplies a normalized players array. The lifecycle:update event already carries a
-      // canonical players list and is handled above via applyLifecycleUpdate. Passing
-      // players: undefined here would clear currentRoom.players, falsely dropping membership.
-      const maybePlayers = (payload as { players?: unknown }).players
-      const roomUpdate: Partial<GameRoom> = { ...roomUpdateBase }
-      if (Array.isArray(maybePlayers)) {
-        ;(roomUpdate as GameRoom).players = maybePlayers as NonNullable<GameRoom['players']>
-      }
-
-      store.dispatch(updateRoom(roomUpdate))
-
-      // Lightweight notification for users not on the Game Room screen
-      try {
-        if (status === 'active' && roomId) {
-          const key = `ui.gamestart.notified:${roomId}`
-          const alreadyNotified = (() => {
-            try {
-              return sessionStorage.getItem(key) === '1'
-            } catch {
-              return false
-            }
-          })()
-          const onThisRoomScreen = (() => {
-            try {
-              const path = window.location?.pathname || ''
-              return path.includes(`/room/${roomId}`)
-            } catch {
-              return false
-            }
-          })()
-          if (!alreadyNotified && !onThisRoomScreen) {
-            notificationService.addNotification({
-              type: 'game_started',
-              title: 'Game started',
-              message: 'Your game is live — jump in!',
-              actionUrl: `/room/${roomId}`,
-              actionLabel: 'Open game',
-              metadata: { gameId: roomId },
-            })
-            try {
-              sessionStorage.setItem(key, '1')
-            } catch {
-              /* ignore */
-            }
-          }
-        }
-      } catch {
-        // best-effort only
-      }
+      this.handleRoomLifecycleChange(lifecyclePayload)
+      // Notification, audio, prefetch, and pruning handled by handleRoomLifecycleChange
     })
 
     // Map ping: show transient ping marker
@@ -1812,8 +1831,8 @@ class SocketService {
             ...(typeof rid === 'string' ? { roomId: rid } : {}),
           }),
         )
-      } catch {
-        // ignore toast/log issues
+      } catch (error) {
+        logger.warn('Failed to show toast/log for gameError (best-effort)', { error })
       }
     })
 
@@ -1962,6 +1981,7 @@ class SocketService {
     this.socket.off('player-joined')
     this.socket.off('player-left')
     this.socket.off('game-delta')
+    this.socket.off('game-delta-batch')
     this.socket.off('game-update')
     this.socket.off('lifecycle:update')
     this.socket.off('room-update')
@@ -1980,6 +2000,8 @@ class SocketService {
     this.socket.off('typing.start')
     this.socket.off('typing.stop')
     this.socket.off('error')
+
+    this.processDeltaHandler = undefined
   }
 }
 

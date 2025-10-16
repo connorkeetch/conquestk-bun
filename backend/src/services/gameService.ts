@@ -904,6 +904,14 @@ export class GameService {
                 (serializedState as { version?: number }).version,
               )
               io.to(`game:${roomId}`).emit('game-delta', delta)
+              try {
+                const { deltaBufferService } = await import('./deltaBufferService.js')
+                await deltaBufferService.append(roomId, [
+                  delta as unknown as import('@conquestk/shared/types/delta').GameDelta,
+                ])
+              } catch {
+                // best-effort
+              }
             }
           } catch (e) {
             logger.warn('Failed to emit GAME_END delta after neutralize', {

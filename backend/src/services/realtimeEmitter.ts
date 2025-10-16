@@ -28,6 +28,14 @@ export async function emitCombined(
     }
   }
 
+  // Store raw deltas in a small Redis ring buffer for replay
+  try {
+    const { deltaBufferService } = await import('./deltaBufferService.js')
+    await deltaBufferService.append(roomId, deltas)
+  } catch {
+    // best-effort
+  }
+
   let sockets: Array<RemoteSocket<ServerToClientEvents, SocketData>> = []
   try {
     sockets = await io.in(gameChannel).fetchSockets()

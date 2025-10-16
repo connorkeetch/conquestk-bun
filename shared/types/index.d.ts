@@ -599,11 +599,29 @@ export interface ServerToClientEvents {
   gameError: (data: { message: string }) => void
 }
 export interface ClientToServerEvents {
-  'join-room': (roomId: string) => void
-  'spectate-room': (roomId: string) => void
+  'join-room': (
+    roomId: string,
+    callback?: (response: {
+      ok: boolean
+      roomId?: string
+      joinedAt?: number
+      error?: string
+      code?: string
+    }) => void,
+  ) => void
+  'spectate-room': (
+    roomId: string,
+    callback?: (response: {
+      ok: boolean
+      roomId?: string
+      joinedAt?: number
+      error?: string
+      code?: string
+    }) => void,
+  ) => void
   'leave-room': (roomId: string) => void
   'game-action': (
-    data: { roomId: string; action: GameAction },
+    data: { roomId: string; action: GameAction; idempotencyKey?: string },
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
   'player:resign': (data: { roomId: string }) => void
@@ -658,6 +676,13 @@ export interface ClientToServerEvents {
   'typing.start': (payload: TypingEventPayload) => void
   'typing.stop': (payload: TypingEventPayload) => void
   'ping:territory': (data: { roomId: string; territoryId: string }) => void
+  // Heartbeat ping for connection health monitoring
+  ping: (callback?: () => void) => void
+  // Request missing deltas for gap recovery
+  'request-missing-deltas': (
+    payload: { roomId: string; fromSeq: number; toSeq: number },
+    callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
+  ) => void
   'conversation.create': (
     payload: ConversationCreatePayload,
     callback?: (response: ConversationCreateAck) => void,

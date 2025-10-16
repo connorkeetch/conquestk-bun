@@ -711,12 +711,30 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  'join-room': (roomId: string) => void
+  'join-room': (
+    roomId: string,
+    callback?: (response: {
+      ok: boolean
+      roomId?: string
+      joinedAt?: number
+      error?: string
+      code?: string
+    }) => void,
+  ) => void
   // Subscribe as spectator for lifecycle/log streams without game deltas
-  'spectate-room': (roomId: string) => void
+  'spectate-room': (
+    roomId: string,
+    callback?: (response: {
+      ok: boolean
+      roomId?: string
+      joinedAt?: number
+      error?: string
+      code?: string
+    }) => void,
+  ) => void
   'leave-room': (roomId: string) => void
   'game-action': (
-    data: { roomId: string; action: GameAction },
+    data: { roomId: string; action: GameAction; idempotencyKey?: string },
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
   'player:resign': (data: { roomId: string }) => void
