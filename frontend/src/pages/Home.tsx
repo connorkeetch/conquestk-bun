@@ -15,7 +15,7 @@ const Home: React.FC = () => {
     badges?: string[] // short meta tags (optional)
     status?: 'available' | 'coming-soon'
   }
-  
+
   const offerings: Offering[] = [
     {
       icon: '🎮',
@@ -56,7 +56,8 @@ const Home: React.FC = () => {
     {
       icon: '🎨',
       title: 'Customization',
-      blurb: '16 player colors (12 standard + 4 premium) and premium themes with animated backdrops.',
+      blurb:
+        '16 player colors (12 standard + 4 premium) and premium themes with animated backdrops.',
       badges: ['16 colors', 'Premium themes'],
     },
     {
@@ -78,7 +79,6 @@ const Home: React.FC = () => {
       badges: ['CP ranking', 'Ladders', 'Clans'],
     },
   ]
-  
 
   return (
     <div className="min-h-screen">
@@ -104,7 +104,7 @@ const Home: React.FC = () => {
             {isAuthenticated ? (
               <>
                 <Link to="/lobby" className="btn-primary btn-lg">
-                   Wage War →
+                  Wage War →
                 </Link>
                 <Link to="/map-editor" className="btn-secondary btn-lg">
                   Forge a Map
@@ -162,53 +162,50 @@ const Home: React.FC = () => {
       </section>
 
       {/* Systems & Modes (combined) */}
-<section className="relative z-10 section-spacing-sm">
-  <div className="container mx-auto px-6 max-w-6xl">
-    <div className="text-center mb-8">
-      <h2 className="text-2xl md:text-3xl font-bold">
-        <span className="text-white">Systems & Modes</span>
-      </h2>
-      <p className="text-muted text-sm">
-        The parts that matter on game night. No fluff.
-      </p>
-    </div>
+      <section className="relative z-10 section-spacing-sm">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold">
+              <span className="text-white">Systems & Modes</span>
+            </h2>
+            <p className="text-muted text-sm">The parts that matter on game night. No fluff.</p>
+          </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {offerings.map((item) => (
-        <div key={item.title} className="panel p-5 group hover:-translate-y-0.5 transition">
-          <div className="flex items-start gap-3">
-            <div className="text-2xl flex-shrink-0">{item.icon}</div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-white font-medium">{item.title}</h3>
-                {item.status === 'coming-soon' && (
-                  <span className="ml-auto text-[10px] uppercase tracking-wide bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded">
-                    Coming Soon
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-sm text-white/70">{item.blurb}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {offerings.map((item) => (
+              <div key={item.title} className="panel p-5 group hover:-translate-y-0.5 transition">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl flex-shrink-0">{item.icon}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-white font-medium">{item.title}</h3>
+                      {item.status === 'coming-soon' && (
+                        <span className="ml-auto text-[10px] uppercase tracking-wide bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded">
+                          Coming Soon
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-sm text-white/70">{item.blurb}</p>
 
-              {item.badges && item.badges.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {item.badges.map((b) => (
-                    <span
-                      key={`${item.title}-${b}`}
-                      className="text-[10px] uppercase tracking-wide text-muted bg-surface-1/50 border border-border px-2 py-0.5 rounded-full"
-                    >
-                      {b}
-                    </span>
-                  ))}
+                    {item.badges && item.badges.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {item.badges.map((b) => (
+                          <span
+                            key={`${item.title}-${b}`}
+                            className="text-[10px] uppercase tracking-wide text-muted bg-surface-1/50 border border-border px-2 py-0.5 rounded-full"
+                          >
+                            {b}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
-    </div>
-  </div>
-</section>
-
+      </section>
 
       {/* How It Works - Streamlined */}
       <section className="relative z-10 section-spacing-sm">
@@ -228,21 +225,27 @@ const Home: React.FC = () => {
                 1
               </div>
               <h3 className="text-lg font-medium text-heading mb-2">Deploy reinforcements</h3>
-              <p className="text-muted text-sm">Place troops to secure borders and set up your push.</p>
+              <p className="text-muted text-sm">
+                Place troops to secure borders and set up your push.
+              </p>
             </div>
             <div className="panel p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 2
               </div>
               <h3 className="text-lg font-medium text-heading mb-2">Attack and adapt</h3>
-              <p className="text-muted text-sm">Roll the attacks, pivot fronts, and seize bonuses.</p>
+              <p className="text-muted text-sm">
+                Roll the attacks, pivot fronts, and seize bonuses.
+              </p>
             </div>
             <div className="panel p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 3
               </div>
               <h3 className="text-lg font-medium text-heading mb-2">Fortify the line</h3>
-              <p className="text-muted text-sm">Reposition armies to lock borders and hold gains.</p>
+              <p className="text-muted text-sm">
+                Reposition armies to lock borders and hold gains.
+              </p>
             </div>
           </div>
         </div>

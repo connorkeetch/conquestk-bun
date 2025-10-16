@@ -103,7 +103,10 @@ async function processOne(
       assetExists(webpW).catch(() => false),
     ])
     if (!haveAvifW) {
-      const buf = await sharp(srcBuf).resize({ width: w }).avif({ quality: 60, effort: 4 }).toBuffer()
+      const buf = await sharp(srcBuf)
+        .resize({ width: w })
+        .avif({ quality: 60, effort: 4 })
+        .toBuffer()
       if (!dry) {
         await uploadAsset({
           key: avifW,

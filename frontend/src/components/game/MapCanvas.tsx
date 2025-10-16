@@ -117,12 +117,8 @@ export function MapCanvas({
       >
         {/* Base image at intrinsic dimensions so token coords align in image pixel space */}
         <picture>
-          {avifSrcSet ? (
-            <source type="image/avif" srcSet={avifSrcSet} sizes="100vw" />
-          ) : null}
-          {webpSrcSet ? (
-            <source type="image/webp" srcSet={webpSrcSet} sizes="100vw" />
-          ) : null}
+          {avifSrcSet ? <source type="image/avif" srcSet={avifSrcSet} sizes="100vw" /> : null}
+          {webpSrcSet ? <source type="image/webp" srcSet={webpSrcSet} sizes="100vw" /> : null}
           <img
             src={imageUrl}
             alt="Game map"
