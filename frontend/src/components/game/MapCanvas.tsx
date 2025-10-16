@@ -63,6 +63,18 @@ export function MapCanvas({
     [view.scale, view.tx, view.ty],
   )
 
+  // Build srcset strings from provided variants
+  const avifSrcSet = useMemo(() => {
+    const list = variants?.avif || []
+    if (!list.length) return ''
+    return list.map((v) => `${v.url} ${v.width}w`).join(', ')
+  }, [variants?.avif])
+  const webpSrcSet = useMemo(() => {
+    const list = variants?.webp || []
+    if (!list.length) return ''
+    return list.map((v) => `${v.url} ${v.width}w`).join(', ')
+  }, [variants?.webp])
+
   return (
     <div
       ref={containerRef}
@@ -105,16 +117,19 @@ export function MapCanvas({
       >
         {/* Base image at intrinsic dimensions so token coords align in image pixel space */}
         <picture>
-          {variants?.avif?.[0]?.url ? (
-            <source type="image/avif" srcSet={variants.avif[0].url} />
+          {avifSrcSet ? (
+            <source type="image/avif" srcSet={avifSrcSet} sizes="100vw" />
           ) : null}
-          {variants?.webp?.[0]?.url ? (
-            <source type="image/webp" srcSet={variants.webp[0].url} />
+          {webpSrcSet ? (
+            <source type="image/webp" srcSet={webpSrcSet} sizes="100vw" />
           ) : null}
           <img
             src={imageUrl}
             alt="Game map"
             draggable={false}
+            /* Include simple srcset for fallback */
+            srcSet={`${imageUrl} ${imageWidth}w`}
+            sizes="100vw"
             /* Reserve intrinsic size to prevent layout shifts and help LCP */
             width={imageWidth}
             height={imageHeight}

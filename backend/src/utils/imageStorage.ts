@@ -123,6 +123,48 @@ export const storeImageBuffer = async (
     })
   }
 
+  // Responsive widths: generate downscaled variants if beneficial
+  try {
+    const targetWidths = [1024, 1536, 2048]
+      .filter((w) => w > 0 && w < width)
+      .sort((a, b) => a - b)
+    for (const w of targetWidths) {
+      const h = Math.round((w / width) * height)
+      try {
+        const key = `${baseKey}-${w}w.avif`
+        const buf = await sharp(buffer).resize({ width: w }).avif({ quality: 60, effort: 4 }).toBuffer()
+        await uploadAsset({
+          key,
+          body: buf,
+          contentType: 'image/avif',
+          cacheControl: 'public, max-age=31536000, immutable',
+        })
+        if (!variants.avif) variants.avif = []
+        variants.avif.push({ key, url: getPublicAssetUrl(key), width: w, height: h })
+      } catch (e) {
+        logger.warn('Failed to generate AVIF responsive variant', { storageKey, width: w, error: e })
+      }
+      try {
+        const key = `${baseKey}-${w}w.webp`
+        const buf = await sharp(buffer).resize({ width: w }).webp({ quality: 70 }).toBuffer()
+        await uploadAsset({
+          key,
+          body: buf,
+          contentType: 'image/webp',
+          cacheControl: 'public, max-age=31536000, immutable',
+        })
+        if (!variants.webp) variants.webp = []
+        variants.webp.push({ key, url: getPublicAssetUrl(key), width: w, height: h })
+      } catch (e) {
+        logger.warn('Failed to generate WebP responsive variant', { storageKey, width: w, error: e })
+      }
+    }
+    if (variants.avif) variants.avif.sort((a, b) => a.width - b.width)
+    if (variants.webp) variants.webp.sort((a, b) => a.width - b.width)
+  } catch (e) {
+    logger.warn('Responsive variant generation error (non-fatal)', { storageKey, error: e })
+  }
+
   return {
     filename: uniqueFilename,
     relativeUrl,

@@ -519,20 +519,45 @@ router.get(
             avif?: Array<{ url: string; width: number; height?: number }>
             webp?: Array<{ url: string; width: number; height?: number }>
           } = {}
-          try {
-            if (await assetExists(avifKey)) {
-              variants.avif = [{ url: getPublicAssetUrl(avifKey), width, height }]
+          // Collect responsive widths (if present), then add original size at end
+          const candidateWidths = [1024, 1536, 2048].filter((w) => w > 0 && w < width).sort((a, b) => a - b)
+          const pushIf = async (
+            list: Array<{ url: string; width: number; height?: number }>,
+            key: string,
+            w: number,
+          ) => {
+            try {
+              if (await assetExists(key)) {
+                const h = Math.round((w / width) * height)
+                list.push({ url: getPublicAssetUrl(key), width: w, height: h })
+              }
+            } catch {
+              // ignore
             }
-          } catch {
-            // ignore
           }
+
+          // AVIF widths
+          const avifList: Array<{ url: string; width: number; height?: number }> = []
+          for (const w of candidateWidths) {
+            await pushIf(avifList, `${base}-${w}w.avif`, w)
+          }
+          // Include original AVIF if present
           try {
-            if (await assetExists(webpKey)) {
-              variants.webp = [{ url: getPublicAssetUrl(webpKey), width, height }]
-            }
-          } catch {
-            // ignore
+            if (await assetExists(avifKey)) avifList.push({ url: getPublicAssetUrl(avifKey), width, height })
+          } catch {}
+          if (avifList.length) variants.avif = avifList
+
+          // WebP widths
+          const webpList: Array<{ url: string; width: number; height?: number }> = []
+          for (const w of candidateWidths) {
+            await pushIf(webpList, `${base}-${w}w.webp`, w)
           }
+          // Include original WebP if present
+          try {
+            if (await assetExists(webpKey)) webpList.push({ url: getPublicAssetUrl(webpKey), width, height })
+          } catch {}
+          if (webpList.length) variants.webp = webpList
+
           if (variants.avif || variants.webp) {
             // eslint-disable-next-line no-param-reassign
             mapData.map.imageVariants = variants

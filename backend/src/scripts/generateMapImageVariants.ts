@@ -44,7 +44,7 @@ async function fetchBuffer(url: string): Promise<Buffer> {
 
 async function processOne(
   imageUrl: string,
-  _width: number,
+  intrinsicWidth: number,
   _height: number,
   dry: boolean,
 ): Promise<{ created: string[]; skipped: string[] }> {
@@ -91,6 +91,45 @@ async function processOne(
       })
     }
     created.push('webp')
+  }
+
+  // Responsive widths
+  const targets = [1024, 1536, 2048].filter((w) => w > 0 && w < intrinsicWidth)
+  for (const w of targets) {
+    const avifW = `${base}-${w}w.avif`
+    const webpW = `${base}-${w}w.webp`
+    const [haveAvifW, haveWebpW] = await Promise.all([
+      assetExists(avifW).catch(() => false),
+      assetExists(webpW).catch(() => false),
+    ])
+    if (!haveAvifW) {
+      const buf = await sharp(srcBuf).resize({ width: w }).avif({ quality: 60, effort: 4 }).toBuffer()
+      if (!dry) {
+        await uploadAsset({
+          key: avifW,
+          body: buf,
+          contentType: 'image/avif',
+          cacheControl: 'public, max-age=31536000, immutable',
+        })
+      }
+      created.push(`avif-${w}w`)
+    } else {
+      skipped.push(`avif-${w}w`)
+    }
+    if (!haveWebpW) {
+      const buf = await sharp(srcBuf).resize({ width: w }).webp({ quality: 70 }).toBuffer()
+      if (!dry) {
+        await uploadAsset({
+          key: webpW,
+          body: buf,
+          contentType: 'image/webp',
+          cacheControl: 'public, max-age=31536000, immutable',
+        })
+      }
+      created.push(`webp-${w}w`)
+    } else {
+      skipped.push(`webp-${w}w`)
+    }
   }
 
   return { created, skipped }
