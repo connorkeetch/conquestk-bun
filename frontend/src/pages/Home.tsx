@@ -24,10 +24,16 @@ const Home: React.FC = () => {
       badges: ['Domination', 'Capitals', 'KOTH', 'Assassination'],
     },
     {
-      icon: '🤝',
-      title: 'Teams & Pace',
-      blurb: 'Solo or teams with coordinated turns — run live games or 24‑hour turns.',
-      badges: ['Solo', 'Teams', 'Live', '24h'],
+      icon: '👥',
+      title: 'Players & Teams',
+      blurb: 'Up to 12 players with up to 6 teams. Queue FFA or coordinate in squads.',
+      badges: ['12 players', 'Up to 6 teams', 'FFA/Teams'],
+    },
+    {
+      icon: '⏱️',
+      title: 'Live & 24h Turns',
+      blurb: 'Run live sessions or asynchronous 24‑hour turns with ready‑checks and AFK rules.',
+      badges: ['Live', '24h', 'Ready‑check'],
     },
     {
       icon: '💎',
@@ -44,8 +50,14 @@ const Home: React.FC = () => {
     {
       icon: '🤖',
       title: 'AI Commanders',
-      blurb: 'Commander and Grandmaster tiers — practice solo or fill seats.',
-      badges: ['Commander', 'Grandmaster'],
+      blurb: 'Commander & Grandmaster tiers that respect team rules and play fast, fair turns.',
+      badges: ['Commander', 'Grandmaster', 'Fill seats'],
+    },
+    {
+      icon: '🎨',
+      title: 'Customization',
+      blurb: '16 player colors (12 standard + 4 premium) and premium themes with animated backdrops.',
+      badges: ['16 colors', 'Premium themes'],
     },
     {
       icon: '🎬',
@@ -62,8 +74,8 @@ const Home: React.FC = () => {
     {
       icon: '🏆',
       title: 'Ranks & Clans',
-      blurb: 'Climb ladders, earn titles, and coordinate clan wars with your crew.',
-      badges: ['Ladders', 'Clans'],
+      blurb: 'Conquest Points (Elo‑inspired) ranking, seasonal ladders, and clan campaigns.',
+      badges: ['CP ranking', 'Ladders', 'Clans'],
     },
   ]
   
