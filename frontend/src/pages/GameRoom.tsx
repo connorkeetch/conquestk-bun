@@ -1485,10 +1485,11 @@ export default function GameRoom() {
       <div
         className="sticky z-40 sm:-mx-6 sm:px-6 bg-[color:color-mix(in srgb, var(--surface-1) 92%, transparent)] backdrop-blur border-b border-border"
         style={{ top: 'calc(env(safe-area-inset-top) + 56px)' }}
+        aria-hidden={false}
       >
         <div className="mx-auto w-full max-w-[clamp(960px,60vw,1400px)]">
           {/* One-line top banner with room info + actions */}
-          <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)]">
+          <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)] min-h-[42px]">
             <div
               className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
               title={`${currentRoom.name}${

@@ -739,16 +739,7 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     }
   }
 
-  // A few soft glows for depth
-  const glows = [
-    'radial-gradient(220px 180px at 20% 30%, rgba(255, 53, 94, 0.18), transparent)',
-    'radial-gradient(280px 200px at 78% 24%, rgba(123, 135, 255, 0.14), transparent)',
-    'radial-gradient(180px 160px at 48% 72%, rgba(159, 252, 255, 0.12), transparent)',
-  ]
-  images.push(...glows)
-  sizes.push('auto', 'auto', 'auto')
-  positions.push('20% 30%', '78% 24%', '48% 72%')
-  repeats.push('no-repeat', 'no-repeat', 'no-repeat')
+  // Note: glow gradients removed temporarily for debugging color rendering
 
   const imageList = images.join(',\n    ')
   const sizeList = sizes.join(',\n    ')
