@@ -3,127 +3,70 @@ import { Link } from 'react-router-dom'
 import { resolveAssetPath } from '@/utils/assets'
 import { useAppSelector } from '../hooks/redux'
 
-interface Feature {
-  icon: string
-  title: string
-  description: string
-  status: 'available' | 'coming-soon'
-}
-
 const Home: React.FC = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth)
 
   const heroBackground = resolveAssetPath('static/images/world-map-hero.jpg')
 
-  const features: Feature[] = [
+  interface Offering {
+    icon: string
+    title: string
+    blurb: string
+    badges?: string[] // short meta tags (optional)
+    status?: 'available' | 'coming-soon'
+  }
+  
+  const offerings: Offering[] = [
     {
-      icon: '🛡️',
-      title: 'Authoritative Warfare',
-      description:
-        'Dice are audited, treaties are logged, and the server plays referee so every march across the border is indisputable.',
-      status: 'available',
+      icon: '🎮',
+      title: 'Game Modes',
+      blurb: 'Domination or Capitals — classic rules in FFA or teams.',
+      badges: ['Domination', 'Capitals', 'FFA/Teams'],
+    },
+    {
+      icon: '⏱️',
+      title: 'Turn Timers',
+      blurb: 'Ready‑checks, per‑turn clocks, optional time bank, and AFK rules.',
+      badges: ['Ready‑check', 'AFK rules', 'Time bank'],
+    },
+    {
+      icon: '💎',
+      title: 'Hidden Treasures',
+      blurb: 'Redeem sets of 3 (bronze/silver/gold/diamond) for reinforcements.',
+      badges: ['Sets of 3', 'Diamond bonus'],
+    },
+    {
+      icon: '🌫️',
+      title: 'Fog of War',
+      blurb: 'Choose Open or Fog — you can only target what you can see.',
+      badges: ['Open', 'Fog'],
+    },
+    {
+      icon: '🤖',
+      title: 'AI Commanders',
+      blurb: 'Commander and Grandmaster tiers — practice solo or fill seats.',
+      badges: ['Commander', 'Grandmaster'],
+    },
+    {
+      icon: '🎬',
+      title: 'Replays & Receipts',
+      blurb: 'Timeline, turn diffs, dice logs, and fortify paths — no guesswork.',
+      badges: ['Timeline', 'Turn diffs', 'Dice logs'],
     },
     {
       icon: '🗺️',
-      title: 'Cartographer’s Arsenal',
-      description:
-        'Sketch continents, wire bonuses, and publish new fronts with the exact moderation workflow our map wardens rely on.',
-      status: 'available',
+      title: 'Map Editor',
+      blurb: 'Build sectors, adjacencies, and capitals; submit for review, then publish.',
+      badges: ['Draft → Review → Publish'],
     },
     {
-      icon: '🤝',
-      title: 'Diplomacy Optional',
-      description:
-        'Queue with allies or queue with frenemies—the lobby keeps receipts when “temporary” truces become eternal grudges.',
-      status: 'available',
+      icon: '🏆',
+      title: 'Ranks & Clans',
+      blurb: 'Climb ladders, earn titles, and coordinate clan wars with your crew.',
+      badges: ['Ladders', 'Clans'],
     },
   ]
-
-  interface GameExperience {
-    icon: string
-    title: string
-    description: string
-    meta: string
-  }
-
-  const gameExperiences: GameExperience[] = [
-    {
-      icon: '⚔️',
-      title: 'Ranked War Rooms',
-      description:
-        'Ready-check, deploy, and climb CP ladders on servers that notarize every contested die and border skirmish.',
-      meta: 'Live delta streaming keeps every empire honest',
-    },
-    {
-      icon: '🏰',
-      title: 'Custom Map Sieges',
-      description:
-        'Spin up lobbies on official rotations or community fever dreams with capitals, alliances, and fog-of-war.',
-      meta: 'Up to 12 commanders per battlefield',
-    },
-    {
-      icon: '🛠️',
-      title: 'Creator Foundry',
-      description:
-        'Draft, iterate, and submit fresh arenas with version history, reviewer feedback, and instant staging previews.',
-      meta: 'Moderation workflow built into the editor',
-    },
-    {
-      icon: '🧠',
-      title: 'AI & Spectator Mode',
-      description:
-        'Watch grandmasters duel or face adaptive commanders who study your tactics, then replay every blunder in clarity.',
-      meta: 'Machine rivals and replays for study and showdowns',
-    },
-  ]
-
-  interface Highlight {
-    title: string
-    description: string
-    bullets: string[]
-  }
-
-  const highlights: Highlight[] = [
-    {
-      title: 'Audited to the bone',
-      description:
-        'Every treaty, roll, and territory swing is stamped and queryable. Arguing about dice becomes a spectator sport.',
-      bullets: [
-        'Authoritative logs for attacks, card cash-ins, bonuses, and fortify paths in real time.',
-        'Rank ladders recalc CP, streaks, and hidden MMR on match close.',
-        'Exportable match reports and per-turn diffs for post-war tribunals.',
-      ],
-    },
-    {
-      title: 'Fair play enforced',
-      description:
-        'Lobbies run with ready-checks, AFK rules, and anti-collusion signals so wins actually mean something.',
-      bullets: [
-        'Ready-check, turn timers, and lifecycle rules applied server-side.',
-        'Identity-tied comms, report flows, and review queues for disputes.',
-        'Fog-of-war, alliances, and capitals implemented as server rules, not client vibes.',
-      ],
-    },
-    {
-      title: 'Built for load',
-      description:
-        'Real-time sockets and CDN assets keep the map snappy even when twelve egos pile in at once.',
-      bullets: [
-        'Delta streaming for state; no “full refresh” nonsense mid-siege.',
-        'Optimized map tiles and assets; cache-busted, CDN-served.',
-        'Scales to 12 commanders per battlefield without stalling animations.',
-      ],
-    },
-    {
-      title: 'Comforts for commanders',
-      description: 'Play into the wee hours without frying your retinas or your friendships.',
-      bullets: [
-        'Push notifications, turn pings, and ready-check reminders.',
-        'Theme presets, audio cues, and contrast-friendly overlays.',
-        'Chat, clans, and moderation tools tied to verified accounts.',
-      ],
-    },
-  ]
+  
 
   return (
     <div className="min-h-screen">
@@ -149,7 +92,7 @@ const Home: React.FC = () => {
             {isAuthenticated ? (
               <>
                 <Link to="/lobby" className="btn-primary btn-lg">
-                  ⚡ Launch Campaign →
+                   Wage War →
                 </Link>
                 <Link to="/map-editor" className="btn-secondary btn-lg">
                   Forge a Map
@@ -206,118 +149,54 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Section - Equal Height & Cleaner */}
-      <section className="relative z-10 section-spacing-sm">
-        <div className="container mx-auto px-6 max-w-6xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              <span className="text-white">Campaign toolkit</span>
-            </h2>
-          </div>
+      {/* Systems & Modes (combined) */}
+<section className="relative z-10 section-spacing-sm">
+  <div className="container mx-auto px-6 max-w-6xl">
+    <div className="text-center mb-8">
+      <h2 className="text-2xl md:text-3xl font-bold">
+        <span className="text-white">Systems & Modes</span>
+      </h2>
+      <p className="text-muted text-sm">
+        The parts that matter on game night. No fluff.
+      </p>
+    </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="panel group min-h-[96px] p-5 hover:-translate-y-0.5 transition will-change-transform"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="text-2xl flex-shrink-0">{feature.icon}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-white font-medium">{feature.title}</h4>
-                      {feature.status === 'coming-soon' && (
-                        <span className="ml-auto text-[10px] uppercase tracking-wide bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded">
-                          Coming Soon
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-sm text-white/70">{feature.description}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Play Modes & Tools */}
-      <section className="relative z-10 section-spacing-sm">
-        <div className="container mx-auto px-6 max-w-6xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              <span className="text-white">Choose your theatre</span>
-            </h2>
-            <p className="text-muted text-sm">
-              Climb the Conquest Ladder, play a casual game, or start a clan war—we have a lobby
-              staged for every flavor of ambition.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {gameExperiences.map((experience) => (
-              <div
-                key={experience.title}
-                className="panel p-5 flex flex-col gap-4"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl" aria-hidden="true">
-                    {experience.icon}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {offerings.map((item) => (
+        <div key={item.title} className="panel p-5 group hover:-translate-y-0.5 transition">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl flex-shrink-0">{item.icon}</div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-white font-medium">{item.title}</h3>
+                {item.status === 'coming-soon' && (
+                  <span className="ml-auto text-[10px] uppercase tracking-wide bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded">
+                    Coming Soon
                   </span>
-                  <div>
-                    <h3 className="text-lg font-medium text-white">{experience.title}</h3>
-                    <p className="mt-2 text-sm text-white/70">{experience.description}</p>
-                  </div>
-                </div>
-                <div className="mt-auto">
-                  <p className="text-xs uppercase tracking-wide text-muted bg-surface-1/50 border border-border inline-flex px-3 py-1 rounded-full">
-                    {experience.meta}
-                  </p>
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <p className="mt-2 text-sm text-white/70">{item.blurb}</p>
 
-      {/* Strategic Pillars */}
-      <section className="relative z-10 section-spacing-sm">
-        <div className="container mx-auto px-6 max-w-6xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              <span className="text-white">Why conquerors linger</span>
-            </h2>
-            <p className="text-muted text-sm">
-              Built for rulers who crave strategy, tools, and options.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {highlights.map((highlight) => (
-              <div
-                key={highlight.title}
-                className="panel p-5 text-left"
-              >
-                <h3 className="text-lg font-medium text-white">{highlight.title}</h3>
-                <p className="mt-2 text-sm text-white/70">{highlight.description}</p>
-                <ul className="mt-4 space-y-3">
-                  {highlight.bullets.map((bullet) => (
-                    <li
-                      key={`${highlight.title}-${bullet}`}
-                      className="flex items-start gap-2 text-sm text-white/70"
+              {item.badges && item.badges.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {item.badges.map((b) => (
+                    <span
+                      key={`${item.title}-${b}`}
+                      className="text-[10px] uppercase tracking-wide text-muted bg-surface-1/50 border border-border px-2 py-0.5 rounded-full"
                     >
-                      <span className="text-sky-300 mt-0.5" aria-hidden="true">
-                        ●
-                      </span>
-                      <span>{bullet}</span>
-                    </li>
+                      {b}
+                    </span>
                   ))}
-                </ul>
-              </div>
-            ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
+
 
       {/* How It Works - Streamlined */}
       <section className="relative z-10 section-spacing-sm">
@@ -336,30 +215,22 @@ const Home: React.FC = () => {
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 1
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Stack the capital</h3>
-              <p className="text-muted text-sm">
-                Fortify strongholds, guard borders, and leave just enough bait to lure overeager
-                liberators.
-              </p>
+              <h3 className="text-lg font-medium text-heading mb-2">Deploy reinforcements</h3>
+              <p className="text-muted text-sm">Place troops to secure borders and set up your push.</p>
             </div>
             <div className="panel p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 2
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Bully the odds</h3>
-              <p className="text-muted text-sm">
-                Blitz when the dice favor you, turtle when they don’t, and rotate fronts before the
-                neighbors smell weakness.
-              </p>
+              <h3 className="text-lg font-medium text-heading mb-2">Attack and adapt</h3>
+              <p className="text-muted text-sm">Roll the attacks, pivot fronts, and seize bonuses.</p>
             </div>
             <div className="panel p-5 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-full flex items-center justify-center text-base font-bold text-white">
                 3
               </div>
-              <h3 className="text-lg font-medium text-heading mb-2">Publish the victory</h3>
-              <p className="text-muted text-sm">
-                Cash in treasures, claim domination, and rise to glory.
-              </p>
+              <h3 className="text-lg font-medium text-heading mb-2">Fortify the line</h3>
+              <p className="text-muted text-sm">Reposition armies to lock borders and hold gains.</p>
             </div>
           </div>
         </div>
@@ -370,11 +241,10 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="panel p-8 md:p-12 text-center">
             <h2 className="text-3xl font-bold text-white">
-              High command is asking: whose banner flies tonight?
+              Whose banner will fly over the battlefield?
             </h2>
             <p className="mt-4 text-white/80 text-base md:text-lg">
-              The beta is online. Rally your council, draft a fresh map, or queue solo and walk away
-              with new provinces.
+              The beta is online. Rally your troops and conquer the map.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               {isAuthenticated ? (
