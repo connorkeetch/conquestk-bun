@@ -2,6 +2,7 @@ import type { GameDelta } from '@conquestk/shared/types/delta'
 import type { RemoteSocket, Server } from 'socket.io'
 import type { GameState } from '../types/game.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
+import { deltaSequenceService } from './deltaSequenceService.js'
 import { computeVisibilityMask } from './fogService.js'
 import { GameService } from './gameService.js'
 import { type DbMove, type FogView, renderLogText } from './logEmitter.js'
@@ -19,6 +20,13 @@ export async function emitCombined(
   const gameChannel = `game:${roomId}`
   const deltas = Array.isArray(payload.deltas) ? payload.deltas : []
   const moves = Array.isArray(payload.moves) ? payload.moves : []
+
+  // RELIABILITY: Add sequence numbers to all deltas for gap detection
+  for (const delta of deltas) {
+    if (delta.version === undefined) {
+      delta.version = await deltaSequenceService.getNextSequence(roomId)
+    }
+  }
 
   let sockets: Array<RemoteSocket<ServerToClientEvents, SocketData>> = []
   try {

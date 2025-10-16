@@ -1014,6 +1014,48 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       ),
     )
 
+    // Heartbeat ping handler for connection health monitoring
+    socket.on('ping', (callback?: () => void) => {
+      // Immediately respond to ping to measure latency
+      if (typeof callback === 'function') {
+        callback()
+      }
+    })
+
+    // RELIABILITY: Handle requests for missing deltas (gap recovery)
+    socket.on(
+      'request-missing-deltas',
+      async (
+        payload: { roomId: string; fromSeq: number; toSeq: number },
+        callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
+      ) => {
+        try {
+          const { roomId, fromSeq, toSeq } = payload
+
+          // Validate sequence range
+          if (fromSeq < 0 || toSeq < fromSeq || toSeq - fromSeq > 100) {
+            callback?.({ ok: false, error: 'Invalid sequence range' })
+            return
+          }
+
+          // For now, we don't persist deltas - just trigger a full state refetch
+          // In a production system, you'd query a delta log table or Redis stream
+          logger.info('Client requested missing deltas - triggering resync', {
+            roomId,
+            fromSeq,
+            toSeq,
+            userId: socket.userId,
+          })
+
+          // Return empty deltas and let client refetch full state
+          callback?.({ ok: true, deltas: [] })
+        } catch (error) {
+          logger.error('Failed to handle missing delta request', { error })
+          callback?.({ ok: false, error: 'Internal error' })
+        }
+      },
+    )
+
     socket.on('disconnect', async () => {
       try {
         const userId = socket.userId
