@@ -2,6 +2,13 @@
 
 ## 🔧 Common Issues & Fixes
 
+### Common Gotchas
+- Ensure PostgreSQL and Redis are running before invoking background jobs or sockets.
+- Path aliases differ per package—check each `tsconfig.json` if imports fail.
+- Socket.io rooms namespace as `game:${gameId}`; keep emit/listen pairs consistent.
+- Frontend should use relative API URLs (`/api`) so deployments work across origins.
+- Email flows require `RESEND_API_KEY`; without it most email routes are disabled.
+
 ### ❌ "Port already in use"
 **Problem**: Backend port 5001 or frontend port 5173 is occupied
 ```bash

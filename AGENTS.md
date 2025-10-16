@@ -137,25 +137,19 @@ For detailed information on coding standards, see the [coding standards guide](d
 - For the Game Room, lobby, and phase UX flows, follow `docs/planning/game-room-plan.md`.
 
 ## Database & admin utilities
-- Always create a new numbered migration for schema changes and test with `cd backend && npm run migrate` before finishing.
-- Stick to PostgreSQL features in migrations and ad-hoc queries—Postgres is the only supported runtime, so don't introduce vendor-specific SQL.
-- Use `cd backend && npm run seed:users` to refresh demo users locally.
-- Promote or diagnose accounts with the scripts in `backend/src/scripts` (see `make-admin`, `diagnose-admin`, and `ensureDeployAccounts`).
-- The shared Railway connection string is `postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway`; treat it carefully even though the repo is private.
+Database migrations are handled with SQL files in `backend/migrations`. Use the provided npm scripts for seeding and admin tasks.
+
+For more details, see the [database management guide](docs/guides/database-management.md).
 
 ## Testing strategy
-- Backend: Jest unit/integration tests alongside source files (`*.test.ts`).
-- Frontend: Vitest + React Testing Library for components and hooks (`*.test.tsx`).
-- Mock Socket.io connections in tests instead of hitting live servers.
-- Prioritise coverage for gameplay logic, services, and reducers when you touch them.
+The project uses Jest for backend testing and Vitest for frontend testing. Mocking is used for external services like Socket.io.
+
+For more details, see the [testing strategy guide](docs/guides/testing-strategy.md).
 
 ## Common gotchas
-- Port conflicts on 5001 (backend) or 5173 (frontend) will block startup.
-- Ensure PostgreSQL and Redis are running before invoking background jobs or sockets.
-- Path aliases differ per package—check each `tsconfig.json` if imports fail.
-- Socket.io rooms namespace as `game:${gameId}`; keep emit/listen pairs consistent.
-- Frontend should use relative API URLs (`/api`) so deployments work across origins.
-- Email flows require `RESEND_API_KEY`; without it most email routes are disabled.
+Be aware of common issues like port conflicts, database connectivity, and correct configuration of environment variables.
+
+For a detailed list of common issues and fixes, see the [troubleshooting guide](docs/operations/troubleshooting.md).
 
 ## Documentation reference
 - `README.md` – project overview and onboarding.
@@ -173,10 +167,9 @@ For detailed information on coding standards, see the [coding standards guide](d
 - `docs/planning/game-room-plan.md` – canonical Game Room UI/UX plan; consult when implementing room, lobby, phases, and timers.
 
 ## Game Replay (development)
-- Backend adds read-only replay endpoints under `/api/games/:id/replay/*` built from `game_logs` and `game_state_snapshots`.
-- Frontend includes `/replay/:gameId` and an isolated `replaySlice` for scrubbing completed matches in read-only mode.
-- Chunk ~25 turns per request; compute diffs client-side from pre/post snapshots plus lightweight deltas.
-- Keep payloads small and memoize selectors; no live sockets involved.
+The application includes a game replay feature that allows users to watch completed matches. The feature is implemented with read-only endpoints and a dedicated Redux slice.
+
+For more details, see the [game replay guide](docs/guides/game-replay.md).
 
 ## Environment configuration
 ### Core variables (`backend/.env`)
