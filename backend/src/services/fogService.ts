@@ -261,12 +261,12 @@ export async function emitRevealSnapshot(
   const serialized = serializeForClient(filtered)
   try {
     const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8')
-    socketPayloadMetrics.record('game-update', bytes)
-    if (socketPayloadMetrics.shouldLog('game-update')) {
-      const stats = socketPayloadMetrics.snapshot('game-update')
+    socketPayloadMetrics.record('game:snapshot', bytes)
+    if (socketPayloadMetrics.shouldLog('game:snapshot')) {
+      const stats = socketPayloadMetrics.snapshot('game:snapshot')
       if (stats) {
         logger.info('Socket payload stats', {
-          event: 'game-update',
+          event: 'game:snapshot',
           windowCount: stats.count,
           p50Bytes: stats.p50,
           p95Bytes: stats.p95,
@@ -277,5 +277,5 @@ export async function emitRevealSnapshot(
   } catch {
     // best-effort metrics only
   }
-  io.to(target.id).emit('game-update', serialized)
+  io.to(target.id).emit('game:snapshot', serialized)
 }

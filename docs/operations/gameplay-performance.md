@@ -38,7 +38,7 @@ Performance-oriented changes landed alongside AI work:
   - Replaced full snapshot on `trade_cards` with two minimal deltas: `PLAYER_UPDATE` (armies, mustCashInTreasures) and conditional `PHASE_CHANGE` (reinforcement) — both fog‑filtered.
 
 - Socket payload metrics
-  - Added lightweight rolling metrics for `game-delta` and `game-update` events (p50/p95/max). Logged periodically to help track regressions in payload size.
+  - Added lightweight rolling metrics for `game-delta` and `game:snapshot` events (p50/p95/max). Logged periodically to help track regressions in payload size.
 
 - Fog‑aware AI planning
   - Planner state is filtered to owned + adjacent territories (team‑aware) when fog is enabled. Prevents EV calculations from using hidden information.
@@ -123,23 +123,23 @@ This phase focuses on shaving server-side latency and wire size during turns. Ea
 Implementation notes (2025‑10‑08)
 - endTurn now persists `game_states` + `game_rooms` and the immutable snapshot in a single DB transaction via `persistTurnStateTransactional()`. Caching remains unchanged.
 
-2) Optimize socket payload sizes (<50 KB per `game-update`)
+2) Optimize socket payload sizes (<50 KB per `game:snapshot`)
 - Scope: Reduce serialized payload and frequency; favor deltas.
 - Where:
   - `backend/src/services/socketService.ts`
   - `backend/src/services/metricsService.ts` (new payload metrics)
   - Client consumers under `frontend/src/store` and `frontend/src/pages/GameRoom.tsx`
 - Steps:
-  - Instrument payload size: wrap `socket.emit('game-update', data)` and `io.to(channel).emit('game-update', data)` with a helper that measures `Buffer.byteLength(JSON.stringify(data),'utf8')` and records a metric `socket_payload_bytes{event="game-update"}` (add a Gauge in `metricsService`). Capture p50/p95 in logs for now.
+  - Instrument payload size: wrap `socket.emit('game:snapshot', data)` and `io.to(channel).emit('game:snapshot', data)` with a helper that measures `Buffer.byteLength(JSON.stringify(data),'utf8')` and records a metric `socket_payload_bytes{event="game:snapshot"}` (add a Gauge in `metricsService`). Capture p50/p95 in logs for now.
   - Trim shape: ensure `SerializedGameState` contains only required fields for the view. Prefer ids over embedded user objects; keep history/logs out of the hot message.
   - Prefer targeted `game-delta` events where possible (already partially used). Audit all emits in `socketService.ts` and switch non-essential full‑state emits to deltas.
 - Done when:
-  - Median payload size for `game-update` < 30 KB, p95 < 50 KB across a 10‑minute synthetic session.
+  - Median payload size for `game:snapshot` < 30 KB, p95 < 50 KB across a 10‑minute synthetic session.
   - At least two previously full‑state emits replaced with deltas with no UX regressions.
 - Risks/rollback:
   - Older clients missing delta handlers: maintain the full‑state path behind a feature flag for one release.
 Implementation notes (2025‑10‑08)
-- Server now emits a lean `game-update` snapshot (players/board/config/targets/KOTH only) from `serializeGameStateForClient()`; heavy/unused fields are excluded.
+- Server now emits a lean `game:snapshot` snapshot (players/board/config/targets/KOTH only) from `serializeGameStateForClient()`; heavy/unused fields are excluded.
 
 3) Delta compression rollout (server-led, client‑safe)
 - Scope: Use the existing `DeltaBuilder`/fog‑filtered emitters to drive convergence with minimal bytes.
@@ -180,7 +180,7 @@ Implementation notes (2025‑10‑08)
 
 Baseline capture (do this once before the above)
 - Run a 10‑minute synthetic session locally (4 players, one AI). Capture:
-  - p50/p95 `game-update` payload bytes
+  - p50/p95 `game:snapshot` payload bytes
   - p50/p95 server handler time for deploy/attack/fortify/endTurn (console logs fine)
   - DB calls per action (enable query debug or rough count via logger)
   - Socket latency p95 (already exposed via `getSocketLatencyMetrics()`)

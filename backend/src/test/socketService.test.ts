@@ -477,7 +477,7 @@ describe('socketService event handlers', () => {
     expect(socket.join).toHaveBeenCalledWith('game:room-123')
     expect(socket.joinedGameRooms.has('room-123')).toBe(true)
     expect(socket.emit).toHaveBeenCalledWith(
-      'game-update',
+      'game:snapshot',
       expect.objectContaining({ roomId: 'room-123', phase: 'reinforcement' }),
     )
 

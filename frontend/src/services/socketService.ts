@@ -15,6 +15,7 @@ import type {
 } from '@conquestk/shared'
 import { toast } from 'react-hot-toast'
 import { io, type Socket } from 'socket.io-client'
+import { v4 as uuidv4 } from 'uuid'
 import { getConquestRank } from '@/components/RankInsignia'
 import { logger } from '@/utils/logger'
 import { store } from '../store'
@@ -92,6 +93,7 @@ class SocketService {
   private pendingDeltaRequests: Set<string> = new Set() // Track in-flight delta requests
   private pendingActions: Map<string, Promise<{ ok: boolean; queued?: boolean; error?: string }>> =
     new Map() // Track in-flight actions by idempotency key
+  private inFlightActionKeys: Map<string, string> = new Map() // action fingerprint -> idempotency key
   private lastActionEmitAt: Map<string, number> = new Map() // For throttling actions
   private joiningRooms: Map<string, number> = new Map() // roomId -> attempt count
   private processDeltaHandler?: (payload: GameDelta) => Promise<void>
@@ -99,6 +101,43 @@ class SocketService {
   // Placeholder for future convergence timers (no-op currently)
   private clearConfirmTimer(_roomId: string) {
     // intentionally empty; used as a hook for future state-convergence timers
+  }
+
+  private static stableReplacer(_key: string, value: unknown): unknown {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+        a.localeCompare(b),
+      )
+      return entries.reduce<Record<string, unknown>>((acc, [k, v]) => {
+        acc[k] = v
+        return acc
+      }, {})
+    }
+    return value
+  }
+
+  private static stableStringify(value: unknown): string {
+    return JSON.stringify(value, SocketService.stableReplacer)
+  }
+
+  private getActionFingerprint(
+    roomId: string,
+    action: { type: string; playerId?: string; payload?: unknown },
+  ): string | null {
+    const base = `${roomId}:${action.type}:${action.playerId ?? ''}`
+    if (action.payload === undefined) {
+      return base
+    }
+    try {
+      return `${base}:${SocketService.stableStringify(action.payload)}`
+    } catch (error) {
+      logger.warn('Failed to build action fingerprint (falling back to unique key)', {
+        roomId,
+        actionType: action.type,
+        error,
+      })
+      return null
+    }
   }
 
   /**
@@ -408,7 +447,13 @@ class SocketService {
       maxRetries?: number
     },
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
-    const idempotencyKey = options?.idempotencyKey ?? `${roomId}:${action.type}:${Date.now()}`
+    const fingerprint = this.getActionFingerprint(roomId, action)
+    const fromOptions = options?.idempotencyKey
+    const fromFingerprint =
+      fromOptions === undefined && fingerprint
+        ? this.inFlightActionKeys.get(fingerprint)
+        : undefined
+    const idempotencyKey = fromOptions ?? fromFingerprint ?? `${roomId}:${action.type}:${uuidv4()}`
     const timeoutMs = options?.timeoutMs ?? ACTION_TIMEOUT_MS
     const autoRetry = options?.autoRetryOnTimeout ?? true
     const maxRetries = Math.max(1, options?.maxRetries ?? ACTION_RETRY_ATTEMPTS)
@@ -425,8 +470,15 @@ class SocketService {
     // Check if already in-flight
     const pending = this.pendingActions.get(idempotencyKey)
     if (pending) {
-      logger.info('Action already in-flight, reusing pending request', { idempotencyKey })
+      logger.info('Action already in-flight, reusing pending request', {
+        idempotencyKey,
+        fingerprint,
+      })
       return pending
+    }
+
+    if (fingerprint) {
+      this.inFlightActionKeys.set(fingerprint, idempotencyKey)
     }
 
     reliabilityMetrics.recordActionAttempt()
@@ -446,6 +498,9 @@ class SocketService {
 
     actionPromise.finally(() => {
       this.pendingActions.delete(idempotencyKey)
+      if (fingerprint && this.inFlightActionKeys.get(fingerprint) === idempotencyKey) {
+        this.inFlightActionKeys.delete(fingerprint)
+      }
     })
 
     const result = await actionPromise
@@ -513,11 +568,7 @@ class SocketService {
       try {
         this.socket.emit(
           'game-action',
-          {
-            roomId,
-            action,
-            idempotencyKey,
-          } as Parameters<ClientToServerEvents['game-action']>[0],
+          { roomId, action, idempotencyKey } as Parameters<ClientToServerEvents['game-action']>[0],
           (ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
             clearTimeout(timeoutHandle)
             resolve(ack ?? { ok: true })
@@ -1602,8 +1653,8 @@ class SocketService {
       }
     })
 
-    // Legacy game-update handler - used primarily for join/resync
-    this.socket.on('game-update', (gameState) => {
+    // Snapshot handler - used primarily for join/resync fallbacks
+    this.socket.on('game:snapshot', (gameState) => {
       const typedGameState = gameState as GameState
       const { game, auth } = store.getState()
       const previousState = game.currentGame
@@ -2115,7 +2166,7 @@ class SocketService {
     this.socket.off('game-delta')
     this.socket.off('game-delta-batch')
     this.socket.off('turn:start')
-    this.socket.off('game-update')
+    this.socket.off('game:snapshot')
     this.socket.off('lifecycle:update')
     this.socket.off('room-update')
     // Legacy events fully retired

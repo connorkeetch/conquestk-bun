@@ -747,12 +747,12 @@ export class GameLifecycleService {
       try {
         const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8')
         const { socketPayloadMetrics } = await import('./metricsService.js')
-        socketPayloadMetrics.record('game-update', bytes)
-        if (socketPayloadMetrics.shouldLog('game-update')) {
-          const stats = socketPayloadMetrics.snapshot('game-update')
+        socketPayloadMetrics.record('game:snapshot', bytes)
+        if (socketPayloadMetrics.shouldLog('game:snapshot')) {
+          const stats = socketPayloadMetrics.snapshot('game:snapshot')
           if (stats) {
             logger.info('Socket payload stats', {
-              event: 'game-update',
+              event: 'game:snapshot',
               windowCount: stats.count,
               p50Bytes: stats.p50,
               p95Bytes: stats.p95,
@@ -764,7 +764,7 @@ export class GameLifecycleService {
         // metrics only; ignore errors
       }
       // Emit snapshots consistently to the game:<id> channel
-      io.to(`game:${roomId}`).emit('game-update', serialized)
+      io.to(`game:${roomId}`).emit('game:snapshot', serialized)
     }
 
     if (turnTimer && turnTimer > 0) {

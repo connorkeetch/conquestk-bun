@@ -2551,7 +2551,7 @@ router.get('/realtime-metrics', async (_req: Request, res: Response) => {
   try {
     const { realtimeMetrics, socketPayloadMetrics } = await import('../services/metricsService.js')
     const payloads = {
-      gameUpdate: socketPayloadMetrics.snapshot('game-update'),
+      gameUpdate: socketPayloadMetrics.snapshot('game:snapshot'),
       gameDelta: socketPayloadMetrics.snapshot('game-delta'),
       gameDeltaBatch: socketPayloadMetrics.snapshot('game-delta-batch'),
     }

@@ -117,18 +117,18 @@ function computePayloadBytes(data: unknown): number {
 }
 
 // Emit helpers that record payload sizes and periodically log p50/p95
-function emitGameUpdateToRoom(
+function emitGameSnapshotToRoom(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   channel: string,
   payload: SerializedGameState,
 ) {
   const bytes = computePayloadBytes(payload)
-  socketPayloadMetrics.record('game-update', bytes)
-  if (socketPayloadMetrics.shouldLog('game-update')) {
-    const stats = socketPayloadMetrics.snapshot('game-update')
+  socketPayloadMetrics.record('game:snapshot', bytes)
+  if (socketPayloadMetrics.shouldLog('game:snapshot')) {
+    const stats = socketPayloadMetrics.snapshot('game:snapshot')
     if (stats) {
       logger.info('Socket payload stats', {
-        event: 'game-update',
+        event: 'game:snapshot',
         windowCount: stats.count,
         p50Bytes: stats.p50,
         p95Bytes: stats.p95,
@@ -136,7 +136,7 @@ function emitGameUpdateToRoom(
       })
     }
   }
-  io.to(channel).emit('game-update', payload)
+  io.to(channel).emit('game:snapshot', payload)
 }
 
 function _emitGameDeltaBatchToRoom(
@@ -170,17 +170,17 @@ function _emitGameDeltaBatchToRoom(
   io.to(channel).emit('game-delta-batch', deltas)
 }
 
-function emitGameUpdateToSocket(
+function emitGameSnapshotToSocket(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   payload: SerializedGameState,
 ) {
   const bytes = computePayloadBytes(payload)
-  socketPayloadMetrics.record('game-update', bytes)
-  if (socketPayloadMetrics.shouldLog('game-update')) {
-    const stats = socketPayloadMetrics.snapshot('game-update')
+  socketPayloadMetrics.record('game:snapshot', bytes)
+  if (socketPayloadMetrics.shouldLog('game:snapshot')) {
+    const stats = socketPayloadMetrics.snapshot('game:snapshot')
     if (stats) {
       logger.info('Socket payload stats', {
-        event: 'game-update',
+        event: 'game:snapshot',
         windowCount: stats.count,
         p50Bytes: stats.p50,
         p95Bytes: stats.p95,
@@ -188,7 +188,7 @@ function emitGameUpdateToSocket(
       })
     }
   }
-  socket.emit('game-update', payload)
+  socket.emit('game:snapshot', payload)
 }
 
 function filterGameStateForPlayer(
@@ -279,7 +279,6 @@ function serializeGameStateForClient(
     armies: t.armies,
     adjacentTerritories: t.adjacentTerritories,
     sector: t.sector,
-    continent: t.continent,
     isCapital: t.isCapital,
     capitalOwnerId: t.capitalOwnerId,
     ...(t.coordinates ? { coordinates: t.coordinates } : {}),
@@ -296,7 +295,6 @@ function serializeGameStateForClient(
         mapId: cfg.mapId,
         gameMode: cfg.gameMode,
         sectorBonuses: cfg.sectorBonuses,
-        continentBonuses: cfg.continentBonuses,
         useTerritoryModifiers: cfg.useTerritoryModifiers,
         modifierDistribution: cfg.modifierDistribution,
         fogOfWar: cfg.fogOfWar,
@@ -312,7 +310,6 @@ function serializeGameStateForClient(
         mapId: 'unknown',
         gameMode: 'classic',
         sectorBonuses: [],
-        continentBonuses: [],
         useTerritoryModifiers: false,
         modifierDistribution: 'none',
         fogOfWar: 'off',
@@ -638,7 +635,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             )
             const finalState = serializeGameStateForClient(filtered)
             if (finalState) {
-              emitGameUpdateToSocket(socket, finalState)
+              emitGameSnapshotToSocket(socket, finalState)
             }
           }
 
@@ -917,7 +914,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                   const updatedState = await gameService.processGameAction(normalizedAction, userId)
                   const serialized = serializeGameStateForClient(updatedState)
                   if (serialized) {
-                    emitGameUpdateToRoom(io, channel, serialized)
+                    emitGameSnapshotToRoom(io, channel, serialized)
                   }
                   break
                 }
@@ -972,7 +969,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const cached = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
         const serialized = serializeGameStateForClient(cached)
         if (serialized) {
-          emitGameUpdateToRoom(io, channel, serialized)
+          emitGameSnapshotToRoom(io, channel, serialized)
         }
         // System + DB log for resignation
         try {
@@ -1059,7 +1056,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const filtered = filterGameStateForPlayer(freshState, userId)
             const finalState = serializeGameStateForClient(filtered)
             if (finalState) {
-              emitGameUpdateToRoom(io, getGameChannel(roomId), finalState)
+              emitGameSnapshotToRoom(io, getGameChannel(roomId), finalState)
             }
           }
         },

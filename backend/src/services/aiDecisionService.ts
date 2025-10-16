@@ -239,7 +239,7 @@ class AIDecisionService {
     // Group by sector and compute control
     const sectorMap = new Map<string, { owned: number; total: number }>()
     for (const t of gameState.board) {
-      const key = t.sector || t.continent || 'unknown'
+      const key = t.sector || 'unknown'
       const e = sectorMap.get(key) ?? { owned: 0, total: 0 }
       e.total += 1
       if (t.ownerId === playerId) e.owned += 1
@@ -253,10 +253,7 @@ class AIDecisionService {
     // Find weakest border inside preferred sector
     for (const [sector] of candidateSectors) {
       const borders = owned
-        .filter(
-          (t) =>
-            (t.sector || t.continent) === sector && this.hasEnemyNeighbor(gameState, t, playerId),
-        )
+        .filter((t) => t.sector === sector && this.hasEnemyNeighbor(gameState, t, playerId))
         .sort((a, b) => a.armies - b.armies)
       if (borders.length > 0) return borders[0].id
     }
@@ -277,7 +274,7 @@ class AIDecisionService {
     if (owned.length === 0) return null
     const sectorScore = new Map<string, number>()
     for (const t of gameState.board) {
-      const key = t.sector || t.continent || 'unknown'
+      const key = t.sector || 'unknown'
       const e = sectorScore.get(key) ?? 0
       sectorScore.set(key, e + (t.ownerId === playerId ? 1 : 0))
     }
@@ -302,7 +299,7 @@ class AIDecisionService {
         if (tgt.ownerId && this.arePlayersTeammates(gameState, playerId, tgt.ownerId)) continue
         const attackDice = Math.min(3, Math.max(1, src.armies - 1))
         const advantage = src.armies - 1 - (tgt.armies ?? 0)
-        const sectorBonus = (tgt.sector || tgt.continent) === bestSector ? 2 : 0
+        const sectorBonus = tgt.sector === bestSector ? 2 : 0
         const isCapital = tgt.isCapital === true ? 2 : 0
         const score = advantage * 2 + sectorBonus + isCapital
         if (advantage >= 1) {
@@ -538,7 +535,7 @@ class AIDecisionService {
     // Precompute sector control
     const sectorCtrl = new Map<string, { owned: number; total: number }>()
     for (const t of gameState.board) {
-      const key = t.sector || t.continent || 'unknown'
+      const key = t.sector || 'unknown'
       const e = sectorCtrl.get(key) ?? { owned: 0, total: 0 }
       e.total += 1
       if (t.ownerId === playerId) e.owned += 1
@@ -555,7 +552,7 @@ class AIDecisionService {
         // Prefer capitals and weak borders; avoid moving to interior
         const isBorder = this.hasEnemyNeighbor(gameState, tgt, playerId)
         if (!isBorder && !tgt.isCapital) continue
-        const sector = tgt.sector || tgt.continent || 'unknown'
+        const sector = tgt.sector || 'unknown'
         const ctrl = sectorCtrl.get(sector) ?? { owned: 0, total: 1 }
         const willOwn = ctrl.owned // fortify does not change ownership
         const progress = willOwn / Math.max(1, ctrl.total)
@@ -584,12 +581,12 @@ class AIDecisionService {
     playerId: string,
     to: GameState['board'][number],
   ): number {
-    const sector = to.sector || to.continent
+    const sector = to.sector || null
     if (!sector) return 0
     let total = 0
     let owned = 0
     for (const t of state.board) {
-      if ((t.sector || t.continent) !== sector) continue
+      if (t.sector !== sector) continue
       total += 1
       if (t.ownerId === playerId) owned += 1
     }

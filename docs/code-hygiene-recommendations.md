@@ -111,7 +111,7 @@ Incomplete features marked with TODO:
 ### 7. Remove Legacy/Deprecated Code
 **Deprecated socket events:**
 - Comments say "legacy events fully retired" but handlers remain
-- `game-update` marked legacy but still used for join/resync
+- `game:snapshot` marked legacy but still used for join/resync
 
 **Deprecated field names:**
 - `continent` → `sector` (with @deprecated tags)

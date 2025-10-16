@@ -230,7 +230,7 @@ export interface ServerToClientEvents {
   'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
   'player-left': (data: PlayerLeftEvent) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
-  'game-update': (gameState: SerializedGameState) => void
+  'game:snapshot': (gameState: SerializedGameState) => void
   'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting
   'game-delta-batch': (deltas: GameDelta[]) => void
   'turn:start': (payload: {

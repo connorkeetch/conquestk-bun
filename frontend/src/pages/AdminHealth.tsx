@@ -327,7 +327,7 @@ export default function AdminHealth() {
                 <div className="font-semibold mb-1">Socket payloads (bytes)</div>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { k: 'gameUpdate', label: 'game-update' },
+                    { k: 'gameUpdate', label: 'game:snapshot' },
                     { k: 'gameDelta', label: 'game-delta' },
                     { k: 'gameDeltaBatch', label: 'delta-batch' },
                   ].map((p) => {

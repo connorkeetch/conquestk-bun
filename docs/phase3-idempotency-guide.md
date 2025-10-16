@@ -3,9 +3,34 @@
 ## Overview
 Idempotency keys prevent duplicate action processing when clients retry failed requests. This is critical for game actions where processing the same attack/deploy twice would corrupt state.
 
+> **Why this document still matters (2025-10-16):** We have queue plumbing and a Redis-backed helper (`jobIdempotencyService`) available, but the end-to-end experience is still incomplete. Client-side keys are not stable, worker coverage lacks regression tests, and we do not surface dedupe metrics yet. Use this guide as the canonical to-do list until those gaps are closed.
+
+## Status Snapshot (2025-10-16)
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Redis-backed store | ✅ Implemented via `backend/src/services/jobIdempotencyService.ts` with TTL + in-memory fallback. Needs final review of stored payload shape before exposing to more callers. |
+| Worker guard rails | ⚠️ Partial – `backend/src/workers/gameActionWorker.ts` consults the store, but we still need dedicated tests per action type and to confirm result replay semantics for duplicate jobs. |
+| Queue wiring | ✅ `backend/src/services/queueService.ts` and socket handlers accept `idempotencyKey` and reuse it for BullMQ job IDs. |
+| Client key management | ❌ `frontend/src/services/socketService.ts` still generates timestamp-based keys, so rapid double-clicks do not reuse the same identifier. |
+| Optimistic rollback helpers | ⚠️ Partial – the `pendingActions` map exists but only becomes useful once keys are stable and we add rollback hooks for missed ACKs. |
+| Metrics & observability | ❌ No dashboards or counters that show idempotency hit rates or duplicate suppression. |
+| Test coverage | ❌ Lacks Jest/Vitest cases proving duplicates are skipped and that cached responses are replayed. |
+
+## Implementation Checklist
+
+- [ ] Finalize backend result caching semantics: confirm `ProcessGameActionResult` payload covers all delta/broadcast scenarios and document expected shape.
+- [ ] Add targeted Jest tests for `gameActionWorker` that simulate duplicate jobs with reused `idempotencyKey`.
+- [ ] Replace timestamp-based key generation on the client with UUIDs (or shared per-action keys) and persist them through retries/optimistic flows.
+- [ ] Expose a tiny helper for optimistic updates that can register rollback handlers keyed by idempotency ID.
+- [ ] Instrument dedupe metrics (Redis hits/misses, duplicate short-circuits) and surface them via `/metrics/client` or the existing queue dashboards.
+- [ ] Build integration smoke tests (backend + socket) proving double clicks and retry flows are safe.
+
 ## Backend Implementation
 
 ### 1. Create Idempotency Service
+
+> **Status:** Pending – the snippets below describe the planned dedicated service. Today we lean on `jobIdempotencyService`; either extend it directly or wrap it with this interface so other services can request cached results without knowing queue details.
 
 **File:** `backend/src/services/idempotencyService.ts`
 
@@ -111,6 +136,8 @@ export const idempotencyService = new IdempotencyService()
 
 ### 2. Update Game Action Worker
 
+> **Status:** Partial – `GameActionWorker.processGameAction` already calls `jobIdempotencyService.getProcessedJob`. Align the implementation with this section once the dedicated service exists and add unit tests that assert duplicate jobs return the cached payload.
+
 **File:** `backend/src/workers/gameActionWorker.ts`
 
 Add idempotency check at the start of the action processor:
@@ -143,6 +170,8 @@ async process(job: Job<GameActionJob>): Promise<void> {
 
 ### 3. Update Socket Service to Accept Idempotency Keys
 
+> **Status:** Done (verify) – the `game-action` handler currently forwards `idempotencyKey`. Keep this section for clarity and double-check we also enrich any admin tooling that inspects queued jobs.
+
 **File:** `backend/src/services/socketService.ts`
 
 The `game-action` handler should already forward idempotency keys from the queue job. Just ensure the type includes it:
@@ -169,6 +198,8 @@ socket.on('game-action', async (payload: {
 ## Frontend Implementation
 
 ### 4. Generate Idempotency Keys
+
+> **Status:** Pending – `sendActionWithAck` still uses `Date.now()` which effectively produces a new key per click. Replace that logic with the UUID-based flow below, and make sure retries reuse the same key.
 
 **File:** `frontend/src/services/socketService.ts`
 
@@ -218,6 +249,8 @@ private async sendActionWithAck(
 ```
 
 ### 5. Track Pending Actions by Idempotency Key
+
+> **Status:** Partial – the `pendingActions` map exists, but without stable keys it never collapses duplicates. Wire it up once the UUID-based keys land and extend the rollback handlers so we can revert optimistic state on terminal failures.
 
 Add tracking to prevent multiple in-flight requests with the same key:
 

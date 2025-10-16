@@ -44,9 +44,9 @@ _Last updated: March 9, 2026_
   - Battle resolution in `backend/src/workers/battleWorker.ts`
   - Fog filtering and socket fan-out in `backend/src/services/fogService.ts`, which emits per-visible viewer
 - Fortify operations stream paired `TERRITORY_UPDATE` deltas and a summarized `FORTIFY_RESULT` payload (`gameActionWorker.processFortify`) so UI logs and history stay consistent.
-- Full-state syncs still emit `game-update` events from `socketService.ts` for reconnects, AFK kicks, and legacy flows.
+- Full-state syncs still emit `game:snapshot` events from `socketService.ts` for reconnects, AFK kicks, and legacy flows.
 - Frontend consumption:
-  - Socket listeners in `frontend/src/services/socketService.ts` forward `game-delta` and `game-update` payloads to Redux slices
+  - Socket listeners in `frontend/src/services/socketService.ts` forward `game-delta` and `game:snapshot` payloads to Redux slices
   - `gameSlice.applyDelta` in `frontend/src/store/gameSlice.ts` applies `TERRITORY_UPDATE`, `PLAYER_UPDATE`, `PHASE_CHANGE`, `BATTLE_RESULT`, `FORTIFY_RESULT`, and `GAME_END`
 - Testing & guardrails:
   - A compatibility test (`backend/src/test/deltaTypesCompatibility.test.ts`) ensures `DeltaBuilder` outputs satisfy the shared `GameDelta` contract.

@@ -18,7 +18,7 @@
   - Haptics: subtle vibration on filter change via swipe or overlay button taps (when supported).
   - Attack/Fortify arrows: When a source and target are selected (or hovered), a white dashed arrow is drawn from source → target with a subtle colored glow (red for attack, blue for fortify) and a crisp white arrowhead to make direction unambiguous.
 - Connection/resync UX
-  - Added `frontend/src/components/game/ConnectionBanner.tsx` and socket connection status in `uiRoomSlice`. Header shows a (green/yellow/red) dot; a top banner appears while disconnected/connecting. “Resync” button not required yet since a fresh `game-update` arrives on reconnect; add if desync incidents appear.
+  - Added `frontend/src/components/game/ConnectionBanner.tsx` and socket connection status in `uiRoomSlice`. Header shows a (green/yellow/red) dot; a top banner appears while disconnected/connecting. “Resync” button not required yet since a fresh `game:snapshot` arrives on reconnect; add if desync incidents appear.
 - Clickable log → map focus
   - `GameLogPanel` now emits `onFocus([from,to])` for battle/fortify entries; `TabbedGameChat` plumbs this to `GameRoom`, which highlights the last territory.
   - Implemented pan/zoom focus: selecting from log now recenters the map to the selected territory via a `focus` prop on `ResponsiveMapContainer`.

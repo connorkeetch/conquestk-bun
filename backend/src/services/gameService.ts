@@ -803,9 +803,7 @@ export class GameService {
     const loaded = await loadMapForEngine(config.mapId)
     // Ensure sector bonuses are present in config (for UI and calculations)
     if (!config.sectorBonuses || config.sectorBonuses.length === 0) {
-      // Backward compatibility: populate both
       config.sectorBonuses = loaded.continentBonuses
-      config.continentBonuses = loaded.continentBonuses
     }
 
     const gameState = this.gameEngine.initializeGame(roomId, players, config, {
@@ -1802,10 +1800,7 @@ export class GameService {
       const sectorEntries: SectorBonusLogEntry[] = (() => {
         try {
           const cfg = state.gameConfig
-          const bonuses =
-            cfg.continentBonuses !== undefined
-              ? cfg.continentBonuses || []
-              : cfg.sectorBonuses || []
+          const bonuses = cfg.sectorBonuses || []
           if (Array.isArray(bonuses) && bonuses.length > 0) {
             const owned = new Set(state.board.filter((t) => t.ownerId === userId).map((t) => t.id))
             const list: SectorBonusLogEntry[] = []

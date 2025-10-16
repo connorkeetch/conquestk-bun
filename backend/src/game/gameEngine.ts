@@ -125,7 +125,7 @@ export class GameEngine {
       id: t.id,
       name: t.name,
       // Prefer sector; fall back to legacy continent name if present
-      sector: (t.sector || t.continent || 'unknown') as string,
+      sector: (t.sector || 'unknown') as string,
       ownerId: null,
       armies: 0,
       adjacentTerritories: [...t.adjacentTerritories],
@@ -160,9 +160,7 @@ export class GameEngine {
       sectorBonuses:
         gameConfig.sectorBonuses && gameConfig.sectorBonuses.length > 0
           ? gameConfig.sectorBonuses
-          : gameConfig.continentBonuses && gameConfig.continentBonuses.length > 0
-            ? gameConfig.continentBonuses
-            : mapOverrides.continentBonuses,
+          : mapOverrides.continentBonuses,
     }
 
     if (kingConfig) {
@@ -1038,13 +1036,8 @@ export class GameEngine {
   ): number {
     let bonusArmies = 0
 
-    // Use configured bonuses if explicitly provided. If continentBonuses is provided (even empty),
-    // prefer it; otherwise fall back to sectorBonuses.
-    const configuredBonuses = gameConfig
-      ? gameConfig.continentBonuses !== undefined
-        ? gameConfig.continentBonuses
-        : gameConfig.sectorBonuses
-      : undefined
+    // Use configured sector bonuses if explicitly provided; otherwise fall back to classic defaults.
+    const configuredBonuses = gameConfig?.sectorBonuses
     if (Array.isArray(configuredBonuses) && configuredBonuses.length > 0) {
       // Dynamic sector bonuses from database (custom maps)
       for (const sector of configuredBonuses) {
@@ -1071,7 +1064,7 @@ export class GameEngine {
 
       // Group territories by sector
       for (const territory of allTerritories) {
-        const sec = (territory.sector || territory.continent || 'unknown') as string
+        const sec = territory.sector || 'unknown'
         if (!sectors[sec]) {
           sectors[sec] = []
         }
