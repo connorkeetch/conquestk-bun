@@ -764,6 +764,8 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
   /* Force normal blending and full opacity to avoid color washout */
   mix-blend-mode: normal;
   opacity: 1;
+  /* Prevent OS/browser forced-colors from remapping our SVG colors */
+  forced-color-adjust: none;
   ${motionCss}
 }
 
