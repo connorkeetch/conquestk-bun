@@ -233,6 +233,14 @@ export interface ServerToClientEvents {
   'game-update': (gameState: SerializedGameState) => void
   'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting
   'game-delta-batch': (deltas: GameDelta[]) => void
+  'turn:start': (payload: {
+    roomId: string
+    playerId: string
+    username?: string | null
+    phase: GamePhase
+    turn: number
+    reinforcementArmies?: number | null
+  }) => void
   'log:append': (payload: { roomId: string; entries: Array<Record<string, unknown>> }) => void
   // Fog-aware, single-tone textual game log
   'game-log:append': (payload: {

@@ -53,8 +53,32 @@ import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
+import { reliabilityMetrics } from './reliabilityMetricsService'
 
 type RoomLifecyclePayload = LifecycleUpdatePayload
+type ReinforcementBaselineState = {
+  reinforcementBaseline?: Record<string, number>
+}
+
+const HEARTBEAT_INTERVAL_MS = 5000
+const HEARTBEAT_TIMEOUT_MS = 3000
+const ZOMBIE_CONNECTION_THRESHOLD_MS = 10_000
+const LATENCY_WARNING_MS = 500
+const ACTION_TIMEOUT_MS = 5000
+const ACTION_RETRY_ATTEMPTS = 2
+const RETRY_BACKOFF_BASE_MS = 500
+const RETRY_BACKOFF_MAX_MS = 5000
+const JOIN_BACKOFF_BASE_MS = 300
+const JOIN_BACKOFF_MAX_MS = 1500
+const AUTH_TOAST_THROTTLE_MS = 30_000
+const DELTA_REQUEST_TOAST_DURATION_MS = 2000
+const CONNECTION_RESTORE_TOAST_DURATION_MS = 2000
+const GAME_STATE_SYNC_TOAST_DURATION_MS = 2000
+const TURN_TOAST_DURATION_MS = 2500
+const TURN_SUPPRESS_WINDOW_MS = 2000
+const RESYNC_DELAY_MS = 100
+const PING_TTL_MS = 3000
+const ATTACK_THROTTLE_MS = 120
 
 class SocketService {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
@@ -71,6 +95,7 @@ class SocketService {
   private lastActionEmitAt: Map<string, number> = new Map() // For throttling actions
   private joiningRooms: Map<string, number> = new Map() // roomId -> attempt count
   private processDeltaHandler?: (payload: GameDelta) => Promise<void>
+  private lastTurnStartByRoom: Map<string, number> = new Map()
   // Placeholder for future convergence timers (no-op currently)
   private clearConfirmTimer(_roomId: string) {
     // intentionally empty; used as a hook for future state-convergence timers
@@ -180,11 +205,11 @@ class SocketService {
 
       const start = Date.now()
       const timeout = setTimeout(() => {
-        // No pong received in 3 seconds - connection is zombie
+        // No pong received within timeout - connection is zombie
         logger.warn('Heartbeat timeout - connection appears dead, forcing reconnect')
         this.socket?.disconnect()
         this.connect()
-      }, 3000)
+      }, HEARTBEAT_TIMEOUT_MS)
 
       // Socket.io has built-in ping/pong, but we add our own for latency tracking
       this.socket.volatile.emit('ping', () => {
@@ -192,13 +217,14 @@ class SocketService {
         const latency = Date.now() - start
         this.connectionLatency = latency
         this.lastPongTime = Date.now()
+        reliabilityMetrics.recordLatencySample(latency)
 
         // Update connection quality indicator
-        if (latency > 500) {
+        if (latency > LATENCY_WARNING_MS) {
           logger.warn(`High connection latency: ${latency}ms`)
         }
       })
-    }, 5000) // Ping every 5 seconds
+    }, HEARTBEAT_INTERVAL_MS)
   }
 
   /**
@@ -216,7 +242,8 @@ class SocketService {
    */
   getConnectionHealth(): { latency: number; lastPong: number; isHealthy: boolean } {
     const timeSinceLastPong = Date.now() - this.lastPongTime
-    const isHealthy = Boolean(this.socket?.connected) && timeSinceLastPong < 10000
+    const isHealthy =
+      Boolean(this.socket?.connected) && timeSinceLastPong < ZOMBIE_CONNECTION_THRESHOLD_MS
 
     return {
       latency: this.connectionLatency,
@@ -259,6 +286,7 @@ class SocketService {
         expected: lastSeq + 1,
         received: currentSeq,
       })
+      reliabilityMetrics.recordDeltaDuplicate()
       return false // Skip duplicate
     }
 
@@ -269,6 +297,7 @@ class SocketService {
       currentSeq,
       missing: currentSeq - lastSeq - 1,
     })
+    reliabilityMetrics.recordDeltaGap()
 
     // Request missing deltas (if not already requesting)
     const requestKey = `${roomId}:${lastSeq}-${currentSeq}`
@@ -301,7 +330,10 @@ class SocketService {
     }
 
     logger.info('Requesting missing deltas', { roomId, fromSeq, toSeq })
-    toast('Syncing missed updates...', { icon: '🔄', duration: 2000 })
+    toast('Syncing missed updates...', {
+      icon: '🔄',
+      duration: DELTA_REQUEST_TOAST_DURATION_MS,
+    })
 
     return new Promise((resolve) => {
       this.socket?.emit(
@@ -329,6 +361,7 @@ class SocketService {
                     await handler(delta)
                   }
                 })().finally(resolve)
+                reliabilityMetrics.recordDeltaGapRecovery()
                 return
               }
               logger.warn('processDeltaHandler not initialized; falling back to full refetch')
@@ -376,9 +409,9 @@ class SocketService {
     },
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
     const idempotencyKey = options?.idempotencyKey ?? `${roomId}:${action.type}:${Date.now()}`
-    const timeoutMs = options?.timeoutMs ?? 5000
+    const timeoutMs = options?.timeoutMs ?? ACTION_TIMEOUT_MS
     const autoRetry = options?.autoRetryOnTimeout ?? true
-    const maxRetries = Math.max(1, options?.maxRetries ?? 2)
+    const maxRetries = Math.max(1, options?.maxRetries ?? ACTION_RETRY_ATTEMPTS)
 
     // THROTTLING: Check if we should throttle this action
     if (options?.throttleKey && options?.throttleMs) {
@@ -395,6 +428,8 @@ class SocketService {
       logger.info('Action already in-flight, reusing pending request', { idempotencyKey })
       return pending
     }
+
+    reliabilityMetrics.recordActionAttempt()
 
     // OPTIMISTIC UPDATE: Apply immediately if provided
     if (options?.optimisticUpdate) {
@@ -414,6 +449,7 @@ class SocketService {
     })
 
     const result = await actionPromise
+    let finalAck = result
 
     if (!result.ok) {
       const isTimeoutError =
@@ -422,7 +458,7 @@ class SocketService {
       if (autoRetry && isTimeoutError) {
         let ack = result
         for (let attempt = 1; attempt <= maxRetries && !ack.ok; attempt += 1) {
-          const backoff = 500 * 2 ** (attempt - 1)
+          const backoff = Math.min(RETRY_BACKOFF_BASE_MS * 2 ** (attempt - 1), RETRY_BACKOFF_MAX_MS)
           logger.warn('Retrying game action after timeout', {
             roomId,
             actionType: action.type,
@@ -431,21 +467,13 @@ class SocketService {
             backoffMs: backoff,
           })
           await new Promise((resolve) => setTimeout(resolve, backoff))
+          reliabilityMetrics.recordActionRetry()
           ack = await this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
         }
-
-        if (!ack.ok && options?.rollback) {
-          try {
-            options.rollback()
-          } catch (error) {
-            logger.error('Rollback failed', { error })
-          }
-        }
-
-        return ack
+        finalAck = ack
       }
 
-      if (options?.rollback) {
+      if (!finalAck.ok && options?.rollback) {
         try {
           options.rollback()
         } catch (error) {
@@ -454,7 +482,13 @@ class SocketService {
       }
     }
 
-    return result
+    if (finalAck.ok) {
+      reliabilityMetrics.recordActionSuccess()
+    } else {
+      reliabilityMetrics.recordActionFailure()
+    }
+
+    return finalAck
   }
 
   /**
@@ -499,6 +533,8 @@ class SocketService {
   connect() {
     // Reset any pending fetch tracking on a fresh connection attempt
     this.pendingRoomStateFetches.clear()
+    this.lastTurnStartByRoom.clear()
+    reliabilityMetrics.start()
     // Early return if already connected to the same socket
     if (this.socket?.connected) {
       return
@@ -530,10 +566,10 @@ class SocketService {
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 500,
-      reconnectionDelayMax: 5000,
+      reconnectionDelay: RETRY_BACKOFF_BASE_MS,
+      reconnectionDelayMax: RETRY_BACKOFF_MAX_MS,
       // Add timeout for connection attempts
-      timeout: 10000,
+      timeout: ACTION_TIMEOUT_MS * 2,
     }) as unknown as Socket<ServerToClientEvents, ClientToServerEvents>
 
     this.setupEventListeners()
@@ -560,7 +596,7 @@ class SocketService {
     const tryJoin = (attempt: number) => {
       if (!this.socket) return
       this.joiningRooms.set(roomId, attempt)
-      const backoff = Math.min(300 * 2 ** (attempt - 1), 1500)
+      const backoff = Math.min(JOIN_BACKOFF_BASE_MS * 2 ** (attempt - 1), JOIN_BACKOFF_MAX_MS)
       this.socket.emit(
         'join-room',
         roomId,
@@ -608,7 +644,7 @@ class SocketService {
     const trySpectate = (attempt: number) => {
       if (!this.socket) return
       this.joiningRooms.set(key, attempt)
-      const backoff = Math.min(300 * 2 ** (attempt - 1), 1500)
+      const backoff = Math.min(JOIN_BACKOFF_BASE_MS * 2 ** (attempt - 1), JOIN_BACKOFF_MAX_MS)
       this.socket.emit(
         'spectate-room',
         roomId,
@@ -630,7 +666,7 @@ class SocketService {
             try {
               toast('Spectate connection unstable — fetching latest state', {
                 icon: '🔄',
-                duration: 2000,
+                duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
               })
               store.dispatch(fetchGameState({ roomId, allowSpectate: true }))
             } catch (error) {
@@ -765,14 +801,6 @@ class SocketService {
     )
   }
 
-  // Generic emit for legacy/untyped events
-  // biome-ignore lint/suspicious/noExplicitAny: passthrough for custom events
-  emit(event: string, data: any) {
-    // Forward as-is for events not represented in our typed interface
-    // biome-ignore lint/suspicious/noExplicitAny: event passthrough to socket
-    this.socket?.emit(event as any, data as any)
-  }
-
   private async deployArmies(roomId: string, territoryId: string, armies: number) {
     // Store original state for rollback
     const state = store.getState()
@@ -851,7 +879,7 @@ class SocketService {
       },
       {
         throttleKey: key,
-        throttleMs: 120,
+        throttleMs: ATTACK_THROTTLE_MS,
         optimisticUpdate: () => {
           // Play dice sound immediately for instant feedback
           try {
@@ -1014,14 +1042,24 @@ class SocketService {
     this.updateConversationMembers({ conversationId, archive: true }, callback)
   }
 
-  // Generic on/off wrappers for convenience in feature areas (typed via casts)
-  on<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
-    // biome-ignore lint/suspicious/noExplicitAny: event bridge surface for pages/modules
-    this.socket?.on(event as any, handler as any)
+  // Generic emit/on/off wrappers for convenience in feature areas
+  emit<T extends keyof ClientToServerEvents>(
+    event: T,
+    ...args: Parameters<ClientToServerEvents[T]>
+  ) {
+    this.socket?.emit(event, ...args)
   }
+
+  on<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
+    const socket = this.socket
+    if (!socket) return
+    socket.on(event, handler as never)
+  }
+
   off<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
-    // biome-ignore lint/suspicious/noExplicitAny: event bridge surface for pages/modules
-    this.socket?.off(event as any, handler as any)
+    const socket = this.socket
+    if (!socket) return
+    socket.off(event, handler as never)
   }
 
   getSocket() {
@@ -1035,6 +1073,7 @@ class SocketService {
       store.dispatch(setConnectionStatus('connected'))
       store.dispatch(loadUnreadSummary())
       store.dispatch(loadInbox())
+      reliabilityMetrics.recordConnectionUp()
 
       // Start health monitoring
       this.startHeartbeat()
@@ -1046,7 +1085,10 @@ class SocketService {
 
       if (recovered) {
         logger.info('✅ Connection recovered - server replayed missed events')
-        toast('Connection restored', { icon: '✅', duration: 2000 })
+        toast('Connection restored', {
+          icon: '✅',
+          duration: CONNECTION_RESTORE_TOAST_DURATION_MS,
+        })
       } else {
         logger.info('New connection established - fetching fresh state')
       }
@@ -1077,13 +1119,16 @@ class SocketService {
           if (!recovered) {
             setTimeout(() => {
               try {
-                toast('Syncing game state...', { icon: '🔄', duration: 1500 })
+                toast('Syncing game state...', {
+                  icon: '🔄',
+                  duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
+                })
                 store.dispatch(fetchGameState({ roomId, allowSpectate: !isMember }))
               } catch (error) {
                 // Best-effort recovery
                 logger.warn('Failed to refetch game state after reconnect', error)
               }
-            }, 100) // Small delay to allow room subscription to complete
+            }, RESYNC_DELAY_MS) // Small delay to allow room subscription to complete
           }
         }
       } catch (error) {
@@ -1096,6 +1141,7 @@ class SocketService {
       store.dispatch(setConnectionStatus('disconnected'))
       // Stop heartbeat monitoring
       this.stopHeartbeat()
+      reliabilityMetrics.recordConnectionDown()
     })
 
     this.socket.on('connect_error', (err) => {
@@ -1106,7 +1152,7 @@ class SocketService {
       const lower = msg.toLowerCase()
       // Throttle auth toasts to once every 30s
       const now = Date.now()
-      const canToast = !this.lastAuthToastAt || now - this.lastAuthToastAt > 30_000
+      const canToast = !this.lastAuthToastAt || now - this.lastAuthToastAt > AUTH_TOAST_THROTTLE_MS
       const toastOpts = { id: 'socket-auth', position: 'bottom-center' as const, duration: 6000 }
 
       // Only surface message for real auth/config failures
@@ -1182,6 +1228,74 @@ class SocketService {
       )
     })
 
+    this.socket.on('turn:start', (incoming) => {
+      const payload = incoming as Parameters<ServerToClientEvents['turn:start']>[0]
+      const { roomId, playerId, username, phase, reinforcementArmies, turn } = payload
+      if (!roomId || !playerId) {
+        return
+      }
+
+      const now = Date.now()
+      this.lastTurnStartByRoom.set(roomId, now)
+
+      const state = store.getState()
+      const currentUserId = state.auth.user?.id ?? null
+      const isMyTurn = currentUserId === playerId
+      const displayName = username ?? 'A player'
+
+      try {
+        store.dispatch(
+          addClientLog({
+            roomId,
+            text: `${displayName} began turn ${turn}`,
+          }),
+        )
+      } catch {
+        /* ignore client log failures */
+      }
+
+      if (isMyTurn && phase === 'reinforcement' && typeof reinforcementArmies === 'number') {
+        const armies = Math.max(0, reinforcementArmies)
+        store.dispatch(setReinforcementArmies(armies))
+        store.dispatch(setPlacementServerSpent(0))
+        store.dispatch(clearPlacementHistory())
+      }
+
+      if (isMyTurn) {
+        try {
+          notificationService.addNotification({
+            type: 'turn_reminder',
+            title: "It's your turn!",
+            message:
+              phase === 'reinforcement'
+                ? 'Reinforcement phase has begun.'
+                : `Current phase: ${phase}`,
+            read: false,
+            actionUrl: `/room/${roomId}`,
+            actionLabel: 'Go to game',
+            metadata: { gameId: roomId },
+          })
+        } catch {
+          /* ignore notification failures */
+        }
+
+        try {
+          audioService.playEffect('turn')
+        } catch {
+          /* ignore audio issues */
+        }
+
+        try {
+          toast.success(
+            phase === 'reinforcement' ? 'Your reinforcement phase has started.' : "It's your turn!",
+            { duration: TURN_TOAST_DURATION_MS },
+          )
+        } catch {
+          /* ignore toast errors */
+        }
+      }
+    })
+
     this.socket.on('player-left', (data) => {
       const payload = data as Parameters<ServerToClientEvents['player-left']>[0]
 
@@ -1210,6 +1324,17 @@ class SocketService {
         this.clearConfirmTimer(payload.roomId)
       }
 
+      const roomId = payload.roomId
+      const recentTurnEventTs =
+        typeof roomId === 'string' ? this.lastTurnStartByRoom.get(roomId) : undefined
+      const skipTurnStartFromEvent =
+        typeof roomId === 'string' &&
+        typeof recentTurnEventTs === 'number' &&
+        Date.now() - recentTurnEventTs < TURN_SUPPRESS_WINDOW_MS
+      if (skipTurnStartFromEvent && typeof roomId === 'string') {
+        this.lastTurnStartByRoom.delete(roomId)
+      }
+
       if (!currentGame || currentGame.roomId !== payload.roomId) {
         if (!this.pendingRoomStateFetches.has(payload.roomId)) {
           this.pendingRoomStateFetches.add(payload.roomId)
@@ -1232,12 +1357,15 @@ class SocketService {
         return
       }
 
+      reliabilityMetrics.recordDeltaReceived()
+
       // DESYNC DETECTION: Check if we need to resync due to version mismatch or state corruption
       if (state.game.needsResync) {
         logger.warn('Desync detected - triggering full state refetch', {
           roomId: payload.roomId,
           deltaType: payload.type,
         })
+        reliabilityMetrics.recordDesyncDetection()
 
         if (!this.pendingRoomStateFetches.has(payload.roomId)) {
           this.pendingRoomStateFetches.add(payload.roomId)
@@ -1247,7 +1375,10 @@ class SocketService {
           )
 
           // Show user-facing indicator that we're resyncing
-          toast('Syncing game state...', { icon: '🔄', duration: 2000 })
+          toast('Syncing game state...', {
+            icon: '🔄',
+            duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
+          })
 
           void (
             store.dispatch(
@@ -1256,7 +1387,10 @@ class SocketService {
           )
             .then(() => {
               logger.info('Desync recovery successful')
-              toast.success('Game state synchronized', { duration: 2000 })
+              toast.success('Game state synchronized', {
+                duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
+              })
+              reliabilityMetrics.recordDesyncRecovery()
             })
             .catch((error) => {
               logger.error('Desync recovery failed', error)
@@ -1275,7 +1409,7 @@ class SocketService {
       // Only notify when the turn first switches to the current user.
       if (payload.type === 'PHASE_CHANGE' && payload.currentPlayer === currentUserId) {
         const wasMyTurn = currentGame?.currentPlayer === currentUserId
-        if (!wasMyTurn) {
+        if (!wasMyTurn && !skipTurnStartFromEvent) {
           notificationService.addNotification({
             type: 'turn_reminder',
             title: "It's your turn!",
@@ -1605,10 +1739,8 @@ class SocketService {
 
       // Reconcile placement counter from server baseline if available
       try {
-        // biome-ignore lint/suspicious/noExplicitAny: tolerate extended state shape
-        const baseline = (typedGameState as any).reinforcementBaseline as
-          | Record<string, number>
-          | undefined
+        const baseline = (typedGameState as GameState & ReinforcementBaselineState)
+          .reinforcementBaseline
         if (baseline && typedGameState.phase === 'reinforcement' && currentUserId) {
           // Sum deltas above baseline for owned territories
           let spent = 0
@@ -1779,7 +1911,7 @@ class SocketService {
           territoryId: payload.territoryId,
           userId: payload.userId,
           username: payload.username ?? null,
-          ttlMs: 3000,
+          ttlMs: PING_TTL_MS,
         }),
       )
     })
@@ -1982,6 +2114,7 @@ class SocketService {
     this.socket.off('player-left')
     this.socket.off('game-delta')
     this.socket.off('game-delta-batch')
+    this.socket.off('turn:start')
     this.socket.off('game-update')
     this.socket.off('lifecycle:update')
     this.socket.off('room-update')
