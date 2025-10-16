@@ -1,16 +1,16 @@
 import path from 'node:path'
 import dotenv from 'dotenv'
 import sharp from 'sharp'
-import { query } from '../config/database.js'
-import {
-  assetExists,
-  extractStorageKeyFromUrl,
-  getPublicAssetUrl,
-  uploadAsset,
-} from '../utils/assetStorage.js'
 import { logger } from '../utils/logger.js'
 
+// Load .env before importing modules that read env at module scope
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
+
+// Defer env-sensitive imports until after dotenv has run
+const { query } = await import('../config/database.js')
+const { assetExists, extractStorageKeyFromUrl, getPublicAssetUrl, uploadAsset } = await import(
+  '../utils/assetStorage.js'
+)
 
 type Options = {
   mapId?: string
