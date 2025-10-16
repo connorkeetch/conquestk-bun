@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node ../scripts/generate-icons.mjs && node scripts/generate-pwa-assets.mjs && node scripts/hash-icons.mjs && node scripts/publish-cdn-assets.mjs",
+    "prebuild": "node scripts/sync-brand-svg.mjs && node ../scripts/generate-icons.mjs && node scripts/generate-pwa-assets.mjs && node scripts/hash-icons.mjs && node scripts/publish-cdn-assets.mjs",
     "build": "vite build",
     "build:check": "tsc && vite build",
     "typecheck": "tsc --noEmit",
