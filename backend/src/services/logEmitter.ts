@@ -607,6 +607,81 @@ export async function emitFogAwareForEntries(
   }
 }
 
+/**
+ * Persist a list of already-rendered DbMove rows into game_logs.
+ * Accepts the same structure we emit over sockets. Best-effort insert only.
+ */
+export async function persistMoves(roomId: string, moves: DbMove[]): Promise<void> {
+  try {
+    if (!Array.isArray(moves) || moves.length === 0) return
+    const rows = moves.map((m) => {
+      const p = (m.payload || {}) as Record<string, unknown>
+      const fromId =
+        (p.fromId as string | undefined) || (p.attackingTerritoryId as string | undefined) || null
+      const toId =
+        (p.toId as string | undefined) ||
+        (p.defendingTerritoryId as string | undefined) ||
+        (p.territoryId as string | undefined) ||
+        null
+      return {
+        game_id: m.game_id,
+        ts: new Date(m.created_at),
+        turn_number: m.turn_number,
+        phase: m.phase,
+        move_type: m.move_type,
+        actor_id: m.actor_id || null,
+        from_territory_id: fromId,
+        to_territory_id: toId,
+        payload: m.payload ?? {},
+      }
+    })
+
+    const { query } = await import('../config/database.js')
+    const cols = [
+      'game_id',
+      'ts',
+      'turn_number',
+      'phase',
+      'move_type',
+      'actor_id',
+      'from_territory_id',
+      'to_territory_id',
+      'payload',
+    ]
+    const values: unknown[] = []
+    const placeholders: string[] = []
+    rows.forEach((r, i) => {
+      const base = i * cols.length
+      placeholders.push(
+        `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${
+          base + 7
+        }, $${base + 8}, $${base + 9})`,
+      )
+      values.push(
+        roomId,
+        r.ts,
+        r.turn_number,
+        r.phase,
+        r.move_type,
+        r.actor_id,
+        r.from_territory_id,
+        r.to_territory_id,
+        JSON.stringify(r.payload ?? {}),
+      )
+    })
+    await query(
+      `INSERT INTO game_logs (game_id, ts, turn_number, phase, move_type, actor_id, from_territory_id, to_territory_id, payload)
+       VALUES ${placeholders.join(', ')}`,
+      values,
+    )
+  } catch (error) {
+    logger.warn('persistMoves failed', {
+      roomId,
+      error: error instanceof Error ? error.message : error,
+    })
+  }
+}
+
 export function createGameEndMoves(
   roomId: string,
   state: GameState | null,

@@ -1002,6 +1002,10 @@ export class GameController {
         t: new Date(m.created_at).toISOString(),
         kind: m.move_type,
         text: renderLogText(m as unknown as import('../services/logEmitter.js').DbMove, toFog(m)),
+        actor: {
+          id: (m.actor_id as string | null) || '',
+          name: String(((m.payload as Record<string, unknown>)?.actorName as string) || ''),
+        },
       }))
       formatted.sort((a, b) => new Date(b.t).getTime() - new Date(a.t).getTime())
       return res.json({ log: formatted })

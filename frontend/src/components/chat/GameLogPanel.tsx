@@ -23,6 +23,9 @@ type Props = {
 type LogEntry = {
   ts: Date
   text: string
+  kind?: string
+  actorId?: string
+  actorName?: string
   focusTerritories?: string[]
   rich?: ReactNode
   id?: string
@@ -269,7 +272,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           const respTxt = await gameService.getGameTextLog(gameId, { limit: 150 })
           if (!cancelled && Array.isArray(respTxt.log)) {
             const formattedTxt = respTxt.log
-              .map((l) => ({ ts: new Date(l.t), text: l.text }))
+              .map((l) => ({
+                ts: new Date(l.t),
+                text: l.text,
+                kind: l.kind,
+                ...(l.actor?.id ? { actorId: String(l.actor.id) } : {}),
+                ...(l.actor?.name ? { actorName: String(l.actor.name) } : {}),
+              }))
               .sort((a, b) => b.ts.getTime() - a.ts.getTime())
             setEntries(formattedTxt)
             return
@@ -1351,7 +1360,12 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     if (!gameId || redact) return
     const onGameLogAppend: Parameters<typeof socketService.on<'game-log:append'>>[1] = (e) => {
       try {
-        const data = e as unknown as { text?: string; t?: string }
+        const data = e as unknown as {
+          text?: string
+          t?: string
+          kind?: string
+          actor?: { id?: string; name?: string }
+        }
         const text = typeof data.text === 'string' ? data.text : null
         if (!text) return
         const ts = data.t ? new Date(String(data.t)) : new Date()
@@ -1361,7 +1375,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             (en) => en.text === text && Math.abs(ts.getTime() - en.ts.getTime()) <= windowMs,
           )
           if (dup) return prev
-          return [{ ts, text }, ...prev].slice(0, 500)
+          return [
+            {
+              ts,
+              text,
+              ...(typeof data.kind === 'string' ? { kind: data.kind } : {}),
+              ...(data.actor?.id ? { actorId: String(data.actor.id) } : {}),
+              ...(data.actor?.name ? { actorName: String(data.actor.name) } : {}),
+            },
+            ...prev,
+          ].slice(0, 500)
         })
       } catch {
         /* ignore */
@@ -1371,7 +1394,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     const onGameLogBatch: Parameters<typeof socketService.on<'game-log:batch'>>[1] = (payload) => {
       try {
         const items = Array.isArray((payload as unknown as { items?: unknown[] }).items)
-          ? (payload as unknown as { items: Array<{ text?: string; t?: string }> }).items
+          ? (
+              payload as unknown as {
+                items: Array<{
+                  text?: string
+                  t?: string
+                  kind?: string
+                  actor?: { id?: string; name?: string }
+                }>
+              }
+            ).items
           : []
         if (items.length === 0) return
         const windowMs = 2000
@@ -1385,7 +1417,16 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               (en) => en.text === text && Math.abs(ts.getTime() - en.ts.getTime()) <= windowMs,
             )
             if (dup) continue
-            next = [{ ts, text }, ...next].slice(0, 500)
+            next = [
+              {
+                ts,
+                text,
+                ...(typeof it.kind === 'string' ? { kind: it.kind } : {}),
+                ...(it.actor?.id ? { actorId: String(it.actor.id) } : {}),
+                ...(it.actor?.name ? { actorName: String(it.actor.name) } : {}),
+              },
+              ...next,
+            ].slice(0, 500)
           }
           return next
         })
@@ -1407,7 +1448,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       try {
         const resp = await gameService.getGameTextLog(gameId, { limit: 150 })
         const formatted = resp.log
-          .map((l) => ({ ts: new Date(l.t), text: l.text }))
+          .map((l) => ({
+            ts: new Date(l.t),
+            text: l.text,
+            kind: l.kind,
+            ...(l.actor?.id ? { actorId: String(l.actor.id) } : {}),
+            ...(l.actor?.name ? { actorName: String(l.actor.name) } : {}),
+          }))
           .sort((a, b) => b.ts.getTime() - a.ts.getTime())
         setEntries(formatted)
       } catch {
@@ -1441,8 +1488,32 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 const clickable = Boolean(
                   onFocus && e.focusTerritories && e.focusTerritories.length > 0,
                 )
+                const isRound = e.kind === 'round_start' || e.text.startsWith('Round ')
+                const actorName = e.actorName
+                const actorId = e.actorId
+                const actorColor = actorId ? playerColor.get(actorId) : undefined
+                let content: ReactNode = e.rich ?? e.text
+                if (!e.rich && actorName && actorColor && typeof content === 'string') {
+                  const idx = content.indexOf(actorName)
+                  if (idx >= 0) {
+                    const left = content.slice(0, idx)
+                    const right = content.slice(idx + actorName.length)
+                    content = (
+                      <>
+                        {left}
+                        <span className="font-semibold" style={{ color: actorColor }}>
+                          {actorName}
+                        </span>
+                        {right}
+                      </>
+                    )
+                  }
+                }
                 return (
-                  <div key={key} className="text-sm">
+                  <div
+                    key={key}
+                    className={`text-sm ${isRound ? 'bg-surface-3/40 rounded px-2 py-1' : ''}`}
+                  >
                     <div className="text-xs text-muted">{formatTimestamp(e.ts)}</div>
                     {clickable ? (
                       <button
@@ -1450,10 +1521,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                         className="text-left text-white underline underline-offset-2 hover:text-[color:var(--color-accent)]"
                         onClick={() => e.focusTerritories && onFocus?.(e.focusTerritories)}
                       >
-                        {e.rich ?? e.text}
+                        {content}
                       </button>
                     ) : (
-                      <div className="text-white">{e.rich ?? e.text}</div>
+                      <div className="text-white">{content}</div>
                     )}
                   </div>
                 )
