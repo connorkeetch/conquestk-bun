@@ -105,3 +105,83 @@ aggressive.
   should see live board changes.
 * Surface queue health in the admin panel and a subtle client warning when
   queues are unhealthy.
+
+## Reliability gaps raised by field testing
+
+Connor's "moves disappear until refresh" report suggests more than one weak
+link. The notes below expand on the highest-risk areas uncovered while tracing
+the live code paths.
+
+1. **Room join confirmation is fire-and-forget.** The frontend simply emits
+   `join-room` and assumes success; there is no acknowledgement and no retry if
+   the server rejects the request or the socket disconnects between emit and
+   join.【F:frontend/src/services/socketService.ts†L118-L120】 On the backend we
+   accept the join, add the socket to the channel, and emit a `game-update`, but
+   likewise never confirm to the client that the subscription is active.【F:backend/src/services/socketService.ts†L520-L616】 If
+   `isMember` is stale when the reconnect logic runs (for example, Redux has not
+   yet rehydrated the room players list), the client also skips rejoining
+   entirely.【F:frontend/src/services/socketService.ts†L557-L571】 These races line
+   up with the observed "no updates until refresh" behaviour.
+2. **Queued actions can stall when workers are offline.** Every gameplay action
+   is enqueued first; the socket handler only falls back to inline execution if
+   queueing fails altogether.【F:backend/src/services/socketService.ts†L706-L820】
+   When Redis is reachable but the worker is down, `addGameAction` still returns
+   a job id, we `ack({ ok: true, queued: true })`, and then nothing processes.
+   The inline fallback in `GameActionProcessor` never runs because it only triggers
+   when we deliberately skip queueing.【F:backend/src/services/gameActionProcessor.ts†L35-L88】 That perfectly explains turns that
+   "hang" until a manual refresh or until someone restarts the worker. We need a
+   worker-health guard before acking.
+3. **Notifications do not cover every path that flips the turn.** Turn-start
+   pushes fire only when `processEndTurn` advances into reinforcement and when
+   the phase actually changes.【F:backend/src/services/gameService.ts†L1226-L1253】
+   AI turns, resigned players, and other lifecycle shortcuts can skip the push
+   entirely. Connor will therefore miss "your turn" alerts even when realtime is
+   otherwise healthy.
+4. **Client-side convergence depends on seeing a delta quickly.** Optimistic
+   updates clear once the follow-up `game-delta` arrives; if the delta never
+   appears, the optimistic state sticks and the local timer fetch runs only after
+   ~600 ms.【F:frontend/src/services/socketService.ts†L291-L321】 When the backend
+   silently drops a delta (fog metadata missing, stale cache read, etc.) the user
+   sees the board freeze until the watchdog fetch completes or they refresh.
+5. **Reconnect UX surfaces status but not auto-repair.** We flag the socket as
+   disconnected and show UI banners, but there is no self-healing beyond the
+   optimistic rejoin attempt. If the join fails or stalls, we never escalate to a
+   forced refetch, toast, or full reconnect loop.【F:frontend/src/services/socketService.ts†L552-L620】
+
+## Hardening plan (prioritised)
+
+1. **Add acknowledgements and retries for room joins.** Extend the `join-room`
+   handler to accept an acknowledgement callback. Return `{ ok: true, joinedAt }
+   ` when subscription succeeds, bubble up meaningful errors for auth or access
+   issues, and retry from the client until confirmed. Log the attempt with
+   socket id and room id so we can correlate field reports. This alone should
+   stop the "silent failure" mode where the client never actually enters the
+   room.【F:backend/src/services/socketService.ts†L520-L616】【F:frontend/src/services/socketService.ts†L118-L120】
+2. **Guard against missing workers before acking gameplay actions.** Teach the
+   socket handler to call `queueService.hasActiveWorkers('gameActions')` after
+   enqueuing. If no worker is active, immediately remove the job and invoke the
+   inline processor so the action still emits deltas. Record a metric/toast so we
+   can see degraded mode in real time.【F:backend/src/services/socketService.ts†L706-L820】【F:backend/src/services/gameActionProcessor.ts†L35-L169】
+3. **Instrument join + delta latencies.** We already capture ack/process timing
+   in `realtimeMetrics`; extend that to include `game-update` round-trip (emit to
+   Redux application) and publish the p95 in Admin Health. That will highlight
+   where deltas are slow or absent.【F:backend/src/services/socketService.ts†L724-L746】【F:frontend/src/services/socketService.ts†L553-L575】
+4. **Emit turn notifications for every phase transition.** When `advancePhase`
+   chooses the next actor (including AI skips, resignations, and reconnect
+   resumes) call `notifyTurnStart` with the resolved player id so Connor always
+   gets a push or in-app toast. Consider mirroring the event over the socket so
+   open tabs show "it's your turn" immediately.【F:backend/src/services/gameService.ts†L1226-L1253】
+5. **Build a client watchdog for delta starvation.** Track `lastDeltaAt` in
+   Redux; if no delta arrives within, say, 2 seconds while our optimistic timer
+   is running, automatically emit `fetchGameState` and display a one-off toast
+   advising the player that we are resyncing. This keeps the UI lively even if a
+   single delta gets lost.【F:frontend/src/services/socketService.ts†L291-L321】
+6. **Expose queue + socket health to the lobby.** Surface queue-worker status and
+   socket connection state directly in the game header so players see "Realtime
+   degraded" instead of guessing. The metrics already exist; we just need a thin
+   API to surface them.【F:backend/src/services/queueService.ts†L260-L348】【F:frontend/src/services/socketService.ts†L553-L620】
+
+Following this roadmap means even if Redis hiccups or the worker dies we still
+process the move inline, confirm the subscription, and nudge the client back to a
+fresh state without requiring a manual refresh. That is the Slack-grade
+experience we are aiming for.
