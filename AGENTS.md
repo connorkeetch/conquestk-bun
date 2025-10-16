@@ -10,7 +10,7 @@ Agent checklist (read before coding):
 - Prefer deletion of deprecated sockets/routes and legacy code over long‑lived shims.
 - Allow destructive/incompatible migrations; verify locally with `cd backend && npm run migrate` and reseed (`seed:users`) if needed.
 - Prioritize clarity, type safety, and fewer abstractions over compatibility layers.
-- Update this guide and `CLAUDE.md` together and call out that they stayed in sync.
+- Update this guide, `CLAUDE.md`, and `GEMINI.md` together and call out that they stayed in sync.
 
 ### Timeline & Rollout
 - Target soft launch (friends-and-family): October 24, 2025 — subject to change.
@@ -22,7 +22,7 @@ Agent checklist (read before coding):
 - Connor Keetch owns ConquestK and is the sole developer; he is a data engineer rather than a full-time application coder, so spell out reasoning, risks, and next steps in plain language.
 - Default to asynchronous-friendly updates: call out what changed, why it matters, and anything Connor should verify locally.
 - Always use Context7 MCP and its tools when you are writing complex code or are unsure about the best approach.
-- Keep this guide in lockstep with its twin (`AGENTS.md` and `CLAUDE.md`); whenever you change one, mirror the update and double-check for drift.
+- Keep this guide in lockstep with its twins (`AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`); whenever you change one, mirror the update and double-check for drift.
 
 ## Project snapshot
 - ConquestK is a Risk-inspired strategy game with an Express/Node backend (`backend/`), a React 19 + Redux Toolkit frontend (`frontend/`), and shared types/utilities in `shared/`.
@@ -44,9 +44,9 @@ Agent checklist (read before coding):
 - Add resource hints for CDN (`dns-prefetch`/`preconnect`) and enable DNS prefetch in Helmet.
 
 ## Architecture & stack
-- Frontend: React 19, TypeScript, Redux Toolkit, Vite 7, Tailwind CSS v4, socket.io client.
-- Backend: Node.js 24+, Express 5, TypeScript, Socket.io, PostgreSQL (Railway-hosted), Redis, BullMQ for background work.
-- Testing: Vitest on the frontend, Jest on the backend. Biome handles linting/formatting (2 spaces, single quotes in TS, double quotes in JSX).
+The project uses a modern web stack: a React/Vite frontend, and a Node.js/Express backend. It uses PostgreSQL for the database, Redis for caching and queues, and Socket.io for real-time communication.
+
+For a detailed breakdown of the architecture, see the [architecture documentation](docs/reference/architecture.md).
 
 ## Tooling requirements
 - Node.js `>=24.0.0` and npm `>=10.0.0` (enforced via `engines` across packages).
@@ -101,12 +101,9 @@ cd backend && npm run make-admin   # promote an account interactively
 - Keep commits focused and document notable behavioural changes inline (explain why, not what).
 
 ## Code style & patterns
-- TypeScript everywhere with strict typings—avoid introducing new `any` types; if you touch legacy `any`, prefer refactoring it to real types.
-- Tailwind CSS v4 only; no inline styles or ad-hoc stylesheets unless a file already uses them.
-- JSX uses double quotes; TS/JS uses single quotes and no semicolons.
-- Use the shared path alias `@/` (mapped to each package’s `src/`) consistently across imports.
-- Prefer extending existing abstractions rather than inventing new patterns.
-- API naming contract: JSON responses and WebSocket payloads use camelCase exclusively (e.g., `selectedColor`). Database columns may remain snake_case; normalize to camelCase at the API boundary and do not expose snake_case to clients.
+The project uses TypeScript with strict typings, Tailwind CSS, and Biome for formatting. Follow the established code style and patterns.
+
+For detailed information on coding standards, see the [coding standards guide](docs/guides/coding-standards.md).
 
 ## Backend notes
 - Routes are mounted under `/api`; add to existing routers before creating new ones.
@@ -214,6 +211,6 @@ VITE_ASSET_BASE_URL=https://assets.conquestk.com
 If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**`. Static audio/background assets still require `VITE_ASSET_BASE_URL` to point at the CDN.
 
 ## Syncing this guide
-- `AGENTS.md` and `CLAUDE.md` carry the same content; review both after every edit.
-- When you update one, update the other in the same commit and skim the diff to confirm parity.
+- `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` carry the same content; review all three after every edit.
+- When you update one, update the other two in the same commit and skim the diff to confirm parity.
 - Call out in your summary that the guides stayed synchronized so Connor can trust the documentation.
