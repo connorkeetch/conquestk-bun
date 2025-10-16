@@ -831,15 +831,21 @@ export class GameRoomService {
   async getRoomById(roomId: string): Promise<GameRoom | null> {
     await this.ensureAiReadyStates(roomId)
     const roomQuery = `
-      SELECT gr.*,
+      SELECT gr.*, 
              m.name as map_name,
              hu.username as host_username,
              hu.skill_rating as host_skill_rating,
              (
-               SELECT rp2.time_bank_seconds_remaining
-               FROM room_players rp2
-               WHERE rp2.room_id = gr.id AND rp2.user_id = gr.current_turn_user_id
-               LIMIT 1
+               CASE
+                 WHEN gr.using_time_bank IS TRUE AND gr.turn_expires_at IS NOT NULL THEN
+                   GREATEST(0, EXTRACT(EPOCH FROM (gr.turn_expires_at - NOW()))::int)
+                 ELSE (
+                   SELECT rp2.time_bank_seconds_remaining
+                   FROM room_players rp2
+                   WHERE rp2.room_id = gr.id AND rp2.user_id = gr.current_turn_user_id
+                   LIMIT 1
+                 )
+               END
              ) as time_bank_seconds_remaining,
              json_agg(
                json_build_object(

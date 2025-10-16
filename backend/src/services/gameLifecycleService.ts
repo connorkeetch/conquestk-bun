@@ -714,7 +714,7 @@ export class GameLifecycleService {
       SET status = 'active',
           turn_number = $2,
           current_turn_user_id = $3,
-          turn_expires_at = CASE WHEN $4 > 0 THEN NOW() + ($4 * INTERVAL '1 second') ELSE NULL END,
+          turn_expires_at = CASE WHEN $4 > 0 THEN NOW() + ($4::int * INTERVAL '1 second') ELSE NULL END,
           using_time_bank = FALSE,
           ready_check_started_at = NULL,
           started_at = COALESCE(started_at, NOW())
@@ -938,7 +938,7 @@ export class GameLifecycleService {
       try {
         await query(
           `UPDATE game_rooms
-             SET turn_expires_at = NOW() + ($2 * INTERVAL '1 second'),
+             SET turn_expires_at = NOW() + ($2::int * INTERVAL '1 second'),
                  using_time_bank = $3
            WHERE id = $1`,
           [roomId, seconds, options?.usingTimeBank === true],
@@ -1017,6 +1017,12 @@ export class GameLifecycleService {
         roomId,
         error: error instanceof Error ? error.message : error,
       })
+      // Even on failure, make a best-effort lifecycle refresh so clients reflect state
+      try {
+        await this.refreshLifecycle(roomId)
+      } catch {
+        /* ignore */
+      }
     }
   }
 
