@@ -115,6 +115,7 @@ import mapRoutes from './routes/maps.js'
 import mapWorkflowRoutes from './routes/mapWorkflow.js'
 import matchsvcRoutes from './routes/matchsvc.js'
 import messagesRoutes from './routes/messages.js'
+import metricsRoutes from './routes/metricsRoutes.js'
 import notificationRoutes from './routes/notifications.js'
 import oddsRoutes from './routes/odds.js'
 import performanceRoutes from './routes/performanceRoutes.js'
@@ -515,6 +516,7 @@ app.use('/api/rum', rumVitalsRoutes)
 app.use('/api/benchmark', benchmarkRoutes)
 app.use('/api/odds', oddsRoutes)
 app.use('/api/matchsvc', matchsvcRoutes)
+app.use('/api/metrics', metricsRoutes)
 app.use('/api/preferences', createPreferencesRouter(getPool()))
 
 // Simple test endpoint that doesn't require database

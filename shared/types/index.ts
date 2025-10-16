@@ -595,6 +595,14 @@ export interface ServerToClientEvents {
   'game-update': (gameState: GameState) => void
   'game-delta': (delta: GameDelta) => void
   'game-delta-batch': (deltas: GameDelta[]) => void
+  'turn:start': (payload: {
+    roomId: string
+    playerId: string
+    username?: string | null
+    phase: GamePhase
+    turn: number
+    reinforcementArmies?: number | null
+  }) => void
   // Fog-aware textual logs (CP-only + lifecycle banners)
   'game-log:append': (payload: {
     roomId?: string

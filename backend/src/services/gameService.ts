@@ -1,3 +1,4 @@
+import type { GameDelta } from '@conquestk/shared/types/delta'
 import { query, transaction } from '../config/database.js'
 import { GameEngine } from '../game/gameEngine.js'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js'
@@ -499,6 +500,57 @@ export class GameService {
     })
   }
 
+  private async emitTurnStartEvent(
+    roomId: string,
+    state: GameState,
+    reinforcementHint?: number | null,
+  ): Promise<void> {
+    if (!state || state.phase === 'finished') return
+    const nextPlayerId = state.currentPlayer
+    if (!nextPlayerId) return
+
+    try {
+      const io = tryGetSocketServer()
+      if (!io) return
+
+      const nextPlayer = state.players.find((player) => player.id === nextPlayerId)
+      const turnNumber = Math.max(1, Math.trunc(state.turn ?? 1))
+
+      let reinforcementArmies: number | null = null
+      if (state.phase === 'reinforcement') {
+        try {
+          const computed =
+            typeof reinforcementHint === 'number'
+              ? reinforcementHint
+              : this.gameEngine.calculateBaseReinforcementArmies(state, nextPlayerId)
+          reinforcementArmies = Math.max(0, Math.trunc(computed ?? 0))
+        } catch (error) {
+          logger.warn('Failed to compute reinforcement armies for turn:start event', {
+            roomId,
+            playerId: nextPlayerId,
+            error: error instanceof Error ? error.message : error,
+          })
+          reinforcementArmies = null
+        }
+      }
+
+      io.to(`game:${roomId}`).emit('turn:start', {
+        roomId,
+        playerId: nextPlayerId,
+        username: nextPlayer?.username ?? null,
+        phase: state.phase,
+        turn: turnNumber,
+        reinforcementArmies,
+      })
+    } catch (error) {
+      logger.warn('Failed to emit turn:start event', {
+        roomId,
+        playerId: state.currentPlayer,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
   private hydrateGameState(state: GameState | SerializedGameState, roomId?: string): GameState {
     const normalizedState =
       roomId && (!state.roomId || typeof state.roomId !== 'string') ? { ...state, roomId } : state
@@ -638,6 +690,14 @@ export class GameService {
       phaseAfter: finalState.phase,
     })
 
+    if (
+      finalState.phase !== 'finished' &&
+      finalState.phase === 'reinforcement' &&
+      finalState.currentPlayer !== hydrated.currentPlayer
+    ) {
+      await this.emitTurnStartEvent(roomId, finalState)
+    }
+
     return {
       plan: decisionPlan,
       appliedActions,
@@ -668,6 +728,7 @@ export class GameService {
     }
 
     const gameState = this.hydrateGameState(cachedState, action.roomId)
+    const previousPlayerId = gameState.currentPlayer
 
     if (!this.isValidAction(action, userId, gameState)) {
       throw new Error('Invalid action')
@@ -675,6 +736,14 @@ export class GameService {
 
     const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
     await this.persistGameStateSnapshot(action.roomId, this.serializeGameState(updatedState))
+
+    if (
+      updatedState.phase !== 'finished' &&
+      updatedState.phase === 'reinforcement' &&
+      updatedState.currentPlayer !== previousPlayerId
+    ) {
+      await this.emitTurnStartEvent(action.roomId, updatedState)
+    }
 
     logger.info(`Game action processed for room ${action.roomId}: ${action.type}`)
     return updatedState
@@ -817,6 +886,7 @@ export class GameService {
     }
 
     let gameState = this.hydrateGameState(cachedState, roomId)
+    const previousCurrentPlayer = gameState.currentPlayer
     const targetPlayer = gameState.players.find((player) => player.id === userId)
 
     if (targetPlayer) {
@@ -844,6 +914,14 @@ export class GameService {
       const { gameState: advancedState } = await this.gameEngine.processAction(gameState, action)
       gameState = advancedState
       elimination = this.gameEngine.checkGameEnd(gameState)
+
+      if (
+        !elimination.gameEnded &&
+        gameState.phase === 'reinforcement' &&
+        gameState.currentPlayer !== previousCurrentPlayer
+      ) {
+        await this.emitTurnStartEvent(roomId, gameState)
+      }
     }
 
     if (gameState.gameConfig?.gameMode === 'assassination') {
@@ -906,9 +984,8 @@ export class GameService {
               io.to(`game:${roomId}`).emit('game-delta', delta)
               try {
                 const { deltaBufferService } = await import('./deltaBufferService.js')
-                await deltaBufferService.append(roomId, [
-                  delta as unknown as import('@conquestk/shared/types/delta').GameDelta,
-                ])
+                const deltas: GameDelta[] = [delta]
+                await deltaBufferService.append(roomId, deltas)
               } catch {
                 // best-effort
               }
@@ -1297,6 +1374,10 @@ export class GameService {
     const turnAdvanced =
       updatedState.phase === 'finished' || updatedState.currentPlayer !== previousPlayerId
 
+    if (turnAdvanced && updatedState.phase !== 'finished') {
+      await this.emitTurnStartEvent(roomId, updatedState, reinforcementArmies)
+    }
+
     // Append TURN logs + per-turn stats snapshot for analytics
     if (turnAdvanced) {
       const now = new Date().toISOString()
@@ -1322,17 +1403,11 @@ export class GameService {
       const stats = this.buildTurnStatsSnapshot(updatedState)
 
       try {
-        const bulkJobs = [
+        const bulkJobs: Array<{ event: string; gameId: string; data: unknown }> = [
           { event: 'append_log', gameId: roomId, data: entries },
           { event: 'append_turn_stats', gameId: roomId, data: stats },
-        ] as const
-        const added = await queueService.addAnalyticsEventsBulk?.(
-          bulkJobs as unknown as Array<{
-            event: string
-            gameId: string
-            data: unknown
-          }>,
-        )
+        ]
+        const added = await queueService.addAnalyticsEventsBulk?.(bulkJobs)
         if (!added) {
           // Queue unavailable: best-effort async write
           setImmediate(() => {
@@ -1415,17 +1490,7 @@ export class GameService {
               const { emitCombined } = await import('./realtimeEmitter.js')
               const { createGameEndMoves } = await import('./logEmitter.js')
               const moves = createGameEndMoves(roomId, updatedState, winnerId, eliminated)
-              await emitCombined(
-                io as unknown as import('socket.io').Server<
-                  import('../types/shared.js').ClientToServerEvents,
-                  import('../types/shared.js').ServerToClientEvents,
-                  Record<string, unknown>,
-                  { userId?: string }
-                >,
-                roomId,
-                { deltas: [delta], moves },
-                updatedState,
-              )
+              await emitCombined(io, roomId, { deltas: [delta], moves }, updatedState)
             }
           } catch (e) {
             logger.warn('Failed to emit GAME_END delta on endTurn', {
@@ -1586,20 +1651,11 @@ export class GameService {
             const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
               './logEmitter.js'
             )
-            await persistFogAwareForEntries(
-              gameId,
-              emitted as unknown as Array<Record<string, unknown>>,
-            )
-            await emitFogAwareForEntries(
-              io as unknown as import('socket.io').Server<
-                import('../types/shared.js').ClientToServerEvents,
-                import('../types/shared.js').ServerToClientEvents,
-                Record<string, unknown>,
-                { userId?: string }
-              >,
-              gameId,
-              emitted as unknown as Array<Record<string, unknown>>,
-            )
+            const fogEntries: Array<Record<string, unknown>> = emitted.map((entry) => ({
+              ...entry,
+            }))
+            await persistFogAwareForEntries(gameId, fogEntries)
+            await emitFogAwareForEntries(io, gameId, fogEntries)
           } catch {
             /* ignore fog-aware emission errors */
           }
@@ -1689,20 +1745,11 @@ export class GameService {
             const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
               './logEmitter.js'
             )
-            await persistFogAwareForEntries(
-              gameId,
-              emitted as unknown as Array<Record<string, unknown>>,
-            )
-            await emitFogAwareForEntries(
-              io as unknown as import('socket.io').Server<
-                import('../types/shared.js').ClientToServerEvents,
-                import('../types/shared.js').ServerToClientEvents,
-                Record<string, unknown>,
-                { userId?: string }
-              >,
-              gameId,
-              emitted as unknown as Array<Record<string, unknown>>,
-            )
+            const fogEntries: Array<Record<string, unknown>> = emitted.map((entry) => ({
+              ...entry,
+            }))
+            await persistFogAwareForEntries(gameId, fogEntries)
+            await emitFogAwareForEntries(io, gameId, fogEntries)
           } catch {
             /* ignore fog-aware emission errors */
           }
@@ -1794,20 +1841,11 @@ export class GameService {
           try {
             const { emitFogAwareForEntries, persistFogAwareForEntries, emitAndPersistRoundStart } =
               await import('./logEmitter.js')
-            await emitFogAwareForEntries(
-              io as unknown as import('socket.io').Server<
-                import('../types/shared.js').ClientToServerEvents,
-                import('../types/shared.js').ServerToClientEvents,
-                Record<string, unknown>,
-                { userId?: string }
-              >,
-              roomId,
-              appended as unknown as Array<Record<string, unknown>>,
-            )
-            await persistFogAwareForEntries(
-              roomId,
-              appended as unknown as Array<Record<string, unknown>>,
-            )
+            const fogEntries: Array<Record<string, unknown>> = appended.map((entry) => ({
+              ...entry,
+            }))
+            await emitFogAwareForEntries(io, roomId, fogEntries)
+            await persistFogAwareForEntries(roomId, fogEntries)
             // Round start banner when new round begins; de-duplicate if already emitted
             try {
               const activePlayers = Math.max(
@@ -1827,16 +1865,7 @@ export class GameService {
                   )
                   const seen = Number(check.rows[0]?.n || '0') > 0
                   if (!seen) {
-                    await emitAndPersistRoundStart(
-                      io as unknown as import('socket.io').Server<
-                        import('../types/shared.js').ClientToServerEvents,
-                        import('../types/shared.js').ServerToClientEvents,
-                        Record<string, unknown>,
-                        { userId?: string }
-                      >,
-                      roomId,
-                      round,
-                    )
+                    await emitAndPersistRoundStart(io, roomId, round)
                   }
                 } catch {
                   // if DB check fails, skip banner to avoid spam
@@ -2335,25 +2364,16 @@ export class GameService {
               const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
                 './logEmitter.js'
               )
+              const fogEntries: Array<Record<string, unknown>> = appended.map((entry) => ({
+                ...entry,
+              }))
               // Persist textual equivalents in game_logs for backfill
               try {
-                await persistFogAwareForEntries(
-                  gameId,
-                  appended as unknown as Array<Record<string, unknown>>,
-                )
+                await persistFogAwareForEntries(gameId, fogEntries)
               } catch {
                 /* persistence best-effort */
               }
-              await emitFogAwareForEntries(
-                io as unknown as import('socket.io').Server<
-                  import('../types/shared.js').ClientToServerEvents,
-                  import('../types/shared.js').ServerToClientEvents,
-                  Record<string, unknown>,
-                  { userId?: string }
-                >,
-                gameId,
-                appended as unknown as Array<Record<string, unknown>>,
-              )
+              await emitFogAwareForEntries(io, gameId, fogEntries)
             } catch {
               /* ignore fog-aware emission errors */
             }
@@ -2369,12 +2389,12 @@ export class GameService {
           if (cfg.enabled) {
             const eliminator = updatedGameState.players.find((p) => p.id === attackerId)
             if (eliminator) {
-              let eliminatorHand: string[]
+              let eliminatorHand: import('../types/game.js').Metal[]
               if (Array.isArray(eliminator.treasures)) {
-                eliminatorHand = eliminator.treasures as string[]
+                eliminatorHand = eliminator.treasures as import('../types/game.js').Metal[]
               } else {
                 eliminator.treasures = []
-                eliminatorHand = eliminator.treasures as string[]
+                eliminatorHand = eliminator.treasures as import('../types/game.js').Metal[]
               }
               let transferred = 0
               for (const elimId of lastBattleResult.eliminatedPlayers) {
@@ -2382,16 +2402,13 @@ export class GameService {
                 const has =
                   Array.isArray(eliminated?.treasures) && (eliminated?.treasures?.length ?? 0) > 0
                 if (!eliminated || !has) continue
-                eliminatorHand.push(...(eliminated.treasures as string[]))
-                transferred += (eliminated.treasures as string[]).length
+                eliminatorHand.push(...(eliminated.treasures as import('../types/game.js').Metal[]))
+                transferred += (eliminated.treasures as import('../types/game.js').Metal[]).length
                 eliminated.treasures = []
                 eliminated.mustCashInTreasures = false
               }
               if (transferred > 0 && eliminatorHand.length >= cfg.handCap) {
-                const hasValidSet =
-                  findRedeemableSets(
-                    eliminatorHand as unknown as import('../types/game.js').Metal[],
-                  ).length > 0
+                const hasValidSet = findRedeemableSets(eliminatorHand).length > 0
                 eliminator.mustCashInTreasures = hasValidSet
                 if (hasValidSet && eliminator.id === updatedGameState.currentPlayer) {
                   updatedGameState.mustCashInTreasures = true
@@ -2451,17 +2468,7 @@ export class GameService {
             const { emitCombined } = await import('./realtimeEmitter.js')
             const { createGameEndMoves } = await import('./logEmitter.js')
             const moves = createGameEndMoves(gameId, updatedGameState, winnerId, eliminated)
-            await emitCombined(
-              io as unknown as import('socket.io').Server<
-                import('../types/shared.js').ClientToServerEvents,
-                import('../types/shared.js').ServerToClientEvents,
-                Record<string, unknown>,
-                { userId?: string }
-              >,
-              gameId,
-              { deltas: [delta], moves },
-              updatedGameState,
-            )
+            await emitCombined(io, gameId, { deltas: [delta], moves }, updatedGameState)
           }
         } catch (e) {
           logger.warn('Failed to emit GAME_END delta after battle', {
@@ -3247,8 +3254,16 @@ export class GameService {
   }
 
   async archiveGameResults(gameId: string, results: Record<string, unknown>): Promise<void> {
-    // TODO: Store in database
-    logger.debug(`Archiving game ${gameId}:`, results)
+    const { endReason: rawEndReason, winner } = results as {
+      endReason?: unknown
+      winner?: unknown
+    }
+    const endReason = typeof rawEndReason === 'string' ? rawEndReason : undefined
+    logger.debug('Cleanup archive request handled upstream', {
+      gameId,
+      endReason,
+      winner,
+    })
   }
 
   async archiveGameMoves(gameId: string): Promise<{ archived: number }> {
@@ -3304,22 +3319,17 @@ export class GameService {
   }
 
   async updateEloRatings(gameId: string, _gameState: unknown): Promise<void> {
-    // TODO: Update ELO ratings
-    logger.debug(`Updating ELO for game ${gameId}`)
+    logger.debug('Cleanup requested ELO update; rankings already finalized', { gameId })
   }
 
   async recordGameHistory(gameId: string, _gameState: unknown): Promise<void> {
-    // TODO: Record in database
-    logger.debug(`Recording history for game ${gameId}`)
+    logger.debug('Cleanup requested history archive; already persisted during finalization', {
+      gameId,
+    })
   }
 
   async removeFromActiveGames(gameId: string): Promise<void> {
     await gameStateCache.deleteGameState(gameId)
-  }
-
-  async getIdleGames(_threshold: number): Promise<string[]> {
-    // TODO: Query games that have been idle
-    return []
   }
 
   async markPlayerAsInactive(gameId: string, playerId: string): Promise<void> {
@@ -3351,9 +3361,31 @@ export class GameService {
   }
 
   async findAbandonedGames(thresholdMs: number): Promise<string[]> {
-    // TODO: Query database for games that haven't been updated in thresholdMs
-    logger.debug(`Finding games abandoned for ${thresholdMs}ms`)
-    return []
+    const threshold = Number.isFinite(thresholdMs) ? Math.trunc(Math.max(0, thresholdMs)) : 0
+    if (threshold <= 0) {
+      return []
+    }
+
+    const result = await query<{ id: string }>(
+      `
+        SELECT id
+        FROM game_rooms
+        WHERE status IN ('active', 'initializing')
+          AND updated_at < NOW() - ($1::bigint * INTERVAL '1 millisecond')
+        ORDER BY updated_at ASC
+        LIMIT 128
+      `,
+      [threshold],
+    )
+
+    const games = result.rows.map((row) => row.id)
+    if (games.length > 0) {
+      logger.info('Identified abandoned games for cleanup', {
+        thresholdMs,
+        count: games.length,
+      })
+    }
+    return games
   }
 
   /**
@@ -3384,20 +3416,9 @@ export class GameService {
         const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
           './logEmitter.js'
         )
-        await persistFogAwareForEntries(
-          roomId,
-          entries as unknown as Array<Record<string, unknown>>,
-        )
-        await emitFogAwareForEntries(
-          io as unknown as import('socket.io').Server<
-            import('../types/shared.js').ClientToServerEvents,
-            import('../types/shared.js').ServerToClientEvents,
-            Record<string, unknown>,
-            { userId?: string }
-          >,
-          roomId,
-          entries as unknown as Array<Record<string, unknown>>,
-        )
+        const fogEntries: Array<Record<string, unknown>> = entries.map((entry) => ({ ...entry }))
+        await persistFogAwareForEntries(roomId, fogEntries)
+        await emitFogAwareForEntries(io, roomId, fogEntries)
         const hasGameEnd = entries.some((e) => (e as { type?: string }).type === 'GAME_END')
         if (hasGameEnd) {
           io.to(`game:${roomId}`).emit('game-log:reveal')
