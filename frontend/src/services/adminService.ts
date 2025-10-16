@@ -143,6 +143,13 @@ export interface AdminMoveRecord {
   created_at: string
 }
 
+export interface ClientMetricsSummary {
+  sessionCount: number
+  avgLatency: number
+  avgSuccessRate: number
+  totalReconnects: number
+}
+
 export interface SystemStatus {
   timestamp: string
   database: {
@@ -473,6 +480,15 @@ class AdminService {
       params: { active: String(activeOnly) },
     })
     return (response.data?.data ?? response.data) as AdminPerformanceAlert[]
+  }
+
+  async getClientMetricsSummary(): Promise<ClientMetricsSummary> {
+    const response = await apiClient.get('/metrics/client/summary')
+    const payload = response.data
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+      return (payload as { data: ClientMetricsSummary }).data
+    }
+    return payload as ClientMetricsSummary
   }
 
   // ============= ODDS METRICS (Performance) =============
