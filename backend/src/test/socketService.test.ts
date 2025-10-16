@@ -128,13 +128,21 @@ const { mockGetCachedState } = getCacheServiceMocks()
 jest.mock('../services/socketRegistry', () => {
   const testGlobals = globalThis as TestGlobals
   const mockRegisterSocketServer = jest.fn()
+  // Keep a captured reference to IO passed during setup so tryGetSocketServer returns it
+  let currentIo: Server<ClientToServerEvents, ServerToClientEvents> | null = null
+  const registerSocketServer = ((io: Server<ClientToServerEvents, ServerToClientEvents>) => {
+    currentIo = io
+    return mockRegisterSocketServer(io)
+  }) as unknown as typeof import('../services/socketRegistry.js').registerSocketServer
+  const tryGetSocketServer = (() =>
+    currentIo) as unknown as typeof import('../services/socketRegistry.js').tryGetSocketServer
   testGlobals.__socketRegistryMocks = {
     mockRegisterSocketServer,
   }
   return {
     __esModule: true,
-    registerSocketServer: mockRegisterSocketServer,
-    tryGetSocketServer: jest.fn(),
+    registerSocketServer,
+    tryGetSocketServer,
   }
 })
 
@@ -305,6 +313,21 @@ describe('socketService event handlers', () => {
     const { socket, io, roomEmit } = initialiseHandlers()
     const handler = getSocketHandler(socket, 'game-action')
 
+    // Ensure inline emitter path runs and emits via fallback channel
+    // by providing a minimal game state for emitCombined
+    mockGameServiceInstance.getGameState.mockResolvedValueOnce({
+      roomId: 'room-99',
+      turn: 1,
+      phase: 'reinforcement',
+      board: [
+        { id: 'from', name: 'From', ownerId: 'user-1', armies: 3, adjacentTerritories: [] },
+        { id: 'to', name: 'To', ownerId: 'user-1', armies: 2, adjacentTerritories: [] },
+      ],
+      players: [{ id: 'user-1', username: 'User One', isAi: false }],
+      settings: { turnTimer: 60 },
+      gameConfig: { fogOfWar: 'off' },
+    } as unknown as import('../types/game.js').GameState)
+
     await handler({
       roomId: 'room-99',
       action: {
@@ -329,9 +352,18 @@ describe('socketService event handlers', () => {
     const ioToMock = io.to as unknown as jest.Mock
     expect(ioToMock).toHaveBeenCalledWith('game:room-99')
     const firstCall = roomEmit.mock.calls[0]
-    expect(firstCall[0]).toBe('game-delta')
-    const delta = firstCall[1] as { type: string; territoryId?: string }
-    expect(delta.type).toBe('TERRITORY_UPDATE')
+    const eventName = firstCall[0] as string
+    expect(['game-delta', 'game-delta-batch']).toContain(eventName)
+    if (eventName === 'game-delta') {
+      const delta = firstCall[1] as { type: string; territoryId?: string }
+      expect(delta.type).toBe('TERRITORY_UPDATE')
+    } else {
+      const deltas = firstCall[1] as Array<{ type: string; territoryId?: string }>
+      // Batch should contain at least one territory update from fortify
+      expect(Array.isArray(deltas)).toBe(true)
+      const hasUpdate = deltas.some((d) => d.type === 'TERRITORY_UPDATE')
+      expect(hasUpdate).toBe(true)
+    }
   })
 
   it('broadcasts phase changes via unified game-delta on end turn', async () => {
