@@ -103,6 +103,11 @@ export default function UnifiedMapDisplay({
   const game = useAppSelector((s) => s.game.currentGame)
   const viewerId = useAppSelector((s) => s.auth.user?.id)
   const isMyTurn = Boolean(viewerId && game?.currentPlayer === viewerId)
+  const fogEnabled = useMemo(() => {
+    const mode = (game?.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' } | undefined)
+      ?.fogOfWar
+    return Boolean(mode && mode !== 'off' && game?.phase !== 'finished')
+  }, [game?.gameConfig, game?.phase])
   // viewerId used for selection cycling
   const players = game?.players ?? []
   const kingOfTheHillState =
@@ -664,6 +669,7 @@ export default function UnifiedMapDisplay({
             ownerColor: playerColors[t.owner ?? ''] as PlayerColor,
             ...(typeof t.armies === 'number' ? { armies: t.armies } : {}),
           }))}
+          fogEnabled={fogEnabled}
           {...(selectedTerritoryId !== undefined ? { selectedId: selectedTerritoryId } : {})}
           validTargets={validTargets}
           dimNonTargets={isMyTurn && pendingAction === 'attack'}
