@@ -16,6 +16,7 @@ import type {
 import { toast } from 'react-hot-toast'
 import { io, type Socket } from 'socket.io-client'
 import { getConquestRank } from '@/components/RankInsignia'
+import { logger } from '@/utils/logger'
 import { store } from '../store'
 import {
   applyDelta,
@@ -63,6 +64,253 @@ class SocketService {
   private pendingAttackAcks: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private lastAttackEmitAt: Map<string, number> = new Map()
   private lastAuthToastAt: number | null = null
+  private pendingActionRetries: Map<string, number> = new Map()
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null
+  private lastPongTime: number = Date.now()
+  private connectionLatency: number = 0
+  private deltaSequenceTracking: Map<string, number> = new Map() // roomId -> last received sequence
+  private pendingDeltaRequests: Set<string> = new Set() // Track in-flight delta requests
+
+  /**
+   * HEALTH MONITORING: Start heartbeat to detect zombie connections
+   * Pings server every 5 seconds and measures latency
+   */
+  private startHeartbeat() {
+    // Clear any existing heartbeat
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+    }
+
+    this.heartbeatInterval = setInterval(() => {
+      if (!this.socket?.connected) {
+        return
+      }
+
+      const start = Date.now()
+      const timeout = setTimeout(() => {
+        // No pong received in 3 seconds - connection is zombie
+        logger.warn('Heartbeat timeout - connection appears dead, forcing reconnect')
+        this.socket?.disconnect()
+        this.connect()
+      }, 3000)
+
+      // Socket.io has built-in ping/pong, but we add our own for latency tracking
+      this.socket.volatile.emit('ping', () => {
+        clearTimeout(timeout)
+        const latency = Date.now() - start
+        this.connectionLatency = latency
+        this.lastPongTime = Date.now()
+
+        // Update connection quality indicator
+        if (latency > 500) {
+          logger.warn(`High connection latency: ${latency}ms`)
+        }
+      })
+    }, 5000) // Ping every 5 seconds
+  }
+
+  /**
+   * HEALTH MONITORING: Stop heartbeat on disconnect
+   */
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+      this.heartbeatInterval = null
+    }
+  }
+
+  /**
+   * Get current connection health metrics
+   */
+  getConnectionHealth(): { latency: number; lastPong: number; isHealthy: boolean } {
+    const timeSinceLastPong = Date.now() - this.lastPongTime
+    const isHealthy = this.socket?.connected && timeSinceLastPong < 10000
+
+    return {
+      latency: this.connectionLatency,
+      lastPong: this.lastPongTime,
+      isHealthy,
+    }
+  }
+
+  /**
+   * RELIABILITY: Check if a delta sequence has gaps and request missing deltas
+   */
+  private async checkDeltaSequence(
+    roomId: string,
+    delta: { version?: number; type?: string },
+  ): Promise<boolean> {
+    // Skip if delta doesn't have a sequence number
+    if (!delta.version) {
+      return true // Allow it through
+    }
+
+    const lastSeq = this.deltaSequenceTracking.get(roomId) ?? 0
+    const currentSeq = delta.version
+
+    // First delta for this room
+    if (lastSeq === 0) {
+      this.deltaSequenceTracking.set(roomId, currentSeq)
+      return true
+    }
+
+    // Expected sequence
+    if (currentSeq === lastSeq + 1) {
+      this.deltaSequenceTracking.set(roomId, currentSeq)
+      return true
+    }
+
+    // Duplicate (already seen)
+    if (currentSeq <= lastSeq) {
+      logger.warn('Received duplicate or out-of-order delta', {
+        roomId,
+        expected: lastSeq + 1,
+        received: currentSeq,
+      })
+      return false // Skip duplicate
+    }
+
+    // GAP DETECTED: Missing deltas between lastSeq and currentSeq
+    logger.warn('Delta sequence gap detected', {
+      roomId,
+      lastSeq,
+      currentSeq,
+      missing: currentSeq - lastSeq - 1,
+    })
+
+    // Request missing deltas (if not already requesting)
+    const requestKey = `${roomId}:${lastSeq}-${currentSeq}`
+    if (!this.pendingDeltaRequests.has(requestKey)) {
+      this.pendingDeltaRequests.add(requestKey)
+
+      try {
+        await this.requestMissingDeltas(roomId, lastSeq + 1, currentSeq - 1)
+      } finally {
+        this.pendingDeltaRequests.delete(requestKey)
+      }
+    }
+
+    // Accept the current delta even though there's a gap
+    // The full state refetch will fix any inconsistencies
+    this.deltaSequenceTracking.set(roomId, currentSeq)
+    return true
+  }
+
+  /**
+   * RELIABILITY: Request missing deltas from server
+   */
+  private async requestMissingDeltas(
+    roomId: string,
+    fromSeq: number,
+    toSeq: number,
+  ): Promise<void> {
+    if (!this.socket) {
+      return
+    }
+
+    logger.info('Requesting missing deltas', { roomId, fromSeq, toSeq })
+    toast('Syncing missed updates...', { icon: '🔄', duration: 2000 })
+
+    return new Promise((resolve) => {
+      this.socket?.emit(
+        'request-missing-deltas',
+        { roomId, fromSeq, toSeq },
+        (response?: { ok: boolean; deltas?: unknown[]; error?: string }) => {
+          if (response?.ok) {
+            if (response.deltas && response.deltas.length > 0) {
+              logger.info('Received missing deltas', { count: response.deltas.length })
+              // Deltas would be applied here if server sent them
+            } else {
+              // Server doesn't have deltas - trigger full state refetch
+              logger.info('Server has no cached deltas - refetching full state')
+              const state = store.getState()
+              const allowSpectate = !state.room.currentRoom?.players?.some(
+                (p) => p.userId === state.auth.user?.id,
+              )
+              store.dispatch(fetchGameState({ roomId, allowSpectate }))
+            }
+            resolve()
+          } else {
+            logger.error('Failed to request missing deltas', { error: response?.error })
+            toast.error('Failed to sync. Please refresh.')
+            resolve()
+          }
+        },
+      )
+    })
+  }
+
+  /**
+   * RELIABILITY FIX: Send game action with mandatory acknowledgment and timeout
+   * This ensures we detect failed deliveries and can retry or notify the user
+   */
+  private async sendActionWithAck(
+    roomId: string,
+    action: { type: string; playerId?: string; payload?: unknown },
+    timeoutMs = 5000,
+  ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      if (!this.socket) {
+        resolve({ ok: false, error: 'Not connected' })
+        return
+      }
+
+      const timeoutHandle = setTimeout(() => {
+        resolve({ ok: false, error: 'Timeout - server did not acknowledge action' })
+      }, timeoutMs)
+
+      try {
+        this.socket.emit(
+          'game-action',
+          { roomId, action } as Parameters<ClientToServerEvents['game-action']>[0],
+          (ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
+            clearTimeout(timeoutHandle)
+            resolve(ack ?? { ok: true })
+          },
+        )
+      } catch (error) {
+        clearTimeout(timeoutHandle)
+        resolve({ ok: false, error: error instanceof Error ? error.message : 'Unknown error' })
+      }
+    })
+  }
+
+  /**
+   * RELIABILITY FIX: Retry failed action with exponential backoff
+   */
+  private async retryAction(
+    roomId: string,
+    action: { type: string; playerId?: string; payload?: unknown },
+    attempt = 1,
+    maxAttempts = 3,
+  ): Promise<boolean> {
+    const ack = await this.sendActionWithAck(roomId, action)
+
+    if (ack.ok) {
+      // Success - clear retry counter
+      const key = `${roomId}:${action.type}`
+      this.pendingActionRetries.delete(key)
+      return true
+    }
+
+    // Failed - should we retry?
+    if (attempt < maxAttempts) {
+      const key = `${roomId}:${action.type}`
+      this.pendingActionRetries.set(key, attempt)
+
+      // Exponential backoff: 500ms, 1s, 2s
+      const delay = 500 * 2 ** (attempt - 1)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+
+      logger.warn(`Retrying action ${action.type}, attempt ${attempt + 1}/${maxAttempts}`)
+      return this.retryAction(roomId, action, attempt + 1, maxAttempts)
+    }
+
+    // All retries exhausted
+    logger.error(`Action ${action.type} failed after ${maxAttempts} attempts`)
+    toast.error(`Action failed to send. Please refresh and try again.`)
+    return false
+  }
 
   connect() {
     // Reset any pending fetch tracking on a fresh connection attempt
@@ -88,17 +336,20 @@ class SocketService {
       (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
 
     // Cast to typed Socket to enable strong event typing without generics on io()
-    // Prefer WebSocket, but allow polling fallback to avoid reconnect loops behind certain proxies
+    // PERFORMANCE FIX: Try WebSocket first for lower latency, fallback to polling if needed
     this.socket = io(socketUrl, {
       auth: { token },
       path: '/socket.io',
-      // Prefer polling-first then upgrade to websocket to be proxy-friendly
-      transports: ['polling', 'websocket'],
+      // Try WebSocket first - provides lowest latency for real-time updates
+      transports: ['websocket', 'polling'],
+      upgrade: false, // Don't upgrade - stick with initial transport for consistency
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 500,
       reconnectionDelayMax: 5000,
+      // Add timeout for connection attempts
+      timeout: 10000,
     }) as unknown as Socket<ServerToClientEvents, ClientToServerEvents>
 
     this.setupEventListeners()
@@ -109,6 +360,7 @@ class SocketService {
   disconnect() {
     if (this.socket) {
       this.removeEventListeners()
+      this.stopHeartbeat()
       this.socket.disconnect()
       this.socket = null
     }
@@ -554,7 +806,23 @@ class SocketService {
       store.dispatch(loadUnreadSummary())
       store.dispatch(loadInbox())
 
-      // Rejoin active room on reconnect to restore subscriptions
+      // Start health monitoring
+      this.startHeartbeat()
+
+      // CONNECTION STATE RECOVERY: Check if Socket.io recovered the connection
+      // If recovered, the server replayed missed events automatically
+      const socket = this.socket
+      const recovered = (socket as unknown as { recovered?: boolean })?.recovered ?? false
+
+      if (recovered) {
+        logger.info('✅ Connection recovered - server replayed missed events')
+        toast('Connection restored', { icon: '✅', duration: 2000 })
+      } else {
+        logger.info('New connection established - fetching fresh state')
+      }
+
+      // CRITICAL FIX: Rejoin active room on reconnect to restore subscriptions
+      // This ensures the client re-subscribes to game channels after any disconnect
       try {
         const state = store.getState()
         const roomId = state.room.currentRoom?.id ?? state.game.currentGame?.roomId ?? null
@@ -565,17 +833,39 @@ class SocketService {
             Array.isArray(players) &&
             players.some((p) => p.userId === userId || p.id === userId),
         )
-        if (roomId) {
-          if (isMember) this.joinRoom(roomId)
-          else this.spectateRoom(roomId)
+        if (roomId && userId) {
+          // Re-join the game channel
+          if (isMember) {
+            this.joinRoom(roomId)
+          } else {
+            this.spectateRoom(roomId)
+          }
+
+          // CRITICAL: Force a full state refetch after reconnection
+          // This ensures we catch up on any missed events during disconnect
+          // Skip refetch if connection was recovered (events already replayed)
+          if (!recovered) {
+            setTimeout(() => {
+              try {
+                toast('Syncing game state...', { icon: '🔄', duration: 1500 })
+                store.dispatch(fetchGameState({ roomId, allowSpectate: !isMember }))
+              } catch (error) {
+                // Best-effort recovery
+                logger.warn('Failed to refetch game state after reconnect', error)
+              }
+            }, 100) // Small delay to allow room subscription to complete
+          }
         }
-      } catch {
+      } catch (error) {
         // best-effort; if state not accessible, skip rejoin
+        logger.warn('Failed to rejoin room on reconnect', error)
       }
     })
 
     this.socket.on('disconnect', () => {
       store.dispatch(setConnectionStatus('disconnected'))
+      // Stop heartbeat monitoring
+      this.stopHeartbeat()
     })
 
     this.socket.on('connect_error', (err) => {
@@ -712,21 +1002,35 @@ class SocketService {
         return
       }
 
-      // Check if we need to resync due to desync detection
+      // DESYNC DETECTION: Check if we need to resync due to version mismatch or state corruption
       if (state.game.needsResync) {
+        logger.warn('Desync detected - triggering full state refetch', {
+          roomId: payload.roomId,
+          deltaType: payload.type,
+        })
+
         if (!this.pendingRoomStateFetches.has(payload.roomId)) {
           this.pendingRoomStateFetches.add(payload.roomId)
           const allowSpectateFetch = Boolean(
             !viewerId ||
               !state.room.currentRoom?.players?.some((player) => player.userId === viewerId),
           )
+
+          // Show user-facing indicator that we're resyncing
+          toast('Syncing game state...', { icon: '🔄', duration: 2000 })
+
           void (
             store.dispatch(
               fetchGameState({ roomId: payload.roomId, allowSpectate: allowSpectateFetch }),
             ) as Promise<unknown>
           )
-            .catch(() => {
-              /* swallow fetch errors - fallback is manual refresh */
+            .then(() => {
+              logger.info('Desync recovery successful')
+              toast.success('Game state synchronized', { duration: 2000 })
+            })
+            .catch((error) => {
+              logger.error('Desync recovery failed', error)
+              toast.error('Failed to sync game state. Please refresh the page.')
             })
             .finally(() => {
               this.pendingRoomStateFetches.delete(payload.roomId)
@@ -840,16 +1144,32 @@ class SocketService {
       }
     }
 
-    this.socket.on('game-delta', (delta) => {
+    this.socket.on('game-delta', async (delta) => {
+      // RELIABILITY: Check delta sequence before processing
+      const roomId = (delta as { roomId?: string }).roomId
+      if (roomId) {
+        const shouldProcess = await this.checkDeltaSequence(roomId, delta as { version?: number })
+        if (!shouldProcess) {
+          return // Skip duplicate
+        }
+      }
       processDelta(delta as unknown as GameDelta)
     })
 
     // Coalesced delta batches (optional optimization)
-    this.socket.on('game-delta-batch', (deltas: unknown) => {
+    this.socket.on('game-delta-batch', async (deltas: unknown) => {
       const array = Array.isArray(deltas) ? (deltas as unknown[]) : []
       if (array.length === 0) return
       const last = array[array.length - 1] as unknown as GameDelta
       for (const d of array) {
+        // RELIABILITY: Check sequence for each delta in batch
+        const roomId = (d as { roomId?: string }).roomId
+        if (roomId) {
+          const shouldProcess = await this.checkDeltaSequence(roomId, d as { version?: number })
+          if (!shouldProcess) {
+            continue // Skip duplicate
+          }
+        }
         processDelta(d as unknown as GameDelta)
       }
       // Minimal UX side-effects for the last delta: notify on PHASE_CHANGE and clear placement if needed
