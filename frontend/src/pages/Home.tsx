@@ -20,14 +20,14 @@ const Home: React.FC = () => {
     {
       icon: '🎮',
       title: 'Game Modes',
-      blurb: 'Domination or Capitals — classic rules in FFA or teams.',
-      badges: ['Domination', 'Capitals', 'FFA/Teams'],
+      blurb: 'Domination, Capitals, King of the Hill, and Assassination — play FFA or teams.',
+      badges: ['Domination', 'Capitals', 'KOTH', 'Assassination'],
     },
     {
-      icon: '⏱️',
-      title: 'Turn Timers',
-      blurb: 'Ready‑checks, per‑turn clocks, optional time bank, and AFK rules.',
-      badges: ['Ready‑check', 'AFK rules', 'Time bank'],
+      icon: '🤝',
+      title: 'Teams & Pace',
+      blurb: 'Solo or teams with coordinated turns — run live games or 24‑hour turns.',
+      badges: ['Solo', 'Teams', 'Live', '24h'],
     },
     {
       icon: '💎',
