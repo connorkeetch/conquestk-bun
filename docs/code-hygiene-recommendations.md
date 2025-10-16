@@ -98,29 +98,11 @@ Incomplete features marked with TODO:
 ---
 
 ### 6. Extract Magic Numbers to Named Constants
-**Issue:** Hardcoded values scattered throughout code
+**Progress:**
+- `frontend/src/services/socketService.ts` now centralizes all timings (heartbeat, retries, toast durations, throttles) via named constants at the top of the file.
+- Backend real-time services (`gameLifecycleService`, `gameActionProcessor`, `cleanupWorker`) expose lock timeouts and scheduling intervals through module-level constants.
 
-Examples in socketService.ts:
-- `120` ms - attack throttle interval
-- `5000` ms - heartbeat interval
-- `3000` ms - heartbeat timeout
-- `100` - max delta sequence range
-- `30_000` - auth toast throttle
-
-**Action:** Create constants section at top of files:
-```typescript
-// Connection Health Constants
-const HEARTBEAT_INTERVAL_MS = 5000
-const HEARTBEAT_TIMEOUT_MS = 3000
-const ZOMBIE_CONNECTION_THRESHOLD_MS = 10000
-
-// Action Throttling
-const ATTACK_THROTTLE_MS = 120
-const READ_RECEIPT_THROTTLE_MS = 1000
-
-// Delta Sequence
-const MAX_DELTA_GAP = 100
-```
+**Next targets:** evaluate other runtime modules (e.g., maintenance/metrics services) and lift remaining hard-coded durations into named constants or shared config where useful.
 
 ---
 
