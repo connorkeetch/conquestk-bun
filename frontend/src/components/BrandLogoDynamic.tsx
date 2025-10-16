@@ -1,5 +1,4 @@
 import React from 'react'
-import brandUrl from '@/assets/brand/conquest_k_logo.svg?url'
 
 type Props = {
   width?: number
@@ -58,7 +57,7 @@ export default function BrandLogoDynamic({
         return (
           <g>
             <image
-              href={brandUrl}
+              href="/conquest_k_logo.svg"
               x={x}
               y={y}
               width={scaled}
