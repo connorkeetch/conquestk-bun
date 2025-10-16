@@ -761,7 +761,9 @@ function generateMetalOverlayCSS(withMotion: boolean): string {
     ${posList};
   background-repeat:
     ${repeatList};
-  opacity: 0.9;
+  /* Force normal blending and full opacity to avoid color washout */
+  mix-blend-mode: normal;
+  opacity: 1;
   ${motionCss}
 }
 
