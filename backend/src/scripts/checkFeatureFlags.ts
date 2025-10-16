@@ -112,11 +112,9 @@ async function insertMissing(flags: string[]): Promise<void> {
           JSON.stringify({}),
         ],
       )
-      // eslint-disable-next-line no-console
-      console.log(`Created flag: ${flag}`)
+      logger.info('Created missing feature flag', { flag })
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(`Failed to create flag ${flag}:`, err)
+      logger.error('Failed to create missing feature flag', { err, flag })
     }
   }
 }
@@ -130,38 +128,30 @@ async function main() {
   const orphans = Array.from(dbFlags).filter((f) => !usedFromCalls.has(f))
 
   // Report
-  // eslint-disable-next-line no-console
-  console.log('— Feature Flag Consistency Report —')
-  // eslint-disable-next-line no-console
-  console.log(`Used in code: ${usedFromCalls.size}`)
-  // eslint-disable-next-line no-console
-  console.log(`In database: ${dbFlags.size}`)
+  logger.info('— Feature Flag Consistency Report —')
+  logger.info(`Used in code: ${usedFromCalls.size}`)
+  logger.info(`In database: ${dbFlags.size}`)
 
   if (missing.length > 0) {
-    // eslint-disable-next-line no-console
-    console.log('\nMissing in DB (required by code):')
+    logger.info('\nMissing in DB (required by code):')
     missing.sort().forEach((f) => {
-      console.log(`  - ${f}`)
+      logger.info(`  - ${f}`)
     })
   } else {
-    // eslint-disable-next-line no-console
-    console.log('\nNo missing flags detected.')
+    logger.info('\nNo missing flags detected.')
   }
 
   if (orphans.length > 0) {
-    // eslint-disable-next-line no-console
-    console.log('\nOrphaned in DB (not referenced in code):')
+    logger.info('\nOrphaned in DB (not referenced in code):')
     orphans.sort().forEach((f) => {
-      console.log(`  - ${f}`)
+      logger.info(`  - ${f}`)
     })
   } else {
-    // eslint-disable-next-line no-console
-    console.log('\nNo orphaned flags detected.')
+    logger.info('\nNo orphaned flags detected.')
   }
 
   if (apply && missing.length > 0) {
-    // eslint-disable-next-line no-console
-    console.log('\nApplying fixes: creating missing flags with safe defaults...')
+    logger.info('\nApplying fixes: creating missing flags with safe defaults...')
     await insertMissing(missing)
   }
 }
@@ -169,7 +159,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((err) => {
-    // eslint-disable-next-line no-console
-    console.error(err)
+    logger.error('Feature flag consistency check failed', { err })
     process.exit(1)
   })

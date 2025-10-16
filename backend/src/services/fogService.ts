@@ -104,6 +104,13 @@ export async function emitFogFilteredDelta(
   delta: GameDelta,
   state?: GameState,
 ): Promise<void> {
+  // Persist the raw delta into the replay ring buffer (best-effort)
+  try {
+    const { deltaBufferService } = await import('./deltaBufferService.js')
+    await deltaBufferService.append(roomId, [delta])
+  } catch {
+    // best-effort only
+  }
   // Fetch sockets in room
   const channel = `${ROOM_PREFIX}${roomId}`
   let sockets: Array<RemoteSocket<ServerToClientEvents, SocketData>>

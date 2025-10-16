@@ -1074,13 +1074,22 @@ export class GameLifecycleService {
       try {
         const io = tryGetSocketServer()
         if (io) {
-          io.to(`game:${roomId}`).emit('game-delta', {
+          const systemDelta = {
             type: 'SYSTEM_MESSAGE',
             roomId,
             timestamp: Date.now(),
             text: 'ai:thinking',
             playerId: current.id,
-          })
+          } as const
+          io.to(`game:${roomId}`).emit('game-delta', systemDelta)
+          try {
+            const { deltaBufferService } = await import('./deltaBufferService.js')
+            await deltaBufferService.append(roomId, [
+              systemDelta as unknown as import('@conquestk/shared/types/delta').GameDelta,
+            ])
+          } catch {
+            // best-effort
+          }
         }
       } catch {
         // best-effort

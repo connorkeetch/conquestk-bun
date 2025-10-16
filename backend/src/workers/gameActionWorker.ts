@@ -1380,6 +1380,14 @@ export class GameActionWorker {
         }
         // Emit treasure delta immediately for UI cues
         this.io.to(`game:${gameId}`).emit('game-delta', delta)
+        try {
+          const { deltaBufferService } = await import('../services/deltaBufferService.js')
+          await deltaBufferService.append(gameId, [
+            delta as unknown as import('@conquestk/shared/types/delta').GameDelta,
+          ])
+        } catch {
+          // best-effort
+        }
         // Also emit a concise textual move for parity with inline path
         try {
           const updated = await this.gameService.getGameState(gameId)

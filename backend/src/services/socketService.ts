@@ -1,4 +1,10 @@
-import type { GameDelta } from '@conquestk/shared/types/delta'
+import type {
+  BattleResultDelta,
+  FortifyResultDelta,
+  GameDelta,
+  PlayerDelta,
+  TerritoryDelta,
+} from '@conquestk/shared/types/delta'
 import type * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
@@ -102,7 +108,10 @@ function computePayloadBytes(data: unknown): number {
   try {
     const json = JSON.stringify(data)
     return Buffer.byteLength(json, 'utf8')
-  } catch {
+  } catch (error) {
+    logger.warn('Failed to stringify payload for metrics (best-effort)', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return -1
   }
 }
@@ -150,8 +159,10 @@ function _emitGameDeltaBatchToRoom(
         })
       }
     }
-  } catch {
-    // metrics best-effort
+  } catch (error) {
+    logger.warn('Failed to record game-delta metrics (best-effort)', {
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
   // Emit as a batch event understood by modern clients; older clients will still
   // receive individual deltas where we keep them.
@@ -323,7 +334,10 @@ function serializeGameStateForClient(
           s.players.filter((p) => !p.isEliminated).length || s.players.length || 1,
         )
         return Math.max(1, Math.ceil(Math.max(1, s.turn) / active))
-      } catch {
+      } catch (error) {
+        logger.warn('Failed to compute roundNumber (best-effort fallback)', {
+          error: error instanceof Error ? error.message : String(error),
+        })
         return Math.max(1, s.turn || 1)
       }
     })(),
@@ -518,142 +532,197 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
     socket.on(
       'join-room',
-      withErrorHandler(socket, 'join-room', async (roomId: string) => {
-        if (!roomId || typeof roomId !== 'string') {
-          throw new Error('Invalid room ID')
-        }
-
-        // Allow numeric room code as input
-        const normalizedRoomId = /^\d+$/.test(roomId)
-          ? await gameRoomService
-              .getRoomByCode(Number.parseInt(roomId, 10))
-              .then((r) => r?.id ?? '')
-          : roomId
-        if (!normalizedRoomId) {
-          throw new Error('Room not found')
-        }
-
-        const userId = requireUserId(socket)
-        const hasAccess = await gameRoomService.isPlayerInRoom(normalizedRoomId, userId)
-        if (!hasAccess) {
-          throw new Error('You are not a member of this game')
-        }
-
-        const channel = getGameChannel(normalizedRoomId)
-        // Join both the game channel (for game updates) and the room channel (for lifecycle/room updates)
-        await socket.join(channel)
-        await socket.join(normalizedRoomId)
-
-        if (!socket.joinedGameRooms) {
-          socket.joinedGameRooms = new Set()
-        }
-        socket.joinedGameRooms.add(normalizedRoomId)
-
-        const player = await gameRoomService.getPlayer(normalizedRoomId, userId)
-        const isAi = player?.isAi === true
-        const basePlayer = {
-          id: player?.id ?? player?.userId ?? userId,
-          userId: player?.userId ?? userId,
-          aiPlayerId: player?.aiPlayerId ?? null,
-          username: player?.username ?? socket.username ?? 'Unknown player',
-          joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
-          isReady: player?.isReady === undefined ? isAi : Boolean(player.isReady),
-          readyAt: player?.readyAt instanceof Date ? player.readyAt.toISOString() : null,
-          isAi,
-          aiDifficulty: player?.aiDifficulty ?? null,
-          aiPersonalitySeed:
-            typeof player?.aiPersonalitySeed === 'number'
-              ? player.aiPersonalitySeed
-              : (player?.aiPersonalitySeed ?? null),
-          selectedColor:
-            typeof player?.selected_color === 'string' && player.selected_color.length > 0
-              ? player.selected_color
-              : null,
-        }
-        const normalizedPlayer = {
-          ...basePlayer,
-          ...(typeof player?.teamId === 'number'
-            ? { teamId: player.teamId }
-            : player?.teamId === null
-              ? { teamId: null }
-              : {}),
-        }
-
-        socket.to(channel).emit('player-joined', {
-          roomId: normalizedRoomId,
-          player: normalizedPlayer,
-        })
-
-        // Best-effort presence move to room
-        void matchPresenceMove(userId, undefined, normalizedRoomId)
-
-        const cachedState = await gameStateCache.getGameState<SerializedGameState>(normalizedRoomId)
-        let serializedState = serializeGameStateForClient(cachedState)
-
-        if (!serializedState) {
-          const freshState = await gameService.getGameState(normalizedRoomId)
-          if (freshState) {
-            const filtered = filterGameStateForPlayer(freshState, userId)
-            serializedState = serializeGameStateForClient(filtered)
-          } else {
-            serializedState = null
+      withErrorHandler(
+        socket,
+        'join-room',
+        async (
+          roomId: string,
+          ack?: (r: {
+            ok: boolean
+            roomId?: string
+            joinedAt?: number
+            error?: string
+            code?: string
+          }) => void,
+        ) => {
+          if (!roomId || typeof roomId !== 'string') {
+            ack?.({ ok: false, error: 'Invalid room ID', code: 'invalid_room_id' })
+            return
           }
-        }
 
-        if (serializedState) {
-          // Apply fog-of-war filtering for the viewer
-          const filtered = filterGameStateForPlayer(
-            (serializedState as unknown as GameState) ?? null,
-            userId,
-          )
-          const finalState = serializeGameStateForClient(filtered)
-          if (finalState) {
-            emitGameUpdateToSocket(socket, finalState)
+          // Allow numeric room code as input
+          const normalizedRoomId = /^\d+$/.test(roomId)
+            ? await gameRoomService
+                .getRoomByCode(Number.parseInt(roomId, 10))
+                .then((r) => r?.id ?? '')
+            : roomId
+          if (!normalizedRoomId) {
+            ack?.({ ok: false, error: 'Room not found', code: 'room_not_found' })
+            return
           }
-        }
 
-        logger.info(`User ${userId} subscribed to game channel ${channel}`)
-      }),
+          const userId = requireUserId(socket)
+          const hasAccess = await gameRoomService.isPlayerInRoom(normalizedRoomId, userId)
+          if (!hasAccess) {
+            ack?.({ ok: false, error: 'You are not a member of this game', code: 'not_a_member' })
+            return
+          }
+
+          const channel = getGameChannel(normalizedRoomId)
+          // Join both the game channel (for game updates) and the room channel (for lifecycle/room updates)
+          await socket.join(channel)
+          await socket.join(normalizedRoomId)
+
+          if (!socket.joinedGameRooms) {
+            socket.joinedGameRooms = new Set()
+          }
+          socket.joinedGameRooms.add(normalizedRoomId)
+
+          const player = await gameRoomService.getPlayer(normalizedRoomId, userId)
+          const isAi = player?.isAi === true
+          const basePlayer = {
+            id: player?.id ?? player?.userId ?? userId,
+            userId: player?.userId ?? userId,
+            aiPlayerId: player?.aiPlayerId ?? null,
+            username: player?.username ?? socket.username ?? 'Unknown player',
+            joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
+            isReady: player?.isReady === undefined ? isAi : Boolean(player.isReady),
+            readyAt: player?.readyAt instanceof Date ? player.readyAt.toISOString() : null,
+            isAi,
+            aiDifficulty: player?.aiDifficulty ?? null,
+            aiPersonalitySeed:
+              typeof player?.aiPersonalitySeed === 'number'
+                ? player.aiPersonalitySeed
+                : (player?.aiPersonalitySeed ?? null),
+            selectedColor:
+              typeof player?.selected_color === 'string' && player.selected_color.length > 0
+                ? player.selected_color
+                : null,
+          }
+          const normalizedPlayer = {
+            ...basePlayer,
+            ...(typeof player?.teamId === 'number'
+              ? { teamId: player.teamId }
+              : player?.teamId === null
+                ? { teamId: null }
+                : {}),
+          }
+
+          socket.to(channel).emit('player-joined', {
+            roomId: normalizedRoomId,
+            player: normalizedPlayer,
+          })
+
+          // Best-effort presence move to room
+          void matchPresenceMove(userId, undefined, normalizedRoomId)
+
+          const cachedState =
+            await gameStateCache.getGameState<SerializedGameState>(normalizedRoomId)
+          let serializedState = serializeGameStateForClient(cachedState)
+
+          if (!serializedState) {
+            const freshState = await gameService.getGameState(normalizedRoomId)
+            if (freshState) {
+              const filtered = filterGameStateForPlayer(freshState, userId)
+              serializedState = serializeGameStateForClient(filtered)
+            } else {
+              serializedState = null
+            }
+          }
+
+          if (serializedState) {
+            // Apply fog-of-war filtering for the viewer
+            const filtered = filterGameStateForPlayer(
+              (serializedState as unknown as GameState) ?? null,
+              userId,
+            )
+            const finalState = serializeGameStateForClient(filtered)
+            if (finalState) {
+              emitGameUpdateToSocket(socket, finalState)
+            }
+          }
+
+          // Ack successful join
+          try {
+            ack?.({ ok: true, roomId: normalizedRoomId, joinedAt: Date.now() })
+          } catch (error) {
+            logger.warn('Failed to ack join-room (best-effort)', {
+              error: error instanceof Error ? error.message : String(error),
+            })
+          }
+
+          logger.info(`User ${userId} subscribed to game channel ${channel}`)
+        },
+      ),
     )
 
     // Spectator subscription: join only the room channel for lifecycle + live logs.
     // Permitted when fog is off for active games, or when the game is completed/abandoned.
     socket.on(
       'spectate-room',
-      withErrorHandler(socket, 'spectate-room', async (roomId: string) => {
-        if (!roomId || typeof roomId !== 'string') {
-          throw new Error('Invalid room ID')
-        }
+      withErrorHandler(
+        socket,
+        'spectate-room',
+        async (
+          roomId: string,
+          ack?: (r: {
+            ok: boolean
+            roomId?: string
+            joinedAt?: number
+            error?: string
+            code?: string
+          }) => void,
+        ) => {
+          if (!roomId || typeof roomId !== 'string') {
+            ack?.({ ok: false, error: 'Invalid room ID', code: 'invalid_room_id' })
+            return
+          }
 
-        const normalizedRoomId = /^\d+$/.test(roomId)
-          ? await gameRoomService
-              .getRoomByCode(Number.parseInt(roomId, 10))
-              .then((r) => r?.id ?? '')
-          : roomId
-        if (!normalizedRoomId) throw new Error('Room not found')
+          const normalizedRoomId = /^\d+$/.test(roomId)
+            ? await gameRoomService
+                .getRoomByCode(Number.parseInt(roomId, 10))
+                .then((r) => r?.id ?? '')
+            : roomId
+          if (!normalizedRoomId) {
+            ack?.({ ok: false, error: 'Room not found', code: 'room_not_found' })
+            return
+          }
 
-        const userId = requireUserId(socket)
-        const room = await gameRoomService.getRoomById(normalizedRoomId)
-        if (!room) throw new Error('Room not found')
+          const userId = requireUserId(socket)
+          const room = await gameRoomService.getRoomById(normalizedRoomId)
+          if (!room) throw new Error('Room not found')
 
-        const status = room.status as string
-        const fog = (room.fogOfWar as string | undefined) ?? 'off'
+          const status = room.status as string
+          const fog = (room.fogOfWar as string | undefined) ?? 'off'
 
-        const isActive = status === 'active'
-        const isFinished = status === 'completed' || status === 'abandoned'
-        const fogOff = fog === 'off'
+          const isActive = status === 'active'
+          const isFinished = status === 'completed' || status === 'abandoned'
+          const fogOff = fog === 'off'
 
-        if (!(isFinished || (isActive && fogOff))) {
-          throw new Error('Spectating not permitted for this game')
-        }
+          if (!(isFinished || (isActive && fogOff))) {
+            ack?.({
+              ok: false,
+              error: 'Spectating not permitted for this game',
+              code: 'spectate_forbidden',
+            })
+            return
+          }
 
-        // Join only the room channel to receive lifecycle + log:append events (no game deltas)
-        await socket.join(normalizedRoomId)
-        if (!socket.joinedGameRooms) socket.joinedGameRooms = new Set()
-        socket.joinedGameRooms.add(normalizedRoomId)
+          // Join only the room channel to receive lifecycle + log:append events (no game deltas)
+          await socket.join(normalizedRoomId)
+          if (!socket.joinedGameRooms) socket.joinedGameRooms = new Set()
+          socket.joinedGameRooms.add(normalizedRoomId)
 
-        logger.info(`User ${userId} spectating room ${normalizedRoomId}`)
-      }),
+          try {
+            ack?.({ ok: true, roomId: normalizedRoomId, joinedAt: Date.now() })
+          } catch (error) {
+            logger.warn('Failed to ack spectate-room (best-effort)', {
+              error: error instanceof Error ? error.message : String(error),
+            })
+          }
+          logger.info(`User ${userId} spectating room ${normalizedRoomId}`)
+        },
+      ),
     )
 
     socket.on(
@@ -698,40 +767,77 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       withErrorHandler(
         socket,
         'game-action',
-        async (data, ack?: (r: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void) => {
+        async (
+          data: { roomId: string; action: unknown; idempotencyKey?: string },
+          ack?: (r: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
+        ) => {
           if (!data || !data.roomId || !data.action) {
             throw new Error('Invalid game action data')
           }
 
           const userId = requireUserId(socket)
           const channel = getGameChannel(data.roomId)
-          const normalizedAction = { ...data.action, roomId: data.roomId, playerId: userId }
+          const normalizedAction = {
+            ...(data.action as Record<string, unknown>),
+            roomId: data.roomId,
+            playerId: userId,
+          } as unknown as import('../types/game.js').GameAction
 
           const t0 = Date.now()
           // Queue the game action for processing
-          const job = await queueService.addGameAction({
-            gameId: data.roomId,
-            playerId: userId,
-            action: normalizedAction,
-            socketId: socket.id,
-          })
+          let job: import('bullmq').Job<import('./queueService.js').GameActionJob> | null = null
+          try {
+            job = await queueService.addGameAction({
+              gameId: data.roomId,
+              playerId: userId,
+              action: normalizedAction,
+              socketId: socket.id,
+              idempotencyKey: data.idempotencyKey,
+            })
+          } catch (e) {
+            const msg = (e instanceof Error ? e.message : String(e)).toLowerCase()
+            // Treat duplicate idempotency keys (existing jobId) as a success ack
+            if (msg.includes('job') && msg.includes('exist')) {
+              try {
+                const { realtimeMetrics } = await import('./metricsService.js')
+                realtimeMetrics.recordAck(normalizedAction.type as string, Date.now() - t0)
+              } catch (error) {
+                logger.warn('Failed to record ack metric for duplicate idempotency (best-effort)', {
+                  error: error instanceof Error ? error.message : String(error),
+                })
+              }
+              ack?.({ ok: true, queued: true, acceptedAt: Date.now() })
+              return
+            }
+            throw e
+          }
 
           if (job) {
-            logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
-              jobId: job.id,
-              playerId: userId,
-            })
+            logger.info(
+              `Queued game action: ${(data.action as { type?: string })?.type} for game ${data.roomId}`,
+              {
+                jobId: job.id,
+                playerId: userId,
+              },
+            )
             try {
               const { realtimeMetrics } = await import('./metricsService.js')
-              realtimeMetrics.recordAck(data.action.type, Date.now() - t0)
-            } catch {
-              /* ignore */
+              realtimeMetrics.recordAck(
+                (data.action as { type?: string })?.type ?? 'unknown',
+                Date.now() - t0,
+              )
+            } catch (error) {
+              logger.warn('Failed to record ack metric for queued game-action (best-effort)', {
+                error: error instanceof Error ? error.message : String(error),
+              })
             }
             if (typeof ack === 'function') {
               try {
                 ack({ ok: true, queued: true, acceptedAt: Date.now() })
-              } catch {
-                /* ignore */
+              } catch (error) {
+                logger.warn('Failed to ack queued game-action (best-effort)', {
+                  error: error instanceof Error ? error.message : String(error),
+                })
               }
             }
           } else {
@@ -746,8 +852,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               if (typeof ack === 'function') {
                 try {
                   ack({ ok: true, queued: false, acceptedAt: Date.now() })
-                } catch {
-                  /* ignore */
+                } catch (error) {
+                  logger.warn('Failed to ack inline game-action (best-effort)', {
+                    error: error instanceof Error ? error.message : String(error),
+                  })
                 }
               }
               switch (normalizedAction.type) {
@@ -880,8 +988,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
             ...(socket.userId ? { playerId: socket.userId } : {}),
           })
-        } catch {
-          // best-effort: logging may fail or socket registry unavailable
+        } catch (error) {
+          logger.warn('Failed to append RESIGN log or emit system message (best-effort)', {
+            error: error instanceof Error ? error.message : String(error),
+          })
         }
         // Refresh lifecycle snapshot so timers/UI reflect changes
         await lifecycleService.refreshLifecycle(data.roomId)
@@ -1033,22 +1143,118 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           const { roomId, fromSeq, toSeq } = payload
 
           // Validate sequence range
-          if (fromSeq < 0 || toSeq < fromSeq || toSeq - fromSeq > 100) {
+          if (fromSeq < 0 || toSeq < fromSeq || toSeq - fromSeq > 200) {
             callback?.({ ok: false, error: 'Invalid sequence range' })
             return
           }
 
-          // For now, we don't persist deltas - just trigger a full state refetch
-          // In a production system, you'd query a delta log table or Redis stream
-          logger.info('Client requested missing deltas - triggering resync', {
-            roomId,
-            fromSeq,
-            toSeq,
-            userId: socket.userId,
-          })
+          // Fetch raw deltas from ring buffer
+          const { deltaBufferService } = await import('./deltaBufferService.js')
+          const raw = await deltaBufferService.getRange(roomId, fromSeq, toSeq)
 
-          // Return empty deltas and let client refetch full state
-          callback?.({ ok: true, deltas: [] })
+          // Fog-aware filtering for this viewer
+          const userId = (socket as AuthenticatedSocket).userId
+          if (!userId) {
+            callback?.({ ok: true, deltas: raw })
+            return
+          }
+
+          // Load game state to compute fog masks
+          let state: GameState | null = null
+          try {
+            state = await new GameService().getGameState(roomId)
+          } catch {
+            state = null
+          }
+          if (!state) {
+            callback?.({ ok: true, deltas: raw })
+            return
+          }
+
+          const fogMode = (state.gameConfig as { fogOfWar?: string } | undefined)?.fogOfWar ?? 'off'
+          const fogEnabled = fogMode !== 'off' && state.phase !== 'finished'
+
+          if (!fogEnabled) {
+            callback?.({ ok: true, deltas: raw })
+            return
+          }
+
+          // Compute visibility and filter deltas similar to fogService
+          const { computeVisibilityMask } = await import('./fogService.js')
+          const mask = computeVisibilityMask(state, userId)
+
+          type BattleResultDeltaWithChanges = BattleResultDelta & {
+            changes?: Array<{ type?: string; territoryId?: string | null }>
+          }
+
+          const filtered = (raw ?? [])
+            .map((delta) => {
+              switch (delta.type) {
+                case 'TERRITORY_UPDATE': {
+                  const territoryDelta = delta as TerritoryDelta
+                  return mask.has(territoryDelta.territoryId) ? delta : null
+                }
+                case 'BATTLE_RESULT': {
+                  const battleDelta = delta as BattleResultDeltaWithChanges
+                  const fromVisible = mask.has(battleDelta.battleResult.fromTerritory.id)
+                  const toVisible = mask.has(battleDelta.battleResult.toTerritory.id)
+                  if (!fromVisible && !toVisible) {
+                    return null
+                  }
+
+                  const redacted = JSON.parse(
+                    JSON.stringify(battleDelta),
+                  ) as BattleResultDeltaWithChanges
+                  if (!fromVisible) {
+                    redacted.battleResult.fromTerritory = {
+                      id: battleDelta.battleResult.fromTerritory.id,
+                      armies: 0,
+                    }
+                  }
+                  if (!toVisible) {
+                    redacted.battleResult.toTerritory = {
+                      id: battleDelta.battleResult.toTerritory.id,
+                      armies: 0,
+                      ownerId: undefined,
+                    }
+                  }
+                  if (Array.isArray(redacted.changes)) {
+                    redacted.changes = redacted.changes.filter((change) => {
+                      if (!change) {
+                        return false
+                      }
+                      if (change.type !== 'TERRITORY_UPDATE') {
+                        return true
+                      }
+                      return change.territoryId ? mask.has(change.territoryId) : true
+                    })
+                  }
+                  return redacted
+                }
+                case 'PLAYER_UPDATE': {
+                  const playerDelta = JSON.parse(JSON.stringify(delta)) as PlayerDelta
+                  playerDelta.changes = {
+                    ...playerDelta.changes,
+                    territories: undefined,
+                  }
+                  return playerDelta
+                }
+                case 'FORTIFY_RESULT': {
+                  const fortifyDelta = delta as FortifyResultDelta
+                  const fromVisible = mask.has(fortifyDelta.fromTerritoryId)
+                  const toVisible = mask.has(fortifyDelta.toTerritoryId)
+                  if (!fromVisible && !toVisible) {
+                    return null
+                  }
+                  return fortifyDelta
+                }
+                default:
+                  return delta
+              }
+            })
+            .filter((delta): delta is GameDelta => Boolean(delta))
+
+          callback?.({ ok: true, deltas: filtered as unknown[] })
         } catch (error) {
           logger.error('Failed to handle missing delta request', { error })
           callback?.({ ok: false, error: 'Internal error' })
