@@ -547,7 +547,9 @@ router.get(
           try {
             if (await assetExists(avifKey))
               avifList.push({ url: getPublicAssetUrl(avifKey), width, height })
-          } catch {}
+          } catch {
+            /* ignore: original AVIF not present */
+          }
           if (avifList.length) variants.avif = avifList
 
           // WebP widths
@@ -559,7 +561,9 @@ router.get(
           try {
             if (await assetExists(webpKey))
               webpList.push({ url: getPublicAssetUrl(webpKey), width, height })
-          } catch {}
+          } catch {
+            /* ignore: original WebP not present */
+          }
           if (webpList.length) variants.webp = webpList
 
           if (variants.avif || variants.webp) {
