@@ -740,6 +740,46 @@ export class GameRoomService {
       return createdRoom
     })
 
+    // Persist a textual log entry indicating that the game was created (distinct from game_started)
+    try {
+      await query(
+        `INSERT INTO game_logs (game_id, ts, turn_number, phase, move_type, actor_id, payload)
+         VALUES ($1, NOW(), $2, $3, $4, $5, $6)`,
+        [roomRow.id, 1, 'lobby', 'game_created', roomData.hostId, JSON.stringify({})],
+      )
+      try {
+        const { tryGetSocketServer } = await import('./socketRegistry.js')
+        const io = tryGetSocketServer()
+        if (io) {
+          const { emitLogAppend } = await import('./logEmitter.js')
+          const move: import('./logEmitter.js').DbMove = {
+            id: `${Date.now()}-created`,
+            game_id: roomRow.id,
+            turn_number: 1,
+            phase: 'lobby',
+            move_type: 'game_created',
+            actor_id: roomData.hostId,
+            created_at: new Date(),
+            payload: {},
+          }
+          await emitLogAppend(
+            io as unknown as import('socket.io').Server<
+              import('../types/shared.js').ClientToServerEvents,
+              import('../types/shared.js').ServerToClientEvents,
+              Record<string, unknown>,
+              { userId?: string }
+            >,
+            roomRow.id,
+            move,
+          )
+        }
+      } catch {
+        // best-effort emit
+      }
+    } catch {
+      // best-effort persistence
+    }
+
     const hydratedRoom = await this.getRoomById(roomRow.id)
     return hydratedRoom ?? this.mapRoomRow(roomRow)
   }
