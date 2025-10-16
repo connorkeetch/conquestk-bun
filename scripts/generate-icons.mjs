@@ -3,7 +3,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 
-const root = path.resolve(process.cwd())
+// Resolve repo root relative to this script's location, regardless of cwd
+const __dirname = path.dirname(new URL(import.meta.url).pathname)
+const root = path.resolve(__dirname, '..')
 // Use the base brand artwork and wrap it with an inline glow + crop in SVG
 const brandSvgPath = path.join(root, 'frontend/public/conquest_k_logo.svg')
 const out512 = path.join(root, 'frontend/public/icon-512.png')

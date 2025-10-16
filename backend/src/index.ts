@@ -804,12 +804,14 @@ if (isProductionLike) {
             res.setHeader('Cache-Control', 'no-cache')
           } else if (
             relativePath.startsWith('assets/') ||
-            /^favicon-\d+x\d+\.png$/.test(relativePath) ||
-            /^apple-touch-icon-\d+\.png$/.test(relativePath) ||
-            /^icon-\d+\.png$/.test(relativePath) ||
-            relativePath === 'safari-pinned-tab.svg' ||
-            relativePath === 'conquest_k_logo.svg'
+            /^favicon-\d+x\d+(\.[a-f0-9]{8,})?\.png$/.test(relativePath) ||
+            /^apple-touch-icon-\d+(\.[a-f0-9]{8,})?\.png$/.test(relativePath) ||
+            /^icon-\d+(\.[a-f0-9]{8,})?\.png$/.test(relativePath) ||
+            /^safari-pinned-tab(\.[a-f0-9]{8,})?\.svg$/.test(relativePath) ||
+            /^conquest_k_logo(\.[a-f0-9]{8,})?\.svg$/.test(relativePath)
           ) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+          } else if (/^screenshots\/.*\.[a-f0-9]{8,}\.png$/.test(relativePath)) {
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
           } else {
             res.setHeader('Cache-Control', 'public, max-age=86400')

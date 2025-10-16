@@ -5,7 +5,11 @@ import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getConquestRank } from '@/components/RankInsignia'
 import { getColorValue, getPremiumColorMeta, isPureWhiteColor } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
-import { resolveAssetPath } from '@/utils/assets'
+import missedUrl from '@/assets/stats/missed.svg?url'
+import armiesUrl from '@/assets/stats/armies.svg?url'
+import territoriesUrl from '@/assets/stats/territories.svg?url'
+import reinforcementsUrl from '@/assets/stats/reinforcements.svg?url'
+import treasuresUrl from '@/assets/stats/treasures.svg?url'
 
 interface PlayerStatsTableProps {
   players: GamePlayer[]
@@ -77,7 +81,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                     title="Missed turns (timed out)"
                   >
                     <img
-                      src={resolveAssetPath('static/icons/stats/missed.svg')}
+                      src={missedUrl}
                       alt=""
                       title="Missed turns (timed out)"
                       aria-hidden
@@ -89,7 +93,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                   </th>
                   <th className="px-2 py-2 text-right font-medium text-muted">
                     <img
-                      src={resolveAssetPath('static/icons/stats/armies.svg')}
+                      src={armiesUrl}
                       alt=""
                       title="Total armies on the board"
                       aria-hidden
@@ -101,7 +105,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                   </th>
                   <th className="px-2 py-2 text-right font-medium text-muted">
                     <img
-                      src={resolveAssetPath('static/icons/stats/territories.svg')}
+                      src={territoriesUrl}
                       alt=""
                       title="Territories owned"
                       aria-hidden
@@ -114,7 +118,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                   {variant === 'full' && (
                     <th className="px-2 py-2 text-right font-medium text-muted">
                       <img
-                        src={resolveAssetPath('static/icons/stats/reinforcements.svg')}
+                        src={reinforcementsUrl}
                         alt=""
                         title="Base reinforcements each turn"
                         aria-hidden
@@ -128,7 +132,7 @@ export const PlayerStatsTable: React.FC<PlayerStatsTableProps> = memo(
                   {variant === 'full' && (
                     <th className="px-2 py-2 text-right font-medium text-muted">
                       <img
-                        src={resolveAssetPath('static/icons/stats/treasures.svg')}
+                        src={treasuresUrl}
                         alt=""
                         title="Treasures in hand"
                         aria-hidden

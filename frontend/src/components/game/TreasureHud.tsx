@@ -4,6 +4,10 @@ import InfoTooltip from '@/components/InfoTooltip'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 import { resolveAssetPath } from '@/utils/assets'
+import bronzeUrl from '@/assets/treasures/bronze.svg?url'
+import silverUrl from '@/assets/treasures/silver.svg?url'
+import goldUrl from '@/assets/treasures/gold.svg?url'
+import diamondUrl from '@/assets/treasures/diamond.svg?url'
 import { computeNextTreasurePayout } from '@/utils/treasures'
 
 type Props = {
@@ -80,7 +84,13 @@ export function TreasureHud({ variant = 'header' }: Props) {
     const m = String(metal).toLowerCase()
     const file =
       m === 'diamond' ? 'diamond' : m === 'gold' ? 'gold' : m === 'silver' ? 'silver' : 'bronze'
-    const url = resolveAssetPath(`static/icons/treasures/${file}.svg`)
+    const urlMap: Record<string, string> = {
+      bronze: bronzeUrl,
+      silver: silverUrl,
+      gold: goldUrl,
+      diamond: diamondUrl,
+    }
+    const url = urlMap[file] || resolveAssetPath(`static/icons/treasures/${file}.svg`)
     const diamondBonus = Math.max(
       0,
       ((room?.treasureConfig as unknown as TreasureConfig | undefined)?.diamondSetBonus ??
