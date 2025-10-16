@@ -6,7 +6,7 @@ import type {
   AdminQueuesStats,
 } from '@conquestk/shared/types/admin'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { adminService } from '@/services/adminService'
+import { adminService, type ClientMetricsSummary } from '@/services/adminService'
 
 type HealthResult = {
   label: string
@@ -23,6 +23,7 @@ const endpoints = [
   { label: 'API Health', path: '/health', auth: false },
   { label: 'Queues Health', path: '/queues/health', auth: true },
   { label: 'Queues Stats', path: '/queues/stats', auth: true },
+  { label: 'Client Metrics Summary', path: '/metrics/client/summary', auth: true },
   { label: 'Performance Detailed', path: '/performance/health/detailed', auth: true },
   { label: 'Performance Metrics', path: '/performance/metrics', auth: true },
   { label: 'Performance Alerts', path: '/performance/alerts?active=true', auth: true },
@@ -111,6 +112,18 @@ export default function AdminHealth() {
         }
         if (e.label === 'Queues Stats') {
           const data = await adminService.getQueueStats()
+          const dt = Date.now() - t0
+          return {
+            label: e.label,
+            path: e.path,
+            ok: true,
+            statusCode: 200,
+            durationMs: dt,
+            data,
+          }
+        }
+        if (e.label === 'Client Metrics Summary') {
+          const data = await adminService.getClientMetricsSummary()
           const dt = Date.now() - t0
           return {
             label: e.label,
@@ -549,6 +562,23 @@ export default function AdminHealth() {
             )
           }
 
+          const renderClientMetricsSummary = () => {
+            const d = (r.data ?? {}) as ClientMetricsSummary
+            return (
+              <div className="mt-3 text-xs text-white/80 space-y-1">
+                <div>Sessions (24h): {d.sessionCount ?? 0}</div>
+                <div>
+                  Avg latency: {d.avgLatency != null ? `${Math.round(d.avgLatency)} ms` : 'n/a'}
+                </div>
+                <div>
+                  Avg success rate:{' '}
+                  {d.avgSuccessRate != null ? `${Math.round(d.avgSuccessRate * 10) / 10}%` : 'n/a'}
+                </div>
+                <div>Total reconnects: {d.totalReconnects ?? 0}</div>
+              </div>
+            )
+          }
+
           const renderPerformanceMetrics = () => {
             const d = (r.data ?? {}) as {
               server?: {
@@ -620,15 +650,17 @@ export default function AdminHealth() {
                     ? renderQueuesHealth()
                     : r.label === 'Queues Stats'
                       ? renderQueuesStats()
-                      : r.label === 'Performance Detailed'
-                        ? renderPerformanceDetailed()
-                        : r.label === 'Performance Metrics'
-                          ? renderPerformanceMetrics()
-                          : r.label === 'Performance Alerts'
-                            ? renderPerformanceAlerts()
-                            : r.label === 'Match Service'
-                              ? renderMatchSvc()
-                              : null
+                      : r.label === 'Client Metrics Summary'
+                        ? renderClientMetricsSummary()
+                        : r.label === 'Performance Detailed'
+                          ? renderPerformanceDetailed()
+                          : r.label === 'Performance Metrics'
+                            ? renderPerformanceMetrics()
+                            : r.label === 'Performance Alerts'
+                              ? renderPerformanceAlerts()
+                              : r.label === 'Match Service'
+                                ? renderMatchSvc()
+                                : null
                 : null}
             </Card>
           )
