@@ -1,15 +1,15 @@
 import type React from 'react'
 import { memo, useCallback, useMemo, useState } from 'react'
+import armiesUrl from '@/assets/stats/armies.svg?url'
+import missedUrl from '@/assets/stats/missed.svg?url'
+import reinforcementsUrl from '@/assets/stats/reinforcements.svg?url'
+import territoriesUrl from '@/assets/stats/territories.svg?url'
+import treasuresUrl from '@/assets/stats/treasures.svg?url'
 import TreasureHud from '@/components/game/TreasureHud'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getConquestRank } from '@/components/RankInsignia'
 import { getColorValue, getPremiumColorMeta, isPureWhiteColor } from '@/constants/colors'
 import type { GamePlayer } from '@/types/game'
-import missedUrl from '@/assets/stats/missed.svg?url'
-import armiesUrl from '@/assets/stats/armies.svg?url'
-import territoriesUrl from '@/assets/stats/territories.svg?url'
-import reinforcementsUrl from '@/assets/stats/reinforcements.svg?url'
-import treasuresUrl from '@/assets/stats/treasures.svg?url'
 
 interface PlayerStatsTableProps {
   players: GamePlayer[]

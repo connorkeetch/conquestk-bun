@@ -1,13 +1,13 @@
 import type { TreasureConfig } from '@shared/types'
 import { useEffect, useMemo } from 'react'
+import bronzeUrl from '@/assets/treasures/bronze.svg?url'
+import diamondUrl from '@/assets/treasures/diamond.svg?url'
+import goldUrl from '@/assets/treasures/gold.svg?url'
+import silverUrl from '@/assets/treasures/silver.svg?url'
 import InfoTooltip from '@/components/InfoTooltip'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { setTreasureModalOpen } from '@/store/uiRoomSlice'
 import { resolveAssetPath } from '@/utils/assets'
-import bronzeUrl from '@/assets/treasures/bronze.svg?url'
-import silverUrl from '@/assets/treasures/silver.svg?url'
-import goldUrl from '@/assets/treasures/gold.svg?url'
-import diamondUrl from '@/assets/treasures/diamond.svg?url'
 import { computeNextTreasurePayout } from '@/utils/treasures'
 
 type Props = {

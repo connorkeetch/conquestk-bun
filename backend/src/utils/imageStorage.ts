@@ -125,14 +125,15 @@ export const storeImageBuffer = async (
 
   // Responsive widths: generate downscaled variants if beneficial
   try {
-    const targetWidths = [1024, 1536, 2048]
-      .filter((w) => w > 0 && w < width)
-      .sort((a, b) => a - b)
+    const targetWidths = [1024, 1536, 2048].filter((w) => w > 0 && w < width).sort((a, b) => a - b)
     for (const w of targetWidths) {
       const h = Math.round((w / width) * height)
       try {
         const key = `${baseKey}-${w}w.avif`
-        const buf = await sharp(buffer).resize({ width: w }).avif({ quality: 60, effort: 4 }).toBuffer()
+        const buf = await sharp(buffer)
+          .resize({ width: w })
+          .avif({ quality: 60, effort: 4 })
+          .toBuffer()
         await uploadAsset({
           key,
           body: buf,
@@ -142,7 +143,11 @@ export const storeImageBuffer = async (
         if (!variants.avif) variants.avif = []
         variants.avif.push({ key, url: getPublicAssetUrl(key), width: w, height: h })
       } catch (e) {
-        logger.warn('Failed to generate AVIF responsive variant', { storageKey, width: w, error: e })
+        logger.warn('Failed to generate AVIF responsive variant', {
+          storageKey,
+          width: w,
+          error: e,
+        })
       }
       try {
         const key = `${baseKey}-${w}w.webp`
@@ -156,7 +161,11 @@ export const storeImageBuffer = async (
         if (!variants.webp) variants.webp = []
         variants.webp.push({ key, url: getPublicAssetUrl(key), width: w, height: h })
       } catch (e) {
-        logger.warn('Failed to generate WebP responsive variant', { storageKey, width: w, error: e })
+        logger.warn('Failed to generate WebP responsive variant', {
+          storageKey,
+          width: w,
+          error: e,
+        })
       }
     }
     if (variants.avif) variants.avif.sort((a, b) => a.width - b.width)

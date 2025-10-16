@@ -520,7 +520,9 @@ router.get(
             webp?: Array<{ url: string; width: number; height?: number }>
           } = {}
           // Collect responsive widths (if present), then add original size at end
-          const candidateWidths = [1024, 1536, 2048].filter((w) => w > 0 && w < width).sort((a, b) => a - b)
+          const candidateWidths = [1024, 1536, 2048]
+            .filter((w) => w > 0 && w < width)
+            .sort((a, b) => a - b)
           const pushIf = async (
             list: Array<{ url: string; width: number; height?: number }>,
             key: string,
@@ -543,7 +545,8 @@ router.get(
           }
           // Include original AVIF if present
           try {
-            if (await assetExists(avifKey)) avifList.push({ url: getPublicAssetUrl(avifKey), width, height })
+            if (await assetExists(avifKey))
+              avifList.push({ url: getPublicAssetUrl(avifKey), width, height })
           } catch {}
           if (avifList.length) variants.avif = avifList
 
@@ -554,7 +557,8 @@ router.get(
           }
           // Include original WebP if present
           try {
-            if (await assetExists(webpKey)) webpList.push({ url: getPublicAssetUrl(webpKey), width, height })
+            if (await assetExists(webpKey))
+              webpList.push({ url: getPublicAssetUrl(webpKey), width, height })
           } catch {}
           if (webpList.length) variants.webp = webpList
 

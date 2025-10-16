@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import bronzeUrl from '@/assets/treasures/bronze.svg?url'
+import diamondUrl from '@/assets/treasures/diamond.svg?url'
+import goldUrl from '@/assets/treasures/gold.svg?url'
+import silverUrl from '@/assets/treasures/silver.svg?url'
 import InfoTooltip from '@/components/InfoTooltip'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { tradeTreasureSet } from '@/store/gameActions'
 import { resolveAssetPath } from '@/utils/assets'
-import bronzeUrl from '@/assets/treasures/bronze.svg?url'
-import silverUrl from '@/assets/treasures/silver.svg?url'
-import goldUrl from '@/assets/treasures/gold.svg?url'
-import diamondUrl from '@/assets/treasures/diamond.svg?url'
 
 type Props = {
   isOpen: boolean

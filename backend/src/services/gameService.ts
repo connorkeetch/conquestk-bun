@@ -2318,13 +2318,24 @@ export class GameService {
     battleMetrics.recordApply(gameId, status, persistenceOutcome.divergence)
 
     if (persistenceOutcome.applied) {
-      // Emit appended battle log entries to subscribers
+      // Persist + emit appended battle log entries to subscribers
       try {
         if (appended.length > 0) {
           const io = tryGetSocketServer()
           if (io) {
             try {
-              const { emitFogAwareForEntries } = await import('./logEmitter.js')
+              const { emitFogAwareForEntries, persistFogAwareForEntries } = await import(
+                './logEmitter.js'
+              )
+              // Persist textual equivalents in game_logs for backfill
+              try {
+                await persistFogAwareForEntries(
+                  gameId,
+                  appended as unknown as Array<Record<string, unknown>>,
+                )
+              } catch {
+                /* persistence best-effort */
+              }
               await emitFogAwareForEntries(
                 io as unknown as import('socket.io').Server<
                   import('../types/shared.js').ClientToServerEvents,
