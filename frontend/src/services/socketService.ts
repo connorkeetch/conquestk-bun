@@ -60,9 +60,6 @@ class SocketService {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
   private lastReadEmitAt: Record<string, number> = {}
   private pendingRoomStateFetches = new Set<string>()
-  private pendingConfirmTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
-  private pendingAttackAcks: Map<string, ReturnType<typeof setTimeout>> = new Map()
-  private lastAttackEmitAt: Map<string, number> = new Map()
   private lastAuthToastAt: number | null = null
   private pendingActionRetries: Map<string, number> = new Map()
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null
@@ -70,6 +67,9 @@ class SocketService {
   private connectionLatency: number = 0
   private deltaSequenceTracking: Map<string, number> = new Map() // roomId -> last received sequence
   private pendingDeltaRequests: Set<string> = new Set() // Track in-flight delta requests
+  private pendingActions: Map<string, Promise<{ ok: boolean; queued?: boolean; error?: string }>> =
+    new Map() // Track in-flight actions by idempotency key
+  private lastActionEmitAt: Map<string, number> = new Map() // For throttling actions
 
   /**
    * HEALTH MONITORING: Start heartbeat to detect zombie connections
@@ -242,12 +242,78 @@ class SocketService {
 
   /**
    * RELIABILITY FIX: Send game action with mandatory acknowledgment and timeout
-   * This ensures we detect failed deliveries and can retry or notify the user
+   * Supports optimistic updates, rollback, throttling, and idempotency
    */
   private async sendActionWithAck(
     roomId: string,
     action: { type: string; playerId?: string; payload?: unknown },
-    timeoutMs = 5000,
+    options?: {
+      idempotencyKey?: string
+      timeoutMs?: number
+      optimisticUpdate?: () => void
+      rollback?: () => void
+      throttleKey?: string
+      throttleMs?: number
+    },
+  ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
+    const idempotencyKey = options?.idempotencyKey ?? `${roomId}:${action.type}:${Date.now()}`
+    const timeoutMs = options?.timeoutMs ?? 5000
+
+    // THROTTLING: Check if we should throttle this action
+    if (options?.throttleKey && options?.throttleMs) {
+      const lastAt = this.lastActionEmitAt.get(options.throttleKey) ?? 0
+      if (Date.now() - lastAt < options.throttleMs) {
+        return { ok: false, error: 'Throttled' }
+      }
+      this.lastActionEmitAt.set(options.throttleKey, Date.now())
+    }
+
+    // Check if already in-flight
+    const pending = this.pendingActions.get(idempotencyKey)
+    if (pending) {
+      logger.info('Action already in-flight, reusing pending request', { idempotencyKey })
+      return pending
+    }
+
+    // OPTIMISTIC UPDATE: Apply immediately if provided
+    if (options?.optimisticUpdate) {
+      try {
+        options.optimisticUpdate()
+      } catch (error) {
+        logger.error('Optimistic update failed', { error })
+      }
+    }
+
+    // Send action with ACK
+    const actionPromise = this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
+    this.pendingActions.set(idempotencyKey, actionPromise)
+
+    actionPromise.finally(() => {
+      this.pendingActions.delete(idempotencyKey)
+    })
+
+    const result = await actionPromise
+
+    // ROLLBACK: Revert optimistic update on failure
+    if (!result.ok && options?.rollback) {
+      try {
+        options.rollback()
+      } catch (error) {
+        logger.error('Rollback failed', { error })
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Internal helper to emit action and wait for ack
+   */
+  private async _sendActionInternal(
+    roomId: string,
+    action: { type: string; playerId?: string; payload?: unknown },
+    idempotencyKey: string,
+    timeoutMs: number,
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
     return new Promise((resolve) => {
       if (!this.socket) {
@@ -262,7 +328,11 @@ class SocketService {
       try {
         this.socket.emit(
           'game-action',
-          { roomId, action } as Parameters<ClientToServerEvents['game-action']>[0],
+          {
+            roomId,
+            action,
+            idempotencyKey,
+          } as Parameters<ClientToServerEvents['game-action']>[0],
           (ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
             clearTimeout(timeoutHandle)
             resolve(ack ?? { ok: true })
@@ -506,165 +576,156 @@ class SocketService {
     this.socket?.emit(event as any, data as any)
   }
 
-  private scheduleDeployConfirmFetch(roomId: string) {
-    // Clear any existing timer for this room
-    const existing = this.pendingConfirmTimers.get(roomId)
-    if (existing) {
-      clearTimeout(existing)
-      this.pendingConfirmTimers.delete(roomId)
-    }
-    const timer = setTimeout(() => {
-      try {
-        const state = store.getState()
-        const loaded = state.game.currentGame
-        if (!loaded || loaded.roomId !== roomId) {
-          this.pendingConfirmTimers.delete(roomId)
-          return
-        }
-        // Fetch full state as a convergence fallback
-        store.dispatch(fetchGameState({ roomId }))
-      } catch {
-        /* ignore fetch errors */
-      } finally {
-        this.pendingConfirmTimers.delete(roomId)
-      }
-    }, 600)
-    this.pendingConfirmTimers.set(roomId, timer)
-  }
+  private async deployArmies(roomId: string, territoryId: string, armies: number) {
+    // Store original state for rollback
+    const state = store.getState()
+    const territory = state.game.currentGame?.board.find((t) => t.id === territoryId)
+    const originalArmies = territory?.armies ?? 0
+    const originalPool = state.game.reinforcementArmies ?? 0
 
-  private clearConfirmTimer(roomId: string) {
-    const t = this.pendingConfirmTimers.get(roomId)
-    if (t) {
-      clearTimeout(t)
-      this.pendingConfirmTimers.delete(roomId)
-    }
-  }
-
-  private deployArmies(roomId: string, territoryId: string, armies: number) {
-    // Send via unified action; apply optimistic update on ack
-    this.scheduleDeployConfirmFetch(roomId)
-    this.socket?.emit(
-      'game-action',
+    const result = await this.sendActionWithAck(
+      roomId,
+      { type: 'deploy', payload: { territoryId, armies } },
       {
-        roomId,
-        action: {
-          type: 'deploy',
-          roomId,
-          playerId: store.getState().auth.user?.id || '',
-          payload: { territoryId, armies },
-        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
-      },
-      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
-        this.clearConfirmTimer(roomId)
-        try {
+        optimisticUpdate: () => {
+          // Apply optimistic update immediately
           const state = store.getState()
           const current = state.game.currentGame
           const userId = state.auth.user?.id
           if (!current || current.roomId !== roomId || !userId) return
           if (current.phase !== 'reinforcement' || current.currentPlayer !== userId) return
+
           const idx = current.board.findIndex((t) => t.id === territoryId)
           if (idx === -1) return
+
           const next = { ...current, board: [...current.board] }
           const target = { ...next.board[idx] }
-          target.armies = (target.armies ?? 0) + armies
+          target.armies = originalArmies + armies
           next.board[idx] = target as (typeof next.board)[number]
-          const currentPool = state.game.reinforcementArmies ?? 0
-          const newPool = Math.max(0, currentPool - armies)
+
+          const newPool = Math.max(0, originalPool - armies)
           store.dispatch(updateGameState(next as unknown as GameState))
           store.dispatch(setReinforcementArmies(newPool))
-        } catch {
-          /* ignore */
-        }
+        },
+        rollback: () => {
+          // Revert on failure
+          const state = store.getState()
+          const current = state.game.currentGame
+          if (!current || current.roomId !== roomId) return
+
+          const idx = current.board.findIndex((t) => t.id === territoryId)
+          if (idx === -1) return
+
+          const next = { ...current, board: [...current.board] }
+          const target = { ...next.board[idx] }
+          target.armies = originalArmies
+          next.board[idx] = target as (typeof next.board)[number]
+
+          store.dispatch(updateGameState(next as unknown as GameState))
+          store.dispatch(setReinforcementArmies(originalPool))
+          toast.error('Deploy failed')
+        },
       },
     )
+
+    if (!result.ok) {
+      logger.warn('Deploy action failed', { territoryId, armies, error: result.error })
+    }
   }
 
-  private attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
+  private async attack(
+    roomId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    armies?: number,
+  ) {
     const key = `${roomId}:${fromTerritoryId}->${toTerritoryId}`
-    const now = Date.now()
-    const lastAt = this.lastAttackEmitAt.get(key) ?? 0
-    const MIN_INTERVAL_MS = 120
-    if (now - lastAt < MIN_INTERVAL_MS) {
-      return
-    }
-    this.lastAttackEmitAt.set(key, now)
-
-    // Prevent spamming the same pair until ack arrives or timeout
-    if (this.pendingAttackAcks.has(key)) {
-      return
-    }
-
-    const clear = () => {
-      const t = this.pendingAttackAcks.get(key)
-      if (t) clearTimeout(t)
-      this.pendingAttackAcks.delete(key)
-    }
-
-    const fallback = setTimeout(() => {
-      // Clear inflight after 1s even if ack lost (convergence occurs via deltas)
-      this.pendingAttackAcks.delete(key)
-    }, 1000)
-    this.pendingAttackAcks.set(key, fallback)
 
     const attackPayload =
       typeof armies === 'number'
-        ? { roomId, fromTerritoryId, toTerritoryId, armies }
-        : { roomId, fromTerritoryId, toTerritoryId }
-    this.socket?.emit(
-      'game-action',
+        ? { fromTerritoryId, toTerritoryId, armies }
+        : { fromTerritoryId, toTerritoryId }
+
+    await this.sendActionWithAck(
+      roomId,
       {
-        roomId,
-        action: {
-          type: 'attack',
-          roomId,
-          playerId: store.getState().auth.user?.id || '',
-          payload: attackPayload,
-        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+        type: 'attack',
+        payload: attackPayload,
       },
-      () => {
-        clear()
-        try {
-          audioService.playEffect('dice')
-        } catch {
-          /* ignore */
-        }
+      {
+        throttleKey: key,
+        throttleMs: 120,
+        optimisticUpdate: () => {
+          // Play dice sound immediately for instant feedback
+          try {
+            audioService.playEffect('dice')
+          } catch {
+            /* ignore */
+          }
+        },
       },
     )
   }
 
-  private fortify(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies: number) {
-    this.socket?.emit(
-      'game-action',
+  private async fortify(
+    roomId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    armies: number,
+  ) {
+    const state = store.getState()
+    const fromTerritory = state.game.currentGame?.board.find((t) => t.id === fromTerritoryId)
+    const toTerritory = state.game.currentGame?.board.find((t) => t.id === toTerritoryId)
+    const originalFrom = fromTerritory?.armies ?? 0
+    const originalTo = toTerritory?.armies ?? 0
+
+    await this.sendActionWithAck(
+      roomId,
+      { type: 'fortify', payload: { fromTerritoryId, toTerritoryId, armies } },
       {
-        roomId,
-        action: {
-          type: 'fortify',
-          roomId,
-          playerId: store.getState().auth.user?.id || '',
-          payload: { fromTerritoryId, toTerritoryId, armies },
-        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
-      },
-      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
-        try {
+        optimisticUpdate: () => {
+          // Move armies visually
           const state = store.getState()
           const current = state.game.currentGame
           const userId = state.auth.user?.id
           if (!current || current.roomId !== roomId || !userId) return
           if (current.phase !== 'fortify' || current.currentPlayer !== userId) return
+
           const fromIdx = current.board.findIndex((t) => t.id === fromTerritoryId)
           const toIdx = current.board.findIndex((t) => t.id === toTerritoryId)
           if (fromIdx === -1 || toIdx === -1) return
+
           const next = { ...current, board: [...current.board] }
           const from = { ...next.board[fromIdx] }
           const to = { ...next.board[toIdx] }
-          from.armies = Math.max(0, (from.armies ?? 0) - armies)
-          to.armies = (to.armies ?? 0) + armies
+          from.armies = Math.max(0, originalFrom - armies)
+          to.armies = originalTo + armies
           next.board[fromIdx] = from as (typeof next.board)[number]
           next.board[toIdx] = to as (typeof next.board)[number]
+
           store.dispatch(updateGameState(next as unknown as GameState))
-        } catch {
-          /* ignore */
-        }
+        },
+        rollback: () => {
+          // Revert on failure
+          const state = store.getState()
+          const current = state.game.currentGame
+          if (!current || current.roomId !== roomId) return
+
+          const fromIdx = current.board.findIndex((t) => t.id === fromTerritoryId)
+          const toIdx = current.board.findIndex((t) => t.id === toTerritoryId)
+          if (fromIdx === -1 || toIdx === -1) return
+
+          const next = { ...current, board: [...current.board] }
+          const from = { ...next.board[fromIdx] }
+          const to = { ...next.board[toIdx] }
+          from.armies = originalFrom
+          to.armies = originalTo
+          next.board[fromIdx] = from as (typeof next.board)[number]
+          next.board[toIdx] = to as (typeof next.board)[number]
+
+          store.dispatch(updateGameState(next as unknown as GameState))
+          toast.error('Fortify failed')
+        },
       },
     )
   }
@@ -687,40 +748,12 @@ class SocketService {
     })
   }
 
-  private undoFortify(roomId: string) {
-    this.socket?.emit(
-      'game-action',
-      {
-        roomId,
-        action: {
-          type: 'undo_fortify',
-          roomId,
-          playerId: store.getState().auth.user?.id || '',
-          payload: undefined,
-        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
-      },
-      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
-        // no-op; server delta will update UI
-      },
-    )
+  private async undoFortify(roomId: string) {
+    await this.sendActionWithAck(roomId, { type: 'undo_fortify' })
   }
 
-  private endTurn(roomId: string) {
-    this.socket?.emit(
-      'game-action',
-      {
-        roomId,
-        action: {
-          type: 'end_turn',
-          roomId,
-          playerId: store.getState().auth.user?.id || '',
-          payload: undefined,
-        } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
-      },
-      (_ack?: { ok: boolean; queued?: boolean; acceptedAt?: number }) => {
-        // no-op; server delta/phase change will update UI
-      },
-    )
+  private async endTurn(roomId: string) {
+    await this.sendActionWithAck(roomId, { type: 'end_turn' })
   }
 
   beginTurn(roomId: string) {
