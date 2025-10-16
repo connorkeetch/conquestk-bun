@@ -380,6 +380,13 @@ export interface ClientToServerEvents {
   'typing.start': (payload: TypingEventPayload) => void
   'typing.stop': (payload: TypingEventPayload) => void
   'ping:territory': (data: { roomId: string; territoryId: string }) => void
+  // Heartbeat ping for connection health monitoring
+  ping: (callback?: () => void) => void
+  // Request missing deltas for gap recovery
+  'request-missing-deltas': (
+    payload: { roomId: string; fromSeq: number; toSeq: number },
+    callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
+  ) => void
   'conversation.create': (
     payload: ConversationCreatePayload,
     callback?: (response: ConversationCreateAck) => void,
