@@ -42,6 +42,7 @@ export type DbMove = {
   turn_number: number
   phase: string
   move_type:
+    | 'game_created'
     | 'game_started'
     | 'game_finished'
     | 'round_start'
@@ -94,6 +95,8 @@ export function renderLogText(move: DbMove, fog: FogView): string {
     // banners
     case 'game_started':
       return V.gameStart[0]
+    case 'game_created':
+      return 'Game created.'
     case 'game_finished':
       return V.gameFinish[0]
     case 'round_start':
