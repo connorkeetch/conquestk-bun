@@ -35,13 +35,15 @@
 
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #020109 0% /* Pit black */,
-    rgba(159, 20, 61, 0.5) 32% /* Crimson spotlight */,
-    rgba(91, 135, 255, 0.42) 62% /* Indigo amp haze */,
-    #03020a 100% /* Fade to void */
+    #010006 0% /* Deeper pit black */,
+    rgba(159, 20, 61, 0.35) 30% /* Darker crimson spotlight */,
+    rgba(91, 135, 255, 0.28) 60% /* Darker indigo amp haze */,
+    #020108 100% /* Deeper void */
   );
 
   --ck-glow: #ff355e;
+  /* Ensure body uses the theme gradient (override any debug overrides) */
+  --body-bg-image: var(--ck-bg-gradient);
 
   /* Decorative heading font applied after fonts are ready (see below) */
 
@@ -75,6 +77,11 @@
   --metal-fog-speed: 44s;
   --metal-bat-speed: 30s;
   --metal-pulse-speed: 12s;
+}
+
+/* Explicitly force the gradient on the body for Metal */
+[data-theme="metal"] body {
+  background-image: var(--ck-bg-gradient);
 }
 
 @keyframes metal-fog-drift {
