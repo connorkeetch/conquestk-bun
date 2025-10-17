@@ -75,7 +75,7 @@ Organize achievements into categories for UI grouping. Provide slug identifiers 
 ### Dark Humor
 | Slug | Title | Unlock condition | Badge placeholder |
 | --- | --- | --- | --- |
-| `democracy-delivered` | Democracy Delivered | Capture first continent via overwhelming attack | `badge-democracy-delivered.svg` |
+| `democracy-delivered` | Democracy Delivered | Capture first sector via overwhelming attack | `badge-democracy-delivered.svg` |
 | `peace-was-never-option` | Peace Was Never an Option | Make at least one attack every turn | `badge-peace-was-never-option.svg` |
 | `collateral-management-specialist` | Collateral Management Specialist | Eliminate ally while "helping" them | `badge-collateral-management-specialist.svg` |
 
@@ -84,7 +84,7 @@ Organize achievements into categories for UI grouping. Provide slug identifiers 
 | --- | --- | --- | --- |
 | `404-strategy-not-found` | 404 Strategy Not Found | Lose without any successful conquest | `badge-404-strategy-not-found.svg` |
 | `map-tourist` | Map Tourist | Play 50 unique maps without a win | `badge-map-tourist.svg` |
-| `taxation-without-representation` | Taxation Without Representation | Hold a continent while owning ≤5 territories | `badge-taxation-without-representation.svg` |
+| `taxation-without-representation` | Taxation Without Representation | Hold a sector while owning ≤5 territories | `badge-taxation-without-representation.svg` |
 | `ctrl-alt-del` | Ctrl+Alt+Del | Disconnect three times in one match but win | `badge-ctrl-alt-del.svg` |
 
 ## Data model considerations

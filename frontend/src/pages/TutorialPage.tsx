@@ -57,14 +57,14 @@ const RANKING_TRACK = [
     key: 'EMPEROR',
     icon: '👑',
     label: 'Emperor',
-    description: 'Commands legions across continents and still finds time for pageantry.',
+    description: 'Commands legions across sectors and still finds time for pageantry.',
     example: 'Napoleon Bonaparte',
   },
   {
     key: 'GREAT_KING',
     icon: '☀️',
     label: 'Great King',
-    description: 'Ruler of rulers, basking in continent-wide adoration.',
+    description: 'Ruler of rulers, basking in sector-wide adoration.',
     example: 'Alexander the Great',
   },
   {
@@ -310,7 +310,7 @@ const TutorialPage: React.FC = () => {
                 </p>
                 <ul className="text-xs text-muted space-y-1">
                   <li>Capital territories glow with a crown marker on the map.</li>
-                  <li>Card bonuses and continent income still apply—capitalize on both.</li>
+                  <li>Card bonuses and sector income still apply—capitalize on both.</li>
                   <li>Perfect for surgical strikes and dramatic comeback plays.</li>
                 </ul>
               </div>
@@ -436,7 +436,7 @@ const TutorialPage: React.FC = () => {
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
                     <span>
-                      Grab a continent with two or fewer choke points; bonus troops are your oxygen.
+                      Grab a sector with two or fewer choke points; bonus troops are your oxygen.
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
@@ -461,7 +461,7 @@ const TutorialPage: React.FC = () => {
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
                     <span>
-                      Break enemy continents even if you can&apos;t hold them. Denying income is
+                      Break enemy sectors even if you can&apos;t hold them. Denying income is
                       victory.
                     </span>
                   </li>
@@ -662,7 +662,7 @@ const TutorialPage: React.FC = () => {
                 Forge your own battlegrounds
               </h2>
               <p className="text-sm text-muted max-w-2xl">
-                The map editor lets you sculpt continents, wire chokepoints, and subject friends to
+                The map editor lets you sculpt sectors, wire chokepoints, and subject friends to
                 suspiciously self-serving geography.
               </p>
             </header>
@@ -696,8 +696,7 @@ const TutorialPage: React.FC = () => {
                 <div className="panel-muted space-y-1">
                   <h4 className="font-semibold text-[color:var(--color-primary)]">🌍 Sectors</h4>
                   <p className="text-sm text-muted">
-                    Group tiles into continents, pick highlight colors, and set reinforcement
-                    bonuses.
+                    Group tiles into sectors, pick highlight colors, and set reinforcement bonuses.
                   </p>
                 </div>
                 <div className="panel-muted space-y-1">

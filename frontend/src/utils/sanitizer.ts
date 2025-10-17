@@ -13,7 +13,6 @@ type ProfileData = {
 type MapTerritory = {
   name?: string
   sector?: string
-  continent?: string
   [key: string]: unknown
 }
 
@@ -164,7 +163,10 @@ export function sanitizeMapData(mapData: Nullable<MapData>): Nullable<MapData> {
       const sectorValue = territory.sector || ''
       sanitizedTerritory.sector = typeof sectorValue === 'string' ? sanitizeText(sectorValue) : ''
       // Drop any legacy 'continent' metadata if present
-      if ('continent' in sanitizedTerritory) delete sanitizedTerritory.continent
+      if ('continent' in sanitizedTerritory) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- dropping legacy field
+        delete (sanitizedTerritory as Record<string, unknown>).continent
+      }
 
       return sanitizedTerritory
     })

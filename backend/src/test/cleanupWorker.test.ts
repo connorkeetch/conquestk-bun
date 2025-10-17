@@ -54,7 +54,7 @@ const createGameState = (): GameState => ({
     {
       id: 'territory-1',
       name: 'Territory 1',
-      continent: 'test-continent',
+      sector: 'test-sector',
       ownerId: 'player1',
       armies: 5,
       adjacentTerritories: [],
@@ -62,7 +62,7 @@ const createGameState = (): GameState => ({
     {
       id: 'territory-2',
       name: 'Territory 2',
-      continent: 'test-continent',
+      sector: 'test-sector',
       ownerId: 'player1',
       armies: 3,
       adjacentTerritories: [],

@@ -215,7 +215,7 @@ const Home: React.FC = () => {
               <span className="text-white">How to seize the map</span>
             </h2>
             <p className="text-muted text-sm">
-              Memorize these three pillars before you start renaming continents after yourself.
+              Memorize these three pillars before you start renaming sectors after yourself.
             </p>
           </div>
 

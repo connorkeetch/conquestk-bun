@@ -38,7 +38,7 @@
 ## Decisions needed from you
 To implement the above confidently we need clarity on:
 - **Action pacing:** How long of a readable delay (if any) should the AI leave between actions so human players can follow along?
-- **Difficulty differentiation:** What concrete behaviours should Commander and Grandmaster add on top of Recruit (multi-front attacks, continent prioritization, smarter fortifies, card timing, etc.)?
+- **Difficulty differentiation:** What concrete behaviours should Commander and Grandmaster add on top of Recruit (multi-front attacks, sector prioritization, smarter fortifies, card timing, etc.)?
 - **Variant priorities:** Which combinations of maps + options must be supported for closed beta (e.g., Capitals + Treasures, Fog of War, Time Bank)? Any variants we can explicitly defer?
 - **Failure handling:** When Recruit has no safe attack, should it skip straight to fortify/end turn (current behaviour) or perform riskier moves to keep games dynamic?
 - **Testing expectations:** What automated coverage (unit vs. integration vs. load) do you want before enabling AI seats broadly?
@@ -57,15 +57,15 @@ These decisions set production caps and UX behaviour; the tighter average target
 
 **Difficulty Differentiation**
 - Recruit — Playable, fast, forgiving
-  - Deterministic reinforcement (hold continents, shore up weak borders).
+  - Deterministic reinforcement (hold sectors, shore up weak borders).
   - Attack: one front at a time; favour ≥ 70% win odds; if none exist, allow at most one “spice” attack at 55–65% to keep play dynamic.
   - Fortify: single simple move toward strongest border/capital; no multi‑hop pathing.
   - Caps: max 3 attack sequences per turn.
 - Commander — Threat‑aware, balanced
   - Greedy scoring + shallow search (1–2 ply) over a few best fronts.
-  - Continent pressure and card timing (avoid forced cash‑ins; snipe eliminations).
+  - Sector pressure and card timing (avoid forced cash‑ins; snipe eliminations).
   - Avoid low‑odds attacks; generally require ≥ 65–70% unless endgame payoff is clear.
-  - Fortify to hold continents and capitals; permit multi‑hop where rules allow.
+  - Fortify to hold sectors and capitals; permit multi‑hop where rules allow.
   - Caps: max 6 attack sequences per turn (still within budget).
 - Grandmaster — Competitive for experts
   - Monte Carlo over candidate plans (time‑boxed); light opponent modelling and adaptive aggression.

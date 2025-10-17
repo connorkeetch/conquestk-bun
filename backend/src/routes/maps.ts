@@ -274,7 +274,6 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         description: row.description || '',
         territory_count: parseInt(row.territory_count, 10) || 0,
         sector_count: parseInt(row.sector_count, 10) || 0,
-        continent_count: parseInt(row.sector_count, 10) || 0,
         min_players: row.min_players || 2,
         max_players: row.max_players || 6,
         is_featured: row.is_featured || false,
@@ -401,7 +400,6 @@ router.get('/', async (req: Request, res: Response) => {
       status: row.status,
       territoryCount: parseInt(row.territory_count, 10) || 0,
       sectorCount: parseInt(row.sector_count, 10) || 0,
-      continentCount: parseInt(row.sector_count, 10) || 0,
     }))
 
     // Get total count for pagination
@@ -982,33 +980,6 @@ router.post(
         return res.status(404).json({ error: 'Map not found' })
       }
       handleRouteError(error, req, 'Failed to create sector', 500, { mapId: req.params.mapId })
-      return res.status(500).json({ error: 'Failed to create sector' })
-    }
-  },
-)
-
-// Backward-compatible alias for older clients
-router.post(
-  '/:mapId/continents',
-  authenticateToken,
-  validateCreateSector,
-  checkValidation,
-  async (req: Request, res: Response) => {
-    // Manually invoke create sector handler
-    try {
-      req.url = `/${req.params.mapId}/sectors`
-      // Re-run through router
-      const sector = await mapService.createSector(
-        req.params.mapId,
-        req.body.name,
-        req.body.bonusArmies,
-        req.body.color,
-      )
-      return res.status(201).json(sector)
-    } catch (error) {
-      handleRouteError(error, req, 'Failed to create sector (compat)', 500, {
-        mapId: req.params.mapId,
-      })
       return res.status(500).json({ error: 'Failed to create sector' })
     }
   },

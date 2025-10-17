@@ -7,7 +7,7 @@ This document outlines the work required to support both token-based and polygon
 
 ### Map editors
 - **Token editor** – `MapEditorTokens.tsx` is wired into the new map workflow API and persists drafts (including background uploads) through `/api/workflow/drafts` before publishing.【F:frontend/src/pages/MapEditorTokens.tsx†L11-L148】【F:frontend/src/pages/MapEditorTokens.tsx†L1088-L1191】
-- **Polygon editor** – `MapEditor.tsx` still uses the older `/api/maps` endpoints. Saving a map walks through `mapService.createMap`, then issues follow-up calls per sector (formerly continent), territory, and adjacency, making it incompatible with the workflow-based publish/review pipeline we now use for community maps.【F:frontend/src/pages/MapEditor.tsx†L844-L883】
+- **Polygon editor** – `MapEditor.tsx` still uses the older `/api/maps` endpoints. Saving a map walks through `mapService.createMap`, then issues follow-up calls per sector, territory, and adjacency, making it incompatible with the workflow-based publish/review pipeline we now use for community maps.【F:frontend/src/pages/MapEditor.tsx†L844-L883】
 - The polygon editor stores polygon vertices locally while drawing (`boundaryCoords`) and posts them through the legacy APIs. The token editor only tracks token coordinates (`x`, `y`) and never captures polygon data.【F:frontend/src/pages/MapEditor.tsx†L496-L536】【F:frontend/src/pages/MapEditorTokens.tsx†L16-L112】
 
 ### Data & backend pipeline
@@ -25,7 +25,7 @@ Supporting both formats is achievable but not trivial. The highest-effort areas 
 
 ### Phase 1 – Workflow alignment (≈2–3 days)
 1. **Normalize polygon metadata**: extend `MapEditorTokens` draft payloads to accept `boundaryCoords` when present so both editors can share the same draft schema. No UI change yet, just type updates and validation.
-2. **Refactor polygon editor persistence**: replace the direct `/api/maps` calls with the workflow draft endpoints so polygon maps pass through the same review/publish path as token maps. Introduce a serializer that converts polygon editor state into `MapDraftPayload` (territories with `boundaryCoords`, continents, adjacencies, capital assignments).
+2. **Refactor polygon editor persistence**: replace the direct `/api/maps` calls with the workflow draft endpoints so polygon maps pass through the same review/publish path as token maps. Introduce a serializer that converts polygon editor state into `MapDraftPayload` (territories with `boundaryCoords`, sectors, adjacencies, capital assignments).
 3. **Draft migration utilities**: add scripts or admin endpoints to import existing legacy polygon maps into the draft workflow for QA and regression testing.
 
 ### Phase 2 – Editor UX integration (≈3–5 days)

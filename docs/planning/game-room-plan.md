@@ -287,7 +287,7 @@ export interface UIRoomState {
   hoverTerritory: TerritoryID | null
   dice: 3
   animationSpeed: 'normal' | 'fast' | 'instant'
-  overlays: { continents: boolean; attackable: boolean; threat: boolean }
+  overlays: { sectors: boolean; attackable: boolean; threat: boolean }
 }
 ```
 

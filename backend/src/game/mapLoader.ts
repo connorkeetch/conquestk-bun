@@ -1,5 +1,5 @@
 import { mapService } from '../services/mapService.js'
-import type { ContinentBonus, Territory } from '../types/game.js'
+import type { SectorBonus, Territory } from '../types/game.js'
 
 /**
  * Loads a map from the database and adapts it to the GameEngine types.
@@ -7,7 +7,7 @@ import type { ContinentBonus, Territory } from '../types/game.js'
  */
 export async function loadMapForEngine(mapId: string): Promise<{
   territories: Territory[]
-  continentBonuses: ContinentBonus[]
+  sectorBonuses: SectorBonus[]
 }> {
   const full = await mapService.getMapWithFullData(mapId)
   if (!full) {
@@ -51,12 +51,12 @@ export async function loadMapForEngine(mapId: string): Promise<{
   }))
 
   // Compute sector bonuses from loaded data
-  const continentBonuses: ContinentBonus[] = sectors.map((c) => ({
+  const sectorBonuses: SectorBonus[] = sectors.map((c) => ({
     id: c.id,
     name: c.name,
     bonusArmies: c.bonusArmies,
     territories: dbTerritories.filter((t) => (t.sectorId ?? '') === c.id).map((t) => t.id),
   }))
 
-  return { territories, continentBonuses }
+  return { territories, sectorBonuses }
 }

@@ -5,7 +5,7 @@ const baseTerritories: Territory[] = [
   {
     id: 't1',
     name: 'Alpha',
-    continent: 'north',
+    sector: 'north',
     ownerId: 'ai-player',
     armies: 5,
     adjacentTerritories: ['t2', 't3'],
@@ -14,7 +14,7 @@ const baseTerritories: Territory[] = [
   {
     id: 't2',
     name: 'Bravo',
-    continent: 'north',
+    sector: 'north',
     ownerId: 'ai-player',
     armies: 2,
     adjacentTerritories: ['t1', 't4'],
@@ -23,7 +23,7 @@ const baseTerritories: Territory[] = [
   {
     id: 't3',
     name: 'Charlie',
-    continent: 'north',
+    sector: 'north',
     ownerId: 'opponent',
     armies: 2,
     adjacentTerritories: ['t1', 't4'],
@@ -32,7 +32,7 @@ const baseTerritories: Territory[] = [
   {
     id: 't4',
     name: 'Delta',
-    continent: 'south',
+    sector: 'south',
     ownerId: 'opponent',
     armies: 3,
     adjacentTerritories: ['t2', 't3'],

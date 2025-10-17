@@ -48,7 +48,7 @@ export interface UserStatistics {
   territoriesConquered: number
   battlesWon: number
   battlesLost: number
-  continentsControlled: number
+  sectorsControlled: number
   averageGameLength: number // in minutes
   longestGame: number // in minutes
   shortestGame: number // in minutes

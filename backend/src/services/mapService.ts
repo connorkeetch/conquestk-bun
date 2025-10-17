@@ -1,6 +1,6 @@
 import type { PoolClient } from 'pg'
 import { getClient, query } from '../config/database.js'
-import type { ContinentBonus } from '../types/game.js'
+import type { SectorBonus } from '../types/game.js'
 import type {
   ConnectionRequirements,
   Coordinate,
@@ -1132,7 +1132,7 @@ export class MapService {
     return result.rows.map((row) => this.formatSectorFromDb(row as SectorRow))
   }
 
-  async getMapSectorBonuses(mapId: string): Promise<ContinentBonus[]> {
+  async getMapSectorBonuses(mapId: string): Promise<SectorBonus[]> {
     const result = await query(
       `
       SELECT 

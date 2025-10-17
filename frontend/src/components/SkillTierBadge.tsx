@@ -91,7 +91,7 @@ const SKILL_TIERS: SkillTier[] = [
     maxRating: 1999,
     icon: '☀️',
     color: 'text-orange-400',
-    description: 'Ruler of kings, empire spanning continents',
+    description: 'Ruler of kings, empire spanning sectors',
   },
   {
     name: 'Overlord',

@@ -443,19 +443,24 @@ describe('socketService event handlers', () => {
     const { socket } = initialiseHandlers()
     const joinHandler = getSocketHandler(socket, 'join-room')
 
-    await joinHandler('room-unauthorized')
+    const ack = jest.fn()
+    await joinHandler('room-unauthorized', ack)
 
     expect(mockIsPlayerInRoom).toHaveBeenCalledWith('room-unauthorized', 'user-1')
     const joinCalls = (socket.join as jest.Mock).mock.calls
     expect(
       joinCalls.find(([roomId]: [string]) => roomId === 'game:room-unauthorized'),
     ).toBeUndefined()
-    expect(socket.emit).toHaveBeenCalledWith(
-      'error',
+    expect(ack).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'join-room',
-        message: expect.stringContaining('member'),
+        ok: false,
+        code: 'not_a_member',
+        error: expect.stringContaining('member'),
       }),
+    )
+    expect(socket.emit).not.toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ event: 'join-room' }),
     )
   })
 

@@ -155,7 +155,7 @@ graph TD
 
 ### Option B – Rank-Based Personas
 - **Data aggregation**: Pool anonymized matches by CP rank. Aim for **200–300 completed matches per rank tier** (≈15k–20k turns) to stabilize statistics. Use telemetry to summarize aggression level, average troop deployments, preferred truces, surrender rates, etc.
-- **Modeling tactic**: Train lightweight classifiers/regressors to set aggression knobs, preferred attack thresholds, and diplomacy likelihood. Feed those knobs into the LLM prompt ("You are a Rank 8 bot: prioritize continent control, avoid high-risk gambits, use formal tone.").
+- **Modeling tactic**: Train lightweight classifiers/regressors to set aggression knobs, preferred attack thresholds, and diplomacy likelihood. Feed those knobs into the LLM prompt ("You are a Rank 8 bot: prioritize sector control, avoid high-risk gambits, use formal tone.").
 - **Communication layer**: Maintain a shared diplomacy LLM, but condition prompts on rank persona descriptors (vocabulary level, risk tolerance, trust defaults). Optionally fine-tune separate adapters/LoRA heads per rank if tone differences are stark.
 - **Operational benefit**: Easier to substitute when a player disconnects—pick the bot whose rank matches the slot, inherit alliances/truces from the replaced player, and continue play with familiar pacing.
 

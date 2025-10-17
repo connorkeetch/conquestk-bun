@@ -40,13 +40,13 @@ describe('buildMapWorkflowNotification', () => {
       mapId: 'map-321',
       mapName: 'Frosthold',
       adminUserId: 'admin-2',
-      rejectionReason: 'Missing continent definitions',
+      rejectionReason: 'Missing sector definitions',
     })
 
     expect(event.type).toBe('map.workflow.rejected')
     expect(event.severity).toBe('warning')
     expect(event.recipients).toEqual({ roles: ['admin'] })
-    expect(event.body).toContain('Missing continent definitions')
+    expect(event.body).toContain('Missing sector definitions')
     expect(event.cta?.[0]).toEqual({ label: 'Review feedback', url: '/maps/map-321/edit' })
   })
 })

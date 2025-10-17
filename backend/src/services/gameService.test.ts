@@ -73,7 +73,7 @@ jest.mock('../game/mapLoader', () => ({
   loadMapForEngine: mockLoadMapForEngine,
 }))
 
-import type { ContinentBonus, GameAction, GameState, Territory } from '../types/game.js'
+import type { GameAction, GameState, SectorBonus, Territory } from '../types/game.js'
 import { aiDecisionService } from './aiDecisionService.js'
 import { gameStateCache } from './cacheService.js'
 import { GameService } from './gameService.js'
@@ -87,7 +87,7 @@ describe('GameService', () => {
     {
       id: 't1',
       name: 'Territory 1',
-      continent: 'c1',
+      sector: 'c1',
       ownerId: null,
       armies: 0,
       adjacentTerritories: ['t2', 't3'],
@@ -96,7 +96,7 @@ describe('GameService', () => {
     {
       id: 't2',
       name: 'Territory 2',
-      continent: 'c1',
+      sector: 'c1',
       ownerId: null,
       armies: 0,
       adjacentTerritories: ['t1', 't3'],
@@ -105,7 +105,7 @@ describe('GameService', () => {
     {
       id: 't3',
       name: 'Territory 3',
-      continent: 'c2',
+      sector: 'c2',
       ownerId: null,
       armies: 0,
       adjacentTerritories: ['t1', 't2', 't4'],
@@ -114,7 +114,7 @@ describe('GameService', () => {
     {
       id: 't4',
       name: 'Territory 4',
-      continent: 'c2',
+      sector: 'c2',
       ownerId: null,
       armies: 0,
       adjacentTerritories: ['t3', 't5'],
@@ -123,7 +123,7 @@ describe('GameService', () => {
     {
       id: 't5',
       name: 'Territory 5',
-      continent: 'c2',
+      sector: 'c2',
       ownerId: null,
       armies: 0,
       adjacentTerritories: ['t4', 't6'],
@@ -132,7 +132,7 @@ describe('GameService', () => {
     {
       id: 't6',
       name: 'Territory 6',
-      continent: 'c2',
+      sector: 'c2',
       ownerId: null,
       armies: 0,
       adjacentTerritories: ['t5', 't4'],
@@ -140,7 +140,7 @@ describe('GameService', () => {
     },
   ]
 
-  const continentBonuses: ContinentBonus[] = [
+  const sectorBonuses: SectorBonus[] = [
     { id: 'c1', name: 'North', territories: ['t1', 't2', 't3'], bonusArmies: 5 },
     { id: 'c2', name: 'South', territories: ['t4', 't5', 't6'], bonusArmies: 3 },
   ]
@@ -194,7 +194,7 @@ describe('GameService', () => {
     mockTryGetSocketServer.mockReturnValue(null)
     mockLoadMapForEngine.mockReset()
     mockValidateMapPlayable.mockResolvedValue({ isValid: true, errors: [] })
-    mockLoadMapForEngine.mockResolvedValue({ territories, continentBonuses })
+    mockLoadMapForEngine.mockResolvedValue({ territories, sectorBonuses })
     gameService = new GameService()
     aiTurnMetrics.reset()
     assassinationMetrics.reset()
@@ -417,7 +417,7 @@ describe('GameService', () => {
         {
           id: 'attacking',
           name: 'Attacking Territory',
-          continent: 'c1',
+          sector: 'c1',
           ownerId: 'attacker',
           armies: 5,
           adjacentTerritories: ['defending'],
@@ -425,7 +425,7 @@ describe('GameService', () => {
         {
           id: 'defending',
           name: 'Defending Territory',
-          continent: 'c1',
+          sector: 'c1',
           ownerId: 'defender',
           armies: 3,
           adjacentTerritories: ['attacking'],
@@ -433,7 +433,7 @@ describe('GameService', () => {
         {
           id: 'support',
           name: 'Support Territory',
-          continent: 'c2',
+          sector: 'c2',
           ownerId: 'support',
           armies: 4,
           adjacentTerritories: ['attacking'],
@@ -451,7 +451,7 @@ describe('GameService', () => {
         maxPlayers: 3,
         mapId: 'test-map',
         gameMode: 'standard',
-        continentBonuses,
+        sectorBonuses,
       },
       movementTracking: {},
     })
@@ -509,7 +509,7 @@ describe('GameService', () => {
           {
             id: 'attacking',
             name: 'Attacking Territory',
-            continent: 'c1',
+            sector: 'c1',
             ownerId: 'attacker',
             armies: 5,
             adjacentTerritories: ['defending'],
@@ -517,7 +517,7 @@ describe('GameService', () => {
           {
             id: 'defending',
             name: 'Defending Territory',
-            continent: 'c1',
+            sector: 'c1',
             ownerId: 'defender',
             armies: 1,
             adjacentTerritories: ['attacking'],
@@ -535,7 +535,7 @@ describe('GameService', () => {
           maxPlayers: 2,
           mapId: 'test-map',
           gameMode: 'standard',
-          continentBonuses,
+          sectorBonuses,
         },
         movementTracking: {},
       }
@@ -898,7 +898,7 @@ describe('GameService', () => {
             id: 'attacking',
             name: 'Attacking Territory',
             sector: 'c1',
-            continent: 'c1',
+            sector: 'c1',
             ownerId: 'hunter',
             armies: 4,
             adjacentTerritories: ['defending', 'support'],
@@ -907,7 +907,7 @@ describe('GameService', () => {
             id: 'defending',
             name: 'Defending Territory',
             sector: 'c1',
-            continent: 'c1',
+            sector: 'c1',
             ownerId: 'target',
             armies: 1,
             adjacentTerritories: ['attacking'],
@@ -916,7 +916,7 @@ describe('GameService', () => {
             id: 'support',
             name: 'Support Territory',
             sector: 'c2',
-            continent: 'c2',
+            sector: 'c2',
             ownerId: 'bystander',
             armies: 3,
             adjacentTerritories: ['attacking'],
@@ -931,8 +931,8 @@ describe('GameService', () => {
           maxPlayers: 3,
           mapId: 'test-map',
           gameMode: 'assassination',
-          continentBonuses,
-          sectorBonuses: continentBonuses,
+          sectorBonuses,
+          sectorBonuses: sectorBonuses,
         },
         movementTracking: {},
         assassinationTargets: {

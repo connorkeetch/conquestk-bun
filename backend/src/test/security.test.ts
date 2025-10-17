@@ -122,7 +122,7 @@ describe('Security Vulnerability Tests', () => {
         const result = schemas.map.validate({
           name: 'Test Map',
           description: payload,
-          territories: Array(15).fill({ name: 'Territory', continent: 'Continent' }),
+          territories: Array(15).fill({ name: 'Territory', sector: 'Sector' }),
         })
 
         expect(result.error).toBeDefined()
@@ -328,7 +328,7 @@ describe('Security Vulnerability Tests', () => {
         description: 'A detailed world map for strategic gameplay',
         tags: ['world', 'classic', 'balanced'],
         isPublic: true,
-        territories: Array(42).fill({ name: 'Territory', continent: 'Continent' }),
+        territories: Array(42).fill({ name: 'Territory', sector: 'Sector' }),
       }
 
       const result = schemas.map.validate(validMap)
@@ -338,7 +338,7 @@ describe('Security Vulnerability Tests', () => {
     it('should reject maps with too few territories', () => {
       const invalidMap = {
         name: 'Small Map',
-        territories: Array(5).fill({ name: 'Territory', continent: 'Continent' }),
+        territories: Array(5).fill({ name: 'Territory', sector: 'Sector' }),
       }
 
       const result = schemas.map.validate(invalidMap)
@@ -348,7 +348,7 @@ describe('Security Vulnerability Tests', () => {
     it('should reject maps with too many territories', () => {
       const invalidMap = {
         name: 'Huge Map',
-        territories: Array(201).fill({ name: 'Territory', continent: 'Continent' }),
+        territories: Array(201).fill({ name: 'Territory', sector: 'Sector' }),
       }
 
       const result = schemas.map.validate(invalidMap)

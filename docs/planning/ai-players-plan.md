@@ -63,7 +63,7 @@ _Last updated: March 9, 2026_
 | Tier | Profile | Techniques |
 | --- | --- | --- |
 | Recruit | Playable, fast, forgiving | Deterministic reinforcement, high‑odds single‑front attacks, simple fortify |
-| Commander | Threat‑aware, balanced | Greedy scoring + shallow search, continent pressure, card timing |
+| Commander | Threat‑aware, balanced | Greedy scoring + shallow search, sector pressure, card timing |
 | Grandmaster | Competitive for experts | Monte Carlo over candidate plans, opponent modelling, adaptive aggression |
 
 **Performance budgets**  

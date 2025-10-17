@@ -66,7 +66,7 @@ Gameplay options
 
 Map selection
 - Choose a specific map or “Random Map” (picks at game start).
-- Map details show territory count, continents, rating, and creator.
+- Map details show territory count, sectors, rating, and creator.
 
 What’s applied vs pending
 

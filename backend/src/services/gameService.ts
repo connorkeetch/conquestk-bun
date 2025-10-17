@@ -652,7 +652,10 @@ export class GameService {
       finalState = planResult.gameState
       appliedActions = planResult.applied
     } else {
-      logger.warn('AI plan application failed, using fallback', { roomId, playerId: currentPlayer.id })
+      logger.warn('AI plan application failed, using fallback', {
+        roomId,
+        playerId: currentPlayer.id,
+      })
       const fallbackActions = this.limitFallbackActions(
         aiDecisionService.buildFallbackPlan(baselineState, currentPlayer.id),
         effectiveBudget,
@@ -665,7 +668,10 @@ export class GameService {
         currentPlayer.id,
       )
       if (!fallbackResult.success) {
-        logger.error('Failed to apply fallback plan for AI turn', { roomId, playerId: currentPlayer.id })
+        logger.error('Failed to apply fallback plan for AI turn', {
+          roomId,
+          playerId: currentPlayer.id,
+        })
         throw new Error('Failed to apply fallback plan for AI turn')
       }
       finalState = fallbackResult.gameState
