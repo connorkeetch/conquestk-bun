@@ -102,7 +102,7 @@ tail -f backend/logs/error.log
 ### Issue: Moves don't register
 
 **Diagnosis**:
-1. Open Debug Dashboard (Ctrl+Shift+D)
+1. Open Debug Dashboard (Ctrl+Alt+Shift+D)
 2. Try to make a move
 3. Check Events tab for:
    - `game-action` (OUT) event
@@ -203,7 +203,7 @@ navigator.serviceWorker.controller?.postMessage({ type: 'GET_SW_BUILD_ID' }, [ch
 
 ### Step 1: Verify Connection
 ```
-1. Open Debug Dashboard (Ctrl+Shift+D)
+1. Open Debug Dashboard (Ctrl+Alt+Shift+D)
 2. Check connection status (green/red dot)
 3. Look at reconnect count in footer
 ```
@@ -291,7 +291,7 @@ Planned endpoints for admin troubleshooting:
 5. Clear logs between test scenarios
 
 ### For Production Issues
-1. Ask user to open Debug Dashboard (Ctrl+Shift+D)
+1. Ask user to open Debug Dashboard (Ctrl+Alt+Shift+D)
 2. Have them screenshot the Events tab
 3. Check connection status and reconnect count
 4. Look for patterns in event timing
