@@ -1070,24 +1070,16 @@ export default function GameRoom() {
     }
   }, [dispatch, navigate, roomId])
 
-  // Join the socket room if member; otherwise spectate for live logs
-  // CRITICAL: Only subscribe after currentRoom loads to avoid race condition
-  // where we spectate first (isMember=false) then try to join (isMember=true)
+  // Everyone joins as a player - simplified subscription (no spectator mode for now)
+  // This ensures all users get real-time game deltas regardless of membership status
   useEffect(() => {
-    if (!roomId || !currentRoom) return // Wait for room to load!
+    if (!roomId) return
 
-    if (isMember) {
-      socketService.joinRoom(roomId)
-      return () => {
-        socketService.leaveRoom(roomId)
-      }
-    }
-    // Spectator path: subscribe to room channel for log:append and lifecycle
-    socketService.spectateRoom(roomId)
+    socketService.joinRoom(roomId)
     return () => {
       socketService.leaveRoom(roomId)
     }
-  }, [roomId, isMember, currentRoom])
+  }, [roomId])
 
   useEffect(() => {
     if (!roomId) {

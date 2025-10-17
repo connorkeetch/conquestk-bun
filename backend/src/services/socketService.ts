@@ -559,11 +559,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           }
 
           const userId = requireUserId(socket)
-          const hasAccess = await gameRoomService.isPlayerInRoom(normalizedRoomId, userId)
-          if (!hasAccess) {
-            ack?.({ ok: false, error: 'You are not a member of this game', code: 'not_a_member' })
-            return
-          }
+          // SIMPLIFIED: Allow anyone to join (no membership check for small user base)
+          // Backend still validates actions based on player membership when processing
+          // This prevents spectator/player subscription race conditions
 
           const channel = getGameChannel(normalizedRoomId)
           // Join both the game channel (for game updates) and the room channel (for lifecycle/room updates)
