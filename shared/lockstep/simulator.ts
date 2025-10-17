@@ -1,5 +1,25 @@
-import type { GameState } from '@conquestk/shared/types'
-import type { InputFrame, LockstepCommand } from '@conquestk/shared/types/lockstep.js'
+import type { GameState, Territory } from '../types/index.js'
+import type { InputFrame, LockstepCommand } from '../types/lockstep.js'
+
+type ReinforcementHistoryEntry = {
+  playerId: string
+  territoryId: string
+  armies: number
+  ts: number
+}
+
+type FortifyHistoryEntry = {
+  playerId: string
+  fromTerritoryId: string
+  toTerritoryId: string
+  armies: number
+  ts: number
+}
+
+export type LockstepState = GameState & {
+  reinforcementHistory?: ReinforcementHistoryEntry[]
+  fortifyHistory?: FortifyHistoryEntry[]
+}
 
 type DeployPayload = {
   territoryId?: unknown
@@ -13,12 +33,12 @@ type FortifyPayload = {
 }
 
 interface SimulationResult {
-  state: GameState
+  state: LockstepState
   unsupported: LockstepCommand['kind'][]
 }
 
-const cloneState = (state: GameState): GameState => {
-  return structuredClone(state) as GameState
+const cloneState = (state: LockstepState): LockstepState => {
+  return structuredClone(state) as LockstepState
 }
 
 const ensureArray = <T>(value: T[] | undefined): T[] => {
@@ -26,10 +46,10 @@ const ensureArray = <T>(value: T[] | undefined): T[] => {
 }
 
 const simulateDeploy = (
-  state: GameState,
+  state: LockstepState,
   playerId: string,
   payload: DeployPayload,
-): { state: GameState; supported: boolean } => {
+): { state: LockstepState; supported: boolean } => {
   if (typeof payload?.territoryId !== 'string' || typeof payload?.armies !== 'number') {
     return { state, supported: false }
   }
@@ -41,7 +61,7 @@ const simulateDeploy = (
   }
 
   const armies = Math.max(0, Math.trunc(payload.armies))
-  const territory = { ...working.board[territoryIndex] }
+  const territory = { ...working.board[territoryIndex] } as Territory
   territory.armies = Math.max(0, (territory.armies ?? 0) + armies)
   territory.ownerId = territory.ownerId ?? playerId
   working.board = [...working.board]
@@ -52,7 +72,7 @@ const simulateDeploy = (
     player.armies = Math.max(0, (player.armies ?? 0) - armies)
   }
 
-  const history = ensureArray(working.reinforcementHistory)
+  const history = ensureArray<ReinforcementHistoryEntry>(working.reinforcementHistory)
   history.push({
     playerId,
     territoryId: payload.territoryId,
@@ -65,10 +85,10 @@ const simulateDeploy = (
 }
 
 const simulateFortify = (
-  state: GameState,
+  state: LockstepState,
   playerId: string,
   payload: FortifyPayload,
-): { state: GameState; supported: boolean } => {
+): { state: LockstepState; supported: boolean } => {
   if (
     typeof payload?.fromTerritoryId !== 'string' ||
     typeof payload?.toTerritoryId !== 'string' ||
@@ -85,8 +105,8 @@ const simulateFortify = (
   }
 
   const armies = Math.max(0, Math.trunc(payload.armies))
-  const from = { ...working.board[fromIndex] }
-  const to = { ...working.board[toIndex] }
+  const from = { ...working.board[fromIndex] } as Territory
+  const to = { ...working.board[toIndex] } as Territory
   if ((from.ownerId ?? playerId) !== playerId) {
     return { state, supported: false }
   }
@@ -106,7 +126,7 @@ const simulateFortify = (
   working.board[fromIndex] = from
   working.board[toIndex] = to
 
-  const history = ensureArray(working.fortifyHistory)
+  const history = ensureArray<FortifyHistoryEntry>(working.fortifyHistory)
   history.push({
     playerId,
     fromTerritoryId: payload.fromTerritoryId,
@@ -119,14 +139,19 @@ const simulateFortify = (
   return { state: working, supported: true }
 }
 
-const simulateUndoFortify = (state: GameState): { state: GameState; supported: boolean } => {
-  const history = ensureArray(state.fortifyHistory)
+const simulateUndoFortify = (
+  state: LockstepState,
+): { state: LockstepState; supported: boolean } => {
+  const history = ensureArray<FortifyHistoryEntry>(state.fortifyHistory)
   if (history.length === 0) {
     return { state, supported: false }
   }
 
   const working = cloneState(state)
   const last = history[history.length - 1]
+  if (!last) {
+    return { state, supported: false }
+  }
 
   const fromIndex = working.board.findIndex((t) => t.id === last.fromTerritoryId)
   const toIndex = working.board.findIndex((t) => t.id === last.toTerritoryId)
@@ -134,8 +159,8 @@ const simulateUndoFortify = (state: GameState): { state: GameState; supported: b
     return { state, supported: false }
   }
 
-  const from = { ...working.board[fromIndex] }
-  const to = { ...working.board[toIndex] }
+  const from = { ...working.board[fromIndex] } as Territory
+  const to = { ...working.board[toIndex] } as Territory
 
   from.armies = Math.max(0, (from.armies ?? 0) + last.armies)
   to.armies = Math.max(0, (to.armies ?? 0) - last.armies)
@@ -149,7 +174,7 @@ const simulateUndoFortify = (state: GameState): { state: GameState; supported: b
 }
 
 export const simulateFrame = (state: GameState, frame: InputFrame): SimulationResult => {
-  let working = cloneState(state)
+  let working = cloneState(state as LockstepState)
   const unsupported: LockstepCommand['kind'][] = []
 
   for (const command of frame.commands) {

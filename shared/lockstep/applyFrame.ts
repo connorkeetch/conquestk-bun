@@ -1,5 +1,5 @@
-import type { GameAction, GameState } from '@conquestk/shared/types'
-import type { InputFrame } from '@conquestk/shared/types/lockstep.js'
+import type { GameAction, GameState } from '../types/index.js'
+import type { InputFrame } from '../types/lockstep.js'
 
 export type ApplyAction = (state: GameState, action: GameAction) => GameState
 
