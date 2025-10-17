@@ -1,3 +1,4 @@
+import { applyCapitalCapture, isCapitalTerritory } from '@conquestk/shared/lockstep'
 import {
   DeterministicRng,
   type DeterministicRngState,
@@ -1181,6 +1182,10 @@ export class GameEngine {
     toTerritory.armies = Math.max(0, toTerritory.armies - battleResult.defenderLosses)
 
     // Check if territory was conquered
+    const targetedCapital =
+      toTerritory.ownerId && typeof toTerritory.ownerId === 'string'
+        ? isCapitalTerritory(gameState, toTerritory.ownerId, toTerritory.id)
+        : false
     const conquered = toTerritory.armies === 0
     if (conquered) {
       // Update territory ownership and player territory lists
@@ -1199,6 +1204,18 @@ export class GameEngine {
       toTerritory.armies = 1 // Attacker must move at least 1 army
       fromTerritory.armies -= 1
       gameState.conqueredDuringTurn = true
+
+      if (defender && targetedCapital) {
+        applyCapitalCapture(gameState, action.playerId, defender.id, toTerritory.id)
+        const refreshedFrom = gameState.board.find((territory) => territory.id === fromTerritoryId)
+        const refreshedTo = gameState.board.find((territory) => territory.id === toTerritoryId)
+        if (refreshedFrom) {
+          Object.assign(fromTerritory, refreshedFrom)
+        }
+        if (refreshedTo) {
+          Object.assign(toTerritory, refreshedTo)
+        }
+      }
     }
 
     const result: BattleResult = {

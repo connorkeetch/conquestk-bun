@@ -110,6 +110,7 @@ export interface Territory {
   sector?: string
   sectorId?: string
   isCapital?: boolean
+  capitalOwnerId?: string | null
   abilities?: TerritoryAbility[]
   adjacentTerritories: string[]
   coordinates?: {
@@ -317,6 +318,7 @@ export type GameAction =
   | TradeCardsAction
   | GoBackToReinforcementAction
   | TransferConquestAction
+  | ResignAction
 
 type GameActionType =
   | 'deploy'
@@ -326,6 +328,7 @@ type GameActionType =
   | 'trade_cards'
   | 'go_back_to_reinforcement'
   | 'transfer_conquest'
+  | 'resign'
 
 type ActionBase<T extends GameActionType> = {
   type: T
@@ -377,6 +380,10 @@ export type TransferConquestAction = ActionBase<'transfer_conquest'> & {
     toTerritoryId: string
     armies: number
   }
+}
+
+export type ResignAction = ActionBase<'resign'> & {
+  payload?: undefined
 }
 
 // ============================================

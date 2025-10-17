@@ -126,7 +126,8 @@ class SocketService {
   private joiningRooms: Map<string, number> = new Map() // roomId -> attempt count
   private processDeltaHandler?: (payload: GameDelta) => Promise<void>
   private lastTurnStartByRoom: Map<string, number> = new Map()
-  private readonly lockstepEnabled = import.meta.env?.VITE_LOCKSTEP_DEV === 'true'
+  private readonly lockstepEnabled =
+    (import.meta.env?.VITE_LOCKSTEP_ENABLED ?? 'true').toString().toLowerCase() !== 'false'
   private lockstepSeqByRoom: Map<string, number> = new Map()
   private lockstepPendingResync: Set<string> = new Set()
   private lockstepLastChecksum: Map<string, number> = new Map()

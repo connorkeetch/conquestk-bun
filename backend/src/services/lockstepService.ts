@@ -4,6 +4,7 @@ import { stableStringifyToUint8 } from '@conquestk/shared/utils/stableJson'
 import type { PoolClient } from 'pg'
 import { query } from '../config/database.js'
 import type { GameAction, SerializedGameState } from '../types/game.js'
+import { logger } from '../utils/logger.js'
 
 const CHECKSUM_INTERVAL_DEFAULT = 5
 
@@ -12,12 +13,31 @@ export class LockstepService {
 
   private readonly seqCache = new Map<string, number>()
 
+  private readonly maxFramesPerMatch: number
+
+  private readonly maxChecksumsPerMatch: number
+
+  private readonly pruneEvery: number
+
   constructor(checksumInterval?: number) {
     const envInterval = Number(process.env.LOCKSTEP_CHECKSUM_INTERVAL ?? '')
     this.checksumInterval =
       Number.isFinite(envInterval) && envInterval > 0
         ? envInterval
         : (checksumInterval ?? CHECKSUM_INTERVAL_DEFAULT)
+
+    const envFrameCap = Number(process.env.LOCKSTEP_MAX_FRAMES ?? '')
+    const frameCap =
+      Number.isFinite(envFrameCap) && envFrameCap > 0 ? Math.trunc(envFrameCap) : 2000
+    this.maxFramesPerMatch = Math.max(frameCap, this.checksumInterval * 4)
+
+    const checksumCap = Math.max(1, Math.floor(this.maxFramesPerMatch / this.checksumInterval))
+    this.maxChecksumsPerMatch = checksumCap
+
+    const envPruneEvery = Number(process.env.LOCKSTEP_PRUNE_INTERVAL ?? '')
+    const derivedPrune = Math.max(50, Math.floor(this.maxFramesPerMatch / 10))
+    this.pruneEvery =
+      Number.isFinite(envPruneEvery) && envPruneEvery > 0 ? Math.trunc(envPruneEvery) : derivedPrune
   }
 
   async reset(matchId: string, client?: PoolClient): Promise<void> {
@@ -85,6 +105,9 @@ export class LockstepService {
     )
 
     if (seq % this.checksumInterval !== 0) {
+      if (seq % this.pruneEvery === 0) {
+        await this.pruneHistory(matchId, seq, client)
+      }
       return { frame }
     }
 
@@ -111,7 +134,53 @@ export class LockstepService {
       { client },
     )
 
+    if (seq % this.pruneEvery === 0) {
+      await this.pruneHistory(matchId, seq, client)
+    }
+
     return { frame, checksum }
+  }
+
+  private async pruneHistory(matchId: string, seq: number, client?: PoolClient): Promise<void> {
+    if (seq <= this.maxFramesPerMatch) {
+      return
+    }
+
+    const frameThreshold = seq - this.maxFramesPerMatch
+    try {
+      await query(
+        `DELETE FROM match_frames
+         WHERE match_id = $1 AND seq <= $2`,
+        [matchId, frameThreshold],
+        { client },
+      )
+    } catch (error) {
+      logger.warn('Failed to prune match_frames history (best-effort)', {
+        matchId,
+        frameThreshold,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+
+    const checksumThreshold = seq - this.maxChecksumsPerMatch * this.checksumInterval
+    if (checksumThreshold <= 0) {
+      return
+    }
+
+    try {
+      await query(
+        `DELETE FROM match_checksums
+         WHERE match_id = $1 AND seq < $2`,
+        [matchId, checksumThreshold],
+        { client },
+      )
+    } catch (error) {
+      logger.warn('Failed to prune match_checksums history (best-effort)', {
+        matchId,
+        checksumThreshold,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 
   async getLatestSnapshot(
