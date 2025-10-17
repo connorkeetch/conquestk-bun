@@ -88,6 +88,11 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Validate the new lockstep resync telemetry in backend dashboards and alerting once the metrics service ingestion is updated.
 - Continue broadening regression coverage for capital eliminations, treasure chain reactions, and other edge flows before moving to Phase 3 automation.
 
+## Phase 3 focus — Replay & Tooling (2025-04-04)
+- Promote the lockstep CLI (`npm run replay:match`) into the regular QA loop: capture canonical fixtures, add CI assertions, and gate merges on checksum parity.
+- Build the analytics bridge for telemetry: surface lockstep resync stats (volume, mean duration, failure reasons) in the reliability dashboard and wire alerts for sustained drift.
+- Start porting replay UI to the new frame store so headless replays and viewer scrubbing share the same deterministic pipeline.
+
 ## Rollout plan
 1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).
 2. Enable lockstep transport in development, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely.
