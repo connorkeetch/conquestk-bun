@@ -44,6 +44,27 @@ class ReliabilityMetricsService {
 
   private latencySamples: number[] = []
 
+  private lockstepResyncTotal = 0
+  private lockstepResyncSuccess = 0
+  private lockstepResyncFailure = 0
+  private lockstepResyncReasonCounts: Record<string, number> = {}
+  private lockstepResyncDurations: number[] = []
+  private lockstepResyncPending: Map<
+    string,
+    {
+      roomId: string
+      reason:
+        | 'frame_gap'
+        | 'unsupported_commands'
+        | 'missing_state'
+        | 'checksum_mismatch'
+        | 'snapshot_error'
+        | 'manual'
+      startedAt: number
+      meta?: Record<string, unknown>
+    }
+  > = new Map()
+
   private listeners = new Set<() => void>()
   private uploadInterval: ReturnType<typeof setInterval> | null = null
   private lastUploadAt: number | null = null
@@ -139,6 +160,69 @@ class ReliabilityMetricsService {
     this.notify()
   }
 
+  recordLockstepResync(event: {
+    traceId: string
+    roomId: string
+    reason:
+      | 'frame_gap'
+      | 'unsupported_commands'
+      | 'missing_state'
+      | 'checksum_mismatch'
+      | 'snapshot_error'
+      | 'manual'
+    seq?: number
+    expectedSeq?: number
+    checksum?: { server?: number; local?: number }
+    unsupported?: string[]
+    meta?: Record<string, unknown>
+  }): void {
+    this.lockstepResyncTotal += 1
+    this.lockstepResyncReasonCounts[event.reason] =
+      (this.lockstepResyncReasonCounts[event.reason] ?? 0) + 1
+    this.lockstepResyncPending.set(event.traceId, {
+      roomId: event.roomId,
+      reason: event.reason,
+      startedAt: Date.now(),
+      meta: {
+        seq: event.seq,
+        expectedSeq: event.expectedSeq,
+        checksum: event.checksum,
+        unsupported: event.unsupported,
+        ...event.meta,
+      },
+    })
+    this.notify()
+  }
+
+  resolveLockstepResync(
+    traceId: string,
+    outcome: {
+      success: boolean
+      roomId: string
+      reason?:
+        | 'frame_gap'
+        | 'unsupported_commands'
+        | 'missing_state'
+        | 'checksum_mismatch'
+        | 'snapshot_error'
+        | 'manual'
+      meta?: Record<string, unknown>
+    },
+  ): void {
+    const pending = this.lockstepResyncPending.get(traceId)
+    if (!pending) {
+      return
+    }
+    this.lockstepResyncPending.delete(traceId)
+    this.lockstepResyncDurations.push(Date.now() - pending.startedAt)
+    if (outcome.success) {
+      this.lockstepResyncSuccess += 1
+    } else {
+      this.lockstepResyncFailure += 1
+    }
+    this.notify()
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener)
     return () => {
@@ -186,6 +270,12 @@ class ReliabilityMetricsService {
     return sum / this.desyncRecoveryDurations.length
   }
 
+  private getAvgLockstepResyncDuration(): number {
+    if (this.lockstepResyncDurations.length === 0) return 0
+    const sum = this.lockstepResyncDurations.reduce((acc, value) => acc + value, 0)
+    return sum / this.lockstepResyncDurations.length
+  }
+
   getSnapshot(): {
     sessionId: string
     reconnectCount: number
@@ -204,6 +294,22 @@ class ReliabilityMetricsService {
     desyncDetections: number
     desyncRecoveries: number
     avgDesyncRecoveryMs: number
+    lockstepResyncs: {
+      total: number
+      successes: number
+      failures: number
+      pending: number
+      avgDurationMs: number
+      byReason: Record<
+        | 'frame_gap'
+        | 'unsupported_commands'
+        | 'missing_state'
+        | 'checksum_mismatch'
+        | 'snapshot_error'
+        | 'manual',
+        number
+      >
+    }
     timestamp: number
   } {
     return {
@@ -224,6 +330,21 @@ class ReliabilityMetricsService {
       desyncDetections: this.desyncDetections,
       desyncRecoveries: this.desyncRecoveries,
       avgDesyncRecoveryMs: this.getAvgDesyncRecovery(),
+      lockstepResyncs: {
+        total: this.lockstepResyncTotal,
+        successes: this.lockstepResyncSuccess,
+        failures: this.lockstepResyncFailure,
+        pending: this.lockstepResyncPending.size,
+        avgDurationMs: this.getAvgLockstepResyncDuration(),
+        byReason: {
+          frame_gap: this.lockstepResyncReasonCounts.frame_gap ?? 0,
+          unsupported_commands: this.lockstepResyncReasonCounts.unsupported_commands ?? 0,
+          missing_state: this.lockstepResyncReasonCounts.missing_state ?? 0,
+          checksum_mismatch: this.lockstepResyncReasonCounts.checksum_mismatch ?? 0,
+          snapshot_error: this.lockstepResyncReasonCounts.snapshot_error ?? 0,
+          manual: this.lockstepResyncReasonCounts.manual ?? 0,
+        },
+      },
       timestamp: Date.now(),
     }
   }

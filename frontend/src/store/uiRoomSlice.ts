@@ -26,6 +26,7 @@ export interface UIRoomState {
       | 'snapshot_error'
       | 'manual'
     roomId: string
+    traceId: string
     seq?: number
     expectedSeq?: number
     unsupported?: string[]

@@ -153,6 +153,17 @@ class SocketService {
     return JSON.stringify(value, SocketService.stableReplacer)
   }
 
+  private generateLockstepTraceId(roomId: string): string {
+    try {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return `${roomId}:${crypto.randomUUID()}`
+      }
+    } catch {
+      /* ignore */
+    }
+    return `${roomId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`
+  }
+
   private requestLockstepResync(roomId: string, meta?: LockstepResyncMeta) {
     if (!this.lockstepEnabled || !this.socket) return
     if (this.lockstepPendingResync.has(roomId)) return
@@ -161,9 +172,11 @@ class SocketService {
     store.dispatch(setDesyncDetected(true))
 
     const observedAt = Date.now()
+    const traceId = this.generateLockstepTraceId(roomId)
     const info = {
       reason: meta?.reason ?? 'manual',
       roomId,
+      traceId,
       seq: meta?.seq,
       expectedSeq: meta?.expectedSeq,
       unsupported: meta?.unsupported,
@@ -182,6 +195,16 @@ class SocketService {
       )
     }
 
+    reliabilityMetrics.recordLockstepResync({
+      traceId,
+      roomId,
+      reason: info.reason,
+      seq: info.seq,
+      expectedSeq: info.expectedSeq,
+      checksum: info.checksum,
+      unsupported: info.unsupported,
+    })
+
     const fromSeq = this.lockstepSeqByRoom.get(roomId) ?? 0
     this.socket.emit(
       'game-action:resync-request',
@@ -195,6 +218,12 @@ class SocketService {
           this.lockstepPendingResync.delete(roomId)
           store.dispatch(setResyncing(false))
           store.dispatch(setLockstepResyncInfo(null))
+          reliabilityMetrics.resolveLockstepResync(traceId, {
+            success: false,
+            roomId,
+            reason: info.reason,
+            meta: { error: response.error ?? 'unknown_error' },
+          })
           store.dispatch(
             addClientLog({
               text: `Lockstep resync rejected: ${response.error ?? 'unknown error'}`,
@@ -363,20 +392,46 @@ class SocketService {
         store.dispatch(setGameState(baseline as unknown as GameState))
       }
       store.dispatch(setDesyncDetected(false))
+      const currentResync = store.getState().uiRoom.lockstepResync
+      if (currentResync && currentResync.roomId === payload.matchId) {
+        reliabilityMetrics.resolveLockstepResync(currentResync.traceId, {
+          success: true,
+          roomId: payload.matchId,
+          reason: currentResync.reason,
+          meta: { seq: payload.seq },
+        })
+      }
       store.dispatch(setLockstepResyncInfo(null))
     } catch (error) {
       logger.warn('Failed to apply lockstep snapshot (falling back to fetch)', { error })
       store.dispatch(setResyncing(false))
       store.dispatch(setDesyncDetected(true))
+      const existingResync = store.getState().uiRoom.lockstepResync
+      if (existingResync && existingResync.roomId === payload.matchId) {
+        reliabilityMetrics.resolveLockstepResync(existingResync.traceId, {
+          success: false,
+          roomId: payload.matchId,
+          reason: existingResync.reason,
+          meta: { error: 'snapshot_apply_failed' },
+        })
+      }
       const observedAt = Date.now()
+      const traceId = this.generateLockstepTraceId(payload.matchId)
       store.dispatch(
         setLockstepResyncInfo({
           reason: 'snapshot_error',
           roomId: payload.matchId,
+          traceId,
           observedAt,
           details: { reason: 'snapshot_apply_failed' },
         }),
       )
+      reliabilityMetrics.recordLockstepResync({
+        traceId,
+        roomId: payload.matchId,
+        reason: 'snapshot_error',
+        meta: { context: 'snapshot_apply_failed' },
+      })
       store.dispatch(
         addClientLog({
           text: 'Lockstep snapshot apply failed; falling back to fetch',
