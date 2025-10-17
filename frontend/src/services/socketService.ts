@@ -11,6 +11,7 @@ import type {
   PlayerDelta,
   ReceiptReadAck,
   ServerToClientEvents,
+  GameState as SharedGameState,
   TerritoryDelta,
 } from '@conquestk/shared'
 import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep'
@@ -58,7 +59,9 @@ import {
   removeOptimisticMarkers,
   setConnectionStatus,
   setDesyncDetected,
+  setLockstepResyncInfo,
   setPlacementServerSpent,
+  setResyncing,
 } from '../store/uiRoomSlice'
 import type { GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
@@ -71,6 +74,21 @@ import { reliabilityMetrics } from './reliabilityMetricsService'
 type RoomLifecyclePayload = LifecycleUpdatePayload
 type ReinforcementBaselineState = {
   reinforcementBaseline?: Record<string, number>
+}
+
+type LockstepResyncMeta = {
+  reason:
+    | 'frame_gap'
+    | 'unsupported_commands'
+    | 'missing_state'
+    | 'checksum_mismatch'
+    | 'snapshot_error'
+    | 'manual'
+  seq?: number
+  expectedSeq?: number
+  unsupported?: string[]
+  checksum?: { server: number; local?: number }
+  details?: Record<string, unknown>
 }
 
 const HEARTBEAT_INTERVAL_MS = 5000
@@ -135,10 +153,35 @@ class SocketService {
     return JSON.stringify(value, SocketService.stableReplacer)
   }
 
-  private requestLockstepResync(roomId: string) {
+  private requestLockstepResync(roomId: string, meta?: LockstepResyncMeta) {
     if (!this.lockstepEnabled || !this.socket) return
     if (this.lockstepPendingResync.has(roomId)) return
     this.lockstepPendingResync.add(roomId)
+    store.dispatch(setResyncing(true))
+    store.dispatch(setDesyncDetected(true))
+
+    const observedAt = Date.now()
+    const info = {
+      reason: meta?.reason ?? 'manual',
+      roomId,
+      seq: meta?.seq,
+      expectedSeq: meta?.expectedSeq,
+      unsupported: meta?.unsupported,
+      checksum: meta?.checksum,
+      details: meta?.details,
+      observedAt,
+    }
+    store.dispatch(setLockstepResyncInfo(info))
+    if (meta) {
+      store.dispatch(
+        addClientLog({
+          text: this.formatLockstepResyncMessage(info),
+          roomId,
+          ts: observedAt,
+        }),
+      )
+    }
+
     const fromSeq = this.lockstepSeqByRoom.get(roomId) ?? 0
     this.socket.emit(
       'game-action:resync-request',
@@ -150,11 +193,54 @@ class SocketService {
             error: response.error,
           })
           this.lockstepPendingResync.delete(roomId)
+          store.dispatch(setResyncing(false))
+          store.dispatch(setLockstepResyncInfo(null))
+          store.dispatch(
+            addClientLog({
+              text: `Lockstep resync rejected: ${response.error ?? 'unknown error'}`,
+              roomId,
+              ts: Date.now(),
+            }),
+          )
         } else {
           logger.info('Lockstep resync requested', { roomId, fromSeq })
         }
       },
     )
+  }
+
+  private formatLockstepResyncMessage(info: {
+    reason: LockstepResyncMeta['reason']
+    seq?: number
+    expectedSeq?: number
+    unsupported?: string[]
+    checksum?: { server: number; local?: number }
+    details?: Record<string, unknown>
+  }): string {
+    switch (info.reason) {
+      case 'frame_gap':
+        return `Lockstep resync: frame gap (expected ${info.expectedSeq ?? 'n/a'}, received ${
+          info.seq ?? 'n/a'
+        })`
+      case 'unsupported_commands':
+        return `Lockstep resync: unsupported commands [${(info.unsupported ?? []).join(
+          ', ',
+        )}] at seq ${info.seq ?? 'n/a'}`
+      case 'missing_state':
+        return 'Lockstep resync: checksum arrived without baseline state'
+      case 'checksum_mismatch':
+        return `Lockstep resync: checksum mismatch at seq ${info.seq ?? 'n/a'} (server ${
+          info.checksum?.server ?? 'n/a'
+        }, local ${info.checksum?.local ?? 'n/a'})`
+      case 'snapshot_error': {
+        const detail = info.details?.reason ?? 'snapshot replay failed'
+        const unsupported = info.unsupported ?? []
+        const suffix = unsupported.length > 0 ? ` (unsupported: ${unsupported.join(', ')})` : ''
+        return `Lockstep resync: ${detail}${suffix}`
+      }
+      default:
+        return 'Lockstep resync: manual request'
+    }
   }
 
   private handleLockstepFrame = (frame: InputFrame) => {
@@ -170,7 +256,11 @@ class SocketService {
         expected: lastSeq + 1,
         received: frame.seq,
       })
-      this.requestLockstepResync(frame.matchId)
+      this.requestLockstepResync(frame.matchId, {
+        reason: 'frame_gap',
+        expectedSeq: lastSeq + 1,
+        seq: frame.seq,
+      })
       return
     }
 
@@ -182,7 +272,14 @@ class SocketService {
         unsupported: simResult.unsupported,
         seq: frame.seq,
       })
-      this.requestLockstepResync(frame.matchId)
+      const resyncReason: LockstepResyncMeta['reason'] =
+        simResult.reason === 'missing_state' ? 'missing_state' : 'unsupported_commands'
+      this.requestLockstepResync(frame.matchId, {
+        reason: resyncReason,
+        seq: frame.seq,
+        unsupported: simResult.unsupported,
+        details: { reason: simResult.reason },
+      })
       return
     }
 
@@ -205,7 +302,7 @@ class SocketService {
         logger.warn('Lockstep checksum received without baseline state', {
           matchId: payload.matchId,
         })
-        this.requestLockstepResync(payload.matchId)
+        this.requestLockstepResync(payload.matchId, { reason: 'missing_state' })
         return
       }
       if (localChecksum !== payload.crc32) {
@@ -216,10 +313,18 @@ class SocketService {
           localChecksum,
         })
         store.dispatch(setDesyncDetected(true))
-        this.requestLockstepResync(payload.matchId)
+        this.requestLockstepResync(payload.matchId, {
+          reason: 'checksum_mismatch',
+          seq: payload.seq,
+          checksum: { server: payload.crc32, local: localChecksum },
+        })
       }
     } catch (error) {
       logger.warn('Failed to compute local lockstep checksum', { error })
+      this.requestLockstepResync(payload.matchId, {
+        reason: 'snapshot_error',
+        details: { reason: 'checksum_calculation_failed' },
+      })
     }
   }
 
@@ -233,7 +338,7 @@ class SocketService {
     this.lockstepPendingResync.delete(payload.matchId)
     this.lockstepLastChecksum.delete(payload.matchId)
     try {
-      const baseline = payload.state as GameState
+      const baseline = payload.state as unknown as SharedGameState
       this.lockstepSim.setBaseline(payload.matchId, baseline)
       if (Array.isArray(payload.frames) && payload.frames.length > 0) {
         const frameResult = this.lockstepSim.applyFrames(payload.matchId, payload.frames)
@@ -243,19 +348,46 @@ class SocketService {
             reason: frameResult.reason,
             unsupported: frameResult.unsupported,
           })
-          this.requestLockstepResync(payload.matchId)
+          this.requestLockstepResync(payload.matchId, {
+            reason: frameResult.reason === 'missing_state' ? 'missing_state' : 'snapshot_error',
+            unsupported: frameResult.unsupported,
+            details: { reason: frameResult.reason },
+          })
           return
         }
       }
       const workingState = this.lockstepSim.getState(payload.matchId)
       if (workingState) {
-        store.dispatch(setGameState(workingState))
+        store.dispatch(setGameState(workingState as unknown as GameState))
       } else {
-        store.dispatch(setGameState(baseline))
+        store.dispatch(setGameState(baseline as unknown as GameState))
       }
       store.dispatch(setDesyncDetected(false))
+      store.dispatch(setLockstepResyncInfo(null))
     } catch (error) {
       logger.warn('Failed to apply lockstep snapshot (falling back to fetch)', { error })
+      store.dispatch(setResyncing(false))
+      store.dispatch(setDesyncDetected(true))
+      const observedAt = Date.now()
+      store.dispatch(
+        setLockstepResyncInfo({
+          reason: 'snapshot_error',
+          roomId: payload.matchId,
+          observedAt,
+          details: { reason: 'snapshot_apply_failed' },
+        }),
+      )
+      store.dispatch(
+        addClientLog({
+          text: 'Lockstep snapshot apply failed; falling back to fetch',
+          roomId: payload.matchId,
+          ts: observedAt,
+        }),
+      )
+    }
+
+    if (!this.lockstepPendingResync.has(payload.matchId)) {
+      store.dispatch(setResyncing(false))
     }
 
     this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
@@ -749,6 +881,7 @@ class SocketService {
       this.lockstepPendingResync.clear()
       this.lockstepLastChecksum.clear()
       this.lockstepSim.reset()
+      store.dispatch(setLockstepResyncInfo(null))
     }
     // Early return if already connected to the same socket
     if (this.socket?.connected) {
@@ -812,6 +945,7 @@ class SocketService {
       this.lockstepPendingResync.clear()
       this.lockstepLastChecksum.clear()
       this.lockstepSim.reset()
+      store.dispatch(setLockstepResyncInfo(null))
     }
   }
 

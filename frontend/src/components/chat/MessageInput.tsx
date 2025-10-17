@@ -1,5 +1,13 @@
 import EmojiPicker, { type EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react'
-import { type KeyboardEvent, useEffect, useEffectEvent, useRef, useState } from 'react'
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+} from 'react'
 import { useAppSelector } from '@/hooks/redux'
 
 interface MessageInputProps {
@@ -18,6 +26,8 @@ export default function MessageInput({
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [emojiPickerPrimed, setEmojiPickerPrimed] = useState(false)
+  const pickerId = useId()
   const typingTimeoutRef = useRef<number | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
@@ -117,14 +127,65 @@ export default function MessageInput({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showEmojiPicker, closeEmojiPicker])
 
+  // Prime the emoji picker in the background so the heavy render happens off the user's critical path.
+  useEffect(() => {
+    if (emojiPickerPrimed) return
+    if (typeof window === 'undefined') return
+
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+    const win = window as Window &
+      typeof globalThis & {
+        requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number
+        cancelIdleCallback?: (handle: number) => void
+      }
+
+    const prime = () => setEmojiPickerPrimed(true)
+    if (typeof win.requestIdleCallback === 'function') {
+      idleId = win.requestIdleCallback(prime, { timeout: 1200 })
+    } else {
+      timeoutId = window.setTimeout(prime, 400)
+    }
+
+    return () => {
+      if (idleId != null && typeof win.cancelIdleCallback === 'function') {
+        win.cancelIdleCallback(idleId)
+      }
+      if (timeoutId != null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [emojiPickerPrimed])
+
+  useEffect(() => {
+    if (showEmojiPicker && !emojiPickerPrimed) {
+      setEmojiPickerPrimed(true)
+    }
+  }, [showEmojiPicker, emojiPickerPrimed])
+
+  const handleToggleEmojiPicker = useCallback(() => {
+    setShowEmojiPicker((prev) => !prev)
+    if (!emojiPickerPrimed) {
+      setEmojiPickerPrimed(true)
+    }
+  }, [emojiPickerPrimed])
+
   const charactersRemaining = maxLength - message.length
   const isNearLimit = charactersRemaining < 50
 
   return (
     <div className="border-t border-border p-3 bg-surface-1 rounded-b-lg relative">
       {/* Emoji Picker Popup */}
-      {showEmojiPicker && (
-        <div className="absolute bottom-full left-0 mb-2 z-50">
+      {emojiPickerPrimed ? (
+        <div
+          id={pickerId}
+          className={`absolute bottom-full left-0 mb-2 z-50 transition duration-150 ease-out ${
+            showEmojiPicker
+              ? 'opacity-100 pointer-events-auto translate-y-0'
+              : 'opacity-0 pointer-events-none translate-y-1'
+          }`}
+          aria-hidden={!showEmojiPicker}
+        >
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
             theme={Theme.DARK}
@@ -134,7 +195,16 @@ export default function MessageInput({
             searchDisabled={false}
             skinTonesDisabled={false}
             previewConfig={{ showPreview: false }}
+            lazyLoadEmojis
+            autoFocusSearch={false}
           />
+        </div>
+      ) : null}
+      {showEmojiPicker && !emojiPickerPrimed && (
+        <div className="absolute bottom-full left-0 mb-2 z-40">
+          <div className="rounded-lg border border-border bg-surface-2/90 px-4 py-2 text-sm text-muted shadow-lg">
+            Loading emoji…
+          </div>
         </div>
       )}
 
@@ -143,10 +213,12 @@ export default function MessageInput({
           <div className="flex items-end gap-1">
             <button
               ref={emojiButtonRef}
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              onClick={handleToggleEmojiPicker}
               className="p-2 hover:bg-[color:var(--hover-bg)] rounded-lg transition-colors text-xl"
               title="Add emoji"
               type="button"
+              aria-expanded={showEmojiPicker}
+              aria-controls={pickerId}
             >
               😊
             </button>

@@ -1,9 +1,5 @@
 import { useMemo } from 'react'
-import {
-  getCardTradeDescription,
-  getFogDescription,
-  getTreasureDescription,
-} from '@/utils/tooltips'
+import { getFogDescription, getTreasureDescription } from '@/utils/tooltips'
 import { useAppSelector } from '../../hooks/redux'
 import InfoTooltip from '../InfoTooltip'
 
@@ -30,7 +26,6 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     const timeBank = (room as unknown as { timeBankSeconds?: number | null }).timeBankSeconds ?? 0
     const movementType = room.movementType ?? null
     const gameMode = room.gameMode ?? null
-    const cardTradeMode = room.cardTradeMode ?? null
 
     const playersLabel = 'Players'
 
@@ -44,15 +39,6 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     })()
 
     const fogValue = fog === 'off' ? 'Off' : toTitle(fog)
-
-    const cardTradesValue = (() => {
-      if (!cardTradeMode) return 'Progressive'
-      const normalized = cardTradeMode.toLowerCase()
-      if (normalized === 'fixed') return 'Fixed'
-      if (normalized === 'progressive' || normalized === 'escalating') return 'Progressive'
-      if (normalized === 'none' || normalized === 'disabled') return 'Disabled'
-      return toTitle(cardTradeMode)
-    })()
 
     const formatTimer = (seconds?: number | null) => {
       const s = seconds ?? 0
@@ -81,12 +67,44 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       }
     })()
 
-    const treasureSummary = (() => {
-      const cfg = room.treasureConfig
-      if (!cfg || cfg.enabled === false) return 'Off'
-      const mode = cfg.payoutMode || 'classic'
-      if (mode === 'fixed') return 'Fixed'
-      return mode === 'triangular' ? 'Progressive' : mode === 'classic' ? 'Classic' : 'Off'
+    const { value: treasureSummary, help: treasureHelp } = (() => {
+      const config = currentGame?.gameConfig?.treasureConfig ?? room.treasureConfig ?? null
+      const legacyMode = currentGame?.gameConfig?.cardTradeMode ?? room.cardTradeMode ?? undefined
+
+      if (config && config.enabled !== false) {
+        const mode = (config.payoutMode || 'classic').toLowerCase()
+        const value = mode === 'fixed' ? 'Fixed' : mode === 'triangular' ? 'Progressive' : 'Classic'
+        return { value, help: getTreasureDescription(config) }
+      }
+
+      if (legacyMode) {
+        const normalized = legacyMode.toLowerCase()
+        if (normalized === 'none' || normalized === 'disabled' || normalized === 'off') {
+          return { value: 'Off', help: 'Treasures are disabled for this match.' }
+        }
+
+        const value =
+          normalized === 'fixed'
+            ? 'Fixed'
+            : normalized === 'progressive' || normalized === 'escalating'
+              ? 'Progressive'
+              : normalized === 'classic'
+                ? 'Classic'
+                : toTitle(legacyMode)
+
+        const help =
+          normalized === 'fixed'
+            ? 'Each treasure set pays a fixed reinforcement bonus.'
+            : normalized === 'progressive' || normalized === 'escalating'
+              ? 'Treasure payouts escalate with each set traded.'
+              : normalized === 'classic'
+                ? 'Treasures follow the classic escalating set values (4, 6, 8, 10, ...).'
+                : 'Treasures award bonus troops based on the configured payout mode.'
+
+        return { value, help }
+      }
+
+      return { value: 'Off', help: 'Treasures are disabled for this match.' }
     })()
 
     const modifiersValue = (() => {
@@ -113,16 +131,20 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       { k: 'Fog of War', v: fogValue, help: getFogDescription(fog) },
       { k: 'Turn Timer', v: formatTimer(turnTimer) },
       { k: 'Time Bank', v: formatBank(timeBank) },
-      { k: 'Card Trades', v: cardTradesValue, help: getCardTradeDescription(cardTradeMode) },
       { k: 'Fortification', v: fortificationValue },
-      { k: 'Treasures', v: treasureSummary, help: getTreasureDescription(room.treasureConfig) },
+      { k: 'Treasures', v: treasureSummary, help: treasureHelp },
       { k: 'Modifiers', v: modifiersValue },
       { k: 'Ranked', v: ranked ? 'Yes' : 'No' },
       { k: 'Private Room', v: privateRoom ? 'Yes' : 'No' },
     ]
 
     return items
-  }, [room, currentGame?.gameConfig?.useTerritoryModifiers])
+  }, [
+    room,
+    currentGame?.gameConfig?.useTerritoryModifiers,
+    currentGame?.gameConfig?.treasureConfig,
+    currentGame?.gameConfig?.cardTradeMode,
+  ])
 
   if (!room) {
     return (

@@ -1,23 +1,23 @@
+import type { GameState as SharedGameState } from '@conquestk/shared'
 import { computeChecksum, simulateFrame } from '@conquestk/shared/lockstep'
 import type { InputFrame } from '@conquestk/shared/types/lockstep'
-import type { GameState } from '@/types/game'
 
 type ApplyFrameResult =
   | { ok: true }
   | { ok: false; reason: 'missing_state' | 'unsupported_commands'; unsupported?: string[] }
 
-const cloneState = (state: GameState): GameState => {
-  return structuredClone(state) as GameState
+const cloneState = (state: SharedGameState): SharedGameState => {
+  return structuredClone(state) as SharedGameState
 }
 
 export class LockstepSimulationManager {
-  private stateByMatch = new Map<string, GameState>()
+  private stateByMatch = new Map<string, SharedGameState>()
 
   reset(): void {
     this.stateByMatch.clear()
   }
 
-  setBaseline(matchId: string, state: GameState): void {
+  setBaseline(matchId: string, state: SharedGameState): void {
     this.stateByMatch.set(matchId, cloneState(state))
   }
 
@@ -58,7 +58,7 @@ export class LockstepSimulationManager {
     return computeChecksum(state)
   }
 
-  getState(matchId: string): GameState | null {
+  getState(matchId: string): SharedGameState | null {
     return this.stateByMatch.get(matchId) ?? null
   }
 }

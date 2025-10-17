@@ -8,7 +8,7 @@ import type {
 import { computeConquestProbability } from '@shared/utils/battleOdds'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getColorValue, type PlayerColor } from '@/constants/colors'
+import { getPlayerTextColor, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
 import { socketService } from '@/services/socketService'
 import { deriveRoundMarkers, isParticipantInRoom } from '@/utils/gameLog'
@@ -128,18 +128,28 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
 
   const playerColor = useMemo(() => {
     const map = new Map<string, string>()
+    const addColor = (key?: string | null, rawColor?: PlayerColor | string | null) => {
+      if (!key || !rawColor) return
+      const resolved = getPlayerTextColor(rawColor)
+      if (!resolved) return
+      map.set(key, resolved)
+    }
+
     if (game?.players) {
       for (const p of game.players) {
-        try {
-          const hex = getColorValue(p.color as unknown as PlayerColor)
-          map.set(p.id, hex)
-        } catch {
-          // ignore mapping issues; fallback handled during render
-        }
+        addColor(p.id, p.color)
+        addColor(p.userId, p.color)
+      }
+    }
+    if (room?.players) {
+      for (const p of room.players) {
+        const color = p.selectedColor ?? p.preferred_color ?? null
+        addColor(p.id, color)
+        addColor(p.userId, color)
       }
     }
     return map
-  }, [game?.players])
+  }, [game?.players, room?.players])
 
   const territoryName = useMemo(() => {
     const map = new Map<string, string>()

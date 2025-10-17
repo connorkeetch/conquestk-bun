@@ -199,6 +199,27 @@ export interface GameState {
   kingOfTheHillState?: KingOfTheHillState
   resumePhaseAfterReinforcement?: GamePhase | null
   resumeHasAttackedAfterReinforcement?: boolean
+  reinforcementHistory?: Array<{
+    playerId: string
+    territoryId: string
+    armies: number
+    ts: number
+  }>
+  fortifyHistory?: Array<{
+    playerId: string
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+    ts: number
+  }>
+  reinforcementBaseline?: Record<string, number>
+  rngSeed?: string
+  rngState?: {
+    a: number
+    b: number
+    c: number
+    d: number
+  }
 }
 export interface GameTerritoryModifier {
   territory_id: string
@@ -249,6 +270,7 @@ export type GameAction =
   | EndTurnAction
   | TradeCardsAction
   | GoBackToReinforcementAction
+  | TransferConquestAction
 type GameActionType =
   | 'deploy'
   | 'attack'
@@ -256,6 +278,7 @@ type GameActionType =
   | 'end_turn'
   | 'trade_cards'
   | 'go_back_to_reinforcement'
+  | 'transfer_conquest'
 type ActionBase<T extends GameActionType> = {
   type: T
   roomId: string
@@ -292,6 +315,13 @@ export type TradeCardsAction = ActionBase<'trade_cards'> & {
 }
 export type GoBackToReinforcementAction = ActionBase<'go_back_to_reinforcement'> & {
   payload?: undefined
+}
+export type TransferConquestAction = ActionBase<'transfer_conquest'> & {
+  payload: {
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+  }
 }
 export interface BattleResult {
   attackerDice: number[]
@@ -467,6 +497,7 @@ export interface RealtimeNotification {
   metadata?: Record<string, unknown>
 }
 import type { GameDelta } from './delta'
+import type { InputFrame, TickChecksum } from './lockstep'
 export interface ServerToClientEvents {
   'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
   'player-left': (data: PlayerLeftEvent) => void
@@ -474,6 +505,14 @@ export interface ServerToClientEvents {
   'game:snapshot': (gameState: GameState) => void
   'game-delta': (delta: GameDelta) => void
   'game-delta-batch': (deltas: GameDelta[]) => void
+  'game-action:frame-committed': (frame: InputFrame) => void
+  'game-action:checksum': (checksum: TickChecksum) => void
+  'game-action:snapshot': (payload: {
+    matchId: string
+    seq: number
+    state: Record<string, unknown>
+    frames: InputFrame[]
+  }) => void
   'turn:start': (payload: {
     roomId: string
     playerId: string
@@ -625,6 +664,10 @@ export interface ClientToServerEvents {
     data: { roomId: string; action: GameAction; idempotencyKey?: string },
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
+  'game-action:resync-request': (
+    data: { roomId: string; fromSeq?: number },
+    callback?: (response: { ok: boolean; error?: string }) => void,
+  ) => void
   'player:resign': (data: { roomId: string }) => void
   deployArmies: (
     data: {
@@ -652,6 +695,7 @@ export interface ClientToServerEvents {
   }) => void
   endTurn: (data: { roomId: string }) => void
   'turn:begin': (data: { roomId: string }) => void
+  goBackToReinforcement: (data: { roomId: string }) => void
   transferConquestArmies: (data: {
     roomId: string
     fromTerritoryId: string

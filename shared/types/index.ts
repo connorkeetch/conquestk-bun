@@ -9,6 +9,8 @@ export * from './messaging.js'
 export * from './notifications.js'
 export * from './themes.js'
 
+import type { InputFrame, TickChecksum } from './lockstep.js'
+
 // Import messaging types for internal references
 import type {
   ConversationCreateAck,
@@ -197,6 +199,7 @@ export interface KingOfTheHillState {
   rotationQueue?: string[]
   eligibleTerritoryIds?: string[]
   lastScoreTurn?: number
+  lastRotationTurn?: number
 }
 
 export interface GameState {
@@ -248,6 +251,7 @@ export interface GameState {
     armies: number
     ts: number
   }>
+  reinforcementBaseline?: Record<string, number>
   rngSeed?: string
   rngState?: {
     a: number
@@ -608,6 +612,14 @@ export interface ServerToClientEvents {
   'game:snapshot': (gameState: GameState) => void
   'game-delta': (delta: GameDelta) => void
   'game-delta-batch': (deltas: GameDelta[]) => void
+  'game-action:frame-committed': (frame: InputFrame) => void
+  'game-action:checksum': (checksum: TickChecksum) => void
+  'game-action:snapshot': (payload: {
+    matchId: string
+    seq: number
+    state: Record<string, unknown>
+    frames: InputFrame[]
+  }) => void
   'turn:start': (payload: {
     roomId: string
     playerId: string
@@ -758,9 +770,14 @@ export interface ClientToServerEvents {
     data: { roomId: string; action: GameAction; idempotencyKey?: string },
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
+  'game-action:resync-request': (
+    data: { roomId: string; fromSeq?: number },
+    callback?: (response: { ok: boolean; error?: string }) => void,
+  ) => void
   'player:resign': (data: { roomId: string }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
   'turn:begin': (data: { roomId: string }) => void
+  goBackToReinforcement: (data: { roomId: string }) => void
   'host:replacement': (data: {
     roomId: string
     targetUserId: string
