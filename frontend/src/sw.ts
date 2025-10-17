@@ -20,7 +20,7 @@ import {
 import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
 import { CacheFirst, NetworkFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies'
 
-const SW_BUILD_ID = '2024-09-27T00:00Z' as const
+const SW_BUILD_ID = '2025-10-17T15:00Z' as const
 
 // Immediately activate the new SW and control uncontrolled clients
 self.skipWaiting()

@@ -10,10 +10,11 @@ type LazyWithRetryOptions = {
 }
 
 const chunkErrorSignatures = [
-  'ChunkLoadError',
-  'Loading chunk',
-  'Failed to fetch dynamically imported module',
-  'Importing a module script failed',
+  'chunkloaderror',
+  'loading chunk',
+  'failed to fetch dynamically imported module',
+  'importing a module script failed',
+  'error loading dynamically imported module',
 ]
 
 const reloadMarkerKey = '__lazyWithRetry:lastReload'
@@ -106,7 +107,9 @@ const isChunkLoadError = (error: unknown) => {
     return false
   }
 
-  return chunkErrorSignatures.some((signature) => error.message.includes(signature))
+  const normalizedMessage = error.message.toLowerCase()
+
+  return chunkErrorSignatures.some((signature) => normalizedMessage.includes(signature))
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: generic wrapper mirrors React.lazy typing

@@ -48,6 +48,17 @@ interface LeaderboardRow extends QueryResultRow {
   ranked_wins?: number | null
   ranked_losses?: number | null
 }
+
+interface MonthlyLeaderboardRow extends QueryResultRow {
+  user_id: string
+  username: string
+  current_rating: number
+  wins: number
+  losses: number
+  games_played: number
+  rating_gain: number
+  rank_position: number
+}
 // Centralize tier thresholds using shared RANKS and attach icons/colors here (server-only)
 const TIER_META: Record<string, { icon: string; color: string }> = {
   Chieftain: { icon: '🛡️', color: '#8B4513' },
@@ -81,6 +92,27 @@ export class EloService {
   private static readonly K_BASE = 24
   private static readonly K_PROVISIONAL = 40 // first 20 ranked games
   private static readonly R_FLOOR = 800
+
+  private resolveMonthlyBounds(month?: string): { periodStart: Date; periodEnd: Date } {
+    let base = new Date()
+    if (typeof month === 'string' && /^[0-9]{4}-[0-9]{2}$/.test(month)) {
+      const [yearPart, monthPart] = month.split('-')
+      const year = Number(yearPart)
+      const monthIndex = Number(monthPart) - 1
+      if (
+        Number.isFinite(year) &&
+        Number.isFinite(monthIndex) &&
+        monthIndex >= 0 &&
+        monthIndex < 12
+      ) {
+        base = new Date(Date.UTC(year, monthIndex, 1))
+      }
+    }
+
+    const periodStart = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 1))
+    const periodEnd = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 1))
+    return { periodStart, periodEnd }
+  }
 
   private kForPlayer(gamesPlayed: number, nPlayers: number): number {
     const provisional = gamesPlayed < 20
@@ -318,6 +350,75 @@ export class EloService {
     return result.rows
   }
 
+  async getMonthlyLeaderboard(options?: {
+    limit?: number
+    offset?: number
+    month?: string
+    userIds?: string[]
+  }): Promise<{ rows: MonthlyLeaderboardRow[]; periodStart: Date; periodEnd: Date }> {
+    const limit = Math.max(1, Math.trunc(options?.limit ?? 100))
+    const offset = Math.max(0, Math.trunc(options?.offset ?? 0))
+    const { periodStart, periodEnd } = this.resolveMonthlyBounds(options?.month)
+    const userIds = options?.userIds?.filter((value, index, array) => array.indexOf(value) === index)
+
+    if (userIds && userIds.length === 0) {
+      return { rows: [], periodStart, periodEnd }
+    }
+
+    const params: Array<number | Date | string[] | string> = [limit, offset, periodStart, periodEnd]
+    let filterClause = ''
+
+    if (userIds && userIds.length > 0) {
+      params.push(userIds)
+      filterClause = `AND pgr.user_id = ANY($${params.length}::uuid[])`
+    }
+
+    const result = await query<MonthlyLeaderboardRow>(
+      `
+        WITH monthly_stats AS (
+          SELECT
+            pgr.user_id,
+            u.username,
+            u.skill_rating AS current_rating,
+            SUM(CASE WHEN pgr.is_winner THEN 1 ELSE 0 END)::int AS wins,
+            COUNT(*)::int AS games_played,
+            COUNT(*) FILTER (WHERE pgr.is_winner = FALSE)::int AS losses,
+            COALESCE(SUM(pgr.rating_change), 0)::int AS rating_gain
+          FROM player_game_results pgr
+          JOIN game_rooms gr ON gr.id = pgr.room_id
+          JOIN users u ON u.id = pgr.user_id
+          WHERE gr.is_ranked = TRUE
+            AND gr.status = 'completed'
+            AND gr.ended_at IS NOT NULL
+            AND gr.ended_at >= $3
+            AND gr.ended_at < $4
+            ${filterClause}
+          GROUP BY pgr.user_id, u.username, u.skill_rating
+        )
+        SELECT
+          stats.user_id,
+          stats.username,
+          stats.current_rating,
+          stats.wins,
+          stats.losses,
+          stats.games_played,
+          stats.rating_gain,
+          ROW_NUMBER() OVER (
+            ORDER BY stats.rating_gain DESC,
+                     stats.wins DESC,
+                     stats.games_played DESC,
+                     stats.username ASC
+          ) AS rank_position
+        FROM monthly_stats stats
+        ORDER BY rank_position
+        LIMIT $1 OFFSET $2
+      `,
+      params,
+    )
+
+    return { rows: result.rows, periodStart, periodEnd }
+  }
+
   async getLeaderboard(limit: number = 100, offset: number = 0): Promise<LeaderboardRow[]> {
     const result = await query<LeaderboardRow>(
       `
@@ -359,6 +460,49 @@ export class EloService {
     )
 
     return fallback.rows
+  }
+
+  async getLeaderboardForUsers(
+    userIds: string[],
+    options?: { limit?: number; offset?: number },
+  ): Promise<LeaderboardRow[]> {
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return []
+    }
+
+    const deduped = Array.from(new Set(userIds))
+    const limit = Math.max(1, Math.trunc(options?.limit ?? deduped.length))
+    const offset = Math.max(0, Math.trunc(options?.offset ?? 0))
+
+    const result = await query<LeaderboardRow>(
+      `
+        SELECT
+          ranked.user_id,
+          ranked.username,
+          ranked.skill_rating,
+          ranked.rank_position,
+          ranked.ranked_wins,
+          ranked.ranked_losses
+        FROM (
+          SELECT
+            u.id AS user_id,
+            u.username,
+            u.skill_rating,
+            u.ranked_wins,
+            u.ranked_losses,
+            ROW_NUMBER() OVER (
+              ORDER BY u.skill_rating DESC, u.created_at ASC
+            ) AS rank_position
+          FROM users u
+          WHERE u.id = ANY($1::uuid[])
+        ) AS ranked
+        ORDER BY ranked.rank_position
+        LIMIT $2 OFFSET $3
+      `,
+      [deduped, limit, offset],
+    )
+
+    return result.rows
   }
 
   async updateLeaderboardCache(client?: PoolClient): Promise<void> {
