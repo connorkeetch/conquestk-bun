@@ -37,6 +37,7 @@ describe('gameSlice', () => {
       expect(state.validTargets).toEqual([])
       expect(state.pendingAction).toBeNull()
       expect(state.territoryActionHistory).toEqual([])
+      expect(state.gameResult).toBeNull()
     })
   })
 
@@ -229,6 +230,86 @@ describe('gameSlice', () => {
       const updated = store.getState().game.currentGame
       expect(updated?.board.find((t) => t.id === 'siberia')?.ownerId).toBe('player1')
       expect(store.getState().game.battleResult?.conquered).toBe(true)
+    })
+
+    it('derives game result metadata from a finished game snapshot', () => {
+      const finishedState: GameState = {
+        ...mockGameState,
+        phase: 'finished',
+        players: [
+          {
+            ...mockGameState.players[0],
+            territories: ['alaska'],
+            armies: 12,
+            isEliminated: false,
+          },
+          {
+            id: 'player2',
+            userId: 'player2',
+            username: 'Player 2',
+            color: 'blue' as PlayerColor,
+            armies: 0,
+            territories: [],
+            cards: [],
+            isEliminated: true,
+          },
+        ],
+      }
+
+      store.dispatch(setGameState(finishedState))
+
+      const state = store.getState().game
+      expect(state.gameResult).toEqual({
+        winnerIds: ['player1'],
+        eliminatedPlayerIds: ['player2'],
+        endedAt: null,
+      })
+    })
+
+    it('persists winner metadata from GAME_END delta', () => {
+      const twoPlayerState: GameState = {
+        ...mockGameState,
+        phase: 'attack',
+        players: [
+          {
+            ...mockGameState.players[0],
+            territories: ['alaska'],
+            armies: 5,
+            isEliminated: false,
+          },
+          {
+            id: 'player2',
+            userId: 'player2',
+            username: 'Player 2',
+            color: 'blue' as PlayerColor,
+            armies: 0,
+            territories: [],
+            cards: [],
+            isEliminated: false,
+          },
+        ],
+      }
+
+      store.dispatch(setGameState(twoPlayerState))
+
+      store.dispatch(
+        applyDelta({
+          type: 'GAME_END',
+          roomId: 'test-room',
+          timestamp: Date.now(),
+          winner: 'player1',
+          eliminatedPlayers: ['player2'],
+        } as GameDelta),
+      )
+
+      const state = store.getState().game
+      expect(state.currentGame?.phase).toBe('finished')
+      expect((state.currentGame as GameState & { winner?: string }).winner).toBe('player1')
+      expect(state.gameResult).toEqual({
+        winnerIds: ['player1'],
+        eliminatedPlayerIds: ['player2'],
+        endedAt: null,
+      })
     })
   })
 
