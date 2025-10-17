@@ -467,15 +467,15 @@ export const AdminMaps: React.FC = () => {
             const groups = record as {
               sectorId?: string
               sector?: string
-              sector?: string
+              sector_name?: string
             }
             const sectorValue =
               typeof groups.sectorId === 'string'
                 ? groups.sectorId
                 : typeof groups.sector === 'string'
                   ? groups.sector
-                  : typeof groups.sector === 'string'
-                    ? groups.sector
+                  : typeof groups.sector_name === 'string'
+                    ? groups.sector_name
                     : undefined
 
             if (typeof idValue !== 'string') {

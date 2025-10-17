@@ -359,7 +359,9 @@ export class EloService {
     const limit = Math.max(1, Math.trunc(options?.limit ?? 100))
     const offset = Math.max(0, Math.trunc(options?.offset ?? 0))
     const { periodStart, periodEnd } = this.resolveMonthlyBounds(options?.month)
-    const userIds = options?.userIds?.filter((value, index, array) => array.indexOf(value) === index)
+    const userIds = options?.userIds?.filter(
+      (value, index, array) => array.indexOf(value) === index,
+    )
 
     if (userIds && userIds.length === 0) {
       return { rows: [], periodStart, periodEnd }

@@ -11,12 +11,13 @@ import ClanDirectoryPage from './ClanDirectoryPage'
 interface LeaderboardEntry {
   id: string
   username: string
-  elo: number
+  rank: number
+  skillRating?: number
+  ratingGain?: number
   wins: number
   losses: number
   winRate: number
-  rank: number
-  gamesPlayed?: number
+  gamesPlayed: number
 }
 
 const CommunityPage: React.FC = () => {
@@ -34,76 +35,109 @@ const CommunityPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
-  const fetchLeaderboardData = useCallback(async () => {
-    setLoading(true)
-    try {
-      // Only the global leaderboard endpoint exists server-side today.
-      if (leaderboardTab !== 'global') {
-        // No API for monthly/friends yet; show empty state without calling backend
-        if (leaderboardTab === 'monthly') setMonthlyLeaderboard([])
-        else setFriendsLeaderboard([])
-        return
-      }
+  type AnyLeaderboardLike = Partial<Record<string, string | number | null | undefined>>
 
-      // Use skill leaderboard: GET /api/skills/leaderboards/skill
-      const response = await api.get('/skills/leaderboards/skill', {
-        params: { limit: 100 },
-      })
+  const normalizeLeaderboard = useCallback(
+    (payload: unknown, options?: { expectRatingGain?: boolean }): LeaderboardEntry[] => {
+      const rawData =
+        Array.isArray(payload) || payload == null
+          ? payload
+          : (payload as { leaderboard?: unknown }).leaderboard
 
-      // Expected shape: { leaderboard: [...] }. Also support array fallback just in case.
-      const raw = Array.isArray(response.data) ? response.data : response.data?.leaderboard || []
+      const rows = Array.isArray(rawData) ? (rawData as AnyLeaderboardLike[]) : []
 
-      type AnyLeaderboardLike = Partial<Record<string, string | number | null | undefined>>
-
-      const asNumber = (value: unknown, fallback = 0): number =>
+      const toNumber = (value: unknown, fallback = 0): number =>
         typeof value === 'number'
           ? value
-          : Number.isFinite(Number(value))
+          : typeof value === 'string' && value.trim().length > 0 && Number.isFinite(Number(value))
             ? Number(value)
             : fallback
 
-      const asString = (value: unknown, fallback = ''): string =>
+      const stringValue = (value: unknown, fallback = ''): string =>
         typeof value === 'string' ? value : fallback
 
-      const normalized: LeaderboardEntry[] = (raw as AnyLeaderboardLike[]).map(
-        (entry, index: number) => {
-          // Accept both profile leaderboard shape and older variants
-          const userId = asString(entry.userId ?? entry.user_id ?? entry.id, '')
-          const username = asString(entry.username, '')
-          const rating = asNumber(entry.rating ?? entry.elo ?? entry.skillRating, 0)
-          const gamesWon = asNumber(entry.gamesWon ?? entry.wins, 0)
-          const rawGamesPlayed = entry.gamesPlayed
-          const rawLosses = entry.losses
-          const computedGamesPlayed =
-            typeof rawGamesPlayed === 'number'
-              ? rawGamesPlayed
-              : typeof entry.wins === 'number' && typeof rawLosses === 'number'
-                ? // fallback if only wins/losses provided
-                  (entry.wins as number) + (rawLosses as number)
-                : undefined
-          const losses =
-            typeof rawLosses === 'number'
-              ? (rawLosses as number)
-              : computedGamesPlayed != null
-                ? Math.max(0, computedGamesPlayed - gamesWon)
-                : 0
-          const winRate = asNumber(entry.winRate, 0)
-          const rank = asNumber(entry.rank, index + 1)
+      return rows
+        .map<LeaderboardEntry | null>((entry, index) => {
+          const userId = stringValue(entry.userId ?? entry.user_id ?? entry.id, '')
+          if (!userId) {
+            return null
+          }
+
+          const username = stringValue(entry.username, 'Commander')
+          const rank = toNumber(entry.rank, index + 1)
+          const wins = toNumber(entry.wins ?? entry.ranked_wins ?? entry.gamesWon, 0)
+          const losses = toNumber(entry.losses ?? entry.ranked_losses, 0)
+          const gamesPlayed = Math.max(
+            0,
+            toNumber(entry.gamesPlayed ?? entry.totalGames, wins + losses),
+          )
+
+          const computedWinRate =
+            gamesPlayed > 0
+              ? toNumber(entry.winRate ?? entry.win_rate, (wins / gamesPlayed) * 100)
+              : 0
+
+          const skillRating = toNumber(
+            entry.skillRating ??
+              entry.skill_rating ??
+              entry.current_rating ??
+              entry.rating ??
+              entry.elo ??
+              entry.cp,
+            0,
+          )
+
+          const ratingGainValue = toNumber(
+            entry.ratingGain ?? entry.rating_gain ?? entry.delta ?? entry.ratingChange,
+            0,
+          )
 
           return {
             id: userId,
             username,
-            elo: Math.round(rating),
-            wins: gamesWon,
-            losses,
-            winRate,
             rank,
-            gamesPlayed: computedGamesPlayed ?? gamesWon + losses,
+            skillRating,
+            ratingGain: options?.expectRatingGain ? ratingGainValue : undefined,
+            wins,
+            losses,
+            gamesPlayed,
+            winRate: computedWinRate,
           }
-        },
-      )
+        })
+        .filter((entry): entry is LeaderboardEntry => entry !== null)
+    },
+    [],
+  )
 
-      setGlobalLeaderboard(normalized)
+  const fetchLeaderboardData = useCallback(async () => {
+    setLoading(true)
+    try {
+      if (leaderboardTab === 'global') {
+        const response = await api.get('/skills/leaderboards/skill', {
+          params: { limit: 100 },
+        })
+        setGlobalLeaderboard(normalizeLeaderboard(response.data))
+        return
+      }
+
+      if (leaderboardTab === 'monthly') {
+        const response = await api.get('/skills/leaderboards/skill', {
+          params: { limit: 100, period: 'monthly' },
+        })
+        setMonthlyLeaderboard(normalizeLeaderboard(response.data, { expectRatingGain: true }))
+        return
+      }
+
+      const response = await api.get('/skills/leaderboards/skill/friends', {
+        params: { limit: 100 },
+      })
+      const metaPeriod =
+        typeof response.data?.meta?.period === 'string'
+          ? (response.data.meta.period as string).toLowerCase()
+          : 'all_time'
+      setFriendsLeaderboard(
+        normalizeLeaderboard(response.data, { expectRatingGain: metaPeriod === 'monthly' }),
+      )
     } catch (error) {
       logger.error('Failed to fetch leaderboard', error)
       // Set empty arrays on error
@@ -113,7 +147,7 @@ const CommunityPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [leaderboardTab])
+  }, [leaderboardTab, normalizeLeaderboard])
 
   useEffect(() => {
     fetchLeaderboardData()
@@ -132,6 +166,8 @@ const CommunityPage: React.FC = () => {
       : leaderboardTab === 'friends'
         ? friendsLeaderboard
         : globalLeaderboard
+
+  const cpColumnLabel = leaderboardTab === 'monthly' ? 'CP Gain' : 'CP'
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -208,7 +244,7 @@ const CommunityPage: React.FC = () => {
                         Player
                       </th>
                       <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
-                        CP
+                        {cpColumnLabel}
                       </th>
                       <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
                         Games
@@ -222,57 +258,76 @@ const CommunityPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {currentLeaderboard.map((player, index) => (
-                      <tr
-                        key={player.id}
-                        className={`hover:bg-surface-2/50 transition-colors ${
-                          index < 3 ? 'bg-surface-2/30' : ''
-                        }`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {renderRankBadge(player.rank || index + 1)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="ml-2">
-                              <button
-                                type="button"
-                                onClick={() => setProfileUsername(player.username)}
-                                className="text-sm font-medium text-white underline-offset-2 hover:underline"
-                                title={`View ${player.username}'s profile`}
-                              >
-                                {player.username}
-                              </button>
+                    {currentLeaderboard.map((player, index) => {
+                      const isMonthlyView = leaderboardTab === 'monthly'
+                      const cpMetric = isMonthlyView
+                        ? (player.ratingGain ?? 0)
+                        : (player.skillRating ?? 0)
+                      const roundedMetric = Math.round(cpMetric)
+                      const cpDisplay = isMonthlyView
+                        ? `${cpMetric >= 0 ? '+' : ''}${roundedMetric}`
+                        : roundedMetric.toLocaleString()
+                      const iconClass =
+                        isMonthlyView && cpMetric < 0 ? 'text-danger' : 'text-success'
+                      const textClass =
+                        isMonthlyView && cpMetric < 0
+                          ? 'text-danger font-medium'
+                          : isMonthlyView
+                            ? 'text-success font-medium'
+                            : 'text-white font-medium'
+
+                      return (
+                        <tr
+                          key={player.id}
+                          className={`hover:bg-surface-2/50 transition-colors ${
+                            index < 3 ? 'bg-surface-2/30' : ''
+                          }`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {renderRankBadge(player.rank || index + 1)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="ml-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setProfileUsername(player.username)}
+                                  className="text-sm font-medium text-white underline-offset-2 hover:underline"
+                                  title={`View ${player.username}'s profile`}
+                                >
+                                  {player.username}
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <TrendingUp className="w-4 h-4 text-success" />
-                            <span className="text-white font-medium">{player.elo}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-muted">
-                          {player.gamesPlayed || player.wins + player.losses}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-success">
-                          {player.wins}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span
-                            className={`font-medium ${
-                              player.winRate > 60
-                                ? 'text-success'
-                                : player.winRate > 50
-                                  ? 'text-warning'
-                                  : 'text-danger'
-                            }`}
-                          >
-                            {player.winRate.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <TrendingUp className={`w-4 h-4 ${iconClass}`} />
+                              <span className={textClass}>{cpDisplay}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-muted">
+                            {player.gamesPlayed}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-success">
+                            {player.wins}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span
+                              className={`font-medium ${
+                                player.winRate > 60
+                                  ? 'text-success'
+                                  : player.winRate > 50
+                                    ? 'text-warning'
+                                    : 'text-danger'
+                              }`}
+                            >
+                              {player.winRate.toFixed(1)}%
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

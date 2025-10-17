@@ -41,7 +41,7 @@ describe('socketService idempotency key handling', () => {
   })
 
   it('reuses the same promise when an identical action is already in flight', async () => {
-    let resolveAck: ((value: { ok: boolean; queued?: boolean }) => void) | null = null
+    let resolveAck: ((value: { ok: boolean; queued?: boolean }) => void) | undefined
     const stub = vi.fn().mockImplementation(
       (_roomId: string, _action: { type: string; payload?: unknown }, _key: string) =>
         new Promise<{ ok: boolean; queued?: boolean }>((resolve) => {

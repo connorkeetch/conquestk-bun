@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
-import { socketDebugger, type SocketDebugState } from '@/utils/socketDebugger'
 import { logger } from '@/utils/logger'
+import { type SocketDebugState, socketDebugger } from '@/utils/socketDebugger'
 
 export function DebugDashboard() {
   const [isVisible, setIsVisible] = useState(false)
   const [debugState, setDebugState] = useState<SocketDebugState>(socketDebugger.getState())
-  const [activeTab, setActiveTab] = useState<'events' | 'rooms' | 'sequences' | 'pending'>(
-    'events',
-  )
+  const [activeTab, setActiveTab] = useState<'events' | 'rooms' | 'sequences' | 'pending'>('events')
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -69,9 +67,7 @@ export function DebugDashboard() {
                 {connectionMetrics.connected ? 'Connected' : 'Disconnected'}
               </span>
               {connectionMetrics.connected && (
-                <span className="text-xs text-muted">
-                  ({connectionMetrics.totalEvents} events)
-                </span>
+                <span className="text-xs text-muted">({connectionMetrics.totalEvents} events)</span>
               )}
             </div>
           </div>
@@ -188,13 +184,13 @@ export function DebugDashboard() {
                       <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
                     </div>
                   </div>
-                  {event.data && (
+                  {event.data !== undefined && event.data !== null ? (
                     <pre className="text-xs bg-surface-3 p-2 rounded mt-2 overflow-x-auto">
                       {typeof event.data === 'string'
                         ? event.data
                         : JSON.stringify(event.data, null, 2)}
                     </pre>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -238,8 +234,8 @@ export function DebugDashboard() {
                   {seq.gaps.length > 0 && (
                     <div className="mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs">
                       <strong>Gaps detected:</strong>
-                      {seq.gaps.map((gap, i) => (
-                        <div key={i}>
+                      {seq.gaps.map((gap) => (
+                        <div key={`${gap.from}-${gap.to}`}>
                           {gap.from} - {gap.to} (missing {gap.to - gap.from + 1} deltas)
                         </div>
                       ))}

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { query } from '../config/database.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { eloService } from '../services/eloService.js'
+import { listFriends } from '../services/friendService.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
@@ -106,9 +107,51 @@ router.get('/leaderboards/skill', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string, 10) || 100
     const offset = parseInt(req.query.offset as string, 10) || 0
+    const rawPeriod = typeof req.query.period === 'string' ? req.query.period.toLowerCase() : ''
+    const period = rawPeriod === 'monthly' ? 'monthly' : 'all_time'
+    const month = typeof req.query.month === 'string' ? req.query.month : undefined
+
+    if (period === 'monthly') {
+      const { rows, periodStart, periodEnd } = await eloService.getMonthlyLeaderboard({
+        limit,
+        offset,
+        month,
+      })
+
+      const leaderboard = rows.map((entry, index) => {
+        const wins = typeof entry.wins === 'number' ? entry.wins : 0
+        const losses = typeof entry.losses === 'number' ? entry.losses : 0
+        const gamesPlayed =
+          typeof entry.games_played === 'number' ? entry.games_played : wins + losses
+        const ratingGain = typeof entry.rating_gain === 'number' ? entry.rating_gain : 0
+        return {
+          rank: entry.rank_position ?? index + 1,
+          userId: entry.user_id,
+          username: entry.username,
+          skillRating: entry.current_rating,
+          ratingGain,
+          wins,
+          losses,
+          gamesPlayed,
+          winRate: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
+          tier: eloService.getSkillTier(entry.current_rating).name,
+        }
+      })
+
+      return res.json({
+        leaderboard,
+        meta: {
+          period,
+          scope: 'global',
+          periodStart: periodStart.toISOString(),
+          periodEnd: periodEnd.toISOString(),
+        },
+      })
+    }
+
     const leaderboard = await eloService.getLeaderboard(limit, offset)
 
-    res.json({
+    return res.json({
       leaderboard: leaderboard.map((entry) => {
         const wins = typeof entry.ranked_wins === 'number' ? entry.ranked_wins : 0
         const losses = typeof entry.ranked_losses === 'number' ? entry.ranked_losses : 0
@@ -125,13 +168,107 @@ router.get('/leaderboards/skill', async (req, res) => {
           tier: eloService.getSkillTier(entry.skill_rating).name,
         }
       }),
+      meta: { period: 'all_time', scope: 'global' },
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to fetch leaderboard', 500, {
       limit: req.query.limit,
       offset: req.query.offset,
+      period: req.query.period,
+      month: req.query.month,
     })
-    res.status(500).json({ error: 'Failed to fetch leaderboard' })
+    return res.status(500).json({ error: 'Failed to fetch leaderboard' })
+  }
+})
+
+/**
+ * Get skill leaderboard scoped to the authenticated user's friends
+ */
+router.get('/leaderboards/skill/friends', authenticateToken, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string, 10) || 100
+    const offset = parseInt(req.query.offset as string, 10) || 0
+    const rawPeriod = typeof req.query.period === 'string' ? req.query.period.toLowerCase() : ''
+    const period = rawPeriod === 'monthly' ? 'monthly' : 'all_time'
+    const month = typeof req.query.month === 'string' ? req.query.month : undefined
+
+    const friendSummaries = await listFriends(req.userId)
+    const friendIds = friendSummaries.map((friend) => friend.userId)
+    const userIds = Array.from(new Set([req.userId, ...friendIds]))
+
+    if (userIds.length === 0) {
+      return res.json({ leaderboard: [], meta: { period, scope: 'friends' } })
+    }
+
+    if (period === 'monthly') {
+      const { rows, periodStart, periodEnd } = await eloService.getMonthlyLeaderboard({
+        limit,
+        offset,
+        month,
+        userIds,
+      })
+
+      const leaderboard = rows.map((entry, index) => {
+        const wins = typeof entry.wins === 'number' ? entry.wins : 0
+        const losses = typeof entry.losses === 'number' ? entry.losses : 0
+        const gamesPlayed =
+          typeof entry.games_played === 'number' ? entry.games_played : wins + losses
+        const ratingGain = typeof entry.rating_gain === 'number' ? entry.rating_gain : 0
+        return {
+          rank: entry.rank_position ?? index + 1,
+          userId: entry.user_id,
+          username: entry.username,
+          skillRating: entry.current_rating,
+          ratingGain,
+          wins,
+          losses,
+          gamesPlayed,
+          winRate: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
+          tier: eloService.getSkillTier(entry.current_rating).name,
+        }
+      })
+
+      return res.json({
+        leaderboard,
+        meta: {
+          period,
+          scope: 'friends',
+          periodStart: periodStart.toISOString(),
+          periodEnd: periodEnd.toISOString(),
+        },
+      })
+    }
+
+    const leaderboard = await eloService.getLeaderboardForUsers(userIds, { limit, offset })
+
+    return res.json({
+      leaderboard: leaderboard.map((entry, index) => {
+        const wins = typeof entry.ranked_wins === 'number' ? entry.ranked_wins : 0
+        const losses = typeof entry.ranked_losses === 'number' ? entry.ranked_losses : 0
+        const gamesPlayed = wins + losses
+        return {
+          rank: entry.rank_position ?? index + 1,
+          userId: entry.user_id,
+          username: entry.username,
+          skillRating: entry.skill_rating,
+          wins,
+          losses,
+          gamesPlayed,
+          winRate: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
+          tier: eloService.getSkillTier(entry.skill_rating).name,
+        }
+      }),
+      meta: { period: 'all_time', scope: 'friends' },
+    })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to fetch friends leaderboard', 500, {
+      userId: req.userId,
+      limit: req.query.limit,
+      offset: req.query.offset,
+      period: req.query.period,
+      month: req.query.month,
+    })
+    return res.status(500).json({ error: 'Failed to fetch friends leaderboard' })
   }
 })
 
