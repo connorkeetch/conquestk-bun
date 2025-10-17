@@ -445,6 +445,43 @@ class ReliabilityMetricsService {
       })
     }
   }
+
+  /**
+   * Test-only helper to reset accumulated metrics without restarting the session ID.
+   */
+  resetForTest(): void {
+    this.reconnectCount = 0
+    this.actionsAttempted = 0
+    this.actionsSucceeded = 0
+    this.actionsFailed = 0
+    this.actionsRetried = 0
+    this.deltasReceived = 0
+    this.deltasDuplicated = 0
+    this.deltaGapsDetected = 0
+    this.deltaGapRecoveries = 0
+    this.desyncDetections = 0
+    this.desyncRecoveries = 0
+    this.desyncDetectedAt = null
+    this.desyncRecoveryDurations = []
+    this.latencySamples = []
+    this.totalUptimeMs = 0
+    this.totalDowntimeMs = 0
+    this.connectedAt = null
+    this.lastConnectionChange = Date.now()
+    this.firstConnection = true
+    if (this.uploadInterval) {
+      clearInterval(this.uploadInterval)
+      this.uploadInterval = null
+    }
+    this.lockstepResyncTotal = 0
+    this.lockstepResyncSuccess = 0
+    this.lockstepResyncFailure = 0
+    this.lockstepResyncReasonCounts = {}
+    this.lockstepResyncDurations = []
+    this.lockstepResyncPending.clear()
+    this.start()
+    this.notify()
+  }
 }
 
 export const reliabilityMetrics = new ReliabilityMetricsService()
