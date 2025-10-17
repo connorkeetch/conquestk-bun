@@ -11,8 +11,8 @@ export function DebugDashboard() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Shift+D to toggle
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      // Ctrl+Alt+Shift+D to toggle (very unique combo)
+      if (e.ctrlKey && e.altKey && e.shiftKey && e.key === 'D') {
         e.preventDefault()
         setIsVisible((prev) => !prev)
       }
@@ -273,7 +273,7 @@ export function DebugDashboard() {
         {/* Footer */}
         <div className="p-3 border-t border-border bg-surface-2 text-xs text-muted">
           <div className="flex items-center justify-between">
-            <span>Press Ctrl+Shift+D to toggle this dashboard</span>
+            <span>Press Ctrl+Alt+Shift+D to toggle this dashboard</span>
             <span>
               {connectionMetrics.lastConnectAt && (
                 <>Connected at: {new Date(connectionMetrics.lastConnectAt).toLocaleTimeString()}</>
