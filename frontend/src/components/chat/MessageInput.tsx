@@ -1,6 +1,8 @@
-import EmojiPicker, { type EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react'
+import type { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react'
 import {
   type KeyboardEvent,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useEffectEvent,
@@ -9,6 +11,12 @@ import {
   useState,
 } from 'react'
 import { useAppSelector } from '@/hooks/redux'
+
+const loadEmojiPicker = () => import('emoji-picker-react')
+const EmojiPicker = lazy(async () => {
+  const module = await loadEmojiPicker()
+  return { default: module.default }
+})
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void
@@ -140,7 +148,10 @@ export default function MessageInput({
         cancelIdleCallback?: (handle: number) => void
       }
 
-    const prime = () => setEmojiPickerPrimed(true)
+    const prime = () => {
+      void loadEmojiPicker()
+      setEmojiPickerPrimed(true)
+    }
     if (typeof win.requestIdleCallback === 'function') {
       idleId = win.requestIdleCallback(prime, { timeout: 1200 })
     } else {
@@ -159,6 +170,7 @@ export default function MessageInput({
 
   useEffect(() => {
     if (showEmojiPicker && !emojiPickerPrimed) {
+      void loadEmojiPicker()
       setEmojiPickerPrimed(true)
     }
   }, [showEmojiPicker, emojiPickerPrimed])
@@ -166,6 +178,7 @@ export default function MessageInput({
   const handleToggleEmojiPicker = useCallback(() => {
     setShowEmojiPicker((prev) => !prev)
     if (!emojiPickerPrimed) {
+      void loadEmojiPicker()
       setEmojiPickerPrimed(true)
     }
   }, [emojiPickerPrimed])
@@ -186,18 +199,26 @@ export default function MessageInput({
           }`}
           aria-hidden={!showEmojiPicker}
         >
-          <EmojiPicker
-            onEmojiClick={handleEmojiClick}
-            theme={Theme.DARK}
-            emojiStyle={EmojiStyle.NATIVE}
-            height={350}
-            width={300}
-            searchDisabled={false}
-            skinTonesDisabled={false}
-            previewConfig={{ showPreview: false }}
-            lazyLoadEmojis
-            autoFocusSearch={false}
-          />
+          <Suspense
+            fallback={
+              <div className="rounded-lg border border-border bg-surface-2/90 px-4 py-2 text-sm text-muted shadow-lg">
+                Loading emoji…
+              </div>
+            }
+          >
+            <EmojiPicker
+              onEmojiClick={handleEmojiClick}
+              theme={'dark' as Theme}
+              emojiStyle={'native' as EmojiStyle}
+              height={320}
+              width={280}
+              searchDisabled={false}
+              skinTonesDisabled={false}
+              previewConfig={{ showPreview: false }}
+              lazyLoadEmojis
+              autoFocusSearch={false}
+            />
+          </Suspense>
         </div>
       ) : null}
       {showEmojiPicker && !emojiPickerPrimed && (

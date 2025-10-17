@@ -6,9 +6,11 @@ import { getColorValue } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { type MapTerritory, mapService } from '@/services/mapService'
 import {
+  ensureLockstepFrames,
   fetchReplayChunk,
   fetchReplaySummary,
   selectCurrentTurn,
+  selectLockstepState,
   selectMapDiff,
   selectReplayMeta,
   setCurrentTurn,
@@ -23,6 +25,7 @@ const ReplayPage: React.FC = () => {
   const meta = useSelector(selectReplayMeta)
   const currentTurn = useSelector(selectCurrentTurn)
   const diff = useSelector(selectMapDiff)
+  const lockstep = useAppSelector(selectLockstepState)
 
   const [_loading, setLoading] = React.useState(false)
   const [_error, setError] = React.useState<string | null>(null)
@@ -62,6 +65,13 @@ const ReplayPage: React.FC = () => {
     const to = Math.min(meta.turns, CHUNK_SIZE)
     if (gameId) dispatch(fetchReplayChunk({ gameId, fromTurn: from, toTurn: to }))
   }, [dispatch, meta, gameId])
+
+  React.useEffect(() => {
+    if (!gameId) return
+    const desired = Math.max(1, currentTurn + CHUNK_SIZE)
+    const capped = meta?.turns ? Math.min(meta.turns, desired) : desired
+    dispatch(ensureLockstepFrames({ gameId, uptoSeq: capped }))
+  }, [dispatch, gameId, currentTurn, meta?.turns])
 
   const goPrev = React.useCallback(() => {
     if (!meta) return
@@ -210,6 +220,23 @@ const ReplayPage: React.FC = () => {
     owner?: string
   }> = React.useMemo(() => {
     if (!mapTerritories) return []
+
+    const lockstepState = lockstep.stateBySeq.get(currentTurn) ?? null
+    if (lockstepState && Array.isArray(lockstepState.board)) {
+      const boardIndex = new Map(lockstepState.board.map((t) => [t.id, t]))
+      return mapTerritories.map((t) => {
+        const node = boardIndex.get(t.territoryId)
+        return {
+          id: t.territoryId,
+          name: t.name,
+          x: t.armyPosition.x,
+          y: t.armyPosition.y,
+          armies: node ? Number(node.armies ?? 0) : 0,
+          ...(node?.ownerId ? { owner: node.ownerId } : {}),
+        }
+      })
+    }
+
     const post = (currentItem?.postArmyMap ?? {}) as Record<
       string,
       { ownerId?: string | null; armies?: number }
@@ -231,9 +258,21 @@ const ReplayPage: React.FC = () => {
         ...(owner ? { owner } : {}),
       }
     })
-  }, [mapTerritories, currentItem?.postArmyMap, currentItem?.preArmyMap])
+  }, [
+    mapTerritories,
+    lockstep.stateBySeq,
+    currentTurn,
+    currentItem?.postArmyMap,
+    currentItem?.preArmyMap,
+  ])
 
   const turnRangeId = React.useId()
+
+  const lockstepProgress = React.useMemo(() => {
+    if (!lockstep.finalSeq || lockstep.finalSeq <= 0) return null
+    if (lockstep.lastSeq <= 0) return 0
+    return Math.max(0, Math.min(100, Math.round((lockstep.lastSeq / lockstep.finalSeq) * 100)))
+  }, [lockstep.finalSeq, lockstep.lastSeq])
 
   return (
     <div className="flex h-full w-full flex-col gap-3 p-3">
@@ -266,8 +305,19 @@ const ReplayPage: React.FC = () => {
         >
           Next ⟩
         </button>
-        <div className="ml-auto text-sm text-muted">
-          Mode: {meta?.mode ?? 'unknown'} • Fog: {meta?.hasFog ? 'on' : 'off'}
+        <div className="ml-auto flex flex-col items-end gap-1 text-xs text-muted">
+          <div>
+            Mode: {meta?.mode ?? 'unknown'} • Fog: {meta?.hasFog ? 'on' : 'off'}
+          </div>
+          <div>
+            Lockstep frames: {lockstep.lastSeq}
+            {lockstep.finalSeq ? ` / ${lockstep.finalSeq}` : ' / ?'}
+            {lockstepProgress != null ? ` (${lockstepProgress}%)` : ''}
+            {lockstep.loading ? ' • syncing…' : ''}
+          </div>
+          {lockstep.error ? (
+            <div className="text-red-300">Lockstep warning: {lockstep.error}</div>
+          ) : null}
         </div>
       </div>
 

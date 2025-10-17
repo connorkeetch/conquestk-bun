@@ -313,6 +313,11 @@ class SocketService {
     }
 
     this.lockstepSeqByRoom.set(frame.matchId, frame.seq)
+
+    const workingState = this.lockstepSim.getState(frame.matchId)
+    if (workingState) {
+      store.dispatch(setGameState(workingState as unknown as GameState))
+    }
   }
 
   private handleLockstepChecksum = (payload: TickChecksum) => {

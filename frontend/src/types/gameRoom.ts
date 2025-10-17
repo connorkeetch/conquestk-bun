@@ -51,7 +51,6 @@ export interface GameRoom {
   numberOfTeams?: number | null
   turnTimerSeconds?: number
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
-  cardTradeMode?: string | null
   bonusType?: string | null
   treasureConfig?: TreasureConfig | null
   players?: Player[]

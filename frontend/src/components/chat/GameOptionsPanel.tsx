@@ -69,39 +69,11 @@ export default function GameOptionsPanel({ className = '' }: Props) {
 
     const { value: treasureSummary, help: treasureHelp } = (() => {
       const config = currentGame?.gameConfig?.treasureConfig ?? room.treasureConfig ?? null
-      const legacyMode = currentGame?.gameConfig?.cardTradeMode ?? room.cardTradeMode ?? undefined
 
       if (config && config.enabled !== false) {
         const mode = (config.payoutMode || 'classic').toLowerCase()
         const value = mode === 'fixed' ? 'Fixed' : mode === 'triangular' ? 'Progressive' : 'Classic'
         return { value, help: getTreasureDescription(config) }
-      }
-
-      if (legacyMode) {
-        const normalized = legacyMode.toLowerCase()
-        if (normalized === 'none' || normalized === 'disabled' || normalized === 'off') {
-          return { value: 'Off', help: 'Treasures are disabled for this match.' }
-        }
-
-        const value =
-          normalized === 'fixed'
-            ? 'Fixed'
-            : normalized === 'progressive' || normalized === 'escalating'
-              ? 'Progressive'
-              : normalized === 'classic'
-                ? 'Classic'
-                : toTitle(legacyMode)
-
-        const help =
-          normalized === 'fixed'
-            ? 'Each treasure set pays a fixed reinforcement bonus.'
-            : normalized === 'progressive' || normalized === 'escalating'
-              ? 'Treasure payouts escalate with each set traded.'
-              : normalized === 'classic'
-                ? 'Treasures follow the classic escalating set values (4, 6, 8, 10, ...).'
-                : 'Treasures award bonus troops based on the configured payout mode.'
-
-        return { value, help }
       }
 
       return { value: 'Off', help: 'Treasures are disabled for this match.' }
@@ -143,7 +115,6 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     room,
     currentGame?.gameConfig?.useTerritoryModifiers,
     currentGame?.gameConfig?.treasureConfig,
-    currentGame?.gameConfig?.cardTradeMode,
   ])
 
   if (!room) {
