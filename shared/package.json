@@ -34,6 +34,14 @@
       "types": "./utils/*.ts",
       "default": "./dist/utils/*.js"
     },
+    "./lockstep": {
+      "types": "./dist/lockstep/index.d.ts",
+      "default": "./dist/lockstep/index.js"
+    },
+    "./lockstep/*": {
+      "types": "./dist/lockstep/*.d.ts",
+      "default": "./dist/lockstep/*.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

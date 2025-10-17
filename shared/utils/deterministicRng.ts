@@ -86,8 +86,7 @@ export class DeterministicRng {
    * Returns a float in [0, 1).
    */
   next(): number {
-    const t =
-      (((this.state.a + this.state.b) | 0) + this.state.d) | 0 // Ensure 32-bit wrapping addition
+    const t = (((this.state.a + this.state.b) | 0) + this.state.d) | 0 // Ensure 32-bit wrapping addition
     this.state.d = (this.state.d + 1) | 0
     this.state.a = this.state.b ^ (this.state.b >>> 9)
     this.state.b = (this.state.c + (this.state.c << 3)) | 0
@@ -142,7 +141,12 @@ export class DeterministicRng {
     if (items.length === 0) {
       throw new RangeError('sample requires a non-empty array')
     }
-    return items[this.nextInt(items.length)]
+    const index = this.nextInt(items.length)
+    const value = items[index]
+    if (value === undefined) {
+      throw new RangeError('sample requires a non-empty array')
+    }
+    return value
   }
 
   /**
@@ -150,8 +154,14 @@ export class DeterministicRng {
    */
   shuffleInPlace<T>(items: T[]): void {
     for (let i = items.length - 1; i > 0; i -= 1) {
-      const j = this.nextInt(i + 1)
-      ;[items[i], items[j]] = [items[j], items[i]]
+      const swapIndex = this.nextInt(i + 1)
+      const temp = items[i]
+      const swapValue = items[swapIndex]
+      if (temp === undefined || swapValue === undefined) {
+        continue
+      }
+      items[i] = swapValue
+      items[swapIndex] = temp
     }
   }
 

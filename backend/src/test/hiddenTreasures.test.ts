@@ -1,3 +1,4 @@
+import type { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import { jest } from '@jest/globals'
 import {
   clampDiamondsPercent,
@@ -32,17 +33,29 @@ describe('Hidden Treasures utilities', () => {
   it('draws treasure based on configured probabilities', () => {
     const config = normalizeTreasureConfig({ diamondsPercent: 0.1 })
 
-    jest.spyOn(Math, 'random').mockReturnValue(0.05)
-    expect(drawTreasure(config)).toBe('diamond')
+    const stub = (value: number): DeterministicRng =>
+      ({
+        next: () => value,
+        nextInt: () => {
+          throw new Error('not implemented')
+        },
+        nextIntInclusive: () => {
+          throw new Error('not implemented')
+        },
+        nextRange: () => value,
+        sample: () => {
+          throw new Error('not implemented')
+        },
+        shuffleInPlace: () => {},
+        getState: () => ({ a: 0, b: 0, c: 0, d: 0 }),
+        clone: () => stub(value),
+        seed: 'stub',
+      }) as unknown as DeterministicRng
 
-    jest.spyOn(Math, 'random').mockReturnValue(0.2)
-    expect(drawTreasure(config)).toBe('bronze')
-
-    jest.spyOn(Math, 'random').mockReturnValue(0.5)
-    expect(drawTreasure(config)).toBe('silver')
-
-    jest.spyOn(Math, 'random').mockReturnValue(0.95)
-    expect(drawTreasure(config)).toBe('gold')
+    expect(drawTreasure(config, stub(0.05))).toBe('diamond')
+    expect(drawTreasure(config, stub(0.2))).toBe('bronze')
+    expect(drawTreasure(config, stub(0.5))).toBe('silver')
+    expect(drawTreasure(config, stub(0.95))).toBe('gold')
   })
 
   it('finds redeemable sets by pattern', () => {

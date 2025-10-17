@@ -32,6 +32,13 @@ export class GameActionProcessor {
     this.io = io
   }
 
+  private shouldUseQueue(): boolean {
+    if (process.env.LOCKSTEP_DEV === 'true') {
+      return false
+    }
+    return process.env.GAME_ACTION_QUEUE === 'enabled'
+  }
+
   /**
    * Process a deployment action
    * Attempts to queue, falls back to inline if no workers
@@ -43,41 +50,40 @@ export class GameActionProcessor {
     armies: number,
     socketId?: string,
   ): Promise<{ mode: 'queued' | 'inline'; result?: import('./deltaEmitter.js').ActionResult }> {
-    // Try to queue the action
-    const job = await queueService.addGameAction({
-      gameId,
-      playerId,
-      action: {
-        type: 'deploy',
-        roomId: gameId,
+    if (this.shouldUseQueue()) {
+      const job = await queueService.addGameAction({
+        gameId,
         playerId,
-        payload: { territoryId, armies },
-      },
-      socketId,
-    })
+        action: {
+          type: 'deploy',
+          roomId: gameId,
+          playerId,
+          payload: { territoryId, armies },
+        },
+        socketId,
+      })
 
-    // If queued successfully and workers are available, let worker handle it
-    if (job) {
-      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-      if (hasWorkers) {
-        logger.info('Queued deployment action for worker processing', {
-          gameId,
-          jobId: job.id,
-          territoryId,
-          armies,
-        })
-        return { mode: 'queued' }
-      }
+      if (job) {
+        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+        if (hasWorkers) {
+          logger.info('Queued deployment action for worker processing', {
+            gameId,
+            jobId: job.id,
+            territoryId,
+            armies,
+          })
+          return { mode: 'queued' }
+        }
 
-      // No workers available - remove job and process inline
-      try {
-        await job.remove()
-      } catch (err) {
-        logger.warn('Failed to remove queued job for inline fallback', {
-          gameId,
-          jobId: job.id,
-          error: err instanceof Error ? err.message : err,
-        })
+        try {
+          await job.remove()
+        } catch (err) {
+          logger.warn('Failed to remove queued job for inline fallback', {
+            gameId,
+            jobId: job.id,
+            error: err instanceof Error ? err.message : err,
+          })
+        }
       }
     }
 
@@ -124,42 +130,41 @@ export class GameActionProcessor {
     armies: number,
     socketId?: string,
   ): Promise<void> {
-    // Try to queue the action
-    const job = await queueService.addGameAction({
-      gameId,
-      playerId,
-      action: {
-        type: 'fortify',
-        roomId: gameId,
+    if (this.shouldUseQueue()) {
+      const job = await queueService.addGameAction({
+        gameId,
         playerId,
-        payload: { fromTerritoryId, toTerritoryId, armies },
-      },
-      socketId,
-    })
+        action: {
+          type: 'fortify',
+          roomId: gameId,
+          playerId,
+          payload: { fromTerritoryId, toTerritoryId, armies },
+        },
+        socketId,
+      })
 
-    // If queued successfully and workers are available, let worker handle it
-    if (job) {
-      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-      if (hasWorkers) {
-        logger.info('Queued fortify action for worker processing', {
-          gameId,
-          jobId: job.id,
-          fromTerritoryId,
-          toTerritoryId,
-          armies,
-        })
-        return
-      }
+      if (job) {
+        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+        if (hasWorkers) {
+          logger.info('Queued fortify action for worker processing', {
+            gameId,
+            jobId: job.id,
+            fromTerritoryId,
+            toTerritoryId,
+            armies,
+          })
+          return
+        }
 
-      // No workers available - remove job and process inline
-      try {
-        await job.remove()
-      } catch (err) {
-        logger.warn('Failed to remove queued job for inline fallback', {
-          gameId,
-          jobId: job.id,
-          error: err instanceof Error ? err.message : err,
-        })
+        try {
+          await job.remove()
+        } catch (err) {
+          logger.warn('Failed to remove queued job for inline fallback', {
+            gameId,
+            jobId: job.id,
+            error: err instanceof Error ? err.message : err,
+          })
+        }
       }
     }
 
@@ -278,38 +283,40 @@ export class GameActionProcessor {
     armies: number,
     socketId?: string,
   ): Promise<void> {
-    const job = await queueService.addGameAction({
-      gameId,
-      playerId,
-      action: ((): import('../types/game.js').TransferConquestAction => ({
-        type: 'transfer_conquest',
-        roomId: gameId,
+    if (this.shouldUseQueue()) {
+      const job = await queueService.addGameAction({
+        gameId,
         playerId,
-        payload: { fromTerritoryId, toTerritoryId, armies },
-      }))(),
-      socketId,
-    })
+        action: ((): import('../types/game.js').TransferConquestAction => ({
+          type: 'transfer_conquest',
+          roomId: gameId,
+          playerId,
+          payload: { fromTerritoryId, toTerritoryId, armies },
+        }))(),
+        socketId,
+      })
 
-    if (job) {
-      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-      if (hasWorkers) {
-        logger.info('Queued transfer_conquest for worker processing', {
-          gameId,
-          jobId: job.id,
-          fromTerritoryId,
-          toTerritoryId,
-          armies,
-        })
-        return
-      }
-      try {
-        await job.remove()
-      } catch (err) {
-        logger.warn('Failed to remove queued job for inline fallback', {
-          gameId,
-          jobId: job.id,
-          error: err instanceof Error ? err.message : err,
-        })
+      if (job) {
+        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+        if (hasWorkers) {
+          logger.info('Queued transfer_conquest for worker processing', {
+            gameId,
+            jobId: job.id,
+            fromTerritoryId,
+            toTerritoryId,
+            armies,
+          })
+          return
+        }
+        try {
+          await job.remove()
+        } catch (err) {
+          logger.warn('Failed to remove queued job for inline fallback', {
+            gameId,
+            jobId: job.id,
+            error: err instanceof Error ? err.message : err,
+          })
+        }
       }
     }
 
@@ -359,38 +366,37 @@ export class GameActionProcessor {
    * Attempts to queue, falls back to inline if no workers
    */
   async processGoBack(gameId: string, playerId: string, socketId?: string): Promise<void> {
-    // Try to queue the action
-    const job = await queueService.addGameAction({
-      gameId,
-      playerId,
-      action: {
-        type: 'go_back_to_reinforcement',
-        roomId: gameId,
+    if (this.shouldUseQueue()) {
+      const job = await queueService.addGameAction({
+        gameId,
         playerId,
-      },
-      socketId,
-    })
+        action: {
+          type: 'go_back_to_reinforcement',
+          roomId: gameId,
+          playerId,
+        },
+        socketId,
+      })
 
-    // If queued successfully and workers are available, let worker handle it
-    if (job) {
-      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-      if (hasWorkers) {
-        logger.info('Queued go-back action for worker processing', {
-          gameId,
-          jobId: job.id,
-        })
-        return
-      }
+      if (job) {
+        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+        if (hasWorkers) {
+          logger.info('Queued go-back action for worker processing', {
+            gameId,
+            jobId: job.id,
+          })
+          return
+        }
 
-      // No workers available - remove job and process inline
-      try {
-        await job.remove()
-      } catch (err) {
-        logger.warn('Failed to remove queued job for inline fallback', {
-          gameId,
-          jobId: job.id,
-          error: err instanceof Error ? err.message : err,
-        })
+        try {
+          await job.remove()
+        } catch (err) {
+          logger.warn('Failed to remove queued job for inline fallback', {
+            gameId,
+            jobId: job.id,
+            error: err instanceof Error ? err.message : err,
+          })
+        }
       }
     }
 
@@ -431,42 +437,44 @@ export class GameActionProcessor {
     armies?: number,
     socketId?: string,
   ): Promise<{ mode: 'queued' | 'inline' }> {
-    const job = await queueService.addGameAction({
-      gameId,
-      playerId,
-      action: {
-        type: 'attack',
-        roomId: gameId,
+    if (this.shouldUseQueue()) {
+      const job = await queueService.addGameAction({
+        gameId,
         playerId,
-        payload: {
-          fromTerritoryId,
-          toTerritoryId,
-          ...(typeof armies === 'number' ? { armies } : {}),
+        action: {
+          type: 'attack',
+          roomId: gameId,
+          playerId,
+          payload: {
+            fromTerritoryId,
+            toTerritoryId,
+            ...(typeof armies === 'number' ? { armies } : {}),
+          },
         },
-      },
-      socketId,
-    })
+        socketId,
+      })
 
-    if (job) {
-      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-      if (hasWorkers) {
-        logger.info('Queued attack action for worker processing', {
-          gameId,
-          jobId: job.id,
-          fromTerritoryId,
-          toTerritoryId,
-          armies,
-        })
-        return { mode: 'queued' }
-      }
-      try {
-        await job.remove()
-      } catch (err) {
-        logger.warn('Failed to remove queued job for inline fallback', {
-          gameId,
-          jobId: job.id,
-          error: err instanceof Error ? err.message : err,
-        })
+      if (job) {
+        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+        if (hasWorkers) {
+          logger.info('Queued attack action for worker processing', {
+            gameId,
+            jobId: job.id,
+            fromTerritoryId,
+            toTerritoryId,
+            armies,
+          })
+          return { mode: 'queued' }
+        }
+        try {
+          await job.remove()
+        } catch (err) {
+          logger.warn('Failed to remove queued job for inline fallback', {
+            gameId,
+            jobId: job.id,
+            error: err instanceof Error ? err.message : err,
+          })
+        }
       }
     }
 
@@ -691,34 +699,36 @@ export class GameActionProcessor {
     playerId: string,
     socketId?: string,
   ): Promise<{ mode: 'queued' | 'inline' }> {
-    const job = await queueService.addGameAction({
-      gameId,
-      playerId,
-      action: {
-        type: 'end_turn',
-        roomId: gameId,
+    if (this.shouldUseQueue()) {
+      const job = await queueService.addGameAction({
+        gameId,
         playerId,
-      },
-      socketId,
-    })
+        action: {
+          type: 'end_turn',
+          roomId: gameId,
+          playerId,
+        },
+        socketId,
+      })
 
-    if (job) {
-      const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-      if (hasWorkers) {
-        logger.info('Queued endTurn action for worker processing', {
-          gameId,
-          jobId: job.id,
-        })
-        return { mode: 'queued' }
-      }
-      try {
-        await job.remove()
-      } catch (err) {
-        logger.warn('Failed to remove queued job for inline fallback', {
-          gameId,
-          jobId: job.id,
-          error: err instanceof Error ? err.message : err,
-        })
+      if (job) {
+        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
+        if (hasWorkers) {
+          logger.info('Queued endTurn action for worker processing', {
+            gameId,
+            jobId: job.id,
+          })
+          return { mode: 'queued' }
+        }
+        try {
+          await job.remove()
+        } catch (err) {
+          logger.warn('Failed to remove queued job for inline fallback', {
+            gameId,
+            jobId: job.id,
+            error: err instanceof Error ? err.message : err,
+          })
+        }
       }
     }
 

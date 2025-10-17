@@ -47,7 +47,8 @@
     "maps:import": "ts-node src/scripts/importMapsPackage.ts",
     "maps:variants": "ts-node src/scripts/generateMapImageVariants.ts",
     "maps:fix-image-urls": "ts-node src/scripts/fixMapImageUrls.ts",
-    "maps:rebuild-adj": "ts-node src/scripts/rebuildAdjacencies.ts"
+    "maps:rebuild-adj": "ts-node src/scripts/rebuildAdjacencies.ts",
+    "replay:match": "ts-node src/scripts/replayMatch.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.896.0",

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import { getClient, query, transaction } from '../config/database.js'
 import {
   isPremiumColorChoice,
@@ -710,7 +711,9 @@ export class GameRoomService {
           const seed =
             typeof opponent.personalitySeed === 'number'
               ? opponent.personalitySeed
-              : Math.trunc(Math.random() * 10_000_000)
+              : new DeterministicRng(`${createdRoom.id}:${aiIdentifier}:personality`).nextInt(
+                  10_000_000,
+                )
 
           await client.query(insertAiQuery, [
             createdRoom.id,
@@ -1075,7 +1078,7 @@ export class GameRoomService {
             const personalitySeed =
               typeof personalitySeedRaw === 'number' && Number.isFinite(personalitySeedRaw)
                 ? Math.trunc(personalitySeedRaw)
-                : Math.trunc(Math.random() * 10_000_000)
+                : new DeterministicRng(`${roomId}:${aiIdentifier}:personality`).nextInt(10_000_000)
 
             await client.query(
               `

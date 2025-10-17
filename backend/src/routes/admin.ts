@@ -1141,7 +1141,7 @@ router.get(
   },
 )
 
-// Get combat RNG seed for a game (auditing aid)
+// Get deterministic RNG seed for a game (auditing aid)
 router.get(
   '/games/:gameId/seed',
   requirePermission('games.view'),
@@ -1158,8 +1158,8 @@ router.get(
       let seed: string | null = null
       let source: 'state' | null = null
       const data = row?.game_data
-      if (data && typeof data === 'object' && (data as { combatRngSeed?: string }).combatRngSeed) {
-        const s = (data as { combatRngSeed?: string }).combatRngSeed
+      if (data && typeof data === 'object' && (data as { rngSeed?: string }).rngSeed) {
+        const s = (data as { rngSeed?: string }).rngSeed
         if (typeof s === 'string' && s.trim().length > 0) {
           seed = s
           source = 'state'
@@ -1167,10 +1167,10 @@ router.get(
       }
       res.json({ seed, source })
     } catch (error) {
-      handleRouteError(error, req, 'Failed to get combat RNG seed', 500, {
+      handleRouteError(error, req, 'Failed to get deterministic RNG seed', 500, {
         gameId: req.params.gameId,
       })
-      res.status(500).json({ error: 'Failed to get combat RNG seed' })
+      res.status(500).json({ error: 'Failed to get deterministic RNG seed' })
     }
   },
 )
@@ -2556,14 +2556,19 @@ export default router
 // Lightweight realtime metrics for Socket.IO/game actions
 router.get('/realtime-metrics', async (_req: Request, res: Response) => {
   try {
-    const { realtimeMetrics, socketPayloadMetrics } = await import('../services/metricsService.js')
+    const { lockstepMetrics, realtimeMetrics, socketPayloadMetrics } = await import(
+      '../services/metricsService.js'
+    )
     const payloads = {
       gameUpdate: socketPayloadMetrics.snapshot('game:snapshot'),
       gameDelta: socketPayloadMetrics.snapshot('game-delta'),
       gameDeltaBatch: socketPayloadMetrics.snapshot('game-delta-batch'),
+      lockstepFrame: socketPayloadMetrics.snapshot('game-action:frame-committed'),
+      lockstepChecksum: socketPayloadMetrics.snapshot('game-action:checksum'),
     }
     const realtime = realtimeMetrics.snapshot()
-    res.json({ ok: true, payloads, realtime, ts: new Date().toISOString() })
+    const lockstep = lockstepMetrics.snapshot()
+    res.json({ ok: true, payloads, realtime, lockstep, ts: new Date().toISOString() })
   } catch (e) {
     res.status(500).json({ ok: false, error: (e as Error)?.message || 'failed' })
   }

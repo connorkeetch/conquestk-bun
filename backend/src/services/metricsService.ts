@@ -249,6 +249,41 @@ class SocketPayloadMetrics {
 
 export const socketPayloadMetrics = new SocketPayloadMetrics()
 
+class LockstepMetrics {
+  private readonly frameCounter = new CounterMetric('lockstep_frames_total')
+  private readonly checksumCounter = new CounterMetric('lockstep_checksums_total')
+  private readonly resyncCounter = new CounterMetric('lockstep_resync_total')
+  private readonly resyncFrameGauge = new GaugeMetric('lockstep_resync_frames')
+
+  recordFrame(): void {
+    this.frameCounter.inc()
+  }
+
+  recordChecksum(): void {
+    this.checksumCounter.inc()
+  }
+
+  recordResync(frames: number): void {
+    this.resyncCounter.inc()
+    if (Number.isFinite(frames)) {
+      this.resyncFrameGauge.set(frames, {})
+    }
+  }
+
+  snapshot() {
+    return {
+      counters: [
+        ...this.frameCounter.snapshot(),
+        ...this.checksumCounter.snapshot(),
+        ...this.resyncCounter.snapshot(),
+      ],
+      gauges: this.resyncFrameGauge.snapshot(),
+    }
+  }
+}
+
+export const lockstepMetrics = new LockstepMetrics()
+
 type IdempotencySource = 'redis' | 'memory'
 type IdempotencyOutcome = 'hit' | 'miss'
 type IdempotencyStoreStatus = 'success' | 'error'

@@ -7,6 +7,7 @@ import type {
   TreasureConfig,
   TreasureState,
 } from '@conquestk/shared/types'
+import type { DeterministicRngState } from '@conquestk/shared/utils/deterministicRng'
 
 export type {
   AIDifficulty,
@@ -90,16 +91,11 @@ export interface GameState {
     ts: number
   }>
   /**
-   * Auditable, seeded RNG state for combat dice.
-   * Seed is recorded in the game log, and state advances per die roll.
+   * Seed + internal state for the deterministic RNG that drives all gameplay randomness.
+   * Persisted alongside snapshots to allow exact re-simulation.
    */
-  combatRngSeed?: string
-  combatRngState?: {
-    a: number
-    b: number
-    c: number
-    d: number
-  }
+  rngSeed?: string
+  rngState?: DeterministicRngState
 }
 
 export interface GamePlayer {

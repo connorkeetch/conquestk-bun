@@ -28,6 +28,12 @@ type TestGlobals = typeof globalThis & {
   __gameRoomServiceMocks?: GameRoomServiceMocks
   __cacheServiceMocks?: CacheServiceMocks
   __socketRegistryMocks?: SocketRegistryMocks
+  __lockstepMocks?: LockstepServiceMocks
+}
+
+type LockstepServiceMocks = {
+  recordFrame: jest.Mock
+  reset: jest.Mock
 }
 
 const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
@@ -73,6 +79,26 @@ const mockGameServiceInstance = {
 jest.mock('../services/gameService', () => ({
   GameService: jest.fn(() => mockGameServiceInstance),
 }))
+
+jest.mock('../services/lockstepService', () => {
+  const testGlobals = globalThis as TestGlobals
+  const mocks: LockstepServiceMocks = {
+    recordFrame: jest.fn().mockResolvedValue({
+      frame: {
+        matchId: 'room-1',
+        seq: 1,
+        playerId: 'user-1',
+        commands: [],
+        committedAt: new Date().toISOString(),
+      },
+    }),
+    reset: jest.fn(),
+  }
+  testGlobals.__lockstepMocks = mocks
+  return {
+    lockstepService: mocks,
+  }
+})
 
 jest.mock('../services/gameRoomService', () => {
   const testGlobals = globalThis as TestGlobals
@@ -124,6 +150,16 @@ const getCacheServiceMocks = (): CacheServiceMocks => {
 }
 
 const { mockGetCachedState } = getCacheServiceMocks()
+
+const getLockstepServiceMocks = (): LockstepServiceMocks => {
+  const testGlobals = globalThis as TestGlobals
+  if (!testGlobals.__lockstepMocks) {
+    throw new Error('Lockstep service mocks not initialised')
+  }
+  return testGlobals.__lockstepMocks
+}
+
+const mockLockstepService = getLockstepServiceMocks()
 
 jest.mock('../services/socketRegistry', () => {
   const testGlobals = globalThis as TestGlobals
@@ -247,6 +283,13 @@ describe('socketService event handlers', () => {
       reinforcementArmies: 5,
     })
     mockGameServiceInstance.isCapitalTerritory.mockResolvedValue(false)
+    mockLockstepService.recordFrame.mockClear()
+    mockLockstepService.reset.mockClear()
+  })
+
+  afterEach(() => {
+    delete process.env.GAME_ACTION_QUEUE
+    delete process.env.LOCKSTEP_DEV
   })
 
   const getSocketHandler = (
@@ -274,6 +317,7 @@ describe('socketService event handlers', () => {
   }
 
   it('queues attack actions with normalized payload', async () => {
+    process.env.GAME_ACTION_QUEUE = 'enabled'
     queueServiceMocks.addGameAction.mockResolvedValue({ id: 'job-123' })
 
     const { socket } = initialiseHandlers()
@@ -366,6 +410,73 @@ describe('socketService event handlers', () => {
     }
   })
 
+  it('emits lockstep frame events when enabled', async () => {
+    process.env.LOCKSTEP_DEV = 'true'
+    const committedAt = new Date().toISOString()
+    mockLockstepService.recordFrame.mockResolvedValue({
+      frame: {
+        matchId: 'room-lockstep',
+        seq: 1,
+        playerId: 'user-1',
+        commands: [{ kind: 'end_turn', payload: {} }],
+        committedAt,
+      },
+      checksum: {
+        matchId: 'room-lockstep',
+        seq: 1,
+        crc32: 123456,
+        computedAt: committedAt,
+      },
+    })
+    mockGameServiceInstance.getGameState.mockResolvedValue({
+      roomId: 'room-lockstep',
+      currentPlayer: 'user-2',
+      phase: 'reinforcement',
+      turn: 2,
+      board: [],
+      players: [{ id: 'user-1', username: 'User One', isAi: false, territories: [], armies: 0 }],
+      cards: [],
+      gameConfig: {},
+    } as unknown as import('../types/game.js').GameState)
+
+    const { socket, roomEmit } = initialiseHandlers()
+    const handler = getSocketHandler(socket, 'game-action')
+
+    await handler({
+      roomId: 'room-lockstep',
+      action: {
+        type: 'end_turn',
+        roomId: 'room-lockstep',
+        playerId: 'user-1',
+      },
+    })
+
+    expect(mockLockstepService.recordFrame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matchId: 'room-lockstep',
+        playerId: 'user-1',
+      }),
+    )
+
+    expect(roomEmit).toHaveBeenCalledWith(
+      'game-action:frame-committed',
+      expect.objectContaining({
+        matchId: 'room-lockstep',
+        seq: 1,
+        playerId: 'user-1',
+      }),
+    )
+
+    expect(roomEmit).toHaveBeenCalledWith(
+      'game-action:checksum',
+      expect.objectContaining({
+        matchId: 'room-lockstep',
+        seq: 1,
+        crc32: 123456,
+      }),
+    )
+  })
+
   it('broadcasts phase changes via unified game-delta on end turn', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
     const handler = getSocketHandler(socket, 'game-action')
@@ -392,6 +503,7 @@ describe('socketService event handlers', () => {
   })
 
   it('falls back gracefully when game action queue is unavailable', async () => {
+    process.env.GAME_ACTION_QUEUE = 'enabled'
     queueServiceMocks.addGameAction.mockResolvedValue(null)
 
     const { socket, io } = initialiseHandlers()
@@ -413,6 +525,7 @@ describe('socketService event handlers', () => {
   })
 
   it('emits error event when queue call fails', async () => {
+    process.env.GAME_ACTION_QUEUE = 'enabled'
     queueServiceMocks.addGameAction.mockRejectedValue(new Error('queue offline'))
 
     const { socket } = initialiseHandlers()
