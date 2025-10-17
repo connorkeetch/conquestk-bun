@@ -77,6 +77,7 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Lockstep recorder seeds per-match sequences, stores commands, and reuses snapped `SerializedGameState` so deterministic replays stay aligned with the RNG log.
 - Queueing is automatically disabled in lockstep mode, keeping inline processing deterministic while legacy delta events continue to flow alongside the new frames.
 - Frontend validator (behind `VITE_LOCKSTEP_DEV`) replays the confirmed frames through Redux state, computes local CRCs via the shared stable serializer, and triggers auto-resync when checksums diverge.
+- Shared `lockstep` simulator currently supports deterministic replays for reinforcement/fortify actions; combat resolution and treasure flows still fall back to snapshot resync (TBD to port full `GameEngine` logic).
 
 ## Rollout plan
 1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).
