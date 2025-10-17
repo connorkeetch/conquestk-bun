@@ -590,15 +590,15 @@ export class GameService {
     const hydrated = this.hydrateGameState(cachedState, roomId)
     const currentPlayer = hydrated.players.find((player) => player.id === hydrated.currentPlayer)
 
+    if (!currentPlayer) {
+      throw new Error('Current player not found')
+    }
+
     logger.info('Executing AI turn', {
       roomId,
       playerId: currentPlayer.id,
       difficulty: currentPlayer.aiDifficulty ?? 'recruit',
     })
-
-    if (!currentPlayer) {
-      throw new Error('Current player not found')
-    }
 
     if (!currentPlayer.isAi) {
       throw new Error('Current player is not AI-controlled')

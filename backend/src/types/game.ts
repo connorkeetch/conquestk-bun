@@ -13,6 +13,7 @@ export type {
   KingOfTheHillConfig,
   KingOfTheHillState,
   Metal,
+  SectorBonus,
   TreasureConfig,
   TreasureState,
 } from '@conquestk/shared/types'
