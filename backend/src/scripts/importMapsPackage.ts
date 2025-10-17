@@ -460,11 +460,7 @@ async function run(): Promise<void> {
                 name: typeof rec.name === 'string' ? rec.name : undefined,
                 ...(asFiniteNumber(rec.x) !== undefined ? { x: rec.x as number } : {}),
                 ...(asFiniteNumber(rec.y) !== undefined ? { y: rec.y as number } : {}),
-                ...(typeof rec.sectorId === 'string'
-                  ? { sectorId: rec.sectorId }
-                  : typeof (rec as { continentId?: unknown }).continentId === 'string'
-                    ? { sectorId: (rec as { continentId: string }).continentId }
-                    : {}),
+                ...(typeof rec.sectorId === 'string' ? { sectorId: rec.sectorId } : {}),
                 ...(typeof rec.isCapital === 'boolean' ? { isCapital: rec.isCapital } : {}),
                 ...(asFiniteNumber((rec as { normalizedX?: unknown }).normalizedX) !== undefined
                   ? { normalizedX: (rec as { normalizedX: number }).normalizedX }

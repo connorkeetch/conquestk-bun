@@ -249,6 +249,56 @@ class SocketPayloadMetrics {
 
 export const socketPayloadMetrics = new SocketPayloadMetrics()
 
+type IdempotencySource = 'redis' | 'memory'
+type IdempotencyOutcome = 'hit' | 'miss'
+type IdempotencyStoreStatus = 'success' | 'error'
+type IdempotencyStage = 'read' | 'write'
+
+class IdempotencyMetrics {
+  private readonly checkCounter = new CounterMetric('idempotency_checks_total')
+  private readonly storeCounter = new CounterMetric('idempotency_store_total')
+  private readonly duplicateCounter = new CounterMetric('idempotency_duplicates_total')
+  private readonly fallbackCounter = new CounterMetric('idempotency_fallback_total')
+
+  recordCheck(queue: string, source: IdempotencySource, outcome: IdempotencyOutcome) {
+    if (!queue) return
+    this.checkCounter.inc({ queue, source, outcome })
+  }
+
+  recordStore(queue: string, source: IdempotencySource, status: IdempotencyStoreStatus) {
+    if (!queue) return
+    this.storeCounter.inc({ queue, source, status })
+  }
+
+  recordDuplicate(queue: string, action: string) {
+    if (!queue) return
+    this.duplicateCounter.inc({ queue, action })
+  }
+
+  recordFallback(queue: string, stage: IdempotencyStage, reason: string) {
+    if (!queue) return
+    this.fallbackCounter.inc({ queue, stage, reason })
+  }
+
+  reset() {
+    this.checkCounter.resetAll()
+    this.storeCounter.resetAll()
+    this.duplicateCounter.resetAll()
+    this.fallbackCounter.resetAll()
+  }
+
+  snapshot() {
+    return {
+      checks: this.checkCounter.snapshot(),
+      stores: this.storeCounter.snapshot(),
+      duplicates: this.duplicateCounter.snapshot(),
+      fallbacks: this.fallbackCounter.snapshot(),
+    }
+  }
+}
+
+export const idempotencyMetrics = new IdempotencyMetrics()
+
 // Realtime latency metrics (server-side view)
 class RealtimeLatencyMetrics {
   private readonly ackWindow = new RollingWindowStats(500)

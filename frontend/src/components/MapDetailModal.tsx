@@ -76,7 +76,7 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       name: territory.name,
       x: territory.armyPosition?.x ?? 0,
       y: territory.armyPosition?.y ?? 0,
-      sector: territory.continentId,
+      sector: territory.sectorId,
     }))
   }, [mapData])
 
@@ -85,7 +85,7 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       return []
     }
 
-    return mapData.continents.map((continent) => ({
+    return mapData.sectors.map((continent) => ({
       id: continent.id,
       name: continent.name,
       bonusArmies: continent.bonusArmies,
@@ -210,7 +210,7 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
                     </div>
                     <div className="flex justify-between">
                       <dt>Sectors</dt>
-                      <dd>{mapData.continents.length}</dd>
+                      <dd>{mapData.sectors.length}</dd>
                     </div>
                     <div className="flex justify-between">
                       <dt>Created</dt>

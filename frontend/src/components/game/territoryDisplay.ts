@@ -4,7 +4,7 @@ import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryMod
 export interface TerritoryDisplay {
   id: string
   name: string
-  continent: string
+  sector: string
   adjacentTerritories: string[]
   armyPosition: { x: number; y: number }
   owner?: string
@@ -27,7 +27,7 @@ export const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDi
     const base: TerritoryDisplay = {
       id: territory.id,
       name: territory.name,
-      continent: territory.continent ?? (territory.continentId as string) ?? 'unknown',
+      sector: territory.sector ?? (territory.sectorId as string) ?? 'unknown',
       adjacentTerritories: territory.adjacentTerritories,
       armyPosition,
     }

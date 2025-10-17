@@ -80,8 +80,6 @@ export interface Territory {
   armies: number
   sector?: string
   sectorId?: string
-  continent?: string
-  continentId?: string
   isCapital?: boolean
   abilities?: TerritoryAbility[]
   adjacentTerritories: string[]
@@ -331,7 +329,6 @@ export interface Map {
   tags: string[]
   territories: MapTerritory[]
   sectors: MapSector[]
-  continents?: MapSector[]
   status: 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived'
   createdAt: Date | string
   updatedAt: Date | string
@@ -343,7 +340,6 @@ export interface MapTerritory {
   territoryId: string
   name: string
   sectorId?: string
-  continentId?: string
   boundaryCoords: {
     x: number
     y: number
@@ -360,7 +356,6 @@ export interface MapSector {
   color: string
   territories: string[]
 }
-export type MapContinent = MapSector
 export interface GameRoom {
   id: string
   name: string

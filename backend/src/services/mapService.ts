@@ -437,12 +437,10 @@ export class MapService {
                 y: territory.normalizedY ?? 0,
               },
             }),
-            // Accept either sectorId or legacy continentId
             ((): string | null => {
               const rec = territory as Record<string, unknown>
-              const a = rec.sectorId
-              const b = rec.continentId
-              return typeof a === 'string' ? a : typeof b === 'string' ? b : null
+              const sector = rec.sectorId
+              return typeof sector === 'string' ? sector : null
             })(),
             territory.isCapital === true,
             JSON.stringify(assignedPlayers),
@@ -1030,9 +1028,7 @@ export class MapService {
           territoryData.mapId,
           territoryData.name,
           JSON.stringify(territoryData.boundaryCoords || []),
-          ((territoryData as { sectorId?: string }).sectorId ??
-            (territoryData as { continentId?: string }).continentId ??
-            null) as string | null,
+          ((territoryData as { sectorId?: string }).sectorId ?? null) as string | null,
           false, // is_capital default
         ],
       )
@@ -1068,12 +1064,10 @@ export class MapService {
         updateFields.push(`name = $${++paramCount}`)
         updateValues.push(updates.name)
       }
-      const updRec = updates as Record<string, unknown>
-      const upA = updRec.sectorId
-      const upB = updRec.continentId
-      if (upA !== undefined || upB !== undefined) {
+      const sectorIdUpdate = (updates as { sectorId?: unknown }).sectorId
+      if (sectorIdUpdate !== undefined) {
         updateFields.push(`sector = $${++paramCount}`)
-        updateValues.push(typeof upA === 'string' ? upA : typeof upB === 'string' ? upB : null)
+        updateValues.push(typeof sectorIdUpdate === 'string' ? sectorIdUpdate : null)
       }
       if (updates.boundaryCoords) {
         updateFields.push(`polygon_data = $${++paramCount}`)

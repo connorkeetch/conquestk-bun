@@ -5,13 +5,13 @@ import type { GamePlayer } from '@/types/game'
 import type { ContinentDefinition, PlayerContinentStatus } from '@/utils/continentBonuses'
 
 interface ContinentControlPanelProps {
-  continents: ContinentDefinition[]
+  sectors: ContinentDefinition[]
   playerStatuses: PlayerContinentStatus[]
   players: GamePlayer[]
 }
 
 export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = memo(
-  ({ continents, playerStatuses, players }) => {
+  ({ sectors, playerStatuses, players }) => {
     // Memoize player lookup map
     const playersById = useMemo(
       () => new Map(players.map((player) => [player.id, player])),
@@ -54,7 +54,7 @@ export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = memo(
       <div className="p-4 flex-1 overflow-y-auto">
         <h3 className="text-lg font-semibold mb-3">Sector Control</h3>
         <div className="space-y-3">
-          {continents.map((continent) => {
+          {sectors.map((continent) => {
             const controllingPlayer = playerStatuses.find((status) =>
               status.controlledContinents.some(
                 (control) => control.continent.id === continent.id && control.controlled,
@@ -137,7 +137,7 @@ export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = memo(
   (prevProps, nextProps) => {
     // Custom comparison for better memoization
     return (
-      prevProps.continents === nextProps.continents &&
+      prevProps.sectors === nextProps.sectors &&
       prevProps.playerStatuses === nextProps.playerStatuses &&
       prevProps.players === nextProps.players
     )

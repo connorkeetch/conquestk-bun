@@ -18,6 +18,12 @@ import { io, type Socket } from 'socket.io-client'
 import { v4 as uuidv4 } from 'uuid'
 import { getConquestRank } from '@/components/RankInsignia'
 import { logger } from '@/utils/logger'
+import {
+  registerOptimisticAction,
+  resolveOptimisticAction,
+  rollbackAllOptimisticActions,
+  rollbackOptimisticAction,
+} from '@/utils/optimisticActions'
 import { store } from '../store'
 import {
   applyDelta,
@@ -481,16 +487,12 @@ class SocketService {
       this.inFlightActionKeys.set(fingerprint, idempotencyKey)
     }
 
-    reliabilityMetrics.recordActionAttempt()
+    registerOptimisticAction(idempotencyKey, {
+      apply: options?.optimisticUpdate,
+      rollback: options?.rollback,
+    })
 
-    // OPTIMISTIC UPDATE: Apply immediately if provided
-    if (options?.optimisticUpdate) {
-      try {
-        options.optimisticUpdate()
-      } catch (error) {
-        logger.error('Optimistic update failed', { error })
-      }
-    }
+    reliabilityMetrics.recordActionAttempt()
 
     // Send action with ACK
     const actionPromise = this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
@@ -527,19 +529,13 @@ class SocketService {
         }
         finalAck = ack
       }
-
-      if (!finalAck.ok && options?.rollback) {
-        try {
-          options.rollback()
-        } catch (error) {
-          logger.error('Rollback failed', { error })
-        }
-      }
     }
 
     if (finalAck.ok) {
+      resolveOptimisticAction(idempotencyKey)
       reliabilityMetrics.recordActionSuccess()
     } else {
+      rollbackOptimisticAction(idempotencyKey)
       reliabilityMetrics.recordActionFailure()
     }
 
@@ -636,6 +632,7 @@ class SocketService {
       this.socket = null
     }
     this.pendingRoomStateFetches.clear()
+    rollbackAllOptimisticActions()
   }
 
   joinRoom(roomId: string) {
@@ -1189,6 +1186,7 @@ class SocketService {
     })
 
     this.socket.on('disconnect', () => {
+      rollbackAllOptimisticActions()
       store.dispatch(setConnectionStatus('disconnected'))
       // Stop heartbeat monitoring
       this.stopHeartbeat()
@@ -1198,6 +1196,7 @@ class SocketService {
     this.socket.on('connect_error', (err) => {
       // Reflect disconnect state immediately
       store.dispatch(setConnectionStatus('disconnected'))
+      rollbackAllOptimisticActions()
       const raw = (err && (err as Error).message) || 'Connection error'
       const msg = String(raw)
       const lower = msg.toLowerCase()

@@ -5,6 +5,7 @@ import { getRedisClient } from '../config/redis.js'
 import type { GameAction } from '../types/game.js'
 import { logger } from '../utils/logger.js'
 import { createRedisFromOptions } from '../utils/redisFactory.js'
+import { idempotencyMetrics } from './metricsService.js'
 
 // Note: BullMQ sampling uses getJobs on states; no extra inspection types needed.
 
@@ -337,14 +338,24 @@ export class QueueService {
       idempotencyKey,
     }
 
-    return queue.add('process-game-action', payload, {
-      jobId: this.sanitizeJobId(idempotencyKey),
-      priority: this.getActionPriority(job.action),
-      delay: 0,
-      attempts: 1, // Real-time actions shouldn't retry on validation errors
-      removeOnFail: true,
-      removeOnComplete: 10,
-    })
+    try {
+      return await queue.add('process-game-action', payload, {
+        jobId: this.sanitizeJobId(idempotencyKey),
+        priority: this.getActionPriority(job.action),
+        delay: 0,
+        attempts: 1, // Real-time actions shouldn't retry on validation errors
+        removeOnFail: true,
+        removeOnComplete: 10,
+      })
+    } catch (error) {
+      const message = (error instanceof Error ? error.message : String(error)).toLowerCase()
+      if (message.includes('job') && message.includes('exist')) {
+        const actionType = job.action?.type ?? 'unknown'
+        const queueName = queue.name ?? 'game-actions'
+        idempotencyMetrics.recordDuplicate(queueName, actionType)
+      }
+      throw error
+    }
   }
 
   // Remove a scheduled or waiting game action by its jobId (idempotencyKey)

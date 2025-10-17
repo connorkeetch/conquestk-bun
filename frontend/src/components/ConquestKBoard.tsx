@@ -104,15 +104,13 @@ export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
         ownerId: null,
         armies: territory.startingArmies ?? 0,
         adjacentTerritories: Array.from(connections),
+        sector: territory.sectorId ?? undefined,
+        sectorId: territory.sectorId ?? undefined,
       } as Territory
-      const withContinent = territory.continentId ? { continent: territory.continentId } : {}
-      const withSector = territory.continentId
-        ? { sector: territory.continentId, sectorId: territory.continentId }
-        : {}
       const withCoords = territory.armyPosition
         ? { coordinates: { x: territory.armyPosition.x, y: territory.armyPosition.y } }
         : {}
-      return { ...base, ...withContinent, ...withSector, ...withCoords }
+      return { ...base, ...withCoords }
     })
   }, [lobbyMapData, lobbyMode])
 

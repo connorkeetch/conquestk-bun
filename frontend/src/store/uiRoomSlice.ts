@@ -9,7 +9,7 @@ export interface UIRoomState {
   dice: 1 | 2 | 3
   attackCommit: number
   animationSpeed: AnimationSpeed
-  overlays: { continents: boolean; attackable: boolean; threat: boolean }
+  overlays: { sectors: boolean; attackable: boolean; threat: boolean }
   connectionStatus: 'connected' | 'connecting' | 'disconnected'
   conquestOverlay?: { fromId: string; toId: string } | null
   // Global UI toggle for auto-attack so non-ActionBar UI (e.g., map tooltip) can start/stop it
@@ -58,7 +58,7 @@ const initialState: UIRoomState = {
   dice: 3,
   attackCommit: 1,
   animationSpeed: 'normal',
-  overlays: { continents: false, attackable: false, threat: false },
+  overlays: { sectors: false, attackable: false, threat: false },
   connectionStatus: 'connected',
   conquestOverlay: null,
   autoAttacking: false,
@@ -288,7 +288,7 @@ const uiRoomSlice = createSlice({
           if (
             typeof parsed === 'object' &&
             parsed !== null &&
-            typeof parsed.continents === 'boolean' &&
+            typeof parsed.sectors === 'boolean' &&
             typeof parsed.attackable === 'boolean' &&
             typeof parsed.threat === 'boolean'
           ) {
