@@ -121,7 +121,7 @@ For detailed information on coding standards, see the [coding standards guide](d
 - New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket. This keeps queue/inline paths and deltas consistent.
 - Team checks are centralized in `backend/src/utils/gameTeams.ts` and used by both `GameEngine` and AI. Do not reimplement team logic elsewhere.
 - Emit deltas first; snapshots are recovery-only for desyncs.
- - Logs: textual `game-log:append` is additive and does not replace DB `game_log` writes.
+- Logs: textual `game-log:append` is additive and runs alongside structured `game_battle_logs` writes.
 
 ### Development norms for routing and compatibility
 - Remove deprecated socket events and REST routes promptly after migrating to `game-action`.

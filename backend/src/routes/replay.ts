@@ -72,7 +72,7 @@ router.get('/:id/replay/summary', authenticateToken, async (req, res) => {
       username: string | null
       color: string | null
     }>(
-      `SELECT rp.user_id, rp.ai_player_id, u.username, COALESCE((rp.meta->>'color')::text, NULL) AS color
+      `SELECT rp.user_id, rp.ai_player_id, u.username, rp.selected_color AS color
          FROM room_players rp
     LEFT JOIN users u ON u.id = rp.user_id
         WHERE rp.room_id = $1

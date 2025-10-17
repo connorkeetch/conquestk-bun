@@ -1,5 +1,6 @@
 import type { GameDelta } from '@conquestk/shared/types/delta'
-import { query, transaction } from '../config/database.js'
+import type { PoolClient } from 'pg'
+import { query, transaction, withClient } from '../config/database.js'
 import { GameEngine } from '../game/gameEngine.js'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js'
 import { loadMapForEngine } from '../game/mapLoader.js'
@@ -216,6 +217,51 @@ type PlayerRankingSummary = {
   territories: number
   armies: number
   eliminationOrder: number | null
+}
+
+type PersistedBattleLogRow = {
+  entry_type: 'BATTLE' | 'ENGAGEMENT_SUMMARY'
+  job_id: string | null
+  engagement_id: string | null
+  entry_timestamp: Date | string
+  turn_number: number
+  attacking_territory_id: string | null
+  defending_territory_id: string | null
+  attacker_id: string | null
+  defender_id: string | null
+  attacker_losses: number | null
+  defender_losses: number | null
+  conquered: boolean | null
+  moved_armies: number | null
+  eliminated_players: unknown
+  initial_from_armies: number | null
+  initial_to_armies: number | null
+  total_attacker_losses: number | null
+  total_defender_losses: number | null
+  metadata: Record<string, unknown> | null
+}
+
+type BattleInsertRow = {
+  game_id: string
+  entry_type: 'BATTLE' | 'ENGAGEMENT_SUMMARY'
+  job_id: string | null
+  engagement_id: string | null
+  entry_timestamp: Date
+  turn_number: number
+  attacking_territory_id: string | null
+  defending_territory_id: string | null
+  attacker_id: string | null
+  defender_id: string | null
+  attacker_losses: number | null
+  defender_losses: number | null
+  conquered: boolean | null
+  moved_armies: number | null
+  eliminated_players: string[]
+  initial_from_armies: number | null
+  initial_to_armies: number | null
+  total_attacker_losses: number | null
+  total_defender_losses: number | null
+  metadata: Record<string, unknown>
 }
 
 const CLAN_XP_BASE = 400
@@ -968,16 +1014,10 @@ export class GameService {
         // Load battle log for elimination order if present
         let battleLog: BattleLogEntry[] = []
         try {
-          const res = await query<{ game_log: unknown }>(
-            'SELECT game_log FROM game_states WHERE room_id = $1',
-            [roomId],
+          const entries = await this.fetchBattleLogEntries(roomId)
+          battleLog = entries.filter((entry): entry is BattleLogEntry =>
+            this.isBattleLogEntry(entry),
           )
-          const raw = res.rows[0]?.game_log
-          if (Array.isArray(raw)) {
-            battleLog = (raw as unknown[]).filter(
-              (e) => e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
-            ) as BattleLogEntry[]
-          }
         } catch (e) {
           logger.warn('Failed to load battle log before neutralize finalization', {
             roomId,
@@ -1473,16 +1513,10 @@ export class GameService {
         // Load latest battle log; filter to battle entries for elimination order
         let battleLog: BattleLogEntry[] = []
         try {
-          const res = await query<{ game_log: unknown }>(
-            'SELECT game_log FROM game_states WHERE room_id = $1',
-            [roomId],
+          const entries = await this.fetchBattleLogEntries(roomId)
+          battleLog = entries.filter((entry): entry is BattleLogEntry =>
+            this.isBattleLogEntry(entry),
           )
-          const raw = res.rows[0]?.game_log
-          if (Array.isArray(raw)) {
-            battleLog = (raw as unknown[]).filter(
-              (e) => e && typeof e === 'object' && (e as { type?: string }).type === 'BATTLE',
-            ) as BattleLogEntry[]
-          }
         } catch (e) {
           logger.warn('Failed to load battle log before finalization', {
             roomId,
@@ -1815,7 +1849,7 @@ export class GameService {
     const territoryCount = state.board.filter((t) => t.ownerId === userId).length
     let logged = false
     let appended: GameLogEntry[] = []
-    // Build entries without touching legacy game_states.game_log
+    // Build entries without touching legacy storage; battle log persistence handled separately
     {
       const entry: TurnLogEntry = {
         type: 'TURN',
@@ -1952,17 +1986,12 @@ export class GameService {
     // Before switching away from attack phase, flush any open engagement summary (non-conquest)
     try {
       if (gameState.phase === 'attack' && phase !== 'attack') {
-        const res = await query<{ game_log: unknown }>(
-          'SELECT game_log FROM game_states WHERE room_id = $1',
-          [gameId],
-        )
-        const raw = res.rows[0]?.game_log
-        const log: GameLogEntry[] = Array.isArray(raw) ? (raw as GameLogEntry[]) : []
+        const log = await this.fetchBattleLogEntries(gameId, { limit: 500 })
         const lastBattle = [...log].reverse().find((e) => (e?.type ?? 'BATTLE') === 'BATTLE') as
           | BattleLogEntry
           | undefined
         if (lastBattle && !lastBattle.conquered) {
-          const engagementId = lastBattle.engagementId || lastBattle.jobId
+          const engagementId: string = lastBattle.engagementId || lastBattle.jobId
           const engagementEntries = log.filter((e): e is BattleLogEntry => {
             if ((e?.type ?? 'BATTLE') !== 'BATTLE') return false
             const be = e as BattleLogEntry
@@ -1997,6 +2026,22 @@ export class GameService {
               conquered: false,
             }
             await this.appendLog(gameId, [summary])
+            try {
+              await withClient(async (client) => {
+                await this.persistBattleLogEntries(
+                  client,
+                  gameId,
+                  [summary],
+                  Math.max(1, gameState.turn ?? 1),
+                )
+              })
+            } catch (persistError) {
+              logger.warn('Failed to persist engagement summary log on phase change', {
+                gameId,
+                phase,
+                error: persistError instanceof Error ? persistError.message : persistError,
+              })
+            }
           }
         }
       }
@@ -2164,51 +2209,7 @@ export class GameService {
         ? Math.max(0, defenderArmiesBeforeRoll)
         : Math.max(0, defendingArmiesRemaining + defenderLosses)
 
-    // Determine engagement id (continue last engagement if same pair and unfinished)
-    let engagementId: string | undefined
-    try {
-      const existing = await query<{ game_log: BattleLogEntry[] | null }>(
-        'SELECT game_log FROM game_states WHERE room_id = $1',
-        [gameId],
-      )
-      const list = (existing.rows[0]?.game_log || []) as BattleLogEntry[]
-      const last = [...list].reverse().find((e) => (e?.type ?? 'BATTLE') === 'BATTLE')
-      if (
-        last &&
-        last.attackingTerritoryId === attackingTerritoryId &&
-        last.defendingTerritoryId === defendingTerritoryId &&
-        last.attackerId === attackerId &&
-        (last.defenderId || null) === (defenderId || null) &&
-        !last.conquered
-      ) {
-        engagementId = last.engagementId || last.jobId
-      }
-    } catch {
-      /* ignore; engagementId will be generated */
-    }
-    if (!engagementId) {
-      engagementId = `${attackingTerritoryId}->${defendingTerritoryId}:${Date.now()}`
-    }
-
-    const logEntry: BattleLogEntry = {
-      type: 'BATTLE',
-      jobId,
-      timestamp: new Date().toISOString(),
-      engagementId,
-      attackingTerritoryId,
-      defendingTerritoryId,
-      attackerId,
-      defenderId,
-      losses: {
-        attacker: attackerLosses,
-        defender: defenderLosses,
-      },
-      conquered: territoryConquered,
-      movedArmies: territoryConquered ? finalDefenderArmies : undefined,
-      eliminatedPlayers: lastBattleResult.eliminatedPlayers ?? [],
-      initialFromArmies: initialFrom,
-      initialToArmies: initialTo,
-    }
+    const logTimestamp = new Date().toISOString()
 
     let persistenceOutcome: { applied: boolean; divergence: number }
     let latestBattleLog: GameLogEntry[] = []
@@ -2218,35 +2219,59 @@ export class GameService {
       persistenceOutcome = await transaction(async (client) => {
         const existingStateResult = await client.query<{
           territories: Territory[] | null
-          game_log: GameLogEntry[] | null
           winner_id: string | null
-        }>(
-          'SELECT territories, game_log, winner_id FROM game_states WHERE room_id = $1 FOR UPDATE',
-          [gameId],
-        )
+        }>('SELECT territories, winner_id FROM game_states WHERE room_id = $1 FOR UPDATE', [gameId])
 
         const existingRow = existingStateResult.rows[0]
-        const existingLog: GameLogEntry[] = Array.isArray(existingRow?.game_log)
-          ? (existingRow?.game_log as GameLogEntry[])
-          : []
-        latestBattleLog = existingLog
-        const alreadyApplied = existingLog.some(
-          (entry) => (entry as BattleLogEntry)?.jobId === jobId,
-        )
+        const existingLog = await this.fetchBattleLogEntries(gameId, { client, limit: 500 })
         const divergence = this.calculateTerritoryDivergence(
           existingRow?.territories ?? null,
           updatedBoard,
         )
 
+        const lastBattle = [...existingLog].reverse().find(this.isBattleLogEntry) as
+          | BattleLogEntry
+          | undefined
+
+        const engagementId =
+          lastBattle &&
+          lastBattle.attackingTerritoryId === attackingTerritoryId &&
+          lastBattle.defendingTerritoryId === defendingTerritoryId &&
+          lastBattle.attackerId === attackerId &&
+          (lastBattle.defenderId || null) === (defenderId || null) &&
+          !lastBattle.conquered
+            ? lastBattle.engagementId || lastBattle.jobId
+            : this.createEngagementId(attackingTerritoryId, defendingTerritoryId)
+
+        const logEntry: BattleLogEntry = {
+          type: 'BATTLE',
+          jobId,
+          timestamp: logTimestamp,
+          engagementId,
+          attackingTerritoryId,
+          defendingTerritoryId,
+          attackerId,
+          defenderId,
+          losses: {
+            attacker: attackerLosses,
+            defender: defenderLosses,
+          },
+          conquered: territoryConquered,
+          movedArmies: territoryConquered ? finalDefenderArmies : undefined,
+          eliminatedPlayers: lastBattleResult.eliminatedPlayers ?? [],
+          initialFromArmies: initialFrom,
+          initialToArmies: initialTo,
+        }
+
+        const alreadyApplied = existingLog.some(
+          (entry) => this.isBattleLogEntry(entry) && entry.jobId === jobId,
+        )
         if (alreadyApplied) {
+          latestBattleLog = existingLog
+          appended = []
           return { applied: false, divergence }
         }
 
-        // If last engagement was unfinished and this roll starts a new engagement,
-        // append a summary entry for the previous engagement (conquered: false)
-        const lastBattle = [...existingLog]
-          .reverse()
-          .find((e) => (e?.type ?? 'BATTLE') === 'BATTLE') as BattleLogEntry | undefined
         const lastEngagementId = lastBattle
           ? lastBattle.engagementId || lastBattle.jobId
           : undefined
@@ -2259,11 +2284,11 @@ export class GameService {
 
         let preExtra: EngagementSummaryLogEntry[] = []
         if (startsNewEngagement && lastBattle && !lastBattle.conquered && lastEngagementId) {
-          const engagementEntries = existingLog.filter((e): e is BattleLogEntry => {
-            if ((e?.type ?? 'BATTLE') !== 'BATTLE') return false
-            const be = e as BattleLogEntry
-            return (be.engagementId || be.jobId) === lastEngagementId
-          })
+          const engagementEntries = existingLog.filter(
+            (entry): entry is BattleLogEntry =>
+              this.isBattleLogEntry(entry) &&
+              (entry.engagementId || entry.jobId) === lastEngagementId,
+          )
           if (engagementEntries.length > 0) {
             const first = engagementEntries[0]
             const totals = engagementEntries.reduce(
@@ -2277,7 +2302,7 @@ export class GameService {
             preExtra = [
               {
                 type: 'ENGAGEMENT_SUMMARY',
-                timestamp: new Date().toISOString(),
+                timestamp: logTimestamp,
                 engagementId: lastEngagementId,
                 attackingTerritoryId: first.attackingTerritoryId,
                 defendingTerritoryId: first.defendingTerritoryId,
@@ -2292,15 +2317,12 @@ export class GameService {
           }
         }
 
-        // If conquest ends the current engagement, append a summary entry
         let extra: EngagementSummaryLogEntry[] = []
         if (logEntry.conquered) {
-          // Compute engagement totals from existing log + this entry
-          const engagementEntries = [...existingLog, logEntry].filter((e): e is BattleLogEntry => {
-            if ((e?.type ?? 'BATTLE') !== 'BATTLE') return false
-            const be = e as BattleLogEntry
-            return be.engagementId === engagementId
-          })
+          const engagementEntries = [...existingLog, ...preExtra, logEntry].filter(
+            (entry): entry is BattleLogEntry =>
+              this.isBattleLogEntry(entry) && (entry.engagementId || entry.jobId) === engagementId,
+          )
           const first = engagementEntries[0]
           const totals = engagementEntries.reduce(
             (acc, cur) => {
@@ -2310,28 +2332,35 @@ export class GameService {
             },
             { attacker: 0, defender: 0 },
           )
-          const summary: EngagementSummaryLogEntry = {
-            type: 'ENGAGEMENT_SUMMARY',
-            timestamp: new Date().toISOString(),
-            engagementId,
-            attackingTerritoryId,
-            defendingTerritoryId,
-            attackerId,
-            defenderId,
-            initialFromArmies: Math.max(0, first?.initialFromArmies ?? initialFrom),
-            initialToArmies: Math.max(0, first?.initialToArmies ?? initialTo),
-            totalLosses: totals,
-            conquered: true,
+          if (first) {
+            const summary: EngagementSummaryLogEntry = {
+              type: 'ENGAGEMENT_SUMMARY',
+              timestamp: logTimestamp,
+              engagementId,
+              attackingTerritoryId,
+              defendingTerritoryId,
+              attackerId,
+              defenderId,
+              initialFromArmies: Math.max(0, first.initialFromArmies ?? initialFrom),
+              initialToArmies: Math.max(0, first.initialToArmies ?? initialTo),
+              totalLosses: totals,
+              conquered: true,
+            }
+            extra = [summary]
           }
-          extra = [summary]
         }
 
-        const updatedLog: GameLogEntry[] = [...existingLog, ...preExtra, logEntry, ...extra].slice(
-          -500,
-        )
-        latestBattleLog = updatedLog
-        appended = [...preExtra, logEntry, ...extra]
+        const appendedEntries: GameLogEntry[] = [...preExtra, logEntry, ...extra]
+        appended = appendedEntries
+        latestBattleLog = [...existingLog, ...appendedEntries].slice(-500)
         const roundNumber = this.calculateRoundNumber(updatedGameState)
+
+        await this.persistBattleLogEntries(
+          client,
+          gameId,
+          appendedEntries,
+          Math.max(1, serializedState.turn ?? updatedGameState.turn ?? 1),
+        )
 
         await client.query(
           `INSERT INTO game_states (
@@ -2342,10 +2371,9 @@ export class GameService {
             round_number,
             territories,
             player_stats,
-            game_log,
             last_activity,
             winner_id
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
           ON CONFLICT (room_id) DO UPDATE SET
             current_player_id = EXCLUDED.current_player_id,
             game_phase = EXCLUDED.game_phase,
@@ -2353,7 +2381,6 @@ export class GameService {
             round_number = EXCLUDED.round_number,
             territories = EXCLUDED.territories,
             player_stats = EXCLUDED.player_stats,
-            game_log = EXCLUDED.game_log,
             last_activity = NOW(),
             winner_id = EXCLUDED.winner_id`,
           [
@@ -2364,7 +2391,6 @@ export class GameService {
             roundNumber,
             JSON.stringify(serializedState.board),
             JSON.stringify(playerStats),
-            JSON.stringify(updatedLog),
             gameEnded ? (winner?.id ?? null) : (existingRow?.winner_id ?? null),
           ],
         )
@@ -2469,9 +2495,7 @@ export class GameService {
         serializedState,
         playersAfterBattle,
         playerStats,
-        latestBattleLog.filter(
-          (e) => (e as { type?: string }).type === 'BATTLE',
-        ) as BattleLogEntry[],
+        latestBattleLog.filter((entry): entry is BattleLogEntry => this.isBattleLogEntry(entry)),
       )
       battleMetrics.clearGame(gameId)
       if (finalization.archived) {
@@ -3431,7 +3455,287 @@ export class GameService {
     logger.info(`Forcefully removed game ${roomId} from cache`)
   }
 
-  // Legacy getBattleLog removed: structured logs moved to append-only game_logs.
+  private createEngagementId(attackingTerritoryId: string, defendingTerritoryId: string): string {
+    return `${attackingTerritoryId}->${defendingTerritoryId}:${Date.now()}`
+  }
+
+  private isBattleLogEntry(entry: GameLogEntry): entry is BattleLogEntry {
+    return (entry as { type?: string }).type === 'BATTLE'
+  }
+
+  private isEngagementSummaryEntry(entry: GameLogEntry): entry is EngagementSummaryLogEntry {
+    return (entry as { type?: string }).type === 'ENGAGEMENT_SUMMARY'
+  }
+
+  private normalizeEliminatedPlayers(value: unknown): string[] {
+    if (Array.isArray(value)) {
+      return value.filter((v): v is string => typeof v === 'string')
+    }
+    if (typeof value === 'string') {
+      return [value]
+    }
+    if (value && typeof value === 'object') {
+      return Object.values(value as Record<string, unknown>).filter(
+        (v): v is string => typeof v === 'string',
+      )
+    }
+    return []
+  }
+
+  private mapBattleLogRowToEntry(row: PersistedBattleLogRow): GameLogEntry {
+    const rawTimestamp =
+      row.entry_timestamp instanceof Date
+        ? row.entry_timestamp
+        : new Date(String(row.entry_timestamp))
+    const timestamp =
+      rawTimestamp instanceof Date && !Number.isNaN(rawTimestamp.getTime())
+        ? rawTimestamp
+        : new Date()
+    const isoTimestamp = timestamp.toISOString()
+
+    if (row.entry_type === 'BATTLE') {
+      return {
+        type: 'BATTLE',
+        jobId: row.job_id ?? '',
+        timestamp: isoTimestamp,
+        engagementId: row.engagement_id ?? undefined,
+        attackingTerritoryId: row.attacking_territory_id ?? '',
+        defendingTerritoryId: row.defending_territory_id ?? '',
+        attackerId: row.attacker_id ?? '',
+        defenderId: row.defender_id ?? null,
+        losses: {
+          attacker: row.attacker_losses ?? 0,
+          defender: row.defender_losses ?? 0,
+        },
+        conquered: Boolean(row.conquered),
+        movedArmies: typeof row.moved_armies === 'number' ? row.moved_armies : undefined,
+        eliminatedPlayers: this.normalizeEliminatedPlayers(row.eliminated_players),
+        initialFromArmies: row.initial_from_armies ?? undefined,
+        initialToArmies: row.initial_to_armies ?? undefined,
+      }
+    }
+
+    return {
+      type: 'ENGAGEMENT_SUMMARY',
+      timestamp: isoTimestamp,
+      engagementId: row.engagement_id ?? '',
+      attackingTerritoryId: row.attacking_territory_id ?? '',
+      defendingTerritoryId: row.defending_territory_id ?? '',
+      attackerId: row.attacker_id ?? '',
+      defenderId: row.defender_id ?? null,
+      initialFromArmies: Math.max(0, row.initial_from_armies ?? 0),
+      initialToArmies: Math.max(0, row.initial_to_armies ?? 0),
+      totalLosses: {
+        attacker: Math.max(0, row.total_attacker_losses ?? 0),
+        defender: Math.max(0, row.total_defender_losses ?? 0),
+      },
+      conquered: Boolean(row.conquered),
+    }
+  }
+
+  private prepareBattleInsertRow(
+    roomId: string,
+    turnNumber: number,
+    entry: BattleLogEntry | EngagementSummaryLogEntry,
+  ): BattleInsertRow {
+    const rawTimestamp = new Date(entry.timestamp)
+    const timestamp = Number.isNaN(rawTimestamp.getTime()) ? new Date() : rawTimestamp
+
+    if (this.isBattleLogEntry(entry)) {
+      return {
+        game_id: roomId,
+        entry_type: 'BATTLE',
+        job_id: entry.jobId,
+        engagement_id: entry.engagementId ?? entry.jobId,
+        entry_timestamp: timestamp,
+        turn_number: turnNumber,
+        attacking_territory_id: entry.attackingTerritoryId,
+        defending_territory_id: entry.defendingTerritoryId,
+        attacker_id: entry.attackerId,
+        defender_id: entry.defenderId ?? null,
+        attacker_losses: entry.losses.attacker,
+        defender_losses: entry.losses.defender,
+        conquered: entry.conquered,
+        moved_armies: entry.movedArmies ?? null,
+        eliminated_players: entry.eliminatedPlayers ?? [],
+        initial_from_armies: entry.initialFromArmies ?? null,
+        initial_to_armies: entry.initialToArmies ?? null,
+        total_attacker_losses: null,
+        total_defender_losses: null,
+        metadata: {},
+      }
+    }
+
+    return {
+      game_id: roomId,
+      entry_type: 'ENGAGEMENT_SUMMARY',
+      job_id: null,
+      engagement_id: entry.engagementId,
+      entry_timestamp: timestamp,
+      turn_number: turnNumber,
+      attacking_territory_id: entry.attackingTerritoryId,
+      defending_territory_id: entry.defendingTerritoryId,
+      attacker_id: entry.attackerId,
+      defender_id: entry.defenderId ?? null,
+      attacker_losses: null,
+      defender_losses: null,
+      conquered: entry.conquered,
+      moved_armies: null,
+      eliminated_players: [],
+      initial_from_armies: entry.initialFromArmies ?? null,
+      initial_to_armies: entry.initialToArmies ?? null,
+      total_attacker_losses: entry.totalLosses.attacker,
+      total_defender_losses: entry.totalLosses.defender,
+      metadata: {},
+    }
+  }
+
+  private async fetchBattleLogEntries(
+    roomId: string,
+    options: { client?: PoolClient; limit?: number } = {},
+  ): Promise<GameLogEntry[]> {
+    const { client, limit } = options
+    const params: unknown[] = [roomId]
+    let sql = `
+      SELECT entry_type,
+             job_id,
+             engagement_id,
+             entry_timestamp,
+             turn_number,
+             attacking_territory_id,
+             defending_territory_id,
+             attacker_id,
+             defender_id,
+             attacker_losses,
+             defender_losses,
+             conquered,
+             moved_armies,
+             eliminated_players,
+             initial_from_armies,
+             initial_to_armies,
+             total_attacker_losses,
+             total_defender_losses,
+             metadata
+        FROM game_battle_logs
+       WHERE game_id = $1
+    `
+    if (limit) {
+      sql += ' ORDER BY entry_timestamp DESC, id DESC LIMIT $2'
+      params.push(limit)
+    } else {
+      sql += ' ORDER BY entry_timestamp ASC, id ASC'
+    }
+
+    const result = client
+      ? await client.query<PersistedBattleLogRow>(sql, params)
+      : await query<PersistedBattleLogRow>(sql, params)
+
+    const rows = limit ? [...result.rows].reverse() : result.rows
+    return rows.map((row) => this.mapBattleLogRowToEntry(row))
+  }
+
+  private async persistBattleLogEntries(
+    client: PoolClient,
+    roomId: string,
+    entries: GameLogEntry[],
+    turnNumber: number,
+  ): Promise<void> {
+    const persistable = entries.filter(
+      (entry): entry is BattleLogEntry | EngagementSummaryLogEntry =>
+        this.isBattleLogEntry(entry) || this.isEngagementSummaryEntry(entry),
+    )
+    if (persistable.length === 0) {
+      return
+    }
+
+    const rows = persistable.map((entry) => this.prepareBattleInsertRow(roomId, turnNumber, entry))
+
+    const columns = [
+      'game_id',
+      'entry_type',
+      'job_id',
+      'engagement_id',
+      'entry_timestamp',
+      'turn_number',
+      'attacking_territory_id',
+      'defending_territory_id',
+      'attacker_id',
+      'defender_id',
+      'attacker_losses',
+      'defender_losses',
+      'conquered',
+      'moved_armies',
+      'eliminated_players',
+      'initial_from_armies',
+      'initial_to_armies',
+      'total_attacker_losses',
+      'total_defender_losses',
+      'metadata',
+    ] as const
+
+    const values: unknown[] = []
+    const placeholders: string[] = []
+    rows.forEach((row, index) => {
+      const base = index * columns.length
+      placeholders.push(
+        `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${
+          base + 7
+        }, $${base + 8}, $${base + 9}, $${base + 10}, $${base + 11}, $${base + 12}, $${base + 13}, $${base + 14}, $${base + 15}, $${base + 16}, $${base + 17}, $${base + 18}, $${base + 19}, $${base + 20})`,
+      )
+      values.push(
+        row.game_id,
+        row.entry_type,
+        row.job_id,
+        row.engagement_id,
+        row.entry_timestamp,
+        row.turn_number,
+        row.attacking_territory_id,
+        row.defending_territory_id,
+        row.attacker_id,
+        row.defender_id,
+        row.attacker_losses,
+        row.defender_losses,
+        row.conquered,
+        row.moved_armies,
+        row.eliminated_players,
+        row.initial_from_armies,
+        row.initial_to_armies,
+        row.total_attacker_losses,
+        row.total_defender_losses,
+        row.metadata,
+      )
+    })
+
+    await client.query(
+      `INSERT INTO game_battle_logs (
+         game_id,
+         entry_type,
+         job_id,
+         engagement_id,
+         entry_timestamp,
+         turn_number,
+         attacking_territory_id,
+         defending_territory_id,
+         attacker_id,
+         defender_id,
+         attacker_losses,
+         defender_losses,
+         conquered,
+         moved_armies,
+         eliminated_players,
+         initial_from_armies,
+         initial_to_armies,
+         total_attacker_losses,
+         total_defender_losses,
+         metadata
+       ) VALUES ${placeholders.join(', ')}
+       ON CONFLICT (game_id, job_id) WHERE job_id IS NOT NULL DO NOTHING`,
+      values,
+    )
+  }
+
+  // Legacy getBattleLog removed: structured entries now persist in game_battle_logs;
+  // game_logs remains the fog-aware/textual stream.
 
   async appendLog(roomId: string, entries: GameLogEntry[]): Promise<void> {
     if (!entries || entries.length === 0) return

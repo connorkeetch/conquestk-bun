@@ -106,14 +106,35 @@ The project uses TypeScript with strict typings, Tailwind CSS, and Biome for for
 For detailed information on coding standards, see the [coding standards guide](docs/guides/coding-standards.md).
 
 ## Backend notes
-The backend is a Node.js/Express application with Socket.io for real-time features. Key logic is in `backend/src/services` and `backend/src/game`. Prefer using the unified `game-action` socket for gameplay actions.
+- Routes are mounted under `/api`; add to existing routers before creating new ones.
+- Use `backend/src/middleware/auth.ts` for user context instead of decoding JWTs manually.
+- Follow logging conventions in `backend/src/utils/logger.ts`.
+- The database is **PostgreSQL-only**—write SQL with native PostgreSQL syntax and `$n` placeholders; avoid MySQL/SQLite idioms such as `?` parameters or `INSERT OR REPLACE`.
+- Asset uploads go through `backend/src/utils/assetStorage.ts`, targeting Cloudflare R2 when the `ASSET_*` variables are configured and falling back to local `/uploads` storage in development.
+- Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/services/socketService.ts` (which wires chat handlers from `backend/src/socket/chatHandlers.ts`).
+- Fog-aware game logs: alongside existing deltas and `log:append` events, the server emits `game-log:append` per viewer with short, single-tone text (fog-filtered). On completion, the server emits `game-log:reveal` so clients refetch full, unredacted history. See `backend/src/services/logEmitter.ts`.
+- Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
+- Development note: during this phase, destructive migrations are acceptable. If local data needs to be reset to unblock a schema change, do so and reseed.
 
-For more details, see the [architecture documentation](docs/reference/architecture.md).
+### Action routing & team utils
+- Prefer the unified `game-action` socket for all gameplay actions. Specialized events (`deployArmies`, `attack`, `fortify`, `transferConquestArmies`, `undoFortify`, `endTurn`, `goBackToReinforcement`) are deprecated and routed internally through the same processor for now.
+- New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket. This keeps queue/inline paths and deltas consistent.
+- Team checks are centralized in `backend/src/utils/gameTeams.ts` and used by both `GameEngine` and AI. Do not reimplement team logic elsewhere.
+- Emit deltas first; snapshots are recovery-only for desyncs.
+- Logs: textual `game-log:append` is additive and runs alongside structured `game_battle_logs` writes.
+
+### Development norms for routing and compatibility
+- Remove deprecated socket events and REST routes promptly after migrating to `game-action`.
+- If an event or route name changes, update both backend and frontend in the same PR; no long deprecation windows are required right now.
 
 ## Frontend notes
-The frontend is a React application using Redux Toolkit for state management. Pages are in `frontend/src/pages` and reusable components are in `frontend/src/components`.
-
-For more details, see the [architecture documentation](docs/reference/architecture.md).
+- Pages are under `frontend/src/pages`; shared components live in `frontend/src/components`.
+- Hooks in `frontend/src/hooks` and slices in `frontend/src/store` provide canonical state logic—reuse them before adding new state containers.
+- API calls flow through `frontend/src/services/api.ts` or high-level game/map helpers.
+- Theme switching relies on CSS variables in `frontend/src/app.css`; toggle the `data-theme` attribute instead of inline styles.
+- The map editor UI lives in `frontend/src/pages/MapEditorTokens.tsx` with detailed format docs in `docs/guides/map-format.md`.
+- Resolve CDN assets through `resolveAssetPath` (`frontend/src/utils/assets.ts`); set `VITE_ASSET_BASE_URL` in every environment (including local dev) because the repo no longer ships audio or hero media.
+- For the Game Room, lobby, and phase UX flows, follow `docs/planning/game-room-plan.md`.
 
 ## Database & admin utilities
 Database migrations are handled with SQL files in `backend/migrations`. Use the provided npm scripts for seeding and admin tasks.
