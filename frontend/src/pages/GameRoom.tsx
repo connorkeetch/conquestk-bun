@@ -1071,8 +1071,11 @@ export default function GameRoom() {
   }, [dispatch, navigate, roomId])
 
   // Join the socket room if member; otherwise spectate for live logs
+  // CRITICAL: Only subscribe after currentRoom loads to avoid race condition
+  // where we spectate first (isMember=false) then try to join (isMember=true)
   useEffect(() => {
-    if (!roomId) return
+    if (!roomId || !currentRoom) return // Wait for room to load!
+
     if (isMember) {
       socketService.joinRoom(roomId)
       return () => {
@@ -1084,7 +1087,7 @@ export default function GameRoom() {
     return () => {
       socketService.leaveRoom(roomId)
     }
-  }, [roomId, isMember])
+  }, [roomId, isMember, currentRoom])
 
   useEffect(() => {
     if (!roomId) {
