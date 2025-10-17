@@ -119,6 +119,7 @@ export default function GameRoom() {
     currentGame,
     isLoading: isGameLoading,
     error: gameError,
+    gameResult,
   } = useAppSelector((state) => state.game)
   const activeGameRoomId = currentGame?.roomId ?? null
   const { user } = useAppSelector((state) => state.auth)
@@ -566,6 +567,82 @@ export default function GameRoom() {
       setShowGameOver(true)
     }
   }, [currentGame?.phase])
+
+  const resolvedEliminatedPlayerIds = useMemo(() => {
+    if (!currentGame || !Array.isArray(currentGame.players)) {
+      return []
+    }
+    const players = currentGame.players
+    const canonicalize = (id: string): string => {
+      const trimmed = id?.trim?.() ?? ''
+      if (!trimmed) return trimmed
+      const match = players.find(
+        (player) =>
+          player.id === trimmed || (typeof player.userId === 'string' && player.userId === trimmed),
+      )
+      return match ? match.id : trimmed
+    }
+
+    if (
+      Array.isArray(gameResult?.eliminatedPlayerIds) &&
+      gameResult.eliminatedPlayerIds.length > 0
+    ) {
+      const unique = new Set<string>()
+      for (const value of gameResult.eliminatedPlayerIds) {
+        if (typeof value !== 'string') continue
+        const canonical = canonicalize(value)
+        if (canonical) unique.add(canonical)
+      }
+      return Array.from(unique)
+    }
+
+    return players.filter((player) => player.isEliminated).map((player) => player.id)
+  }, [currentGame, gameResult])
+
+  const resolvedGameOverWinners = useMemo(() => {
+    if (!currentGame || !Array.isArray(currentGame.players)) {
+      return []
+    }
+    const players = currentGame.players
+    const canonicalize = (id: string): string => {
+      const trimmed = id?.trim?.() ?? ''
+      if (!trimmed) return trimmed
+      const match = players.find(
+        (player) =>
+          player.id === trimmed || (typeof player.userId === 'string' && player.userId === trimmed),
+      )
+      return match ? match.id : trimmed
+    }
+
+    const candidateWinnerIds =
+      Array.isArray(gameResult?.winnerIds) && gameResult.winnerIds.length > 0
+        ? Array.from(
+            new Set(
+              gameResult.winnerIds
+                .filter((value): value is string => typeof value === 'string' && value.length > 0)
+                .map(canonicalize)
+                .filter((value): value is string => Boolean(value)),
+            ),
+          )
+        : []
+
+    if (candidateWinnerIds.length > 0) {
+      const mapped = players.filter((player) => candidateWinnerIds.includes(player.id))
+      if (mapped.length > 0) {
+        return mapped
+      }
+    }
+
+    const eliminatedSet = new Set(resolvedEliminatedPlayerIds)
+    if (eliminatedSet.size > 0) {
+      const survivors = players.filter((player) => !eliminatedSet.has(player.id))
+      if (survivors.length > 0) {
+        return survivors
+      }
+    }
+
+    return players.filter((player) => !player.isEliminated)
+  }, [currentGame, gameResult, resolvedEliminatedPlayerIds])
 
   // Auto-disable background animations during active gameplay for better performance
   // Respects user's performance mode preference
@@ -3041,8 +3118,8 @@ export default function GameRoom() {
       {showGameOver && currentGame && (
         <LazyGameOverModal
           isOpen={showGameOver}
-          winners={currentGame.players.filter((p) => !p.isEliminated)}
-          eliminatedPlayers={currentGame.players.filter((p) => p.isEliminated).map((p) => p.id)}
+          winners={resolvedGameOverWinners}
+          eliminatedPlayers={resolvedEliminatedPlayerIds}
           onClose={() => setShowGameOver(false)}
           onBackToMenu={() => navigate('/lobby')}
           roomId={currentRoom?.id}

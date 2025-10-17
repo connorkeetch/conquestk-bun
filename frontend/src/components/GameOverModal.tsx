@@ -58,6 +58,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
     () => (winnersProp?.length ? winnersProp : winner ? [winner] : []),
     [winnersProp, winner],
   )
+  const winnerNames = React.useMemo(() => winners.map((w) => w.username), [winners])
+  const primaryWinnerName =
+    winners[0]?.username ?? winner?.username ?? winnerNames[0] ?? 'Unknown commander'
+  const formattedWinnerList = winnerNames.length > 0 ? winnerNames.join(', ') : primaryWinnerName
   const isCurrentUserWinner = winners.some((w) => w.id === currentUserId)
   const isCurrentUserLoser = winners.length > 0 && !isCurrentUserWinner
   // Removed local rating toast; rank change now surfaces via global notifications
@@ -170,11 +174,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                     {winners.length > 0
                       ? isCurrentUserWinner
                         ? winners.length === 1
-                          ? `${winners[0].username} conquers the world!`
-                          : `${winners.map((w) => w.username).join(', ')} triumph!`
+                          ? `${primaryWinnerName} conquers the world!`
+                          : `${formattedWinnerList} triumph!`
                         : winners.length === 1
-                          ? `${winners[0].username} conquers the world.`
-                          : `${winners.map((w) => w.username).join(', ')} triumph.`
+                          ? `${primaryWinnerName} conquers the world.`
+                          : `${formattedWinnerList} triumph.`
                       : 'All players have been eliminated'}
                   </p>
                 </div>

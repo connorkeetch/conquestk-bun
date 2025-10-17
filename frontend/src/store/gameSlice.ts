@@ -153,6 +153,170 @@ const adaptBattleResult = (
   }
 }
 
+export interface GameResultState {
+  winnerIds: string[]
+  eliminatedPlayerIds: string[]
+  endedAt: string | null
+}
+
+type GameResultSource = {
+  winnerId?: string | null
+  eliminatedIds?: string[] | null
+  endedAt?: string | Date | null
+}
+
+const toIsoString = (value: string | Date | null | undefined): string | null => {
+  if (!value) return null
+  if (typeof value === 'string') return value
+  try {
+    return value.toISOString()
+  } catch (error) {
+    logger.warn('Failed to normalise end timestamp to ISO string', { value, error })
+    return null
+  }
+}
+
+const canonicalizePlayerIdentifier = (rawId: string, players?: GameState['players']): string => {
+  const trimmed = rawId?.trim?.() ?? ''
+  if (!trimmed || !Array.isArray(players)) {
+    return trimmed
+  }
+  const match = players.find(
+    (player) =>
+      player.id === trimmed || (typeof player.userId === 'string' && player.userId === trimmed),
+  )
+  return match ? match.id : trimmed
+}
+
+const buildIdentifierSet = (
+  values: string[] | null | undefined,
+  players?: GameState['players'],
+): Set<string> => {
+  const set = new Set<string>()
+  if (!Array.isArray(values)) return set
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+    const canonical = canonicalizePlayerIdentifier(value, players)
+    if (canonical) set.add(canonical)
+  }
+  return set
+}
+
+const computeWinnerIdsFromPlayers = (
+  players: GameState['players'] | undefined,
+  eliminated: Set<string>,
+): string[] => {
+  if (!Array.isArray(players) || players.length === 0) {
+    return []
+  }
+  return players.filter((player) => !eliminated.has(player.id)).map((player) => player.id)
+}
+
+const isGameComplete = (game: GameState | null): boolean => {
+  if (!game) return false
+  if (game.phase === 'finished') return true
+  const status = (game as GameState & { status?: string }).status
+  return status === 'completed'
+}
+
+const mergeGameResult = (
+  game: GameState | null,
+  previous: GameResultState | null,
+  source?: GameResultSource,
+): GameResultState | null => {
+  const players = game?.players
+  const winnerSet = buildIdentifierSet(previous?.winnerIds, players)
+  const eliminatedSet = buildIdentifierSet(previous?.eliminatedPlayerIds, players)
+
+  const candidateWinnerIds: Array<string | undefined> = []
+  const candidateEliminatedIds: string[] = []
+  const candidateEndedAt: Array<string | null> = []
+
+  if (game) {
+    const gameWinner =
+      typeof (game as GameState & { winner?: unknown }).winner === 'string'
+        ? ((game as GameState & { winner?: string }).winner ?? '')
+        : ''
+    if (gameWinner) {
+      candidateWinnerIds.push(gameWinner)
+    }
+    candidateEndedAt.push(
+      toIsoString(
+        (game as GameState & { endedAt?: unknown }).endedAt as string | Date | null | undefined,
+      ),
+    )
+    if (isGameComplete(game)) {
+      candidateEliminatedIds.push(
+        ...game.players
+          .filter((player) => player.isEliminated)
+          .map((player) => player.id)
+          .filter((value) => typeof value === 'string'),
+      )
+    }
+  }
+
+  if (source?.winnerId) {
+    candidateWinnerIds.push(source.winnerId)
+  }
+  if (Array.isArray(source?.eliminatedIds)) {
+    candidateEliminatedIds.push(...source.eliminatedIds)
+  }
+
+  candidateEndedAt.push(toIsoString(source?.endedAt))
+  candidateEndedAt.push(previous?.endedAt ?? null)
+
+  for (const winnerId of candidateWinnerIds) {
+    if (typeof winnerId !== 'string') continue
+    const canonical = canonicalizePlayerIdentifier(winnerId, players)
+    if (canonical) {
+      winnerSet.add(canonical)
+    }
+  }
+  for (const eliminatedId of candidateEliminatedIds) {
+    if (typeof eliminatedId !== 'string') continue
+    const canonical = canonicalizePlayerIdentifier(eliminatedId, players)
+    if (canonical) {
+      eliminatedSet.add(canonical)
+    }
+  }
+
+  if (game && isGameComplete(game)) {
+    const derivedWinners = computeWinnerIdsFromPlayers(game.players, eliminatedSet)
+    for (const value of derivedWinners) {
+      if (value) {
+        winnerSet.add(value)
+      }
+    }
+  }
+
+  const nextWinnerIds = Array.from(winnerSet)
+  const nextEliminatedIds = Array.from(eliminatedSet)
+  const resolvedEndedAt =
+    candidateEndedAt.find((value) => typeof value === 'string' && value.length > 0) ?? null
+
+  if (nextWinnerIds.length === 0 && nextEliminatedIds.length === 0 && !resolvedEndedAt) {
+    return previous
+  }
+
+  const arraysEqual = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((value, index) => value === b[index])
+
+  if (
+    previous &&
+    arraysEqual(previous.winnerIds, nextWinnerIds) &&
+    arraysEqual(previous.eliminatedPlayerIds, nextEliminatedIds) &&
+    previous.endedAt === resolvedEndedAt
+  ) {
+    return previous
+  }
+
+  return {
+    winnerIds: nextWinnerIds,
+    eliminatedPlayerIds: nextEliminatedIds,
+    endedAt: resolvedEndedAt,
+  }
+}
+
 interface GameSliceState {
   currentGame: GameState | null
   isLoading: boolean
@@ -174,6 +338,7 @@ interface GameSliceState {
     availableArmies: number
   } | null
   needsResync: boolean
+  gameResult: GameResultState | null
 }
 
 const initialState: GameSliceState = {
@@ -189,6 +354,7 @@ const initialState: GameSliceState = {
   battleResult: null,
   reinforcementArmies: 0,
   conquestTransfer: null,
+  gameResult: null,
 }
 
 const computeReinforcementArmies = (game: GameState | null): number => {
@@ -245,11 +411,13 @@ const gameSlice = createSlice({
     setGameState: (state, action: PayloadAction<GameState>) => {
       state.currentGame = action.payload
       state.reinforcementArmies = computeReinforcementArmies(state.currentGame)
+      state.gameResult = mergeGameResult(state.currentGame, null)
     },
     updateGameState: (state, action: PayloadAction<Partial<GameState>>) => {
       if (state.currentGame) {
         state.currentGame = { ...state.currentGame, ...action.payload }
         state.reinforcementArmies = computeReinforcementArmies(state.currentGame)
+        state.gameResult = mergeGameResult(state.currentGame, state.gameResult)
       }
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -266,6 +434,7 @@ const gameSlice = createSlice({
       state.validTargets = []
       state.pendingAction = null
       state.territoryActionHistory = []
+      state.gameResult = null
     },
     selectTerritory: (state, action: PayloadAction<string | null>) => {
       state.selectedTerritory = action.payload
@@ -464,6 +633,41 @@ const gameSlice = createSlice({
               state.battleResult = adaptBattleResult(incoming.battleResult, state.currentGame)
             }
             const nested = (incoming as BattleResultDelta & { changes?: GameDelta[] }).changes
+
+            const eliminatedFromBattle = Array.isArray(incoming.battleResult.eliminatedPlayers)
+              ? incoming.battleResult.eliminatedPlayers
+              : undefined
+
+            if (
+              incoming.battleResult.gameEnded ||
+              typeof incoming.battleResult.winner === 'string' ||
+              (eliminatedFromBattle && eliminatedFromBattle.length > 0)
+            ) {
+              state.gameResult = mergeGameResult(state.currentGame, state.gameResult, {
+                winnerId:
+                  typeof incoming.battleResult.winner === 'string'
+                    ? incoming.battleResult.winner
+                    : undefined,
+                eliminatedIds: eliminatedFromBattle,
+              })
+
+              if (state.currentGame && incoming.battleResult.gameEnded) {
+                state.currentGame.phase = 'finished'
+                const canonicalWinner =
+                  typeof incoming.battleResult.winner === 'string'
+                    ? canonicalizePlayerIdentifier(
+                        incoming.battleResult.winner,
+                        state.currentGame.players,
+                      )
+                    : null
+                if (canonicalWinner) {
+                  ;(state.currentGame as GameState & { winner?: string }).winner = canonicalWinner
+                  state.currentGame.currentPlayer = canonicalWinner
+                }
+                ;(state.currentGame as GameState & { status?: string }).status = 'completed'
+              }
+            }
+
             if (Array.isArray(nested)) {
               for (const change of nested) {
                 applyDeltaToState(change as GameDelta)
@@ -475,7 +679,20 @@ const gameSlice = createSlice({
           case 'GAME_END': {
             if (state.currentGame) {
               state.currentGame.phase = 'finished'
+              const canonicalWinner = canonicalizePlayerIdentifier(
+                incoming.winner,
+                state.currentGame.players,
+              )
+              ;(state.currentGame as GameState & { winner?: string }).winner = canonicalWinner
+              ;(state.currentGame as GameState & { status?: string }).status = 'completed'
+              if (canonicalWinner) {
+                state.currentGame.currentPlayer = canonicalWinner
+              }
             }
+            state.gameResult = mergeGameResult(state.currentGame, state.gameResult, {
+              winnerId: incoming.winner,
+              eliminatedIds: incoming.eliminatedPlayers,
+            })
             break
           }
 
@@ -525,6 +742,7 @@ const gameSlice = createSlice({
           ...payload,
           roomId: payload.roomId ?? action.meta.arg.roomId,
         }
+        state.gameResult = mergeGameResult(state.currentGame, null)
         if (payload.phase === 'reinforcement') {
           const current = payload.players.find((p) => p.id === payload.currentPlayer)
           state.reinforcementArmies = Math.max(0, current?.armies ?? 0)
