@@ -33,23 +33,47 @@ export async function getClientMetricsSummary(hours = 24): Promise<{
   avgLatency: number
   avgSuccessRate: number
   totalReconnects: number
+  lockstepResyncs: {
+    total: number
+    successes: number
+    failures: number
+    failureRate: number
+    avgDurationMs: number
+  }
 }> {
   const result = await query(
     `SELECT
         COUNT(*)::int AS session_count,
         COALESCE(AVG((metrics->>'avgLatency')::numeric), 0) AS avg_latency,
         COALESCE(AVG((stats->>'actionSuccessRate')::numeric), 0) AS avg_success_rate,
-        COALESCE(SUM((metrics->>'reconnectCount')::integer), 0) AS total_reconnects
+        COALESCE(SUM((metrics->>'reconnectCount')::integer), 0) AS total_reconnects,
+        COALESCE(SUM((metrics->'lockstepResyncs'->>'total')::integer), 0) AS lockstep_total,
+        COALESCE(SUM((metrics->'lockstepResyncs'->>'successes')::integer), 0) AS lockstep_successes,
+        COALESCE(SUM((metrics->'lockstepResyncs'->>'failures')::integer), 0) AS lockstep_failures,
+        COALESCE(AVG(NULLIF((metrics->'lockstepResyncs'->>'avgDurationMs')::numeric, 0)), 0) AS lockstep_avg_duration
       FROM client_metrics
       WHERE created_at >= NOW() - ($1::text || ' hours')::interval`,
     [String(hours)],
   )
 
   const row = result.rows[0]
+  const sessionCount = Number(row?.session_count ?? 0)
+  const totalResyncs = Number(row?.lockstep_total ?? 0)
+  const successes = Number(row?.lockstep_successes ?? 0)
+  const failures = Number(row?.lockstep_failures ?? 0)
+  const failureRate = totalResyncs > 0 ? failures / totalResyncs : 0
+
   return {
-    sessionCount: Number(row?.session_count ?? 0),
+    sessionCount,
     avgLatency: Number(row?.avg_latency ?? 0),
     avgSuccessRate: Number(row?.avg_success_rate ?? 0),
     totalReconnects: Number(row?.total_reconnects ?? 0),
+    lockstepResyncs: {
+      total: totalResyncs,
+      successes,
+      failures,
+      failureRate,
+      avgDurationMs: Number(row?.lockstep_avg_duration ?? 0),
+    },
   }
 }

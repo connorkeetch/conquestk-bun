@@ -93,6 +93,10 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Build the analytics bridge for telemetry: surface lockstep resync stats (volume, mean duration, failure reasons) in the reliability dashboard and wire alerts for sustained drift.
 - Start porting replay UI to the new frame store so headless replays and viewer scrubbing share the same deterministic pipeline.
 
+### Verification checklist (2025-04-04)
+- Run `npm run replay:export -- <matchId> export.json` to produce baseline snapshot + frame bundles that the frontend replay UI can ingest.
+- Validate `/metrics/client/summary` now includes lockstep resync totals, success/failure counts, and mean durations so dashboards can trigger alerts when failure rate drifts above a chosen threshold.
+
 ## Rollout plan
 1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).
 2. Enable lockstep transport in development, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely.
