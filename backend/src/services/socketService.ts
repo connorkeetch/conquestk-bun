@@ -651,74 +651,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       ),
     )
 
-    // Spectator subscription: join only the room channel for lifecycle + live logs.
-    // Permitted when fog is off for active games, or when the game is completed/abandoned.
-    socket.on(
-      'spectate-room',
-      withErrorHandler(
-        socket,
-        'spectate-room',
-        async (
-          roomId: string,
-          ack?: (r: {
-            ok: boolean
-            roomId?: string
-            joinedAt?: number
-            error?: string
-            code?: string
-          }) => void,
-        ) => {
-          if (!roomId || typeof roomId !== 'string') {
-            ack?.({ ok: false, error: 'Invalid room ID', code: 'invalid_room_id' })
-            return
-          }
-
-          const normalizedRoomId = /^\d+$/.test(roomId)
-            ? await gameRoomService
-                .getRoomByCode(Number.parseInt(roomId, 10))
-                .then((r) => r?.id ?? '')
-            : roomId
-          if (!normalizedRoomId) {
-            ack?.({ ok: false, error: 'Room not found', code: 'room_not_found' })
-            return
-          }
-
-          const userId = requireUserId(socket)
-          const room = await gameRoomService.getRoomById(normalizedRoomId)
-          if (!room) throw new Error('Room not found')
-
-          const status = room.status as string
-          const fog = (room.fogOfWar as string | undefined) ?? 'off'
-
-          const isActive = status === 'active'
-          const isFinished = status === 'completed' || status === 'abandoned'
-          const fogOff = fog === 'off'
-
-          if (!(isFinished || (isActive && fogOff))) {
-            ack?.({
-              ok: false,
-              error: 'Spectating not permitted for this game',
-              code: 'spectate_forbidden',
-            })
-            return
-          }
-
-          // Join only the room channel to receive lifecycle + log:append events (no game deltas)
-          await socket.join(normalizedRoomId)
-          if (!socket.joinedGameRooms) socket.joinedGameRooms = new Set()
-          socket.joinedGameRooms.add(normalizedRoomId)
-
-          try {
-            ack?.({ ok: true, roomId: normalizedRoomId, joinedAt: Date.now() })
-          } catch (error) {
-            logger.warn('Failed to ack spectate-room (best-effort)', {
-              error: error instanceof Error ? error.message : String(error),
-            })
-          }
-          logger.info(`User ${userId} spectating room ${normalizedRoomId}`)
-        },
-      ),
-    )
+    // REMOVED: spectate-room handler - simplified to single subscription path
+    // Everyone uses join-room now regardless of membership status
 
     socket.on(
       'leave-room',

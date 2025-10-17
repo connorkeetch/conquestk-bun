@@ -422,24 +422,16 @@ class SocketService {
                 return
               }
               logger.warn('processDeltaHandler not initialized; falling back to full refetch')
-              const state = store.getState()
-              const allowSpectate = !state.room.currentRoom?.players?.some(
-                (p) => p.userId === state.auth.user?.id,
-              )
-              store.dispatch(fetchGameState({ roomId, allowSpectate }))
+              store.dispatch(fetchGameState({ roomId }))
             } else {
               // Server doesn't have deltas - trigger full state refetch
               logger.info('Server has no cached deltas - refetching full state')
-              const state = store.getState()
-              const allowSpectate = !state.room.currentRoom?.players?.some(
-                (p) => p.userId === state.auth.user?.id,
-              )
-              store.dispatch(fetchGameState({ roomId, allowSpectate }))
+              store.dispatch(fetchGameState({ roomId }))
             }
             resolve()
           } else {
             logger.error('Failed to request missing deltas', { error: response?.error })
-            toast.error('Failed to sync. Please refresh.')
+            // Status shown in ResyncBanner, no need for toast
             resolve()
           }
         },
@@ -702,14 +694,9 @@ class SocketService {
             setTimeout(() => tryJoin(attempt + 1), backoff)
           } else {
             this.joiningRooms.delete(roomId)
-            // surface a one-off toast to indicate degraded realtime
+            // ConnectionBanner shows status, trigger resync without toast
             try {
-              toast.error('Failed to join game room. Trying to resync...')
-              const state = store.getState()
-              const allowSpectate = !state.room.currentRoom?.players?.some(
-                (p) => p.userId === state.auth.user?.id,
-              )
-              store.dispatch(fetchGameState({ roomId, allowSpectate }))
+              store.dispatch(fetchGameState({ roomId }))
             } catch (error) {
               logger.warn('Failed to display degraded realtime toast flow', { error })
             }
@@ -720,51 +707,8 @@ class SocketService {
     tryJoin(1)
   }
 
-  // Subscribe as a spectator to receive live logs and lifecycle (no game deltas)
-  spectateRoom(roomId: string) {
-    if (!this.socket) return
-    const key = `spectate:${roomId}`
-    const attempts = this.joiningRooms.get(key) ?? 0
-    if (attempts > 0) return
-
-    const maxAttempts = 5
-    const trySpectate = (attempt: number) => {
-      if (!this.socket) return
-      this.joiningRooms.set(key, attempt)
-      const backoff = Math.min(JOIN_BACKOFF_BASE_MS * 2 ** (attempt - 1), JOIN_BACKOFF_MAX_MS)
-      this.socket.emit(
-        'spectate-room',
-        roomId,
-        (ack?: {
-          ok?: boolean
-          roomId?: string
-          joinedAt?: number
-          error?: string
-          code?: string
-        }) => {
-          if (ack?.ok) {
-            this.joiningRooms.delete(key)
-            return
-          }
-          if (attempt < maxAttempts) {
-            setTimeout(() => trySpectate(attempt + 1), backoff)
-          } else {
-            this.joiningRooms.delete(key)
-            try {
-              toast('Spectate connection unstable — fetching latest state', {
-                icon: '🔄',
-                duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
-              })
-              store.dispatch(fetchGameState({ roomId, allowSpectate: true }))
-            } catch (error) {
-              logger.warn('Failed to write spectate unstable flag', { error })
-            }
-          }
-        },
-      )
-    }
-    trySpectate(1)
-  }
+  // REMOVED: spectateRoom() - simplified to single subscription path
+  // Everyone uses joinRoom() now regardless of membership status
 
   leaveRoom(roomId: string) {
     this.socket?.emit('leave-room', roomId)
@@ -1188,19 +1132,9 @@ class SocketService {
         const state = store.getState()
         const roomId = state.room.currentRoom?.id ?? state.game.currentGame?.roomId ?? null
         const userId = state.auth.user?.id
-        const players = state.room.currentRoom?.players
-        const isMember = Boolean(
-          userId &&
-            Array.isArray(players) &&
-            players.some((p) => p.userId === userId || p.id === userId),
-        )
         if (roomId && userId) {
-          // Re-join the game channel
-          if (isMember) {
-            this.joinRoom(roomId)
-          } else {
-            this.spectateRoom(roomId)
-          }
+          // Re-join the game channel (everyone uses joinRoom now)
+          this.joinRoom(roomId)
 
           // CRITICAL: Force a full state refetch after reconnection
           // This ensures we catch up on any missed events during disconnect
@@ -1208,11 +1142,8 @@ class SocketService {
           if (!recovered) {
             setTimeout(() => {
               try {
-                toast('Syncing game state...', {
-                  icon: '🔄',
-                  duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
-                })
-                store.dispatch(fetchGameState({ roomId, allowSpectate: !isMember }))
+                // ResyncBanner shows sync status, no need for toast
+                store.dispatch(fetchGameState({ roomId }))
               } catch (error) {
                 // Best-effort recovery
                 logger.warn('Failed to refetch game state after reconnect', error)
@@ -1431,14 +1362,8 @@ class SocketService {
       if (!currentGame || currentGame.roomId !== payload.roomId) {
         if (!this.pendingRoomStateFetches.has(payload.roomId)) {
           this.pendingRoomStateFetches.add(payload.roomId)
-          const allowSpectateFetch = Boolean(
-            !viewerId ||
-              !state.room.currentRoom?.players?.some((player) => player.userId === viewerId),
-          )
           void (
-            store.dispatch(
-              fetchGameState({ roomId: payload.roomId, allowSpectate: allowSpectateFetch }),
-            ) as Promise<unknown>
+            store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>
           )
             .catch(() => {
               /* swallow fetch errors - fallback is manual refresh */
@@ -1462,32 +1387,17 @@ class SocketService {
 
         if (!this.pendingRoomStateFetches.has(payload.roomId)) {
           this.pendingRoomStateFetches.add(payload.roomId)
-          const allowSpectateFetch = Boolean(
-            !viewerId ||
-              !state.room.currentRoom?.players?.some((player) => player.userId === viewerId),
-          )
 
-          // Show user-facing indicator that we're resyncing
-          toast('Syncing game state...', {
-            icon: '🔄',
-            duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
-          })
-
-          void (
-            store.dispatch(
-              fetchGameState({ roomId: payload.roomId, allowSpectate: allowSpectateFetch }),
-            ) as Promise<unknown>
-          )
+          // ResyncBanner shows user-facing sync status
+          void (store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>)
             .then(() => {
               logger.info('Desync recovery successful')
-              toast.success('Game state synchronized', {
-                duration: GAME_STATE_SYNC_TOAST_DURATION_MS,
-              })
+              // ResyncBanner will hide automatically when desync flag clears
               reliabilityMetrics.recordDesyncRecovery()
             })
             .catch((error) => {
               logger.error('Desync recovery failed', error)
-              toast.error('Failed to sync game state. Please refresh the page.')
+              // ResyncBanner stays visible with error, no toast needed
             })
             .finally(() => {
               this.pendingRoomStateFetches.delete(payload.roomId)
