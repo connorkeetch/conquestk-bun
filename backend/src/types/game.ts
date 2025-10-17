@@ -257,8 +257,6 @@ export interface GameConfiguration {
   kingOfTheHill?: KingOfTheHillConfig
 }
 
-export type ContinentBonus = SectorBonus
-
 export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
 
 export type ModifierDistribution = 'none' | 'sparse' | 'balanced' | 'abundant' | 'custom'

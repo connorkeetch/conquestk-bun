@@ -178,7 +178,7 @@
 
 ### Zombie behavior
 - Zombies take their own turn after all human players.
-- At start, each neutral territory gains `zombieArmies` (config: base 3 + continent modifier).
+- At start, each neutral territory gains `zombieArmies` (config: base 3 + sector modifier).
 - **Infection attack**: For each zombie territory with ≥5 armies, AI selects adjacent human territory prioritizing weakest defense. Attack resolves like normal combat, but defeated defending armies become zombies (conversion rate 50% of surviving attackers rounded down).
 - **Spread mechanic**: At end of zombie turn, each zombie territory with ≥10 armies spawns 1 zombie army on each adjacent neutral/zombie territory (capped to prevent runaway growth).
 

@@ -266,7 +266,11 @@ export class GameActionWorker {
 
       // Validate this job still applies
       if (state.phase === 'finished') {
-        logger.info('AI turn processing skipped: Game is finished', { gameId, playerId, turnNumber })
+        logger.info('AI turn processing skipped: Game is finished', {
+          gameId,
+          playerId,
+          turnNumber,
+        })
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
@@ -287,7 +291,11 @@ export class GameActionWorker {
 
       const current = state.players.find((p) => p.id === playerId)
       if (!current || !current.isAi) {
-        logger.info('AI turn processing skipped: Player is not an AI', { gameId, playerId, turnNumber })
+        logger.info('AI turn processing skipped: Player is not an AI', {
+          gameId,
+          playerId,
+          turnNumber,
+        })
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result

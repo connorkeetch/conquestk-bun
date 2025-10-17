@@ -30,7 +30,7 @@
     "src/components/game/GameStartModal.tsx",
     "src/components/game/YourTurnModal.tsx",
     "src/components/game/PausedBanner.tsx",
-    "src/components/game/ContinentControlPanel.tsx",
+    "src/components/game/SectorControlPanel.tsx",
     "src/components/game/AssassinationContract.tsx",
     "src/components/game/ConquestTransferPopup.tsx",
     "src/components/game/KingOfTheHillPanel.tsx",

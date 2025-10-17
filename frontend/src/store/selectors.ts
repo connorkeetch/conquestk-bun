@@ -149,12 +149,11 @@ export const selectPlayerStats = createSelector([selectGameState], (gameState) =
   })
 })
 
-// Memoized continent control calculation
-export const selectContinentControl = createSelector([selectGameState], (gameState) => {
+// Memoized sector control calculation
+export const selectSectorControl = createSelector([selectGameState], (gameState) => {
   if (!gameState) return []
 
-  // Resolve sector/continent definitions from config (supports sectorBonuses or continentBonuses)
-  const continentDefs = ((): Array<{
+  const sectorDefs = ((): Array<{
     id: string
     name: string
     territories: string[]
@@ -173,21 +172,21 @@ export const selectContinentControl = createSelector([selectGameState], (gameSta
     return cfg?.sectorBonuses ?? []
   })()
 
-  if (!continentDefs.length) return []
+  if (!sectorDefs.length) return []
 
   const board = gameState.board
 
-  return continentDefs.map((continent) => {
-    const continentTerritories = board.filter((t) => continent.territories.includes(t.id))
-    const owners = new Set(continentTerritories.map((t) => t.ownerId).filter(Boolean) as string[])
+  return sectorDefs.map((sector) => {
+    const sectorTerritories = board.filter((t) => sector.territories.includes(t.id))
+    const owners = new Set(sectorTerritories.map((t) => t.ownerId).filter(Boolean) as string[])
 
     return {
-      ...continent,
-      totalTerritories: continentTerritories.length,
+      ...sector,
+      totalTerritories: sectorTerritories.length,
       controlledBy: owners.size === 1 ? Array.from(owners)[0] : null,
       partialControl: Array.from(owners).map((ownerId) => ({
         ownerId,
-        count: continentTerritories.filter((t) => t.ownerId === ownerId).length,
+        count: sectorTerritories.filter((t) => t.ownerId === ownerId).length,
       })),
     }
   })

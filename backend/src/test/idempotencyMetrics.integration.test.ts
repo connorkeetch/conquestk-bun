@@ -71,7 +71,7 @@ const buildGameState = () => ({
     {
       id: 'terra',
       name: 'Terra',
-      continent: 'earth',
+      sector: 'earth',
       ownerId: 'player-1',
       armies: 5,
       adjacentTerritories: [],

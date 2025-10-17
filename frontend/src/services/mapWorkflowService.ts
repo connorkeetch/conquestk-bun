@@ -12,7 +12,7 @@ export interface MapDraftPayload {
   description?: string
   data?: Record<string, unknown>
   territories?: unknown[]
-  continents?: unknown[]
+  sectors?: unknown[]
   adjacencies?: unknown[]
   capitalAssignments?: Record<string, string[]>
   image?: DraftImagePayload | null
@@ -30,7 +30,7 @@ export interface MapDraftResponse {
   description?: string
   data: Record<string, unknown>
   territories: unknown[]
-  continents: unknown[]
+  sectors: unknown[]
   adjacencies: unknown[]
   capitalAssignments: Record<string, string[]>
   imageUrl?: string

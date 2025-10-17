@@ -48,7 +48,7 @@ const createBaseGameState = (override?: Partial<GameState>): GameState => {
     {
       id: 'territory-a',
       name: 'Territory A',
-      continent: 'america',
+      sector: 'america',
       ownerId: 'player-1',
       armies: 3,
       adjacentTerritories: ['territory-b'],
@@ -56,7 +56,7 @@ const createBaseGameState = (override?: Partial<GameState>): GameState => {
     {
       id: 'territory-b',
       name: 'Territory B',
-      continent: 'america',
+      sector: 'america',
       ownerId: 'player-2',
       armies: 2,
       adjacentTerritories: ['territory-a'],
@@ -127,7 +127,7 @@ describe('GameEngine', () => {
     )
   })
 
-  it('includes continent metadata when calculating reinforcement armies', () => {
+  it('includes sector metadata when calculating reinforcement armies', () => {
     const reinforcementState: GameState = {
       roomId: 'room-reinforcement',
       players: [
@@ -157,7 +157,7 @@ describe('GameEngine', () => {
         {
           id: 'territory-a',
           name: 'Territory A',
-          continent: 'continent-alpha',
+          sector: 'sector-alpha',
           ownerId: 'player-alpha',
           armies: 5,
           adjacentTerritories: ['territory-b'],
@@ -165,7 +165,7 @@ describe('GameEngine', () => {
         {
           id: 'territory-b',
           name: 'Territory B',
-          continent: 'continent-alpha',
+          sector: 'sector-alpha',
           ownerId: 'player-alpha',
           armies: 2,
           adjacentTerritories: ['territory-a', 'territory-c'],
@@ -173,7 +173,7 @@ describe('GameEngine', () => {
         {
           id: 'territory-c',
           name: 'Territory C',
-          continent: 'continent-beta',
+          sector: 'sector-beta',
           ownerId: 'player-beta',
           armies: 3,
           adjacentTerritories: ['territory-b'],
@@ -188,14 +188,14 @@ describe('GameEngine', () => {
         gameMode: 'standard',
         sectorBonuses: [
           {
-            id: 'continent-alpha',
-            name: 'Continent Alpha',
+            id: 'sector-alpha',
+            name: 'Sector Alpha',
             bonusArmies: 4,
             territories: ['territory-a', 'territory-b'],
           },
           {
-            id: 'continent-beta',
-            name: 'Continent Beta',
+            id: 'sector-beta',
+            name: 'Sector Beta',
             bonusArmies: 2,
             territories: ['territory-c'],
           },
@@ -208,7 +208,7 @@ describe('GameEngine', () => {
       'player-alpha',
     )
 
-    // Owns two territories -> base 3 armies + 4 continent bonus
+    // Owns two territories -> base 3 armies + 4 sector bonus
     expect(reinforcementArmies).toBe(7)
   })
 
@@ -244,7 +244,7 @@ describe('GameEngine', () => {
         {
           id: 'territory-a',
           name: 'Territory A',
-          continent: 'continent-alpha',
+          sector: 'sector-alpha',
           ownerId: 'player-1',
           armies: 5,
           adjacentTerritories: ['territory-b'],
@@ -252,7 +252,7 @@ describe('GameEngine', () => {
         {
           id: 'territory-b',
           name: 'Territory B',
-          continent: 'continent-alpha',
+          sector: 'sector-alpha',
           ownerId: 'player-2',
           armies: 2,
           adjacentTerritories: ['territory-a'],
@@ -538,7 +538,7 @@ describe('GameService capital helpers', () => {
         {
           id: 'territory-capital',
           name: 'Capital Territory',
-          continent: 'continent-alpha',
+          sector: 'sector-alpha',
           ownerId: 'player-1',
           armies: 6,
           adjacentTerritories: ['territory-regular'],
@@ -548,7 +548,7 @@ describe('GameService capital helpers', () => {
         {
           id: 'territory-regular',
           name: 'Regular Territory',
-          continent: 'continent-beta',
+          sector: 'sector-beta',
           ownerId: 'player-2',
           armies: 4,
           adjacentTerritories: ['territory-capital'],

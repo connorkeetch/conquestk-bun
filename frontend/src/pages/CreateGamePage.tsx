@@ -22,7 +22,8 @@ interface GameMap {
   name: string
   description: string
   territory_count: number
-  continent_count: number
+  sector_count: number
+  continent_count?: number
   min_players: number
   max_players: number
   is_featured?: boolean
@@ -57,6 +58,7 @@ const RANDOM_MAP_OPTION: GameMap = {
   name: 'Random Map',
   description: 'Randomly selected when game starts',
   territory_count: 0,
+  sector_count: 0,
   continent_count: 0,
   min_players: 2,
   max_players: 12,
@@ -1887,9 +1889,18 @@ const CreateGamePage: React.FC = () => {
                               <div>
                                 <dt className="text-muted">Sectors</dt>
                                 <dd className="text-[color:var(--heading)]">
-                                  {(selectedMapData as unknown as { sector_count?: number })
-                                    .sector_count ||
-                                    selectedMapData.continent_count ||
+                                  {(
+                                    selectedMapData as unknown as {
+                                      sector_count?: number
+                                      continent_count?: number
+                                    }
+                                  ).sector_count ||
+                                    (
+                                      selectedMapData as unknown as {
+                                        continent_count?: number
+                                      }
+                                    ).continent_count ||
+                                    selectedMapData.sector_count ||
                                     'Unknown'}
                                 </dd>
                               </div>

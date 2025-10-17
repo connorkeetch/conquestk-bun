@@ -45,7 +45,7 @@ Performance-oriented changes landed alongside AI work:
 
 - Grandmaster EV + chaining (budget‑aware)
   - Grandmaster selects attacks using a time‑boxed Monte Carlo EV estimate (win prob + expected losses + capture/sector/capital value) and re‑plans to chain multiple attacks within remaining budget up to `maxAttackChains`.
-  - Commander received continent‑pressure reinforcement and simple card‑timing logic.
+  - Commander received sector‑pressure reinforcement and simple card‑timing logic.
 
 What to verify locally
 - Observe deltas instead of full snapshots during AI turns and treasure cash‑ins.
@@ -78,14 +78,14 @@ What to verify locally
 **Component Memoization** (5 heavy components optimized)
 - [x] [PlayersPanel.tsx](frontend/src/components/game/PlayersPanel.tsx) - Memoized territory/army calculations with custom comparison
 - [x] [PlayerStatsTable.tsx](frontend/src/components/game/PlayerStatsTable.tsx) - Memoized stats computation with useCallback handlers
-- [x] [ContinentControlPanel.tsx](frontend/src/components/game/ContinentControlPanel.tsx) - Memoized player lookup map and partial control rendering
+- [x] [SectorControlPanel.tsx](frontend/src/components/game/SectorControlPanel.tsx) - Memoized player lookup map and partial control rendering
 - [x] [TerritoryInfoPanel.tsx](frontend/src/components/game/TerritoryInfoPanel.tsx) - Memoized territory data lookup to prevent hover spam
 - [x] Turn summary chip in [GameRoom.tsx](frontend/src/pages/GameRoom.tsx#L1100) - Memoized derived state keeps phase updates lightweight
 
 **Memoized Redux Selectors** ([frontend/src/store/selectors.ts](frontend/src/store/selectors.ts))
 - [x] `selectValidTargets` - Cached BFS pathfinding for fortify movement (was recalculated every selection)
 - [x] `selectPlayerStats` - Territory/army aggregation per player
-- [x] `selectContinentControl` - Continent ownership calculations
+- [x] `selectSectorControl` - Sector ownership calculations
 - [x] `selectAvailableActions` - Phase-based action availability
 
 **Socket Latency Monitoring** ([backend/src/services/socketService.ts](backend/src/services/socketService.ts))

@@ -111,7 +111,7 @@ describe('Map permission enforcement', () => {
       .send({
         territoryId: 'territory-1',
         name: 'Forbidden Territory',
-        continentId: null,
+        sectorId: null,
         boundaryCoords: [
           { x: 0, y: 0 },
           { x: 5, y: 0 },

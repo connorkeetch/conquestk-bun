@@ -5,7 +5,6 @@ import territoryModifierService, {
 import type {
   AttackAction,
   BattleResult,
-  ContinentBonus,
   DeployAction,
   FortifyAction,
   GameAction,
@@ -16,6 +15,7 @@ import type {
   KingOfTheHillState,
   Metal,
   ProcessActionResult,
+  SectorBonus,
   Territory,
   TradeCardsAction,
   TreasureConfig,
@@ -114,7 +114,7 @@ export class GameEngine {
       skillRating?: number | null
     }>,
     gameConfig: GameConfiguration,
-    mapOverrides: { territories: Territory[]; continentBonuses: ContinentBonus[] },
+    mapOverrides: { territories: Territory[]; sectorBonuses: SectorBonus[] },
   ): GameState {
     if (!mapOverrides || !Array.isArray(mapOverrides.territories)) {
       throw new Error('Map data not provided to GameEngine')
@@ -124,8 +124,7 @@ export class GameEngine {
     const territories = baseTerritories.map((t) => ({
       id: t.id,
       name: t.name,
-      // Prefer sector; fall back to legacy continent name if present
-      sector: (t.sector || 'unknown') as string,
+      sector: t.sector,
       ownerId: null,
       armies: 0,
       adjacentTerritories: [...t.adjacentTerritories],
@@ -160,7 +159,7 @@ export class GameEngine {
       sectorBonuses:
         gameConfig.sectorBonuses && gameConfig.sectorBonuses.length > 0
           ? gameConfig.sectorBonuses
-          : mapOverrides.continentBonuses,
+          : mapOverrides.sectorBonuses,
     }
 
     if (kingConfig) {
@@ -1023,7 +1022,7 @@ export class GameEngine {
     // Base armies: 3 minimum, or territories/3 (rounded down)
     let armies = Math.max(3, Math.floor(territoryCount / 3))
 
-    // Add sector (formerly continent) bonuses
+    // Add sector bonuses
     armies += this.calculateSectorBonuses(playerTerritories, allTerritories, gameConfig)
 
     return armies
@@ -1050,7 +1049,7 @@ export class GameEngine {
         }
       }
     } else {
-      // Fallback to classic Risk sector (continent) bonuses
+      // Fallback to classic Risk sector bonuses
       const classicSectorBonuses: { [sector: string]: number } = {
         'north-america': 5,
         'south-america': 2,

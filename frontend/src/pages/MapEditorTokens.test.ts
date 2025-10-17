@@ -10,7 +10,7 @@ interface Territory {
   normalizedY?: number
   connections: string[]
   armies: number
-  continentId: string | null
+  sectorId: string | null
 }
 
 /**
@@ -72,8 +72,8 @@ describe('MapEditorTokens utility functions', () => {
 
     it('should detect overlapping territories', () => {
       const territories: Territory[] = [
-        { id: '1', name: 'A', x: 100, y: 100, connections: [], armies: 1, continentId: null },
-        { id: '2', name: 'B', x: 115, y: 100, connections: [], armies: 1, continentId: null },
+        { id: '1', name: 'A', x: 100, y: 100, connections: [], armies: 1, sectorId: null },
+        { id: '2', name: 'B', x: 115, y: 100, connections: [], armies: 1, sectorId: null },
       ]
 
       const tokenSize = 20
@@ -89,8 +89,8 @@ describe('MapEditorTokens utility functions', () => {
 
     it('should not detect overlap for well-spaced territories', () => {
       const territories: Territory[] = [
-        { id: '1', name: 'A', x: 100, y: 100, connections: [], armies: 1, continentId: null },
-        { id: '2', name: 'B', x: 150, y: 150, connections: [], armies: 1, continentId: null },
+        { id: '1', name: 'A', x: 100, y: 100, connections: [], armies: 1, sectorId: null },
+        { id: '2', name: 'B', x: 150, y: 150, connections: [], armies: 1, sectorId: null },
       ]
 
       const tokenSize = 20
@@ -108,8 +108,8 @@ describe('MapEditorTokens utility functions', () => {
   describe('territory connection cleanup', () => {
     it('should remove deleted territory from connections', () => {
       const territories: Territory[] = [
-        { id: '1', name: 'A', x: 0, y: 0, connections: ['2', '3'], armies: 1, continentId: null },
-        { id: '2', name: 'B', x: 50, y: 50, connections: ['1', '3'], armies: 1, continentId: null },
+        { id: '1', name: 'A', x: 0, y: 0, connections: ['2', '3'], armies: 1, sectorId: null },
+        { id: '2', name: 'B', x: 50, y: 50, connections: ['1', '3'], armies: 1, sectorId: null },
         {
           id: '3',
           name: 'C',
@@ -117,7 +117,7 @@ describe('MapEditorTokens utility functions', () => {
           y: 100,
           connections: ['1', '2'],
           armies: 1,
-          continentId: null,
+          sectorId: null,
         },
       ]
 

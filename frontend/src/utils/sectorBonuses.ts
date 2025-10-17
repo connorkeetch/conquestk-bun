@@ -1,6 +1,6 @@
 import type { GamePlayer, Territory } from '../types/game'
 
-export interface ContinentBonusInput {
+export interface SectorBonusInput {
   id: string
   name: string
   territories: string[]
@@ -8,13 +8,13 @@ export interface ContinentBonusInput {
   color?: string
 }
 
-export interface ContinentDefinition extends ContinentBonusInput {
+export interface SectorDefinition extends SectorBonusInput {
   color: string
 }
 
 const FALLBACK_COLORS = ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336', '#FFEB3B']
 
-const DEFAULT_CONTINENT_DEFINITIONS: ContinentDefinition[] = [
+const DEFAULT_SECTOR_DEFINITIONS: SectorDefinition[] = [
   {
     id: 'north_america',
     name: 'North America',
@@ -90,28 +90,28 @@ const DEFAULT_CONTINENT_DEFINITIONS: ContinentDefinition[] = [
   },
 ]
 
-export interface ContinentControl {
-  continent: ContinentDefinition
+export interface SectorControl {
+  sector: SectorDefinition
   controlled: boolean
   controlledTerritories: number
   totalTerritories: number
   missingTerritories: string[]
 }
 
-export interface PlayerContinentStatus {
+export interface PlayerSectorStatus {
   playerId: string
-  controlledContinents: ContinentControl[]
+  controlledSectors: SectorControl[]
   totalBonusArmies: number
 }
 
-export const resolveContinentDefinitions = (
-  continentBonuses?: ContinentBonusInput[] | null,
-): ContinentDefinition[] => {
-  if (!continentBonuses || continentBonuses.length === 0) {
-    return DEFAULT_CONTINENT_DEFINITIONS
+export const resolveSectorDefinitions = (
+  sectorBonuses?: SectorBonusInput[] | null,
+): SectorDefinition[] => {
+  if (!sectorBonuses || sectorBonuses.length === 0) {
+    return DEFAULT_SECTOR_DEFINITIONS
   }
 
-  return continentBonuses.map((bonus, index) => ({
+  return sectorBonuses.map((bonus, index) => ({
     id: bonus.id,
     name: bonus.name,
     territories: [...bonus.territories],
@@ -120,83 +120,79 @@ export const resolveContinentDefinitions = (
   }))
 }
 
-export function calculatePlayerContinentStatus(
+export function calculatePlayerSectorStatus(
   playerId: string,
   board: Territory[],
-  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
-): PlayerContinentStatus {
+  sectorDefinitions: SectorDefinition[] = DEFAULT_SECTOR_DEFINITIONS,
+): PlayerSectorStatus {
   const playerTerritories = new Set(
     board.filter((territory) => territory.ownerId === playerId).map((territory) => territory.id),
   )
 
-  const controlledContinents: ContinentControl[] = continentDefinitions.map((continent) => {
-    const controlledTerritories = continent.territories.filter((territoryId) =>
+  const controlledSectors: SectorControl[] = sectorDefinitions.map((sector) => {
+    const controlledTerritories = sector.territories.filter((territoryId) =>
       playerTerritories.has(territoryId),
     )
 
-    const controlled = controlledTerritories.length === continent.territories.length
-    const missingTerritories = continent.territories.filter(
+    const controlled = controlledTerritories.length === sector.territories.length
+    const missingTerritories = sector.territories.filter(
       (territoryId) => !playerTerritories.has(territoryId),
     )
 
     return {
-      continent,
+      sector,
       controlled,
       controlledTerritories: controlledTerritories.length,
-      totalTerritories: continent.territories.length,
+      totalTerritories: sector.territories.length,
       missingTerritories,
     }
   })
 
-  const totalBonusArmies = controlledContinents
-    .filter((continentControl) => continentControl.controlled)
-    .reduce((sum, continentControl) => sum + continentControl.continent.bonusArmies, 0)
+  const totalBonusArmies = controlledSectors
+    .filter((sectorControl) => sectorControl.controlled)
+    .reduce((sum, sectorControl) => sum + sectorControl.sector.bonusArmies, 0)
 
   return {
     playerId,
-    controlledContinents,
+    controlledSectors,
     totalBonusArmies,
   }
 }
 
-export function calculateAllPlayersContinentStatus(
+export function calculateAllPlayersSectorStatus(
   players: GamePlayer[],
   board: Territory[],
-  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
-): PlayerContinentStatus[] {
-  return players.map((player) =>
-    calculatePlayerContinentStatus(player.id, board, continentDefinitions),
-  )
+  sectorDefinitions: SectorDefinition[] = DEFAULT_SECTOR_DEFINITIONS,
+): PlayerSectorStatus[] {
+  return players.map((player) => calculatePlayerSectorStatus(player.id, board, sectorDefinitions))
 }
 
-export function getContinentBonusArmies(
+export function getSectorBonusArmies(
   playerId: string,
   board: Territory[],
-  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
+  sectorDefinitions: SectorDefinition[] = DEFAULT_SECTOR_DEFINITIONS,
 ): number {
-  return calculatePlayerContinentStatus(playerId, board, continentDefinitions).totalBonusArmies
+  return calculatePlayerSectorStatus(playerId, board, sectorDefinitions).totalBonusArmies
 }
 
-export function getContinentControlSummary(
+export function getSectorControlSummary(
   playerId: string,
   board: Territory[],
-  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
+  sectorDefinitions: SectorDefinition[] = DEFAULT_SECTOR_DEFINITIONS,
 ): string {
-  const status = calculatePlayerContinentStatus(playerId, board, continentDefinitions)
-  const controlled = status.controlledContinents.filter((continent) => continent.controlled)
+  const status = calculatePlayerSectorStatus(playerId, board, sectorDefinitions)
+  const controlled = status.controlledSectors.filter((sector) => sector.controlled)
 
   if (controlled.length === 0) {
-    return 'No continents controlled'
+    return 'No sectors controlled'
   }
 
-  return controlled.map((continent) => continent.continent.name).join(', ')
+  return controlled.map((sector) => sector.sector.name).join(', ')
 }
 
-export function getTerritoryContinent(
+export function getTerritorySector(
   territoryId: string,
-  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
-): ContinentDefinition | null {
-  return (
-    continentDefinitions.find((continent) => continent.territories.includes(territoryId)) ?? null
-  )
+  sectorDefinitions: SectorDefinition[] = DEFAULT_SECTOR_DEFINITIONS,
+): SectorDefinition | null {
+  return sectorDefinitions.find((sector) => sector.territories.includes(territoryId)) ?? null
 }

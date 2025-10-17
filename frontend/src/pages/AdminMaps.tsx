@@ -52,7 +52,7 @@ interface Map {
   territoryCount?: number
   sectorCount?: number
   // Backward compat
-  continentCount?: number
+  legacyContinentCount?: number
 }
 
 interface RawTerritoryRecord {
@@ -467,15 +467,15 @@ export const AdminMaps: React.FC = () => {
             const groups = record as {
               sectorId?: string
               sector?: string
-              continent?: string
+              sector?: string
             }
             const sectorValue =
               typeof groups.sectorId === 'string'
                 ? groups.sectorId
                 : typeof groups.sector === 'string'
                   ? groups.sector
-                  : typeof groups.continent === 'string'
-                    ? groups.continent
+                  : typeof groups.sector === 'string'
+                    ? groups.sector
                     : undefined
 
             if (typeof idValue !== 'string') {
@@ -751,7 +751,7 @@ export const AdminMaps: React.FC = () => {
           isCapital: isCapitalTerritory(territory),
           sector:
             (territory as unknown as { sector?: string }).sector ??
-            (territory as unknown as { continent?: string }).continent ??
+            (territory as unknown as { sector?: string }).sector ??
             null,
         }
       })
@@ -1071,8 +1071,8 @@ export const AdminMaps: React.FC = () => {
                           <div className="text-sm text-muted">
                             {typeof map.sectorCount === 'number'
                               ? map.sectorCount
-                              : typeof map.continentCount === 'number'
-                                ? map.continentCount
+                              : typeof map.legacyContinentCount === 'number'
+                                ? map.legacyContinentCount
                                 : 'N/A'}
                           </div>
                         </td>
@@ -1417,11 +1417,11 @@ export const AdminMaps: React.FC = () => {
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Sectors</p>
                   <p className="mt-1 text-sm text-[color:var(--heading)]">
-                    {typeof (previewMap as unknown as { sectorCount?: number }).sectorCount ===
-                    'number'
-                      ? (previewMap as unknown as { sectorCount?: number }).sectorCount
-                      : typeof previewMap.continentCount === 'number'
-                        ? previewMap.continentCount
+                    {typeof previewMap.sectorCount === 'number'
+                      ? previewMap.sectorCount
+                      : typeof (previewMap as { legacyContinentCount?: number })
+                            .legacyContinentCount === 'number'
+                        ? (previewMap as { legacyContinentCount?: number }).legacyContinentCount
                         : 'N/A'}
                   </p>
                 </div>

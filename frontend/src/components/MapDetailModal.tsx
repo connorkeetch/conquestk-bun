@@ -85,11 +85,11 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       return []
     }
 
-    return mapData.sectors.map((continent) => ({
-      id: continent.id,
-      name: continent.name,
-      bonusArmies: continent.bonusArmies,
-      color: continent.color || defaultTokenColor,
+    return mapData.sectors.map((sector) => ({
+      id: sector.id,
+      name: sector.name,
+      bonusArmies: sector.bonusArmies,
+      color: sector.color || defaultTokenColor,
     }))
   }, [mapData])
 

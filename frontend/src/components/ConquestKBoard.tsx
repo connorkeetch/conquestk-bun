@@ -50,9 +50,7 @@ export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
   const validTargets = useSelector((state: RootState) => state.game.validTargets)
   const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
   const viewerId = useSelector((state: RootState) => state.auth.user?.id ?? null)
-  const optimisticMarkers = useSelector(
-    (state: RootState) => state.uiRoom.optimisticMarkers ?? {},
-  )
+  const optimisticMarkers = useSelector((state: RootState) => state.uiRoom.optimisticMarkers ?? {})
 
   const [_hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
   const [lobbyMapData, setLobbyMapData] = useState<FullMapData | null>(null)

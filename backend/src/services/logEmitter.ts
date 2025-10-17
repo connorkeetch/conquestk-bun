@@ -160,8 +160,8 @@ export function renderLogText(move: DbMove, fog: FogView): string {
       )}.`
 
     case 'bonus':
-      return (p.continent as string | undefined)
-        ? `${actor} ${V.bonus[0]} ${p.bonus} troops for holding ${p.continent}.`
+      return (p.sector as string | undefined)
+        ? `${actor} ${V.bonus[0]} ${p.bonus} troops for holding ${p.sector}.`
         : `${actor} ${V.bonus[0]} ${p.bonus} troops for ${(p.reason as string | undefined) ?? 'territories'}.`
 
     case 'trade_cards':
@@ -500,7 +500,7 @@ export async function emitFogAwareForEntries(
           phase,
           move_type: 'bonus',
           actor_id: pid,
-          payload: { actorName: nameOfPlayer(pid), bonus, continent: sectorName },
+          payload: { actorName: nameOfPlayer(pid), bonus, sector: sectorName },
           created_at,
         })
         continue
@@ -928,7 +928,7 @@ export async function persistFogAwareForEntries(
           phase,
           move_type: 'bonus',
           actor_id: pid || null,
-          payload: { actorName: nameOfPlayer(pid), bonus, continent: sectorName },
+          payload: { actorName: nameOfPlayer(pid), bonus, sector: sectorName },
         })
         continue
       }

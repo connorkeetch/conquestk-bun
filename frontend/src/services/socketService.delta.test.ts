@@ -77,16 +77,20 @@ describe('socketService delta + events handling', () => {
         /* noop */
       },
     }
+    // Clear per-room suppression timers between tests
+    const turnStartMap = (socketService as unknown as { lastTurnStartByRoom?: Map<string, number> })
+      .lastTurnStartByRoom
+    turnStartMap?.clear?.()
     // biome-ignore lint/suspicious/noExplicitAny: test-only access to private method
     ;(socketService as any).setupEventListeners()
   })
 
-  it('triggers turn reminder and audio on PHASE_CHANGE to current user and updates state', () => {
+  it('triggers turn reminder and audio on PHASE_CHANGE to current user and updates state', async () => {
     const handler = handlers['game-delta']
     expect(typeof handler).toBe('function')
 
     // Send a phase change that switches turn to u2 (current user)
-    handler({
+    await handler({
       type: 'PHASE_CHANGE',
       roomId: 'g1',
       phase: 'reinforcement',
@@ -109,13 +113,13 @@ describe('socketService delta + events handling', () => {
     expect(state.game.reinforcementArmies).toBe(5)
   })
 
-  it('emits rank_update notification on ratingUpdate when rank changes (promotion)', () => {
+  it('emits rank_update notification on ratingUpdate when rank changes (promotion)', async () => {
     const handler = handlers.ratingUpdate
     expect(typeof handler).toBe('function')
 
     const addSpy = vi.spyOn(notificationService, 'addNotification')
 
-    handler({
+    await handler({
       changes: [
         { userId: 'u2', oldRating: 1199, newRating: 1200, change: 1 }, // Sultan -> Caesar
       ],
@@ -129,14 +133,14 @@ describe('socketService delta + events handling', () => {
     expect(meta.newRank).toBe('Caesar')
   })
 
-  it('does not emit rank_update when rating changes within same rank', () => {
+  it('does not emit rank_update when rating changes within same rank', async () => {
     const handler = handlers.ratingUpdate
     expect(typeof handler).toBe('function')
 
     const addSpy = vi.spyOn(notificationService, 'addNotification')
     addSpy.mockClear()
 
-    handler({
+    await handler({
       changes: [
         { userId: 'u2', oldRating: 1210, newRating: 1215, change: 5 }, // Caesar -> Caesar
       ],

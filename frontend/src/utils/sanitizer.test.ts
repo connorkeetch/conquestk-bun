@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { sanitizeMapData } from './sanitizer'
 
 describe('sanitizeMapData', () => {
-  it('sanitizes territory continent fields without leaving HTML behind', () => {
+  it('sanitizes territory sector fields and drops legacy continent data', () => {
     const sanitized = sanitizeMapData({
       territories: [
         {
@@ -17,10 +17,10 @@ describe('sanitizeMapData', () => {
     const territory = sanitized?.territories?.[0]
     expect(territory?.name).toBe('')
     expect(territory?.sector).toBe('')
-    expect(territory?.continent).toBe('Northlands')
+    expect(territory && 'continent' in territory).toBe(false)
   })
 
-  it('falls back to continent value when sector is missing', () => {
+  it('ignores legacy continent values when sector is missing', () => {
     const sanitized = sanitizeMapData({
       territories: [
         {
@@ -30,7 +30,7 @@ describe('sanitizeMapData', () => {
     })
 
     const territory = sanitized?.territories?.[0]
-    expect(territory?.sector).toBe('Asia')
-    expect(territory?.continent).toBe('Asia')
+    expect(territory?.sector).toBe('')
+    expect(territory && 'continent' in territory).toBe(false)
   })
 })

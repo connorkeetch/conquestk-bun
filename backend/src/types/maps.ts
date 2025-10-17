@@ -182,8 +182,6 @@ export interface EnhancedTerritory {
   id: string
   name: string
   sector: string
-  /** @deprecated use `sector` */
-  continent?: string
   ownerId: string | null
   armies: number
   adjacentTerritories: string[]
@@ -290,13 +288,6 @@ export interface MetadataTerritoryInput {
   armyPosition?: Coordinate
   armyPositionNormalized?: Coordinate
   connections?: string[]
-}
-
-export interface MetadataContinentInput {
-  id?: string
-  name?: string
-  bonus?: number
-  color?: string
 }
 
 export interface MetadataSectorInput {

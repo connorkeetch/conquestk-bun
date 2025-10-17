@@ -92,7 +92,7 @@ describe('GameActionWorker', () => {
       {
         id: 'north',
         name: 'North',
-        continent: 'earth',
+        sector: 'earth',
         ownerId: 'player-1',
         armies: 5,
         adjacentTerritories: ['south'],
@@ -100,7 +100,7 @@ describe('GameActionWorker', () => {
       {
         id: 'south',
         name: 'South',
-        continent: 'earth',
+        sector: 'earth',
         ownerId: 'player-2',
         armies: 3,
         adjacentTerritories: ['north'],

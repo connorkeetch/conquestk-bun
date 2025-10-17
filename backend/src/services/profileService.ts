@@ -640,7 +640,7 @@ export class ProfileService {
       territoriesConquered: 0,
       battlesWon: 0,
       battlesLost: 0,
-      continentsControlled: 0,
+      sectorsControlled: 0,
       averageGameLength: 0,
       longestGame: 0,
       shortestGame: 0,

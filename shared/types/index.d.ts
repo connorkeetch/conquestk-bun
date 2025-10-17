@@ -221,7 +221,6 @@ export interface GameConfiguration {
   mapId?: string
   gameMode?: string
   sectorBonuses?: SectorBonus[]
-  continentBonuses?: SectorBonus[]
   useTerritoryModifiers?: boolean
   modifierDistribution?: ModifierDistribution
   turnTimer?: number
@@ -241,7 +240,6 @@ export interface SectorBonus {
   bonusArmies: number
   territories: string[]
 }
-export type ContinentBonus = SectorBonus
 export type ModifierDistribution = 'none' | 'sparse' | 'balanced' | 'abundant' | 'custom'
 export type GameSettings = GameConfiguration
 export type GameAction =

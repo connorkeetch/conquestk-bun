@@ -70,7 +70,8 @@ type AdminMapRow = {
   is_public: boolean | null
   is_vip_only: boolean | null
   territoryCount: string | number | null
-  continentCount: string | number | null
+  sectorCount: string | number | null
+  legacyContinentCount?: string | number | null
 }
 
 type ActiveGameSummaryRow = {
@@ -1990,7 +1991,7 @@ router.get(
           COALESCE(AVG(mr.rating), 0) as "ratingAverage",
           COUNT(DISTINCT mr.id) as "ratingCount",
           (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as "territoryCount",
-          (SELECT COUNT(DISTINCT sector) FROM map_territories WHERE map_id = m.id AND sector IS NOT NULL) as "continentCount"
+          (SELECT COUNT(DISTINCT sector) FROM map_territories WHERE map_id = m.id AND sector IS NOT NULL) as "sectorCount"
         FROM maps m
         LEFT JOIN users u ON m.creator_id = u.id
         LEFT JOIN game_rooms gr ON gr.map_id = m.id
@@ -2056,24 +2057,30 @@ router.get(
       const maps = (mapsResult.rows as AdminMapRow[]).map((map) => {
         const imageUrl = resolveAssetUrl(req, map.image_url)
 
+        const { legacyContinentCount, ...rest } = map
+        const resolvedSectorCount =
+          rest.sectorCount !== null && rest.sectorCount !== undefined
+            ? rest.sectorCount
+            : legacyContinentCount
+
         return {
-          ...map,
+          ...rest,
           image_url: imageUrl,
           imageUrl,
-          playCount: parseInt(String(map.playCount ?? '0'), 10),
-          ratingAverage: Number.parseFloat(String(map.ratingAverage ?? '0')),
-          ratingCount: parseInt(String(map.ratingCount ?? '0'), 10),
-          territoryCount: parseInt(String(map.territoryCount ?? '0'), 10),
-          continentCount: parseInt(String(map.continentCount ?? '0'), 10),
+          playCount: parseInt(String(rest.playCount ?? '0'), 10),
+          ratingAverage: Number.parseFloat(String(rest.ratingAverage ?? '0')),
+          ratingCount: parseInt(String(rest.ratingCount ?? '0'), 10),
+          territoryCount: parseInt(String(rest.territoryCount ?? '0'), 10),
+          sectorCount: parseInt(String(resolvedSectorCount ?? '0'), 10),
           // Map snake_case to camelCase for dates
-          createdAt: map.created_at,
-          updatedAt: map.updated_at,
-          creatorId: map.creator_id,
-          minPlayers: map.min_players,
-          maxPlayers: map.max_players,
-          isPublic: map.is_public,
-          isFeatured: map.is_featured,
-          isVipOnly: map.is_vip_only || false,
+          createdAt: rest.created_at,
+          updatedAt: rest.updated_at,
+          creatorId: rest.creator_id,
+          minPlayers: rest.min_players,
+          maxPlayers: rest.max_players,
+          isPublic: rest.is_public,
+          isFeatured: rest.is_featured,
+          isVipOnly: rest.is_vip_only || false,
         }
       })
 
@@ -2297,7 +2304,7 @@ router.post(
               territory.polygon,
               territory.center_x,
               territory.center_y,
-              territory.sector ?? territory.continent,
+              territory.sector,
               territory.army_position,
               territory.metadata,
             ],

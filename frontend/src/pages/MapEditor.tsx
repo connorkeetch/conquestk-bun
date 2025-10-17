@@ -19,7 +19,7 @@ import {
 } from '../services/mapService'
 import { type TermsCheckResponse, termsService } from '../services/termsService'
 
-type EditorTool = 'select' | 'territory' | 'continent' | 'adjacency'
+type EditorTool = 'select' | 'territory' | 'sector' | 'adjacency'
 
 interface EditorState {
   selectedTool: EditorTool
@@ -272,11 +272,11 @@ export default function MapEditor() {
     (ctx: CanvasRenderingContext2D) => {
       // Draw territories
       state.territories.forEach((territory) => {
-        const continent = state.sectors.find((c) => c.id === territory.sectorId)
+        const sector = state.sectors.find((c) => c.id === territory.sectorId)
         const isSelected = state.selectedTerritory === territory.id
 
         // Use higher opacity for better visibility
-        ctx.fillStyle = continent ? `${continent.color}B3` : '#6B7280B3' // 70% opacity
+        ctx.fillStyle = sector ? `${sector.color}B3` : '#6B7280B3' // 70% opacity
         ctx.strokeStyle = isSelected ? '#FFD700' : '#FFFFFF' // White borders for better contrast
         ctx.lineWidth = isSelected ? 4 : 2
 
@@ -690,13 +690,13 @@ export default function MapEditor() {
 
   const createSector = () => {
     if (!newSectorName.trim()) {
-      addNotification('Please enter a continent name', 'error')
+      addNotification('Please enter a sector name', 'error')
       return
     }
 
     // Check for duplicate names
     if (state.sectors.some((c) => c.name.toLowerCase() === newSectorName.trim().toLowerCase())) {
-      addNotification('A continent with this name already exists', 'error')
+      addNotification('A sector with this name already exists', 'error')
       return
     }
 
@@ -726,26 +726,26 @@ export default function MapEditor() {
   }
 
   const editSector = (sectorId: string) => {
-    const continent = state.sectors.find((c) => c.id === sectorId)
-    if (!continent) return
+    const sector = state.sectors.find((c) => c.id === sectorId)
+    if (!sector) return
 
-    setNewSectorName(continent.name)
-    setNewSectorBonus(continent.bonusArmies)
-    setNewSectorColor(continent.color)
+    setNewSectorName(sector.name)
+    setNewSectorBonus(sector.bonusArmies)
+    setNewSectorColor(sector.color)
     setEditingSector(sectorId)
   }
 
   const updateSector = () => {
     if (!editingSector || !newSectorName.trim()) return
 
-    // Check for duplicate names (excluding current continent)
+    // Check for duplicate names (excluding current sector)
     if (
       state.sectors.some(
         (c) =>
           c.id !== editingSector && c.name.toLowerCase() === newSectorName.trim().toLowerCase(),
       )
     ) {
-      addNotification('A continent with this name already exists', 'error')
+      addNotification('A sector with this name already exists', 'error')
       return
     }
 
@@ -780,21 +780,21 @@ export default function MapEditor() {
   }
 
   const deleteSector = (sectorId: string) => {
-    const continent = state.sectors.find((c) => c.id === sectorId)
-    if (!continent) return
+    const sector = state.sectors.find((c) => c.id === sectorId)
+    if (!sector) return
 
     const territoriesInSector = state.territories.filter((t) => t.sectorId === sectorId)
 
     if (territoriesInSector.length > 0) {
       if (
         !confirm(
-          `Sector "${continent.name}" contains ${territoriesInSector.length} territories. Are you sure you want to delete it? Territories will be moved to "No Sector".`,
+          `Sector "${sector.name}" contains ${territoriesInSector.length} territories. Are you sure you want to delete it? Territories will be moved to "No Sector".`,
         )
       ) {
         return
       }
 
-      // Remove continent assignment from territories (omit property instead of setting undefined)
+      // Remove sector assignment from territories (omit property instead of setting undefined)
       setState((prev) => ({
         ...prev,
         territories: prev.territories.map((t) => {
@@ -811,7 +811,7 @@ export default function MapEditor() {
       }))
     }
 
-    // Cancel editing if this continent was being edited
+    // Cancel editing if this sector was being edited
     if (editingSector === sectorId) {
       cancelEditSector()
     }
@@ -1735,7 +1735,7 @@ export default function MapEditor() {
                 {[
                   { id: 'select', name: '👆 Select Tool', desc: 'Select territories' },
                   { id: 'territory', name: '🗺️ Territory Tool', desc: 'Draw territories' },
-                  { id: 'continent', name: '🌍 Sector Tool', desc: 'Group territories' },
+                  { id: 'sector', name: '🌍 Sector Tool', desc: 'Group territories' },
                   { id: 'adjacency', name: '🔗 Connection Tool', desc: 'Connect territories' },
                 ].map((tool) => (
                   <button
@@ -1801,10 +1801,10 @@ export default function MapEditor() {
                       }}
                       className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                     >
-                      <option value="">No continent</option>
-                      {state.sectors.map((continent) => (
-                        <option key={continent.id} value={continent.id}>
-                          {continent.name}
+                      <option value="">No sector</option>
+                      {state.sectors.map((sector) => (
+                        <option key={sector.id} value={sector.id}>
+                          {sector.name}
                         </option>
                       ))}
                     </select>
@@ -1906,35 +1906,33 @@ export default function MapEditor() {
                       </span>
                     </div>
                   ) : (
-                    state.sectors.map((continent) => {
-                      const territoryCount = getSectorTerritoryCount(continent.id)
+                    state.sectors.map((sector) => {
+                      const territoryCount = getSectorTerritoryCount(sector.id)
                       return (
-                        <div key={continent.id} className="bg-surface-2 rounded p-2">
+                        <div key={sector.id} className="bg-surface-2 rounded p-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <div
                                 className="w-4 h-4 rounded border border-gray-500"
-                                style={{ backgroundColor: continent.color }}
+                                style={{ backgroundColor: sector.color }}
                               />
-                              <span className="font-medium text-sm">{continent.name}</span>
+                              <span className="font-medium text-sm">{sector.name}</span>
                               <span className="text-xs text-muted">
                                 ({territoryCount} territories)
                               </span>
                             </div>
                             <div className="flex items-center space-x-1">
-                              <span className="text-sm text-green-400">
-                                +{continent.bonusArmies}
-                              </span>
+                              <span className="text-sm text-green-400">+{sector.bonusArmies}</span>
                               <button
                                 type="button"
-                                onClick={() => editSector(continent.id)}
+                                onClick={() => editSector(sector.id)}
                                 className="text-xs bg-primary hover:bg-primary px-2 py-1 rounded"
                               >
                                 Edit
                               </button>
                               <button
                                 type="button"
-                                onClick={() => deleteSector(continent.id)}
+                                onClick={() => deleteSector(sector.id)}
                                 className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
                               >
                                 Delete
@@ -1942,13 +1940,13 @@ export default function MapEditor() {
                             </div>
                           </div>
 
-                          {/* Show territories in this continent */}
+                          {/* Show territories in this sector */}
                           {showSectorTerritories && territoryCount > 0 && (
                             <div className="mt-2 text-xs">
                               <div className="text-muted mb-1">Territories:</div>
                               <div className="flex flex-wrap gap-1">
                                 {state.territories
-                                  .filter((t) => t.sectorId === continent.id)
+                                  .filter((t) => t.sectorId === sector.id)
                                   .map((territory) => (
                                     <span
                                       key={territory.id}
@@ -1980,7 +1978,7 @@ export default function MapEditor() {
                   </div>
                 ) : (
                   state.territories.map((territory) => {
-                    const continent = state.sectors.find((c) => c.id === territory.sectorId)
+                    const sector = state.sectors.find((c) => c.id === territory.sectorId)
                     return (
                       <div
                         key={territory.id}
@@ -1999,16 +1997,16 @@ export default function MapEditor() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="font-medium">{territory.name}</div>
-                            {continent && (
+                            {sector && (
                               <div
                                 className="w-3 h-3 rounded border"
-                                style={{ backgroundColor: continent.color }}
-                                title={continent.name}
+                                style={{ backgroundColor: sector.color }}
+                                title={sector.name}
                               />
                             )}
                           </div>
                           <div className="text-xs opacity-75">
-                            {continent ? continent.name : 'No continent'}
+                            {sector ? sector.name : 'No sector'}
                           </div>
                         </button>
 
@@ -2016,23 +2014,23 @@ export default function MapEditor() {
                         {state.selectedTerritory === territory.id && (
                           <div className="mt-2 pt-2 border-t border-border">
                             <label
-                              htmlFor={`territory-${territory.id}-continent`}
+                              htmlFor={`territory-${territory.id}-sector`}
                               className="block text-xs mb-1"
                             >
-                              Reassign to continent:
+                              Reassign to sector:
                             </label>
                             <select
-                              id={`territory-${territory.id}-continent`}
+                              id={`territory-${territory.id}-sector`}
                               value={territory.sectorId || ''}
                               onChange={(e) =>
                                 reassignTerritorySector(territory.id, e.target.value || undefined)
                               }
                               className="w-full px-2 py-1 bg-[color:var(--panel-bg-alt)] border border-[color:var(--panel-border)] text-[color:var(--text)] rounded text-xs"
                             >
-                              <option value="">No continent</option>
-                              {state.sectors.map((continent) => (
-                                <option key={continent.id} value={continent.id}>
-                                  {continent.name} (+{continent.bonusArmies})
+                              <option value="">No sector</option>
+                              {state.sectors.map((sector) => (
+                                <option key={sector.id} value={sector.id}>
+                                  {sector.name} (+{sector.bonusArmies})
                                 </option>
                               ))}
                             </select>
