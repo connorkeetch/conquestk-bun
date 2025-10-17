@@ -308,7 +308,7 @@ export class ProfileService {
         FROM game_results gres
         JOIN player_game_results pgr ON pgr.room_id = gres.room_id
         CROSS JOIN LATERAL jsonb_array_elements(COALESCE(gres.battle_log, '[]'::jsonb)) AS entry
-        WHERE pgr.user_id = $1 AND (entry->>'attackerId') = $1
+        WHERE pgr.user_id = $1 AND (entry->>'attackerId') = ($1)::text
       `,
         [userId],
       )
@@ -333,7 +333,7 @@ export class ProfileService {
         FROM game_results gres
         JOIN player_game_results pgr ON pgr.room_id = gres.room_id
         CROSS JOIN LATERAL jsonb_array_elements(COALESCE(gres.battle_log, '[]'::jsonb)) AS entry
-        WHERE pgr.user_id = $1 AND (entry->>'attackerId') = $1 AND (entry->>'conquered')::boolean = TRUE
+        WHERE pgr.user_id = $1 AND (entry->>'attackerId') = ($1)::text AND (entry->>'conquered')::boolean = TRUE
       `,
         [userId],
       )
