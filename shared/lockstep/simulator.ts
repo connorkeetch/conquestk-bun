@@ -252,6 +252,28 @@ const simulateUndoFortify = (
   return { state: working, supported: true }
 }
 
+const markEliminations = (state: LockstepState): string[] => {
+  const eliminated: string[] = []
+  for (const player of state.players as Player[]) {
+    if (!player.isEliminated) {
+      const hasTerritory = state.board.some((t) => t.ownerId === player.id)
+      if (!hasTerritory) {
+        player.isEliminated = true
+        eliminated.push(player.id)
+      }
+    }
+  }
+  return eliminated
+}
+
+const resolveWinner = (state: LockstepState): Player | null => {
+  const active = (state.players as Player[]).filter((p) => !p.isEliminated)
+  if (active.length === 1) {
+    return active[0]
+  }
+  return null
+}
+
 const simulateAttack = (
   state: LockstepState,
   playerId: string,
@@ -315,12 +337,55 @@ const simulateAttack = (
     working.conqueredDuringTurn = true
     conquered = true
 
-    if (defender.territories.length === 0) {
-      return { state, supported: false }
+    const eliminated = markEliminations(working)
+    const winner = resolveWinner(working)
+    if (winner) {
+      working.phase = 'finished'
+      working.currentPlayer = winner.id
+      working.winner = winner.id
     }
+
+    working.lastBattleResult = {
+      attackerDice: battle.attackerDice,
+      defenderDice: battle.defenderDice,
+      attackerLosses: battle.attackerLosses,
+      defenderLosses: battle.defenderLosses,
+      conquered,
+      fromTerritory: {
+        id: from.id,
+        name: from.name,
+        armies: from.armies ?? 0,
+      },
+      toTerritory: {
+        id: to.id,
+        name: to.name,
+        armies: to.armies ?? 0,
+        ownerId: to.ownerId ?? playerId,
+      },
+      pendingConquestFor: conquered ? playerId : null,
+      gameEnded: Boolean(winner),
+      winner: winner ?? null,
+      eliminatedPlayers: eliminated,
+    } as unknown as GameState['lastBattleResult']
+
+    working.players = players as unknown as Player[]
+
+    working.board = [...working.board]
+    working.board[fromIndex] = from
+    working.board[toIndex] = to
+
+    return { state: working, supported: true }
   }
 
   working.hasAttackedThisTurn = true
+
+  const eliminated = markEliminations(working)
+  const winner = resolveWinner(working)
+  if (winner) {
+    working.phase = 'finished'
+    working.currentPlayer = winner.id
+    working.winner = winner.id
+  }
 
   working.board = [...working.board]
   working.board[fromIndex] = from
@@ -346,6 +411,9 @@ const simulateAttack = (
       ownerId: to.ownerId ?? playerId,
     },
     pendingConquestFor: conquered ? playerId : null,
+    gameEnded: Boolean(winner),
+    winner: winner ?? null,
+    eliminatedPlayers: eliminated,
   } as unknown as GameState['lastBattleResult']
 
   return { state: working, supported: true }
