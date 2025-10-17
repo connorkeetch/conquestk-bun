@@ -353,19 +353,34 @@ const gameSlice = createSlice({
 
       if (!state.currentGame) return
 
-      // Version check for automatic desync detection
-      if (delta.version !== undefined && state.currentGame.version !== undefined) {
-        // Server version should be exactly currentGame.version + 1
-        // If not, we have a desync
-        if (delta.version !== state.currentGame.version + 1) {
-          logger.warn('[Desync detected] Version mismatch - triggering resync:', {
-            clientVersion: state.currentGame.version,
-            serverVersion: delta.version,
+      const incomingVersion = delta.version
+      const currentVersion =
+        typeof state.currentGame.version === 'number' ? state.currentGame.version : undefined
+
+      if (incomingVersion !== undefined && currentVersion !== undefined) {
+        if (incomingVersion < currentVersion) {
+          logger.debug('Ignoring stale delta version', {
+            currentVersion,
+            incomingVersion,
             deltaType: delta.type,
           })
-          // Mark that we need a resync
+          return
+        }
+
+        if (incomingVersion === currentVersion) {
+          logger.debug('Processing repeated delta version', {
+            version: incomingVersion,
+            deltaType: delta.type,
+          })
+        }
+
+        if (incomingVersion > currentVersion + 1) {
+          logger.warn('[Desync detected] Version gap - triggering resync:', {
+            clientVersion: currentVersion,
+            serverVersion: incomingVersion,
+            deltaType: delta.type,
+          })
           state.needsResync = true
-          // Don't apply this delta - wait for full resync
           return
         }
       }
@@ -473,7 +488,11 @@ const gameSlice = createSlice({
 
       // Update client version after applying delta
       if (delta.version !== undefined && state.currentGame) {
-        state.currentGame.version = delta.version
+        const recordedVersion =
+          typeof state.currentGame.version === 'number' ? state.currentGame.version : undefined
+        if (recordedVersion === undefined || delta.version > recordedVersion) {
+          state.currentGame.version = delta.version
+        }
       }
 
       // Recalculate valid targets if territory selection is active
