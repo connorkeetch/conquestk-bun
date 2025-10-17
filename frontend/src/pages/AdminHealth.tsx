@@ -564,17 +564,121 @@ export default function AdminHealth() {
 
           const renderClientMetricsSummary = () => {
             const d = (r.data ?? {}) as ClientMetricsSummary
+            const sessionCount = d.sessionCount ?? 0
+            const avgLatency = d.avgLatency ?? 0
+            const avgSuccessRate = d.avgSuccessRate ?? 100
+            const totalReconnects = d.totalReconnects ?? 0
+            const reconnectsPerSession =
+              sessionCount > 0 ? totalReconnects / sessionCount : totalReconnects
+
+            const warnings: Array<{ severity: 'warn' | 'critical'; message: string }> = []
+            if (avgSuccessRate < 90) {
+              warnings.push({
+                severity: 'critical',
+                message: `Action success rate is ${avgSuccessRate.toFixed(1)}% (< 90%)`,
+              })
+            } else if (avgSuccessRate < 95) {
+              warnings.push({
+                severity: 'warn',
+                message: `Action success rate dipped to ${avgSuccessRate.toFixed(1)}%`,
+              })
+            }
+            if (avgLatency > 600) {
+              warnings.push({
+                severity: 'critical',
+                message: `Average latency is ${Math.round(avgLatency)} ms (> 600 ms)`,
+              })
+            } else if (avgLatency > 400) {
+              warnings.push({
+                severity: 'warn',
+                message: `Average latency is ${Math.round(avgLatency)} ms`,
+              })
+            }
+            if (reconnectsPerSession > 5) {
+              warnings.push({
+                severity: 'critical',
+                message: `Reconnects average ${reconnectsPerSession.toFixed(1)} per session`,
+              })
+            } else if (reconnectsPerSession > 2) {
+              warnings.push({
+                severity: 'warn',
+                message: `Reconnects averaging ${reconnectsPerSession.toFixed(1)} per session`,
+              })
+            }
+
+            const barWidth = (value: number) => `${Math.max(0, Math.min(100, value))}%`
+            const successColor =
+              avgSuccessRate < 90
+                ? 'bg-red-500'
+                : avgSuccessRate < 95
+                  ? 'bg-amber-400'
+                  : 'bg-emerald-400'
+            const latencyColor =
+              avgLatency > 600 ? 'bg-red-500' : avgLatency > 400 ? 'bg-amber-400' : 'bg-sky-400'
+
             return (
-              <div className="mt-3 text-xs text-white/80 space-y-1">
-                <div>Sessions (24h): {d.sessionCount ?? 0}</div>
-                <div>
-                  Avg latency: {d.avgLatency != null ? `${Math.round(d.avgLatency)} ms` : 'n/a'}
+              <div className="mt-3 text-xs text-white/80 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Sessions (24h)
+                    </div>
+                    <div className="text-sm font-semibold text-white">{sessionCount}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">Reconnects</div>
+                    <div className="text-sm font-semibold text-white">{totalReconnects}</div>
+                    <div className="text-[10px] text-muted">
+                      {reconnectsPerSession.toFixed(1)} per session
+                    </div>
+                  </div>
                 </div>
+
                 <div>
-                  Avg success rate:{' '}
-                  {d.avgSuccessRate != null ? `${Math.round(d.avgSuccessRate * 10) / 10}%` : 'n/a'}
+                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                    <span>Action Success</span>
+                    <span>{avgSuccessRate.toFixed(1)}%</span>
+                  </div>
+                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                    <div
+                      className={`h-full rounded-full ${successColor}`}
+                      style={{ width: barWidth(avgSuccessRate) }}
+                    />
+                  </div>
                 </div>
-                <div>Total reconnects: {d.totalReconnects ?? 0}</div>
+
+                <div>
+                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                    <span>Avg Latency</span>
+                    <span>{Math.round(avgLatency)} ms</span>
+                  </div>
+                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                    <div
+                      className={`h-full rounded-full ${latencyColor}`}
+                      style={{ width: barWidth((avgLatency / 800) * 100) }}
+                    />
+                  </div>
+                </div>
+
+                {warnings.length > 0 ? (
+                  <div className="space-y-1 rounded-lg border border-red-500/40 bg-red-500/10 p-2">
+                    {warnings.map((warning, index) => (
+                      <div
+                        key={`${warning.message}:${index}`}
+                        className={`flex items-center gap-2 text-[11px] ${warning.severity === 'critical' ? 'text-red-200' : 'text-amber-200'}`}
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full ${warning.severity === 'critical' ? 'bg-red-400' : 'bg-amber-300'} shadow`}
+                        />
+                        {warning.message}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-[11px] text-emerald-200">
+                    Client reliability metrics are within healthy ranges.
+                  </div>
+                )}
               </div>
             )
           }

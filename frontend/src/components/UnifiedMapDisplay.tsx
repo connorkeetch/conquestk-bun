@@ -50,7 +50,7 @@ interface Territory {
   y: number
   armies?: number
   owner?: string
-  continent?: string
+  sector?: string
 }
 
 interface UnifiedMapDisplayProps {
@@ -76,6 +76,7 @@ interface UnifiedMapDisplayProps {
     armyChanges: Array<{ territoryId: string; delta: number }>
     paths: Array<{ from: string; to: string; kind: 'attack' | 'fortify' }>
   } | null
+  optimisticMarkers?: Record<string, { actionIds: string[]; label?: string }>
 }
 
 export default function UnifiedMapDisplay({
@@ -96,6 +97,7 @@ export default function UnifiedMapDisplay({
   adjacency: _adjacency,
   previewMode = false,
   diffOverlayData = null,
+  optimisticMarkers = {},
 }: UnifiedMapDisplayProps) {
   const dispatch = useAppDispatch()
   const hoveredTargetId = useAppSelector((s) => s.gameInteraction.hoveredTargetId)
@@ -673,6 +675,7 @@ export default function UnifiedMapDisplay({
           {...(selectedTerritoryId !== undefined ? { selectedId: selectedTerritoryId } : {})}
           validTargets={validTargets}
           dimNonTargets={isMyTurn && pendingAction === 'attack'}
+          optimisticMarkers={optimisticMarkers}
           {...(isMyTurn ? { onClick: handleTerritoryActivate } : {})}
           {...(isMyTurn ? { onHover: handleHoverChange } : {})}
         />

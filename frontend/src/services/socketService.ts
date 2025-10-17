@@ -48,9 +48,12 @@ import {
 } from '../store/roomSlice'
 import {
   addClientLog,
+  addOptimisticMarkers,
   addPing,
+  clearOptimisticMarkers,
   clearPlacementHistory,
   recordBattleResult,
+  removeOptimisticMarkers,
   setConnectionStatus,
   setDesyncDetected,
   setPlacementServerSpent,
@@ -455,6 +458,7 @@ class SocketService {
       timeoutMs?: number
       optimisticUpdate?: () => void
       rollback?: () => void
+      optimisticMetadata?: { territoryIds?: string[]; label?: string }
       throttleKey?: string
       throttleMs?: number
       autoRetryOnTimeout?: boolean
@@ -495,10 +499,26 @@ class SocketService {
       this.inFlightActionKeys.set(fingerprint, idempotencyKey)
     }
 
+    const optimisticKeys =
+      options?.optimisticMetadata?.territoryIds?.filter((key): key is string => Boolean(key)) ?? []
+    const optimisticLabel =
+      options?.optimisticMetadata?.label ??
+      action.type.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+
     registerOptimisticAction(idempotencyKey, {
       apply: options?.optimisticUpdate,
       rollback: options?.rollback,
     })
+
+    if (optimisticKeys.length > 0) {
+      store.dispatch(
+        addOptimisticMarkers({
+          keys: optimisticKeys,
+          actionId: idempotencyKey,
+          label: optimisticLabel,
+        }),
+      )
+    }
 
     reliabilityMetrics.recordActionAttempt()
 
@@ -545,6 +565,10 @@ class SocketService {
     } else {
       rollbackOptimisticAction(idempotencyKey)
       reliabilityMetrics.recordActionFailure()
+    }
+
+    if (optimisticKeys.length > 0) {
+      store.dispatch(removeOptimisticMarkers({ keys: optimisticKeys, actionId: idempotencyKey }))
     }
 
     return finalAck
@@ -641,6 +665,7 @@ class SocketService {
     }
     this.pendingRoomStateFetches.clear()
     rollbackAllOptimisticActions()
+    store.dispatch(clearOptimisticMarkers())
   }
 
   joinRoom(roomId: string) {
@@ -906,6 +931,7 @@ class SocketService {
           store.dispatch(setReinforcementArmies(originalPool))
           toast.error('Deploy failed')
         },
+        optimisticMetadata: { territoryIds: [territoryId], label: 'Deploying' },
       },
     )
 
@@ -1007,6 +1033,7 @@ class SocketService {
           store.dispatch(updateGameState(next as unknown as GameState))
           toast.error('Fortify failed')
         },
+        optimisticMetadata: { territoryIds: [fromTerritoryId, toTerritoryId], label: 'Fortifying' },
       },
     )
   }
@@ -1195,6 +1222,7 @@ class SocketService {
 
     this.socket.on('disconnect', () => {
       rollbackAllOptimisticActions()
+      store.dispatch(clearOptimisticMarkers())
       store.dispatch(setConnectionStatus('disconnected'))
       // Stop heartbeat monitoring
       this.stopHeartbeat()
@@ -1205,6 +1233,7 @@ class SocketService {
       // Reflect disconnect state immediately
       store.dispatch(setConnectionStatus('disconnected'))
       rollbackAllOptimisticActions()
+      store.dispatch(clearOptimisticMarkers())
       const raw = (err && (err as Error).message) || 'Connection error'
       const msg = String(raw)
       const lower = msg.toLowerCase()

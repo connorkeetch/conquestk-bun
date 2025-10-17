@@ -12,6 +12,7 @@ export interface UIRoomState {
   overlays: { sectors: boolean; attackable: boolean; threat: boolean }
   connectionStatus: 'connected' | 'connecting' | 'disconnected'
   conquestOverlay?: { fromId: string; toId: string } | null
+  optimisticMarkers?: Record<string, { actionIds: string[]; label?: string }>
   // Global UI toggle for auto-attack so non-ActionBar UI (e.g., map tooltip) can start/stop it
   autoAttacking?: boolean
   desyncDetected: boolean
@@ -61,6 +62,7 @@ const initialState: UIRoomState = {
   overlays: { sectors: false, attackable: false, threat: false },
   connectionStatus: 'connected',
   conquestOverlay: null,
+  optimisticMarkers: {},
   autoAttacking: false,
   desyncDetected: false,
   resyncing: false,
@@ -119,6 +121,42 @@ const uiRoomSlice = createSlice({
     },
     setConnectionStatus(state, action: PayloadAction<UIRoomState['connectionStatus']>) {
       state.connectionStatus = action.payload
+    },
+    addOptimisticMarkers(
+      state,
+      action: PayloadAction<{ keys: string[]; actionId: string; label?: string }>,
+    ) {
+      const { keys, actionId, label } = action.payload
+      const markers = state.optimisticMarkers ?? {}
+      for (const key of keys) {
+        if (!key) continue
+        const entry = markers[key] ?? { actionIds: [] as string[], label }
+        if (!entry.actionIds.includes(actionId)) {
+          entry.actionIds.push(actionId)
+        }
+        if (label) {
+          entry.label = label
+        }
+        markers[key] = entry
+      }
+      state.optimisticMarkers = markers
+    },
+    removeOptimisticMarkers(state, action: PayloadAction<{ keys: string[]; actionId: string }>) {
+      if (!state.optimisticMarkers) return
+      const { keys, actionId } = action.payload
+      for (const key of keys) {
+        const entry = state.optimisticMarkers[key]
+        if (!entry) continue
+        entry.actionIds = entry.actionIds.filter((id) => id !== actionId)
+        if (entry.actionIds.length === 0) {
+          delete state.optimisticMarkers[key]
+        } else {
+          state.optimisticMarkers[key] = entry
+        }
+      }
+    },
+    clearOptimisticMarkers(state) {
+      state.optimisticMarkers = {}
     },
     showConquestOverlay(state, action: PayloadAction<{ fromId: string; toId: string }>) {
       state.conquestOverlay = { fromId: action.payload.fromId, toId: action.payload.toId }
@@ -317,6 +355,9 @@ export const {
   setAttackCommit,
   setOverlay,
   setConnectionStatus,
+  addOptimisticMarkers,
+  removeOptimisticMarkers,
+  clearOptimisticMarkers,
   showConquestOverlay,
   hideConquestOverlay,
   setAutoAttacking,
