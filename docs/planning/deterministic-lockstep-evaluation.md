@@ -85,8 +85,8 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Added backend parity tests (`lockstepSimulator.test.ts`) that feed treasure trades, KOTH end-turn scoring, and assassination victories through both `GameEngine` and the shared simulator, guarding against regressions.
 
 ### Remaining Phase 2 work
-- Add richer telemetry hooks (metrics + trace IDs) once we start streaming resync reasons to the service dashboard.
-- Continue expanding fixture coverage for edge modes (treasure eliminations, card-trade forced reinforcements) as we unlock those flows.
+- Validate the new lockstep resync telemetry in backend dashboards and alerting once the metrics service ingestion is updated.
+- Continue broadening regression coverage for capital eliminations, treasure chain reactions, and other edge flows before moving to Phase 3 automation.
 
 ## Rollout plan
 1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).

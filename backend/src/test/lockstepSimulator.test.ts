@@ -347,4 +347,104 @@ describe('Shared lockstep simulator parity', () => {
     expect(simState.lastBattleResult?.gameEnded).toBe(true)
     expect((simState.lastBattleResult?.winner as { id?: string } | null)?.id).toBe('p1')
   })
+
+  it('forces treasure cash-in after eliminating a target with a large hand', async () => {
+    const rngState = deriveStateFromSeed('treasure-elimination')
+
+    const baseState: GameState = {
+      roomId: 'match-treasure-elim',
+      players: [
+        {
+          id: 'p1',
+          userId: 'u1',
+          username: 'Alice',
+          color: 'red',
+          territories: ['t1'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: ['bronze', 'silver'],
+          mustCashInTreasures: false,
+        },
+        {
+          id: 'p2',
+          userId: 'u2',
+          username: 'Bob',
+          color: 'blue',
+          territories: ['t2'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: ['gold', 'diamond'],
+          mustCashInTreasures: false,
+        },
+      ],
+      currentPlayer: 'p1',
+      phase: 'attack',
+      turn: 1,
+      board: [
+        {
+          id: 't1',
+          name: 'Alpha Ridge',
+          ownerId: 'p1',
+          armies: 5,
+          adjacentTerritories: ['t2'],
+        },
+        {
+          id: 't2',
+          name: 'Bravo Pass',
+          ownerId: 'p2',
+          armies: 1,
+          adjacentTerritories: ['t1'],
+        },
+      ],
+      cards: [],
+      hasAttackedThisTurn: false,
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        maxPlayers: 2,
+        treasureConfig: {
+          enabled: true,
+          diamondsPercent: 0.08,
+          payoutMode: 'classic',
+          fixedValue: 8,
+          handCap: 3,
+          diamondSetBonus: 3,
+        },
+      },
+      treasureState: {
+        totalSetsCashed: 0,
+        nextPayoutIndex: 0,
+      },
+      rngSeed: rngState.seed,
+      rngState: rngState.state,
+      mustCashInTreasures: false,
+      conqueredDuringTurn: false,
+    }
+
+    const frame: InputFrame = {
+      matchId: 'match-treasure-elim',
+      seq: 42,
+      playerId: 'p1',
+      committedAt: new Date().toISOString(),
+      commands: [
+        {
+          kind: 'attack',
+          payload: {
+            fromTerritoryId: 't1',
+            toTerritoryId: 't2',
+          },
+        },
+      ],
+    }
+
+    const simState = applySimulatorFrame(baseState, frame)
+    const engineState = await applyEngineFrame(baseState, frame)
+
+    expectStateParity(simState, engineState)
+    const attacker = simState.players.find((p) => p.id === 'p1')
+    expect(attacker?.treasures?.length).toBeGreaterThanOrEqual(4)
+    expect(attacker?.mustCashInTreasures).toBe(true)
+    expect(simState.mustCashInTreasures).toBe(true)
+  })
 })
