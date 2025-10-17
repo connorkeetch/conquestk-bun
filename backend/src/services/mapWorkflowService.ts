@@ -1007,10 +1007,7 @@ export class MapWorkflowService {
           boundaryCoords: Array.isArray(entry.boundaryCoords)
             ? (entry.boundaryCoords as MetadataTerritoryInput['boundaryCoords'])
             : undefined,
-          sectorId:
-            asString((entry as Record<string, unknown>).sectorId) ??
-            asString((entry as Record<string, unknown>).continentId) ??
-            undefined,
+          sectorId: asString((entry as Record<string, unknown>).sectorId) ?? undefined,
           x: pixelX,
           y: pixelY,
           normalizedX,

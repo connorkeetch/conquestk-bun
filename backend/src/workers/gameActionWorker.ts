@@ -8,7 +8,11 @@ import { gameStateCache } from '../services/cacheService.js'
 import { DeltaEmitter } from '../services/deltaEmitter.js'
 import { GameService } from '../services/gameService.js'
 import { jobIdempotencyService } from '../services/jobIdempotencyService.js'
-import { aiTurnMetrics, socketPayloadMetrics } from '../services/metricsService.js'
+import {
+  aiTurnMetrics,
+  idempotencyMetrics,
+  socketPayloadMetrics,
+} from '../services/metricsService.js'
 import { type GameActionJob, queueService } from '../services/queueService.js'
 import { startWorkerHeartbeat } from '../services/workerHeartbeat.js'
 import { DeltaBuilder } from '../types/deltaUpdates.js'
@@ -738,6 +742,7 @@ export class GameActionWorker {
         actionType: action.type,
         jobId: job.id,
       })
+      idempotencyMetrics.recordDuplicate(this.queueName, action.type)
       return { ...cached.value, processed: false }
     }
 

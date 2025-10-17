@@ -1,5 +1,6 @@
 import { getRedisClient } from '../config/redis.js'
 import { logger } from '../utils/logger.js'
+import { idempotencyMetrics } from './metricsService.js'
 
 type StoredJobValue<T> = {
   storedAt: string
@@ -51,8 +52,11 @@ export class JobIdempotencyService {
       try {
         const raw = await redis.get(storageKey)
         if (!raw) {
+          idempotencyMetrics.recordCheck(queueName, 'redis', 'miss')
           return { exists: false }
         }
+
+        idempotencyMetrics.recordCheck(queueName, 'redis', 'hit')
 
         if (raw === '1') {
           return { exists: true }
@@ -77,18 +81,24 @@ export class JobIdempotencyService {
           jobKey,
           error,
         })
+        const reason = error instanceof Error ? (error.name ?? 'redis_error') : typeof error
+        idempotencyMetrics.recordFallback(queueName, 'read', String(reason))
       }
     }
 
     const fallback = this.inMemoryStore.get(storageKey)
     if (!fallback) {
+      idempotencyMetrics.recordCheck(queueName, 'memory', 'miss')
       return { exists: false }
     }
 
     if (fallback.expiresAt <= Date.now()) {
       this.inMemoryStore.delete(storageKey)
+      idempotencyMetrics.recordCheck(queueName, 'memory', 'miss')
       return { exists: false }
     }
+
+    idempotencyMetrics.recordCheck(queueName, 'memory', 'hit')
 
     if (fallback.payload === null) {
       return { exists: true }
@@ -125,6 +135,7 @@ export class JobIdempotencyService {
     if (redis) {
       try {
         await redis.set(storageKey, payload, 'EX', ttlSeconds)
+        idempotencyMetrics.recordStore(queueName, 'redis', 'success')
         return
       } catch (error) {
         logger.error('Redis error while writing job idempotency state, falling back to memory', {
@@ -132,6 +143,9 @@ export class JobIdempotencyService {
           jobKey,
           error,
         })
+        const reason = error instanceof Error ? (error.name ?? 'redis_error') : typeof error
+        idempotencyMetrics.recordFallback(queueName, 'write', String(reason))
+        idempotencyMetrics.recordStore(queueName, 'redis', 'error')
       }
     }
 
@@ -140,6 +154,7 @@ export class JobIdempotencyService {
       payload,
     })
     this.cleanupInMemoryStore()
+    idempotencyMetrics.recordStore(queueName, 'memory', 'success')
   }
 
   async clearProcessedJob(queueName: string, jobKey: string): Promise<void> {

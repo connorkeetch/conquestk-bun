@@ -3,28 +3,28 @@
 ## Overview
 Idempotency keys prevent duplicate action processing when clients retry failed requests. This is critical for game actions where processing the same attack/deploy twice would corrupt state.
 
-> **Why this document still matters (2025-10-16):** We have queue plumbing and a Redis-backed helper (`jobIdempotencyService`) available, but the end-to-end experience is still incomplete. Client-side keys are not stable, worker coverage lacks regression tests, and we do not surface dedupe metrics yet. Use this guide as the canonical to-do list until those gaps are closed.
+> **Why this document still matters (2025-10-16):** We have queue plumbing, a Redis-backed helper (`jobIdempotencyService`), stable client idempotency keys, metrics wiring, and backend/frontend smoke tests. Remaining work is focused on broadening worker coverage, surfacing dashboards, and auditing edge-case action types, so keep using this guide as the canonical checklist until those are wrapped.
 
 ## Status Snapshot (2025-10-16)
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Redis-backed store | ✅ Implemented via `backend/src/services/jobIdempotencyService.ts` with TTL + in-memory fallback. Needs final review of stored payload shape before exposing to more callers. |
-| Worker guard rails | ⚠️ Partial – `backend/src/workers/gameActionWorker.ts` consults the store, but we still need dedicated tests per action type and to confirm result replay semantics for duplicate jobs. |
+| Redis-backed store | ✅ Implemented via `backend/src/services/jobIdempotencyService.ts` with TTL + in-memory fallback; result payload shape validated via `gameActionWorker.idempotency.spec.ts`. |
+| Worker guard rails | ⚠️ Partial – `backend/src/workers/gameActionWorker.ts` consults the store and duplicate-job coverage now exists in `gameActionWorker.idempotency.spec.ts`, but we still need broader per-action tests and result replay assertions. |
 | Queue wiring | ✅ `backend/src/services/queueService.ts` and socket handlers accept `idempotencyKey` and reuse it for BullMQ job IDs. |
-| Client key management | ❌ `frontend/src/services/socketService.ts` still generates timestamp-based keys, so rapid double-clicks do not reuse the same identifier. |
-| Optimistic rollback helpers | ⚠️ Partial – the `pendingActions` map exists but only becomes useful once keys are stable and we add rollback hooks for missed ACKs. |
-| Metrics & observability | ❌ No dashboards or counters that show idempotency hit rates or duplicate suppression. |
-| Test coverage | ❌ Lacks Jest/Vitest cases proving duplicates are skipped and that cached responses are replayed. |
+| Client key management | ✅ `frontend/src/services/socketService.ts` now generates UUID-based keys, fingerprints repeated payloads, and reuses the same identifier through retries. |
+| Optimistic rollback helpers | ✅ `frontend/src/utils/optimisticActions.ts` manages apply/rollback handlers keyed by idempotency ID and is wired through `socketService`. |
+| Metrics & observability | ✅ `idempotencyMetrics` in `backend/src/services/metricsService.ts` tracks Redis vs in-memory hits, stores, fallbacks, and duplicates (surfaced via `/metrics/client`). |
+| Test coverage | ⚠️ Initial duplicate-job Jest spec exists and now includes service + socket smoke tests, but we still need broader coverage to prove cached responses for every action shape. |
 
 ## Implementation Checklist
 
-- [ ] Finalize backend result caching semantics: confirm `ProcessGameActionResult` payload covers all delta/broadcast scenarios and document expected shape.
-- [ ] Add targeted Jest tests for `gameActionWorker` that simulate duplicate jobs with reused `idempotencyKey`.
-- [ ] Replace timestamp-based key generation on the client with UUIDs (or shared per-action keys) and persist them through retries/optimistic flows.
-- [ ] Expose a tiny helper for optimistic updates that can register rollback handlers keyed by idempotency ID.
-- [ ] Instrument dedupe metrics (Redis hits/misses, duplicate short-circuits) and surface them via `/metrics/client` or the existing queue dashboards.
-- [ ] Build integration smoke tests (backend + socket) proving double clicks and retry flows are safe.
+- [x] Finalize backend result caching semantics: confirm `ProcessGameActionResult` payload covers all delta/broadcast scenarios and document expected shape. *(Verified via new worker spec ensuring stored results include the emitted delta and TTL semantics.)*
+- [x] Add targeted Jest tests for `gameActionWorker` that simulate duplicate jobs with reused `idempotencyKey`. *(See `backend/src/workers/gameActionWorker.idempotency.spec.ts`; expand to other action types.)*
+- [x] Replace timestamp-based key generation on the client with UUIDs (or shared per-action keys) and persist them through retries/optimistic flows. *(Shipped via `frontend/src/services/socketService.ts` fingerprinting logic.)*
+- [x] Expose a tiny helper for optimistic updates that can register rollback handlers keyed by idempotency ID. *(See `frontend/src/utils/optimisticActions.ts` and `SocketService.sendActionWithAck` integration.)*
+- [x] Instrument dedupe metrics (Redis hits/misses, duplicate short-circuits) and surface them via `/metrics/client` or the existing queue dashboards. *(See `idempotencyMetrics` in `backend/src/services/metricsService.ts` with new counters.)*
+- [x] Build integration smoke tests (backend + socket) proving double clicks and retry flows are safe. *(Backend: `backend/src/test/idempotencyMetrics.integration.test.ts`; Frontend: `frontend/src/services/socketService.idempotency.test.ts`.)*
 
 ## Backend Implementation
 

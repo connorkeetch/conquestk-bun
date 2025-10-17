@@ -7,7 +7,7 @@ export interface PolygonEditorTerritory {
   name?: string
   boundaryCoords: Coordinate[]
   armyPosition: Coordinate
-  continentId?: string | null
+  sectorId?: string | null
 }
 
 export interface PolygonEditorContinent {
@@ -29,7 +29,7 @@ export interface PolygonEditorSnapshot {
   imageWidth: number
   imageHeight: number
   territories: PolygonEditorTerritory[]
-  continents: PolygonEditorContinent[]
+  sectors: PolygonEditorContinent[]
   adjacencies: PolygonEditorAdjacency[]
   isPublic?: boolean
   tags?: string[]
@@ -40,13 +40,13 @@ export interface PolygonEditorSnapshot {
 export function serializePolygonEditorStateToDraft(
   snapshot: PolygonEditorSnapshot,
 ): PolygonMapDraftPayload {
-  // Build sectors (formerly continents) with territory membership
-  const sectors = snapshot.continents.map((c) => ({
+  // Build sectors (formerly sectors) with territory membership
+  const sectors = snapshot.sectors.map((c) => ({
     id: c.id,
     name: c.name,
     bonusArmies: c.bonusArmies,
     color: c.color,
-    territories: snapshot.territories.filter((t) => t.continentId === c.id).map((t) => t.id),
+    territories: snapshot.territories.filter((t) => t.sectorId === c.id).map((t) => t.id),
   }))
 
   // Pass through territories and adjacencies as-is; backend will validate
@@ -67,7 +67,7 @@ export function serializePolygonEditorStateToDraft(
       name: t.name,
       boundaryCoords: t.boundaryCoords,
       armyPosition: t.armyPosition,
-      continentId: t.continentId ?? undefined,
+      sectorId: t.sectorId ?? undefined,
     })),
     sectors,
     adjacencies: snapshot.adjacencies.map((a) => ({ from: a.from, to: a.to })),

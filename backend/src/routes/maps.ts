@@ -1034,12 +1034,9 @@ router.post(
       const rec =
         req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {}
       const maybeSector =
-        (typeof (rec as Record<string, unknown>).sectorId === 'string'
+        typeof (rec as Record<string, unknown>).sectorId === 'string'
           ? (rec.sectorId as string)
-          : undefined) ??
-        (typeof (rec as Record<string, unknown>).continentId === 'string'
-          ? (rec.continentId as string)
-          : undefined)
+          : undefined
       const baseTerritory = {
         mapId: req.params.mapId,
         territoryId: req.body.territoryId,

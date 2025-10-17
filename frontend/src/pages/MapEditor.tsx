@@ -11,7 +11,7 @@ import {
   type Coordinate,
   type CustomMap,
   type GameMode,
-  type MapContinent,
+  type MapSector,
   type MapTerritory,
   mapService,
   type TerritoryAbilityType,
@@ -25,9 +25,9 @@ interface EditorState {
   selectedTool: EditorTool
   currentMap?: CustomMap
   territories: MapTerritory[]
-  continents: MapContinent[]
+  sectors: MapSector[]
   selectedTerritory?: string
-  selectedContinent?: string
+  selectedSector?: string
   isDrawing: boolean
   currentPolygon: Coordinate[]
   imageUrl?: string
@@ -74,12 +74,12 @@ export default function MapEditor() {
   const mapNameId = useId()
   const mapDescriptionId = useId()
   const territoryNameId = useId()
-  const territoryContinentId = useId()
+  const territorySectorId = useId()
 
   const [state, setState] = useState<EditorState>({
     selectedTool: 'select',
     territories: [],
-    continents: [],
+    sectors: [],
     isDrawing: false,
     currentPolygon: [],
     imageWidth: 800,
@@ -99,11 +99,11 @@ export default function MapEditor() {
   const [mapName, setMapName] = useState('')
   const [mapDescription, setMapDescription] = useState('')
   const [newTerritoryName, setNewTerritoryName] = useState('')
-  const [newContinentName, setNewContinentName] = useState('')
-  const [newContinentBonus, setNewContinentBonus] = useState(2)
-  const [newContinentColor, setNewContinentColor] = useState('#3B82F6')
-  const [editingContinent, setEditingContinent] = useState<string | null>(null)
-  const [showContinentTerritories, setShowContinentTerritories] = useState(false)
+  const [newSectorName, setNewSectorName] = useState('')
+  const [newSectorBonus, setNewSectorBonus] = useState(2)
+  const [newSectorColor, setNewSectorColor] = useState('#3B82F6')
+  const [editingSector, setEditingSector] = useState<string | null>(null)
+  const [showSectorTerritories, setShowSectorTerritories] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -272,7 +272,7 @@ export default function MapEditor() {
     (ctx: CanvasRenderingContext2D) => {
       // Draw territories
       state.territories.forEach((territory) => {
-        const continent = state.continents.find((c) => c.id === territory.continentId)
+        const continent = state.sectors.find((c) => c.id === territory.sectorId)
         const isSelected = state.selectedTerritory === territory.id
 
         // Use higher opacity for better visibility
@@ -358,7 +358,7 @@ export default function MapEditor() {
     },
     [
       state.territories,
-      state.continents,
+      state.sectors,
       state.selectedTerritory,
       state.isDrawing,
       state.currentPolygon,
@@ -501,7 +501,7 @@ export default function MapEditor() {
       mapId: state.currentMap?.id || 'temp',
       territoryId: newTerritoryName.toLowerCase().replace(/\s+/g, '_'),
       name: newTerritoryName,
-      ...(state.selectedContinent ? { continentId: state.selectedContinent } : {}),
+      ...(state.selectedSector ? { sectorId: state.selectedSector } : {}),
       boundaryCoords: state.currentPolygon,
       armyPosition: { x: centerX, y: centerY },
       startingArmies: 1,
@@ -517,7 +517,7 @@ export default function MapEditor() {
     }))
 
     setNewTerritoryName('')
-  }, [newTerritoryName, state.currentPolygon, state.selectedContinent, state.currentMap?.id])
+  }, [newTerritoryName, state.currentPolygon, state.selectedSector, state.currentMap?.id])
 
   const isPointInPolygon = useCallback((point: Coordinate, polygon: Coordinate[]): boolean => {
     let inside = false
@@ -688,64 +688,61 @@ export default function MapEditor() {
     }
   }
 
-  const createContinent = () => {
-    if (!newContinentName.trim()) {
+  const createSector = () => {
+    if (!newSectorName.trim()) {
       addNotification('Please enter a continent name', 'error')
       return
     }
 
     // Check for duplicate names
-    if (
-      state.continents.some((c) => c.name.toLowerCase() === newContinentName.trim().toLowerCase())
-    ) {
+    if (state.sectors.some((c) => c.name.toLowerCase() === newSectorName.trim().toLowerCase())) {
       addNotification('A continent with this name already exists', 'error')
       return
     }
 
     // Validate bonus armies range
-    if (newContinentBonus < 1 || newContinentBonus > 20) {
+    if (newSectorBonus < 1 || newSectorBonus > 20) {
       addNotification('Bonus armies must be between 1 and 20', 'error')
       return
     }
 
-    const newContinent: MapContinent = {
+    const newSector: MapSector = {
       id: `temp_${Date.now()}`,
       mapId: state.currentMap?.id || 'temp',
-      name: newContinentName.trim(),
-      bonusArmies: newContinentBonus,
-      color: newContinentColor,
+      name: newSectorName.trim(),
+      bonusArmies: newSectorBonus,
+      color: newSectorColor,
       createdAt: new Date().toISOString(),
     }
 
     setState((prev) => ({
       ...prev,
-      continents: [...prev.continents, newContinent],
+      sectors: [...prev.sectors, newSector],
     }))
 
-    setNewContinentName('')
-    setNewContinentBonus(2)
-    setNewContinentColor('#3B82F6')
+    setNewSectorName('')
+    setNewSectorBonus(2)
+    setNewSectorColor('#3B82F6')
   }
 
-  const editContinent = (continentId: string) => {
-    const continent = state.continents.find((c) => c.id === continentId)
+  const editSector = (sectorId: string) => {
+    const continent = state.sectors.find((c) => c.id === sectorId)
     if (!continent) return
 
-    setNewContinentName(continent.name)
-    setNewContinentBonus(continent.bonusArmies)
-    setNewContinentColor(continent.color)
-    setEditingContinent(continentId)
+    setNewSectorName(continent.name)
+    setNewSectorBonus(continent.bonusArmies)
+    setNewSectorColor(continent.color)
+    setEditingSector(sectorId)
   }
 
-  const updateContinent = () => {
-    if (!editingContinent || !newContinentName.trim()) return
+  const updateSector = () => {
+    if (!editingSector || !newSectorName.trim()) return
 
     // Check for duplicate names (excluding current continent)
     if (
-      state.continents.some(
+      state.sectors.some(
         (c) =>
-          c.id !== editingContinent &&
-          c.name.toLowerCase() === newContinentName.trim().toLowerCase(),
+          c.id !== editingSector && c.name.toLowerCase() === newSectorName.trim().toLowerCase(),
       )
     ) {
       addNotification('A continent with this name already exists', 'error')
@@ -753,45 +750,45 @@ export default function MapEditor() {
     }
 
     // Validate bonus armies range
-    if (newContinentBonus < 1 || newContinentBonus > 20) {
+    if (newSectorBonus < 1 || newSectorBonus > 20) {
       addNotification('Bonus armies must be between 1 and 20', 'error')
       return
     }
 
     setState((prev) => ({
       ...prev,
-      continents: prev.continents.map((c) =>
-        c.id === editingContinent
+      sectors: prev.sectors.map((c) =>
+        c.id === editingSector
           ? {
               ...c,
-              name: newContinentName.trim(),
-              bonusArmies: newContinentBonus,
-              color: newContinentColor,
+              name: newSectorName.trim(),
+              bonusArmies: newSectorBonus,
+              color: newSectorColor,
             }
           : c,
       ),
     }))
 
-    cancelEditContinent()
+    cancelEditSector()
   }
 
-  const cancelEditContinent = () => {
-    setEditingContinent(null)
-    setNewContinentName('')
-    setNewContinentBonus(2)
-    setNewContinentColor('#3B82F6')
+  const cancelEditSector = () => {
+    setEditingSector(null)
+    setNewSectorName('')
+    setNewSectorBonus(2)
+    setNewSectorColor('#3B82F6')
   }
 
-  const deleteContinent = (continentId: string) => {
-    const continent = state.continents.find((c) => c.id === continentId)
+  const deleteSector = (sectorId: string) => {
+    const continent = state.sectors.find((c) => c.id === sectorId)
     if (!continent) return
 
-    const territoriesInContinent = state.territories.filter((t) => t.continentId === continentId)
+    const territoriesInSector = state.territories.filter((t) => t.sectorId === sectorId)
 
-    if (territoriesInContinent.length > 0) {
+    if (territoriesInSector.length > 0) {
       if (
         !confirm(
-          `Continent "${continent.name}" contains ${territoriesInContinent.length} territories. Are you sure you want to delete it? Territories will be moved to "No Continent".`,
+          `Sector "${continent.name}" contains ${territoriesInSector.length} territories. Are you sure you want to delete it? Territories will be moved to "No Sector".`,
         )
       ) {
         return
@@ -801,37 +798,37 @@ export default function MapEditor() {
       setState((prev) => ({
         ...prev,
         territories: prev.territories.map((t) => {
-          if (t.continentId !== continentId) return t
-          const { continentId: _omit, ...rest } = t
+          if (t.sectorId !== sectorId) return t
+          const { sectorId: _omit, ...rest } = t
           return rest as MapTerritory
         }),
-        continents: prev.continents.filter((c) => c.id !== continentId),
+        sectors: prev.sectors.filter((c) => c.id !== sectorId),
       }))
     } else {
       setState((prev) => ({
         ...prev,
-        continents: prev.continents.filter((c) => c.id !== continentId),
+        sectors: prev.sectors.filter((c) => c.id !== sectorId),
       }))
     }
 
     // Cancel editing if this continent was being edited
-    if (editingContinent === continentId) {
-      cancelEditContinent()
+    if (editingSector === sectorId) {
+      cancelEditSector()
     }
   }
 
-  const getContinentTerritoryCount = (continentId: string) => {
-    return state.territories.filter((t) => t.continentId === continentId).length
+  const getSectorTerritoryCount = (sectorId: string) => {
+    return state.territories.filter((t) => t.sectorId === sectorId).length
   }
 
-  const reassignTerritoryContinent = (territoryId: string, newContinentId: string | undefined) => {
+  const reassignTerritorySector = (territoryId: string, newSectorId: string | undefined) => {
     setState((prev) => ({
       ...prev,
       territories: prev.territories.map((t) =>
         t.id === territoryId
           ? {
               ...t,
-              ...(typeof newContinentId === 'string' ? { continentId: newContinentId } : {}),
+              ...(typeof newSectorId === 'string' ? { sectorId: newSectorId } : {}),
             }
           : t,
       ),
@@ -864,9 +861,9 @@ export default function MapEditor() {
           name: t.name,
           boundaryCoords: t.boundaryCoords as unknown as Coordinate[],
           armyPosition: t.armyPosition as Coordinate,
-          continentId: t.continentId ?? null,
+          sectorId: t.sectorId ?? null,
         })),
-        continents: state.continents.map((c) => ({
+        sectors: state.sectors.map((c) => ({
           id: c.id,
           name: c.name,
           bonusArmies: c.bonusArmies,
@@ -940,7 +937,7 @@ export default function MapEditor() {
       setState((prev) => ({
         ...prev,
         territories: [],
-        continents: [],
+        sectors: [],
         currentPolygon: [],
         isDrawing: false,
         imageScale: 1,
@@ -1057,7 +1054,7 @@ export default function MapEditor() {
         boundaryCoords: t.boundaryCoords,
         armyPosition: t.armyPosition,
       })),
-      continents: state.continents,
+      sectors: state.sectors,
       adjacencies: state.adjacencies,
       version: '1.0',
     }
@@ -1089,7 +1086,7 @@ export default function MapEditor() {
         setState((prev) => ({
           ...prev,
           territories: mapData.territories || [],
-          continents: mapData.continents || [],
+          sectors: mapData.sectors || [],
           adjacencies: mapData.adjacencies || [],
           imageWidth: mapData.imageWidth || 800,
           imageHeight: mapData.imageHeight || 600,
@@ -1472,15 +1469,14 @@ export default function MapEditor() {
                     (PNG/JPG) of your map
                   </p>
                   <p>
-                    <span className="text-primary-soft">2.</span> Create continents with bonus
-                    armies
+                    <span className="text-primary-soft">2.</span> Create sectors with bonus armies
                   </p>
                   <p>
                     <span className="text-primary-soft">3.</span> Use Territory Tool to trace
                     territories on the image
                   </p>
                   <p>
-                    <span className="text-primary-soft">4.</span> Assign territories to continents
+                    <span className="text-primary-soft">4.</span> Assign territories to sectors
                   </p>
                   <p>
                     <span className="text-primary-soft">5.</span> Connect territories with adjacency
@@ -1739,7 +1735,7 @@ export default function MapEditor() {
                 {[
                   { id: 'select', name: '👆 Select Tool', desc: 'Select territories' },
                   { id: 'territory', name: '🗺️ Territory Tool', desc: 'Draw territories' },
-                  { id: 'continent', name: '🌍 Continent Tool', desc: 'Group territories' },
+                  { id: 'continent', name: '🌍 Sector Tool', desc: 'Group territories' },
                   { id: 'adjacency', name: '🔗 Connection Tool', desc: 'Connect territories' },
                 ].map((tool) => (
                   <button
@@ -1784,21 +1780,21 @@ export default function MapEditor() {
                   </div>
                   <div>
                     <label
-                      htmlFor={territoryContinentId}
+                      htmlFor={territorySectorId}
                       className="block text-sm font-medium mb-1 text-slate-200"
                     >
-                      Continent
+                      Sector
                     </label>
                     <select
-                      id={territoryContinentId}
-                      value={state.selectedContinent || ''}
+                      id={territorySectorId}
+                      value={state.selectedSector || ''}
                       onChange={(e) => {
                         const val = e.target.value
                         if (val) {
-                          setState((prev) => ({ ...prev, selectedContinent: val }))
+                          setState((prev) => ({ ...prev, selectedSector: val }))
                         } else {
                           setState((prev) => {
-                            const { selectedContinent: _omit, ...rest } = prev
+                            const { selectedSector: _omit, ...rest } = prev
                             return rest
                           })
                         }
@@ -1806,7 +1802,7 @@ export default function MapEditor() {
                       className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                     >
                       <option value="">No continent</option>
-                      {state.continents.map((continent) => (
+                      {state.sectors.map((continent) => (
                         <option key={continent.id} value={continent.id}>
                           {continent.name}
                         </option>
@@ -1830,16 +1826,16 @@ export default function MapEditor() {
               </div>
             )}
 
-            {/* Continent Management */}
+            {/* Sector Management */}
             <div className="bg-surface-1 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold">Continents ({state.continents.length})</h3>
+                <h3 className="text-lg font-bold">Sectors ({state.sectors.length})</h3>
                 <button
                   type="button"
-                  onClick={() => setShowContinentTerritories(!showContinentTerritories)}
+                  onClick={() => setShowSectorTerritories(!showSectorTerritories)}
                   className="text-xs bg-surface-2 hover:bg-gray-600 px-2 py-1 rounded"
                 >
-                  {showContinentTerritories ? 'Hide Details' : 'Show Details'}
+                  {showSectorTerritories ? 'Hide Details' : 'Show Details'}
                 </button>
               </div>
               <div className="space-y-3">
@@ -1848,15 +1844,15 @@ export default function MapEditor() {
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="text"
-                      value={newContinentName}
-                      onChange={(e) => setNewContinentName(e.target.value)}
+                      value={newSectorName}
+                      onChange={(e) => setNewSectorName(e.target.value)}
                       className="px-2 py-1 bg-surface-2 border border-border rounded text-sm"
-                      placeholder="Continent name..."
+                      placeholder="Sector name..."
                     />
                     <input
                       type="number"
-                      value={newContinentBonus}
-                      onChange={(e) => setNewContinentBonus(parseInt(e.target.value, 10) || 2)}
+                      value={newSectorBonus}
+                      onChange={(e) => setNewSectorBonus(parseInt(e.target.value, 10) || 2)}
                       className="px-2 py-1 bg-surface-2 border border-border rounded text-sm"
                       placeholder="Bonus armies"
                       min="1"
@@ -1866,22 +1862,22 @@ export default function MapEditor() {
                   <div className="flex space-x-2">
                     <input
                       type="color"
-                      value={newContinentColor}
-                      onChange={(e) => setNewContinentColor(e.target.value)}
+                      value={newSectorColor}
+                      onChange={(e) => setNewSectorColor(e.target.value)}
                       className="flex-1 h-8 bg-surface-2 border border-border rounded"
                     />
-                    {editingContinent ? (
+                    {editingSector ? (
                       <>
                         <button
                           type="button"
-                          onClick={updateContinent}
+                          onClick={updateSector}
                           className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
                         >
                           Update
                         </button>
                         <button
                           type="button"
-                          onClick={cancelEditContinent}
+                          onClick={cancelEditSector}
                           className="bg-gray-600 hover:bg-surface-2 px-3 py-1 rounded text-sm"
                         >
                           Cancel
@@ -1890,7 +1886,7 @@ export default function MapEditor() {
                     ) : (
                       <button
                         type="button"
-                        onClick={createContinent}
+                        onClick={createSector}
                         className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm"
                       >
                         Add
@@ -1899,19 +1895,19 @@ export default function MapEditor() {
                   </div>
                 </div>
 
-                {/* Continents List */}
+                {/* Sectors List */}
                 <div className="max-h-40 overflow-y-auto space-y-1">
-                  {state.continents.length === 0 ? (
+                  {state.sectors.length === 0 ? (
                     <div className="text-sm text-muted text-center py-4">
-                      No continents created yet
+                      No sectors created yet
                       <br />
                       <span className="text-xs">
-                        Continents group territories and provide bonus armies
+                        Sectors group territories and provide bonus armies
                       </span>
                     </div>
                   ) : (
-                    state.continents.map((continent) => {
-                      const territoryCount = getContinentTerritoryCount(continent.id)
+                    state.sectors.map((continent) => {
+                      const territoryCount = getSectorTerritoryCount(continent.id)
                       return (
                         <div key={continent.id} className="bg-surface-2 rounded p-2">
                           <div className="flex items-center justify-between">
@@ -1931,14 +1927,14 @@ export default function MapEditor() {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => editContinent(continent.id)}
+                                onClick={() => editSector(continent.id)}
                                 className="text-xs bg-primary hover:bg-primary px-2 py-1 rounded"
                               >
                                 Edit
                               </button>
                               <button
                                 type="button"
-                                onClick={() => deleteContinent(continent.id)}
+                                onClick={() => deleteSector(continent.id)}
                                 className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
                               >
                                 Delete
@@ -1947,12 +1943,12 @@ export default function MapEditor() {
                           </div>
 
                           {/* Show territories in this continent */}
-                          {showContinentTerritories && territoryCount > 0 && (
+                          {showSectorTerritories && territoryCount > 0 && (
                             <div className="mt-2 text-xs">
                               <div className="text-muted mb-1">Territories:</div>
                               <div className="flex flex-wrap gap-1">
                                 {state.territories
-                                  .filter((t) => t.continentId === continent.id)
+                                  .filter((t) => t.sectorId === continent.id)
                                   .map((territory) => (
                                     <span
                                       key={territory.id}
@@ -1984,7 +1980,7 @@ export default function MapEditor() {
                   </div>
                 ) : (
                   state.territories.map((territory) => {
-                    const continent = state.continents.find((c) => c.id === territory.continentId)
+                    const continent = state.sectors.find((c) => c.id === territory.sectorId)
                     return (
                       <div
                         key={territory.id}
@@ -2016,7 +2012,7 @@ export default function MapEditor() {
                           </div>
                         </button>
 
-                        {/* Continent reassignment dropdown */}
+                        {/* Sector reassignment dropdown */}
                         {state.selectedTerritory === territory.id && (
                           <div className="mt-2 pt-2 border-t border-border">
                             <label
@@ -2027,17 +2023,14 @@ export default function MapEditor() {
                             </label>
                             <select
                               id={`territory-${territory.id}-continent`}
-                              value={territory.continentId || ''}
+                              value={territory.sectorId || ''}
                               onChange={(e) =>
-                                reassignTerritoryContinent(
-                                  territory.id,
-                                  e.target.value || undefined,
-                                )
+                                reassignTerritorySector(territory.id, e.target.value || undefined)
                               }
                               className="w-full px-2 py-1 bg-[color:var(--panel-bg-alt)] border border-[color:var(--panel-border)] text-[color:var(--text)] rounded text-xs"
                             >
                               <option value="">No continent</option>
-                              {state.continents.map((continent) => (
+                              {state.sectors.map((continent) => (
                                 <option key={continent.id} value={continent.id}>
                                   {continent.name} (+{continent.bonusArmies})
                                 </option>

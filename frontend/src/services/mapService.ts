@@ -68,7 +68,7 @@ export interface MapTerritory {
   mapId: string
   territoryId: string
   name: string
-  continentId?: string
+  sectorId?: string
   boundaryCoords: Coordinate[]
   armyPosition: Coordinate
   abilityTypeId?: string
@@ -78,7 +78,7 @@ export interface MapTerritory {
   createdAt: string
 }
 
-export interface MapContinent {
+export interface MapSector {
   id: string
   mapId: string
   name: string
@@ -157,7 +157,7 @@ export interface CreateTerritoryRequest {
   mapId: string
   territoryId: string
   name: string
-  continentId?: string
+  sectorId?: string
   boundaryCoords: Coordinate[]
   armyPosition: Coordinate
   abilityTypeId?: string
@@ -165,7 +165,7 @@ export interface CreateTerritoryRequest {
   startingArmies?: number
 }
 
-export interface CreateContinentRequest {
+export interface CreateSectorRequest {
   name: string
   bonusArmies: number
   color?: string
@@ -181,7 +181,7 @@ export interface CreateAdjacencyRequest {
 
 export interface FullMapData {
   map: CustomMap
-  continents: MapContinent[]
+  sectors: MapSector[]
   territories: MapTerritory[]
   adjacencies: TerritoryAdjacency[]
   gameMode?: GameMode
@@ -209,10 +209,15 @@ export const mapService = {
   async getMap(mapId: string): Promise<FullMapData> {
     const response = await api.get(`/maps/${mapId}`)
     const obj = response.data as Record<string, unknown>
-    const sectors = obj.sectors
-    const continents = obj.continents
-    if (Array.isArray(sectors) && !Array.isArray(continents)) {
-      ;(obj as { continents: unknown[] }).continents = sectors as unknown[]
+    const rawSectors = obj.sectors
+    if (Array.isArray(rawSectors)) {
+      ;(obj as { sectors: unknown[] }).sectors = rawSectors as unknown[]
+    } else if (rawSectors && typeof rawSectors === 'object') {
+      ;(obj as { sectors: unknown[] }).sectors = Object.values(
+        rawSectors as Record<string, unknown>,
+      )
+    } else {
+      ;(obj as { sectors: unknown[] }).sectors = []
     }
     return obj as unknown as FullMapData
   },
@@ -276,19 +281,8 @@ export const mapService = {
     return response.data
   },
 
-  async createSector(
-    mapId: string,
-    sectorData: { name: string; bonusArmies: number; color?: string },
-  ): Promise<unknown> {
+  async createSector(mapId: string, sectorData: CreateSectorRequest): Promise<MapSector> {
     const response = await api.post(`/maps/${mapId}/sectors`, sectorData)
-    return response.data
-  },
-  // Backward-compat alias
-  async createContinent(
-    mapId: string,
-    continentData: CreateContinentRequest,
-  ): Promise<MapContinent> {
-    const response = await api.post(`/maps/${mapId}/sectors`, continentData)
     return response.data
   },
 

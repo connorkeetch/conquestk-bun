@@ -104,14 +104,8 @@ export interface Territory {
   name: string
   ownerId: string | null
   armies: number
-  // Sector (formerly "continent")
   sector?: string
   sectorId?: string
-  // Backward compatibility: keep deprecated fields for older payloads
-  /** @deprecated use `sector` */
-  continent?: string
-  /** @deprecated use `sectorId` */
-  continentId?: string
   isCapital?: boolean
   abilities?: TerritoryAbility[]
   adjacentTerritories: string[]
@@ -263,10 +257,7 @@ export interface GameConfiguration {
   maxPlayers: number
   mapId?: string
   gameMode?: string
-  // Sector bonuses (formerly continent bonuses)
   sectorBonuses?: SectorBonus[]
-  /** @deprecated use `sectorBonuses` */
-  continentBonuses?: SectorBonus[]
   useTerritoryModifiers?: boolean
   modifierDistribution?: ModifierDistribution
   turnTimer?: number
@@ -288,9 +279,6 @@ export interface SectorBonus {
   bonusArmies: number
   territories: string[]
 }
-
-// Backward compatibility alias
-export type ContinentBonus = SectorBonus
 
 export type ModifierDistribution = 'none' | 'sparse' | 'balanced' | 'abundant' | 'custom'
 
@@ -400,8 +388,6 @@ export interface Map {
   tags: string[]
   territories: MapTerritory[]
   sectors: MapSector[]
-  // Backward compatibility
-  continents?: MapSector[]
   status: 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived'
   createdAt: Date | string
   updatedAt: Date | string
@@ -414,8 +400,6 @@ export interface MapTerritory {
   territoryId: string
   name: string
   sectorId?: string
-  /** @deprecated use `sectorId` */
-  continentId?: string
   boundaryCoords: { x: number; y: number }[]
   centerX: number
   centerY: number
@@ -430,8 +414,6 @@ export interface MapSector {
   color: string
   territories: string[]
 }
-
-export type MapContinent = MapSector
 
 // ============================================
 // Room & Lobby Types
