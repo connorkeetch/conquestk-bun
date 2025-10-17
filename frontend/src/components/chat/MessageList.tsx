@@ -100,18 +100,22 @@ export default function MessageList({
         const senderColor = getSenderColor?.(message, isOwnMessage)
         const timestampLabel = formatTime(message.createdAt)
 
+        const bubbleClassName = [
+          'max-w-[70%] rounded-lg px-4 py-2 border transition-colors duration-150',
+          isOwnMessage
+            ? 'bg-primary text-[color:var(--color-white)] border-[color:color-mix(in srgb, var(--color-primary) 55%, transparent)] shadow-[0_6px_18px_color-mix(in srgb, var(--color-primary) 22%, transparent)]'
+            : 'bg-surface-2 text-[color:var(--text)] border-[color:color-mix(in srgb, var(--panel-border) 85%, transparent)] shadow-[0_6px_16px_color-mix(in srgb, var(--panel-border) 25%, transparent)]',
+          isDeleted ? 'opacity-50 italic' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+
         return (
           <div
             key={message.id}
             className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                isOwnMessage
-                  ? 'bg-primary text-[color:var(--color-white)]'
-                  : 'bg-surface-2 text-[color:var(--text)]'
-              } ${isDeleted ? 'opacity-50 italic' : ''}`}
-            >
+            <div className={bubbleClassName}>
               <div className="flex items-baseline justify-between gap-3 mb-1">
                 {(() => {
                   const clickable =

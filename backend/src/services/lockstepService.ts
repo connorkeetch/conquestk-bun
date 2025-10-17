@@ -1,4 +1,4 @@
-import type { InputFrame, LockstepCommand, TickChecksum } from '@conquestk/shared/types/lockstep.js'
+import type { InputFrame, LockstepCommand, TickChecksum } from '@conquestk/shared/types/lockstep'
 import { crc32 } from '@conquestk/shared/utils/crc32'
 import { stableStringifyToUint8 } from '@conquestk/shared/utils/stableJson'
 import type { PoolClient } from 'pg'

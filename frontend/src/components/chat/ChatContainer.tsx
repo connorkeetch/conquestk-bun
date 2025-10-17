@@ -1,7 +1,7 @@
 import type { ChatConversationType } from '@shared/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
-import { getColorValue, type PlayerColor } from '@/constants/colors'
+import { getPlayerTextColor, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { socketService } from '@/services/socketService'
 import {
@@ -31,7 +31,9 @@ export default function ChatContainer({
   className = '',
 }: ChatContainerProps) {
   const dispatch = useAppDispatch()
-  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null)
+  const currentUser = useAppSelector((state) => state.auth.user)
+  const currentUserId = currentUser?.id ?? null
+  const currentUsername = currentUser?.username ?? null
   const [resolvedConversationId, setResolvedConversationId] = useState<string | null>(null)
   const [initializing, setInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -64,14 +66,25 @@ export default function ChatContainer({
   // Map game player userId -> resolved hex color for quick lookup
   const playerColorByUserId = useAppSelector((state) => {
     const map = new Map<string, string>()
+    const addColor = (key?: string | null, raw?: PlayerColor | string | null) => {
+      if (!key || !raw) return
+      const resolved = getPlayerTextColor(raw)
+      if (resolved) map.set(key, resolved)
+    }
+
     const players = state.game.currentGame?.players ?? []
     for (const p of players) {
-      try {
-        map.set(p.userId, getColorValue(p.color as unknown as PlayerColor))
-      } catch {
-        // ignore
-      }
+      addColor(p.userId, p.color)
+      addColor(p.id, p.color)
     }
+
+    const roomPlayers = state.room.currentRoom?.players ?? []
+    for (const player of roomPlayers) {
+      const color = player.selectedColor ?? player.preferred_color ?? null
+      addColor(player.userId ?? player.id, color)
+      addColor(player.id, color)
+    }
+
     return map
   })
 
@@ -192,6 +205,15 @@ export default function ChatContainer({
   }, [dispatch, resolvedConversationId, rawMessages.length, isSpectator])
 
   const mutedIds = useAppSelector((s) => new Set(s.uiRoom.mutedUserIds ?? []))
+  const selfDisplayName = useMemo(() => {
+    if (currentUsername && currentUsername.trim().length > 0) {
+      return currentUsername
+    }
+    if (currentUserId) {
+      return currentUserId
+    }
+    return 'You'
+  }, [currentUserId, currentUsername])
   const displayMessages: DisplayMessage[] = useMemo(() => {
     const memberNameMap = new Map(
       (conversation?.memberRoles ?? []).map((member) => [
@@ -207,7 +229,7 @@ export default function ChatContainer({
         senderId: message.senderId,
         senderName:
           message.senderId === currentUserId
-            ? 'You'
+            ? selfDisplayName
             : typeof message.metadata?.senderName === 'string'
               ? message.metadata.senderName
               : message.senderId
@@ -217,7 +239,7 @@ export default function ChatContainer({
         createdAt: message.createdAt,
         metadata: message.metadata,
       }))
-  }, [conversation?.memberRoles, rawMessages, currentUserId, mutedIds])
+  }, [conversation?.memberRoles, rawMessages, currentUserId, mutedIds, selfDisplayName])
 
   const handleLoadOlder = useCallback(() => {
     if (!resolvedConversationId) {
@@ -321,8 +343,14 @@ export default function ChatContainer({
           <MessageList
             messages={displayMessages}
             currentUserId={currentUserId}
-            getSenderColor={(message, isOwn) =>
-              isOwn || !message.senderId ? undefined : playerColorByUserId.get(message.senderId)
+            getDisplayName={(message, isOwn) => {
+              if (isOwn) {
+                return selfDisplayName
+              }
+              return message.senderName ?? undefined
+            }}
+            getSenderColor={(message) =>
+              message.senderId ? playerColorByUserId.get(message.senderId) : undefined
             }
             onUserClick={(name) => setProfileUsername(name)}
           />

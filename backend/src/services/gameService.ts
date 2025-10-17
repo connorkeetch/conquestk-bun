@@ -930,7 +930,7 @@ export class GameService {
       const entry: RngLogEntry = {
         type: 'RNG',
         timestamp: new Date().toISOString(),
-        scope: 'primary',
+        scope: 'combat',
         algorithm: 'sfc32',
         seed: resolvedSeed,
       }

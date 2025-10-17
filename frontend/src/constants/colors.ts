@@ -275,6 +275,23 @@ export const getPremiumEffect = (
   return getPremiumColorMeta(color)?.effect
 }
 
+/**
+ * Resolve a player's color for text usage. Premium entries fall back to their solid tone so the
+ * username renders consistently, gradients remain reserved for token fills.
+ */
+export const getPlayerTextColor = (color?: PlayerColor | string | null): string | undefined => {
+  if (!color) return undefined
+  const meta = getPremiumColorMeta(color)
+  if (meta?.solid) {
+    return meta.solid
+  }
+  try {
+    return getColorValue(color as PlayerColor)
+  } catch {
+    return undefined
+  }
+}
+
 export const isPureWhiteColor = (color?: PlayerColor | string | null): boolean => {
   const meta = getPremiumColorMeta(color)
   if (meta?.solid) {

@@ -4,7 +4,7 @@
  */
 
 import type { GameDelta } from '@conquestk/shared/types/delta'
-import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep.js'
+import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep'
 import type { ClanProgressionSocketPayload } from './clans.js'
 import type { GameAction, SerializedGameState } from './game.js'
 import type { Player as RoomPlayer } from './gameRoom.js'

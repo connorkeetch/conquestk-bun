@@ -79,6 +79,15 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Frontend validator (behind `VITE_LOCKSTEP_DEV`) replays the confirmed frames through Redux state, computes local CRCs via the shared stable serializer, and triggers auto-resync when checksums diverge.
 - Shared `lockstep` simulator currently supports deterministic replays for reinforcement/fortify actions; combat resolution and treasure flows still fall back to snapshot resync (TBD to port full `GameEngine` logic).
 
+## Phase 2 progress (2025-04-04)
+- Shared simulator now mirrors backend combat, treasure trades, territory modifiers, `transfer_conquest`, and `end_turn`/`go_back_to_reinforcement` flows, including assassination wins and King-of-the-Hill rotations.
+- Lockstep resync instrumentation records the triggering reason (frame gaps, checksum mismatches, unsupported commands) and surfaces it via the client log + banner so reviewers know why a snapshot fired.
+- Added backend parity tests (`lockstepSimulator.test.ts`) that feed treasure trades, KOTH end-turn scoring, and assassination victories through both `GameEngine` and the shared simulator, guarding against regressions.
+
+### Remaining Phase 2 work
+- Add richer telemetry hooks (metrics + trace IDs) once we start streaming resync reasons to the service dashboard.
+- Continue expanding fixture coverage for edge modes (treasure eliminations, card-trade forced reinforcements) as we unlock those flows.
+
 ## Rollout plan
 1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).
 2. Enable lockstep transport in development, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely.

@@ -79,7 +79,9 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const messagesByConversation = useAppSelector((s) => s.messages.messages)
   const loadingMessagesMap = useAppSelector((s) => s.messages.loadingMessages)
   const hasMoreMap = useAppSelector((s) => s.messages.hasMore)
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? null)
+  const currentUser = useAppSelector((s) => s.auth.user)
+  const currentUserId = currentUser?.id ?? null
+  const currentUsername = currentUser?.username ?? null
   const unreadSummaryFetched = useAppSelector((s) => s.messages.unreadSummaryFetched)
   const typingMap = useAppSelector((s) => s.messages.typing)
 
@@ -394,11 +396,21 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     )
   }, [drawerActiveConversationId, dispatch, messagesByConversation])
 
+  const selfDisplayName = useMemo(() => {
+    if (currentUsername && currentUsername.trim().length > 0) {
+      return currentUsername
+    }
+    if (currentUserId) {
+      return currentUserId
+    }
+    return 'You'
+  }, [currentUserId, currentUsername])
+
   const displayMessages: DisplayMessage[] = useMemo(() => {
     return activeMessages.map((m) => {
       const label =
         m.senderId === currentUserId
-          ? 'You'
+          ? selfDisplayName
           : typeof m.metadata?.senderName === 'string'
             ? (m.metadata.senderName as string)
             : undefined
@@ -411,7 +423,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
         metadata: m.metadata,
       }
     })
-  }, [activeMessages, currentUserId])
+  }, [activeMessages, currentUserId, selfDisplayName])
 
   const handleSendMessage = useCallback(
     (text: string) => {

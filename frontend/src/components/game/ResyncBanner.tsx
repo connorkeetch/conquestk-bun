@@ -35,14 +35,18 @@ export function ResyncBanner({ roomId }: Props) {
     }
   }, [dispatch, roomId])
 
-  if (!desync) return null
+  if (!desync && !resyncing) return null
+
+  const statusText = resyncing
+    ? 'Attempting automatic recovery…'
+    : 'State out of sync. Refresh to recover.'
 
   return (
     <div className="fixed top-10 inset-x-0 z-40" role="alert" aria-live="assertive">
       <div className="mx-auto max-w-7xl px-4 py-2">
         <div className="rounded bg-[color:color-mix(in srgb, var(--color-warning) 20%, transparent)] border border-[color:var(--color-warning)] text-[color:var(--color-warning)] px-3 py-2 text-sm">
           <div className="flex items-center justify-between">
-            <span>State out of sync. Refresh to recover.</span>
+            <span>{statusText}</span>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
