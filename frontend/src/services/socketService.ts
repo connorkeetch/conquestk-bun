@@ -64,6 +64,7 @@ import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
 import { reliabilityMetrics } from './reliabilityMetricsService'
+import { socketDebugger } from '@/utils/socketDebugger'
 
 type RoomLifecyclePayload = LifecycleUpdatePayload
 type ReinforcementBaselineState = {
@@ -650,6 +651,11 @@ class SocketService {
       // Add timeout for connection attempts
       timeout: ACTION_TIMEOUT_MS * 2,
     }) as unknown as Socket<ServerToClientEvents, ClientToServerEvents>
+
+    // Instrument socket for debugging if enabled
+    if (socketDebugger.isEnabled()) {
+      socketDebugger.instrumentSocket(this.socket)
+    }
 
     this.setupEventListeners()
     // Immediately reflect connecting state
