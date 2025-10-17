@@ -22,6 +22,7 @@ import type {
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { getJwtSecrets, verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
+import { hydrateSerializedGameState, toSerializedGameState } from '../utils/serializeGameState.js'
 import { gameStateCache } from './cacheService.js'
 import { clanService } from './clanService.js'
 import { eloService, type PlayerRating } from './eloService.js'
@@ -29,12 +30,13 @@ import { GameActionProcessor } from './gameActionProcessor.js'
 import { GameLifecycleService } from './gameLifecycleService.js'
 import { GameRoomService } from './gameRoomService.js'
 import { GameService } from './gameService.js'
+import { lockstepService } from './lockstepService.js'
 import {
   matchPresenceMove,
   matchPresenceOffline,
   matchPresenceOnline,
 } from './matchSvcIntegration.js'
-import { socketPayloadMetrics } from './metricsService.js'
+import { lockstepMetrics, socketPayloadMetrics } from './metricsService.js'
 import { queueService } from './queueService.js'
 import { registerSocketServer } from './socketRegistry.js'
 
@@ -429,6 +431,71 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   const gameRoomService = new GameRoomService()
   const gameActionProcessor = new GameActionProcessor(io)
   const lifecycleService = new GameLifecycleService()
+  const lockstepEnabled = process.env.LOCKSTEP_DEV === 'true'
+
+  const emitLockstepFrame = async (
+    roomId: string,
+    channel: string,
+    action: import('../types/game.js').GameAction,
+    playerId: string,
+  ): Promise<void> => {
+    if (!lockstepEnabled) {
+      return
+    }
+    try {
+      const latestState = await gameService.getGameState(roomId)
+      if (!latestState) {
+        return
+      }
+      const serialized = toSerializedGameState(latestState)
+      const { frame, checksum } = await lockstepService.recordFrame({
+        matchId: roomId,
+        playerId,
+        action,
+        state: serialized,
+      })
+      io.to(channel).emit('game-action:frame-committed', frame)
+      const frameBytes = computePayloadBytes(frame)
+      socketPayloadMetrics.record('game-action:frame-committed', frameBytes)
+      if (socketPayloadMetrics.shouldLog('game-action:frame-committed')) {
+        const stats = socketPayloadMetrics.snapshot('game-action:frame-committed')
+        if (stats) {
+          logger.info('Frame payload metrics', {
+            event: 'game-action:frame-committed',
+            count: stats.count,
+            p50: stats.p50,
+            p95: stats.p95,
+            max: stats.max,
+          })
+        }
+      }
+      lockstepMetrics.recordFrame()
+      if (checksum) {
+        io.to(channel).emit('game-action:checksum', checksum)
+        const checksumBytes = computePayloadBytes(checksum)
+        socketPayloadMetrics.record('game-action:checksum', checksumBytes)
+        if (socketPayloadMetrics.shouldLog('game-action:checksum')) {
+          const stats = socketPayloadMetrics.snapshot('game-action:checksum')
+          if (stats) {
+            logger.info('Checksum payload metrics', {
+              event: 'game-action:checksum',
+              count: stats.count,
+              p50: stats.p50,
+              p95: stats.p95,
+              max: stats.max,
+            })
+          }
+        }
+        lockstepMetrics.recordChecksum()
+      }
+    } catch (error) {
+      logger.warn('Failed to emit lockstep frame (best-effort)', {
+        roomId,
+        action: action.type,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
 
   io.use((socket: AuthenticatedSocket, next) => {
     const token = socket.handshake.auth.token
@@ -559,9 +626,15 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           }
 
           const userId = requireUserId(socket)
-          // SIMPLIFIED: Allow anyone to join (no membership check for small user base)
-          // Backend still validates actions based on player membership when processing
-          // This prevents spectator/player subscription race conditions
+          const isMember = await gameRoomService.isPlayerInRoom(normalizedRoomId, userId)
+          if (!isMember) {
+            ack?.({
+              ok: false,
+              code: 'not_a_member',
+              error: 'You must be a member before subscribing to updates.',
+            })
+            return
+          }
 
           const channel = getGameChannel(normalizedRoomId)
           // Join both the game channel (for game updates) and the room channel (for lifecycle/room updates)
@@ -651,9 +724,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       ),
     )
 
-    // REMOVED: spectate-room handler - simplified to single subscription path
-    // Everyone uses join-room now regardless of membership status
-
     socket.on(
       'leave-room',
       withErrorHandler(socket, 'leave-room', async (roomId: string) => {
@@ -714,34 +784,41 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
           const t0 = Date.now()
           // Queue the game action for processing
+          const useQueue = process.env.GAME_ACTION_QUEUE === 'enabled' && !lockstepEnabled
           let job: import('bullmq').Job<import('./queueService.js').GameActionJob> | null = null
-          try {
-            job = await queueService.addGameAction({
-              gameId: data.roomId,
-              playerId: userId,
-              action: normalizedAction,
-              socketId: socket.id,
-              idempotencyKey: data.idempotencyKey,
-            })
-          } catch (e) {
-            const msg = (e instanceof Error ? e.message : String(e)).toLowerCase()
-            // Treat duplicate idempotency keys (existing jobId) as a success ack
-            if (msg.includes('job') && msg.includes('exist')) {
-              try {
-                const { realtimeMetrics } = await import('./metricsService.js')
-                realtimeMetrics.recordAck(normalizedAction.type as string, Date.now() - t0)
-              } catch (error) {
-                logger.warn('Failed to record ack metric for duplicate idempotency (best-effort)', {
-                  error: error instanceof Error ? error.message : String(error),
-                })
+
+          if (useQueue) {
+            try {
+              job = await queueService.addGameAction({
+                gameId: data.roomId,
+                playerId: userId,
+                action: normalizedAction,
+                socketId: socket.id,
+                idempotencyKey: data.idempotencyKey,
+              })
+            } catch (e) {
+              const msg = (e instanceof Error ? e.message : String(e)).toLowerCase()
+              // Treat duplicate idempotency keys (existing jobId) as a success ack
+              if (msg.includes('job') && msg.includes('exist')) {
+                try {
+                  const { realtimeMetrics } = await import('./metricsService.js')
+                  realtimeMetrics.recordAck(normalizedAction.type as string, Date.now() - t0)
+                } catch (error) {
+                  logger.warn(
+                    'Failed to record ack metric for duplicate idempotency (best-effort)',
+                    {
+                      error: error instanceof Error ? error.message : String(error),
+                    },
+                  )
+                }
+                ack?.({ ok: true, queued: true, acceptedAt: Date.now() })
+                return
               }
-              ack?.({ ok: true, queued: true, acceptedAt: Date.now() })
-              return
+              throw e
             }
-            throw e
           }
 
-          if (job) {
+          if (job && useQueue) {
             logger.info(
               `Queued game action: ${(data.action as { type?: string })?.type} for game ${data.roomId}`,
               {
@@ -851,10 +928,94 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                   break
                 }
               }
+              await emitLockstepFrame(data.roomId, channel, normalizedAction, userId)
             } catch (inlineError) {
               handleSocketError(socket, 'game-action:inline', inlineError)
             }
           }
+        },
+      ),
+    )
+
+    socket.on(
+      'game-action:resync-request',
+      withErrorHandler(
+        socket,
+        'game-action:resync-request',
+        async (
+          data: { roomId?: string; fromSeq?: number },
+          ack?: (r: { ok: boolean; error?: string }) => void,
+        ) => {
+          if (!lockstepEnabled) {
+            ack?.({ ok: false, error: 'Lockstep mode disabled on server' })
+            return
+          }
+
+          if (!data || typeof data.roomId !== 'string') {
+            ack?.({ ok: false, error: 'Invalid resync request' })
+            return
+          }
+
+          const normalizedRoomId = data.roomId
+          const userId = requireUserId(socket)
+          const isMember = await gameRoomService.isPlayerInRoom(normalizedRoomId, userId)
+          if (!isMember) {
+            ack?.({ ok: false, error: 'Not a member of this game' })
+            return
+          }
+
+          const checksumEntry = await lockstepService.getLatestSnapshot(
+            normalizedRoomId,
+            data.fromSeq,
+          )
+
+          let serializedState: SerializedGameState | null = null
+          if (checksumEntry?.snapshot) {
+            try {
+              const parsed = JSON.parse(
+                checksumEntry.snapshot.toString('utf8'),
+              ) as SerializedGameState
+              const hydrated = hydrateSerializedGameState(parsed)
+              const filtered = filterGameStateForPlayer(hydrated, userId)
+              const finalState = serializeGameStateForClient(filtered)
+              if (finalState) {
+                serializedState = finalState
+              }
+            } catch (error) {
+              logger.warn('Failed to parse lockstep snapshot; falling back to live state', {
+                roomId: normalizedRoomId,
+                error: error instanceof Error ? error.message : String(error),
+              })
+            }
+          }
+
+          if (!serializedState) {
+            const currentState = await gameService.getGameState(normalizedRoomId)
+            if (!currentState) {
+              ack?.({ ok: false, error: 'Unable to load game state for resync' })
+              return
+            }
+            const filtered = filterGameStateForPlayer(currentState, userId)
+            const finalState = serializeGameStateForClient(filtered)
+            if (!finalState) {
+              ack?.({ ok: false, error: 'Unable to serialize game state' })
+              return
+            }
+            serializedState = finalState
+          }
+
+          const baselineSeq = checksumEntry?.seq ?? 0
+          const frames = await lockstepService.getFramesAfter(normalizedRoomId, baselineSeq)
+          lockstepMetrics.recordResync(frames.length)
+
+          socket.emit('game-action:snapshot', {
+            matchId: normalizedRoomId,
+            seq: baselineSeq,
+            state: serializedState,
+            frames,
+          })
+
+          ack?.({ ok: true })
         },
       ),
     )

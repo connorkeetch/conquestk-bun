@@ -4,6 +4,7 @@
  */
 
 import type { GameDelta } from '@conquestk/shared/types/delta'
+import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep.js'
 import type { ClanProgressionSocketPayload } from './clans.js'
 import type { GameAction, SerializedGameState } from './game.js'
 import type { Player as RoomPlayer } from './gameRoom.js'
@@ -227,6 +228,14 @@ export interface PlayerLeftEvent {
 }
 
 export interface ServerToClientEvents {
+  'game-action:frame-committed': (frame: InputFrame) => void
+  'game-action:checksum': (checksum: TickChecksum) => void
+  'game-action:snapshot': (payload: {
+    matchId: string
+    seq: number
+    state: SerializedGameState
+    frames: InputFrame[]
+  }) => void
   'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
   'player-left': (data: PlayerLeftEvent) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
@@ -383,6 +392,10 @@ export interface ClientToServerEvents {
   'game-action': (
     data: { roomId: string; action: GameAction; idempotencyKey?: string },
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
+  ) => void
+  'game-action:resync-request': (
+    data: { roomId: string; fromSeq?: number },
+    callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
   'player:resign': (data: { roomId: string }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void

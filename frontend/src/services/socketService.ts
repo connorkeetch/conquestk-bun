@@ -13,6 +13,8 @@ import type {
   ServerToClientEvents,
   TerritoryDelta,
 } from '@conquestk/shared'
+import { computeChecksum } from '@conquestk/shared/lockstep'
+import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep'
 import { toast } from 'react-hot-toast'
 import { io, type Socket } from 'socket.io-client'
 import { v4 as uuidv4 } from 'uuid'
@@ -106,6 +108,10 @@ class SocketService {
   private joiningRooms: Map<string, number> = new Map() // roomId -> attempt count
   private processDeltaHandler?: (payload: GameDelta) => Promise<void>
   private lastTurnStartByRoom: Map<string, number> = new Map()
+  private readonly lockstepEnabled = import.meta.env?.VITE_LOCKSTEP_DEV === 'true'
+  private lockstepSeqByRoom: Map<string, number> = new Map()
+  private lockstepPendingResync: Set<string> = new Set()
+  private lockstepLastChecksum: Map<string, number> = new Map()
   // Placeholder for future convergence timers (no-op currently)
   private clearConfirmTimer(_roomId: string) {
     // intentionally empty; used as a hook for future state-convergence timers
@@ -126,6 +132,105 @@ class SocketService {
 
   private static stableStringify(value: unknown): string {
     return JSON.stringify(value, SocketService.stableReplacer)
+  }
+
+  private requestLockstepResync(roomId: string) {
+    if (!this.lockstepEnabled || !this.socket) return
+    if (this.lockstepPendingResync.has(roomId)) return
+    this.lockstepPendingResync.add(roomId)
+    const fromSeq = this.lockstepSeqByRoom.get(roomId) ?? 0
+    this.socket.emit(
+      'game-action:resync-request',
+      { roomId, fromSeq } as Parameters<ClientToServerEvents['game-action:resync-request']>[0],
+      (response?: { ok: boolean; error?: string }) => {
+        if (response && !response.ok) {
+          logger.warn('Lockstep resync request rejected', {
+            roomId,
+            error: response.error,
+          })
+          this.lockstepPendingResync.delete(roomId)
+        } else {
+          logger.info('Lockstep resync requested', { roomId, fromSeq })
+        }
+      },
+    )
+  }
+
+  private handleLockstepFrame = (frame: InputFrame) => {
+    if (!this.lockstepEnabled || !frame || typeof frame.matchId !== 'string') return
+    const lastSeq = this.lockstepSeqByRoom.get(frame.matchId) ?? 0
+    if (
+      lastSeq > 0 &&
+      frame.seq !== lastSeq + 1 &&
+      !this.lockstepPendingResync.has(frame.matchId)
+    ) {
+      logger.warn('Lockstep frame gap detected; requesting resync', {
+        matchId: frame.matchId,
+        expected: lastSeq + 1,
+        received: frame.seq,
+      })
+      this.requestLockstepResync(frame.matchId)
+    }
+    this.lockstepSeqByRoom.set(frame.matchId, frame.seq)
+  }
+
+  private handleLockstepChecksum = (payload: TickChecksum) => {
+    if (!this.lockstepEnabled || !payload || typeof payload.matchId !== 'string') return
+    this.lockstepLastChecksum.set(payload.matchId, payload.crc32)
+    const lastSeq = this.lockstepSeqByRoom.get(payload.matchId) ?? 0
+    if (payload.seq > lastSeq) {
+      this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
+    }
+    if (this.lockstepPendingResync.has(payload.matchId)) {
+      return
+    }
+    const state = store.getState().game.currentGame
+    if (!state || state.roomId !== payload.matchId) {
+      return
+    }
+    try {
+      const localChecksum = computeChecksum(state)
+      if (localChecksum !== payload.crc32) {
+        logger.warn('Lockstep checksum mismatch detected', {
+          matchId: payload.matchId,
+          serverSeq: payload.seq,
+          serverChecksum: payload.crc32,
+          localChecksum,
+        })
+        store.dispatch(setDesyncDetected(true))
+        this.requestLockstepResync(payload.matchId)
+      }
+    } catch (error) {
+      logger.warn('Failed to compute local lockstep checksum', { error })
+    }
+  }
+
+  private handleLockstepSnapshot = (payload: {
+    matchId: string
+    seq: number
+    state: Record<string, unknown>
+    frames: InputFrame[]
+  }) => {
+    if (!this.lockstepEnabled || !payload || typeof payload.matchId !== 'string') return
+    this.lockstepPendingResync.delete(payload.matchId)
+    this.lockstepLastChecksum.delete(payload.matchId)
+    try {
+      store.dispatch(setGameState(payload.state as GameState))
+      store.dispatch(setDesyncDetected(false))
+    } catch (error) {
+      logger.warn('Failed to apply lockstep snapshot (falling back to fetch)', { error })
+    }
+
+    this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
+
+    if (Array.isArray(payload.frames) && payload.frames.length > 0) {
+      const lastFrame = payload.frames[payload.frames.length - 1]
+      if (lastFrame && typeof lastFrame.seq === 'number') {
+        this.lockstepSeqByRoom.set(payload.matchId, lastFrame.seq)
+      }
+    }
+
+    void (store.dispatch(fetchGameState({ roomId: payload.matchId })) as Promise<unknown>)
   }
 
   private getActionFingerprint(
@@ -602,6 +707,11 @@ class SocketService {
     this.pendingRoomStateFetches.clear()
     this.lastTurnStartByRoom.clear()
     reliabilityMetrics.start()
+    if (this.lockstepEnabled) {
+      this.lockstepSeqByRoom.clear()
+      this.lockstepPendingResync.clear()
+      this.lockstepLastChecksum.clear()
+    }
     // Early return if already connected to the same socket
     if (this.socket?.connected) {
       return
@@ -659,6 +769,11 @@ class SocketService {
     this.pendingRoomStateFetches.clear()
     rollbackAllOptimisticActions()
     store.dispatch(clearOptimisticMarkers())
+    if (this.lockstepEnabled) {
+      this.lockstepSeqByRoom.clear()
+      this.lockstepPendingResync.clear()
+      this.lockstepLastChecksum.clear()
+    }
   }
 
   joinRoom(roomId: string) {
@@ -728,6 +843,10 @@ class SocketService {
     action: { type: string; playerId?: string; payload?: unknown }
   }) {
     const { roomId, action } = data
+    if (this.lockstepEnabled) {
+      void this.sendActionWithAck(roomId, action)
+      return
+    }
     // Route to specialized handlers to preserve throttling and optimistic UI where applicable
     try {
       switch (String(action?.type)) {
@@ -1569,6 +1688,12 @@ class SocketService {
       }
     })
 
+    if (this.lockstepEnabled) {
+      this.socket.on('game-action:frame-committed', this.handleLockstepFrame)
+      this.socket.on('game-action:checksum', this.handleLockstepChecksum)
+      this.socket.on('game-action:snapshot', this.handleLockstepSnapshot)
+    }
+
     // Rating updates (rank changes -> notifications)
     this.socket.on('ratingUpdate', (data) => {
       try {
@@ -2119,6 +2244,11 @@ class SocketService {
     this.socket.off('game:snapshot')
     this.socket.off('lifecycle:update')
     this.socket.off('room-update')
+    if (this.lockstepEnabled) {
+      this.socket.off('game-action:frame-committed', this.handleLockstepFrame)
+      this.socket.off('game-action:checksum', this.handleLockstepChecksum)
+      this.socket.off('game-action:snapshot', this.handleLockstepSnapshot)
+    }
     // Legacy events fully retired
     this.socket.off('capitalAttackCheck')
     this.socket.off('capitalElimination')

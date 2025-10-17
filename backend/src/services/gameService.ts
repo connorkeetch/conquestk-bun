@@ -28,6 +28,7 @@ import type { PlayerRating, RatingChange } from './eloService.js'
 import { eloService } from './eloService.js'
 // Pairwise Elo is now built into eloService; no separate service import
 import { featureFlagService } from './featureFlagService.js'
+import { lockstepService } from './lockstepService.js'
 import { mapService } from './mapService.js'
 import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
 import notificationService from './notificationService.js'
@@ -601,6 +602,8 @@ export class GameService {
     const normalizedState =
       roomId && (!state.roomId || typeof state.roomId !== 'string') ? { ...state, roomId } : state
 
+    let baseState: GameState
+
     if (
       normalizedState.territoryModifiers &&
       !(normalizedState.territoryModifiers instanceof Map)
@@ -609,13 +612,28 @@ export class GameService {
         Object.entries(normalizedState.territoryModifiers),
       )
 
-      return {
+      baseState = {
         ...normalizedState,
         territoryModifiers: modifierMap,
-      }
+      } as GameState
+    } else {
+      baseState = normalizedState as GameState
     }
 
-    return normalizedState as GameState
+    const { combatRngSeed, combatRngState, ...restState } = baseState as GameState & {
+      combatRngSeed?: string
+      combatRngState?: { a: number; b: number; c: number; d: number }
+    }
+
+    if (!restState.rngSeed && combatRngSeed) {
+      restState.rngSeed = combatRngSeed
+    }
+
+    if (!restState.rngState && combatRngState) {
+      restState.rngState = combatRngState
+    }
+
+    return restState
   }
 
   async executeAiTurn(
@@ -883,35 +901,44 @@ export class GameService {
       config.sectorBonuses = loaded.sectorBonuses
     }
 
-    const gameState = this.gameEngine.initializeGame(roomId, players, config, {
-      territories: loaded.territories,
-      sectorBonuses: loaded.sectorBonuses,
-    })
-
+    let rngSeed = roomId
     try {
       const crypto = await import('node:crypto')
       const seed = crypto.randomBytes(16).toString('hex')
-      const seedStr = `sfc32:${seed}`
-      gameState.combatRngSeed = seedStr
-      try {
-        const entry: RngLogEntry = {
-          type: 'RNG',
-          timestamp: new Date().toISOString(),
-          scope: 'combat',
-          algorithm: 'sfc32',
-          seed: seedStr,
-        }
-        await this.appendLog(roomId, [entry])
-      } catch (logErr) {
-        logger.debug('Skipped RNG seed appendLog', {
-          roomId,
-          error: logErr instanceof Error ? logErr.message : logErr,
-        })
-      }
-    } catch (e) {
-      logger.warn('Failed to initialize or log combat RNG seed', {
+      rngSeed = `sfc32:${seed}`
+    } catch (error) {
+      logger.warn('Falling back to roomId-derived RNG seed', {
         roomId,
-        error: e instanceof Error ? e.message : e,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+
+    const gameState = this.gameEngine.initializeGame(
+      roomId,
+      players,
+      config,
+      {
+        territories: loaded.territories,
+        sectorBonuses: loaded.sectorBonuses,
+      },
+      { rngSeed },
+    )
+
+    const resolvedSeed = gameState.rngSeed ?? rngSeed
+
+    try {
+      const entry: RngLogEntry = {
+        type: 'RNG',
+        timestamp: new Date().toISOString(),
+        scope: 'primary',
+        algorithm: 'sfc32',
+        seed: resolvedSeed,
+      }
+      await this.appendLog(roomId, [entry])
+    } catch (logErr) {
+      logger.debug('Skipped RNG seed appendLog', {
+        roomId,
+        error: logErr instanceof Error ? logErr.message : logErr,
       })
     }
 
@@ -927,6 +954,7 @@ export class GameService {
 
     // Cache the game state with TTL for automatic cleanup (24 hours)
     await this.persistGameStateSnapshot(roomId, this.serializeGameState(gameState))
+    await lockstepService.reset(roomId)
 
     this.recordAssassinationAssignments(roomId, gameState)
 

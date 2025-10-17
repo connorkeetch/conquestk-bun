@@ -1,3 +1,4 @@
+import { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import type { Pool } from 'pg'
 import { logger } from '../utils/logger.js'
 
@@ -75,10 +76,12 @@ export class CapitalGeneratorService {
           mapId,
           playerCount,
         })
+        const rng = new DeterministicRng(`${mapId}:capitals:${playerCount}`)
         capitalAssignments[playerCount] = this.selectOptimalCapitals(
           territories,
           graph,
           playerCount,
+          rng,
         )
       }
 
@@ -97,6 +100,7 @@ export class CapitalGeneratorService {
     territories: Territory[],
     graph: Map<string, Set<string>>,
     count: number,
+    rng: DeterministicRng,
   ): string[] {
     const capitals: string[] = []
     const territoryIds = territories.map((t) => t.id)
@@ -145,7 +149,7 @@ export class CapitalGeneratorService {
         // Fallback: select random territory if algorithm fails
         const remaining = territoryIds.filter((id) => !capitals.includes(id))
         if (remaining.length > 0) {
-          capitals.push(remaining[Math.floor(Math.random() * remaining.length)])
+          capitals.push(remaining[rng.nextInt(remaining.length)])
         }
       }
     }

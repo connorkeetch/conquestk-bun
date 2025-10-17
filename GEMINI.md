@@ -198,6 +198,11 @@ VITE_ASSET_BASE_URL=https://assets.conquestk.com
 ```
 If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**`. Static audio/background assets still require `VITE_ASSET_BASE_URL` to point at the CDN.
 
+### Lockstep development mode
+- Set `LOCKSTEP_DEV=true` in `backend/.env` to emit `game-action:frame-committed`/`game-action:checksum` events, persist frames in `match_frames`, and bypass the worker queue.
+- Set `VITE_LOCKSTEP_DEV=true` in `frontend/.env` to disable optimistic client updates and consume the new lockstep feeds alongside legacy deltas.
+- Use `npm run replay:match -- <matchId>` (backend) to re-sim recorded frames and compare checksums whenever you suspect drift; the script exits non-zero on mismatches.
+
 ## Syncing this guide
 - `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` carry the same content; review all three after every edit.
 - When you update one, update the other two in the same commit and skim the diff to confirm parity.

@@ -1,3 +1,4 @@
+import { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import { GameEngine } from '../game/gameEngine.js'
 import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreasures.js'
 import type { AIDifficulty, GameAction, GamePlayer, GameState } from '../types/game.js'
@@ -124,16 +125,23 @@ class AIDecisionService {
       return []
     }
 
+    const rng = this.createDecisionRng(request.gameState, request.player.id)
+
     switch (request.difficulty) {
       case 'recruit':
         return await this.generateRecruitPlan(request)
       case 'commander':
         return await this.generateCommanderPlan(request)
       case 'grandmaster':
-        return await this.generateGrandmasterPlan(request)
+        return await this.generateGrandmasterPlan(request, rng)
       default:
         return []
     }
+  }
+
+  private createDecisionRng(gameState: GameState, playerId: string): DeterministicRng {
+    const baseSeed = gameState.rngSeed ?? `${gameState.roomId}`
+    return new DeterministicRng(`${baseSeed}:ai:${playerId}:turn:${gameState.turn}`)
   }
 
   private async generateCommanderPlan(request: DecisionRequest): Promise<GameAction[]> {
@@ -359,7 +367,10 @@ class AIDecisionService {
   }
 
   // === Grandmaster (EV-driven) ===
-  private async generateGrandmasterPlan(request: DecisionRequest): Promise<GameAction[]> {
+  private async generateGrandmasterPlan(
+    request: DecisionRequest,
+    rng: DeterministicRng,
+  ): Promise<GameAction[]> {
     const { gameState, player, budget } = request
     const roomId = gameState.roomId
     const actions: GameAction[] = []
@@ -420,7 +431,7 @@ class AIDecisionService {
     }
 
     if (phase === 'attack') {
-      const attack = this.findGrandmasterAttack(gameState, player.id, budget)
+      const attack = this.findGrandmasterAttack(gameState, player.id, budget, rng)
       if (attack) {
         if (!push(attack)) return actions
       }
@@ -441,6 +452,7 @@ class AIDecisionService {
     gameState: GameState,
     playerId: string,
     budget: DecisionBudget,
+    rng: DeterministicRng,
   ): GameAction | null {
     const owned = gameState.board.filter((t) => t.ownerId === playerId)
     if (owned.length === 0) return null
@@ -454,7 +466,8 @@ class AIDecisionService {
         if (!tgt || tgt.ownerId === playerId) continue
         if (tgt.ownerId && this.arePlayersTeammates(gameState, playerId, tgt.ownerId)) continue
         const attackDice = Math.min(3, Math.max(1, src.armies - 1))
-        const ev = this.estimateAttackEV(gameState, playerId, src.id, tgt.id, endTime)
+        const ev = this.estimateAttackEV(gameState, playerId, src.id, tgt.id, endTime, rng.clone())
+        rng.next()
         candidates.push({ from: src.id, to: tgt.id, ev, armies: attackDice })
       }
     }
@@ -486,6 +499,7 @@ class AIDecisionService {
     fromId: string,
     toId: string,
     endTimeMs: number,
+    rng: DeterministicRng,
   ): number {
     const from = this.getTerritory(gameState, fromId)
     const to = this.getTerritory(gameState, toId)
@@ -501,7 +515,7 @@ class AIDecisionService {
     const maxTrials = 200 // cap to keep fast
 
     while (trials < maxTrials && Date.now() < endTimeMs) {
-      const { aLoss, dLoss, conquered } = this.simulateBattle(attackersStart, defendersStart)
+      const { aLoss, dLoss, conquered } = this.simulateBattle(attackersStart, defendersStart, rng)
       if (conquered) wins += 1
       totalALoss += aLoss
       totalDLoss += dLoss
@@ -599,6 +613,7 @@ class AIDecisionService {
   private simulateBattle(
     attackersStart: number,
     defendersStart: number,
+    rng: DeterministicRng,
   ): {
     aLoss: number
     dLoss: number
@@ -612,8 +627,8 @@ class AIDecisionService {
       // Dice counts per Risk rules
       const ad = Math.min(3, Math.max(1, a)) // Using all attacking dice available (a already excludes the 1 left behind)
       const dd = Math.min(2, Math.max(1, d))
-      const aRolls = this.rollDice(ad)
-      const dRolls = this.rollDice(dd)
+      const aRolls = this.rollDice(ad, rng)
+      const dRolls = this.rollDice(dd, rng)
       const pairs = Math.min(aRolls.length, dRolls.length)
       for (let i = 0; i < pairs; i++) {
         if (aRolls[i] > dRolls[i]) {
@@ -633,8 +648,8 @@ class AIDecisionService {
     return { aLoss, dLoss, conquered: d <= 0 }
   }
 
-  private rollDice(n: number): number[] {
-    const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6))
+  private rollDice(n: number, rng: DeterministicRng): number[] {
+    const rolls = Array.from({ length: n }, () => rng.nextIntInclusive(1, 6))
     return rolls.sort((a, b) => b - a)
   }
 

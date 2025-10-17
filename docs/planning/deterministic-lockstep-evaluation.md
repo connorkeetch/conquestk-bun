@@ -64,6 +64,20 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Golden replay test: pick a completed match fixture, run the headless replay twice and assert identical checksum/serialized state.
 - Integration test that runs a short match locally, captures emitted checksums, and verifies they match the database snapshot checksum for the same turn.
 
+## Phase 0 status (2025-03-18)
+- Shared `DeterministicRng` utility added to `@conquestk/shared/utils` with seed hashing, integer helpers, and shuffle support.
+- `GameEngine`, AI planners, treasure draws, capital selection, and lobby AI seeding now use the deterministic RNG seeded per match.
+- `GameState` persists `rngSeed`/`rngState`; legacy `combatRng*` fields hydrate into the new structure automatically.
+- Game action processor defaults to inline execution (`GAME_ACTION_QUEUE=enabled` re-enables workers) to keep command sequencing deterministic.
+- Socket `join-room` handler restores membership validation so transport behaviour matches existing tests while we prep lockstep.
+
+## Phase 1 progress (2025-03-18)
+- Added `match_frames` and `match_checksums` tables to persist authoritative input frames and periodic CRC snapshots (with optional binary state payloads for resync).
+- Socket layer now emits `game-action:frame-committed` and `game-action:checksum` when `LOCKSTEP_DEV=true`, using canonical JSON + CRC32 to detect drift.
+- Lockstep recorder seeds per-match sequences, stores commands, and reuses snapped `SerializedGameState` so deterministic replays stay aligned with the RNG log.
+- Queueing is automatically disabled in lockstep mode, keeping inline processing deterministic while legacy delta events continue to flow alongside the new frames.
+- Frontend validator (behind `VITE_LOCKSTEP_DEV`) replays the confirmed frames through Redux state, computes local CRCs via the shared stable serializer, and triggers auto-resync when checksums diverge.
+
 ## Rollout plan
 1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).
 2. Enable lockstep transport in development, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely.

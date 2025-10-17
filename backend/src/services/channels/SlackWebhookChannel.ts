@@ -1,4 +1,5 @@
 import type { NotificationEvent, NotificationResult } from '@conquestk/shared/types/notifications'
+import { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import { logger } from '../../utils/logger.js'
 import type { NotificationChannel } from '../NotificationDispatcher.js'
 import { formatSlackWebhookPayload, type SlackWebhookPayload } from './slackFormatting.js'
@@ -341,7 +342,7 @@ export class SlackWebhookChannel implements NotificationChannel {
     }
 
     const exponential = BASE_BACKOFF_MS * 2 ** (attempt - 1)
-    const jitter = Math.random() * JITTER_MS
+    const jitter = new DeterministicRng('slack-jitter').next() * JITTER_MS
     return exponential + jitter
   }
 }

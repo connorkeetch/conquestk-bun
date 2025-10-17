@@ -4,6 +4,7 @@
  */
 
 export * from './delta.js'
+export * from './lockstep.js'
 export * from './messaging.js'
 export * from './notifications.js'
 export * from './themes.js'
