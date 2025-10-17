@@ -706,6 +706,11 @@ class SocketService {
   // Everyone uses joinRoom() now regardless of membership status
 
   leaveRoom(roomId: string) {
+    if (!roomId) return
+    // Allow immediate rejoin attempts (React StrictMode double-invokes effects)
+    this.joiningRooms.delete(roomId)
+    // Reset delta sequence tracking so rejoin starts fresh
+    this.deltaSequenceTracking.delete(roomId)
     this.socket?.emit('leave-room', roomId)
   }
 
