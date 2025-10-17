@@ -590,6 +590,12 @@ export class GameService {
     const hydrated = this.hydrateGameState(cachedState, roomId)
     const currentPlayer = hydrated.players.find((player) => player.id === hydrated.currentPlayer)
 
+    logger.info('Executing AI turn', {
+      roomId,
+      playerId: currentPlayer.id,
+      difficulty: currentPlayer.aiDifficulty ?? 'recruit',
+    })
+
     if (!currentPlayer) {
       throw new Error('Current player not found')
     }
@@ -611,12 +617,29 @@ export class GameService {
       budget: effectiveBudget,
     })
 
+    logger.info('AI decision plan', {
+      roomId,
+      playerId: currentPlayer.id,
+      plan: {
+        actions: decisionPlan.actions.map((a) => a.type),
+        usedFallback: decisionPlan.usedFallback,
+        reason: decisionPlan.reason,
+        diagnostics: decisionPlan.diagnostics,
+      },
+    })
+
     const baselineState = this.cloneGameState(hydrated)
     const planResult = await this.applyActions(
       baselineState,
       decisionPlan.actions,
       currentPlayer.id,
     )
+
+    logger.info('AI plan application result', {
+      roomId,
+      playerId: currentPlayer.id,
+      success: planResult.success,
+    })
 
     let finalState: GameState
     let appliedActions: GameAction[]
@@ -629,6 +652,7 @@ export class GameService {
       finalState = planResult.gameState
       appliedActions = planResult.applied
     } else {
+      logger.warn('AI plan application failed, using fallback', { roomId, playerId: currentPlayer.id })
       const fallbackActions = this.limitFallbackActions(
         aiDecisionService.buildFallbackPlan(baselineState, currentPlayer.id),
         effectiveBudget,
@@ -641,6 +665,7 @@ export class GameService {
         currentPlayer.id,
       )
       if (!fallbackResult.success) {
+        logger.error('Failed to apply fallback plan for AI turn', { roomId, playerId: currentPlayer.id })
         throw new Error('Failed to apply fallback plan for AI turn')
       }
       finalState = fallbackResult.gameState
@@ -803,12 +828,12 @@ export class GameService {
     const loaded = await loadMapForEngine(config.mapId)
     // Ensure sector bonuses are present in config (for UI and calculations)
     if (!config.sectorBonuses || config.sectorBonuses.length === 0) {
-      config.sectorBonuses = loaded.continentBonuses
+      config.sectorBonuses = loaded.sectorBonuses
     }
 
     const gameState = this.gameEngine.initializeGame(roomId, players, config, {
       territories: loaded.territories,
-      continentBonuses: loaded.continentBonuses,
+      sectorBonuses: loaded.sectorBonuses,
     })
 
     try {
@@ -1796,7 +1821,7 @@ export class GameService {
         turnNumber,
       }
 
-      // Compute sector/continent bonuses for detailed logging (non-fog breakdown aid)
+      // Compute sector bonuses for detailed logging (non-fog breakdown aid)
       const sectorEntries: SectorBonusLogEntry[] = (() => {
         try {
           const cfg = state.gameConfig

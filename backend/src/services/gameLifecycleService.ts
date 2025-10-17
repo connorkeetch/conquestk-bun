@@ -1047,6 +1047,13 @@ export class GameLifecycleService {
       // Derive small human-visible delay
       const delay = Math.max(0, Math.trunc(options?.delayMs ?? 300))
 
+      logger.info('Scheduling AI turn job', {
+        gameId: roomId,
+        playerId: current.id,
+        turnNumber: state.turn,
+        delay,
+      })
+
       const queue = queueService.getGameActionQueue()
       const safeId = String(idKey).replace(/[^a-zA-Z0-9_-]/g, '_')
       await queue.add(

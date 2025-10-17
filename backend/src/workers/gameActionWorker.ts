@@ -240,6 +240,8 @@ export class GameActionWorker {
       budgetOverrides?: Partial<import('../services/aiDecisionService.js').DecisionBudget>
     }
 
+    logger.info('Processing AI turn job', { gameId, playerId, turnNumber, jobId: job.id })
+
     const idKey = job.id !== undefined ? String(job.id) : `ai:${gameId}:${turnNumber}`
 
     const cached = await jobIdempotencyService.getProcessedJob<ProcessGameActionResult>(
@@ -257,16 +259,27 @@ export class GameActionWorker {
 
     try {
       const state = await this.gameService.getGameState(gameId)
-      if (!state) throw new Error('Game not found')
+      if (!state) {
+        logger.warn('AI turn processing skipped: Game not found', { gameId, playerId, turnNumber })
+        throw new Error('Game not found')
+      }
 
       // Validate this job still applies
       if (state.phase === 'finished') {
+        logger.info('AI turn processing skipped: Game is finished', { gameId, playerId, turnNumber })
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
 
       if (state.turn !== turnNumber || state.currentPlayer !== playerId) {
+        logger.info('AI turn processing skipped: Stale job', {
+          gameId,
+          playerId,
+          turnNumber,
+          actualTurn: state.turn,
+          actualPlayer: state.currentPlayer,
+        })
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
@@ -274,6 +287,7 @@ export class GameActionWorker {
 
       const current = state.players.find((p) => p.id === playerId)
       if (!current || !current.isAi) {
+        logger.info('AI turn processing skipped: Player is not an AI', { gameId, playerId, turnNumber })
         const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
