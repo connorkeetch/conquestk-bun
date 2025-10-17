@@ -82,7 +82,6 @@ const RETRY_BACKOFF_MAX_MS = 5000
 const JOIN_BACKOFF_BASE_MS = 300
 const JOIN_BACKOFF_MAX_MS = 1500
 const AUTH_TOAST_THROTTLE_MS = 30_000
-const DELTA_REQUEST_TOAST_DURATION_MS = 2000
 const CONNECTION_RESTORE_TOAST_DURATION_MS = 2000
 const TURN_TOAST_DURATION_MS = 2500
 const TURN_SUPPRESS_WINDOW_MS = 2000
@@ -386,10 +385,7 @@ class SocketService {
     }
 
     logger.info('Requesting missing deltas', { roomId, fromSeq, toSeq })
-    toast('Syncing missed updates...', {
-      icon: '🔄',
-      duration: DELTA_REQUEST_TOAST_DURATION_MS,
-    })
+    // ResyncBanner shows sync status, no toast needed for delta requests
 
     return new Promise((resolve) => {
       this.socket?.emit(

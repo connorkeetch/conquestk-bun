@@ -4,9 +4,9 @@ import { fetchGameState } from '@/store/gameSlice'
 import { setDesyncDetected, setResyncing } from '@/store/uiRoomSlice'
 import { logger } from '@/utils/logger'
 
-type Props = { roomId: string; allowSpectate?: boolean }
+type Props = { roomId: string }
 
-export function ResyncBanner({ roomId, allowSpectate }: Props) {
+export function ResyncBanner({ roomId }: Props) {
   const dispatch = useAppDispatch()
   const desync = useAppSelector((s) => s.uiRoom.desyncDetected)
   const resyncing = useAppSelector((s) => s.uiRoom.resyncing)
@@ -17,9 +17,7 @@ export function ResyncBanner({ roomId, allowSpectate }: Props) {
     dispatch(setResyncing(true))
     setError(null)
     try {
-      const result = await dispatch(
-        fetchGameState({ roomId, allowSpectate: allowSpectate === true }),
-      )
+      const result = await dispatch(fetchGameState({ roomId }))
       if (fetchGameState.fulfilled.match(result)) {
         dispatch(setDesyncDetected(false))
       } else {
@@ -35,7 +33,7 @@ export function ResyncBanner({ roomId, allowSpectate }: Props) {
     } finally {
       dispatch(setResyncing(false))
     }
-  }, [allowSpectate, dispatch, roomId])
+  }, [dispatch, roomId])
 
   if (!desync) return null
 
