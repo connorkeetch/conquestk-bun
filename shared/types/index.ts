@@ -235,6 +235,26 @@ export interface GameState {
   kingOfTheHillState?: KingOfTheHillState
   resumePhaseAfterReinforcement?: GamePhase | null
   resumeHasAttackedAfterReinforcement?: boolean
+  reinforcementHistory?: Array<{
+    playerId: string
+    territoryId: string
+    armies: number
+    ts: number
+  }>
+  fortifyHistory?: Array<{
+    playerId: string
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+    ts: number
+  }>
+  rngSeed?: string
+  rngState?: {
+    a: number
+    b: number
+    c: number
+    d: number
+  }
 }
 
 export interface GameTerritoryModifier {
@@ -293,6 +313,7 @@ export type GameAction =
   | EndTurnAction
   | TradeCardsAction
   | GoBackToReinforcementAction
+  | TransferConquestAction
 
 type GameActionType =
   | 'deploy'
@@ -301,6 +322,7 @@ type GameActionType =
   | 'end_turn'
   | 'trade_cards'
   | 'go_back_to_reinforcement'
+  | 'transfer_conquest'
 
 type ActionBase<T extends GameActionType> = {
   type: T
@@ -344,6 +366,14 @@ export type TradeCardsAction = ActionBase<'trade_cards'> & {
 
 export type GoBackToReinforcementAction = ActionBase<'go_back_to_reinforcement'> & {
   payload?: undefined
+}
+
+export type TransferConquestAction = ActionBase<'transfer_conquest'> & {
+  payload: {
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+  }
 }
 
 // ============================================
