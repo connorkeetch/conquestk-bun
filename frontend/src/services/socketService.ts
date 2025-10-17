@@ -24,6 +24,7 @@ import {
   rollbackAllOptimisticActions,
   rollbackOptimisticAction,
 } from '@/utils/optimisticActions'
+import { socketDebugger } from '@/utils/socketDebugger'
 import { store } from '../store'
 import {
   applyDelta,
@@ -64,7 +65,6 @@ import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
 import { reliabilityMetrics } from './reliabilityMetricsService'
-import { socketDebugger } from '@/utils/socketDebugger'
 
 type RoomLifecyclePayload = LifecycleUpdatePayload
 type ReinforcementBaselineState = {
@@ -84,7 +84,6 @@ const JOIN_BACKOFF_MAX_MS = 1500
 const AUTH_TOAST_THROTTLE_MS = 30_000
 const DELTA_REQUEST_TOAST_DURATION_MS = 2000
 const CONNECTION_RESTORE_TOAST_DURATION_MS = 2000
-const GAME_STATE_SYNC_TOAST_DURATION_MS = 2000
 const TURN_TOAST_DURATION_MS = 2500
 const TURN_SUPPRESS_WINDOW_MS = 2000
 const RESYNC_DELAY_MS = 100
@@ -1362,9 +1361,7 @@ class SocketService {
       if (!currentGame || currentGame.roomId !== payload.roomId) {
         if (!this.pendingRoomStateFetches.has(payload.roomId)) {
           this.pendingRoomStateFetches.add(payload.roomId)
-          void (
-            store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>
-          )
+          void (store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>)
             .catch(() => {
               /* swallow fetch errors - fallback is manual refresh */
             })

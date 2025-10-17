@@ -320,7 +320,6 @@ if (typeof window !== 'undefined') {
   if (debugEnabled) {
     socketDebugger.enable()
   }
-
   // Expose to window for easy console access
   ;(window as never as { __socketDebugger: SocketDebugger }).__socketDebugger = socketDebugger
 }
