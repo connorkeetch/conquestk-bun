@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js'
 import { getWorkerManagerInstance } from '../workers/workerManager.js'
 import { adminService } from './adminService.js'
 import { cdnService } from './cdnService.js'
+import { getClientMetricsSummary } from './clientMetricsService.js'
 import { databaseClusterService } from './databaseClusterService.js'
 import { notificationDispatcher } from './NotificationDispatcher.js'
 import { buildPerformanceAlertNotification } from './notifications/performanceAlerts.js'
@@ -50,6 +51,19 @@ interface SystemMetrics {
     totalPlayers: number
     avgPlayersPerGame: number
     completedGames: number
+  }
+  reliability: {
+    sessionCount: number
+    avgLatency: number
+    avgSuccessRate: number
+    totalReconnects: number
+    lockstep: {
+      total: number
+      successes: number
+      failures: number
+      failureRate: number
+      avgDurationMs: number
+    }
   }
 }
 
@@ -101,6 +115,11 @@ interface PerformanceThresholds {
     maxWaitingJobs: number
     maxFailureRate: number
   }
+  reliability: {
+    minSamples: number
+    maxFailureRate: number
+    maxAvgDurationMs: number
+  }
 }
 
 export class PerformanceMonitorService {
@@ -128,6 +147,11 @@ export class PerformanceMonitorService {
     queues: {
       maxWaitingJobs: 100,
       maxFailureRate: 5, // 5%
+    },
+    reliability: {
+      minSamples: 10, // only alert once we have meaningful volume
+      maxFailureRate: 0.1, // 10%
+      maxAvgDurationMs: 2000, // 2 seconds
     },
   }
 
@@ -202,6 +226,9 @@ export class PerformanceMonitorService {
       // Game metrics (placeholder - would integrate with game service)
       const gameMetrics = await this.collectGameMetrics()
 
+      // Reliability metrics (lockstep telemetry)
+      const reliabilityMetrics = await this.collectReliabilityMetrics()
+
       const systemMetrics: SystemMetrics = {
         timestamp,
         server: {
@@ -232,6 +259,7 @@ export class PerformanceMonitorService {
           healthyProviders: cdnMetrics.providers,
         },
         game: gameMetrics,
+        reliability: reliabilityMetrics,
       }
 
       // Store metrics (keep last 24 hours)
@@ -296,6 +324,44 @@ export class PerformanceMonitorService {
     }
   }
 
+  private async collectReliabilityMetrics(): Promise<SystemMetrics['reliability']> {
+    const empty: SystemMetrics['reliability'] = {
+      sessionCount: 0,
+      avgLatency: 0,
+      avgSuccessRate: 0,
+      totalReconnects: 0,
+      lockstep: {
+        total: 0,
+        successes: 0,
+        failures: 0,
+        failureRate: 0,
+        avgDurationMs: 0,
+      },
+    }
+
+    try {
+      const summary = await getClientMetricsSummary(6)
+      return {
+        sessionCount: summary.sessionCount,
+        avgLatency: Number.isFinite(summary.avgLatency) ? summary.avgLatency : 0,
+        avgSuccessRate: Number.isFinite(summary.avgSuccessRate) ? summary.avgSuccessRate : 0,
+        totalReconnects: summary.totalReconnects,
+        lockstep: {
+          total: summary.lockstepResyncs.total,
+          successes: summary.lockstepResyncs.successes,
+          failures: summary.lockstepResyncs.failures,
+          failureRate: summary.lockstepResyncs.failureRate,
+          avgDurationMs: summary.lockstepResyncs.avgDurationMs,
+        },
+      }
+    } catch (error) {
+      logger.warn('Failed to collect reliability metrics', {
+        error: error instanceof Error ? error.message : error,
+      })
+      return empty
+    }
+  }
+
   private async checkPerformanceAlerts(): Promise<void> {
     if (this.metrics.length === 0) return
 
@@ -348,6 +414,46 @@ export class PerformanceMonitorService {
           { waitingJobs: latestMetrics.queues.waitingJobs },
         ),
       )
+    }
+
+    const lockstep = latestMetrics.reliability.lockstep
+    if (lockstep.total >= this.thresholds.reliability.minSamples) {
+      if (lockstep.failureRate > this.thresholds.reliability.maxFailureRate) {
+        const ratePct = Math.round(lockstep.failureRate * 1000) / 10
+        const severity =
+          lockstep.failureRate >= this.thresholds.reliability.maxFailureRate * 1.5
+            ? 'critical'
+            : 'high'
+        newAlerts.push(
+          this.createAlert(
+            severity,
+            'lockstep',
+            `Lockstep resync failure rate is ${ratePct}% (threshold: ${Math.round(this.thresholds.reliability.maxFailureRate * 1000) / 10}%)`,
+            {
+              failureRate: lockstep.failureRate,
+              total: lockstep.total,
+              failures: lockstep.failures,
+              successes: lockstep.successes,
+            },
+          ),
+        )
+      }
+
+      if (lockstep.avgDurationMs > this.thresholds.reliability.maxAvgDurationMs) {
+        newAlerts.push(
+          this.createAlert(
+            'medium',
+            'lockstep',
+            `Average lockstep resync duration is ${Math.round(lockstep.avgDurationMs)}ms (threshold: ${this.thresholds.reliability.maxAvgDurationMs}ms)`,
+            {
+              avgDurationMs: lockstep.avgDurationMs,
+              total: lockstep.total,
+              failures: lockstep.failures,
+              successes: lockstep.successes,
+            },
+          ),
+        )
+      }
     }
 
     // Add new alerts
@@ -435,6 +541,9 @@ export class PerformanceMonitorService {
       totalRequests: number
       avgResponseTime: number
       errorRate: number
+      lockstepFailureRate: number
+      lockstepAvgDurationMs: number
+      lockstepTotalResyncs: number
     }
     current: SystemMetrics | null
     trends: {
@@ -442,6 +551,8 @@ export class PerformanceMonitorService {
       memoryUsage: number[]
       cacheHitRate: number[]
       activeGames: number[]
+      lockstepFailureRate: number[]
+      lockstepAvgDurationMs: number[]
     }
     alerts: {
       active: number
@@ -451,6 +562,9 @@ export class PerformanceMonitorService {
   } {
     const current = this.getCurrentMetrics()
     const lastHour = this.getMetricsHistory(1)
+    const lockstepFailureRate = current?.reliability.lockstep.failureRate ?? 0
+    const lockstepAvgDuration = current?.reliability.lockstep.avgDurationMs ?? 0
+    const lockstepTotal = current?.reliability.lockstep.total ?? 0
 
     return {
       summary: {
@@ -458,6 +572,9 @@ export class PerformanceMonitorService {
         totalRequests: this.requestCounter,
         avgResponseTime: current?.database.avgResponseTime || 0,
         errorRate: 0, // Would calculate from actual error tracking
+        lockstepFailureRate,
+        lockstepAvgDurationMs: lockstepAvgDuration,
+        lockstepTotalResyncs: lockstepTotal,
       },
       current,
       trends: {
@@ -465,6 +582,8 @@ export class PerformanceMonitorService {
         memoryUsage: lastHour.map((m) => m.server.memoryUsage.heapUsed / 1024 / 1024),
         cacheHitRate: lastHour.map((m) => m.cache.hitRate),
         activeGames: lastHour.map((m) => m.game.activeGames),
+        lockstepFailureRate: lastHour.map((m) => m.reliability.lockstep.failureRate),
+        lockstepAvgDurationMs: lastHour.map((m) => m.reliability.lockstep.avgDurationMs),
       },
       alerts: {
         active: this.getActiveAlerts().length,

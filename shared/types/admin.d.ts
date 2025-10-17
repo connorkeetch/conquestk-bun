@@ -60,15 +60,71 @@ export interface AdminPerformanceDetailedHealth {
 }
 
 export interface AdminPerformanceCurrentMetrics {
-  // Shape depends on performanceMonitorService; expose as index signature
+  timestamp?: number
+  server?: {
+    uptime?: number
+    memoryUsage?: { heapUsed?: number }
+    cpuUsage?: { user: number; system: number }
+    activeConnections?: number
+    requestsPerSecond?: number
+  }
+  database?: {
+    totalQueries?: number
+    avgResponseTime?: number
+    slowQueries?: number
+    connectionPoolSize?: number
+    healthyNodes?: number
+  }
+  cache?: {
+    hitRate?: number
+    totalRequests?: number
+    memoryUsage?: number
+    evictions?: number
+  }
+  queues?: {
+    totalJobs?: number
+    activeJobs?: number
+    waitingJobs?: number
+    failedJobs?: number
+    processedJobs?: number
+    deadLetterJobs?: number
+  }
+  cdn?: {
+    hitRate?: number
+    bandwidth?: number
+    avgLoadTime?: number
+    healthyProviders?: number
+  }
+  game?: {
+    activeGames?: number
+    totalPlayers?: number
+    avgPlayersPerGame?: number
+    completedGames?: number
+  }
+  reliability?: {
+    sessionCount: number
+    avgLatency: number
+    avgSuccessRate: number
+    totalReconnects: number
+    lockstep: {
+      total: number
+      successes: number
+      failures: number
+      failureRate: number
+      avgDurationMs: number
+    }
+  }
   [k: string]: unknown
 }
 
 export interface AdminPerformanceAlert {
   id?: string
-  severity?: string
+  component?: string
+  severity?: 'low' | 'medium' | 'high' | 'critical'
   message?: string
   resolved?: boolean
+  timestamp?: number
+  metrics?: Record<string, unknown>
   [k: string]: unknown
 }
 

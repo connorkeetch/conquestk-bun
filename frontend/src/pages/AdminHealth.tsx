@@ -2,6 +2,7 @@ import type {
   AdminApiHealth,
   AdminMatchSvcStatus,
   AdminOddsStatus,
+  AdminPerformanceAlert,
   AdminQueuesHealth,
   AdminQueuesStats,
 } from '@conquestk/shared/types/admin'
@@ -562,7 +563,7 @@ export default function AdminHealth() {
             )
           }
 
-          const renderClientMetricsSummary = () => {
+          const renderClientMetricsSummaryCard = () => {
             const d = (r.data ?? {}) as ClientMetricsSummary
             const sessionCount = d.sessionCount ?? 0
             const avgLatency = d.avgLatency ?? 0
@@ -693,10 +694,30 @@ export default function AdminHealth() {
               database?: { avgResponseTime?: number; slowQueries?: number }
               cache?: { hitRate?: number }
               queues?: { waitingJobs?: number; failedJobs?: number; processedJobs?: number }
+              reliability?: {
+                sessionCount?: number
+                avgLatency?: number
+                avgSuccessRate?: number
+                totalReconnects?: number
+                lockstep?: {
+                  total?: number
+                  successes?: number
+                  failures?: number
+                  failureRate?: number
+                  avgDurationMs?: number
+                }
+              }
             }
             const memMb = d.server?.memoryUsage?.heapUsed
               ? Math.round((d.server.memoryUsage.heapUsed / 1024 / 1024) * 10) / 10
               : undefined
+            const lockstep = d.reliability?.lockstep
+            const failureRatePct =
+              lockstep?.failureRate != null
+                ? Math.round((lockstep.failureRate ?? 0) * 1000) / 10
+                : 0
+            const avgDurationMs =
+              lockstep?.avgDurationMs != null ? Math.round(lockstep.avgDurationMs) : 0
             return (
               <div className="mt-3 text-xs text-white/80 space-y-1">
                 <div>
@@ -721,15 +742,78 @@ export default function AdminHealth() {
                 <div>Cache hit: {d.cache?.hitRate != null ? `${d.cache.hitRate}%` : 'unknown'}</div>
                 <div>Queue waiting: {d.queues?.waitingJobs ?? 0}</div>
                 <div>Queue failed: {d.queues?.failedJobs ?? 0}</div>
+                <div>Queue processed: {d.queues?.processedJobs ?? 0}</div>
+                <div className="border-t border-border/40 pt-2 mt-2">
+                  <div className="text-white/70 font-semibold mb-1">Lockstep Reliability</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-muted">Resyncs</div>
+                      <div>{lockstep?.total ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Failures</div>
+                      <div>{lockstep?.failures ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Failure Rate</div>
+                      <div>{failureRatePct}%</div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Avg Duration</div>
+                      <div>{avgDurationMs} ms</div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Sessions</div>
+                      <div>{d.reliability?.sessionCount ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Reconnects</div>
+                      <div>{d.reliability?.totalReconnects ?? 0}</div>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-muted">
+                    Success rate:{' '}
+                    {d.reliability?.avgSuccessRate != null
+                      ? `${Math.round((d.reliability.avgSuccessRate ?? 0) * 1000) / 10}%`
+                      : 'unknown'}
+                    {' · '}Avg latency:{' '}
+                    {d.reliability?.avgLatency != null
+                      ? Math.round(d.reliability.avgLatency)
+                      : 'unknown'}{' '}
+                    ms
+                  </div>
+                </div>
               </div>
             )
           }
 
           const renderPerformanceAlerts = () => {
-            const arr = (r.data as unknown[]) || []
+            const arr = Array.isArray(r.data) ? (r.data as AdminPerformanceAlert[]) : []
             return (
-              <div className="mt-3 text-sm text-white">
-                Active alerts: {Array.isArray(arr) ? arr.length : 0}
+              <div className="mt-3 text-sm text-white space-y-2">
+                <div>Active alerts: {arr.length}</div>
+                {arr.length === 0 ? (
+                  <div className="text-xs text-muted">No active performance alerts</div>
+                ) : (
+                  arr.slice(0, 4).map((alert) => (
+                    <div
+                      key={alert.id ?? `${alert.component}-${alert.timestamp ?? ''}`}
+                      className={`rounded border px-2 py-1 text-xs ${
+                        alert.severity === 'critical'
+                          ? 'border-red-500/60 bg-red-500/10 text-red-200'
+                          : alert.severity === 'high'
+                            ? 'border-amber-500/60 bg-amber-500/10 text-amber-100'
+                            : 'border-sky-500/60 bg-sky-500/10 text-sky-100'
+                      }`}
+                    >
+                      <div className="font-semibold">
+                        {String(alert.component ?? 'unknown')} ·{' '}
+                        {String(alert.severity ?? 'info').toUpperCase()}
+                      </div>
+                      <div>{alert.message ?? 'No message provided'}</div>
+                    </div>
+                  ))
+                )}
               </div>
             )
           }
@@ -755,7 +839,7 @@ export default function AdminHealth() {
                     : r.label === 'Queues Stats'
                       ? renderQueuesStats()
                       : r.label === 'Client Metrics Summary'
-                        ? renderClientMetricsSummary()
+                        ? renderClientMetricsSummaryCard()
                         : r.label === 'Performance Detailed'
                           ? renderPerformanceDetailed()
                           : r.label === 'Performance Metrics'

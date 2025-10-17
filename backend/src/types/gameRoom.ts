@@ -53,7 +53,6 @@ export interface GameRoom {
   playerCount?: number
   turnTimerSeconds?: number
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
-  cardTradeMode?: string | null
   bonusType?: string | null
   treasureConfig?: TreasureConfig | null
   kingOfTheHillConfig?: KingOfTheHillConfig | null

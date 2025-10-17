@@ -37,8 +37,6 @@ type RawLobbyRoom = GameRoom & {
   turn_timer?: number | string | null
   fogOfWar?: string | null
   fog_of_war?: string | null
-  cardTradeMode?: string | null
-  card_trade_mode?: string | null
   bonusType?: string | null
   bonus_type?: string | null
 }
@@ -49,7 +47,6 @@ type NormalizedLobbyRoom = GameRoom & {
   currentPlayers?: number
   turnTimerSeconds?: number
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
-  cardTradeMode?: string | null
   bonusType?: string | null
 }
 
@@ -116,7 +113,6 @@ const normalizeLobbyRoom = (room: RawLobbyRoom): NormalizedLobbyRoom => {
   }
 
   const fogOfWar = normalizeFog(room.fogOfWar ?? room.fog_of_war)
-  const cardTradeMode = (room.cardTradeMode ?? room.card_trade_mode) || undefined
   const bonusType = (room.bonusType ?? room.bonus_type) || undefined
 
   const playerCount = currentPlayers ?? room.playerCount ?? room.currentPlayers
@@ -128,7 +124,6 @@ const normalizeLobbyRoom = (room: RawLobbyRoom): NormalizedLobbyRoom => {
     ...(typeof playerCount === 'number' ? { playerCount } : {}),
     ...(typeof turnTimerSeconds === 'number' ? { turnTimerSeconds } : {}),
     ...(fogOfWar ? { fogOfWar } : {}),
-    ...(cardTradeMode ? { cardTradeMode } : {}),
     ...(bonusType ? { bonusType } : {}),
   }
 }
@@ -174,17 +169,6 @@ const formatFogOfWar = (fog?: NormalizedLobbyRoom['fogOfWar']) => {
     default:
       return 'Fog: Default'
   }
-}
-
-const formatCardMode = (mode?: string | null) => {
-  if (!mode) {
-    return 'Cards: Progressive (default)'
-  }
-  const normalized = mode.toLowerCase()
-  if (normalized === 'fixed') return 'Cards: Fixed'
-  if (normalized === 'progressive' || normalized === 'escalating') return 'Cards: Progressive'
-  if (normalized === 'none' || normalized === 'disabled') return 'Cards: Disabled'
-  return `Cards: ${mode}`
 }
 
 const formatBonusType = (bonus?: string | null) => {
@@ -1137,7 +1121,6 @@ const LobbyPage: React.FC = () => {
                     detailBadges.push(formatTeamSetup(game))
                     detailBadges.push(formatTurnTimer(game.turnTimerSeconds))
                     detailBadges.push(formatFogOfWar(game.fogOfWar))
-                    detailBadges.push(formatCardMode(game.cardTradeMode))
                     const bonusLabel = formatBonusType(game.bonusType)
                     if (bonusLabel) {
                       detailBadges.push(bonusLabel)

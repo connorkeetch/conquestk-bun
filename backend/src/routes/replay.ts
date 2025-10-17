@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { Router } from 'express'
 import { query } from '../config/database.js'
 import { authenticateToken } from '../middleware/auth.js'
+import { getReplayFrameChunk, getReplayInitialSnapshot } from '../services/replayFrameService.js'
 import { logger } from '../utils/logger.js'
 
 const router = Router()
@@ -433,6 +434,54 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
   } catch (error) {
     logger.error('Replay chunk error', { error: error instanceof Error ? error.message : error })
     return res.status(500).json({ error: 'Failed to load replay chunk' })
+  }
+})
+
+router.get('/:id/replay/frames', authenticateToken, async (req, res) => {
+  try {
+    const gameId = String(req.params.id)
+    const viewerId = (req as unknown as { userId?: string }).userId ?? null
+    const allowed = await canViewReplay(gameId, viewerId)
+    if (!allowed) return res.status(403).json({ error: 'Not authorized to view this replay' })
+
+    const includeSnapshot = String(req.query.includeSnapshot ?? '').toLowerCase() === 'true'
+    const limitParam = Number(req.query.limit ?? 50)
+    const limit = Number.isFinite(limitParam)
+      ? Math.max(1, Math.min(200, Math.trunc(limitParam)))
+      : 50
+    const fromParam = Number(req.query.fromSeq ?? 1)
+    const fromSeq = Number.isFinite(fromParam) ? Math.max(1, Math.trunc(fromParam)) : 1
+    const toSeq = fromSeq + limit - 1
+
+    const [{ frames, finalSeq, totalFrames }, snapshot] = await Promise.all([
+      getReplayFrameChunk(gameId, fromSeq, toSeq),
+      includeSnapshot ? getReplayInitialSnapshot(gameId) : Promise.resolve(null),
+    ])
+
+    const lastSeq =
+      frames.length > 0 ? (frames[frames.length - 1]?.seq ?? fromSeq - 1) : fromSeq - 1
+    const hasMore = finalSeq > lastSeq
+    const nextSeq = hasMore ? lastSeq + 1 : null
+
+    return res.json({
+      ok: true,
+      data: {
+        snapshot: includeSnapshot ? snapshot : undefined,
+        frames,
+        fromSeq,
+        toSeq: lastSeq,
+        finalSeq,
+        totalFrames,
+        nextSeq,
+        hasMore,
+      },
+    })
+  } catch (error) {
+    logger.error('Replay frame window error', {
+      matchId: req.params.id,
+      error: error instanceof Error ? error.message : error,
+    })
+    return res.status(500).json({ error: 'Failed to load replay frames' })
   }
 })
 

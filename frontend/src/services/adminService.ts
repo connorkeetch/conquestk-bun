@@ -148,6 +148,13 @@ export interface ClientMetricsSummary {
   avgLatency: number
   avgSuccessRate: number
   totalReconnects: number
+  lockstepResyncs?: {
+    total: number
+    successes: number
+    failures: number
+    failureRate: number
+    avgDurationMs: number
+  }
 }
 
 export interface SystemStatus {

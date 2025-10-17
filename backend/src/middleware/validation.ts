@@ -164,7 +164,6 @@ const gameSchema = Joi.object({
 
   settings: Joi.object({
     turnTimeLimit: Joi.number().integer().min(30).max(300),
-    cardTradeMode: Joi.string().valid('fixed', 'progressive', 'none'),
     fogOfWar: Joi.boolean(),
     autoAssignTerritories: Joi.boolean(),
   }).default({}),

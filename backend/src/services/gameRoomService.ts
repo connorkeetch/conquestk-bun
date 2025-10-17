@@ -60,7 +60,6 @@ interface GameRoomRow {
   map_id?: string | null
   game_mode?: string | null
   fog_of_war?: string | null
-  card_trade_mode?: string | null
   bonus_type?: string | null
   treasure_config?: unknown | null
   king_of_the_hill_config?: unknown | null
@@ -503,7 +502,6 @@ export class GameRoomService {
             : undefined,
       turnTimerSeconds: this.parseNullableNumber(row.turn_timer) ?? undefined,
       fogOfWar: this.normalizeFogOfWar(row.fog_of_war),
-      cardTradeMode: typeof row.card_trade_mode === 'string' ? row.card_trade_mode : undefined,
       bonusType: typeof row.bonus_type === 'string' ? row.bonus_type : undefined,
       treasureConfig: (row.treasure_config ?? undefined) as
         | import('../types/game.js').TreasureConfig

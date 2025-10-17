@@ -246,7 +246,6 @@ export interface GameConfiguration {
   modifierDistribution?: ModifierDistribution
   turnTimer?: number
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
-  cardTradeMode?: 'fixed' | 'progressive' | 'custom'
   startingArmies?: number
   isRanked?: boolean
   isPrivate?: boolean
