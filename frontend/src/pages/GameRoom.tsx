@@ -1805,7 +1805,7 @@ export default function GameRoom() {
       {/* Banners appear below the sticky title */}
       <ConnectionBanner />
       <PausedBanner />
-      <ResyncBanner roomId={currentRoom.id} allowSpectate={isSpectator} />
+      <ResyncBanner roomId={currentRoom.id} />
       <GameStartModal />
       <YourTurnModal />
 
