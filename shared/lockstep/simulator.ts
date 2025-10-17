@@ -17,6 +17,7 @@ import type {
 } from '../types/index.js'
 import type { InputFrame, LockstepCommand } from '../types/lockstep.js'
 import { DeterministicRng, deriveStateFromSeed } from '../utils/deterministicRng.js'
+import { applyCapitalCapture, isCapitalTerritory } from './capitals.js'
 
 type ReinforcementHistoryEntry = {
   playerId: string
@@ -763,7 +764,7 @@ const ensureArray = <T>(value: T[] | undefined): T[] => {
 }
 
 const initializeRng = (state: LockstepState): DeterministicRng => {
-  const baseSeed = state.rngSeed ?? `${state.roomId ?? 'lockstep'}:seed`
+  const baseSeed = state.rngSeed ?? `${state.roomId ?? 'lockstep'}`
   if (!state.rngSeed) {
     state.rngSeed = baseSeed
   }
@@ -1057,8 +1058,8 @@ const simulateAttack = (
     return { state, supported: false }
   }
 
-  const from = { ...working.board[fromIndex] } as Territory
-  const to = { ...working.board[toIndex] } as Territory
+  let from = { ...working.board[fromIndex] } as Territory
+  let to = { ...working.board[toIndex] } as Territory
 
   if ((from.ownerId ?? playerId) !== playerId || (from.armies ?? 0) <= 1) {
     return { state, supported: false }
@@ -1097,10 +1098,12 @@ const simulateAttack = (
   const players = working.players as Player[]
   const attacker = players.find((p) => p.id === playerId)
   const defender = players.find((p) => p.id === to.ownerId)
+  const defenderId = defender?.id ?? null
+  const targetedCapital = defenderId ? isCapitalTerritory(working, defenderId, to.id) : false
 
   let conquered = false
   if (to.armies === 0) {
-    if (!attacker || !defender) {
+    if (!attacker || !defender || !defenderId) {
       return { state, supported: false }
     }
 
@@ -1113,9 +1116,24 @@ const simulateAttack = (
     working.conqueredDuringTurn = true
     conquered = true
 
-    working.board = [...working.board]
-    working.board[fromIndex] = from
-    working.board[toIndex] = to
+    working.board = working.board.map((territory) => {
+      if (territory.id === from.id) return { ...from }
+      if (territory.id === to.id) return { ...to }
+      return territory
+    })
+
+    if (targetedCapital) {
+      applyCapitalCapture(working, playerId, defenderId, to.id)
+      const refreshedBoard = working.board as Territory[]
+      const refreshedFrom = refreshedBoard.find((territory) => territory.id === from.id)
+      const refreshedTo = refreshedBoard.find((territory) => territory.id === to.id)
+      if (refreshedFrom) {
+        from = { ...refreshedFrom }
+      }
+      if (refreshedTo) {
+        to = { ...refreshedTo }
+      }
+    }
 
     const gameEndCheck = checkGameEnd(working)
     transferEliminatedTreasures(working, playerId, treasureConfig, gameEndCheck.eliminatedPlayers)
@@ -1151,9 +1169,11 @@ const simulateAttack = (
 
   const gameEndCheck = checkGameEnd(working)
 
-  working.board = [...working.board]
-  working.board[fromIndex] = from
-  working.board[toIndex] = to
+  working.board = working.board.map((territory) => {
+    if (territory.id === from.id) return { ...from }
+    if (territory.id === to.id) return { ...to }
+    return territory
+  })
 
   working.lastBattleResult = {
     attackerDice: battle.attackerDice,
@@ -1431,6 +1451,68 @@ const simulateGoBackToReinforcement = (
   return { state: working, supported: true }
 }
 
+const neutralizeCapitalAssignment = (state: LockstepState, playerId: string): void => {
+  if (!state.capitalAssignments || !(playerId in state.capitalAssignments)) {
+    return
+  }
+  const assignments = { ...state.capitalAssignments }
+  delete assignments[playerId]
+  state.capitalAssignments = assignments
+}
+
+const simulateResign = (
+  state: LockstepState,
+  playerId: string,
+): { state: LockstepState; supported: boolean } => {
+  const currentPlayer = (state.players as Player[]).find((player) => player.id === playerId)
+  if (!currentPlayer) {
+    return { state, supported: false }
+  }
+
+  let working = cloneState(state)
+  const board = working.board.map((territory) => {
+    if (territory.ownerId !== playerId) {
+      return territory
+    }
+    const updated: Territory = { ...territory, ownerId: 'neutral' }
+    if (updated.capitalOwnerId === playerId) {
+      updated.capitalOwnerId = null
+      updated.isCapital = false
+    }
+    return updated
+  })
+
+  working.board = board
+
+  const players = working.players as Player[]
+  const target = players.find((player) => player.id === playerId)
+  if (!target) {
+    return { state, supported: false }
+  }
+
+  target.territories = []
+  target.armies = 0
+  target.treasures = []
+  target.mustCashInTreasures = false
+  target.isEliminated = true
+  delete target.capitalTerritory
+
+  neutralizeCapitalAssignment(working, playerId)
+
+  working.players = players.map((player) => ({ ...player }))
+
+  if (working.currentPlayer === playerId) {
+    const result = simulateEndTurn(working, playerId, undefined)
+    if (result.supported) {
+      working = result.state
+    }
+  }
+
+  checkGameEnd(working)
+
+  return { state: working, supported: true }
+}
+
 export const simulateFrame = (state: GameState, frame: InputFrame): SimulationResult => {
   let working = cloneState(state as LockstepState)
   const unsupported: LockstepCommand['kind'][] = []
@@ -1514,6 +1596,15 @@ export const simulateFrame = (state: GameState, frame: InputFrame): SimulationRe
       }
       case 'go_back_to_reinforcement': {
         const result = simulateGoBackToReinforcement(working, frame.playerId, undefined)
+        if (result.supported) {
+          working = result.state
+        } else {
+          unsupported.push(command.kind)
+        }
+        break
+      }
+      case 'resign': {
+        const result = simulateResign(working, frame.playerId)
         if (result.supported) {
           working = result.state
         } else {

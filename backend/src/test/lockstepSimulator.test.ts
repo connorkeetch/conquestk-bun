@@ -248,6 +248,189 @@ describe('Shared lockstep simulator parity', () => {
     expect(simState.kingOfTheHillState?.points['p1']).toBe(1)
   })
 
+  it('eliminates capitals and transfers territories on capture', async () => {
+    const baseState: GameState = {
+      roomId: 'match-capital',
+      players: [
+        {
+          id: 'p1',
+          userId: 'u1',
+          username: 'Attacker',
+          color: 'red',
+          territories: ['alpha'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: [],
+          mustCashInTreasures: false,
+          capitalTerritory: 'alpha',
+        },
+        {
+          id: 'p2',
+          userId: 'u2',
+          username: 'Defender',
+          color: 'blue',
+          territories: ['cap', 'delta'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: [],
+          mustCashInTreasures: false,
+          capitalTerritory: 'cap',
+        },
+      ],
+      currentPlayer: 'p1',
+      phase: 'attack',
+      turn: 1,
+      board: [
+        {
+          id: 'alpha',
+          name: 'Alpha',
+          ownerId: 'p1',
+          armies: 5,
+          adjacentTerritories: ['cap'],
+          isCapital: true,
+          capitalOwnerId: 'p1',
+        },
+        {
+          id: 'cap',
+          name: 'Capital',
+          ownerId: 'p2',
+          armies: 1,
+          adjacentTerritories: ['alpha'],
+          isCapital: true,
+          capitalOwnerId: 'p2',
+        },
+        {
+          id: 'delta',
+          name: 'Delta',
+          ownerId: 'p2',
+          armies: 2,
+          adjacentTerritories: ['alpha'],
+          isCapital: false,
+        },
+      ],
+      cards: [],
+      hasAttackedThisTurn: false,
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        maxPlayers: 2,
+        gameMode: 'capitals',
+      },
+      treasureState: {
+        totalSetsCashed: 0,
+        nextPayoutIndex: 0,
+      },
+      conqueredDuringTurn: false,
+      capitalAssignments: {
+        p1: 'alpha',
+        p2: 'cap',
+      },
+    }
+
+    const frame: InputFrame = {
+      matchId: 'match-capital',
+      seq: 1,
+      playerId: 'p1',
+      committedAt: new Date().toISOString(),
+      commands: [
+        {
+          kind: 'attack',
+          payload: { fromTerritoryId: 'alpha', toTerritoryId: 'cap' },
+        },
+      ],
+    }
+
+    const simState = applySimulatorFrame(baseState, frame)
+    const engineState = await applyEngineFrame(baseState, frame)
+
+    expectStateParity(simState, engineState)
+    const defender = engineState.players.find((player) => player.id === 'p2')
+    expect(defender?.isEliminated).toBe(true)
+    expect(engineState.board.every((territory) => territory.ownerId !== 'p2')).toBe(true)
+    expect(engineState.board.find((territory) => territory.id === 'cap')?.capitalOwnerId).toBe('p1')
+    expect(engineState.capitalAssignments?.p1).toBe('cap')
+    expect(engineState.board.find((territory) => territory.id === 'alpha')?.isCapital).toBe(false)
+  })
+
+  it('neutralizes territories when a player resigns', () => {
+    const baseState: GameState = {
+      roomId: 'match-resign',
+      players: [
+        {
+          id: 'p1',
+          userId: 'u1',
+          username: 'Aggro',
+          color: 'red',
+          territories: ['alpha'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: [],
+          mustCashInTreasures: false,
+        },
+        {
+          id: 'p2',
+          userId: 'u2',
+          username: 'Quitter',
+          color: 'blue',
+          territories: ['beta'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: ['bronze'],
+          mustCashInTreasures: false,
+        },
+      ],
+      currentPlayer: 'p2',
+      phase: 'attack',
+      turn: 1,
+      board: [
+        {
+          id: 'alpha',
+          name: 'Alpha',
+          ownerId: 'p1',
+          armies: 4,
+          adjacentTerritories: ['beta'],
+        },
+        {
+          id: 'beta',
+          name: 'Beta',
+          ownerId: 'p2',
+          armies: 3,
+          adjacentTerritories: ['alpha'],
+        },
+      ],
+      cards: [],
+      hasAttackedThisTurn: false,
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        maxPlayers: 2,
+      },
+      treasureState: {
+        totalSetsCashed: 0,
+        nextPayoutIndex: 0,
+      },
+      conqueredDuringTurn: false,
+    }
+
+    const frame: InputFrame = {
+      matchId: 'match-resign',
+      seq: 1,
+      playerId: 'p2',
+      committedAt: new Date().toISOString(),
+      commands: [{ kind: 'resign' }],
+    }
+
+    const { state: simState, unsupported } = simulateFrame(cloneState(baseState), frame)
+
+    expect(unsupported).toHaveLength(0)
+    expect(simState.board.find((territory) => territory.id === 'beta')?.ownerId).toBe('neutral')
+    const resignedPlayer = simState.players.find((player) => player.id === 'p2')
+    expect(resignedPlayer?.isEliminated).toBe(true)
+    expect(resignedPlayer?.territories).toEqual([])
+  })
+
   it('resolves assassination victories after conquest', async () => {
     const seed = 'alpha'
     const rngState = deriveStateFromSeed(seed)
