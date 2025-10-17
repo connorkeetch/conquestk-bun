@@ -92,6 +92,7 @@ describe('gameSlice', () => {
   describe('game state management', () => {
     const mockGameState: GameState = {
       roomId: 'test-room',
+      version: 1,
       players: [
         {
           id: 'player1',
@@ -228,6 +229,111 @@ describe('gameSlice', () => {
       const updated = store.getState().game.currentGame
       expect(updated?.board.find((t) => t.id === 'siberia')?.ownerId).toBe('player1')
       expect(store.getState().game.battleResult?.conquered).toBe(true)
+    })
+  })
+
+  describe('delta version tracking', () => {
+    const createVersionedGameState = (): GameState => ({
+      roomId: 'version-room',
+      version: 5,
+      players: [
+        {
+          id: 'player1',
+          userId: 'player1',
+          username: 'Player 1',
+          color: 'red' as PlayerColor,
+          armies: 3,
+          territories: ['alaska'],
+          cards: [],
+          isEliminated: false,
+        },
+      ],
+      currentPlayer: 'player1',
+      phase: 'reinforcement',
+      turn: 4,
+      board: [
+        {
+          id: 'alaska',
+          name: 'Alaska',
+          sector: 'north_america',
+          ownerId: 'player1',
+          armies: 3,
+          adjacentTerritories: ['kamchatka'],
+        },
+      ],
+      cards: [],
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        maxPlayers: 2,
+      },
+    })
+
+    it('accepts repeated delta versions without forcing a resync', () => {
+      store.dispatch(setGameState(createVersionedGameState()))
+
+      const updateDelta = {
+        type: 'PLAYER_UPDATE',
+        roomId: 'version-room',
+        playerId: 'player1',
+        changes: { armies: 7 },
+        timestamp: Date.now(),
+        version: 6,
+      } as unknown as GameDelta
+
+      store.dispatch(applyDelta(updateDelta))
+
+      let state = store.getState().game
+      expect(state.currentGame?.version).toBe(6)
+      expect(state.needsResync).toBe(false)
+      expect(state.currentGame?.players[0].armies).toBe(7)
+
+      // Re-delivery should not flip resync flag or advance version
+      store.dispatch(applyDelta(updateDelta))
+
+      state = store.getState().game
+      expect(state.currentGame?.version).toBe(6)
+      expect(state.needsResync).toBe(false)
+      expect(state.currentGame?.players[0].armies).toBe(7)
+    })
+
+    it('ignores stale delta versions without mutating state', () => {
+      store.dispatch(setGameState(createVersionedGameState()))
+
+      const staleDelta = {
+        type: 'PLAYER_UPDATE',
+        roomId: 'version-room',
+        playerId: 'player1',
+        changes: { armies: 1 },
+        timestamp: Date.now(),
+        version: 4,
+      } as unknown as GameDelta
+
+      store.dispatch(applyDelta(staleDelta))
+
+      const state = store.getState().game
+      expect(state.currentGame?.version).toBe(5)
+      expect(state.currentGame?.players[0].armies).toBe(3)
+      expect(state.needsResync).toBe(false)
+    })
+
+    it('flags forward gaps larger than one for resync', () => {
+      store.dispatch(setGameState(createVersionedGameState()))
+
+      const gapDelta = {
+        type: 'PLAYER_UPDATE',
+        roomId: 'version-room',
+        playerId: 'player1',
+        changes: { armies: 10 },
+        timestamp: Date.now(),
+        version: 8,
+      } as unknown as GameDelta
+
+      store.dispatch(applyDelta(gapDelta))
+
+      const state = store.getState().game
+      expect(state.currentGame?.version).toBe(5)
+      expect(state.currentGame?.players[0].armies).toBe(3)
+      expect(state.needsResync).toBe(true)
     })
   })
 

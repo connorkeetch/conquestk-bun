@@ -318,21 +318,29 @@ class SocketService {
       return true
     }
 
-    // Expected sequence
-    if (currentSeq === lastSeq + 1) {
-      this.deltaSequenceTracking.set(roomId, currentSeq)
+    if (currentSeq === lastSeq) {
+      logger.debug('Received repeated delta version; processing without advancing sequence', {
+        roomId,
+        version: currentSeq,
+      })
+      reliabilityMetrics.recordDeltaDuplicate()
       return true
     }
 
-    // Duplicate (already seen)
-    if (currentSeq <= lastSeq) {
-      logger.warn('Received duplicate or out-of-order delta', {
+    if (currentSeq < lastSeq) {
+      logger.warn('Received stale delta - dropping', {
         roomId,
-        expected: lastSeq + 1,
+        lastSeq,
         received: currentSeq,
       })
       reliabilityMetrics.recordDeltaDuplicate()
-      return false // Skip duplicate
+      return false
+    }
+
+    // Expected next sequence number
+    if (currentSeq === lastSeq + 1) {
+      this.deltaSequenceTracking.set(roomId, currentSeq)
+      return true
     }
 
     // GAP DETECTED: Missing deltas between lastSeq and currentSeq
