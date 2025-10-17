@@ -33,6 +33,7 @@ interface TokenLayerProps {
   fogEnabled?: boolean
   onClick?: (id: string) => void
   onHover?: (id: string | null) => void
+  optimisticMarkers?: Record<string, { actionIds: string[]; label?: string }>
 }
 
 export function TokenLayer({
@@ -45,6 +46,7 @@ export function TokenLayer({
   fogEnabled = false,
   onClick,
   onHover,
+  optimisticMarkers = {},
 }: TokenLayerProps) {
   const tokenMap = useMemo(() => new Set(validTargets), [validTargets])
 
@@ -54,6 +56,7 @@ export function TokenLayer({
         const isSelected = selectedId === t.id
         const isValid = tokenMap.has(t.id)
         const dimmed = dimNonTargets && selectedId && !isSelected && !isValid
+        const optimistic = optimisticMarkers?.[t.id]
         // Treat only explicit 'neutral' owner as neutral forces.
         const isNeutral = t.owner === 'neutral'
         // Fogged territories: when fog is enabled and owner is unknown/null from server filtering
@@ -98,6 +101,7 @@ export function TokenLayer({
               : pureWhite
                 ? `rgba(255,255,255,${dimmed ? 0.3 : 0.65})`
                 : hexToRgba(String(color), dimmed ? 0.3 : 0.5)
+        const optimisticGlow = optimistic ? ', 0 0 12px rgba(16, 185, 129, 0.55)' : ''
         const baseFill = isFogged ? '#64748B' : String(color) // slate-500 for fogged
         const innerFill = isDragonfire
           ? '#FDBA74' // softer orange to simulate molten middle
@@ -163,7 +167,7 @@ export function TokenLayer({
           <button
             key={t.id}
             type="button"
-            className="absolute focus:outline-none"
+            className="absolute focus:outline-none relative"
             style={{
               left: t.xPx,
               top: t.yPx,
@@ -184,7 +188,7 @@ export function TokenLayer({
             onBlur={() => onHover?.(null)}
           >
             <span
-              className={`block${premiumEffectClass}`}
+              className={`block${premiumEffectClass}${optimistic ? ' optimistic-token' : ''}`}
               style={{
                 width: baseSize,
                 height: baseSize,
@@ -193,7 +197,7 @@ export function TokenLayer({
                 opacity: finalOpacity,
                 borderRadius: '50%',
                 border: `${border}px solid ${edgeStroke}`,
-                boxShadow: `0 2px 6px rgba(0,0,0,0.4), 0 0 6px ${colorGlow}`,
+                boxShadow: `0 2px 6px rgba(0,0,0,0.4), 0 0 6px ${colorGlow}${optimisticGlow}`,
                 filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.35))',
                 display: 'flex',
                 alignItems: 'center',
@@ -228,6 +232,11 @@ export function TokenLayer({
                 </span>
               ) : null}
             </span>
+            {optimistic ? (
+              <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 text-[10px] font-semibold text-emerald-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                {optimistic.label ?? 'Pending'}
+              </span>
+            ) : null}
           </button>
         )
       })}

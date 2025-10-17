@@ -14,6 +14,7 @@ interface ConquestKMapProps {
   selectedTargetTerritory: string | null
   validTargets: string[]
   pendingAction: string | null
+  optimisticMarkers: Record<string, { actionIds: string[]; label?: string }>
   territoryModifierMap: Map<string, IconTerritoryModifier> | null
   onTerritoryClick: (territoryId: string) => void
   onTerritoryHover: (territoryId: string | null) => void
@@ -27,6 +28,7 @@ export const ConquestKMap: React.FC<ConquestKMapProps> = ({
   selectedTargetTerritory,
   validTargets,
   pendingAction,
+  optimisticMarkers,
   territoryModifierMap,
   onTerritoryClick,
   onTerritoryHover,
@@ -51,7 +53,7 @@ export const ConquestKMap: React.FC<ConquestKMapProps> = ({
           y: territory.armyPosition.y,
           ...(typeof territory.armies === 'number' ? { armies: territory.armies } : {}),
           ...(territory.owner ? { owner: territory.owner } : {}),
-          ...(territory.continent ? { continent: territory.continent } : {}),
+          ...(territory.sector ? { sector: territory.sector } : {}),
         }))}
         onTerritoryClick={onTerritoryClick}
         onTerritoryHover={onTerritoryHover}
@@ -59,6 +61,7 @@ export const ConquestKMap: React.FC<ConquestKMapProps> = ({
         selectedTargetTerritoryId={selectedTargetTerritory}
         playerColors={playerColors}
         pendingAction={pendingAction}
+        optimisticMarkers={optimisticMarkers}
         validTargets={validTargets}
         // focus centering handled elsewhere
         adjacency={Object.fromEntries(
