@@ -1171,6 +1171,17 @@ export class GameActionWorker {
           break
         }
 
+        case 'go_back_to_attack': {
+          const result = await this.gameService.processGoBackToAttack(gameId, playerId)
+          await this.deltaEmitter.emitPhaseChange(gameId, {
+            ...result,
+            reinforcementArmies: undefined,
+          })
+          await this.recordMove(gameId, playerId, currentState.turn, 'go_back_to_attack', {})
+          shouldBroadcast = false
+          break
+        }
+
         case 'undo_fortify': {
           // Process undo fortify by delegating to the generic action path
           await this.gameService.processGameAction(
@@ -1184,6 +1195,15 @@ export class GameActionWorker {
             this.emitGameSnapshot(`game:${gameId}`, serialized)
           }
           // Avoid emitting an extra delta below
+          shouldBroadcast = false
+          break
+        }
+
+        case 'resign': {
+          await this.gameService.processGameAction(
+            { type: 'resign', roomId: gameId, playerId },
+            playerId,
+          )
           shouldBroadcast = false
           break
         }

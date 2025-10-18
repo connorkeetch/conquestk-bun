@@ -592,6 +592,30 @@ class AdminService {
         }
       >
     }
+    lockstep: {
+      counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
+      gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
+    }
+    deltaTransport: {
+      counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
+      gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
+    }
+    deltaTransportSummary: {
+      interval: {
+        total: number
+        room: number
+        socket: number
+        byEvent: Record<string, number>
+        bySource: Record<string, number>
+        byContext: Record<string, number>
+      }
+      cumulative: {
+        total: number
+        room: number
+        socket: number
+        bySource: Record<string, number>
+      }
+    }
     ts: string
   }> {
     const response = await apiClient.get(this.realtimeUrl)

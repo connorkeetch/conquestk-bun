@@ -582,13 +582,22 @@ export const resignFromGame = createAsyncThunk(
   'game/resign',
   async (roomId: string, { getState, dispatch }) => {
     const state = getState() as RootState
+    const currentGame = state.game.currentGame
+    if (!currentGame || currentGame.roomId !== roomId) {
+      dispatch(setError('Unable to resign: game not found'))
+      return
+    }
     const isConnected = state.uiRoom.connectionStatus === 'connected'
     if (!isConnected) {
       dispatch(setError('Cannot resign while offline or disconnected'))
       return
     }
     try {
-      socketService.emit('player:resign', { roomId })
+      await sendOrQueueAction(state, {
+        type: 'resign',
+        roomId,
+        playerId: state.auth.user?.id || currentGame.currentPlayer,
+      } as GameAction)
     } catch (_e) {
       dispatch(setError('Failed to resign'))
     }
@@ -621,6 +630,36 @@ export const goBackToReinforcement = createAsyncThunk(
       dispatch(setPendingAction(null))
     } catch (_error) {
       dispatch(setError('Failed to go back to reinforcement phase'))
+    }
+  },
+)
+
+export const goBackToAttack = createAsyncThunk(
+  'game/goBackToAttack',
+  async (_, { getState, dispatch }) => {
+    const state = getState() as RootState
+    const { currentGame } = state.game
+
+    if (!currentGame) throw new Error('No active game')
+    if (currentGame.phase !== 'fortify') throw new Error('Can only go back from fortify phase')
+    if (Object.keys(currentGame.movementTracking ?? {}).length > 0) {
+      throw new Error('Cannot go back after fortifying')
+    }
+
+    try {
+      const action = {
+        type: 'go_back_to_attack',
+        roomId: currentGame.roomId,
+        playerId: state.auth.user?.id || currentGame.currentPlayer,
+      } as const
+
+      await sendOrQueueAction(state, action as unknown as GameAction)
+
+      dispatch(selectTerritory(null))
+      dispatch(selectTargetTerritory(null))
+      dispatch(setPendingAction(null))
+    } catch (_error) {
+      dispatch(setError('Failed to go back to attack phase'))
     }
   },
 )

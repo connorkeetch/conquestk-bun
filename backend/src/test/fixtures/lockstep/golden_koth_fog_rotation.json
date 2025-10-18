@@ -1,0 +1,119 @@
+{
+  "description": "King of the Hill rotation advances under persistent fog when the final player ends their turn",
+  "baseline": {
+    "roomId": "match-koth-fog-rotation",
+    "players": [
+      {
+        "id": "p1",
+        "userId": "u1",
+        "username": "Astra",
+        "color": "gold",
+        "territories": ["t1"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false
+      },
+      {
+        "id": "p2",
+        "userId": "u2",
+        "username": "Blaze",
+        "color": "teal",
+        "territories": ["t2"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false
+      }
+    ],
+    "currentPlayer": "p2",
+    "phase": "fortify",
+    "turn": 6,
+    "board": [
+      {
+        "id": "t1",
+        "name": "Summit Hold",
+        "ownerId": "p1",
+        "armies": 5,
+        "adjacentTerritories": ["t2", "t3"]
+      },
+      {
+        "id": "t2",
+        "name": "Lowland Gate",
+        "ownerId": "p2",
+        "armies": 3,
+        "adjacentTerritories": ["t1", "t3"]
+      },
+      {
+        "id": "t3",
+        "name": "Shrouded Ridge",
+        "ownerId": "neutral",
+        "armies": 4,
+        "adjacentTerritories": ["t1", "t2"]
+      }
+    ],
+    "cards": [],
+    "hasAttackedThisTurn": false,
+    "gameConfig": {
+      "movementType": "classic_adjacent",
+      "maxPlayers": 2,
+      "gameMode": "king_of_the_hill",
+      "fogOfWar": "persistent",
+      "treasureConfig": {
+        "enabled": false,
+        "diamondsPercent": 0,
+        "payoutMode": "classic",
+        "handCap": 5,
+        "diamondSetBonus": 5
+      },
+      "kingOfTheHill": {
+        "targetPoints": 5,
+        "rotationInterval": 2,
+        "neutralArmies": 4,
+        "previewTurns": 1,
+        "eligibleTerritoryIds": ["t1", "t2", "t3"],
+        "rotationOrder": ["t1", "t2", "t3"]
+      }
+    },
+    "kingOfTheHillState": {
+      "currentHillTerritoryId": "t1",
+      "points": {
+        "p1": 2,
+        "p2": 1
+      },
+      "targetPoints": 5,
+      "rotationInterval": 2,
+      "turnsUntilRotation": 1,
+      "rotationQueue": ["t2", "t3"],
+      "upcomingHillTerritoryId": "t2",
+      "lastScoreTurn": 5
+    },
+    "movementTracking": {},
+    "rngSeed": "sfc32:koth-fog-rotation",
+    "rngState": {
+      "a": 129503221,
+      "b": 1955526672,
+      "c": 902345112,
+      "d": 156223445
+    }
+  },
+  "frames": [
+    {
+      "matchId": "match-koth-fog-rotation",
+      "seq": 1,
+      "playerId": "p2",
+      "committedAt": "2025-04-05T18:30:00.000Z",
+      "commands": [
+        {
+          "kind": "end_turn"
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "finalSeq": 1,
+    "finalCrc32": 1627356380
+  }
+}

@@ -397,7 +397,6 @@ export interface ClientToServerEvents {
     data: { roomId: string; fromSeq?: number },
     callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
-  'player:resign': (data: { roomId: string }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
   'turn:begin': (data: { roomId: string }) => void
   goBackToReinforcement: (data: { roomId: string }) => void

@@ -6,6 +6,7 @@ import type {
   GamePhase,
   GameState,
   GameTerritoryModifier,
+  GoBackToAttackAction,
   GoBackToReinforcementAction,
   Metal,
   Player,
@@ -1474,6 +1475,28 @@ const simulateGoBackToReinforcement = (
   return { state: working, supported: true }
 }
 
+const simulateGoBackToAttack = (
+  state: LockstepState,
+  playerId: string,
+  _payload: GoBackToAttackAction['payload'] | undefined,
+): { state: LockstepState; supported: boolean } => {
+  if (state.phase !== 'fortify') {
+    return { state, supported: false }
+  }
+
+  const history = (state.fortifyHistory ?? []).filter((entry) => entry.playerId === playerId)
+  const movementUsed = Object.keys(state.movementTracking ?? {}).length > 0
+  if (history.length > 0 || movementUsed) {
+    return { state, supported: false }
+  }
+
+  const working = cloneState(state)
+  working.phase = 'attack'
+  working.fortifyHistory = []
+  working.movementTracking = {}
+  return { state: working, supported: true }
+}
+
 const neutralizeCapitalAssignment = (state: LockstepState, playerId: string): void => {
   if (!state.capitalAssignments || !(playerId in state.capitalAssignments)) {
     return
@@ -1506,6 +1529,10 @@ const simulateResign = (
   })
 
   working.board = board
+  delete working.capitalElimination
+  if (working.lastBattleResult) {
+    delete (working.lastBattleResult as BattleResult).capitalElimination
+  }
 
   const players = working.players as Player[]
   const target = players.find((player) => player.id === playerId)
@@ -1528,6 +1555,10 @@ const simulateResign = (
     const result = simulateEndTurn(working, playerId, undefined)
     if (result.supported) {
       working = result.state
+      delete working.capitalElimination
+      if (working.lastBattleResult) {
+        delete (working.lastBattleResult as BattleResult).capitalElimination
+      }
     }
   }
 
@@ -1619,6 +1650,15 @@ export const simulateFrame = (state: GameState, frame: InputFrame): SimulationRe
       }
       case 'go_back_to_reinforcement': {
         const result = simulateGoBackToReinforcement(working, frame.playerId, undefined)
+        if (result.supported) {
+          working = result.state
+        } else {
+          unsupported.push(command.kind)
+        }
+        break
+      }
+      case 'go_back_to_attack': {
+        const result = simulateGoBackToAttack(working, frame.playerId, undefined)
         if (result.supported) {
           working = result.state
         } else {

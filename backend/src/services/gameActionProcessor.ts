@@ -242,15 +242,18 @@ export class GameActionProcessor {
    * Process a go-back-to-reinforcement action
    * Attempts to queue, falls back to inline if no workers
    */
-  async processGoBack(gameId: string, playerId: string): Promise<void> {
+  async processGoBackToReinforcement(gameId: string, playerId: string): Promise<void> {
     // Process inline and emit deltas
-    await this.processGoBackInline(gameId, playerId)
+    await this.processGoBackToReinforcementInline(gameId, playerId)
   }
 
   /**
    * Process go-back inline (synchronously)
    */
-  private async processGoBackInline(gameId: string, playerId: string): Promise<void> {
+  private async processGoBackToReinforcementInline(
+    gameId: string,
+    playerId: string,
+  ): Promise<void> {
     logger.info('Processing go-back inline (no queue)', {
       gameId,
       playerId,
@@ -260,6 +263,19 @@ export class GameActionProcessor {
 
     // Emit single phase change delta (no nested complexity)
     await this.deltaEmitter.emitPhaseChange(gameId, result)
+  }
+
+  async processGoBackToAttack(gameId: string, playerId: string): Promise<void> {
+    logger.info('Processing go-back-to-attack inline (no queue)', {
+      gameId,
+      playerId,
+    })
+
+    const result = await this.gameService.processGoBackToAttack(gameId, playerId)
+    await this.deltaEmitter.emitPhaseChange(gameId, {
+      ...result,
+      reinforcementArmies: undefined,
+    })
   }
 
   /**

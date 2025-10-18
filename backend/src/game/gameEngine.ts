@@ -20,6 +20,7 @@ import type {
   KingOfTheHillState,
   Metal,
   ProcessActionResult,
+  ResignAction,
   SectorBonus,
   Territory,
   TradeCardsAction,
@@ -224,6 +225,10 @@ export class GameEngine {
         return { gameState: this.handleTradeCards(newState, action) }
       case 'go_back_to_reinforcement':
         return { gameState: this.handleGoBackToReinforcement(newState) }
+      case 'go_back_to_attack':
+        return { gameState: this.handleGoBackToAttack(newState, action.playerId) }
+      case 'resign':
+        return { gameState: this.handleResign(newState, action as ResignAction) }
       default: {
         const _exhaustiveCheck: never = action
         throw new Error(`Unknown action type received in game engine`)
@@ -232,6 +237,10 @@ export class GameEngine {
   }
 
   validateAction(gameState: GameState, action: GameAction): boolean {
+    if (action.type === 'resign') {
+      return this.validateResign(gameState, action as ResignAction)
+    }
+
     if (action.playerId !== gameState.currentPlayer) {
       return false
     }
@@ -266,6 +275,8 @@ export class GameEngine {
         return this.validateTreasureTrade(gameState, action)
       case 'go_back_to_reinforcement':
         return gameState.phase === 'attack' && !gameState.hasAttackedThisTurn
+      case 'go_back_to_attack':
+        return this.validateGoBackToAttack(gameState)
       default:
         return false
     }
@@ -1690,6 +1701,63 @@ export class GameEngine {
     return gameState
   }
 
+  private handleGoBackToAttack(gameState: GameState, playerId: string): GameState {
+    if (gameState.phase !== 'fortify') {
+      return gameState
+    }
+    const history = (gameState.fortifyHistory ?? []).filter((entry) => entry.playerId === playerId)
+    const movementUsed = Object.keys(gameState.movementTracking ?? {}).length > 0
+    if (history.length > 0 || movementUsed) {
+      return gameState
+    }
+    gameState.phase = 'attack'
+    gameState.fortifyHistory = []
+    gameState.movementTracking = {}
+    return gameState
+  }
+
+  private handleResign(gameState: GameState, action: ResignAction): GameState {
+    const player = gameState.players.find((p) => p.id === action.playerId)
+    if (!player || player.isEliminated) {
+      return gameState
+    }
+
+    for (const territory of gameState.board) {
+      if (territory.ownerId === action.playerId) {
+        territory.ownerId = 'neutral'
+      }
+      if (territory.capitalOwnerId === action.playerId) {
+        territory.capitalOwnerId = null
+        territory.isCapital = false
+      }
+    }
+
+    player.territories = []
+    player.armies = 0
+    player.treasures = []
+    player.mustCashInTreasures = false
+    player.isEliminated = true
+    delete player.capitalTerritory
+
+    if (gameState.capitalAssignments) {
+      const assignments = { ...gameState.capitalAssignments }
+      delete assignments[action.playerId]
+      gameState.capitalAssignments = assignments
+    }
+
+    delete gameState.capitalElimination
+    if (gameState.lastBattleResult) {
+      delete gameState.lastBattleResult.capitalElimination
+    }
+    gameState.lastBattleResult = undefined
+
+    if (gameState.currentPlayer === action.playerId) {
+      return this.handleEndTurn(gameState)
+    }
+
+    return gameState
+  }
+
   private validateDeploy(gameState: GameState, action: DeployAction): boolean {
     const { territoryId, armies } = action.payload
     const player = gameState.players.find((p) => p.id === action.playerId)
@@ -1855,6 +1923,29 @@ export class GameEngine {
 
     const matches = findRedeemableSets(hand)
     return matches.some((match) => match.indices.every((value, idx) => value === sorted[idx]))
+  }
+
+  private validateGoBackToAttack(gameState: GameState): boolean {
+    if (gameState.phase !== 'fortify') {
+      return false
+    }
+    const movementUsed = Object.keys(gameState.movementTracking ?? {}).length > 0
+    if (movementUsed) {
+      return false
+    }
+    const history = gameState.fortifyHistory ?? []
+    return history.length === 0
+  }
+
+  private validateResign(gameState: GameState, action: ResignAction): boolean {
+    if (gameState.phase === 'finished') {
+      return false
+    }
+    const player = gameState.players.find((p) => p.id === action.playerId)
+    if (!player || player.isEliminated) {
+      return false
+    }
+    return true
   }
 
   private simulateBattle(

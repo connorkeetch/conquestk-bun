@@ -11,6 +11,7 @@ export type LockstepCommandKind =
   | 'end_turn'
   | 'trade_cards'
   | 'go_back_to_reinforcement'
+  | 'go_back_to_attack'
   | 'resign'
 
 export interface LockstepCommand<TPayload = Record<string, unknown>> {

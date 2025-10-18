@@ -153,7 +153,9 @@ export type GameAction =
   | EndTurnAction
   | TradeCardsAction
   | GoBackToReinforcementAction
+  | GoBackToAttackAction
   | TransferConquestAction
+  | ResignAction
 
 type GameActionType =
   | 'deploy'
@@ -163,7 +165,9 @@ type GameActionType =
   | 'end_turn'
   | 'trade_cards'
   | 'go_back_to_reinforcement'
+  | 'go_back_to_attack'
   | 'transfer_conquest'
+  | 'resign'
 
 type ActionBase<T extends GameActionType> = {
   type: T
@@ -213,12 +217,20 @@ export type GoBackToReinforcementAction = ActionBase<'go_back_to_reinforcement'>
   payload?: undefined
 }
 
+export type GoBackToAttackAction = ActionBase<'go_back_to_attack'> & {
+  payload?: undefined
+}
+
 export type TransferConquestAction = ActionBase<'transfer_conquest'> & {
   payload: {
     fromTerritoryId: string
     toTerritoryId: string
     armies: number
   }
+}
+
+export type ResignAction = ActionBase<'resign'> & {
+  payload?: undefined
 }
 
 export interface BattleResult {

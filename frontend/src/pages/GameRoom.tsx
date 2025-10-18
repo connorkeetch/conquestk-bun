@@ -82,6 +82,7 @@ import { socketService } from '../services/socketService'
 import { store } from '../store'
 import {
   endTurn,
+  goBackToAttack,
   goBackToReinforcement,
   resignFromGame,
   undoFortify,
@@ -715,9 +716,10 @@ export default function GameRoom() {
     gamePhase === 'reinforcement' || gamePhase === 'attack' || gamePhase === 'fortify'
   const canGoBackToReinforcement =
     isMyTurn && isGameActive && gamePhase === 'attack' && !currentGame?.hasAttackedThisTurn
-  const hasFortifyUndo = Boolean(
-    currentGame && Object.keys(currentGame.movementTracking ?? {}).length > 0,
-  )
+  const fortifyMovements = Object.keys(currentGame?.movementTracking ?? {}).length
+  const hasFortifyUndo = Boolean(currentGame && fortifyMovements > 0)
+  const canGoBackToAttack =
+    isMyTurn && isGameActive && gamePhase === 'fortify' && fortifyMovements === 0
   const endPhaseLabel =
     gamePhase === 'reinforcement'
       ? 'End Phase → Attack'
@@ -1783,6 +1785,16 @@ export default function GameRoom() {
                       title="Go back to reinforcement"
                     >
                       ↩ Reinforce
+                    </button>
+                  )}
+                  {isMyTurn && !isFinishedPhase && canGoBackToAttack && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => void dispatch(goBackToAttack())}
+                      title="Go back to attack"
+                    >
+                      ↩ Attack
                     </button>
                   )}
                   {isMyTurn && !isFinishedPhase && isGameActive && (
