@@ -248,6 +248,96 @@ describe('Shared lockstep simulator parity', () => {
     expect(simState.kingOfTheHillState?.points['p1']).toBe(1)
   })
 
+  it('rewinds fortify phase back to attack when no movements occurred', async () => {
+    const baseState: GameState = {
+      roomId: 'match-fortify-rewind',
+      players: [
+        {
+          id: 'p1',
+          userId: 'u1',
+          username: 'Commander',
+          color: 'red',
+          territories: ['alpha', 'beta'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: [],
+          mustCashInTreasures: false,
+        },
+        {
+          id: 'p2',
+          userId: 'u2',
+          username: 'Guardian',
+          color: 'blue',
+          territories: ['gamma'],
+          armies: 0,
+          cards: [],
+          isEliminated: false,
+          treasures: [],
+          mustCashInTreasures: false,
+        },
+      ],
+      currentPlayer: 'p1',
+      phase: 'fortify',
+      turn: 3,
+      board: [
+        {
+          id: 'alpha',
+          name: 'Alpha',
+          ownerId: 'p1',
+          armies: 3,
+          adjacentTerritories: ['beta', 'gamma'],
+        },
+        {
+          id: 'beta',
+          name: 'Beta',
+          ownerId: 'p1',
+          armies: 2,
+          adjacentTerritories: ['alpha', 'gamma'],
+        },
+        {
+          id: 'gamma',
+          name: 'Gamma',
+          ownerId: 'p2',
+          armies: 4,
+          adjacentTerritories: ['alpha', 'beta'],
+        },
+      ],
+      cards: [],
+      hasAttackedThisTurn: true,
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        maxPlayers: 2,
+      },
+      movementTracking: {},
+      treasureState: {
+        totalSetsCashed: 0,
+        nextPayoutIndex: 0,
+      },
+      mustCashInTreasures: false,
+      conqueredDuringTurn: false,
+    }
+
+    const frame: InputFrame = {
+      matchId: 'match-fortify-rewind',
+      seq: 1,
+      playerId: 'p1',
+      committedAt: new Date().toISOString(),
+      commands: [
+        {
+          kind: 'go_back_to_attack',
+        },
+      ],
+    }
+
+    const simState = applySimulatorFrame(baseState, frame)
+    const engineState = await applyEngineFrame(baseState, frame)
+
+    expectStateParity(simState, engineState)
+    expect(simState.phase).toBe('attack')
+    expect(simState.movementTracking).toEqual({})
+  })
+
   it('eliminates capitals and transfers territories on capture', async () => {
     const baseState: GameState = {
       roomId: 'match-capital',

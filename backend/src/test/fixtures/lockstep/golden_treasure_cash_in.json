@@ -1,0 +1,114 @@
+{
+  "description": "Forced treasure cash-in during attack returns to reinforcement and resumes attack state after placing bonus troops",
+  "baseline": {
+    "roomId": "match-treasure-cash-in",
+    "players": [
+      {
+        "id": "p1",
+        "userId": "u1",
+        "username": "Nova",
+        "color": "red",
+        "territories": ["t1"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": ["bronze", "silver", "gold"],
+        "mustCashInTreasures": true
+      },
+      {
+        "id": "p2",
+        "userId": "u2",
+        "username": "Quinn",
+        "color": "blue",
+        "territories": ["t2"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false
+      }
+    ],
+    "currentPlayer": "p1",
+    "phase": "attack",
+    "turn": 4,
+    "board": [
+      {
+        "id": "t1",
+        "name": "Orion Ridge",
+        "ownerId": "p1",
+        "armies": 3,
+        "adjacentTerritories": ["t2"]
+      },
+      {
+        "id": "t2",
+        "name": "Lyra Vale",
+        "ownerId": "p2",
+        "armies": 2,
+        "adjacentTerritories": ["t1"]
+      }
+    ],
+    "cards": [],
+    "hasAttackedThisTurn": true,
+    "gameConfig": {
+      "movementType": "classic_adjacent",
+      "maxPlayers": 2,
+      "treasureConfig": {
+        "enabled": true,
+        "diamondsPercent": 0.05,
+        "payoutMode": "fixed",
+        "fixedValue": 10,
+        "handCap": 5,
+        "diamondSetBonus": 5
+      }
+    },
+    "treasureState": {
+      "totalSetsCashed": 0,
+      "nextPayoutIndex": 0
+    },
+    "movementTracking": {},
+    "rngSeed": "sfc32:treasure-cash-in",
+    "rngState": {
+      "a": 188972321,
+      "b": 404229517,
+      "c": 1092387455,
+      "d": 270114534
+    },
+    "mustCashInTreasures": true,
+    "conqueredDuringTurn": true
+  },
+  "frames": [
+    {
+      "matchId": "match-treasure-cash-in",
+      "seq": 1,
+      "playerId": "p1",
+      "committedAt": "2025-04-02T10:00:00.000Z",
+      "commands": [
+        {
+          "kind": "trade_cards",
+          "payload": {
+            "treasureSet": [0, 1, 2]
+          }
+        }
+      ]
+    },
+    {
+      "matchId": "match-treasure-cash-in",
+      "seq": 2,
+      "playerId": "p1",
+      "committedAt": "2025-04-02T10:00:05.000Z",
+      "commands": [
+        {
+          "kind": "deploy",
+          "payload": {
+            "territoryId": "t1",
+            "armies": 10
+          }
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "finalSeq": 2,
+    "finalCrc32": 2969657327
+  }
+}

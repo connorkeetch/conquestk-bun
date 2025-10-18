@@ -270,6 +270,7 @@ export type GameAction =
   | EndTurnAction
   | TradeCardsAction
   | GoBackToReinforcementAction
+  | GoBackToAttackAction
   | TransferConquestAction
   | ResignAction
 type GameActionType =
@@ -279,6 +280,7 @@ type GameActionType =
   | 'end_turn'
   | 'trade_cards'
   | 'go_back_to_reinforcement'
+  | 'go_back_to_attack'
   | 'transfer_conquest'
   | 'resign'
 type ActionBase<T extends GameActionType> = {
@@ -316,6 +318,9 @@ export type TradeCardsAction = ActionBase<'trade_cards'> & {
   }
 }
 export type GoBackToReinforcementAction = ActionBase<'go_back_to_reinforcement'> & {
+  payload?: undefined
+}
+export type GoBackToAttackAction = ActionBase<'go_back_to_attack'> & {
   payload?: undefined
 }
 export type TransferConquestAction = ActionBase<'transfer_conquest'> & {
@@ -674,7 +679,6 @@ export interface ClientToServerEvents {
     data: { roomId: string; fromSeq?: number },
     callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
-  'player:resign': (data: { roomId: string }) => void
   deployArmies: (
     data: {
       roomId: string

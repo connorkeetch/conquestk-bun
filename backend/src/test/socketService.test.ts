@@ -434,6 +434,65 @@ describe('socketService event handlers', () => {
     )
   })
 
+  it('processes resign actions via unified game-action pipeline', async () => {
+    const { socket, io } = initialiseHandlers()
+    const handler = getSocketHandler(socket, 'game-action')
+    const ack = jest.fn()
+
+    const updatedState = {
+      roomId: 'room-resign',
+      players: [
+        {
+          id: 'user-1',
+          userId: 'user-1',
+          username: 'Resigner',
+          color: 'red',
+          territories: [],
+          armies: 0,
+          cards: [],
+          isEliminated: true,
+        },
+      ],
+      currentPlayer: 'user-2',
+      phase: 'attack',
+      turn: 3,
+      board: [],
+      cards: [],
+      gameConfig: { movementType: 'classic_adjacent', maxPlayers: 2 },
+    } as unknown as import('../types/game.js').GameState
+
+    mockGameServiceInstance.processGameAction.mockResolvedValue(updatedState)
+    mockGameServiceInstance.getGameState.mockResolvedValue(updatedState)
+
+    await handler(
+      {
+        roomId: 'room-resign',
+        action: { type: 'resign' } as import('../types/game.js').ResignAction,
+      },
+      ack,
+    )
+
+    expect(mockGameServiceInstance.processGameAction).toHaveBeenCalledWith(
+      { type: 'resign', roomId: 'room-resign', playerId: 'user-1' },
+      'user-1',
+    )
+
+    expect(mockLockstepService.recordFrame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matchId: 'room-resign',
+        playerId: 'user-1',
+        action: expect.objectContaining({ type: 'resign' }),
+      }),
+    )
+
+    expect(ack).toHaveBeenCalledWith(
+      expect.objectContaining({ ok: true, queued: false, acceptedAt: expect.any(Number) }),
+    )
+
+    const roomEmit = io.to as unknown as jest.Mock
+    expect(roomEmit).toHaveBeenCalledWith('game:room-resign')
+  })
+
   it('validates membership before joining a game channel', async () => {
     mockIsPlayerInRoom.mockResolvedValue(false)
 

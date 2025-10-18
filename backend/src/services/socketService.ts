@@ -276,6 +276,7 @@ function serializeGameStateForClient(
     treasures: p.treasures,
     territories: p.territories,
     cards: p.cards,
+    mustCashInTreasures: p.mustCashInTreasures ?? false,
   })) as GamePlayer[]
   const board = s.board.map((t) => ({
     id: t.id,
@@ -346,9 +347,25 @@ function serializeGameStateForClient(
     players,
     board,
     gameConfig,
+    ...(typeof s.hasAttackedThisTurn === 'boolean'
+      ? { hasAttackedThisTurn: s.hasAttackedThisTurn }
+      : {}),
+    ...(typeof s.mustCashInTreasures === 'boolean'
+      ? { mustCashInTreasures: s.mustCashInTreasures }
+      : {}),
+    ...(s.resumePhaseAfterReinforcement !== undefined
+      ? { resumePhaseAfterReinforcement: s.resumePhaseAfterReinforcement ?? null }
+      : {}),
+    ...(typeof s.resumeHasAttackedAfterReinforcement === 'boolean'
+      ? { resumeHasAttackedAfterReinforcement: s.resumeHasAttackedAfterReinforcement }
+      : {}),
+    ...(typeof s.conqueredDuringTurn === 'boolean'
+      ? { conqueredDuringTurn: s.conqueredDuringTurn }
+      : {}),
     ...(s.kingOfTheHillState ? { kingOfTheHillState: s.kingOfTheHillState } : {}),
     ...(s.assassinationTargets ? { assassinationTargets: s.assassinationTargets } : {}),
     cards: Array.isArray(s.cards) ? s.cards : [],
+    ...(s.treasureState ? { treasureState: s.treasureState } : {}),
     ...(s.movementTracking ? { movementTracking: s.movementTracking } : {}),
   }
 
@@ -843,7 +860,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 break
               }
               case 'go_back_to_reinforcement': {
-                await gameActionProcessor.processGoBack(data.roomId, userId)
+                await gameActionProcessor.processGoBackToReinforcement(data.roomId, userId)
+                break
+              }
+              case 'go_back_to_attack': {
+                await gameActionProcessor.processGoBackToAttack(data.roomId, userId)
                 break
               }
               case 'transfer_conquest': {
@@ -977,55 +998,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     // (dev) No legacy endTurn event; use unified 'game-action' with type 'end_turn'
 
     // Deprecated 'transferConquestArmies' removed; clients should use 'game-action' with type 'transfer_conquest'
-
-    // Player resigns: neutralize their territories and mark eliminated
-    socket.on(
-      'player:resign',
-      withErrorHandler(socket, 'player:resign', async (data: { roomId: string }) => {
-        if (!data || !data.roomId) throw new Error('Invalid resign data')
-        const userId = requireUserId(socket)
-        // Validate membership
-        const hasAccess = await gameRoomService.isPlayerInRoom(data.roomId, userId)
-        if (!hasAccess) throw new Error('Not a member of this game')
-
-        // Neutralize territories and eliminate player (mark as resignation)
-        await lifecycleService.kickAndNeutralize(data.roomId, userId, 'resignation')
-
-        // Broadcast updated game state
-        const channel = getGameChannel(data.roomId)
-        const cached = await gameStateCache.getGameState<SerializedGameState>(data.roomId)
-        const serialized = serializeGameStateForClient(cached)
-        if (serialized) {
-          emitGameSnapshotToRoom(io, channel, serialized)
-        }
-        // System + DB log for resignation
-        try {
-          const now = new Date()
-          // Append authoritative RESIGN entry to database log
-          await gameService.appendLog(data.roomId, [
-            { type: 'RESIGN', timestamp: now.toISOString(), playerId: userId },
-          ])
-          io.to(channel).emit('game-delta', {
-            type: 'SYSTEM_MESSAGE',
-            roomId: data.roomId,
-            timestamp: now.getTime(),
-            text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
-            ...(socket.userId ? { playerId: socket.userId } : {}),
-          })
-          deltaTransportMetrics.record('game-delta', 'room', {
-            source: 'socketService',
-            context: 'resign',
-          })
-        } catch (error) {
-          logger.warn('Failed to append RESIGN log or emit system message (best-effort)', {
-            error: error instanceof Error ? error.message : String(error),
-          })
-        }
-        // Refresh lifecycle snapshot so timers/UI reflect changes
-        await lifecycleService.refreshLifecycle(data.roomId)
-        logger.info(`User ${userId} resigned from room ${data.roomId}`)
-      }),
-    )
 
     // Host replacement decision after a kick (3 strikes)
     socket.on(

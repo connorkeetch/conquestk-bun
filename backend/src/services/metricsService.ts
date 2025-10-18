@@ -383,7 +383,9 @@ class RealtimeLatencyMetrics {
       'fortify',
       'end_turn',
       'go_back_to_reinforcement',
+      'go_back_to_attack',
       'transfer_conquest',
+      'resign',
     ]
     const toStats = (key: string) =>
       this.ackWindow.getPercentiles(key) || { count: 0, p50: 0, p95: 0, max: 0 }

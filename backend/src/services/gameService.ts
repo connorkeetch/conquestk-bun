@@ -509,7 +509,7 @@ export class GameService {
     gameState: GameState,
     elimination: { gameEnded: boolean; winner: GamePlayer | null; eliminatedPlayers: string[] },
     eliminatorId: string | null,
-    cause: 'battle' | 'neutralize',
+    cause: 'battle' | 'neutralize' | 'resignation',
   ) {
     if (
       gameState.gameConfig?.gameMode !== 'assassination' ||
@@ -598,6 +598,24 @@ export class GameService {
       logger.warn('Failed to emit turn:start event', {
         roomId,
         playerId: state.currentPlayer,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+  }
+
+  private async markPlayerResigned(roomId: string, playerId: string): Promise<void> {
+    try {
+      await query(
+        `UPDATE room_players
+            SET is_kicked = TRUE,
+                elimination_reason = 'resignation'
+          WHERE room_id = $1 AND user_id = $2`,
+        [roomId, playerId],
+      )
+    } catch (error) {
+      logger.warn('Failed to mark player resignation', {
+        roomId,
+        playerId,
         error: error instanceof Error ? error.message : error,
       })
     }
@@ -835,6 +853,17 @@ export class GameService {
     }
 
     const { gameState: updatedState } = await this.gameEngine.processAction(gameState, action)
+
+    let resignationElimination: {
+      gameEnded: boolean
+      winner: GamePlayer | null
+      eliminatedPlayers: string[]
+    } | null = null
+    if (action.type === 'resign') {
+      resignationElimination = this.gameEngine.checkGameEnd(updatedState)
+      delete updatedState.capitalElimination
+    }
+
     await this.persistGameStateSnapshot(action.roomId, this.serializeGameState(updatedState))
 
     if (
@@ -843,6 +872,28 @@ export class GameService {
       updatedState.currentPlayer !== previousPlayerId
     ) {
       await this.emitTurnStartEvent(action.roomId, updatedState)
+    }
+
+    if (action.type === 'resign') {
+      await this.markPlayerResigned(action.roomId, action.playerId)
+      const timestamp = new Date().toISOString()
+      await this.appendLog(action.roomId, [
+        {
+          type: 'RESIGN',
+          timestamp,
+          playerId: action.playerId,
+        },
+      ])
+
+      if (updatedState.gameConfig?.gameMode === 'assassination' && resignationElimination) {
+        this.recordAssassinationElimination(
+          action.roomId,
+          updatedState,
+          resignationElimination,
+          action.playerId,
+          'resignation',
+        )
+      }
     }
 
     logger.info(`Game action processed for room ${action.roomId}: ${action.type}`)
@@ -2010,6 +2061,26 @@ export class GameService {
       currentPlayer: updatedState.currentPlayer,
       turn: updatedState.turn,
       reinforcementArmies,
+      version: updatedState.version,
+    }
+  }
+
+  async processGoBackToAttack(
+    gameId: string,
+    playerId: string,
+  ): Promise<{ phase: GamePhase; currentPlayer: string; turn: number; version?: number }> {
+    const action: GameAction = {
+      type: 'go_back_to_attack',
+      roomId: gameId,
+      playerId,
+    }
+
+    const updatedState = await this.processGameAction(action, playerId)
+
+    return {
+      phase: updatedState.phase,
+      currentPlayer: updatedState.currentPlayer,
+      turn: updatedState.turn,
       version: updatedState.version,
     }
   }

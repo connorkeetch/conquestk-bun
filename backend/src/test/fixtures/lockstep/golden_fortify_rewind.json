@@ -1,0 +1,84 @@
+{
+  "description": "Fortify rewind returns to attack when no fortifications have occurred",
+  "baseline": {
+    "roomId": "match-fortify-rewind",
+    "players": [
+      {
+        "id": "p1",
+        "userId": "u1",
+        "username": "Commander",
+        "color": "red",
+        "territories": ["alpha", "beta"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false
+      },
+      {
+        "id": "p2",
+        "userId": "u2",
+        "username": "Guardian",
+        "color": "blue",
+        "territories": ["gamma"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false
+      }
+    ],
+    "currentPlayer": "p1",
+    "phase": "fortify",
+    "turn": 3,
+    "board": [
+      {
+        "id": "alpha",
+        "name": "Alpha",
+        "ownerId": "p1",
+        "armies": 3,
+        "adjacentTerritories": ["beta", "gamma"]
+      },
+      {
+        "id": "beta",
+        "name": "Beta",
+        "ownerId": "p1",
+        "armies": 2,
+        "adjacentTerritories": ["alpha", "gamma"]
+      },
+      {
+        "id": "gamma",
+        "name": "Gamma",
+        "ownerId": "p2",
+        "armies": 4,
+        "adjacentTerritories": ["alpha", "beta"]
+      }
+    ],
+    "cards": [],
+    "hasAttackedThisTurn": true,
+    "gameConfig": {
+      "movementType": "classic_adjacent",
+      "maxPlayers": 2
+    },
+    "movementTracking": {},
+    "fortifyHistory": []
+  },
+  "frames": [
+    {
+      "matchId": "match-fortify-rewind",
+      "seq": 1,
+      "playerId": "p1",
+      "committedAt": "2025-03-18T00:00:00.000Z",
+      "commands": [
+        {
+          "kind": "go_back_to_attack",
+          "payload": {}
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "finalSeq": 1,
+    "finalCrc32": 1979397384
+  }
+}

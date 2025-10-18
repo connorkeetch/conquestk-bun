@@ -95,6 +95,7 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 ## Phase 3 progress (2025-04-12)
 - Performance monitor now ingests lockstep resync totals, failure rates, and mean durations; reliability alerts trigger automatically when thresholds are breached, and the Admin Health dashboard exposes the new lockstep card alongside socket payload telemetry.
 - `/games/:id/replay/frames` serves deterministic snapshots + frame windows, and the replay viewer hydrates the lockstep simulator client-side to drive map overlays from deterministic state while legacy deltas remain as a fallback.
+- `delta_transports_total` counters feed into the performance dashboard and alerting, exposing per-interval room/unicast delta traffic so we can track the sunset of legacy `game-delta` emissions.
 - Golden frame fixtures live in `backend/src/test/fixtures/lockstep/*.json`; `lockstepGoldenFrames.test.ts` replays them via the shared simulator and asserts CRC parity in CI. Regenerate fixtures with `npm run replay:match` + `scripts/replayHelpers.ts` before landing intentional gameplay changes.
 
 ### Verification checklist (2025-04-12)

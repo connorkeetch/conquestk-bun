@@ -33,7 +33,12 @@ describe('Lockstep golden frame fixtures', () => {
 
       let working = baseline
       for (const frame of fixture.frames) {
+        const committedAtMs = frame.committedAt
+          ? new Date(frame.committedAt).getTime()
+          : new Date('2025-01-01T00:00:00.000Z').getTime()
+        const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => committedAtMs)
         const { state, unsupported } = simulateFrame(working, frame)
+        nowSpy.mockRestore()
         expect(unsupported).toHaveLength(0)
         working = state
       }
