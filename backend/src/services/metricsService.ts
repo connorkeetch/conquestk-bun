@@ -249,6 +249,27 @@ class SocketPayloadMetrics {
 
 export const socketPayloadMetrics = new SocketPayloadMetrics()
 
+class DeltaTransportMetrics {
+  private readonly counter = new CounterMetric('delta_transports_total')
+
+  record(
+    event: 'game-delta' | 'game-delta-batch',
+    audience: 'room' | 'socket',
+    labels: LabelValue = {},
+  ): void {
+    this.counter.inc({ event, audience, ...labels })
+  }
+
+  snapshot() {
+    return {
+      counters: this.counter.snapshot(),
+      gauges: [] as GaugeSnapshot[],
+    }
+  }
+}
+
+export const deltaTransportMetrics = new DeltaTransportMetrics()
+
 class LockstepMetrics {
   private readonly frameCounter = new CounterMetric('lockstep_frames_total')
   private readonly checksumCounter = new CounterMetric('lockstep_checksums_total')

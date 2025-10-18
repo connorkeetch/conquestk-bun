@@ -52,6 +52,13 @@ export interface GameState {
   movementTracking?: Record<string, boolean>
   territoryModifiers?: Map<string, GameTerritoryModifier>
   capitalAssignments?: Record<string, string>
+  capitalElimination?: {
+    conqueror: string
+    eliminated: string
+    capitalTerritory: string
+    territoriesGained: number
+    troopsGained: number
+  }
   treasureState?: TreasureState
   mustCashInTreasures?: boolean
   conqueredDuringTurn?: boolean
@@ -235,6 +242,13 @@ export interface BattleResult {
   gameEnded?: boolean
   winner?: GamePlayer | null
   eliminatedPlayers?: string[]
+  capitalElimination?: {
+    conqueror: string
+    eliminated: string
+    capitalTerritory: string
+    territoriesGained: number
+    troopsGained: number
+  }
 }
 
 export interface GameConfiguration {

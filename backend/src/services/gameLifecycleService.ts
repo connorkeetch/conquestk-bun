@@ -7,6 +7,7 @@ import capitalGameService from './capitalGameService.js'
 import { GameRoomService } from './gameRoomService.js'
 import { GameService } from './gameService.js'
 import { mapService } from './mapService.js'
+import { deltaTransportMetrics } from './metricsService.js'
 import { queueService } from './queueService.js'
 import { tryGetSocketServer } from './socketRegistry.js'
 
@@ -1089,6 +1090,10 @@ export class GameLifecycleService {
             playerId: current.id,
           } as const
           io.to(`game:${roomId}`).emit('game-delta', systemDelta)
+          deltaTransportMetrics.record('game-delta', 'room', {
+            source: 'lifecycle',
+            context: 'ai-thinking',
+          })
           try {
             const { deltaBufferService } = await import('./deltaBufferService.js')
             await deltaBufferService.append(roomId, [
@@ -1333,6 +1338,10 @@ export class GameLifecycleService {
               userId: targetUserId,
               metal: lastResult.treasureAwarded,
             })
+            deltaTransportMetrics.record('game-delta', 'room', {
+              source: 'lifecycle',
+              context: 'timeout-treasure',
+            })
           }
           const phaseDelta = lastResult
             ? DeltaBuilder.phaseChange(
@@ -1343,7 +1352,13 @@ export class GameLifecycleService {
                 lastResult.reinforcementArmies,
               )
             : null
-          if (phaseDelta) io.to(channel).emit('game-delta', phaseDelta)
+          if (phaseDelta) {
+            io.to(channel).emit('game-delta', phaseDelta)
+            deltaTransportMetrics.record('game-delta', 'room', {
+              source: 'lifecycle',
+              context: 'timeout-phase',
+            })
+          }
         }
       } catch (ee) {
         logger.warn('Failed to emit deltas after timeout skip', {

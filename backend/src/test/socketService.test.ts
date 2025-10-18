@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import type { Server } from 'socket.io'
-import { queueService } from '../services/queueService.js'
 import { setupSocketHandlers } from '../services/socketService.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
-
-type QueueServiceMocks = {
-  addGameAction: jest.Mock
-  addBattleSimulation: jest.Mock
-}
 
 type GameRoomServiceMocks = {
   mockIsPlayerInRoom: jest.Mock
@@ -24,7 +18,6 @@ type SocketRegistryMocks = {
 }
 
 type TestGlobals = typeof globalThis & {
-  __queueServiceMocks?: QueueServiceMocks
   __gameRoomServiceMocks?: GameRoomServiceMocks
   __cacheServiceMocks?: CacheServiceMocks
   __socketRegistryMocks?: SocketRegistryMocks
@@ -41,28 +34,6 @@ const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
 jest.mock('../config/database', () => ({
   query: (...args: unknown[]) => mockDbQuery(...args),
 }))
-
-jest.mock('../services/queueService', () => {
-  const testGlobals = globalThis as TestGlobals
-  const mocks: QueueServiceMocks = {
-    addGameAction: jest.fn(),
-    addBattleSimulation: jest.fn(),
-  }
-  testGlobals.__queueServiceMocks = mocks
-  return {
-    queueService: mocks,
-  }
-})
-
-const getQueueServiceMocks = (): QueueServiceMocks => {
-  const testGlobals = globalThis as TestGlobals
-  if (!testGlobals.__queueServiceMocks) {
-    throw new Error('Queue service mocks not initialised')
-  }
-  return testGlobals.__queueServiceMocks
-}
-
-const queueServiceMocks = getQueueServiceMocks()
 
 const mockGameServiceInstance = {
   fortify: jest.fn(),
@@ -245,8 +216,6 @@ describe('socketService event handlers', () => {
     jest.clearAllMocks()
     mockDbQuery.mockReset()
     mockDbQuery.mockResolvedValue({ rows: [], rowCount: 0 })
-    queueServiceMocks.addGameAction.mockReset()
-    queueServiceMocks.addBattleSimulation.mockReset()
     mockGetCachedState.mockReset()
     mockGetCachedState.mockResolvedValue(null)
     mockIsPlayerInRoom.mockReset()
@@ -315,43 +284,6 @@ describe('socketService event handlers', () => {
     connectionHandler(socket)
     return { socket, io, roomEmit }
   }
-
-  it('queues attack actions with normalized payload', async () => {
-    process.env.GAME_ACTION_QUEUE = 'enabled'
-    queueServiceMocks.addGameAction.mockResolvedValue({ id: 'job-123' })
-
-    const { socket } = initialiseHandlers()
-    const handler = getSocketHandler(socket, 'game-action')
-
-    await handler({
-      roomId: 'room-42',
-      action: {
-        type: 'attack',
-        roomId: 'room-42',
-        playerId: 'user-1',
-        payload: {
-          fromTerritoryId: 'territory-a',
-          toTerritoryId: 'territory-b',
-          armies: 3,
-        },
-      },
-    })
-
-    expect(queueService.addGameAction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        gameId: 'room-42',
-        playerId: 'user-1',
-        action: expect.objectContaining({
-          type: 'attack',
-          payload: expect.objectContaining({
-            fromTerritoryId: 'territory-a',
-            toTerritoryId: 'territory-b',
-            armies: 3,
-          }),
-        }),
-      }),
-    )
-  })
 
   it('sends fortify updates as coalesced deltas after processing', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
@@ -498,54 +430,6 @@ describe('socketService event handlers', () => {
         roomId: 'room-end',
         phase: 'reinforcement',
         currentPlayer: 'player-2',
-      }),
-    )
-  })
-
-  it('falls back gracefully when game action queue is unavailable', async () => {
-    process.env.GAME_ACTION_QUEUE = 'enabled'
-    queueServiceMocks.addGameAction.mockResolvedValue(null)
-
-    const { socket, io } = initialiseHandlers()
-    const handler = getSocketHandler(socket, 'game-action')
-
-    await handler({
-      roomId: 'room-degraded',
-      action: {
-        type: 'attack',
-        roomId: 'room-degraded',
-        playerId: 'user-1',
-        payload: { fromTerritoryId: 'a', toTerritoryId: 'b', armies: 1 },
-      },
-    })
-
-    expect(queueService.addGameAction).toHaveBeenCalled()
-    const ioToMock = io.to as unknown as jest.Mock
-    expect(ioToMock).not.toHaveBeenCalled()
-  })
-
-  it('emits error event when queue call fails', async () => {
-    process.env.GAME_ACTION_QUEUE = 'enabled'
-    queueServiceMocks.addGameAction.mockRejectedValue(new Error('queue offline'))
-
-    const { socket } = initialiseHandlers()
-    const handler = getSocketHandler(socket, 'game-action')
-
-    await handler({
-      roomId: 'room-failure',
-      action: {
-        type: 'attack',
-        roomId: 'room-failure',
-        playerId: 'user-1',
-        payload: { fromTerritoryId: 'x', toTerritoryId: 'y', armies: 2 },
-      },
-    })
-
-    expect(socket.emit).toHaveBeenCalledWith(
-      'error',
-      expect.objectContaining({
-        event: 'game-action',
-        message: expect.stringContaining('queue offline'),
       }),
     )
   })

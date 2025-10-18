@@ -30,7 +30,12 @@ import { eloService } from './eloService.js'
 import { featureFlagService } from './featureFlagService.js'
 import { lockstepService } from './lockstepService.js'
 import { mapService } from './mapService.js'
-import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
+import {
+  aiTurnMetrics,
+  assassinationMetrics,
+  battleMetrics,
+  deltaTransportMetrics,
+} from './metricsService.js'
 import notificationService from './notificationService.js'
 import { queueService } from './queueService.js'
 import { tryGetSocketServer } from './socketRegistry.js'
@@ -953,8 +958,10 @@ export class GameService {
     }
 
     // Cache the game state with TTL for automatic cleanup (24 hours)
-    await this.persistGameStateSnapshot(roomId, this.serializeGameState(gameState))
+    const serializedInitialState = this.serializeGameState(gameState)
+    await this.persistGameStateSnapshot(roomId, serializedInitialState)
     await lockstepService.reset(roomId)
+    await lockstepService.recordBaseline({ matchId: roomId, state: serializedInitialState })
 
     this.recordAssassinationAssignments(roomId, gameState)
 
@@ -1079,6 +1086,10 @@ export class GameService {
                 (serializedState as { version?: number }).version,
               )
               io.to(`game:${roomId}`).emit('game-delta', delta)
+              deltaTransportMetrics.record('game-delta', 'room', {
+                source: 'gameService',
+                context: 'reconcile-delta',
+              })
               try {
                 const { deltaBufferService } = await import('./deltaBufferService.js')
                 const deltas: GameDelta[] = [delta]

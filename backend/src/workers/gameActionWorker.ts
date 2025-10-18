@@ -10,6 +10,7 @@ import { GameService } from '../services/gameService.js'
 import { jobIdempotencyService } from '../services/jobIdempotencyService.js'
 import {
   aiTurnMetrics,
+  deltaTransportMetrics,
   idempotencyMetrics,
   socketPayloadMetrics,
 } from '../services/metricsService.js'
@@ -1407,6 +1408,10 @@ export class GameActionWorker {
         }
         // Emit treasure delta immediately for UI cues
         this.io.to(`game:${gameId}`).emit('game-delta', delta)
+        deltaTransportMetrics.record('game-delta', 'room', {
+          source: 'worker',
+          context: 'treasure-award',
+        })
         try {
           const { deltaBufferService } = await import('../services/deltaBufferService.js')
           await deltaBufferService.append(gameId, [

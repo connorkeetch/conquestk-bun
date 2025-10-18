@@ -3,7 +3,6 @@ import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared
 import { logger } from '../utils/logger.js'
 import { DeltaEmitter } from './deltaEmitter.js'
 import { GameService } from './gameService.js'
-import { queueService } from './queueService.js'
 
 /**
  * Unified game action processor
@@ -32,13 +31,6 @@ export class GameActionProcessor {
     this.io = io
   }
 
-  private shouldUseQueue(): boolean {
-    if (process.env.LOCKSTEP_DEV === 'true') {
-      return false
-    }
-    return process.env.GAME_ACTION_QUEUE === 'enabled'
-  }
-
   /**
    * Process a deployment action
    * Attempts to queue, falls back to inline if no workers
@@ -48,50 +40,12 @@ export class GameActionProcessor {
     playerId: string,
     territoryId: string,
     armies: number,
-    socketId?: string,
-  ): Promise<{ mode: 'queued' | 'inline'; result?: import('./deltaEmitter.js').ActionResult }> {
-    if (this.shouldUseQueue()) {
-      const job = await queueService.addGameAction({
-        gameId,
-        playerId,
-        action: {
-          type: 'deploy',
-          roomId: gameId,
-          playerId,
-          payload: { territoryId, armies },
-        },
-        socketId,
-      })
-
-      if (job) {
-        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-        if (hasWorkers) {
-          logger.info('Queued deployment action for worker processing', {
-            gameId,
-            jobId: job.id,
-            territoryId,
-            armies,
-          })
-          return { mode: 'queued' }
-        }
-
-        try {
-          await job.remove()
-        } catch (err) {
-          logger.warn('Failed to remove queued job for inline fallback', {
-            gameId,
-            jobId: job.id,
-            error: err instanceof Error ? err.message : err,
-          })
-        }
-      }
-    }
-
+  ): Promise<import('./deltaEmitter.js').ActionResult> {
     // Process inline and emit deltas + actor snapshot fallback
     const result = await this.processDeploymentInline(gameId, playerId, territoryId, armies)
     await this.deltaEmitter.emitDeploymentDeltas(gameId, playerId, territoryId, result)
     await this.deltaEmitter.emitRevealTo(gameId, playerId)
-    return { mode: 'inline', result }
+    return result
   }
 
   /**
@@ -128,46 +82,7 @@ export class GameActionProcessor {
     fromTerritoryId: string,
     toTerritoryId: string,
     armies: number,
-    socketId?: string,
   ): Promise<void> {
-    if (this.shouldUseQueue()) {
-      const job = await queueService.addGameAction({
-        gameId,
-        playerId,
-        action: {
-          type: 'fortify',
-          roomId: gameId,
-          playerId,
-          payload: { fromTerritoryId, toTerritoryId, armies },
-        },
-        socketId,
-      })
-
-      if (job) {
-        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-        if (hasWorkers) {
-          logger.info('Queued fortify action for worker processing', {
-            gameId,
-            jobId: job.id,
-            fromTerritoryId,
-            toTerritoryId,
-            armies,
-          })
-          return
-        }
-
-        try {
-          await job.remove()
-        } catch (err) {
-          logger.warn('Failed to remove queued job for inline fallback', {
-            gameId,
-            jobId: job.id,
-            error: err instanceof Error ? err.message : err,
-          })
-        }
-      }
-    }
-
     // Process inline and emit deltas
     await this.processFortifyInline(gameId, playerId, fromTerritoryId, toTerritoryId, armies)
   }
@@ -281,45 +196,7 @@ export class GameActionProcessor {
     fromTerritoryId: string,
     toTerritoryId: string,
     armies: number,
-    socketId?: string,
   ): Promise<void> {
-    if (this.shouldUseQueue()) {
-      const job = await queueService.addGameAction({
-        gameId,
-        playerId,
-        action: ((): import('../types/game.js').TransferConquestAction => ({
-          type: 'transfer_conquest',
-          roomId: gameId,
-          playerId,
-          payload: { fromTerritoryId, toTerritoryId, armies },
-        }))(),
-        socketId,
-      })
-
-      if (job) {
-        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-        if (hasWorkers) {
-          logger.info('Queued transfer_conquest for worker processing', {
-            gameId,
-            jobId: job.id,
-            fromTerritoryId,
-            toTerritoryId,
-            armies,
-          })
-          return
-        }
-        try {
-          await job.remove()
-        } catch (err) {
-          logger.warn('Failed to remove queued job for inline fallback', {
-            gameId,
-            jobId: job.id,
-            error: err instanceof Error ? err.message : err,
-          })
-        }
-      }
-    }
-
     // Inline fallback: use GameService and emit deltas
     const result = await this.gameService.transferConquestArmies(
       gameId,
@@ -365,41 +242,7 @@ export class GameActionProcessor {
    * Process a go-back-to-reinforcement action
    * Attempts to queue, falls back to inline if no workers
    */
-  async processGoBack(gameId: string, playerId: string, socketId?: string): Promise<void> {
-    if (this.shouldUseQueue()) {
-      const job = await queueService.addGameAction({
-        gameId,
-        playerId,
-        action: {
-          type: 'go_back_to_reinforcement',
-          roomId: gameId,
-          playerId,
-        },
-        socketId,
-      })
-
-      if (job) {
-        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-        if (hasWorkers) {
-          logger.info('Queued go-back action for worker processing', {
-            gameId,
-            jobId: job.id,
-          })
-          return
-        }
-
-        try {
-          await job.remove()
-        } catch (err) {
-          logger.warn('Failed to remove queued job for inline fallback', {
-            gameId,
-            jobId: job.id,
-            error: err instanceof Error ? err.message : err,
-          })
-        }
-      }
-    }
-
+  async processGoBack(gameId: string, playerId: string): Promise<void> {
     // Process inline and emit deltas
     await this.processGoBackInline(gameId, playerId)
   }
@@ -435,49 +278,7 @@ export class GameActionProcessor {
     fromTerritoryId: string,
     toTerritoryId: string,
     armies?: number,
-    socketId?: string,
-  ): Promise<{ mode: 'queued' | 'inline' }> {
-    if (this.shouldUseQueue()) {
-      const job = await queueService.addGameAction({
-        gameId,
-        playerId,
-        action: {
-          type: 'attack',
-          roomId: gameId,
-          playerId,
-          payload: {
-            fromTerritoryId,
-            toTerritoryId,
-            ...(typeof armies === 'number' ? { armies } : {}),
-          },
-        },
-        socketId,
-      })
-
-      if (job) {
-        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-        if (hasWorkers) {
-          logger.info('Queued attack action for worker processing', {
-            gameId,
-            jobId: job.id,
-            fromTerritoryId,
-            toTerritoryId,
-            armies,
-          })
-          return { mode: 'queued' }
-        }
-        try {
-          await job.remove()
-        } catch (err) {
-          logger.warn('Failed to remove queued job for inline fallback', {
-            gameId,
-            jobId: job.id,
-            error: err instanceof Error ? err.message : err,
-          })
-        }
-      }
-    }
-
+  ): Promise<void> {
     // Inline fallback: process through GameService/GameEngine and emit battle result delta
     // Serialize inline path too to avoid double-apply in non-queue environments
     let lockToken: string | null = null
@@ -688,50 +489,12 @@ export class GameActionProcessor {
         // best-effort
       }
     }
-    return { mode: 'inline' }
   }
 
   /**
    * Process an end turn action. Queues when workers available; otherwise inline via GameService.
    */
-  async processEndTurn(
-    gameId: string,
-    playerId: string,
-    socketId?: string,
-  ): Promise<{ mode: 'queued' | 'inline' }> {
-    if (this.shouldUseQueue()) {
-      const job = await queueService.addGameAction({
-        gameId,
-        playerId,
-        action: {
-          type: 'end_turn',
-          roomId: gameId,
-          playerId,
-        },
-        socketId,
-      })
-
-      if (job) {
-        const hasWorkers = await queueService.hasActiveWorkers('gameActions')
-        if (hasWorkers) {
-          logger.info('Queued endTurn action for worker processing', {
-            gameId,
-            jobId: job.id,
-          })
-          return { mode: 'queued' }
-        }
-        try {
-          await job.remove()
-        } catch (err) {
-          logger.warn('Failed to remove queued job for inline fallback', {
-            gameId,
-            jobId: job.id,
-            error: err instanceof Error ? err.message : err,
-          })
-        }
-      }
-    }
-
+  async processEndTurn(gameId: string, playerId: string): Promise<void> {
     // Inline fallback: end the turn and emit a phase change delta
     const result = await this.gameService.endTurn(gameId, playerId)
     await this.deltaEmitter.emitPhaseChange(gameId, {
@@ -797,7 +560,5 @@ export class GameActionProcessor {
         error: e instanceof Error ? e.message : e,
       })
     }
-
-    return { mode: 'inline' }
   }
 }

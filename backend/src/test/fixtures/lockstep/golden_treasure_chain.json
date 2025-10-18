@@ -1,0 +1,99 @@
+{
+  "description": "Treasure chain reaction forces attacker to cash in after eliminating target",
+  "baseline": {
+    "roomId": "match-treasure-elim",
+    "players": [
+      {
+        "id": "p1",
+        "userId": "u1",
+        "username": "Alice",
+        "color": "red",
+        "territories": ["t1"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": ["bronze", "silver"],
+        "mustCashInTreasures": false
+      },
+      {
+        "id": "p2",
+        "userId": "u2",
+        "username": "Bob",
+        "color": "blue",
+        "territories": ["t2"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": ["gold", "diamond"],
+        "mustCashInTreasures": false
+      }
+    ],
+    "currentPlayer": "p1",
+    "phase": "attack",
+    "turn": 1,
+    "board": [
+      {
+        "id": "t1",
+        "name": "Alpha Ridge",
+        "ownerId": "p1",
+        "armies": 5,
+        "adjacentTerritories": ["t2"]
+      },
+      {
+        "id": "t2",
+        "name": "Bravo Pass",
+        "ownerId": "p2",
+        "armies": 1,
+        "adjacentTerritories": ["t1"]
+      }
+    ],
+    "cards": [],
+    "hasAttackedThisTurn": false,
+    "gameConfig": {
+      "movementType": "classic_adjacent",
+      "maxPlayers": 2,
+      "treasureConfig": {
+        "enabled": true,
+        "diamondsPercent": 0.08,
+        "payoutMode": "classic",
+        "fixedValue": 8,
+        "handCap": 3,
+        "diamondSetBonus": 3
+      }
+    },
+    "treasureState": {
+      "totalSetsCashed": 0,
+      "nextPayoutIndex": 0
+    },
+    "rngSeed": "sfc32:treasure-elimination",
+    "rngState": {
+      "a": 379596434,
+      "b": 596625496,
+      "c": 2204601540,
+      "d": 868986620
+    },
+    "mustCashInTreasures": false,
+    "conqueredDuringTurn": false
+  },
+  "frames": [
+    {
+      "matchId": "match-treasure-elim",
+      "seq": 1,
+      "playerId": "p1",
+      "committedAt": "2025-03-18T00:00:00.000Z",
+      "commands": [
+        {
+          "kind": "attack",
+          "payload": {
+            "fromTerritoryId": "t1",
+            "toTerritoryId": "t2"
+          }
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "finalSeq": 1,
+    "finalCrc32": 2096680046
+  }
+}

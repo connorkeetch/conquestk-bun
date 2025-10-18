@@ -21,6 +21,29 @@ export async function getReplayInitialSnapshot(
   matchId: string,
 ): Promise<SerializedGameState | null> {
   try {
+    const baseline = await query<{ snapshot: Buffer | null }>(
+      `SELECT snapshot
+         FROM match_checksums
+        WHERE match_id = $1
+          AND snapshot IS NOT NULL
+        ORDER BY seq ASC
+        LIMIT 1`,
+      [matchId],
+    )
+
+    const baselineSnapshot = baseline.rows[0]?.snapshot
+    if (baselineSnapshot) {
+      try {
+        const parsed = JSON.parse(baselineSnapshot.toString('utf8')) as SerializedGameState
+        return parsed
+      } catch (error) {
+        logger.warn('Failed to parse baseline lockstep snapshot for replay (falling back)', {
+          matchId,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+    }
+
     const snapshots = await query<{ snapshot: SerializedGameState }>(
       `SELECT snapshot
          FROM game_state_snapshots

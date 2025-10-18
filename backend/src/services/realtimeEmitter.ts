@@ -6,7 +6,7 @@ import { deltaSequenceService } from './deltaSequenceService.js'
 import { computeVisibilityMask } from './fogService.js'
 import { GameService } from './gameService.js'
 import { type DbMove, type FogView, renderLogText } from './logEmitter.js'
-import { socketPayloadMetrics } from './metricsService.js'
+import { deltaTransportMetrics, socketPayloadMetrics } from './metricsService.js'
 
 type SocketData = { userId?: string }
 
@@ -16,6 +16,18 @@ export async function emitCombined(
   payload: { deltas?: GameDelta[]; moves?: DbMove[] },
   state?: GameState,
 ): Promise<void> {
+  const recordTransport = (
+    event: 'game-delta' | 'game-delta-batch',
+    audience: 'room' | 'socket',
+    context: string,
+    extra: Record<string, string> = {},
+  ) => {
+    deltaTransportMetrics.record(event, audience, {
+      source: 'realtimeEmitter',
+      context,
+      ...extra,
+    })
+  }
   const BATCH_THRESHOLD = Number.parseInt(process.env.LOG_TEXT_BATCH_THRESHOLD || '2', 10)
   const gameChannel = `game:${roomId}`
   const deltas = Array.isArray(payload.deltas) ? payload.deltas : []
@@ -41,8 +53,13 @@ export async function emitCombined(
     sockets = await io.in(gameChannel).fetchSockets()
   } catch {
     // Fallback broadcast without fog filtering
-    if (deltas.length === 1) io.to(gameChannel).emit('game-delta', deltas[0])
-    else if (deltas.length > 1) io.to(gameChannel).emit('game-delta-batch', deltas)
+    if (deltas.length === 1) {
+      io.to(gameChannel).emit('game-delta', deltas[0])
+      recordTransport('game-delta', 'room', 'fallback', { fog: 'unknown' })
+    } else if (deltas.length > 1) {
+      io.to(gameChannel).emit('game-delta-batch', deltas)
+      recordTransport('game-delta-batch', 'room', 'fallback', { fog: 'unknown' })
+    }
     if (moves.length >= BATCH_THRESHOLD) {
       const items = moves.map((m) => ({
         id: String(m.id),
@@ -154,6 +171,9 @@ export async function emitCombined(
           // metrics best-effort
         }
         io.to(s.id).emit('game-delta', filtered[0])
+        recordTransport('game-delta', 'socket', 'filtered', {
+          fog: fogEnabled ? 'on' : 'off',
+        })
       } else if (filtered.length > 1) {
         try {
           const bytes = Buffer.byteLength(JSON.stringify(filtered), 'utf8')
@@ -162,6 +182,9 @@ export async function emitCombined(
           // metrics best-effort
         }
         io.to(s.id).emit('game-delta-batch', filtered)
+        recordTransport('game-delta-batch', 'socket', 'filtered', {
+          fog: fogEnabled ? 'on' : 'off',
+        })
       }
     }
 

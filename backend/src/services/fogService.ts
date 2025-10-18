@@ -4,7 +4,7 @@ import type { GameState, GameTerritoryModifier, SerializedGameState } from '../t
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { logger } from '../utils/logger.js'
 import { GameService } from './gameService.js'
-import { socketPayloadMetrics } from './metricsService.js'
+import { deltaTransportMetrics, socketPayloadMetrics } from './metricsService.js'
 
 const ROOM_PREFIX = 'game:'
 
@@ -104,6 +104,18 @@ export async function emitFogFilteredDelta(
   delta: GameDelta,
   state?: GameState,
 ): Promise<void> {
+  const recordTransport = (
+    event: 'game-delta' | 'game-delta-batch',
+    audience: 'room' | 'socket',
+    context: string,
+    extra: Record<string, string> = {},
+  ) => {
+    deltaTransportMetrics.record(event, audience, {
+      source: 'fog',
+      context,
+      ...extra,
+    })
+  }
   // Persist the raw delta into the replay ring buffer (best-effort)
   try {
     const { deltaBufferService } = await import('./deltaBufferService.js')
@@ -126,6 +138,7 @@ export async function emitFogFilteredDelta(
       /* metrics best-effort */
     }
     io.to(channel).emit('game-delta', delta)
+    recordTransport('game-delta', 'room', 'fetchSockets-fallback', { fog: 'unknown' })
     return
   }
 
@@ -140,6 +153,7 @@ export async function emitFogFilteredDelta(
       /* metrics best-effort */
     }
     io.to(channel).emit('game-delta', delta)
+    recordTransport('game-delta', 'room', 'missing-state', { fog: 'unknown' })
     return
   }
 
@@ -155,6 +169,7 @@ export async function emitFogFilteredDelta(
       /* metrics best-effort */
     }
     io.to(channel).emit('game-delta', delta)
+    recordTransport('game-delta', 'room', 'broadcast', { fog: fogMode })
     return
   }
 
@@ -170,6 +185,7 @@ export async function emitFogFilteredDelta(
         /* metrics best-effort */
       }
       io.to(s.id).emit('game-delta', delta)
+      recordTransport('game-delta', 'socket', 'missing-viewer', { fog: fogMode })
       continue
     }
     const mask = computeVisibilityMask(gameState, viewerId)
@@ -182,6 +198,7 @@ export async function emitFogFilteredDelta(
         /* metrics best-effort */
       }
       io.to(s.id).emit('game-delta', filtered)
+      recordTransport('game-delta', 'socket', 'filtered', { fog: fogMode })
     }
   }
 }

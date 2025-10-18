@@ -1047,6 +1047,8 @@ const simulateAttack = (
 
   const { fromTerritoryId, toTerritoryId } = payload as AttackAction['payload']
   const working = cloneState(state)
+  const baselineBoard = working.board.map((territory) => ({ ...territory }))
+  delete working.capitalElimination
 
   if (working.phase !== 'attack') {
     return { state, supported: false }
@@ -1102,6 +1104,7 @@ const simulateAttack = (
   const targetedCapital = defenderId ? isCapitalTerritory(working, defenderId, to.id) : false
 
   let conquered = false
+  let capitalSummary: LockstepState['capitalElimination'] | null = null
   if (to.armies === 0) {
     if (!attacker || !defender || !defenderId) {
       return { state, supported: false }
@@ -1123,7 +1126,7 @@ const simulateAttack = (
     })
 
     if (targetedCapital) {
-      applyCapitalCapture(working, playerId, defenderId, to.id)
+      const capture = applyCapitalCapture(working, playerId, defenderId, to.id, { baselineBoard })
       const refreshedBoard = working.board as Territory[]
       const refreshedFrom = refreshedBoard.find((territory) => territory.id === from.id)
       const refreshedTo = refreshedBoard.find((territory) => territory.id === to.id)
@@ -1133,13 +1136,20 @@ const simulateAttack = (
       if (refreshedTo) {
         to = { ...refreshedTo }
       }
+      capitalSummary = {
+        conqueror: playerId,
+        eliminated: defenderId,
+        capitalTerritory: capture.capitalTerritoryId,
+        territoriesGained: capture.transferred.length,
+        troopsGained: capture.troopsGained,
+      }
     }
 
     const gameEndCheck = checkGameEnd(working)
     transferEliminatedTreasures(working, playerId, treasureConfig, gameEndCheck.eliminatedPlayers)
     updateCurrentPlayerCashRequirement(working, treasureConfig)
 
-    working.lastBattleResult = {
+    const battleResultPayload = {
       attackerDice: battle.attackerDice,
       defenderDice: battle.defenderDice,
       attackerLosses: battle.attackerLosses,
@@ -1162,6 +1172,15 @@ const simulateAttack = (
       eliminatedPlayers: gameEndCheck.eliminatedPlayers,
     } as unknown as BattleResult
 
+    if (capitalSummary) {
+      ;(battleResultPayload as BattleResult).capitalElimination = capitalSummary
+      working.capitalElimination = capitalSummary
+    } else {
+      delete working.capitalElimination
+    }
+
+    working.lastBattleResult = battleResultPayload
+
     return { state: working, supported: true }
   }
 
@@ -1175,7 +1194,7 @@ const simulateAttack = (
     return territory
   })
 
-  working.lastBattleResult = {
+  const battleResultPayload = {
     attackerDice: battle.attackerDice,
     defenderDice: battle.defenderDice,
     attackerLosses: battle.attackerLosses,
@@ -1197,6 +1216,10 @@ const simulateAttack = (
     winner: gameEndCheck.winner ?? null,
     eliminatedPlayers: gameEndCheck.eliminatedPlayers,
   } as unknown as BattleResult
+
+  delete working.capitalElimination
+  delete (battleResultPayload as BattleResult).capitalElimination
+  working.lastBattleResult = battleResultPayload
 
   return { state: working, supported: true }
 }
