@@ -1,0 +1,100 @@
+{
+  "description": "Fog match where attacker rewinds to reinforcement phase after partial placements",
+  "baseline": {
+    "roomId": "match-fog-rewind",
+    "players": [
+      {
+        "id": "p1",
+        "userId": "u1",
+        "username": "Scout",
+        "color": "green",
+        "territories": ["alpha", "beta", "gamma"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false
+      },
+      {
+        "id": "p2",
+        "userId": "u2",
+        "username": "Observer",
+        "color": "orange",
+        "territories": ["delta"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false
+      }
+    ],
+    "currentPlayer": "p1",
+    "phase": "attack",
+    "turn": 3,
+    "board": [
+      {
+        "id": "alpha",
+        "name": "Alpha",
+        "ownerId": "p1",
+        "armies": 3,
+        "adjacentTerritories": ["beta", "gamma"]
+      },
+      {
+        "id": "beta",
+        "name": "Beta",
+        "ownerId": "p1",
+        "armies": 2,
+        "adjacentTerritories": ["alpha", "gamma"]
+      },
+      {
+        "id": "gamma",
+        "name": "Gamma",
+        "ownerId": "p1",
+        "armies": 1,
+        "adjacentTerritories": ["alpha", "beta", "delta"]
+      },
+      {
+        "id": "delta",
+        "name": "Delta",
+        "ownerId": "p2",
+        "armies": 4,
+        "adjacentTerritories": ["gamma"]
+      }
+    ],
+    "cards": [],
+    "hasAttackedThisTurn": false,
+    "gameConfig": {
+      "movementType": "classic_adjacent",
+      "maxPlayers": 4,
+      "fogOfWar": "adjacent"
+    },
+    "reinforcementHistory": [
+      {
+        "playerId": "p1",
+        "territoryId": "alpha",
+        "armies": 1,
+        "ts": 1710720000000
+      }
+    ],
+    "mustCashInTreasures": false,
+    "conqueredDuringTurn": false
+  },
+  "frames": [
+    {
+      "matchId": "match-fog-rewind",
+      "seq": 1,
+      "playerId": "p1",
+      "committedAt": "2025-03-18T00:00:00.000Z",
+      "commands": [
+        {
+          "kind": "go_back_to_reinforcement",
+          "payload": {}
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "finalSeq": 1,
+    "finalCrc32": 3492131775
+  }
+}

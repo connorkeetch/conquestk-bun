@@ -3,6 +3,25 @@ import { query } from '../config/database.js'
 import type { SerializedGameState } from '../types/game.js'
 
 export async function loadInitialSnapshot(matchId: string): Promise<SerializedGameState | null> {
+  const baseline = await query<{ snapshot: Buffer | null }>(
+    `SELECT snapshot
+       FROM match_checksums
+      WHERE match_id = $1
+        AND snapshot IS NOT NULL
+      ORDER BY seq ASC
+      LIMIT 1`,
+    [matchId],
+  )
+
+  const baselineSnapshot = baseline.rows[0]?.snapshot
+  if (baselineSnapshot) {
+    try {
+      return JSON.parse(baselineSnapshot.toString('utf8')) as SerializedGameState
+    } catch {
+      // Fall through to legacy snapshot sources
+    }
+  }
+
   const snapshots = await query<{ snapshot: SerializedGameState }>(
     `SELECT snapshot
        FROM game_state_snapshots

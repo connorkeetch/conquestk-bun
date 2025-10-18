@@ -351,6 +351,17 @@ describe('Shared lockstep simulator parity', () => {
     expect(engineState.board.find((territory) => territory.id === 'cap')?.capitalOwnerId).toBe('p1')
     expect(engineState.capitalAssignments?.p1).toBe('cap')
     expect(engineState.board.find((territory) => territory.id === 'alpha')?.isCapital).toBe(false)
+    expect(engineState.capitalElimination).toEqual({
+      conqueror: 'p1',
+      eliminated: 'p2',
+      capitalTerritory: 'cap',
+      territoriesGained: 2,
+      troopsGained: 3,
+    })
+    expect(simState.capitalElimination).toEqual(engineState.capitalElimination)
+    expect(simState.lastBattleResult?.capitalElimination).toEqual(
+      engineState.lastBattleResult?.capitalElimination,
+    )
   })
 
   it('neutralizes territories when a player resigns', () => {

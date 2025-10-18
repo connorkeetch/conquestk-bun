@@ -43,28 +43,44 @@ export const isCapitalTerritory = (
   return territory?.isCapital === true && territory?.capitalOwnerId === playerId
 }
 
+type CapitalCaptureResult = {
+  transferred: string[]
+  troopsGained: number
+  capitalTerritoryId: string
+}
+
 export const applyCapitalCapture = (
   state: CapitalCompatibleState,
   attackerId: string,
   defenderId: string,
   capitalTerritoryId: string | number,
-): { transferred: string[] } => {
+  options?: { baselineBoard?: Territory[] },
+): CapitalCaptureResult => {
   const normalizedCapitalId = normalizeTerritoryId(capitalTerritoryId)
   const players = state.players
   const attacker = players.find((player) => player.id === attackerId)
   const defender = players.find((player) => player.id === defenderId)
 
   if (!attacker || !defender) {
-    return { transferred: [] }
+    return { transferred: [], troopsGained: 0, capitalTerritoryId: normalizedCapitalId }
   }
 
   const transferred = new Set<string>()
+  let troopsGained = 0
+  const baseline = options?.baselineBoard ?? state.board
+  const baselineLookup = new Map<string, Territory>(
+    baseline.map((territory) => [territory.id, { ...territory } as Territory]),
+  )
   const updatedBoard: Territory[] = state.board.map((territory) => {
     const copy: Territory = { ...territory }
+    const original = baselineLookup.get(copy.id) ?? territory
+    const originalOwner = original.ownerId ?? copy.ownerId
+    const originalArmies = original.armies ?? copy.armies ?? 0
 
-    if (copy.ownerId === defenderId) {
+    if (originalOwner === defenderId) {
       copy.ownerId = attackerId
       transferred.add(copy.id)
+      troopsGained += originalArmies
     }
 
     if (copy.capitalOwnerId === defenderId && copy.id !== normalizedCapitalId) {
@@ -110,5 +126,9 @@ export const applyCapitalCapture = (
   assignments[attackerId] = normalizedCapitalId
   state.capitalAssignments = assignments
 
-  return { transferred: Array.from(transferred) }
+  return {
+    transferred: Array.from(transferred),
+    troopsGained,
+    capitalTerritoryId: normalizedCapitalId,
+  }
 }

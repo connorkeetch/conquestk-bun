@@ -1124,6 +1124,7 @@ export class GameEngine {
   }
 
   private async handleAttack(gameState: GameState, action: AttackAction): Promise<BattleResult> {
+    delete gameState.capitalElimination
     const { fromTerritoryId, toTerritoryId } = action.payload
 
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
@@ -1142,6 +1143,7 @@ export class GameEngine {
     }
 
     const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+    const baselineBoard = gameState.board.map((territory) => ({ ...territory }))
 
     // Mark that player has attacked this turn
     gameState.hasAttackedThisTurn = true
@@ -1187,6 +1189,7 @@ export class GameEngine {
         ? isCapitalTerritory(gameState, toTerritory.ownerId, toTerritory.id)
         : false
     const conquered = toTerritory.armies === 0
+    let capitalSummary: GameState['capitalElimination'] | null = null
     if (conquered) {
       // Update territory ownership and player territory lists
       const attacker = gameState.players.find((p) => p.id === action.playerId)
@@ -1206,7 +1209,13 @@ export class GameEngine {
       gameState.conqueredDuringTurn = true
 
       if (defender && targetedCapital) {
-        applyCapitalCapture(gameState, action.playerId, defender.id, toTerritory.id)
+        const capture = applyCapitalCapture(
+          gameState,
+          action.playerId,
+          defender.id,
+          toTerritory.id,
+          { baselineBoard },
+        )
         const refreshedFrom = gameState.board.find((territory) => territory.id === fromTerritoryId)
         const refreshedTo = gameState.board.find((territory) => territory.id === toTerritoryId)
         if (refreshedFrom) {
@@ -1214,6 +1223,13 @@ export class GameEngine {
         }
         if (refreshedTo) {
           Object.assign(toTerritory, refreshedTo)
+        }
+        capitalSummary = {
+          conqueror: action.playerId,
+          eliminated: defender.id,
+          capitalTerritory: capture.capitalTerritoryId,
+          territoriesGained: capture.transferred.length,
+          troopsGained: capture.troopsGained,
         }
       }
     }
@@ -1237,6 +1253,12 @@ export class GameEngine {
 
     // Store the battle result in game state
     gameState.lastBattleResult = result
+    if (capitalSummary) {
+      result.capitalElimination = capitalSummary
+      gameState.capitalElimination = capitalSummary
+    } else {
+      delete result.capitalElimination
+    }
 
     // Check if conquest resulted in game end
     if (conquered) {

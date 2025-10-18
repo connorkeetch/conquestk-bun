@@ -1,0 +1,102 @@
+{
+  "description": "Capital capture eliminates defender and transfers holdings deterministically",
+  "baseline": {
+    "roomId": "match-capital",
+    "players": [
+      {
+        "id": "p1",
+        "userId": "u1",
+        "username": "Alice",
+        "color": "red",
+        "territories": ["alpha"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false,
+        "capitalTerritory": "alpha"
+      },
+      {
+        "id": "p2",
+        "userId": "u2",
+        "username": "Bob",
+        "color": "blue",
+        "territories": ["cap", "delta"],
+        "armies": 0,
+        "cards": [],
+        "isEliminated": false,
+        "treasures": [],
+        "mustCashInTreasures": false,
+        "capitalTerritory": "cap"
+      }
+    ],
+    "currentPlayer": "p1",
+    "phase": "attack",
+    "turn": 1,
+    "board": [
+      {
+        "id": "alpha",
+        "name": "Alpha",
+        "ownerId": "p1",
+        "armies": 5,
+        "adjacentTerritories": ["cap"],
+        "isCapital": true,
+        "capitalOwnerId": "p1"
+      },
+      {
+        "id": "cap",
+        "name": "Capital",
+        "ownerId": "p2",
+        "armies": 1,
+        "adjacentTerritories": ["alpha"],
+        "isCapital": true,
+        "capitalOwnerId": "p2"
+      },
+      {
+        "id": "delta",
+        "name": "Delta",
+        "ownerId": "p2",
+        "armies": 2,
+        "adjacentTerritories": ["alpha"],
+        "isCapital": false
+      }
+    ],
+    "cards": [],
+    "hasAttackedThisTurn": false,
+    "gameConfig": {
+      "movementType": "classic_adjacent",
+      "maxPlayers": 2,
+      "gameMode": "capitals"
+    },
+    "treasureState": {
+      "totalSetsCashed": 0,
+      "nextPayoutIndex": 0
+    },
+    "conqueredDuringTurn": false,
+    "capitalAssignments": {
+      "p1": "alpha",
+      "p2": "cap"
+    }
+  },
+  "frames": [
+    {
+      "matchId": "match-capital",
+      "seq": 1,
+      "playerId": "p1",
+      "committedAt": "2025-03-18T00:00:00.000Z",
+      "commands": [
+        {
+          "kind": "attack",
+          "payload": {
+            "fromTerritoryId": "alpha",
+            "toTerritoryId": "cap"
+          }
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "finalSeq": 1,
+    "finalCrc32": 3855182730
+  }
+}

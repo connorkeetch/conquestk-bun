@@ -36,7 +36,7 @@ import {
   matchPresenceOffline,
   matchPresenceOnline,
 } from './matchSvcIntegration.js'
-import { lockstepMetrics, socketPayloadMetrics } from './metricsService.js'
+import { deltaTransportMetrics, lockstepMetrics, socketPayloadMetrics } from './metricsService.js'
 import { registerSocketServer } from './socketRegistry.js'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
@@ -169,6 +169,10 @@ function _emitGameDeltaBatchToRoom(
   // receive individual deltas where we keep them.
   // To preserve compatibility, we still support single 'game-delta' elsewhere.
   io.to(channel).emit('game-delta-batch', deltas)
+  deltaTransportMetrics.record('game-delta-batch', 'room', {
+    source: 'socketService',
+    context: 'batch',
+  })
 }
 
 function emitGameSnapshotToSocket(
@@ -811,7 +815,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                   userId,
                   (normalizedAction as DeployAction).payload.territoryId,
                   (normalizedAction as DeployAction).payload.armies,
-                  socket.id,
                 )
                 break
               }
@@ -822,7 +825,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                   (normalizedAction as AttackAction).payload.fromTerritoryId,
                   (normalizedAction as AttackAction).payload.toTerritoryId,
                   (normalizedAction as AttackAction).payload?.armies,
-                  socket.id,
                 )
                 break
               }
@@ -833,16 +835,15 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                   (normalizedAction as FortifyAction).payload.fromTerritoryId,
                   (normalizedAction as FortifyAction).payload.toTerritoryId,
                   (normalizedAction as FortifyAction).payload.armies,
-                  socket.id,
                 )
                 break
               }
               case 'end_turn': {
-                await gameActionProcessor.processEndTurn(data.roomId, userId, socket.id)
+                await gameActionProcessor.processEndTurn(data.roomId, userId)
                 break
               }
               case 'go_back_to_reinforcement': {
-                await gameActionProcessor.processGoBack(data.roomId, userId, socket.id)
+                await gameActionProcessor.processGoBack(data.roomId, userId)
                 break
               }
               case 'transfer_conquest': {
@@ -855,7 +856,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                     .toTerritoryId,
                   (normalizedAction as import('../types/game.js').TransferConquestAction).payload
                     .armies,
-                  socket.id,
                 )
                 break
               }
@@ -1011,6 +1011,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             timestamp: now.getTime(),
             text: `${socket.username ?? 'A player'} resigned; territories set neutral.`,
             ...(socket.userId ? { playerId: socket.userId } : {}),
+          })
+          deltaTransportMetrics.record('game-delta', 'room', {
+            source: 'socketService',
+            context: 'resign',
           })
         } catch (error) {
           logger.warn('Failed to append RESIGN log or emit system message (best-effort)', {

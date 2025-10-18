@@ -77,6 +77,28 @@ export class LockstepService {
     }
   }
 
+  async recordBaseline(params: {
+    matchId: string
+    state: SerializedGameState
+    client?: PoolClient
+  }): Promise<void> {
+    const { matchId, state, client } = params
+    const bytes = stableStringifyToUint8(state)
+    const checksumValue = crc32(bytes)
+    const committedAt = new Date().toISOString()
+    await query(
+      `INSERT INTO match_checksums (match_id, seq, crc32, snapshot, computed_at)
+       VALUES ($1, 0, $2, $3, $4)
+       ON CONFLICT (match_id, seq) DO UPDATE
+       SET crc32 = EXCLUDED.crc32,
+           snapshot = EXCLUDED.snapshot,
+           computed_at = EXCLUDED.computed_at`,
+      [matchId, checksumValue, Buffer.from(bytes), committedAt],
+      { client },
+    )
+    this.seqCache.set(matchId, 0)
+  }
+
   async recordFrame(params: {
     matchId: string
     playerId: string
@@ -166,12 +188,13 @@ export class LockstepService {
     if (checksumThreshold <= 0) {
       return
     }
+    const deletionThreshold = Math.max(1, checksumThreshold)
 
     try {
       await query(
         `DELETE FROM match_checksums
          WHERE match_id = $1 AND seq < $2`,
-        [matchId, checksumThreshold],
+        [matchId, deletionThreshold],
         { client },
       )
     } catch (error) {

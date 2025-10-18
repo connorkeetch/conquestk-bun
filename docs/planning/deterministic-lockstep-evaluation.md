@@ -14,7 +14,7 @@
 ## Determinism gaps today
 - Core game setup still uses `Math.random()` to shuffle player order, distribute territories, and assign rotating objectives, bypassing the seeded combat RNG helper. 【F:backend/src/game/gameEngine.ts†L525-L612】
 - Treasures, AI dice rolls, and lobby AI seeding rely on ad-hoc `Math.random()` calls, so identical inputs already diverge between runs. 【F:backend/src/game/hiddenTreasures.ts†L104-L127】【F:backend/src/services/aiDecisionService.ts†L600-L640】【F:backend/src/services/gameRoomService.ts†L708-L740】
-- Game actions can execute either inline or through background workers, adding nondeterministic ordering around queue availability. 【F:backend/src/services/gameActionProcessor.ts†L35-L168】
+- Game actions now execute inline through the lockstep processor; the BullMQ worker path was retired to guarantee submission order. 【F:backend/src/services/gameActionProcessor.ts†L35-L168】
 
 ## Comparison: Current snapshot+delta vs. deterministic lockstep
 | Factor | Snapshot + delta (current) | Deterministic lockstep (proposed) |
@@ -68,16 +68,16 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Shared `DeterministicRng` utility added to `@conquestk/shared/utils` with seed hashing, integer helpers, and shuffle support.
 - `GameEngine`, AI planners, treasure draws, capital selection, and lobby AI seeding now use the deterministic RNG seeded per match.
 - `GameState` persists `rngSeed`/`rngState`; legacy `combatRng*` fields hydrate into the new structure automatically.
-- Game action processor defaults to inline execution (`GAME_ACTION_QUEUE=enabled` re-enables workers) to keep command sequencing deterministic.
+- Game action processor now runs inline exclusively; the BullMQ worker toggle (`GAME_ACTION_QUEUE`) has been retired to keep command sequencing deterministic.
 - Socket `join-room` handler restores membership validation so transport behaviour matches existing tests while we prep lockstep.
 
 ## Phase 1 progress (2025-03-18)
 - Added `match_frames` and `match_checksums` tables to persist authoritative input frames and periodic CRC snapshots (with optional binary state payloads for resync).
 - Socket layer now emits `game-action:frame-committed` and `game-action:checksum` when `LOCKSTEP_DEV=true`, using canonical JSON + CRC32 to detect drift.
 - Lockstep recorder seeds per-match sequences, stores commands, and reuses snapped `SerializedGameState` so deterministic replays stay aligned with the RNG log.
-- Queueing is automatically disabled in lockstep mode, keeping inline processing deterministic while legacy delta events continue to flow alongside the new frames.
+- Gameplay queue removed: lockstep processing now always runs inline while legacy delta events continue to flow alongside the new frames for compatibility.
 - Frontend validator (behind `VITE_LOCKSTEP_DEV`) replays the confirmed frames through Redux state, computes local CRCs via the shared stable serializer, and triggers auto-resync when checksums diverge.
-- Shared `lockstep` simulator currently supports deterministic replays for reinforcement/fortify actions; combat resolution and treasure flows still fall back to snapshot resync (TBD to port full `GameEngine` logic).
+- Shared `lockstep` simulator now mirrors deterministic deployments, combat (including capital eliminations), fortify, treasure trades, resignations, and `transfer_conquest`, eliminating the previous need to fall back to snapshot resync for those flows.
 
 ## Phase 2 progress (2025-04-04)
 - Shared simulator now mirrors backend combat, treasure trades, territory modifiers, `transfer_conquest`, and `end_turn`/`go_back_to_reinforcement` flows, including assassination wins and King-of-the-Hill rotations.
@@ -85,7 +85,7 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Added backend parity tests (`lockstepSimulator.test.ts`) that feed treasure trades, KOTH end-turn scoring, and assassination victories through both `GameEngine` and the shared simulator, guarding against regressions.
 
 ### Remaining Phase 2 work
-- Continue broadening regression coverage for capital eliminations, treasure chain reactions, and other edge flows before moving to Phase 3 automation.
+- Capture golden frame fixtures + checksum assertions in CI and plan delta-emitter removal once the lockstep client rolls out broadly.
 
 ## Phase 3 focus — Replay & Tooling (2025-04-04)
 - Promote the lockstep CLI (`npm run replay:match`) into the regular QA loop: capture canonical fixtures, add CI assertions, and gate merges on checksum parity.
@@ -95,6 +95,7 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 ## Phase 3 progress (2025-04-12)
 - Performance monitor now ingests lockstep resync totals, failure rates, and mean durations; reliability alerts trigger automatically when thresholds are breached, and the Admin Health dashboard exposes the new lockstep card alongside socket payload telemetry.
 - `/games/:id/replay/frames` serves deterministic snapshots + frame windows, and the replay viewer hydrates the lockstep simulator client-side to drive map overlays from deterministic state while legacy deltas remain as a fallback.
+- Golden frame fixtures live in `backend/src/test/fixtures/lockstep/*.json`; `lockstepGoldenFrames.test.ts` replays them via the shared simulator and asserts CRC parity in CI. Regenerate fixtures with `npm run replay:match` + `scripts/replayHelpers.ts` before landing intentional gameplay changes.
 
 ### Verification checklist (2025-04-12)
 - Run `npm run replay:export -- <matchId> export.json` to produce baseline snapshot + frame bundles that the frontend replay UI can ingest and diff against backend exports.
@@ -103,5 +104,22 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 
 ## Rollout plan
 1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).
-2. Enable lockstep transport in development, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely.
+2. Enable lockstep transport in development, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely once the lockstep client ships broadly.
 3. Promote the lockstep protocol to staging, run seeded matches end-to-end, and only then clean up snapshot/delta persistence tables that are no longer necessary.
+
+## Delta emitter sunset plan (draft — update before execution)
+
+**Prerequisites**
+- Lockstep client is the default experience (no `VITE_LOCKSTEP_DEV` gating).
+- Golden frame fixtures and replay CLI runs are green in CI against representative matches.
+- Telemetry shows negligible `game-delta` / `game-delta-batch` traffic for at least two consecutive weeks.
+
+**Execution steps**
+1. Remove `DeltaEmitter` fan-out from `GameActionProcessor`, background workers, and AI paths; replace remaining fog-aware emissions with lockstep frame notifications.
+2. Delete legacy socket events (`game-delta`, `game-delta-batch`, snapshot reveals) and associated metrics counters.
+3. Excise delta-specific reducers/listeners on the frontend once all environments consume lockstep frames exclusively.
+4. Drop historical delta snapshot tables after a final backup and once the replay tooling no longer depends on them.
+
+**Rollback considerations**
+- Keep a hotfix branch that can reintroduce delta emissions behind a `LOCKSTEP_FALLBACK=true` flag for one release cycle.
+- Preserve the replay CLI + golden fixtures to validate parity before and after the removal.

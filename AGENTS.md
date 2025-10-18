@@ -118,7 +118,7 @@ For detailed information on coding standards, see the [coding standards guide](d
 
 ### Action routing & team utils
 - Prefer the unified `game-action` socket for all gameplay actions. Specialized events (`deployArmies`, `attack`, `fortify`, `transferConquestArmies`, `undoFortify`, `endTurn`, `goBackToReinforcement`) are deprecated and routed internally through the same processor for now.
-- New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket. This keeps queue/inline paths and deltas consistent.
+- New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket and is fully handled by the unified inline lockstep processor.
 - Team checks are centralized in `backend/src/utils/gameTeams.ts` and used by both `GameEngine` and AI. Do not reimplement team logic elsewhere.
 - Emit deltas first; snapshots are recovery-only for desyncs.
 - Logs: textual `game-log:append` is additive and runs alongside structured `game_battle_logs` writes.
@@ -204,7 +204,7 @@ VITE_ASSET_BASE_URL=https://assets.conquestk.com
 If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**`. Static audio/background assets still require `VITE_ASSET_BASE_URL` to point at the CDN.
 
 ### Lockstep development mode
-- Set `LOCKSTEP_DEV=true` in `backend/.env` to emit `game-action:frame-committed`/`game-action:checksum` events, persist frames in `match_frames`, and bypass the worker queue.
+- Set `LOCKSTEP_DEV=true` in `backend/.env` to emit `game-action:frame-committed`/`game-action:checksum` events and persist frames in `match_frames`; gameplay now always runs inline, so no queue bypass is required.
 - Set `VITE_LOCKSTEP_DEV=true` in `frontend/.env` to disable optimistic client updates and consume the new lockstep feeds alongside legacy deltas.
 - Use `npm run replay:match -- <matchId>` (backend) to re-sim recorded frames and compare checksums whenever you suspect drift; the script exits non-zero on mismatches.
 
