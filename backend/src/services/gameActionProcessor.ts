@@ -2,15 +2,26 @@ import type { Server } from 'socket.io'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { logger } from '../utils/logger.js'
 import { DeltaEmitter } from './deltaEmitter.js'
+import { BattleResultEmitter } from './emission/BattleResultEmitter.js'
 import { GameService } from './gameService.js'
+import { ActionLockManager } from './locking/ActionLockManager.js'
+import { GameLogPersister } from './persistence/GameLogPersister.js'
 
 /**
  * Unified game action processor
  * Single code path for all game actions - handles queue vs inline internally
+ *
+ * Refactored to use specialized services for better separation of concerns:
+ * - BattleResultEmitter: Handles battle delta emission and transformation
+ * - GameLogPersister: Manages game log persistence
+ * - ActionLockManager: Handles Redis lock acquisition/release
  */
 export class GameActionProcessor {
   private gameService: GameService
   private deltaEmitter: DeltaEmitter
+  private battleResultEmitter: BattleResultEmitter
+  private logPersister: GameLogPersister
+  private lockManager: ActionLockManager
   private io: Server<
     ClientToServerEvents,
     ServerToClientEvents,
@@ -28,6 +39,9 @@ export class GameActionProcessor {
   ) {
     this.gameService = new GameService()
     this.deltaEmitter = new DeltaEmitter(io)
+    this.battleResultEmitter = new BattleResultEmitter(io)
+    this.logPersister = new GameLogPersister()
+    this.lockManager = new ActionLockManager()
     this.io = io
   }
 
@@ -182,8 +196,15 @@ export class GameActionProcessor {
           )
         }
       }
-    } catch {
-      // Non-fatal: fortify combined emission is best-effort
+    } catch (error) {
+      logger.warn('Failed to emit fortify combined deltas - client may need manual refresh', {
+        gameId,
+        playerId,
+        fromTerritoryId,
+        toTerritoryId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
     }
   }
 
@@ -230,10 +251,15 @@ export class GameActionProcessor {
           result.gameState.version,
         ),
       )
-    } catch (e) {
-      logger.debug('Failed to emit transfer_conquest deltas (inline)', {
+    } catch (error) {
+      logger.warn('Failed to emit transfer_conquest deltas - client may be desynced', {
         gameId,
-        error: e instanceof Error ? e.message : e,
+        playerId,
+        fromTerritoryId,
+        toTerritoryId,
+        armies,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       })
     }
   }
@@ -287,6 +313,7 @@ export class GameActionProcessor {
 
   /**
    * Process an attack action. Queues when workers available; otherwise inline via GameEngine.
+   * Refactored to use specialized services for cleaner separation of concerns.
    */
   async processAttack(
     gameId: string,
@@ -295,215 +322,219 @@ export class GameActionProcessor {
     toTerritoryId: string,
     armies?: number,
   ): Promise<void> {
-    // Inline fallback: process through GameService/GameEngine and emit battle result delta
-    // Serialize inline path too to avoid double-apply in non-queue environments
-    let lockToken: string | null = null
-    const { acquireLock, releaseLock } = await import('../config/redis.js')
-    const lockKey = `lock:game-actions:${gameId}`
-    const startWait = Date.now()
-    lockToken = await acquireLock(lockKey, 5000)
-    while (!lockToken) {
-      if (Date.now() - startWait > 1500) break
-      await new Promise((r) => setTimeout(r, 25))
-      lockToken = await acquireLock(lockKey, 5000)
-    }
-    const updated = await this.gameService.processGameAction(
-      {
-        type: 'attack',
-        roomId: gameId,
-        playerId,
-        payload: {
-          fromTerritoryId,
-          toTerritoryId,
-          ...(typeof armies === 'number' ? { armies } : {}),
+    // Use ActionLockManager to serialize attack processing
+    await this.lockManager.withLock(gameId, async () => {
+      const updated = await this.gameService.processGameAction(
+        {
+          type: 'attack',
+          roomId: gameId,
+          playerId,
+          payload: {
+            fromTerritoryId,
+            toTerritoryId,
+            ...(typeof armies === 'number' ? { armies } : {}),
+          },
         },
-      },
-      playerId,
-    )
-    const last = updated.lastBattleResult
-    if (last) {
-      try {
-        const { DeltaBuilder } = await import('../types/deltaUpdates.js')
-        const toPayload = (
-          val: unknown,
-        ): import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'] | null => {
-          if (!val || typeof val !== 'object') return null
-          const obj = val as Record<string, unknown>
-          const f = obj.fromTerritory
-          const t = obj.toTerritory
-          const aL = obj.attackerLosses
-          const dL = obj.defenderLosses
-          const aD = obj.attackerDice
-          const dD = obj.defenderDice
-          const c = obj.conquered
-          const ok =
-            typeof f === 'object' &&
-            f !== null &&
-            typeof (f as Record<string, unknown>).id === 'string' &&
-            typeof (f as Record<string, unknown>).armies === 'number' &&
-            typeof t === 'object' &&
-            t !== null &&
-            typeof (t as Record<string, unknown>).id === 'string' &&
-            typeof (t as Record<string, unknown>).armies === 'number' &&
-            Array.isArray(aD) &&
-            aD.every((n) => typeof n === 'number') &&
-            Array.isArray(dD) &&
-            dD.every((n) => typeof n === 'number') &&
-            typeof aL === 'number' &&
-            typeof dL === 'number' &&
-            typeof c === 'boolean'
-          if (!ok) return null
-          const tRec = t as Record<string, unknown>
-          return {
-            fromTerritory: {
-              id: String((f as Record<string, unknown>).id),
-              armies: Number((f as Record<string, unknown>).armies),
-            },
-            toTerritory: {
-              id: String(tRec.id as string),
-              armies: Number(tRec.armies as number),
-              ...(typeof tRec.ownerId === 'string' || tRec.ownerId === null
-                ? { ownerId: tRec.ownerId as string | null }
-                : {}),
-            },
-            attackerLosses: Number(aL),
-            defenderLosses: Number(dL),
-            attackerDice: aD as number[],
-            defenderDice: dD as number[],
-            conquered: Boolean(c),
-          }
-        }
-        const payload = toPayload(last)
-        if (payload) {
-          const battleDelta = DeltaBuilder.battleResult(gameId, payload, updated.version)
-          const withChanges: import('@conquestk/shared/types/delta').BattleResultDelta & {
-            changes?: import('@conquestk/shared/types/delta').GameDelta[]
-          } = {
-            ...battleDelta,
-            changes: [
-              DeltaBuilder.territoryUpdate(
-                gameId,
-                payload.fromTerritory.id,
-                { armies: payload.fromTerritory.armies },
-                updated.version,
-              ),
-              DeltaBuilder.territoryUpdate(
-                gameId,
-                payload.toTerritory.id,
-                {
-                  armies: payload.toTerritory.armies,
-                  ownerId: payload.toTerritory.ownerId ?? undefined,
-                },
-                updated.version,
-              ),
-            ],
-          }
-          const { emitFogFilteredDelta } = await import('./fogService.js')
-          await emitFogFilteredDelta(this.io, gameId, withChanges)
+        playerId,
+      )
 
-          // Build textual moves for this battle and co-emit with deltas
-          try {
-            const { emitCombined } = await import('./realtimeEmitter.js')
-            const now = new Date()
-            const attacker = updated.players.find((p) => p.id === playerId)
-            const actorName = attacker?.username || playerId
-            const fromId = payload.fromTerritory.id
-            const toId = payload.toTerritory.id
-            const fromT = updated.board.find((t) => t.id === fromId)
-            const toT = updated.board.find((t) => t.id === toId)
-            const moves: Array<import('./logEmitter.js').DbMove> = [
-              {
-                id: `${now.getTime()}-atk`,
-                game_id: gameId,
-                turn_number: updated.turn,
-                phase: updated.phase,
-                move_type: 'attack',
-                actor_id: playerId,
-                created_at: now,
-                payload: {
-                  actorName,
-                  fromId,
-                  toId,
-                  fromName: fromT?.name,
-                  toName: toT?.name,
-                  fromOwnerName: actorName,
-                  toOwnerName: undefined,
-                  kills: payload.defenderLosses,
-                  losses: payload.attackerLosses,
-                },
-              },
-            ]
-            if (payload.conquered) {
-              moves.push({
-                id: `${now.getTime()}-conq`,
-                game_id: gameId,
-                turn_number: updated.turn,
-                phase: updated.phase,
-                move_type: 'conquer',
-                actor_id: playerId,
-                created_at: now,
-                payload: {
-                  actorName,
-                  fromId,
-                  toId,
-                  fromName: fromT?.name,
-                  toName: toT?.name,
-                  fromOwnerName: actorName,
-                  toOwnerName: undefined,
-                },
-              })
-            }
-            if (Array.isArray((last as { eliminatedPlayers?: unknown[] }).eliminatedPlayers)) {
-              const eliminated = (last as { eliminatedPlayers?: string[] }).eliminatedPlayers ?? []
-              for (const pid of eliminated) {
-                const defeatedName = updated.players.find((p) => p.id === pid)?.username || pid
-                moves.push({
-                  id: `${now.getTime()}-elim-${pid}`,
-                  game_id: gameId,
-                  turn_number: updated.turn,
-                  phase: updated.phase,
-                  move_type: 'player_eliminated',
-                  actor_id: pid,
-                  created_at: now,
-                  payload: { playerName: defeatedName, byName: actorName },
-                })
-              }
-            }
-            try {
-              const { persistMoves } = await import('./logEmitter.js')
-              await persistMoves(gameId, moves)
-            } catch {
-              // best-effort persistence of textual moves
-            }
-            await emitCombined(
-              this.io as unknown as import('socket.io').Server<
-                import('../types/shared.js').ClientToServerEvents,
-                import('../types/shared.js').ServerToClientEvents,
-                Record<string, unknown>,
-                { userId?: string }
-              >,
-              gameId,
-              { deltas: [withChanges], moves },
-              updated,
-            )
-          } catch {
-            // best-effort text emission
-          }
+      const last = updated.lastBattleResult
+      if (last) {
+        try {
+          // Use BattleResultEmitter to handle delta emission
+          await this.battleResultEmitter.emitBattleResult(gameId, last, updated.version ?? 0)
+
+          // Build and emit battle moves
+          await this.buildAndEmitBattleMoves(
+            gameId,
+            playerId,
+            fromTerritoryId,
+            toTerritoryId,
+            last,
+            updated,
+          )
+        } catch (error) {
+          logger.warn('Failed to emit fog-filtered battle delta - client may be desynced', {
+            gameId,
+            playerId,
+            fromTerritoryId,
+            toTerritoryId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          })
         }
-      } catch (e) {
-        logger.debug('Failed to emit fog-filtered battle delta in inline attack', {
-          gameId,
-          error: e instanceof Error ? e.message : e,
+      }
+
+      await this.deltaEmitter.emitRevealTo(gameId, playerId)
+    })
+  }
+
+  /**
+   * Build battle moves and emit them via combined delta
+   * Extracted from processAttack for better readability
+   */
+  private async buildAndEmitBattleMoves(
+    gameId: string,
+    playerId: string,
+    fromTerritoryId: string,
+    toTerritoryId: string,
+    battleResult: unknown,
+    updated: {
+      players: Array<{ id: string; username?: string }>
+      board: Array<{ id: string; name?: string }>
+      turn: number
+      phase: string
+      version?: number
+      lastBattleResult?: unknown
+    },
+  ): Promise<void> {
+    try {
+      const { emitCombined } = await import('./realtimeEmitter.js')
+      const { DeltaBuilder } = await import('../types/deltaUpdates.js')
+
+      // Get battle result payload (already validated by BattleResultEmitter)
+      const obj = battleResult as Record<string, unknown>
+      const conquered = Boolean(obj.conquered)
+      const attackerLosses = Number(obj.attackerLosses || 0)
+      const defenderLosses = Number(obj.defenderLosses || 0)
+
+      const now = new Date()
+      const attacker = updated.players.find((p) => p.id === playerId)
+      const actorName = attacker?.username || playerId
+      const fromT = updated.board.find((t) => t.id === fromTerritoryId)
+      const toT = updated.board.find((t) => t.id === toTerritoryId)
+
+      const moves: Array<import('./logEmitter.js').DbMove> = [
+        {
+          id: `${now.getTime()}-atk`,
+          game_id: gameId,
+          turn_number: updated.turn,
+          phase: updated.phase,
+          move_type: 'attack',
+          actor_id: playerId,
+          created_at: now,
+          payload: {
+            actorName,
+            fromId: fromTerritoryId,
+            toId: toTerritoryId,
+            fromName: fromT?.name,
+            toName: toT?.name,
+            fromOwnerName: actorName,
+            toOwnerName: undefined,
+            kills: defenderLosses,
+            losses: attackerLosses,
+          },
+        },
+      ]
+
+      if (conquered) {
+        moves.push({
+          id: `${now.getTime()}-conq`,
+          game_id: gameId,
+          turn_number: updated.turn,
+          phase: updated.phase,
+          move_type: 'conquer',
+          actor_id: playerId,
+          created_at: now,
+          payload: {
+            actorName,
+            fromId: fromTerritoryId,
+            toId: toTerritoryId,
+            fromName: fromT?.name,
+            toName: toT?.name,
+            fromOwnerName: actorName,
+            toOwnerName: undefined,
+          },
         })
       }
-    }
-    await this.deltaEmitter.emitRevealTo(gameId, playerId)
-    if (lockToken) {
-      try {
-        await releaseLock(lockKey, lockToken)
-      } catch {
-        // best-effort
+
+      if (Array.isArray((obj as { eliminatedPlayers?: unknown[] }).eliminatedPlayers)) {
+        const eliminated = (obj as { eliminatedPlayers?: string[] }).eliminatedPlayers ?? []
+        for (const pid of eliminated) {
+          const defeatedName = updated.players.find((p) => p.id === pid)?.username || pid
+          moves.push({
+            id: `${now.getTime()}-elim-${pid}`,
+            game_id: gameId,
+            turn_number: updated.turn,
+            phase: updated.phase,
+            move_type: 'player_eliminated',
+            actor_id: pid,
+            created_at: now,
+            payload: { playerName: defeatedName, byName: actorName },
+          })
+        }
       }
+
+      // Persist moves using GameLogPersister
+      await this.logPersister.persistBattleMoves(gameId, moves)
+
+      // Get the battle result payload for emitCombined
+      const fromTerritory = (obj.fromTerritory as Record<string, unknown>) || {}
+      const toTerritory = (obj.toTerritory as Record<string, unknown>) || {}
+      const battleDelta = DeltaBuilder.battleResult(
+        gameId,
+        {
+          fromTerritory: {
+            id: String(fromTerritory.id),
+            armies: Number(fromTerritory.armies),
+          },
+          toTerritory: {
+            id: String(toTerritory.id),
+            armies: Number(toTerritory.armies),
+            ...(typeof toTerritory.ownerId === 'string' || toTerritory.ownerId === null
+              ? { ownerId: toTerritory.ownerId as string | null }
+              : {}),
+          },
+          attackerLosses,
+          defenderLosses,
+          attackerDice: (obj.attackerDice as number[]) || [],
+          defenderDice: (obj.defenderDice as number[]) || [],
+          conquered,
+        },
+        updated.version,
+      )
+
+      const withChanges = {
+        ...battleDelta,
+        changes: [
+          DeltaBuilder.territoryUpdate(
+            gameId,
+            fromTerritoryId,
+            { armies: Number(fromTerritory.armies) },
+            updated.version,
+          ),
+          DeltaBuilder.territoryUpdate(
+            gameId,
+            toTerritoryId,
+            {
+              armies: Number(toTerritory.armies),
+              ownerId: (toTerritory.ownerId as string | null) ?? undefined,
+            },
+            updated.version,
+          ),
+        ],
+      }
+
+      await emitCombined(
+        this.io as unknown as import('socket.io').Server<
+          import('../types/shared.js').ClientToServerEvents,
+          import('../types/shared.js').ServerToClientEvents,
+          Record<string, unknown>,
+          { userId?: string }
+        >,
+        gameId,
+        { deltas: [withChanges], moves },
+        updated as import('../types/game.js').GameState,
+      )
+    } catch (error) {
+      logger.warn('Failed to emit combined battle deltas and moves', {
+        gameId,
+        playerId,
+        fromTerritoryId,
+        toTerritoryId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
     }
   }
 
@@ -560,8 +591,14 @@ export class GameActionProcessor {
           )
         }
       }
-    } catch {
-      // best-effort
+    } catch (error) {
+      logger.warn('Failed to emit treasure awarded delta', {
+        gameId,
+        playerId,
+        treasureMetal: result.treasureAwarded,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
     }
 
     // Schedule next player's timer and potential AI turn
