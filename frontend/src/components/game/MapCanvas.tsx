@@ -117,15 +117,19 @@ export function MapCanvas({
       >
         {/* Base image at intrinsic dimensions so token coords align in image pixel space */}
         <picture>
-          {avifSrcSet ? <source type="image/avif" srcSet={avifSrcSet} sizes="100vw" /> : null}
-          {webpSrcSet ? <source type="image/webp" srcSet={webpSrcSet} sizes="100vw" /> : null}
+          {avifSrcSet ? (
+            <source type="image/avif" srcSet={avifSrcSet} sizes={`${imageWidth}px`} />
+          ) : null}
+          {webpSrcSet ? (
+            <source type="image/webp" srcSet={webpSrcSet} sizes={`${imageWidth}px`} />
+          ) : null}
           <img
             src={imageUrl}
             alt="Game map"
             draggable={false}
             /* Include simple srcset for fallback */
             srcSet={`${imageUrl} ${imageWidth}w`}
-            sizes="100vw"
+            sizes={`${imageWidth}px`}
             /* Reserve intrinsic size to prevent layout shifts and help LCP */
             width={imageWidth}
             height={imageHeight}
