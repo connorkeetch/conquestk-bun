@@ -81,6 +81,14 @@ type TreasureRedeemResult = {
   pattern: TreasureSetPattern
 }
 
+// Battle and dice constants
+const MIN_DICE_VALUE = 1
+const MAX_DICE_VALUE = 6
+const MAX_ATTACKER_DICE = 3
+const MAX_DEFENDER_DICE = 2
+const MIN_ARMIES_TO_ATTACK = 1 // Attacker must leave 1 army behind
+
+// Treasure constants
 const CLASSIC_TREASURE_SEQUENCE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35]
 
 const DEFAULT_TREASURE_CONFIG: Required<TreasureConfig> = {
@@ -91,6 +99,10 @@ const DEFAULT_TREASURE_CONFIG: Required<TreasureConfig> = {
   handCap: 5,
   diamondSetBonus: 3,
 }
+
+// Reinforcement constants
+const MIN_REINFORCEMENTS = 3
+const TERRITORIES_PER_REINFORCEMENT = 3 // 1 army per 3 territories
 
 const clampDiamondsPercent = (value: number): number => {
   if (!Number.isFinite(value)) return DEFAULT_TREASURE_CONFIG.diamondsPercent
@@ -384,8 +396,9 @@ const transferEliminatedTreasures = (
 
   if (transferred > 0 && eliminatorHand.length >= treasureConfig.handCap) {
     const hasValidSet = findRedeemableSets(eliminatorHand).length > 0
-    eliminator.mustCashInTreasures = hasValidSet
-    if (hasValidSet && eliminator.id === state.currentPlayer) {
+    // Preserve existing mustCashInTreasures flag - use logical OR to never clear it
+    eliminator.mustCashInTreasures = hasValidSet || (eliminator.mustCashInTreasures ?? false)
+    if ((hasValidSet || eliminator.mustCashInTreasures) && eliminator.id === state.currentPlayer) {
       state.mustCashInTreasures = true
     }
   }
@@ -488,7 +501,10 @@ const calculateReinforcementArmies = (
   gameConfig?: GameConfiguration,
 ): number => {
   const territoryCount = playerTerritories.length
-  let armies = Math.max(3, Math.floor(territoryCount / 3))
+  let armies = Math.max(
+    MIN_REINFORCEMENTS,
+    Math.floor(territoryCount / TERRITORIES_PER_REINFORCEMENT),
+  )
   armies += calculateSectorBonuses(playerTerritories, allTerritories, gameConfig)
   return armies
 }
@@ -785,7 +801,7 @@ const rollDice = (state: LockstepState, count: number): number[] => {
   return withRng(state, (rng) => {
     const dice: number[] = []
     for (let i = 0; i < count; i += 1) {
-      dice.push(rng.nextIntInclusive(1, 6))
+      dice.push(rng.nextIntInclusive(MIN_DICE_VALUE, MAX_DICE_VALUE))
     }
     return dice
   })
@@ -808,13 +824,13 @@ const simulateBattle = (
 
   if (attackBonus !== 0) {
     attackerDice = attackerDice
-      .map((die) => Math.max(1, Math.min(6, die + attackBonus)))
+      .map((die) => Math.max(MIN_DICE_VALUE, Math.min(MAX_DICE_VALUE, die + attackBonus)))
       .sort((a, b) => b - a)
   }
 
   if (defenseBonus !== 0) {
     defenderDice = defenderDice
-      .map((die) => Math.max(1, Math.min(6, die + defenseBonus)))
+      .map((die) => Math.max(MIN_DICE_VALUE, Math.min(MAX_DICE_VALUE, die + defenseBonus)))
       .sort((a, b) => b - a)
   }
 
@@ -1048,7 +1064,6 @@ const simulateAttack = (
 
   const { fromTerritoryId, toTerritoryId } = payload as AttackAction['payload']
   const working = cloneState(state)
-  const baselineBoard = working.board.map((territory) => ({ ...territory }))
   delete working.capitalElimination
 
   if (working.phase !== 'attack') {
@@ -1084,8 +1099,11 @@ const simulateAttack = (
     defenseBonus = defenderModifier?.defense_bonus ?? 0
   }
 
-  const attackerDiceCount = Math.max(1, Math.min(3, (from.armies ?? 0) - 1))
-  const defenderDiceCount = Math.max(1, Math.min(2, to.armies ?? 0))
+  const attackerDiceCount = Math.max(
+    MIN_DICE_VALUE,
+    Math.min(MAX_ATTACKER_DICE, (from.armies ?? 0) - MIN_ARMIES_TO_ATTACK),
+  )
+  const defenderDiceCount = Math.max(MIN_DICE_VALUE, Math.min(MAX_DEFENDER_DICE, to.armies ?? 0))
 
   const battle = simulateBattle(
     working,
@@ -1111,6 +1129,11 @@ const simulateAttack = (
       return { state, supported: false }
     }
 
+    // Capture baseline board BEFORE any modifications for capital elimination tracking
+    const baselineBoard = targetedCapital
+      ? working.board.map((territory) => ({ ...territory }))
+      : undefined
+
     defender.territories = defender.territories.filter((t) => t !== toTerritoryId)
     attacker.territories = [...attacker.territories, toTerritoryId]
 
@@ -1126,7 +1149,7 @@ const simulateAttack = (
       return territory
     })
 
-    if (targetedCapital) {
+    if (targetedCapital && baselineBoard) {
       const capture = applyCapitalCapture(working, playerId, defenderId, to.id, { baselineBoard })
       const refreshedBoard = working.board as Territory[]
       const refreshedFrom = refreshedBoard.find((territory) => territory.id === from.id)
@@ -1176,8 +1199,6 @@ const simulateAttack = (
     if (capitalSummary) {
       ;(battleResultPayload as BattleResult).capitalElimination = capitalSummary
       working.capitalElimination = capitalSummary
-    } else {
-      delete working.capitalElimination
     }
 
     working.lastBattleResult = battleResultPayload
@@ -1218,8 +1239,7 @@ const simulateAttack = (
     eliminatedPlayers: gameEndCheck.eliminatedPlayers,
   } as unknown as BattleResult
 
-  delete working.capitalElimination
-  delete (battleResultPayload as BattleResult).capitalElimination
+  // No capital elimination in non-conquest case (already deleted at start)
   working.lastBattleResult = battleResultPayload
 
   return { state: working, supported: true }
