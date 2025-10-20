@@ -22,6 +22,7 @@ type LogEntry = {
   focusTerritories?: string[]
   rich?: ReactNode
   id?: string
+  playerRefs?: Array<{ id?: string; name: string }>
 }
 
 const LOG_KIND_PRIORITY: Record<string, number> = {
@@ -45,6 +46,31 @@ const compareLogEntries = (a: LogEntry, b: LogEntry): number => {
   const priorityDiff = getKindPriority(a) - getKindPriority(b)
   if (priorityDiff !== 0) return priorityDiff
   return a.text.localeCompare(b.text)
+}
+
+const normalizePlayerRefs = (value: unknown): Array<{ id?: string; name: string }> => {
+  if (!Array.isArray(value)) return []
+  const refs = new Map<string, { id?: string; name: string }>()
+  for (const entry of value) {
+    if (!entry) continue
+    let name: string | undefined
+    let id: string | undefined
+    if (typeof entry === 'string' && entry.trim() !== '') {
+      name = entry
+    } else if (typeof entry === 'object') {
+      const obj = entry as { id?: unknown; name?: unknown }
+      if (typeof obj.name === 'string' && obj.name.trim() !== '') {
+        name = obj.name
+      }
+      if (typeof obj.id === 'string' && obj.id.trim() !== '') {
+        id = obj.id
+      }
+    }
+    if (!name) continue
+    const key = `${id ?? ''}:${name}`
+    if (!refs.has(key)) refs.set(key, { id, name })
+  }
+  return Array.from(refs.values())
 }
 
 function formatTimestamp(d: Date): string {
@@ -165,6 +191,76 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
     }
     return map
   }, [game?.players, room?.players])
+
+  const highlightText = useCallback(
+    (text: string, refs: Array<{ id?: string; name: string }>) => {
+      if (typeof text !== 'string' || text.length === 0 || refs.length === 0) return text
+      const resolved = new Map<string, { id?: string; name: string; color?: string | undefined }>()
+      const resolveColor = (ref: { id?: string; name: string }): string | undefined => {
+        if (ref.id) {
+          const direct = playerColor.get(ref.id)
+          if (direct) return direct
+        }
+        for (const [id, display] of playerName.entries()) {
+          if (display === ref.name) {
+            const color = playerColor.get(id)
+            if (color) return color
+          }
+        }
+        return undefined
+      }
+      for (const ref of refs) {
+        if (!ref || typeof ref.name !== 'string' || ref.name.trim() === '') continue
+        const key = `${ref.id ?? ''}:${ref.name}`
+        if (!resolved.has(key)) {
+          resolved.set(key, { ...ref, color: resolveColor(ref) })
+        }
+      }
+      if (resolved.size === 0) return text
+      const refList = Array.from(resolved.values())
+      let cursor = 0
+      const parts: ReactNode[] = []
+      let keyCounter = 0
+      while (cursor < text.length) {
+        let nextMatch: {
+          index: number
+          ref: { id?: string; name: string; color?: string }
+        } | null = null
+        for (const ref of refList) {
+          const idx = text.indexOf(ref.name, cursor)
+          if (idx >= 0) {
+            if (
+              !nextMatch ||
+              idx < nextMatch.index ||
+              (idx === nextMatch.index && ref.name.length > nextMatch.ref.name.length)
+            ) {
+              nextMatch = { index: idx, ref }
+            }
+          }
+        }
+        if (!nextMatch) {
+          parts.push(text.slice(cursor))
+          break
+        }
+        if (nextMatch.index > cursor) {
+          parts.push(text.slice(cursor, nextMatch.index))
+        }
+        parts.push(
+          <span
+            key={`hl-${keyCounter}`}
+            className="font-semibold"
+            style={nextMatch.ref.color ? { color: nextMatch.ref.color } : undefined}
+          >
+            {nextMatch.ref.name}
+          </span>,
+        )
+        keyCounter += 1
+        cursor = nextMatch.index + nextMatch.ref.name.length
+      }
+      return <>{parts}</>
+    },
+    [playerColor, playerName],
+  )
 
   const territoryName = useMemo(() => {
     const map = new Map<string, string>()
@@ -297,13 +393,22 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           const respTxt = await gameService.getGameTextLog(gameId, { limit: 150 })
           if (!cancelled && Array.isArray(respTxt.log)) {
             const formattedTxt = respTxt.log
-              .map((l) => ({
-                ts: new Date(l.t),
-                text: l.text,
-                kind: l.kind,
-                ...(l.actor?.id ? { actorId: String(l.actor.id) } : {}),
-                ...(l.actor?.name ? { actorName: String(l.actor.name) } : {}),
-              }))
+              .map((l) => {
+                const refs = normalizePlayerRefs(l.players)
+                const actorId = l.actor?.id ? String(l.actor.id) : undefined
+                const actorName = l.actor?.name ? String(l.actor.name) : undefined
+                if (refs.length === 0 && actorName) {
+                  refs.push({ id: actorId, name: actorName })
+                }
+                return {
+                  ts: new Date(l.t),
+                  text: l.text,
+                  kind: l.kind,
+                  ...(actorId ? { actorId } : {}),
+                  ...(actorName ? { actorName } : {}),
+                  ...(refs.length > 0 ? { playerRefs: refs } : {}),
+                }
+              })
               .sort(compareLogEntries)
             setEntries(formattedTxt)
             return
@@ -1040,23 +1145,38 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           t?: string
           kind?: string
           actor?: { id?: string; name?: string }
+          players?: Array<{ id?: string; name?: string }>
         }
         const text = typeof data.text === 'string' ? data.text : null
         if (!text) return
         const ts = data.t ? new Date(String(data.t)) : new Date()
+        const baseRefs = normalizePlayerRefs((data as { players?: unknown }).players)
+        if (
+          baseRefs.length === 0 &&
+          typeof data.actor?.name === 'string' &&
+          data.actor.name.trim() !== ''
+        ) {
+          baseRefs.push({
+            id: data.actor?.id ? String(data.actor.id) : undefined,
+            name: data.actor.name,
+          })
+        }
         const windowMs = 2000
         setEntries((prev) => {
           const dup = prev.some(
             (en) => en.text === text && Math.abs(ts.getTime() - en.ts.getTime()) <= windowMs,
           )
           if (dup) return prev
+          const actorId = data.actor?.id ? String(data.actor.id) : undefined
+          const actorName = data.actor?.name ? String(data.actor.name) : undefined
           return [
             {
               ts,
               text,
               ...(typeof data.kind === 'string' ? { kind: data.kind } : {}),
-              ...(data.actor?.id ? { actorId: String(data.actor.id) } : {}),
-              ...(data.actor?.name ? { actorName: String(data.actor.name) } : {}),
+              ...(actorId ? { actorId } : {}),
+              ...(actorName ? { actorName } : {}),
+              ...(baseRefs.length > 0 ? { playerRefs: baseRefs } : {}),
             },
             ...prev,
           ].slice(0, 500)
@@ -1092,13 +1212,20 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
               (en) => en.text === text && Math.abs(ts.getTime() - en.ts.getTime()) <= windowMs,
             )
             if (dup) continue
+            const refs = normalizePlayerRefs((it as { players?: unknown }).players)
+            const actorId = it.actor?.id ? String(it.actor.id) : undefined
+            const actorName = it.actor?.name ? String(it.actor.name) : undefined
+            if (refs.length === 0 && typeof actorName === 'string' && actorName.trim() !== '') {
+              refs.push({ id: actorId, name: actorName })
+            }
             next = [
               {
                 ts,
                 text,
                 ...(typeof it.kind === 'string' ? { kind: it.kind } : {}),
-                ...(it.actor?.id ? { actorId: String(it.actor.id) } : {}),
-                ...(it.actor?.name ? { actorName: String(it.actor.name) } : {}),
+                ...(actorId ? { actorId } : {}),
+                ...(actorName ? { actorName } : {}),
+                ...(refs.length > 0 ? { playerRefs: refs } : {}),
               },
               ...next,
             ].slice(0, 500)
@@ -1123,13 +1250,22 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       try {
         const resp = await gameService.getGameTextLog(gameId, { limit: 150 })
         const formatted = resp.log
-          .map((l) => ({
-            ts: new Date(l.t),
-            text: l.text,
-            kind: l.kind,
-            ...(l.actor?.id ? { actorId: String(l.actor.id) } : {}),
-            ...(l.actor?.name ? { actorName: String(l.actor.name) } : {}),
-          }))
+          .map((l) => {
+            const refs = normalizePlayerRefs(l.players)
+            const actorId = l.actor?.id ? String(l.actor.id) : undefined
+            const actorName = l.actor?.name ? String(l.actor.name) : undefined
+            if (refs.length === 0 && actorName) {
+              refs.push({ id: actorId, name: actorName })
+            }
+            return {
+              ts: new Date(l.t),
+              text: l.text,
+              kind: l.kind,
+              ...(actorId ? { actorId } : {}),
+              ...(actorName ? { actorName } : {}),
+              ...(refs.length > 0 ? { playerRefs: refs } : {}),
+            }
+          })
           .sort(compareLogEntries)
         setEntries(formatted)
       } catch {
@@ -1166,24 +1302,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 const isRound = e.kind === 'round_start' || e.text.startsWith('Round ')
                 const actorName = e.actorName
                 const actorId = e.actorId
-                const actorColor = actorId ? playerColor.get(actorId) : undefined
-                let content: ReactNode = e.rich ?? e.text
-                if (!e.rich && actorName && actorColor && typeof content === 'string') {
-                  const idx = content.indexOf(actorName)
-                  if (idx >= 0) {
-                    const left = content.slice(0, idx)
-                    const right = content.slice(idx + actorName.length)
-                    content = (
-                      <>
-                        {left}
-                        <span className="font-semibold" style={{ color: actorColor }}>
-                          {actorName}
-                        </span>
-                        {right}
-                      </>
-                    )
-                  }
-                }
+                const refs =
+                  e.playerRefs && e.playerRefs.length > 0
+                    ? e.playerRefs
+                    : actorName
+                      ? [{ id: actorId, name: actorName }]
+                      : []
+                const content: ReactNode = e.rich ?? highlightText(e.text, refs)
                 return (
                   <div
                     key={key}

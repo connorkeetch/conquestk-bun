@@ -258,6 +258,7 @@ export interface ServerToClientEvents {
     kind: string
     actor: { id: string; name: string }
     text: string
+    players?: Array<{ id?: string; name: string }>
   }) => void
   'game-log:batch': (payload: {
     roomId?: string
@@ -269,6 +270,7 @@ export interface ServerToClientEvents {
       kind: string
       actor: { id: string; name: string }
       text: string
+      players?: Array<{ id?: string; name: string }>
     }>
   }) => void
   'game-log:reveal': () => void
