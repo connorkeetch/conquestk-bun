@@ -147,7 +147,7 @@ describe('GameActionWorker', () => {
     worker = new GameActionWorker(io)
   })
 
-  it('processes deploy actions without broadcasting deltas', async () => {
+  it('processes deploy actions without extra broadcasts', async () => {
     mockGetGameState.mockResolvedValue(buildGameState())
     mockProcessPlaceArmies.mockResolvedValue({ armies: 7, playerArmies: 5 })
 
@@ -209,7 +209,7 @@ describe('GameActionWorker', () => {
     expect(io.to).not.toHaveBeenCalledWith('game:game-1')
     expect(roomEmit).not.toHaveBeenCalled()
     expect(mockEmitFogFilteredDelta).not.toHaveBeenCalled()
-    expect(result).toEqual({ success: true, delta: null, processed: true })
+    expect(result).toEqual({ success: true, processed: true })
     expect(mockMarkProcessedJob).toHaveBeenCalledWith(
       'game-actions',
       'job-attack',
@@ -218,7 +218,7 @@ describe('GameActionWorker', () => {
     )
   })
 
-  it('processes go back to reinforcement and emits phase change delta', async () => {
+  it('processes go back to reinforcement without emitting legacy deltas', async () => {
     mockGetGameState.mockResolvedValue(
       buildGameState({ phase: 'attack', hasAttackedThisTurn: false }),
     )
@@ -245,9 +245,7 @@ describe('GameActionWorker', () => {
     const result = await invokeProcess(job)
 
     expect(mockProcessGoBackToReinforcement).toHaveBeenCalledWith('game-1', 'player-1')
-    expect(mockEmitFogFilteredDelta).toHaveBeenCalled()
-    const emitted = mockEmitFogFilteredDelta.mock.calls.find(([, roomId]) => roomId === 'game-1')
-    expect(emitted).toBeDefined()
+    // Delta emission has been retired in favor of lockstep frames
     expect(result).toEqual(expect.objectContaining({ success: true, processed: true }))
   })
 })

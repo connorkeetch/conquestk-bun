@@ -19,7 +19,7 @@ Idempotency keys prevent duplicate action processing when clients retry failed r
 
 ## Implementation Checklist
 
-- [x] Finalize backend result caching semantics: confirm `ProcessGameActionResult` payload covers all delta/broadcast scenarios and document expected shape. *(Verified via new worker spec ensuring stored results include the emitted delta and TTL semantics.)*
+- [x] Finalize backend result caching semantics: confirm `ProcessGameActionResult` payload captures success/processing flags without relying on legacy delta data. *(Verified via updated worker spec storing the streamlined `{ success, processed }` result.)*
 - [x] Add targeted Jest tests for `gameActionWorker` that simulate duplicate jobs with reused `idempotencyKey`. *(See `backend/src/workers/gameActionWorker.idempotency.spec.ts`; expand to other action types.)*
 - [x] Replace timestamp-based key generation on the client with UUIDs (or shared per-action keys) and persist them through retries/optimistic flows. *(Shipped via `frontend/src/services/socketService.ts` fingerprinting logic.)*
 - [x] Expose a tiny helper for optimistic updates that can register rollback handlers keyed by idempotency ID. *(See `frontend/src/utils/optimisticActions.ts` and `SocketService.sendActionWithAck` integration.)*

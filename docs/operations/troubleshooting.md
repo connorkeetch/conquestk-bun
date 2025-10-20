@@ -144,7 +144,7 @@ powershell -ExecutionPolicy Bypass -File ./start-dev.ps1
 
 ### ❌ Socket.io performance degradation
 **Problem**: Clients receive large payloads or lag in real-time updates
-1. Confirm emitters are using `DeltaBuilder` helpers instead of full state broadcasts.
+1. Confirm emitters rely on lockstep frames and fog-aware log updates instead of ad-hoc full-state broadcasts.
 2. Check browser dev tools to ensure lockstep frame handlers (`game-action:*`) run without warnings.
 3. Audit listeners for accidental legacy event usage and remove any redundant full-state fallbacks.
 4. Monitor network panel bandwidth per connection; expect ~60% lower usage versus the original full payload stream.
