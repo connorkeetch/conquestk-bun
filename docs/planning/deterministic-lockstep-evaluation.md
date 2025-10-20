@@ -73,10 +73,10 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 
 ## Phase 1 progress (2025-03-18)
 - Added `match_frames` and `match_checksums` tables to persist authoritative input frames and periodic CRC snapshots (with optional binary state payloads for resync).
-- Socket layer now emits `game-action:frame-committed` and `game-action:checksum` when `LOCKSTEP_DEV=true`, using canonical JSON + CRC32 to detect drift.
+- Socket layer now emits `game-action:frame-committed` and `game-action:checksum` by default, using canonical JSON + CRC32 to detect drift.
 - Lockstep recorder seeds per-match sequences, stores commands, and reuses snapped `SerializedGameState` so deterministic replays stay aligned with the RNG log.
 - Gameplay queue removed: lockstep processing now always runs inline while legacy delta events continue to flow alongside the new frames for compatibility.
-- Frontend validator (behind `VITE_LOCKSTEP_DEV`) replays the confirmed frames through Redux state, computes local CRCs via the shared stable serializer, and triggers auto-resync when checksums diverge.
+- Frontend validator replays the confirmed frames through Redux state, computes local CRCs via the shared stable serializer, and triggers auto-resync when checksums diverge.
 - Shared `lockstep` simulator now mirrors deterministic deployments, combat (including capital eliminations), fortify, treasure trades, resignations, and `transfer_conquest`, eliminating the previous need to fall back to snapshot resync for those flows.
 
 ## Phase 2 progress (2025-04-04)
@@ -104,14 +104,14 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Load `/games/:id/replay` and verify the header lockstep status climbs as `/replay/frames` chunks stream in; map overlays should reflect deterministic board state without waiting on legacy snapshot deltas.
 
 ## Rollout plan
-1. Land RNG consolidation + deterministic sim harness behind a `LOCKSTEP_DEV` flag and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`).
-2. Enable lockstep transport in development, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely once the lockstep client ships broadly.
-3. Promote the lockstep protocol to staging, run seeded matches end-to-end, and only then clean up snapshot/delta persistence tables that are no longer necessary.
+1. Land RNG consolidation + deterministic sim harness and verify via local matches (`npm run dev:backend` + `npm run dev:frontend`). ✅
+2. Enable lockstep transport across environments, keep delta emitter as a temporary compatibility shim for one sprint while we validate tooling, then remove the shim entirely once the lockstep client ships broadly. ✅
+3. Promote the lockstep protocol to staging, run seeded matches end-to-end, and only then clean up snapshot/delta persistence tables that are no longer necessary. ✅
 
 ## Delta emitter sunset plan (draft — update before execution)
 
 **Prerequisites**
-- Lockstep client is the default experience (no `VITE_LOCKSTEP_DEV` gating).
+- Lockstep client is the default experience across environments.
 - Golden frame fixtures and replay CLI runs are green in CI against representative matches.
 - Legacy telemetry counters for `game-delta` / `game-delta-batch` have been retired; rely on lockstep resync metrics for health.
 

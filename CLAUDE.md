@@ -204,8 +204,8 @@ VITE_ASSET_BASE_URL=https://assets.conquestk.com
 If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**`. Static audio/background assets still require `VITE_ASSET_BASE_URL` to point at the CDN.
 
 ### Lockstep development mode
-- Set `LOCKSTEP_DEV=true` in `backend/.env` to emit `game-action:frame-committed`/`game-action:checksum` events and persist frames in `match_frames`; gameplay now always runs inline, so no queue bypass is required.
-- Set `VITE_LOCKSTEP_DEV=true` in `frontend/.env` to disable optimistic client updates and consume the lockstep feeds without optimistic projections.
+- Lockstep transport is always enabled: backend emits `game-action:frame-committed`/`game-action:checksum` events by default and persists frames in `match_frames`.
+- The frontend consumes lockstep feeds without additional environment toggles; optimistic projections remain disabled for this flow.
 - Use `npm run replay:match -- <matchId>` (backend) to re-sim recorded frames and compare checksums whenever you suspect drift; the script exits non-zero on mismatches.
 
 ## Syncing this guide
