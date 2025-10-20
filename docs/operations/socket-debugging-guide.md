@@ -128,7 +128,7 @@ tail -f backend/logs/error.log
 2. Wait for your turn
 3. Check Events tab for:
    - `turn:start` event (IN)
-   - `game-delta` with PHASE_CHANGE (IN)
+   - `game-action:frame-committed` with PHASE_CHANGE payload (IN)
 
 **Possible causes**:
 - **Not subscribed to room**: Check Rooms tab
@@ -321,7 +321,7 @@ When reporting socket/real-time issues, include:
 ```
 Client Action
     ↓
-  emit('game-action')
+emit('game-action')
     ↓
 Backend Validation
     ↓
@@ -329,18 +329,18 @@ Queue Job (BullMQ)
     ↓
 Worker Processing
     ↓
-emit('game-delta') to room
+emit('game-action:frame-committed') to room
     ↓
 Client Receives & Applies
     ↓
 UI Updates
 ```
 
-### Delta Sequence Tracking
-- Each delta has a `version` number
-- Client tracks last received version per room
+### Frame Sequence Tracking
+- Each committed frame has a monotonically increasing `seq`
+- Client tracks the last received sequence per room
 - Gaps trigger automatic recovery
-- Recovery fetches missing deltas or full state
+- Recovery fetches missing frames or requests a full snapshot
 
 ### Connection Health Monitoring
 - Heartbeat ping every 5 seconds

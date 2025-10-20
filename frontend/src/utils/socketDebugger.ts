@@ -1,4 +1,3 @@
-import type { GameDelta } from '@conquestk/shared'
 import type { Socket } from 'socket.io-client'
 import { logger } from './logger'
 
@@ -11,18 +10,8 @@ export interface SocketEventLog {
   roomId?: string
   latency?: number
 }
-
-export interface DeltaSequenceInfo {
-  roomId: string
-  lastSequence: number
-  receivedCount: number
-  duplicates: number
-  gaps: Array<{ from: number; to: number }>
-}
-
 export interface SocketDebugState {
   events: SocketEventLog[]
-  deltaSequences: Map<string, DeltaSequenceInfo>
   joinedRooms: Set<string>
   pendingActions: Map<string, { action: string; timestamp: number }>
   connectionMetrics: {
@@ -37,7 +26,6 @@ export interface SocketDebugState {
 class SocketDebugger {
   private state: SocketDebugState = {
     events: [],
-    deltaSequences: new Map(),
     joinedRooms: new Set(),
     pendingActions: new Map(),
     connectionMetrics: {
@@ -137,11 +125,6 @@ class SocketDebugger {
           }
         }
 
-        // Track delta sequences
-        if (event === 'game-delta' || event === 'game-delta-batch') {
-          this.trackDeltaSequence(args[0])
-        }
-
         // Track room joins
         if (event === 'join-room') {
           const roomId = (args[0] as { roomId?: string })?.roomId
@@ -204,51 +187,6 @@ class SocketDebugger {
     logger.info('[SocketDebugger] Socket instrumented')
   }
 
-  private trackDeltaSequence(data: unknown) {
-    if (!data || typeof data !== 'object') return
-
-    const delta = data as GameDelta & { version?: number }
-    const roomId = delta.roomId
-    const version = delta.version
-
-    if (!roomId || typeof version !== 'number') return
-
-    let info = this.state.deltaSequences.get(roomId)
-    if (!info) {
-      info = {
-        roomId,
-        lastSequence: version,
-        receivedCount: 1,
-        duplicates: 0,
-        gaps: [],
-      }
-      this.state.deltaSequences.set(roomId, info)
-      return
-    }
-
-    // Check for gaps
-    if (version > info.lastSequence + 1) {
-      info.gaps.push({ from: info.lastSequence + 1, to: version - 1 })
-      logger.warn('[SocketDebugger] Delta sequence gap detected', {
-        roomId,
-        expected: info.lastSequence + 1,
-        received: version,
-      })
-    } else if (version === info.lastSequence) {
-      info.duplicates++
-      logger.debug('[SocketDebugger] Duplicate delta version', { roomId, version })
-    } else if (version < info.lastSequence) {
-      logger.warn('[SocketDebugger] Out-of-order delta', {
-        roomId,
-        lastSeq: info.lastSequence,
-        received: version,
-      })
-    }
-
-    info.lastSequence = Math.max(info.lastSequence, version)
-    info.receivedCount++
-  }
-
   private logEvent(event: SocketEventLog) {
     if (!this.enabled) return
 
@@ -299,7 +237,6 @@ class SocketDebugger {
 
   clearLogs() {
     this.state.events = []
-    this.state.deltaSequences.clear()
     this.state.connectionMetrics.totalEvents = 0
     logger.info('[SocketDebugger] Logs cleared')
     this.notifyListeners()

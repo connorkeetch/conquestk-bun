@@ -29,7 +29,6 @@ import {
 import { socketDebugger } from '@/utils/socketDebugger'
 import { store } from '../store'
 import {
-  applyDelta,
   fetchGameState,
   setError,
   setGameState,
@@ -660,7 +659,6 @@ class SocketService {
         roomId,
         version: currentSeq,
       })
-      reliabilityMetrics.recordDeltaDuplicate()
       return true
     }
 
@@ -670,7 +668,6 @@ class SocketService {
         lastSeq,
         received: currentSeq,
       })
-      reliabilityMetrics.recordDeltaDuplicate()
       return false
     }
 
@@ -687,8 +684,6 @@ class SocketService {
       currentSeq,
       missing: currentSeq - lastSeq - 1,
     })
-    reliabilityMetrics.recordDeltaGap()
-
     // Request missing deltas (if not already requesting)
     const requestKey = `${roomId}:${lastSeq}-${currentSeq}`
     if (!this.pendingDeltaRequests.has(requestKey)) {
@@ -748,7 +743,6 @@ class SocketService {
                     await handler(delta)
                   }
                 })().finally(resolve)
-                reliabilityMetrics.recordDeltaGapRecovery()
                 return
               }
               logger.warn('processDeltaHandler not initialized; falling back to full refetch')
@@ -1726,8 +1720,6 @@ class SocketService {
         return
       }
 
-      reliabilityMetrics.recordDeltaReceived()
-
       // DESYNC DETECTION: Check if we need to resync due to version mismatch or state corruption
       if (state.game.needsResync) {
         logger.warn('Desync detected - triggering full state refetch', {
@@ -1845,7 +1837,7 @@ class SocketService {
       }
 
       // Apply delta to Redux store
-      store.dispatch(applyDelta(payload))
+      // Legacy delta path removed.
 
       // Align room lifecycle status with end-of-game signals immediately
       try {
@@ -1864,64 +1856,7 @@ class SocketService {
 
     this.processDeltaHandler = processDelta
 
-    this.socket.on('game-delta', async (delta) => {
-      // RELIABILITY: Check delta sequence before processing
-      const roomId = (delta as { roomId?: string }).roomId
-      if (roomId) {
-        const shouldProcess = await this.checkDeltaSequence(roomId, delta as { version?: number })
-        if (!shouldProcess) {
-          return // Skip duplicate
-        }
-      }
-      await processDelta(delta as unknown as GameDelta)
-    })
-
-    // Coalesced delta batches (optional optimization)
-    this.socket.on('game-delta-batch', async (deltas: unknown) => {
-      const array = Array.isArray(deltas) ? (deltas as unknown[]) : []
-      if (array.length === 0) return
-      const last = array[array.length - 1] as unknown as GameDelta
-      for (const d of array) {
-        // RELIABILITY: Check sequence for each delta in batch
-        const roomId = (d as { roomId?: string }).roomId
-        if (roomId) {
-          const shouldProcess = await this.checkDeltaSequence(roomId, d as { version?: number })
-          if (!shouldProcess) {
-            continue // Skip duplicate
-          }
-        }
-        await processDelta(d as unknown as GameDelta)
-      }
-      // Minimal UX side-effects for the last delta: notify on PHASE_CHANGE and clear placement if needed
-      try {
-        const payload = last
-        const { game, auth } = store.getState()
-        const previousState = game.currentGame
-        const currentUserId = auth.user?.id
-        if (payload.type === 'PHASE_CHANGE' && currentUserId) {
-          const wasMyTurn = previousState?.currentPlayer === currentUserId
-          if (payload.currentPlayer === currentUserId && !wasMyTurn) {
-            notificationService.addNotification({
-              type: 'turn_reminder',
-              title: "It's your turn!",
-              message: `It's your turn - ${payload.phase} phase`,
-              read: false,
-              actionUrl: `/room/${payload.roomId}`,
-              actionLabel: 'Go to game',
-              metadata: { gameId: payload.roomId },
-            })
-            audioService.playEffect('turn')
-          }
-          if (payload.phase === 'reinforcement') {
-            store.dispatch(clearPlacementHistory())
-            store.dispatch(setPlacementServerSpent(0))
-          }
-        }
-      } catch (error) {
-        logger.warn('Failed to process post-batch UX side-effects (best-effort)', { error })
-      }
-    })
-
+    // Legacy `game-delta` listeners removed; lockstep frames now handle reconciliation.
     if (this.lockstepEnabled) {
       this.socket.on('game-action:frame-committed', this.handleLockstepFrame)
       this.socket.on('game-action:checksum', this.handleLockstepChecksum)
@@ -2276,7 +2211,7 @@ class SocketService {
       )
     })
 
-    // Legacy events fully retired; rely on game-delta and game-delta-batch only
+    // Legacy delta events fully retired; rely on lockstep frame channels only
 
     // Capital-specific events
     this.socket.on('capitalAttackCheck', (data: unknown) => {
@@ -2472,8 +2407,6 @@ class SocketService {
     this.socket.off('disconnect')
     this.socket.off('player-joined')
     this.socket.off('player-left')
-    this.socket.off('game-delta')
-    this.socket.off('game-delta-batch')
     this.socket.off('turn:start')
     this.socket.off('game:snapshot')
     this.socket.off('lifecycle:update')

@@ -1,4 +1,3 @@
-import type { GameDelta } from '@conquestk/shared/types/delta'
 import type { PoolClient } from 'pg'
 import { query, transaction, withClient } from '../config/database.js'
 import { GameEngine } from '../game/gameEngine.js'
@@ -30,12 +29,7 @@ import { eloService } from './eloService.js'
 import { featureFlagService } from './featureFlagService.js'
 import { lockstepService } from './lockstepService.js'
 import { mapService } from './mapService.js'
-import {
-  aiTurnMetrics,
-  assassinationMetrics,
-  battleMetrics,
-  deltaTransportMetrics,
-} from './metricsService.js'
+import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
 import notificationService from './notificationService.js'
 import { queueService } from './queueService.js'
 import { tryGetSocketServer } from './socketRegistry.js'
@@ -1120,41 +1114,6 @@ export class GameService {
         )
 
         if (finalization.archived) {
-          // Emit a canonical GAME_END delta to the room
-          try {
-            const io = tryGetSocketServer()
-            if (io) {
-              const winnerId =
-                finalization.playerRankings.find((r) => r.isWinner)?.userId ||
-                (serializedState.currentPlayer ?? '')
-              const eliminated = finalization.playerRankings
-                .filter((r) => r.eliminated)
-                .map((r) => r.userId)
-              const delta = DeltaBuilder.gameEnd(
-                roomId,
-                winnerId,
-                eliminated,
-                (serializedState as { version?: number }).version,
-              )
-              io.to(`game:${roomId}`).emit('game-delta', delta)
-              deltaTransportMetrics.record('game-delta', 'room', {
-                source: 'gameService',
-                context: 'reconcile-delta',
-              })
-              try {
-                const { deltaBufferService } = await import('./deltaBufferService.js')
-                const deltas: GameDelta[] = [delta]
-                await deltaBufferService.append(roomId, deltas)
-              } catch {
-                // best-effort
-              }
-            }
-          } catch (e) {
-            logger.warn('Failed to emit GAME_END delta after neutralize', {
-              roomId,
-              error: e instanceof Error ? e.message : e,
-            })
-          }
           await this.awardClanContributions(roomId, finalization.playerRankings)
           try {
             const { achievementService } = await import('./achievementService.js')

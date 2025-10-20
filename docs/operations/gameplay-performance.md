@@ -38,7 +38,7 @@ Performance-oriented changes landed alongside AI work:
   - Replaced full snapshot on `trade_cards` with two minimal deltas: `PLAYER_UPDATE` (armies, mustCashInTreasures) and conditional `PHASE_CHANGE` (reinforcement) — both fog‑filtered.
 
 - Socket payload metrics
-  - Added lightweight rolling metrics for `game-delta` and `game:snapshot` events (p50/p95/max). Logged periodically to help track regressions in payload size.
+  - Added lightweight rolling metrics for `game:snapshot`, `game-action:frame-committed`, and `game-action:checksum` events (p50/p95/max). Logged periodically to help track regressions in payload size.
 
 - Fog‑aware AI planning
   - Planner state is filtered to owned + adjacent territories (team‑aware) when fog is enabled. Prevents EV calculations from using hidden information.
@@ -48,7 +48,7 @@ Performance-oriented changes landed alongside AI work:
   - Commander received sector‑pressure reinforcement and simple card‑timing logic.
 
 What to verify locally
-- Observe deltas instead of full snapshots during AI turns and treasure cash‑ins.
+- Observe lockstep frame commits instead of full snapshots during AI turns and treasure cash-ins.
 - Watch logs for `Socket payload stats` and ensure p95 sizes do not increase over time.
 - In fog games, confirm AI no longer targets unseen territories.
 - With Grandmaster, expect multiple attacks per turn within budget; phase still transitions promptly.
@@ -132,7 +132,7 @@ Implementation notes (2025‑10‑08)
 - Steps:
   - Instrument payload size: wrap `socket.emit('game:snapshot', data)` and `io.to(channel).emit('game:snapshot', data)` with a helper that measures `Buffer.byteLength(JSON.stringify(data),'utf8')` and records a metric `socket_payload_bytes{event="game:snapshot"}` (add a Gauge in `metricsService`). Capture p50/p95 in logs for now.
   - Trim shape: ensure `SerializedGameState` contains only required fields for the view. Prefer ids over embedded user objects; keep history/logs out of the hot message.
-  - Prefer targeted `game-delta` events where possible (already partially used). Audit all emits in `socketService.ts` and switch non-essential full‑state emits to deltas.
+  - Keep `game:snapshot` usage exceptional; rely on lockstep frames (`game-action:frame-committed`) for turn-by-turn updates. Audit any remaining snapshot emits in `socketService.ts` and convert hot-path updates to framed actions.
 - Done when:
   - Median payload size for `game:snapshot` < 30 KB, p95 < 50 KB across a 10‑minute synthetic session.
   - At least two previously full‑state emits replaced with deltas with no UX regressions.

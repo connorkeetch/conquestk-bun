@@ -7,7 +7,6 @@ import { authenticateToken } from '../middleware/auth.js'
 import { adminService } from '../services/adminService.js'
 import { GameLifecycleService } from '../services/gameLifecycleService.js'
 import { mapService } from '../services/mapService.js'
-import { performanceMonitorService } from '../services/performanceMonitorService.js'
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 import { resolveAssetUrl } from '../utils/url.js'
@@ -86,77 +85,6 @@ type ActiveGameSummaryRow = {
   host_username: string | null
   player_count: string | number | null
   duration_minutes: string | number | null
-}
-
-type DeltaTransportSnapshot = {
-  counters?: Array<{
-    metric: string
-    labels?: Record<string, string>
-    value: number
-  }>
-}
-
-const buildDeltaTransportFallbackSummary = (
-  snapshot: DeltaTransportSnapshot,
-): {
-  interval: {
-    total: number
-    room: number
-    socket: number
-    byEvent: Record<string, number>
-    bySource: Record<string, number>
-    byContext: Record<string, number>
-  }
-  cumulative: {
-    total: number
-    room: number
-    socket: number
-    bySource: Record<string, number>
-  }
-} => {
-  const counters = snapshot.counters ?? []
-  const aggregate = {
-    total: 0,
-    room: 0,
-    socket: 0,
-    byEvent: {} as Record<string, number>,
-    bySource: {} as Record<string, number>,
-    byContext: {} as Record<string, number>,
-  }
-
-  for (const counter of counters) {
-    const value = Number(counter.value ?? 0)
-    if (!Number.isFinite(value) || value <= 0) continue
-    aggregate.total += value
-    const labels = counter.labels ?? {}
-    const audience = labels.audience ?? 'room'
-    if (audience === 'room') aggregate.room += value
-    if (audience === 'socket') aggregate.socket += value
-    const event = labels.event ?? 'unknown'
-    aggregate.byEvent[event] = (aggregate.byEvent[event] ?? 0) + value
-    const source = labels.source ?? 'unknown'
-    aggregate.bySource[source] = (aggregate.bySource[source] ?? 0) + value
-    const context = labels.context ?? 'general'
-    aggregate.byContext[context] = (aggregate.byContext[context] ?? 0) + value
-  }
-
-  return {
-    // Without interval sampling we mirror cumulative totals so dashboards still render meaningful data.
-    interval: {
-      total: aggregate.total,
-      room: aggregate.room,
-      socket: aggregate.socket,
-      byEvent: aggregate.byEvent,
-      bySource: aggregate.bySource,
-      byContext: aggregate.byContext,
-    },
-    cumulative: {
-      total: aggregate.total,
-      room: aggregate.room,
-      socket: aggregate.socket,
-      bySource: aggregate.bySource,
-    },
-  }
 }
 
 // Apply authentication to all admin routes
@@ -2628,28 +2556,21 @@ export default router
 // Lightweight realtime metrics for Socket.IO/game actions
 router.get('/realtime-metrics', async (_req: Request, res: Response) => {
   try {
-    const { deltaTransportMetrics, lockstepMetrics, realtimeMetrics, socketPayloadMetrics } =
-      await import('../services/metricsService.js')
+    const { lockstepMetrics, realtimeMetrics, socketPayloadMetrics } = await import(
+      '../services/metricsService.js'
+    )
     const payloads = {
       gameUpdate: socketPayloadMetrics.snapshot('game:snapshot'),
-      gameDelta: socketPayloadMetrics.snapshot('game-delta'),
-      gameDeltaBatch: socketPayloadMetrics.snapshot('game-delta-batch'),
       lockstepFrame: socketPayloadMetrics.snapshot('game-action:frame-committed'),
       lockstepChecksum: socketPayloadMetrics.snapshot('game-action:checksum'),
     }
     const realtime = realtimeMetrics.snapshot()
     const lockstep = lockstepMetrics.snapshot()
-    const deltaTransport = deltaTransportMetrics.snapshot()
-    const deltaTransportSummary =
-      performanceMonitorService.getCurrentMetrics()?.reliability?.deltaTransport ??
-      buildDeltaTransportFallbackSummary(deltaTransport)
     res.json({
       ok: true,
       payloads,
       realtime,
       lockstep,
-      deltaTransport,
-      deltaTransportSummary,
       ts: new Date().toISOString(),
     })
   } catch (e) {

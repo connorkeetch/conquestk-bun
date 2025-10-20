@@ -579,8 +579,8 @@ class AdminService {
   async getRealtimeMetrics(): Promise<{
     payloads: {
       gameUpdate: { count: number; p50: number; p95: number; max: number } | null
-      gameDelta: { count: number; p50: number; p95: number; max: number } | null
-      gameDeltaBatch: { count: number; p50: number; p95: number; max: number } | null
+      lockstepFrame: { count: number; p50: number; p95: number; max: number } | null
+      lockstepChecksum: { count: number; p50: number; p95: number; max: number } | null
     }
     realtime: {
       accepted: Array<{ metric: string; labels: Record<string, string>; value: number }>
@@ -595,26 +595,6 @@ class AdminService {
     lockstep: {
       counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
       gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
-    }
-    deltaTransport: {
-      counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
-      gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
-    }
-    deltaTransportSummary: {
-      interval: {
-        total: number
-        room: number
-        socket: number
-        byEvent: Record<string, number>
-        bySource: Record<string, number>
-        byContext: Record<string, number>
-      }
-      cumulative: {
-        total: number
-        room: number
-        socket: number
-        bySource: Record<string, number>
-      }
     }
     ts: string
   }> {

@@ -184,7 +184,7 @@ private reliabilityMetrics = {
   actionsSucceeded: 0,
   actionsFailed: 0,
   reconnectCount: 0,
-  deltaGapsDetected: 0,
+  desyncDetections: 0,
   lastResetAt: Date.now(),
 }
 
@@ -195,7 +195,7 @@ getReliabilityMetrics(): {
   reconnectCount: number
   actionSuccessRate: number
   totalActions: number
-  deltaGaps: number
+  desyncEvents: number
   uptimeMs: number
 } {
   const total = this.reliabilityMetrics.actionsAttempted
@@ -207,7 +207,7 @@ getReliabilityMetrics(): {
     reconnectCount: this.reliabilityMetrics.reconnectCount,
     actionSuccessRate: successRate,
     totalActions: total,
-    deltaGaps: this.reliabilityMetrics.deltaGapsDetected,
+    desyncEvents: this.reliabilityMetrics.desyncDetections,
     uptimeMs: Date.now() - this.reliabilityMetrics.lastResetAt,
   }
 }
@@ -221,7 +221,7 @@ resetReliabilityMetrics(): void {
     actionsSucceeded: 0,
     actionsFailed: 0,
     reconnectCount: 0,
-    deltaGapsDetected: 0,
+    desyncDetections: 0,
     lastResetAt: Date.now(),
   }
 }
@@ -262,7 +262,7 @@ private async checkDeltaSequence(...): Promise<boolean> {
 
   // Track gaps
   if (currentSeq > lastSeq + 1) {
-    this.reliabilityMetrics.deltaGapsDetected++
+    this.reliabilityMetrics.desyncDetections++
   }
 
   // ... rest of logic ...

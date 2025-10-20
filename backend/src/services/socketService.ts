@@ -1,10 +1,3 @@
-import type {
-  BattleResultDelta,
-  FortifyResultDelta,
-  GameDelta,
-  PlayerDelta,
-  TerritoryDelta,
-} from '@conquestk/shared/types/delta'
 import type * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
@@ -36,7 +29,7 @@ import {
   matchPresenceOffline,
   matchPresenceOnline,
 } from './matchSvcIntegration.js'
-import { deltaTransportMetrics, lockstepMetrics, socketPayloadMetrics } from './metricsService.js'
+import { lockstepMetrics, socketPayloadMetrics } from './metricsService.js'
 import { registerSocketServer } from './socketRegistry.js'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
@@ -138,41 +131,6 @@ function emitGameSnapshotToRoom(
     }
   }
   io.to(channel).emit('game:snapshot', payload)
-}
-
-function _emitGameDeltaBatchToRoom(
-  io: Server<ClientToServerEvents, ServerToClientEvents>,
-  channel: string,
-  deltas: GameDelta[],
-) {
-  try {
-    const bytes = computePayloadBytes(deltas)
-    socketPayloadMetrics.record('game-delta', bytes)
-    if (socketPayloadMetrics.shouldLog('game-delta')) {
-      const stats = socketPayloadMetrics.snapshot('game-delta')
-      if (stats) {
-        logger.info('Socket payload stats', {
-          event: 'game-delta',
-          windowCount: stats.count,
-          p50Bytes: stats.p50,
-          p95Bytes: stats.p95,
-          maxBytes: stats.max,
-        })
-      }
-    }
-  } catch (error) {
-    logger.warn('Failed to record game-delta metrics (best-effort)', {
-      error: error instanceof Error ? error.message : String(error),
-    })
-  }
-  // Emit as a batch event understood by modern clients; older clients will still
-  // receive individual deltas where we keep them.
-  // To preserve compatibility, we still support single 'game-delta' elsewhere.
-  io.to(channel).emit('game-delta-batch', deltas)
-  deltaTransportMetrics.record('game-delta-batch', 'room', {
-    source: 'socketService',
-    context: 'batch',
-  })
 }
 
 function emitGameSnapshotToSocket(
@@ -1139,126 +1097,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         payload: { roomId: string; fromSeq: number; toSeq: number },
         callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
       ) => {
-        try {
-          const { roomId, fromSeq, toSeq } = payload
-
-          // Validate sequence range
-          if (fromSeq < 0 || toSeq < fromSeq || toSeq - fromSeq > 200) {
-            callback?.({ ok: false, error: 'Invalid sequence range' })
-            return
-          }
-
-          // Fetch raw deltas from ring buffer
-          const { deltaBufferService } = await import('./deltaBufferService.js')
-          const raw = await deltaBufferService.getRange(roomId, fromSeq, toSeq)
-
-          // Fog-aware filtering for this viewer
-          const userId = (socket as AuthenticatedSocket).userId
-          if (!userId) {
-            callback?.({ ok: true, deltas: raw })
-            return
-          }
-
-          // Load game state to compute fog masks
-          let state: GameState | null = null
-          try {
-            state = await new GameService().getGameState(roomId)
-          } catch {
-            state = null
-          }
-          if (!state) {
-            callback?.({ ok: true, deltas: raw })
-            return
-          }
-
-          const fogMode = (state.gameConfig as { fogOfWar?: string } | undefined)?.fogOfWar ?? 'off'
-          const fogEnabled = fogMode !== 'off' && state.phase !== 'finished'
-
-          if (!fogEnabled) {
-            callback?.({ ok: true, deltas: raw })
-            return
-          }
-
-          // Compute visibility and filter deltas similar to fogService
-          const { computeVisibilityMask } = await import('./fogService.js')
-          const mask = computeVisibilityMask(state, userId)
-
-          type BattleResultDeltaWithChanges = BattleResultDelta & {
-            changes?: Array<{ type?: string; territoryId?: string | null }>
-          }
-
-          const filtered = (raw ?? [])
-            .map((delta) => {
-              switch (delta.type) {
-                case 'TERRITORY_UPDATE': {
-                  const territoryDelta = delta as TerritoryDelta
-                  return mask.has(territoryDelta.territoryId) ? delta : null
-                }
-                case 'BATTLE_RESULT': {
-                  const battleDelta = delta as BattleResultDeltaWithChanges
-                  const fromVisible = mask.has(battleDelta.battleResult.fromTerritory.id)
-                  const toVisible = mask.has(battleDelta.battleResult.toTerritory.id)
-                  if (!fromVisible && !toVisible) {
-                    return null
-                  }
-
-                  const redacted = JSON.parse(
-                    JSON.stringify(battleDelta),
-                  ) as BattleResultDeltaWithChanges
-                  if (!fromVisible) {
-                    redacted.battleResult.fromTerritory = {
-                      id: battleDelta.battleResult.fromTerritory.id,
-                      armies: 0,
-                    }
-                  }
-                  if (!toVisible) {
-                    redacted.battleResult.toTerritory = {
-                      id: battleDelta.battleResult.toTerritory.id,
-                      armies: 0,
-                      ownerId: undefined,
-                    }
-                  }
-                  if (Array.isArray(redacted.changes)) {
-                    redacted.changes = redacted.changes.filter((change) => {
-                      if (!change) {
-                        return false
-                      }
-                      if (change.type !== 'TERRITORY_UPDATE') {
-                        return true
-                      }
-                      return change.territoryId ? mask.has(change.territoryId) : true
-                    })
-                  }
-                  return redacted
-                }
-                case 'PLAYER_UPDATE': {
-                  const playerDelta = JSON.parse(JSON.stringify(delta)) as PlayerDelta
-                  playerDelta.changes = {
-                    ...playerDelta.changes,
-                    territories: undefined,
-                  }
-                  return playerDelta
-                }
-                case 'FORTIFY_RESULT': {
-                  const fortifyDelta = delta as FortifyResultDelta
-                  const fromVisible = mask.has(fortifyDelta.fromTerritoryId)
-                  const toVisible = mask.has(fortifyDelta.toTerritoryId)
-                  if (!fromVisible && !toVisible) {
-                    return null
-                  }
-                  return fortifyDelta
-                }
-                default:
-                  return delta
-              }
-            })
-            .filter((delta): delta is GameDelta => Boolean(delta))
-
-          callback?.({ ok: true, deltas: filtered as unknown[] })
-        } catch (error) {
-          logger.error('Failed to handle missing delta request', { error })
-          callback?.({ ok: false, error: 'Internal error' })
-        }
+        const { roomId, fromSeq, toSeq } = payload
+        logger.info('Rejected legacy request-missing-deltas call', {
+          roomId,
+          fromSeq,
+          toSeq,
+        })
+        callback?.({ ok: false, error: 'legacy_delta_transport_removed' })
       },
     )
 

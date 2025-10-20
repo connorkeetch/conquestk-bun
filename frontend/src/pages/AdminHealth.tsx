@@ -59,8 +59,8 @@ export default function AdminHealth() {
   const [realtime, setRealtime] = useState<{
     payloads: {
       gameUpdate: { count: number; p50: number; p95: number; max: number } | null
-      gameDelta: { count: number; p50: number; p95: number; max: number } | null
-      gameDeltaBatch: { count: number; p50: number; p95: number; max: number } | null
+      lockstepFrame: { count: number; p50: number; p95: number; max: number } | null
+      lockstepChecksum: { count: number; p50: number; p95: number; max: number } | null
     }
     realtime: {
       accepted: Array<{ metric: string; labels: Record<string, string>; value: number }>
@@ -75,26 +75,6 @@ export default function AdminHealth() {
     lockstep: {
       counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
       gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
-    }
-    deltaTransport: {
-      counters: Array<{ metric: string; labels: Record<string, string>; value: number }>
-      gauges: Array<{ metric: string; labels: Record<string, string>; value: number }>
-    }
-    deltaTransportSummary: {
-      interval: {
-        total: number
-        room: number
-        socket: number
-        byEvent: Record<string, number>
-        bySource: Record<string, number>
-        byContext: Record<string, number>
-      }
-      cumulative: {
-        total: number
-        room: number
-        socket: number
-        bySource: Record<string, number>
-      }
     }
     ts: string
   } | null>(null)
@@ -349,6 +329,11 @@ export default function AdminHealth() {
           {realtime ? (
             (() => {
               const payloadMetrics = realtime.payloads || {}
+              const metricConfigs = [
+                { key: 'gameUpdate', label: 'game:snapshot' },
+                { key: 'lockstepFrame', label: 'game-action:frame-committed' },
+                { key: 'lockstepChecksum', label: 'game-action:checksum' },
+              ] as const
               const lockstepCounters = realtime.lockstep?.counters ?? []
               const lockstepTotals = lockstepCounters.reduce<Record<string, number>>(
                 (acc, entry) => {
@@ -361,139 +346,28 @@ export default function AdminHealth() {
                 realtime.lockstep?.gauges?.find((g) => g.metric === 'lockstep_resync_frames')
                   ?.value ?? 0
 
-              const deltaCounters = realtime.deltaTransport?.counters ?? []
-              const buildSummaryFromCounters = (
-                entries: Array<{ labels?: Record<string, string>; value: number }>,
-              ) => {
-                const base = {
-                  interval: {
-                    total: 0,
-                    room: 0,
-                    socket: 0,
-                    byEvent: {} as Record<string, number>,
-                    bySource: {} as Record<string, number>,
-                    byContext: {} as Record<string, number>,
-                  },
-                  cumulative: {
-                    total: 0,
-                    room: 0,
-                    socket: 0,
-                    bySource: {} as Record<string, number>,
-                  },
-                }
-                for (const entry of entries) {
-                  const value = Number(entry.value ?? 0)
-                  if (!Number.isFinite(value) || value <= 0) continue
-                  const labels = entry.labels ?? {}
-                  const audience = labels.audience ?? 'room'
-                  base.interval.total += value
-                  if (audience === 'room') base.interval.room += value
-                  if (audience === 'socket') base.interval.socket += value
-                  const event = labels.event ?? 'unknown'
-                  base.interval.byEvent[event] = (base.interval.byEvent[event] ?? 0) + value
-                  const source = labels.source ?? 'unknown'
-                  base.interval.bySource[source] = (base.interval.bySource[source] ?? 0) + value
-                  const context = labels.context ?? 'general'
-                  base.interval.byContext[context] = (base.interval.byContext[context] ?? 0) + value
-
-                  base.cumulative.total += value
-                  if (audience === 'room') base.cumulative.room += value
-                  if (audience === 'socket') base.cumulative.socket += value
-                  base.cumulative.bySource[source] = (base.cumulative.bySource[source] ?? 0) + value
-                }
-                return base
-              }
-              const fallbackSummary = buildSummaryFromCounters(deltaCounters)
-              const mergeRecord = (
-                primary: Record<string, number> | undefined,
-                fallback: Record<string, number>,
-              ) => {
-                if (!primary) return fallback
-                const nonZero = Object.entries(primary).filter(([, value]) => value > 0)
-                return nonZero.length > 0 ? primary : fallback
-              }
-              const summary = realtime.deltaTransportSummary
-                ? {
-                    interval: {
-                      total:
-                        realtime.deltaTransportSummary.interval.total ??
-                        fallbackSummary.interval.total,
-                      room:
-                        realtime.deltaTransportSummary.interval.room ??
-                        fallbackSummary.interval.room,
-                      socket:
-                        realtime.deltaTransportSummary.interval.socket ??
-                        fallbackSummary.interval.socket,
-                      byEvent: mergeRecord(
-                        realtime.deltaTransportSummary.interval.byEvent,
-                        fallbackSummary.interval.byEvent,
-                      ),
-                      bySource: mergeRecord(
-                        realtime.deltaTransportSummary.interval.bySource,
-                        fallbackSummary.interval.bySource,
-                      ),
-                      byContext: mergeRecord(
-                        realtime.deltaTransportSummary.interval.byContext,
-                        fallbackSummary.interval.byContext,
-                      ),
-                    },
-                    cumulative: {
-                      total:
-                        realtime.deltaTransportSummary.cumulative.total ??
-                        fallbackSummary.cumulative.total,
-                      room:
-                        realtime.deltaTransportSummary.cumulative.room ??
-                        fallbackSummary.cumulative.room,
-                      socket:
-                        realtime.deltaTransportSummary.cumulative.socket ??
-                        fallbackSummary.cumulative.socket,
-                      bySource: mergeRecord(
-                        realtime.deltaTransportSummary.cumulative.bySource,
-                        fallbackSummary.cumulative.bySource,
-                      ),
-                    },
-                  }
-                : fallbackSummary
-              const topN = (record: Record<string, number>, limit = 3) =>
-                Object.entries(record)
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, limit)
-              const deltaTotals = summary.cumulative
-              const intervalEvents = summary.interval.byEvent ?? {}
-              const intervalSources = summary.interval.bySource ?? {}
-              const intervalContexts = summary.interval.byContext ?? {}
-              const cumulativeSources = summary.cumulative.bySource ?? {}
-
               return (
                 <div className="text-xs text-white/80 space-y-3">
                   <div>
                     <div className="font-semibold mb-1">Socket payloads (bytes)</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { k: 'gameUpdate', label: 'game:snapshot' },
-                        { k: 'gameDelta', label: 'game-delta' },
-                        { k: 'gameDeltaBatch', label: 'delta-batch' },
-                      ].map((p) => {
-                        const v = (
-                          payloadMetrics as {
-                            [k: string]: {
-                              count: number
-                              p50: number
-                              p95: number
-                              max: number
-                            } | null
-                          }
-                        )?.[p.k]
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {metricConfigs.map((config) => {
+                        const stats = (
+                          payloadMetrics as Record<
+                            (typeof metricConfigs)[number]['key'],
+                            { count: number; p50: number; p95: number; max: number } | null
+                          >
+                        )[config.key]
                         return (
                           <div
-                            key={p.k}
+                            key={config.key}
                             className="bg-surface-3/60 rounded p-2 border border-border/40"
                           >
-                            <div className="text-muted mb-1">{p.label}</div>
+                            <div className="text-muted mb-1">{config.label}</div>
                             <div className="flex items-center gap-3">
-                              <div>P50: {v?.p50 ?? 0}</div>
-                              <div>P95: {v?.p95 ?? 0}</div>
-                              <div>Max: {v?.max ?? 0}</div>
+                              <div>P50: {stats?.p50 ?? 0}</div>
+                              <div>P95: {stats?.p95 ?? 0}</div>
+                              <div>Max: {stats?.max ?? 0}</div>
                             </div>
                           </div>
                         )
@@ -551,48 +425,6 @@ export default function AdminHealth() {
                     </div>
                     <div className="mt-1 text-[10px] text-muted">
                       Last resync touched {Math.round(resyncGauge)} frame(s)
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="font-semibold mb-1">Delta transport (cumulative)</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
-                        <div className="text-muted mb-1">Total</div>
-                        <div>{deltaTotals.total.toLocaleString()}</div>
-                      </div>
-                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
-                        <div className="text-muted mb-1">Room broadcasts</div>
-                        <div>{deltaTotals.room.toLocaleString()}</div>
-                      </div>
-                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
-                        <div className="text-muted mb-1">Socket unicasts</div>
-                        <div>{deltaTotals.socket.toLocaleString()}</div>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-white/70">
-                      {topN(intervalEvents).map(([event, value]) => (
-                        <span key={event} className="rounded bg-surface-3/70 px-2 py-0.5">
-                          {event}: {value.toLocaleString()}
-                        </span>
-                      ))}
-                      {topN(intervalSources).map(([source, value]) => (
-                        <span key={source} className="rounded bg-surface-3/70 px-2 py-0.5">
-                          {source}: {value.toLocaleString()}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="text-[10px] text-muted mt-1">
-                      Context leaders:{' '}
-                      {topN(intervalContexts)
-                        .map(([context, value]) => `${context} (${value.toLocaleString()})`)
-                        .join(', ') || 'none'}
-                    </div>
-                    <div className="text-[10px] text-muted">
-                      Cumulative sources:{' '}
-                      {topN(cumulativeSources, 4)
-                        .map(([source, value]) => `${source} (${value.toLocaleString()})`)
-                        .join(', ') || 'none'}
                     </div>
                   </div>
 
@@ -921,22 +753,6 @@ export default function AdminHealth() {
                   failureRate?: number
                   avgDurationMs?: number
                 }
-                deltaTransport?: {
-                  interval: {
-                    total: number
-                    room: number
-                    socket: number
-                    byEvent: Record<string, number>
-                    bySource: Record<string, number>
-                    byContext: Record<string, number>
-                  }
-                  cumulative: {
-                    total: number
-                    room: number
-                    socket: number
-                    bySource: Record<string, number>
-                  }
-                }
               }
             }
             const memMb = d.server?.memoryUsage?.heapUsed
@@ -949,22 +765,6 @@ export default function AdminHealth() {
                 : 0
             const avgDurationMs =
               lockstep?.avgDurationMs != null ? Math.round(lockstep.avgDurationMs) : 0
-            const delta = d.reliability?.deltaTransport
-            const deltaIntervalTopEvents = delta
-              ? Object.entries(delta.interval.byEvent ?? {})
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 3)
-              : []
-            const deltaIntervalTopContexts = delta
-              ? Object.entries(delta.interval.byContext ?? {})
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 2)
-              : []
-            const deltaCumulativeSources = delta
-              ? Object.entries(delta.cumulative.bySource ?? {})
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 4)
-              : []
             return (
               <div className="mt-3 text-xs text-white/80 space-y-1">
                 <div>
@@ -1030,63 +830,6 @@ export default function AdminHealth() {
                     ms
                   </div>
                 </div>
-                {delta ? (
-                  <div className="border-t border-border/40 pt-2 mt-2">
-                    <div className="text-white/70 font-semibold mb-1">Delta Transport</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <div className="text-muted">Interval total</div>
-                        <div>{delta.interval.total.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted">Interval room</div>
-                        <div>{delta.interval.room.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted">Interval socket</div>
-                        <div>{delta.interval.socket.toLocaleString()}</div>
-                      </div>
-                    </div>
-                    <div className="mt-1 text-muted">
-                      Leading events:{' '}
-                      {deltaIntervalTopEvents.length > 0
-                        ? deltaIntervalTopEvents
-                            .map(([event, value]) => `${event} (${value.toLocaleString()})`)
-                            .join(', ')
-                        : 'none'}
-                    </div>
-                    <div className="text-muted">
-                      Leading contexts:{' '}
-                      {deltaIntervalTopContexts.length > 0
-                        ? deltaIntervalTopContexts
-                            .map(([context, value]) => `${context} (${value.toLocaleString()})`)
-                            .join(', ')
-                        : 'none'}
-                    </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      <div>
-                        <div className="text-muted">Cumulative total</div>
-                        <div>{delta.cumulative.total.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted">Cumulative room</div>
-                        <div>{delta.cumulative.room.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted">Cumulative socket</div>
-                        <div>{delta.cumulative.socket.toLocaleString()}</div>
-                      </div>
-                    </div>
-                    <div className="mt-1 text-muted">
-                      Top sources:{' '}
-                      {deltaCumulativeSources.length > 0
-                        ? deltaCumulativeSources
-                            .map(([source, value]) => `${source} (${value.toLocaleString()})`)
-                            .join(', ')
-                        : 'none'}
-                    </div>
-                  </div>
-                ) : null}
               </div>
             )
           }

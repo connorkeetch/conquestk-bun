@@ -285,63 +285,6 @@ describe('socketService event handlers', () => {
     return { socket, io, roomEmit }
   }
 
-  it('sends fortify updates as coalesced deltas after processing', async () => {
-    const { socket, io, roomEmit } = initialiseHandlers()
-    const handler = getSocketHandler(socket, 'game-action')
-
-    // Ensure inline emitter path runs and emits via fallback channel
-    // by providing a minimal game state for emitCombined
-    mockGameServiceInstance.getGameState.mockResolvedValueOnce({
-      roomId: 'room-99',
-      turn: 1,
-      phase: 'reinforcement',
-      board: [
-        { id: 'from', name: 'From', ownerId: 'user-1', armies: 3, adjacentTerritories: [] },
-        { id: 'to', name: 'To', ownerId: 'user-1', armies: 2, adjacentTerritories: [] },
-      ],
-      players: [{ id: 'user-1', username: 'User One', isAi: false }],
-      settings: { turnTimer: 60 },
-      gameConfig: { fogOfWar: 'off' },
-    } as unknown as import('../types/game.js').GameState)
-
-    await handler({
-      roomId: 'room-99',
-      action: {
-        type: 'fortify',
-        roomId: 'room-99',
-        playerId: 'user-1',
-        payload: { fromTerritoryId: 'from', toTerritoryId: 'to', armies: 5 },
-      },
-    })
-
-    expect(mockGameServiceInstance.processFortify).toHaveBeenCalledWith(
-      'room-99',
-      expect.objectContaining({
-        fromTerritoryId: 'from',
-        toTerritoryId: 'to',
-        armies: 5,
-        playerId: 'user-1',
-      }),
-    )
-
-    // Under fog-aware emission, fallback path emits individual 'game-delta' events
-    const ioToMock = io.to as unknown as jest.Mock
-    expect(ioToMock).toHaveBeenCalledWith('game:room-99')
-    const firstCall = roomEmit.mock.calls[0]
-    const eventName = firstCall[0] as string
-    expect(['game-delta', 'game-delta-batch']).toContain(eventName)
-    if (eventName === 'game-delta') {
-      const delta = firstCall[1] as { type: string; territoryId?: string }
-      expect(delta.type).toBe('TERRITORY_UPDATE')
-    } else {
-      const deltas = firstCall[1] as Array<{ type: string; territoryId?: string }>
-      // Batch should contain at least one territory update from fortify
-      expect(Array.isArray(deltas)).toBe(true)
-      const hasUpdate = deltas.some((d) => d.type === 'TERRITORY_UPDATE')
-      expect(hasUpdate).toBe(true)
-    }
-  })
-
   it('emits lockstep frame events when enabled', async () => {
     process.env.LOCKSTEP_DEV = 'true'
     const committedAt = new Date().toISOString()
@@ -405,31 +348,6 @@ describe('socketService event handlers', () => {
         matchId: 'room-lockstep',
         seq: 1,
         crc32: 123456,
-      }),
-    )
-  })
-
-  it('broadcasts phase changes via unified game-delta on end turn', async () => {
-    const { socket, io, roomEmit } = initialiseHandlers()
-    const handler = getSocketHandler(socket, 'game-action')
-
-    await handler({
-      roomId: 'room-end',
-      action: { type: 'end_turn', roomId: 'room-end', playerId: 'user-1' },
-    })
-
-    expect(mockGameServiceInstance.endTurn).toHaveBeenCalledWith('room-end', 'user-1')
-
-    const ioToMock = io.to as unknown as jest.Mock
-    expect(ioToMock).toHaveBeenCalledWith('game:room-end')
-    expect(roomEmit).toHaveBeenNthCalledWith(
-      1,
-      'game-delta',
-      expect.objectContaining({
-        type: 'PHASE_CHANGE',
-        roomId: 'room-end',
-        phase: 'reinforcement',
-        currentPlayer: 'player-2',
       }),
     )
   })

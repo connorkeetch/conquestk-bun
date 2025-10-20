@@ -5,7 +5,6 @@ import { adminService } from './adminService.js'
 import { cdnService } from './cdnService.js'
 import { getClientMetricsSummary } from './clientMetricsService.js'
 import { databaseClusterService } from './databaseClusterService.js'
-import { deltaTransportMetrics } from './metricsService.js'
 import { notificationDispatcher } from './NotificationDispatcher.js'
 import { buildPerformanceAlertNotification } from './notifications/performanceAlerts.js'
 import type { QueueStats } from './queueService.js'
@@ -65,24 +64,6 @@ interface SystemMetrics {
       failureRate: number
       avgDurationMs: number
     }
-    deltaTransport: DeltaTransportSummary
-  }
-}
-
-type DeltaTransportSummary = {
-  interval: {
-    total: number
-    room: number
-    socket: number
-    byEvent: Record<string, number>
-    bySource: Record<string, number>
-    byContext: Record<string, number>
-  }
-  cumulative: {
-    total: number
-    room: number
-    socket: number
-    bySource: Record<string, number>
   }
 }
 
@@ -139,10 +120,6 @@ interface PerformanceThresholds {
     maxFailureRate: number
     maxAvgDurationMs: number
   }
-  transport: {
-    maxRoomEventsPerInterval: number
-    maxSocketEventsPerInterval: number
-  }
 }
 
 export class PerformanceMonitorService {
@@ -151,7 +128,6 @@ export class PerformanceMonitorService {
   private isMonitoring = false
   private monitoringInterval?: NodeJS.Timeout
   private alertCheckInterval?: NodeJS.Timeout
-  private previousDeltaTransportCounters = new Map<string, number>()
 
   private thresholds: PerformanceThresholds = {
     database: {
@@ -176,10 +152,6 @@ export class PerformanceMonitorService {
       minSamples: 10, // only alert once we have meaningful volume
       maxFailureRate: 0.1, // 10%
       maxAvgDurationMs: 2000, // 2 seconds
-    },
-    transport: {
-      maxRoomEventsPerInterval: 10,
-      maxSocketEventsPerInterval: 40,
     },
   }
 
@@ -353,8 +325,6 @@ export class PerformanceMonitorService {
   }
 
   private async collectReliabilityMetrics(): Promise<SystemMetrics['reliability']> {
-    const deltaTransport = this.collectDeltaTransportSummary()
-
     const base: SystemMetrics['reliability'] = {
       sessionCount: 0,
       avgLatency: 0,
@@ -367,7 +337,6 @@ export class PerformanceMonitorService {
         failureRate: 0,
         avgDurationMs: 0,
       },
-      deltaTransport,
     }
 
     try {
@@ -488,28 +457,6 @@ export class PerformanceMonitorService {
       }
     }
 
-    const deltaInterval = latestMetrics.reliability.deltaTransport.interval
-    if (deltaInterval.room > this.thresholds.transport.maxRoomEventsPerInterval) {
-      newAlerts.push(
-        this.createAlert(
-          'medium',
-          'transport',
-          `Delta broadcasts this interval: ${deltaInterval.room} (threshold: ${this.thresholds.transport.maxRoomEventsPerInterval})`,
-          { roomEvents: deltaInterval.room },
-        ),
-      )
-    }
-    if (deltaInterval.socket > this.thresholds.transport.maxSocketEventsPerInterval) {
-      newAlerts.push(
-        this.createAlert(
-          'low',
-          'transport',
-          `Delta unicasts this interval: ${deltaInterval.socket} (threshold: ${this.thresholds.transport.maxSocketEventsPerInterval})`,
-          { socketEvents: deltaInterval.socket },
-        ),
-      )
-    }
-
     // Add new alerts
     for (const alert of newAlerts) {
       this.alerts.push(alert)
@@ -555,73 +502,6 @@ export class PerformanceMonitorService {
     }
   }
 
-  private createEmptyDeltaTransportSummary(): DeltaTransportSummary {
-    return {
-      interval: {
-        total: 0,
-        room: 0,
-        socket: 0,
-        byEvent: {},
-        bySource: {},
-        byContext: {},
-      },
-      cumulative: {
-        total: 0,
-        room: 0,
-        socket: 0,
-        bySource: {},
-      },
-    }
-  }
-
-  private collectDeltaTransportSummary(): DeltaTransportSummary {
-    const summary = this.createEmptyDeltaTransportSummary()
-    const snapshot = deltaTransportMetrics.snapshot()
-    const counters = snapshot.counters ?? []
-    const seen = new Set<string>()
-
-    for (const entry of counters) {
-      const event = entry.labels.event ?? 'unknown'
-      const audience = entry.labels.audience ?? 'room'
-      const source = entry.labels.source ?? 'unknown'
-      const context = entry.labels.context ?? 'general'
-      const key = `${event}|${audience}|${source}|${context}`
-      seen.add(key)
-
-      const previous = this.previousDeltaTransportCounters.get(key) ?? 0
-      const diff = entry.value - previous
-      this.previousDeltaTransportCounters.set(key, entry.value)
-
-      summary.cumulative.total += entry.value
-      if (audience === 'room') {
-        summary.cumulative.room += entry.value
-      } else if (audience === 'socket') {
-        summary.cumulative.socket += entry.value
-      }
-      summary.cumulative.bySource[source] = (summary.cumulative.bySource[source] ?? 0) + entry.value
-
-      if (diff > 0) {
-        summary.interval.total += diff
-        if (audience === 'room') {
-          summary.interval.room += diff
-        } else if (audience === 'socket') {
-          summary.interval.socket += diff
-        }
-        summary.interval.byEvent[event] = (summary.interval.byEvent[event] ?? 0) + diff
-        summary.interval.bySource[source] = (summary.interval.bySource[source] ?? 0) + diff
-        summary.interval.byContext[context] = (summary.interval.byContext[context] ?? 0) + diff
-      }
-    }
-
-    for (const key of this.previousDeltaTransportCounters.keys()) {
-      if (!seen.has(key)) {
-        this.previousDeltaTransportCounters.delete(key)
-      }
-    }
-
-    return summary
-  }
-
   // Public API methods
   trackRequest(): void {
     this.requestCounter++
@@ -665,8 +545,6 @@ export class PerformanceMonitorService {
       lockstepFailureRate: number
       lockstepAvgDurationMs: number
       lockstepTotalResyncs: number
-      deltaTransportRoom: number
-      deltaTransportSocket: number
     }
     current: SystemMetrics | null
     trends: {
@@ -676,8 +554,6 @@ export class PerformanceMonitorService {
       activeGames: number[]
       lockstepFailureRate: number[]
       lockstepAvgDurationMs: number[]
-      deltaTransportRoom: number[]
-      deltaTransportSocket: number[]
     }
     alerts: {
       active: number
@@ -700,8 +576,6 @@ export class PerformanceMonitorService {
         lockstepFailureRate,
         lockstepAvgDurationMs: lockstepAvgDuration,
         lockstepTotalResyncs: lockstepTotal,
-        deltaTransportRoom: current?.reliability.deltaTransport.interval.room ?? 0,
-        deltaTransportSocket: current?.reliability.deltaTransport.interval.socket ?? 0,
       },
       current,
       trends: {
@@ -711,8 +585,6 @@ export class PerformanceMonitorService {
         activeGames: lastHour.map((m) => m.game.activeGames),
         lockstepFailureRate: lastHour.map((m) => m.reliability.lockstep.failureRate),
         lockstepAvgDurationMs: lastHour.map((m) => m.reliability.lockstep.avgDurationMs),
-        deltaTransportRoom: lastHour.map((m) => m.reliability.deltaTransport.interval.room),
-        deltaTransportSocket: lastHour.map((m) => m.reliability.deltaTransport.interval.socket),
       },
       alerts: {
         active: this.getActiveAlerts().length,

@@ -13,7 +13,6 @@ import type {
   MetadataTerritoryInput,
   TerritoryModifierMetadata,
 } from '../types/maps.js'
-import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage.js'
 import { logger } from '../utils/logger.js'
 
 type Json = unknown
@@ -222,6 +221,9 @@ async function extractZip(zipPath: string): Promise<string> {
 
 async function run(): Promise<void> {
   const opts = parseArgs()
+
+  // Import image storage lazily so env-driven configuration (S3 vs local) is available.
+  const { storeBase64Image, storeImageBuffer } = await import('../utils/imageStorage.js')
 
   let userId: string | undefined
   if (!opts.dryRun) {
