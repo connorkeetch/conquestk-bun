@@ -7,7 +7,6 @@ import capitalGameService from './capitalGameService.js'
 import { GameRoomService } from './gameRoomService.js'
 import { GameService } from './gameService.js'
 import { mapService } from './mapService.js'
-import { deltaTransportMetrics } from './metricsService.js'
 import { queueService } from './queueService.js'
 import { tryGetSocketServer } from './socketRegistry.js'
 
@@ -1078,34 +1077,7 @@ export class GameLifecycleService {
         },
       )
 
-      // Optional: lightweight lifecycle hint using a system message (fog-safe)
-      try {
-        const io = tryGetSocketServer()
-        if (io) {
-          const systemDelta = {
-            type: 'SYSTEM_MESSAGE',
-            roomId,
-            timestamp: Date.now(),
-            text: 'ai:thinking',
-            playerId: current.id,
-          } as const
-          io.to(`game:${roomId}`).emit('game-delta', systemDelta)
-          deltaTransportMetrics.record('game-delta', 'room', {
-            source: 'lifecycle',
-            context: 'ai-thinking',
-          })
-          try {
-            const { deltaBufferService } = await import('./deltaBufferService.js')
-            await deltaBufferService.append(roomId, [
-              systemDelta as unknown as import('@conquestk/shared/types/delta').GameDelta,
-            ])
-          } catch {
-            // best-effort
-          }
-        }
-      } catch {
-        // best-effort
-      }
+      // Legacy delta hint removed; lockstep frames already signal AI activity.
     } catch (error) {
       logger.warn('Failed to schedule AI turn', {
         roomId,
@@ -1325,47 +1297,7 @@ export class GameLifecycleService {
           break
         }
       }
-      try {
-        const io = tryGetSocketServer()
-        if (io) {
-          const { DeltaBuilder } = await import('../types/deltaUpdates.js')
-          const channel = `game:${roomId}`
-          if (lastResult?.treasureAwarded) {
-            io.to(channel).emit('game-delta', {
-              type: 'TREASURE_AWARDED',
-              roomId,
-              timestamp: Date.now(),
-              userId: targetUserId,
-              metal: lastResult.treasureAwarded,
-            })
-            deltaTransportMetrics.record('game-delta', 'room', {
-              source: 'lifecycle',
-              context: 'timeout-treasure',
-            })
-          }
-          const phaseDelta = lastResult
-            ? DeltaBuilder.phaseChange(
-                roomId,
-                lastResult.gameState.phase,
-                lastResult.gameState.currentPlayer,
-                lastResult.gameState.turn,
-                lastResult.reinforcementArmies,
-              )
-            : null
-          if (phaseDelta) {
-            io.to(channel).emit('game-delta', phaseDelta)
-            deltaTransportMetrics.record('game-delta', 'room', {
-              source: 'lifecycle',
-              context: 'timeout-phase',
-            })
-          }
-        }
-      } catch (ee) {
-        logger.warn('Failed to emit deltas after timeout skip', {
-          roomId,
-          error: ee instanceof Error ? ee.message : ee,
-        })
-      }
+      // Delta fan-out removed; lockstep frames reflect timeout state changes.
     } catch (error) {
       logger.warn('Turn timeout: endTurn failed', {
         roomId,

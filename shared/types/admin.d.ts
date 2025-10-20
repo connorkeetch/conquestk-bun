@@ -113,22 +113,6 @@ export interface AdminPerformanceCurrentMetrics {
       failureRate: number
       avgDurationMs: number
     }
-    deltaTransport?: {
-      interval: {
-        total: number
-        room: number
-        socket: number
-        byEvent: Record<string, number>
-        bySource: Record<string, number>
-        byContext: Record<string, number>
-      }
-      cumulative: {
-        total: number
-        room: number
-        socket: number
-        bySource: Record<string, number>
-      }
-    }
   }
   [k: string]: unknown
 }

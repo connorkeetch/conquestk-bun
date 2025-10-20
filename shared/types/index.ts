@@ -615,15 +615,11 @@ export interface RealtimeNotification {
   metadata?: Record<string, unknown>
 }
 
-import type { GameDelta } from './delta.js'
-
 export interface ServerToClientEvents {
   'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
   'player-left': (data: PlayerLeftEvent) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game:snapshot': (gameState: GameState) => void
-  'game-delta': (delta: GameDelta) => void
-  'game-delta-batch': (deltas: GameDelta[]) => void
   'game-action:frame-committed': (frame: InputFrame) => void
   'game-action:checksum': (checksum: TickChecksum) => void
   'game-action:snapshot': (payload: {

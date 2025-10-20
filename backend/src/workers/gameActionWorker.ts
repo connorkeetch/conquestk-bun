@@ -5,12 +5,10 @@ import { query } from '../config/database.js'
 import { acquireLock, releaseLock } from '../config/redis.js'
 import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService.js'
 import { gameStateCache } from '../services/cacheService.js'
-import { DeltaEmitter } from '../services/deltaEmitter.js'
 import { GameService } from '../services/gameService.js'
 import { jobIdempotencyService } from '../services/jobIdempotencyService.js'
 import {
   aiTurnMetrics,
-  deltaTransportMetrics,
   idempotencyMetrics,
   socketPayloadMetrics,
 } from '../services/metricsService.js'
@@ -38,7 +36,6 @@ export class GameActionWorker {
   private worker: Worker | null = null
   private queueName: string
   private gameService: GameService
-  private deltaEmitter: DeltaEmitter
   private io: Server<
     ClientToServerEvents,
     ServerToClientEvents,
@@ -55,7 +52,6 @@ export class GameActionWorker {
     >,
   ) {
     this.gameService = new GameService()
-    this.deltaEmitter = new DeltaEmitter(io)
     this.io = io
     this.queueName = queueService.getGameActionQueue().name
   }
@@ -1413,33 +1409,6 @@ export class GameActionWorker {
     // Emit treasure awarded (if any) before phase change for UX parity
     try {
       if (result.treasureAwarded) {
-        const delta: Partial<import('@conquestk/shared/types/delta').TreasureAwardedDelta> & {
-          type: 'TREASURE_AWARDED'
-          roomId: string
-          timestamp: number
-          userId: string
-          metal: import('@conquestk/shared/types').Metal
-        } = {
-          type: 'TREASURE_AWARDED',
-          roomId: gameId,
-          timestamp: Date.now(),
-          userId: playerId,
-          metal: result.treasureAwarded,
-        }
-        // Emit treasure delta immediately for UI cues
-        this.io.to(`game:${gameId}`).emit('game-delta', delta)
-        deltaTransportMetrics.record('game-delta', 'room', {
-          source: 'worker',
-          context: 'treasure-award',
-        })
-        try {
-          const { deltaBufferService } = await import('../services/deltaBufferService.js')
-          await deltaBufferService.append(gameId, [
-            delta as unknown as import('@conquestk/shared/types/delta').GameDelta,
-          ])
-        } catch {
-          // best-effort
-        }
         // Also emit a concise textual move for parity with inline path
         try {
           const updated = await this.gameService.getGameState(gameId)

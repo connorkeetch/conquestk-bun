@@ -38,19 +38,16 @@ _Last updated: March 9, 2026_
 - Emission on the backend is centralized through the `DeltaBuilder` factory in `backend/src/types/deltaUpdates.ts` together with the runtime `DeltaEmitter` service. Fields are normalized before broadcasting:
   - `armies`, `turn`, `reinforcementArmies` are clamped to non-negative integers
   - `ownerId` is only included when a non-empty string is provided
-- Where deltas are produced:
-  - Turn actions in `backend/src/workers/gameActionWorker.ts`
-  - Inline fallbacks in `backend/src/services/gameActionProcessor.ts`
-  - Battle resolution in `backend/src/workers/battleWorker.ts`
-  - Fog filtering and socket fan-out in `backend/src/services/fogService.ts`, which emits per-visible viewer
-- Fortify operations stream paired `TERRITORY_UPDATE` deltas and a summarized `FORTIFY_RESULT` payload (`gameActionWorker.processFortify`) so UI logs and history stay consistent.
+- Lockstep transport:
+  - Game actions run in `backend/src/workers/gameActionWorker.ts`, which records deterministic frames and emits `game-action:frame-committed` and `game-action:checksum` events.
+  - Fog filtering in `backend/src/services/fogService.ts` now only handles targeted reveal snapshots for convergence; incremental deltas are no longer broadcast.
 - Full-state syncs still emit `game:snapshot` events from `socketService.ts` for reconnects, AFK kicks, and legacy flows.
 - Frontend consumption:
-  - Socket listeners in `frontend/src/services/socketService.ts` forward `game-delta` and `game:snapshot` payloads to Redux slices
-  - `gameSlice.applyDelta` in `frontend/src/store/gameSlice.ts` applies `TERRITORY_UPDATE`, `PLAYER_UPDATE`, `PHASE_CHANGE`, `BATTLE_RESULT`, `FORTIFY_RESULT`, and `GAME_END`
+  - `frontend/src/services/socketService.ts` ingests `game-action:frame-committed` and `game-action:checksum` events and feeds the lockstep simulator; legacy `game-delta` handlers have been removed.
+  - Full snapshots remain as the recovery path and route through the same service.
 - Testing & guardrails:
-  - A compatibility test (`backend/src/test/deltaTypesCompatibility.test.ts`) ensures `DeltaBuilder` outputs satisfy the shared `GameDelta` contract.
-  - Lint/typecheck enforce shared import usage; local delta interfaces on the backend have been removed to prevent drift.
+  - Golden-frame fixtures in `backend/src/test/lockstepGoldenFrames.test.ts` and simulator coverage in `backend/src/test/lockstepSimulator.test.ts` guard against lockstep regressions.
+  - Shared types in `shared/types/lockstep.ts` define frame payload structure consumed by both client and server.
 
 ### Frontend (React + Redux Toolkit)
 - Entry point `frontend/src/main.tsx` mounts the app shell defined in `App.tsx`. Routing is handled by React Router with pages under `frontend/src/pages`.

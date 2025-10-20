@@ -4,13 +4,6 @@ import type { Server } from 'socket.io'
 const queryMock = jest.fn().mockResolvedValue({ rows: [{ id: 'move-1' }] })
 const acquireLockMock = jest.fn().mockResolvedValue('lock-token')
 const releaseLockMock = jest.fn().mockResolvedValue(true)
-const emitDeploymentDeltasMock = jest.fn().mockResolvedValue(undefined)
-const emitRevealToMock = jest.fn().mockResolvedValue(undefined)
-const DeltaEmitterConstructorMock = jest.fn().mockImplementation(() => ({
-  emitDeploymentDeltas: emitDeploymentDeltasMock,
-  emitRevealTo: emitRevealToMock,
-}))
-
 const ioMock = {
   to: jest.fn().mockReturnThis(),
   emit: jest.fn(),
@@ -24,10 +17,6 @@ jest.mock('../config/redis.js', () => ({
   acquireLock: acquireLockMock,
   getRedisClient: jest.fn().mockReturnValue(null),
   releaseLock: releaseLockMock,
-}))
-
-jest.mock('../services/deltaEmitter.js', () => ({
-  DeltaEmitter: DeltaEmitterConstructorMock,
 }))
 
 jest.mock('../services/queueService.js', () => {
@@ -114,7 +103,7 @@ describe('GameActionWorker idempotency', () => {
     expect(gameServiceInstance?.getGameState).not.toHaveBeenCalled()
   })
 
-  it('stores processed result with delta when handling a fresh job', async () => {
+  it('stores processed result when handling a fresh job', async () => {
     const worker = new GameActionWorker(ioMock)
     const gameServiceInstance = GameServiceMock.mock.results.at(-1)?.value as {
       getGameState: jest.Mock
@@ -149,12 +138,7 @@ describe('GameActionWorker idempotency', () => {
     expect(result).toMatchObject({
       success: true,
       processed: true,
-      delta: {
-        type: 'TERRITORY_UPDATE',
-        roomId: 'room-1',
-        territoryId: 'tex',
-        changes: { armies: 7 },
-      },
+      delta: null,
     })
 
     expect(jobIdempotencyServiceMock.markProcessedJob).toHaveBeenCalledTimes(1)

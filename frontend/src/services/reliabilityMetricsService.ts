@@ -8,7 +8,6 @@ export interface ReliabilityDisplaySnapshot {
   status: ReliabilityStatus
   label: string
   actionSuccessRate: number
-  deltaGapRate: number
   avgLatency: number
   p95Latency: number
   reconnectCount: number
@@ -31,11 +30,6 @@ class ReliabilityMetricsService {
   private actionsSucceeded = 0
   private actionsFailed = 0
   private actionsRetried = 0
-
-  private deltasReceived = 0
-  private deltasDuplicated = 0
-  private deltaGapsDetected = 0
-  private deltaGapRecoveries = 0
 
   private desyncDetections = 0
   private desyncRecoveries = 0
@@ -122,26 +116,6 @@ class ReliabilityMetricsService {
 
   recordActionRetry(): void {
     this.actionsRetried += 1
-    this.notify()
-  }
-
-  recordDeltaReceived(): void {
-    this.deltasReceived += 1
-    this.notify()
-  }
-
-  recordDeltaDuplicate(): void {
-    this.deltasDuplicated += 1
-    this.notify()
-  }
-
-  recordDeltaGap(): void {
-    this.deltaGapsDetected += 1
-    this.notify()
-  }
-
-  recordDeltaGapRecovery(): void {
-    this.deltaGapRecoveries += 1
     this.notify()
   }
 
@@ -287,10 +261,6 @@ class ReliabilityMetricsService {
     actionsSucceeded: number
     actionsFailed: number
     actionsRetried: number
-    deltasReceived: number
-    deltasDuplicated: number
-    deltaGapsDetected: number
-    deltaGapRecoveries: number
     desyncDetections: number
     desyncRecoveries: number
     avgDesyncRecoveryMs: number
@@ -323,10 +293,6 @@ class ReliabilityMetricsService {
       actionsSucceeded: this.actionsSucceeded,
       actionsFailed: this.actionsFailed,
       actionsRetried: this.actionsRetried,
-      deltasReceived: this.deltasReceived,
-      deltasDuplicated: this.deltasDuplicated,
-      deltaGapsDetected: this.deltaGapsDetected,
-      deltaGapRecoveries: this.deltaGapRecoveries,
       desyncDetections: this.desyncDetections,
       desyncRecoveries: this.desyncRecoveries,
       avgDesyncRecoveryMs: this.getAvgDesyncRecovery(),
@@ -351,22 +317,21 @@ class ReliabilityMetricsService {
 
   getStats(): {
     actionSuccessRate: number
-    deltaAccuracyRate: number
     desyncRate: number
     avgLatency: number
   } {
     const actionSuccessRate =
       this.actionsAttempted > 0 ? (this.actionsSucceeded / this.actionsAttempted) * 100 : 100
-    const deltaAccuracyRate =
-      this.deltasReceived > 0
-        ? ((this.deltasReceived - this.deltasDuplicated) / this.deltasReceived) * 100
-        : 100
-    const desyncRate =
-      this.deltasReceived > 0 ? (this.desyncDetections / this.deltasReceived) * 100 : 0
+    const denominator = Math.max(
+      this.actionsAttempted,
+      this.lockstepResyncTotal,
+      this.reconnectCount,
+      1,
+    )
+    const desyncRate = (this.desyncDetections / denominator) * 100
 
     return {
       actionSuccessRate,
-      deltaAccuracyRate,
       desyncRate,
       avgLatency: this.getAvgLatency(),
     }
@@ -375,21 +340,20 @@ class ReliabilityMetricsService {
   getDisplaySnapshot(): ReliabilityDisplaySnapshot {
     const stats = this.getStats()
     const p95Latency = this.getP95Latency()
-    const deltaGapRate =
-      this.deltasReceived > 0 ? (this.deltaGapsDetected / this.deltasReceived) * 100 : 0
+    const desyncRate = stats.desyncRate
 
     let status: ReliabilityStatus = 'excellent'
     if (
       stats.actionSuccessRate < 85 ||
       p95Latency > 600 ||
-      deltaGapRate > 5 ||
+      desyncRate > 5 ||
       this.reconnectCount > 8
     ) {
       status = 'critical'
     } else if (
       stats.actionSuccessRate < 95 ||
       p95Latency > 350 ||
-      deltaGapRate > 2 ||
+      desyncRate > 2 ||
       this.reconnectCount > 3
     ) {
       status = 'warning'
@@ -402,7 +366,6 @@ class ReliabilityMetricsService {
       status,
       label,
       actionSuccessRate: Math.round(stats.actionSuccessRate * 10) / 10,
-      deltaGapRate: Math.round(deltaGapRate * 10) / 10,
       avgLatency: Math.round(this.getAvgLatency()),
       p95Latency: Math.round(p95Latency),
       reconnectCount: this.reconnectCount,
@@ -455,10 +418,6 @@ class ReliabilityMetricsService {
     this.actionsSucceeded = 0
     this.actionsFailed = 0
     this.actionsRetried = 0
-    this.deltasReceived = 0
-    this.deltasDuplicated = 0
-    this.deltaGapsDetected = 0
-    this.deltaGapRecoveries = 0
     this.desyncDetections = 0
     this.desyncRecoveries = 0
     this.desyncDetectedAt = null

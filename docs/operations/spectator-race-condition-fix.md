@@ -62,7 +62,7 @@ The backend has two different subscription modes:
 
 When players were incorrectly marked as spectators:
 - Their moves were ignored (not subscribed to correct channel)
-- They didn't receive game-delta events (not in `game:${roomId}`)
+- They didn't receive lockstep frame updates (previously `game-delta` events on `game:${roomId}`)
 - Page refresh forced re-subscription with correct data → worked until next refresh
 
 ## The Fix

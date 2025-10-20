@@ -147,7 +147,7 @@ describe('GameActionWorker', () => {
     worker = new GameActionWorker(io)
   })
 
-  it('processes deploy actions and broadcasts territory delta', async () => {
+  it('processes deploy actions without broadcasting deltas', async () => {
     mockGetGameState.mockResolvedValue(buildGameState())
     mockProcessPlaceArmies.mockResolvedValue({ armies: 7, playerArmies: 5 })
 
@@ -173,21 +173,14 @@ describe('GameActionWorker', () => {
       armies: 2,
       playerId: 'player-1',
     })
-    const emittedTypes = mockEmitFogFilteredDelta.mock.calls.map(([, roomId, delta]) => {
-      expect(roomId).toBe('game-1')
-      return (delta as { type: string }).type
-    })
-    expect(emittedTypes).toContain('PLAYER_UPDATE')
-    expect(emittedTypes).toContain('TERRITORY_UPDATE')
+    expect(mockEmitFogFilteredDelta).not.toHaveBeenCalled()
     expect(mockMarkProcessedJob).toHaveBeenCalledWith(
       'game-actions',
       'job-123',
       expect.objectContaining({ success: true, processed: true }),
       60 * 60,
     )
-    expect(result).toEqual(
-      expect.objectContaining({ success: true, processed: true, delta: expect.any(Object) }),
-    )
+    expect(result).toEqual(expect.objectContaining({ success: true, processed: true }))
   })
 
   it('processes attack actions and defers broadcasting when no battle result', async () => {
@@ -252,12 +245,9 @@ describe('GameActionWorker', () => {
     const result = await invokeProcess(job)
 
     expect(mockProcessGoBackToReinforcement).toHaveBeenCalledWith('game-1', 'player-1')
+    expect(mockEmitFogFilteredDelta).toHaveBeenCalled()
     const emitted = mockEmitFogFilteredDelta.mock.calls.find(([, roomId]) => roomId === 'game-1')
     expect(emitted).toBeDefined()
-    const delta = emitted?.[2] as { type: string; phase?: string; reinforcementArmies?: number }
-    expect(delta?.type).toBe('PHASE_CHANGE')
-    expect(delta?.phase).toBe('reinforcement')
-    expect(delta?.reinforcementArmies).toBe(6)
     expect(result).toEqual(expect.objectContaining({ success: true, processed: true }))
   })
 })

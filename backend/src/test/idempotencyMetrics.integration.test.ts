@@ -7,8 +7,6 @@ import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared
 const queryMock = jest.fn().mockResolvedValue({ rows: [{ id: 'move-1' }] })
 const acquireLockMock = jest.fn().mockResolvedValue('lock-token')
 const releaseLockMock = jest.fn().mockResolvedValue(true)
-const emitDeploymentDeltasMock = jest.fn().mockResolvedValue(undefined)
-const emitRevealToMock = jest.fn().mockResolvedValue(undefined)
 const getGameStateMock = jest.fn()
 const processPlaceArmiesMock = jest.fn()
 const gameActionQueueMock = {
@@ -25,13 +23,6 @@ jest.mock('../config/redis.js', () => ({
   getRedisClient: jest.fn(() => null),
   acquireLock: (...args: unknown[]) => acquireLockMock(...args),
   releaseLock: (...args: unknown[]) => releaseLockMock(...args),
-}))
-
-jest.mock('../services/deltaEmitter.js', () => ({
-  DeltaEmitter: jest.fn().mockImplementation(() => ({
-    emitDeploymentDeltas: (...args: unknown[]) => emitDeploymentDeltasMock(...args),
-    emitRevealTo: (...args: unknown[]) => emitRevealToMock(...args),
-  })),
 }))
 
 jest.mock('../services/gameService.js', () => ({
@@ -99,8 +90,6 @@ describe('Idempotency instrumentation', () => {
     queryMock.mockClear()
     acquireLockMock.mockClear()
     releaseLockMock.mockClear()
-    emitDeploymentDeltasMock.mockClear()
-    emitRevealToMock.mockClear()
     getGameStateMock.mockReset()
     processPlaceArmiesMock.mockReset()
   })

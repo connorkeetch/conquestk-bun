@@ -95,7 +95,7 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 ## Phase 3 progress (2025-04-12)
 - Performance monitor now ingests lockstep resync totals, failure rates, and mean durations; reliability alerts trigger automatically when thresholds are breached, and the Admin Health dashboard exposes the new lockstep card alongside socket payload telemetry.
 - `/games/:id/replay/frames` serves deterministic snapshots + frame windows, and the replay viewer hydrates the lockstep simulator client-side to drive map overlays from deterministic state while legacy deltas remain as a fallback.
-- `delta_transports_total` counters feed into the performance dashboard and alerting, exposing per-interval room/unicast delta traffic so we can track the sunset of legacy `game-delta` emissions.
+- Performance dashboards now focus on lockstep resync metrics; legacy delta transport counters have been removed.
 - Golden frame fixtures live in `backend/src/test/fixtures/lockstep/*.json` (relative to repository root); the test file `backend/src/test/lockstepGoldenFrames.test.ts` loads them using `path.join(process.cwd(), 'src', 'test', 'fixtures', 'lockstep')` where `process.cwd()` is the backend directory. The test replays fixtures via the shared simulator and asserts CRC parity in CI. Regenerate fixtures with `npm run replay:match` + `scripts/replayHelpers.ts` before landing intentional gameplay changes.
 
 ### Verification checklist (2025-04-12)
@@ -113,11 +113,11 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 **Prerequisites**
 - Lockstep client is the default experience (no `VITE_LOCKSTEP_DEV` gating).
 - Golden frame fixtures and replay CLI runs are green in CI against representative matches.
-- Telemetry shows negligible `game-delta` / `game-delta-batch` traffic for at least two consecutive weeks.
+- Legacy telemetry counters for `game-delta` / `game-delta-batch` have been retired; rely on lockstep resync metrics for health.
 
 **Execution steps**
 1. Remove `DeltaEmitter` fan-out from `GameActionProcessor`, background workers, and AI paths; replace remaining fog-aware emissions with lockstep frame notifications.
-2. Delete legacy socket events (`game-delta`, `game-delta-batch`, snapshot reveals) and associated metrics counters.
+2. Delete legacy socket events (`game-delta`, `game-delta-batch`, snapshot reveals) and associated metrics counters. (Metrics removal is complete; events remain stubbed for targeted reveals only.)
 3. Excise delta-specific reducers/listeners on the frontend once all environments consume lockstep frames exclusively.
 4. Drop historical delta snapshot tables after a final backup and once the replay tooling no longer depends on them.
 

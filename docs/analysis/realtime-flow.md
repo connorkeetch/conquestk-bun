@@ -18,24 +18,24 @@ Status: Subscription works and auto‑rejoin is in place. `join-room`/`spectate-
 
 Status: Inline fallback and acks are implemented; job idempotency exists server‑side, and the client now emits idempotency keys and automatically retries timeouts with the same key.
 
-## 3) Broadcasting deltas (and logs)
+## 3) Lockstep broadcast + fog-aware logs
 
-- Deltas first: backend emits `game-delta` and coalesced `game-delta-batch` events. Sequence numbers are added per room via `deltaSequenceService` so clients can detect gaps and recover.
-- Replay buffer: every emitted delta is persisted to a short Redis ring (with in-memory fallback) so clients can request missing payloads without forcing a full snapshot.
-- Fog filtering: when possible, deltas are filtered per viewer (using `socket.data.userId` + visibility masks). If identity is missing or fetchSockets fails, we fall back to unfiltered broadcast to avoid silent drops.
-- Game logs: alongside deltas, we emit fog‑aware textual moves via `game-log:append`/`game-log:batch`. On game completion we emit `game-log:reveal` so clients fetch the full, unredacted history.
+- Frames first: backend commits deterministic input frames via `game-action:frame-committed` (with seq + checksum) and sends periodic `game-action:checksum` heartbeats. These replace legacy `game-delta` payloads entirely.
+- Replay buffer: persisted frames live in Postgres (`match_frames`) and can be streamed for resync/replay without relying on ad-hoc Redis rings.
+- Fog filtering: textual game-log emissions (`game-log:append` / `game-log:batch`) remain fog-aware, using visibility masks derived from the authoritative state when the frame was applied.
+- Targeted reveal: when a client joins or reports a gap, we emit a fog-filtered snapshot (`emitRevealSnapshot`) to that socket only, avoiding room-wide broadcasts.
 
-Status: Delta batching, sequencing, and fog‑aware text logs are live.
+Status: Frame commits + checksums are the sole realtime transport; only game-log text continues over fog-aware socket events.
 
 ## 4) Frontend consumption and convergence
 
-- Listeners: the client handles both `game-delta` and `game-delta-batch`. Each delta runs sequence checks; gaps trigger a best‑effort replay request. Returned deltas are now fog-filtered client-side and applied directly before we consider a fallback snapshot.
-- Delta‑first: snapshots (`game:snapshot`) are ignored during normal play and used for join/reconnect and explicit resyncs only.
-- Defensive checks: we bail out and refetch when applying a delta would reference unknown entities, and we surface a `desync` flag for visibility.
-- Optimism: deploy/fortify apply light optimistic updates on ack to improve responsiveness while still reconciling with authoritative deltas.
-- Health: a heartbeat pings every 5s; high latency is logged and zombie connections force a reconnect. On reconnect we auto‑rejoin and do a one‑shot refetch if Socket.io did not recover the stream.
+- Lockstep client: `socketService` replays committed frames through the shared simulator, tracking seq/checksum. Gaps trigger a `game-action:resync-request` which pulls a snapshot + missing frames.
+- Snapshot usage: full snapshots (`game-action:snapshot` / `game:snapshot`) are reserved for join/reconnect flows and resync fallbacks; normal play derives state exclusively from frames.
+- Defensive checks: checksum mismatches or frame gaps flip the `needsResync` flag and surface a banner instead of silently drifting.
+- Optimism: deploy/fortify still apply lightweight optimistic updates on ack, but the authoritative frame reconciles them immediately after commit.
+- Health: heartbeat pings + reconnect logic remain; after reconnect we request the latest snapshot if checksums diverged.
 
-Status: Gap detection + replay, delta‑first model, and reconnect auto‑repair are live. Full optimistic update manager and client reliability KPIs are planned (see Phase 3 docs).
+Status: Lockstep replay is live, with resync + checksum handling in place. Further UX polish (connection badges, richer banners) is tracked in Phase 3.
 
 ## 5) What’s still fragile (re‑evaluated)
 
@@ -58,7 +58,7 @@ Status: Gap detection + replay, delta‑first model, and reconnect auto‑repair
 
 ## References and related docs
 
-- Delta contract and emitters: backend/src/services/realtimeEmitter.ts, backend/src/services/fogService.ts, backend/src/workers/gameActionWorker.ts
+- Lockstep contract + fogged logs: backend/src/services/realtimeEmitter.ts, backend/src/services/fogService.ts, backend/src/workers/gameActionWorker.ts
 - Client socket orchestration: frontend/src/services/socketService.ts
 - Queues and fallback: backend/src/services/queueService.ts, backend/src/workers/workerManager.ts, backend/src/services/jobIdempotencyService.ts
 - Phase 3 guides to implement next:
@@ -67,4 +67,4 @@ Status: Gap detection + replay, delta‑first model, and reconnect auto‑repair
   - docs/phase3-metrics-tracking.md
   - docs/phase3-latency-indicator.md
 
-Following this updated plan, even if Redis hiccups or a worker dies, actions process inline, subscriptions are confirmed/retried, deltas are sequenced with gap recovery, and the client self‑heals and surfaces status — eliminating the need for manual refreshes.
+Following this updated plan, even if Redis hiccups or a worker dies, actions process inline, subscriptions are confirmed/retried, lockstep frames keep every client in sync, and the client self-heals and surfaces status — eliminating the need for manual refreshes.

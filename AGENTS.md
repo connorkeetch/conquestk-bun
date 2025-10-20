@@ -112,7 +112,7 @@ For detailed information on coding standards, see the [coding standards guide](d
 - The database is **PostgreSQL-only**—write SQL with native PostgreSQL syntax and `$n` placeholders; avoid MySQL/SQLite idioms such as `?` parameters or `INSERT OR REPLACE`.
 - Asset uploads go through `backend/src/utils/assetStorage.ts`, targeting Cloudflare R2 when the `ASSET_*` variables are configured and falling back to local `/uploads` storage in development.
 - Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/services/socketService.ts` (which wires chat handlers from `backend/src/socket/chatHandlers.ts`).
-- Fog-aware game logs: alongside existing deltas and `log:append` events, the server emits `game-log:append` per viewer with short, single-tone text (fog-filtered). On completion, the server emits `game-log:reveal` so clients refetch full, unredacted history. See `backend/src/services/logEmitter.ts`.
+- Fog-aware game logs: alongside lockstep frame updates and `log:append` events, the server emits `game-log:append` per viewer with short, single-tone text (fog-filtered). On completion, the server emits `game-log:reveal` so clients refetch full, unredacted history. See `backend/src/services/logEmitter.ts`.
 - Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
 - Development note: during this phase, destructive migrations are acceptable. If local data needs to be reset to unblock a schema change, do so and reseed.
 
@@ -120,7 +120,7 @@ For detailed information on coding standards, see the [coding standards guide](d
 - Prefer the unified `game-action` socket for all gameplay actions. Specialized events (`deployArmies`, `attack`, `fortify`, `transferConquestArmies`, `undoFortify`, `endTurn`, `goBackToReinforcement`) are deprecated and routed internally through the same processor for now.
 - New action type: `transfer_conquest` (use via `game-action`) replaces the legacy `transferConquestArmies` socket and is fully handled by the unified inline lockstep processor.
 - Team checks are centralized in `backend/src/utils/gameTeams.ts` and used by both `GameEngine` and AI. Do not reimplement team logic elsewhere.
-- Emit deltas first; snapshots are recovery-only for desyncs.
+- Lockstep frames are the primary transport; snapshots are recovery-only for desyncs.
 - Logs: textual `game-log:append` is additive and runs alongside structured `game_battle_logs` writes.
 
 ### Development norms for routing and compatibility
@@ -205,7 +205,7 @@ If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/up
 
 ### Lockstep development mode
 - Set `LOCKSTEP_DEV=true` in `backend/.env` to emit `game-action:frame-committed`/`game-action:checksum` events and persist frames in `match_frames`; gameplay now always runs inline, so no queue bypass is required.
-- Set `VITE_LOCKSTEP_DEV=true` in `frontend/.env` to disable optimistic client updates and consume the new lockstep feeds alongside legacy deltas.
+- Set `VITE_LOCKSTEP_DEV=true` in `frontend/.env` to disable optimistic client updates and consume the lockstep feeds without optimistic projections.
 - Use `npm run replay:match -- <matchId>` (backend) to re-sim recorded frames and compare checksums whenever you suspect drift; the script exits non-zero on mismatches.
 
 ## Syncing this guide

@@ -3,7 +3,6 @@
  * These are the core types that both frontend and backend use
  */
 
-import type { GameDelta } from '@conquestk/shared/types/delta'
 import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep'
 import type { ClanProgressionSocketPayload } from './clans.js'
 import type { GameAction, SerializedGameState } from './game.js'
@@ -240,8 +239,6 @@ export interface ServerToClientEvents {
   'player-left': (data: PlayerLeftEvent) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game:snapshot': (gameState: SerializedGameState) => void
-  'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting
-  'game-delta-batch': (deltas: GameDelta[]) => void
   'turn:start': (payload: {
     roomId: string
     playerId: string

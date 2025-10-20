@@ -87,10 +87,10 @@ export class YourFeatureCache extends CacheService {
 - Use `UPDATE ... CASE` blocks to apply multiple skill rating changes in a single round-trip.
 - Prefer `SELECT ... WHERE id = ANY($1)` over repeated lookups when gathering player or territory data.
 
-### Real-time Delta Updates
-- Socket events should emit deltas (`DeltaBuilder.*`) rather than entire game states to keep payloads lean.
-- Pair broadcasted deltas with the frontend `applyDelta` reducer helpers so clients reconcile incremental changes safely.
-- Maintain temporary legacy events only when absolutely necessary for backward compatibility.
+### Real-time Lockstep Updates
+- Socket events now rely on deterministic lockstep frames (`game-action:*`) instead of legacy `game-delta` payloads.
+- Ensure lockstep frames include stable sequence numbers and checksums so clients can detect gaps and request snapshots when necessary.
+- Avoid reintroducing legacy delta broadcasts; if a targeted resync is required, emit a fog-filtered snapshot via `emitRevealSnapshot`.
 
 ### Query Optimization Checklist
 - [ ] Can this response be cached in Redis?
