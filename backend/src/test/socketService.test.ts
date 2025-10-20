@@ -258,7 +258,6 @@ describe('socketService event handlers', () => {
 
   afterEach(() => {
     delete process.env.GAME_ACTION_QUEUE
-    delete process.env.LOCKSTEP_DEV
   })
 
   const getSocketHandler = (
@@ -286,7 +285,6 @@ describe('socketService event handlers', () => {
   }
 
   it('emits lockstep frame events when enabled', async () => {
-    process.env.LOCKSTEP_DEV = 'true'
     const committedAt = new Date().toISOString()
     mockLockstepService.recordFrame.mockResolvedValue({
       frame: {

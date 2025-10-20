@@ -380,7 +380,7 @@ private async processAction<T>(
 ### Risk 1: Breaking Lockstep Determinism
 **Mitigation**:
 - Keep golden frame tests passing
-- Test with `LOCKSTEP_DEV=true` throughout refactor
+- Test end-to-end lockstep flows throughout refactor
 - Don't change action processing logic, only organization
 
 ### Risk 2: Delta Emission Regressions
