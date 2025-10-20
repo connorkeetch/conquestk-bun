@@ -40,6 +40,9 @@ type BattleResultPayload = {
   gameEnded?: boolean
   winner?: string
   eliminatedPlayers?: string[]
+  defenderPlayerId?: string | null
+  initialFromArmies?: number
+  initialToArmies?: number
 }
 
 export class GameActionWorker {
@@ -134,6 +137,20 @@ export class GameActionWorker {
     const gameEnded = obj.gameEnded
     const winner = obj.winner
     const eliminated = obj.eliminatedPlayers
+    const defenderPlayerId =
+      typeof obj.defenderPlayerId === 'string'
+        ? obj.defenderPlayerId
+        : obj.defenderPlayerId === null
+          ? null
+          : undefined
+    const initialFromArmies =
+      typeof obj.initialFromArmies === 'number' && Number.isFinite(obj.initialFromArmies)
+        ? Number(obj.initialFromArmies)
+        : undefined
+    const initialToArmies =
+      typeof obj.initialToArmies === 'number' && Number.isFinite(obj.initialToArmies)
+        ? Number(obj.initialToArmies)
+        : undefined
 
     return {
       fromTerritory: {
@@ -160,6 +177,9 @@ export class GameActionWorker {
       ...(Array.isArray(eliminated) && eliminated.every((v) => typeof v === 'string')
         ? { eliminatedPlayers: eliminated as string[] }
         : {}),
+      ...(defenderPlayerId !== undefined ? { defenderPlayerId } : {}),
+      ...(initialFromArmies !== undefined ? { initialFromArmies } : {}),
+      ...(initialToArmies !== undefined ? { initialToArmies } : {}),
     }
   }
 
@@ -448,7 +468,30 @@ export class GameActionWorker {
                   const fromT = updated.board.find((t) => t.id === fromId)
                   const toT = updated.board.find((t) => t.id === toId)
                   const fromOwnerName = attacker?.username || playerId
-                  const toOwnerName = undefined
+                  const defenderId =
+                    typeof payload.defenderPlayerId === 'string' &&
+                    payload.defenderPlayerId.length > 0
+                      ? payload.defenderPlayerId
+                      : null
+                  const defender =
+                    defenderId && defenderId !== playerId
+                      ? updated.players.find((p) => p.id === defenderId)
+                      : undefined
+                  const defenderName = defender?.username || defenderId || undefined
+                  const movedArmies =
+                    payload.conquered && typeof payload.toTerritory.armies === 'number'
+                      ? Math.max(0, payload.toTerritory.armies)
+                      : undefined
+                  const initialFromArmies =
+                    typeof payload.initialFromArmies === 'number'
+                      ? payload.initialFromArmies
+                      : typeof fromT?.armies === 'number'
+                        ? fromT.armies + payload.attackerLosses + (movedArmies ?? 0)
+                        : undefined
+                  const initialToArmies =
+                    typeof payload.initialToArmies === 'number'
+                      ? payload.initialToArmies
+                      : undefined
                   moves.push({
                     id: `${now.getTime()}-atk`,
                     game_id: gameId,
@@ -464,9 +507,14 @@ export class GameActionWorker {
                       fromName: fromT?.name,
                       toName: toT?.name,
                       fromOwnerName,
-                      toOwnerName,
+                      toOwnerName: defenderName,
                       kills: payload.defenderLosses,
                       losses: payload.attackerLosses,
+                      defenderName,
+                      defenderId: defenderId ?? undefined,
+                      initialFromArmies,
+                      initialToArmies,
+                      conquered: payload.conquered,
                     },
                   })
                   if (payload.conquered) {
@@ -485,7 +533,11 @@ export class GameActionWorker {
                         fromName: fromT?.name,
                         toName: toT?.name,
                         fromOwnerName,
-                        toOwnerName,
+                        toOwnerName: undefined,
+                        occupyArmies:
+                          typeof movedArmies === 'number'
+                            ? movedArmies
+                            : payload.toTerritory.armies,
                       },
                     })
                   }
@@ -501,7 +553,11 @@ export class GameActionWorker {
                         move_type: 'player_eliminated',
                         actor_id: pid,
                         created_at: now,
-                        payload: { playerName: defeatedName, byName: actorName },
+                        payload: {
+                          playerName: defeatedName,
+                          byName: actorName,
+                          actorName: defeatedName,
+                        },
                       })
                     }
                   }
@@ -792,7 +848,28 @@ export class GameActionWorker {
                 const fromT = updated.board.find((t) => t.id === fromId)
                 const toT = updated.board.find((t) => t.id === toId)
                 const fromOwnerName = attacker?.username || playerId
-                const toOwnerName = undefined
+                const defenderId =
+                  typeof payload.defenderPlayerId === 'string' &&
+                  payload.defenderPlayerId.length > 0
+                    ? payload.defenderPlayerId
+                    : null
+                const defender =
+                  defenderId && defenderId !== playerId
+                    ? updated.players.find((p) => p.id === defenderId)
+                    : undefined
+                const defenderName = defender?.username || defenderId || undefined
+                const movedArmies =
+                  payload.conquered && typeof payload.toTerritory.armies === 'number'
+                    ? Math.max(0, payload.toTerritory.armies)
+                    : undefined
+                const initialFromArmies =
+                  typeof payload.initialFromArmies === 'number'
+                    ? payload.initialFromArmies
+                    : typeof fromT?.armies === 'number'
+                      ? fromT.armies + payload.attackerLosses + (movedArmies ?? 0)
+                      : undefined
+                const initialToArmies =
+                  typeof payload.initialToArmies === 'number' ? payload.initialToArmies : undefined
                 moves.push({
                   id: `${now.getTime()}-atk`,
                   game_id: gameId,
@@ -808,9 +885,14 @@ export class GameActionWorker {
                     fromName: fromT?.name,
                     toName: toT?.name,
                     fromOwnerName,
-                    toOwnerName,
+                    toOwnerName: defenderName,
                     kills: payload.defenderLosses,
                     losses: payload.attackerLosses,
+                    defenderName,
+                    defenderId: defenderId ?? undefined,
+                    initialFromArmies,
+                    initialToArmies,
+                    conquered: payload.conquered,
                   },
                 })
                 if (payload.conquered) {
@@ -829,7 +911,9 @@ export class GameActionWorker {
                       fromName: fromT?.name,
                       toName: toT?.name,
                       fromOwnerName,
-                      toOwnerName,
+                      toOwnerName: undefined,
+                      occupyArmies:
+                        typeof movedArmies === 'number' ? movedArmies : payload.toTerritory.armies,
                     },
                   })
                 }
@@ -844,7 +928,11 @@ export class GameActionWorker {
                       move_type: 'player_eliminated',
                       actor_id: pid,
                       created_at: now,
-                      payload: { playerName: defeatedName, byName: actorName },
+                      payload: {
+                        playerName: defeatedName,
+                        byName: actorName,
+                        actorName: defeatedName,
+                      },
                     })
                   }
                 }

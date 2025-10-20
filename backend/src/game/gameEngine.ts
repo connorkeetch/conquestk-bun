@@ -1154,6 +1154,9 @@ export class GameEngine {
     }
 
     const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+    const attackerInitialArmies = fromTerritory.armies
+    const defenderInitialArmies = toTerritory.armies
+    const originalDefenderId = toTerritory.ownerId ?? null
     const baselineBoard = gameState.board.map((territory) => ({ ...territory }))
 
     // Mark that player has attacked this turn
@@ -1260,6 +1263,10 @@ export class GameEngine {
         ownerId: toTerritory.ownerId ?? action.playerId,
       },
       pendingConquestFor: conquered ? action.playerId : null,
+      attackerPlayerId: action.playerId,
+      defenderPlayerId: originalDefenderId,
+      initialFromArmies: attackerInitialArmies,
+      initialToArmies: defenderInitialArmies,
     }
 
     // Store the battle result in game state

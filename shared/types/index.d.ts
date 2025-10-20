@@ -334,15 +334,24 @@ export type TransferConquestAction = ActionBase<'transfer_conquest'> & {
 export type ResignAction = ActionBase<'resign'> & {
   payload?: undefined
 }
+export interface BattleTerritorySnapshot {
+  id: string
+  name?: string
+  armies: number
+  ownerId?: string | null
+}
 export interface BattleResult {
   attackerDice: number[]
   defenderDice: number[]
   attackerLosses: number
   defenderLosses: number
   conquered: boolean
-  fromTerritory: string
-  toTerritory: string
+  fromTerritory: string | BattleTerritorySnapshot
+  toTerritory: string | BattleTerritorySnapshot
   pendingConquestFor?: string | null
+  gameEnded?: boolean
+  winner?: Player | null
+  eliminatedPlayers?: string[]
   capitalElimination?: {
     conqueror: string
     eliminated: string
@@ -350,7 +359,10 @@ export interface BattleResult {
     territoriesGained: number
     troopsGained: number
   }
-  gameEnded?: boolean
+  attackerPlayerId?: string
+  defenderPlayerId?: string | null
+  initialFromArmies?: number
+  initialToArmies?: number
   gameState?: GameState
 }
 export interface Map {

@@ -23,7 +23,7 @@ export const V = {
   victory: ['has vanquished their foes and conquered the map.'],
   eliminated: ['was swept from the field by {by}.'],
   missed: ['failed to muster and missed the turn.'],
-  kicked: ['was deemed unworthy to continue.'],
+  kicked: ['was kicked from the match after missing their turn.'],
   resigned: ['laid down arms and quit the field.'],
 
   // CP only
@@ -80,6 +80,20 @@ const withArmies = (n?: number, show?: boolean) =>
   show && typeof n === 'number' && Number.isFinite(n) && n > 0
     ? ` with ${n} ${n === 1 ? 'troop' : 'troops'}`
     : ''
+const labelWithDetail = (
+  territory?: string,
+  owner?: string,
+  count?: number,
+  showCount?: boolean,
+): string => {
+  const base = territory ?? 'unknown ground'
+  const hasCount = showCount && typeof count === 'number' && Number.isFinite(count) && count >= 0
+  if (!owner && !hasCount) return base
+  const detail: string[] = []
+  if (owner) detail.push(owner)
+  if (hasCount) detail.push(`· ${count}`)
+  return `${base} (${detail.join(' ')})`
+}
 
 export function renderLogText(move: DbMove, fog: FogView): string {
   const p = move.payload || {}
@@ -103,31 +117,90 @@ export function renderLogText(move: DbMove, fog: FogView): string {
       return V.roundStart[0].replace('{round}', String(p.round ?? '?'))
 
     // turns
-    case 'start_turn':
+    case 'start_turn': {
+      const reinforcementsRaw = p.reinforcements ?? p.reinforcementArmies
+      const reinforcements =
+        typeof reinforcementsRaw === 'number' && Number.isFinite(reinforcementsRaw)
+          ? Math.max(0, Math.trunc(reinforcementsRaw))
+          : null
+      const territoriesRaw = p.territories ?? p.territoryCount
+      const territories =
+        typeof territoriesRaw === 'number' && Number.isFinite(territoriesRaw)
+          ? Math.max(0, Math.trunc(territoriesRaw))
+          : null
+      if (reinforcements !== null) {
+        const troopWord = reinforcements === 1 ? 'troop' : 'troops'
+        const territorySuffix =
+          territories && territories > 0
+            ? ` for ${territories} ${territories === 1 ? 'territory' : 'territories'}`
+            : ''
+        return `${actor} received ${reinforcements} ${troopWord}${territorySuffix}.`
+      }
       return `${actor} ${V.started[0]}`
+    }
     case 'end_turn':
       return `${actor} ${V.ended[0]}`
 
     // core actions
-    case 'reinforce':
-      return fog.canSeeTo
-        ? `${label(p.toName as string | undefined, p.toOwnerName as string | undefined)} was ${V.reinforced[0]} by ${actor}${withArmies(
-            (p.armies as number | undefined) ?? undefined,
-            fog.showCounts,
-          )}.`
-        : `${actor} ${V.reinforced[0]} forces beyond your scouts.`
+    case 'reinforce': {
+      if (!fog.canSeeTo) return `${actor} deployed reinforcements beyond your scouts.`
+      if (!fog.showCounts) {
+        return `${actor} deployed troops to ${label(
+          p.toName as string | undefined,
+          p.toOwnerName as string | undefined,
+        )}.`
+      }
+      const delta =
+        typeof p.armies === 'number' && Number.isFinite(p.armies) ? Math.trunc(Number(p.armies)) : 0
+      const territoryLabel = label(
+        p.toName as string | undefined,
+        p.toOwnerName as string | undefined,
+      )
+      if (delta > 0) {
+        const troopWord = delta === 1 ? 'troop' : 'troops'
+        return `${actor} deployed ${delta} ${troopWord} to ${territoryLabel}.`
+      }
+      if (delta < 0) {
+        const n = Math.abs(delta)
+        const troopWord = n === 1 ? 'troop' : 'troops'
+        return `${actor} recalled ${n} ${troopWord} from ${territoryLabel}.`
+      }
+      return `${actor} repositioned forces at ${territoryLabel}.`
+    }
 
     case 'attack': {
       if (!fog.canSeeFrom && !fog.canSeeTo) return `${actor} ${V.attacked[0]} from the shadows.`
       if (fog.canSeeFrom && !fog.canSeeTo) return `${from} ${V.attacked[0]} a hidden position.`
       if (!fog.canSeeFrom && fog.canSeeTo) return `A hidden force ${V.attacked[0]} ${to}.`
-      const loss =
+      const initialFrom =
+        fog.showCounts && typeof p.initialFromArmies === 'number'
+          ? (p.initialFromArmies as number)
+          : undefined
+      const initialTo =
+        fog.showCounts && typeof p.initialToArmies === 'number'
+          ? (p.initialToArmies as number)
+          : undefined
+      const defenderName =
+        (p.defenderName as string | undefined) ?? (p.toOwnerName as string | undefined)
+      const fromLabel = labelWithDetail(
+        p.fromName as string | undefined,
+        (p.fromOwnerName as string | undefined) ?? actor,
+        initialFrom,
+        fog.showCounts,
+      )
+      const toLabel = labelWithDetail(
+        p.toName as string | undefined,
+        defenderName,
+        initialTo,
+        fog.showCounts,
+      )
+      const conquered = Boolean(p.conquered)
+      const casualties =
         fog.showCounts && (p.kills != null || p.losses != null)
-          ? `, ${V.casualties[0]
-              .replace('{kills}', String(p.kills ?? '?'))
-              .replace('{losses}', String(p.losses ?? '?'))}`
+          ? `, killing ${String(p.kills ?? '?')}, losing ${String(p.losses ?? '?')}`
           : ''
-      return `${from} ${V.attacked[0]} ${to}${loss}.`
+      const conquest = conquered ? ' conquering it' : ''
+      return `${fromLabel} ${V.attacked[0]} ${toLabel}${conquest}${casualties}.`
     }
 
     case 'conquer': {
@@ -159,10 +232,19 @@ export function renderLogText(move: DbMove, fog: FogView): string {
         fog.showCounts,
       )}.`
 
-    case 'bonus':
-      return (p.sector as string | undefined)
-        ? `${actor} ${V.bonus[0]} ${p.bonus} troops for holding ${p.sector}.`
-        : `${actor} ${V.bonus[0]} ${p.bonus} troops for ${(p.reason as string | undefined) ?? 'territories'}.`
+    case 'bonus': {
+      const bonusRaw = p.bonus
+      if (typeof bonusRaw !== 'number' || !Number.isFinite(bonusRaw)) {
+        return `${actor} ${V.bonus[0]} troops.`
+      }
+      const bonus = Math.max(0, Math.trunc(Number(bonusRaw)))
+      const troopWord = bonus === 1 ? 'troop' : 'troops'
+      const sector = (p.sector as string | undefined) ?? (p.reason as string | undefined)
+      if (sector) {
+        return `${actor} received ${bonus} ${troopWord} for holding ${sector}.`
+      }
+      return `${actor} received ${bonus} ${troopWord}.`
+    }
 
     case 'trade_cards':
       return `${actor} bartered Hidden Treasures for ${p.bonus} fresh troops.`
@@ -714,7 +796,7 @@ export function createGameEndMoves(
       move_type: 'player_eliminated',
       actor_id: pid,
       created_at: ts,
-      payload: { playerName: nameOf(pid), byName: nameOf(winnerId) },
+      payload: { playerName: nameOf(pid), byName: nameOf(winnerId), actorName: nameOf(pid) },
     })
   }
   moves.push({
@@ -804,7 +886,7 @@ export async function persistFogAwareForEntries(
             phase,
             move_type: 'player_won',
             actor_id: winner || null,
-            payload: { playerName: nameOfPlayer(winner) },
+            payload: { playerName: nameOfPlayer(winner), actorName: nameOfPlayer(winner) },
           })
         for (const pid of eliminated) {
           push({
@@ -817,6 +899,7 @@ export async function persistFogAwareForEntries(
             payload: {
               playerName: nameOfPlayer(pid),
               byName: winner ? nameOfPlayer(winner) : undefined,
+              actorName: nameOfPlayer(pid),
             },
           })
         }
@@ -843,7 +926,17 @@ export async function persistFogAwareForEntries(
             phase,
             move_type: 'start_turn',
             actor_id: pid || null,
-            payload: { actorName },
+            payload: {
+              actorName,
+              reinforcements:
+                typeof (e as { reinforcementArmies?: number }).reinforcementArmies === 'number'
+                  ? (e as { reinforcementArmies?: number }).reinforcementArmies
+                  : (e as { reinforcements?: number }).reinforcements,
+              territories:
+                typeof (e as { territoryCount?: number }).territoryCount === 'number'
+                  ? (e as { territoryCount?: number }).territoryCount
+                  : (e as { territories?: number }).territories,
+            },
           })
         else if (event === 'END')
           push({
@@ -863,7 +956,7 @@ export async function persistFogAwareForEntries(
             phase,
             move_type: 'player_missed_turn',
             actor_id: pid || null,
-            payload: { playerName: actorName },
+            payload: { playerName: actorName, actorName },
           })
         continue
       }
@@ -943,7 +1036,11 @@ export async function persistFogAwareForEntries(
           phase,
           move_type,
           actor_id: pid || null,
-          payload: { playerName: nameOfPlayer(pid), delta: Math.abs(delta) },
+          payload: {
+            playerName: nameOfPlayer(pid),
+            actorName: nameOfPlayer(pid),
+            delta: Math.abs(delta),
+          },
         })
         continue
       }
@@ -956,18 +1053,31 @@ export async function persistFogAwareForEntries(
           phase,
           move_type: 'player_resigned',
           actor_id: pid || null,
-          payload: { playerName: nameOfPlayer(pid) },
+          payload: { playerName: nameOfPlayer(pid), actorName: nameOfPlayer(pid) },
         })
         continue
       }
       if (type === 'BATTLE') {
         const attackerId = idOf((e as { attackerId?: string }).attackerId)
+        const defenderRaw = idOf((e as { defenderId?: string | null }).defenderId)
+        const defenderId = defenderRaw && defenderRaw.length > 0 ? defenderRaw : undefined
         const fromId = idOf((e as { attackingTerritoryId?: string }).attackingTerritoryId)
         const toId = idOf((e as { defendingTerritoryId?: string }).defendingTerritoryId)
         const kills = Number((e as { losses?: { defender?: number } }).losses?.defender || 0)
         const losses = Number((e as { losses?: { attacker?: number } }).losses?.attacker || 0)
         const conquered = Boolean((e as { conquered?: boolean }).conquered)
         const movedArmies = (e as { movedArmies?: number }).movedArmies
+        const initialFromRaw = (e as { initialFromArmies?: unknown }).initialFromArmies
+        const initialToRaw = (e as { initialToArmies?: unknown }).initialToArmies
+        const initialFromArmies =
+          typeof initialFromRaw === 'number' && Number.isFinite(initialFromRaw)
+            ? initialFromRaw
+            : undefined
+        const initialToArmies =
+          typeof initialToRaw === 'number' && Number.isFinite(initialToRaw)
+            ? initialToRaw
+            : undefined
+        const defenderName = defenderId ? nameOfPlayer(defenderId) : undefined
         const eliminated = Array.isArray((e as { eliminatedPlayers?: unknown[] }).eliminatedPlayers)
           ? ((e as { eliminatedPlayers?: string[] }).eliminatedPlayers as string[])
           : []
@@ -987,9 +1097,14 @@ export async function persistFogAwareForEntries(
             fromOwnerName: ownerName(fromId),
             toId,
             toName: terrName(toId),
-            toOwnerName: ownerName(toId),
+            toOwnerName: defenderName ?? ownerName(toId),
             kills,
             losses,
+            defenderName,
+            defenderId,
+            initialFromArmies,
+            initialToArmies,
+            conquered,
           },
         })
         if (conquered) {

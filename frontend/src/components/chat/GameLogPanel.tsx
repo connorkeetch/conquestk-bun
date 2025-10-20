@@ -24,6 +24,29 @@ type LogEntry = {
   id?: string
 }
 
+const LOG_KIND_PRIORITY: Record<string, number> = {
+  round_start: 5,
+  cp_loss: 10,
+  cp_gain: 20,
+  game_finished: 30,
+  player_won: 40,
+  player_eliminated: 50,
+  player_kicked: 55,
+  player_missed_turn: 60,
+}
+const DEFAULT_KIND_PRIORITY = 1000
+
+const getKindPriority = (entry: LogEntry): number =>
+  LOG_KIND_PRIORITY[entry.kind ?? ''] ?? DEFAULT_KIND_PRIORITY
+
+const compareLogEntries = (a: LogEntry, b: LogEntry): number => {
+  const timeDiff = b.ts.getTime() - a.ts.getTime()
+  if (timeDiff !== 0) return timeDiff
+  const priorityDiff = getKindPriority(a) - getKindPriority(b)
+  if (priorityDiff !== 0) return priorityDiff
+  return a.text.localeCompare(b.text)
+}
+
 function formatTimestamp(d: Date): string {
   const day = d.toLocaleDateString(undefined, { day: '2-digit' })
   const mon = d.toLocaleDateString(undefined, { month: 'short' })
@@ -281,7 +304,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 ...(l.actor?.id ? { actorId: String(l.actor.id) } : {}),
                 ...(l.actor?.name ? { actorName: String(l.actor.name) } : {}),
               }))
-              .sort((a, b) => b.ts.getTime() - a.ts.getTime())
+              .sort(compareLogEntries)
             setEntries(formattedTxt)
             return
           }
@@ -861,7 +884,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
           /* ignore */
         }
         // Newest first
-        formatted.sort((a, b) => b.ts.getTime() - a.ts.getTime())
+        formatted.sort(compareLogEntries)
         setEntries(formatted)
         backfillLoadedRef.current = true
       } catch (_err) {
@@ -1107,7 +1130,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
             ...(l.actor?.id ? { actorId: String(l.actor.id) } : {}),
             ...(l.actor?.name ? { actorName: String(l.actor.name) } : {}),
           }))
-          .sort((a, b) => b.ts.getTime() - a.ts.getTime())
+          .sort(compareLogEntries)
         setEntries(formatted)
       } catch {
         setRefreshKey((k) => k + 1)
@@ -1134,7 +1157,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
                 ...entries,
               ] as LogEntry[]
             )
-              .sort((a, b) => b.ts.getTime() - a.ts.getTime())
+              .sort(compareLogEntries)
               .map((e) => {
                 const key = `${e.ts.getTime()}-${e.text}`
                 const clickable = Boolean(
