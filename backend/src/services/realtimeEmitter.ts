@@ -3,7 +3,7 @@ import type { GameState } from '../types/game.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { computeVisibilityMask } from './fogService.js'
 import { GameService } from './gameService.js'
-import { type DbMove, type FogView, renderLogText } from './logEmitter.js'
+import { collectPlayerRefs, type DbMove, type FogView, renderLogText } from './logEmitter.js'
 
 type SocketData = { userId?: string }
 
@@ -47,6 +47,7 @@ export async function emitCombined(
     kind: string
     actor: { id: string; name: string }
     text: string
+    players: ReturnType<typeof collectPlayerRefs>
   }> =>
     moves.map((m) => {
       const payloadData = m.payload ?? {}
@@ -75,6 +76,7 @@ export async function emitCombined(
         kind: m.move_type,
         actor: { id: m.actor_id, name: (payloadData.actorName as string) ?? 'Unknown' },
         text: renderLogText(m, fog),
+        players: collectPlayerRefs(m),
       }
     })
 

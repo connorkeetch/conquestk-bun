@@ -95,6 +95,34 @@ const labelWithDetail = (
   return `${base} (${detail.join(' ')})`
 }
 
+export type PlayerRef = { id?: string; name: string }
+
+const addPlayerRef = (refs: Map<string, PlayerRef>, name: unknown, id?: unknown): void => {
+  if (typeof name !== 'string' || name.trim() === '') return
+  const keyId = typeof id === 'string' && id.trim() !== '' ? id : undefined
+  const key = `${keyId ?? ''}:${name}`
+  if (!refs.has(key)) refs.set(key, { id: keyId, name })
+}
+
+export function collectPlayerRefs(move: DbMove): PlayerRef[] {
+  const refs = new Map<string, PlayerRef>()
+  const payload = move.payload ?? {}
+  addPlayerRef(refs, payload.actorName, move.actor_id)
+  addPlayerRef(refs, payload.playerName)
+  addPlayerRef(refs, payload.byName)
+  addPlayerRef(refs, payload.defenderName, payload.defenderId)
+  addPlayerRef(refs, payload.kickedByName)
+  addPlayerRef(refs, payload.toOwnerName)
+  addPlayerRef(refs, payload.fromOwnerName)
+  if (Array.isArray(payload.players)) {
+    for (const entry of payload.players as Array<{ id?: string; name?: string }>) {
+      if (!entry) continue
+      addPlayerRef(refs, entry.name, entry.id)
+    }
+  }
+  return Array.from(refs.values())
+}
+
 export function renderLogText(move: DbMove, fog: FogView): string {
   const p = move.payload || {}
   const actor = (p.actorName as string) ?? 'Unknown'
@@ -316,6 +344,7 @@ export async function emitLogAppend(
   roomId: string,
   move: DbMove,
 ): Promise<void> {
+  const playerRefs = collectPlayerRefs(move)
   // Fetch sockets in room channel with fog rules and room spectators channel without fog
   const gameChannel = `game:${roomId}`
   let sockets: Array<RemoteSocket<ServerToClientEvents, SocketData>> = []
@@ -347,6 +376,7 @@ export async function emitLogAppend(
         showCounts: true,
         fogActive: false,
       }),
+      players: playerRefs,
     }
     if (sockets.length > 0) io.to(gameChannel).emit('game-log:append', payload)
     if (spectatorSockets.length > 0) io.to(roomId).emit('game-log:append', payload)
@@ -366,6 +396,7 @@ export async function emitLogAppend(
       kind: move.move_type,
       actor: { id: move.actor_id, name: (move.payload?.actorName as string) ?? 'Unknown' },
       text: renderLogText(move, fog),
+      players: playerRefs,
     }
     io.to(s.id).emit('game-log:append', payload)
   }
@@ -385,6 +416,7 @@ export async function emitLogAppend(
         showCounts: true,
         fogActive: false,
       }),
+      players: playerRefs,
     }
     io.to(roomId).emit('game-log:append', payload)
   }

@@ -159,6 +159,7 @@ export const gameService = {
       kind: string
       text: string
       actor?: { id?: string; name?: string }
+      players?: Array<{ id?: string; name?: string }>
     }>
   }> {
     const params: Record<string, string> = {}
@@ -177,6 +178,7 @@ export const gameService = {
           kind: string
           text: string
           actor?: { id?: string; name?: string }
+          players?: Array<{ id?: string; name?: string }>
         }>)
       : []
     return { log }

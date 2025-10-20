@@ -945,7 +945,7 @@ export class GameController {
 
       // Fog-aware rendering per requesting viewer
       const { filterFullStateForViewer } = await import('../services/fogService.js')
-      const { renderLogText } = await import('../services/logEmitter.js')
+      const { collectPlayerRefs, renderLogText } = await import('../services/logEmitter.js')
       const fullState = await this.gameService.getGameState(roomId)
       const _state = fullState ? filterFullStateForViewer(fullState, userId) : null
 
@@ -1006,6 +1006,7 @@ export class GameController {
           id: (m.actor_id as string | null) || '',
           name: String(((m.payload as Record<string, unknown>)?.actorName as string) || ''),
         },
+        players: collectPlayerRefs(m as unknown as import('../services/logEmitter.js').DbMove),
       }))
       formatted.sort((a, b) => new Date(b.t).getTime() - new Date(a.t).getTime())
       return res.json({ log: formatted })
