@@ -138,8 +138,11 @@ export function MapCanvas({
             decoding="async"
             fetchPriority="high"
             style={{
-              width: imageWidth,
-              height: imageHeight,
+              /* DO NOT set width/height here - let attributes + srcset/sizes work together */
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              objectPosition: 'top left',
               maxWidth: 'none',
               maxHeight: 'none',
               display: 'block',
