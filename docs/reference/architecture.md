@@ -23,7 +23,7 @@ _Last updated: March 9, 2026_
 
 ### Workers & Queues
 - BullMQ queues (`queueService.ts`) drive asynchronous work. Key workers live in `backend/src/workers/`:
-  - `gameActionWorker.ts` processes turn-based commands and emits deltas via `DeltaEmitter`.
+- `gameActionWorker.ts` processes turn-based actions and streams lockstep frames while emitting fog-aware log updates via `realtimeEmitter`.
   - `battleWorker.ts` resolves combat jobs.
   - `cleanupWorker.ts` retires completed games, prunes stale lobbies, and clears cache/modifier state.
   - `mapAssetWorker.ts` runs periodic purges of soft-deleted map art through `mapStagingService`.
@@ -35,7 +35,7 @@ _Last updated: March 9, 2026_
 
 ### Real‑Time Game Deltas
 - Contract is defined once in the shared package at `shared/types/delta.ts` and re-exported via `@conquestk/shared/types`. All runtimes (backend + frontend) use this single contract.
-- Emission on the backend is centralized through the `DeltaBuilder` factory in `backend/src/types/deltaUpdates.ts` together with the runtime `DeltaEmitter` service. Fields are normalized before broadcasting:
+- Fog-aware logging on the backend runs through `backend/src/services/realtimeEmitter.ts` in tandem with frame commits; textual events remain filtered per viewer.
   - `armies`, `turn`, `reinforcementArmies` are clamped to non-negative integers
   - `ownerId` is only included when a non-empty string is provided
 - Lockstep transport:

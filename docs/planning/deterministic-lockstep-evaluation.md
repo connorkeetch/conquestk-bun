@@ -7,7 +7,7 @@
 
 ## Current transport, storage, and replay pipeline
 - The lifecycle service emits complete `game:snapshot` payloads to every player whenever a match starts or resyncs, alongside per-turn metadata. 【F:backend/src/services/gameLifecycleService.ts†L720-L776】
-- After each action the `DeltaEmitter` produces fog-aware batched deltas (phase, player, territory updates) instead of resending the whole state. 【F:backend/src/services/deltaEmitter.ts†L62-L148】
+- After each action the lockstep service records a deterministic frame while `realtimeEmitter` produces fog-aware textual logs instead of resending the whole state.
 - `GameService` persists an authoritative JSON snapshot for the current turn, updates the `game_rooms` turn metadata, and appends immutable turn/phase snapshots for replay queries. 【F:backend/src/services/gameService.ts†L325-L406】
 - The replay feature already reconstructs finished matches from `game_logs` plus `game_state_snapshots`, chunked by turn, with no live sockets involved. 【F:docs/guides/game-replay.md†L3-L15】
 
@@ -116,7 +116,7 @@ Commit to input-driven lockstep as the authoritative transport and storage model
 - Legacy telemetry counters for `game-delta` / `game-delta-batch` have been retired; rely on lockstep resync metrics for health.
 
 **Execution steps**
-1. Remove `DeltaEmitter` fan-out from `GameActionProcessor`, background workers, and AI paths; replace remaining fog-aware emissions with lockstep frame notifications.
+1. Remove legacy `DeltaEmitter` fan-out from `GameActionProcessor`, background workers, and AI paths; replace remaining fog-aware emissions with lockstep frame notifications. ✅
 2. Delete legacy socket events (`game-delta`, `game-delta-batch`, snapshot reveals) and associated metrics counters. (Metrics removal is complete; events remain stubbed for targeted reveals only.)
 3. Excise delta-specific reducers/listeners on the frontend once all environments consume lockstep frames exclusively.
 4. Drop historical delta snapshot tables after a final backup and once the replay tooling no longer depends on them.

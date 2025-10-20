@@ -1,4 +1,4 @@
-import type { RemoteSocket, Server } from 'socket.io'
+import type { BroadcastOperator, RemoteSocket, Server } from 'socket.io'
 import type { GameState } from '../types/game.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { computeVisibilityMask } from './fogService.js'
@@ -29,6 +29,9 @@ export async function emitCombined(
   }
 
   const gameState = state ?? (await new GameService().getGameState(roomId))
+  if (!gameState) {
+    return
+  }
   const fogMode =
     (gameState?.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' } | undefined)
       ?.fogOfWar ?? 'off'
@@ -76,8 +79,8 @@ export async function emitCombined(
     })
 
   const emitItems = (
-    target: { emit: (event: string, payload: unknown) => void },
-    items: unknown[],
+    target: BroadcastOperator<ServerToClientEvents, SocketData>,
+    items: ReturnType<typeof buildItems>,
   ) => {
     if (items.length >= BATCH_THRESHOLD) {
       target.emit('game-log:batch', { items })

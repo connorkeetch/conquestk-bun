@@ -13,7 +13,7 @@ Status: Subscription works and auto‑rejoin is in place. `join-room`/`spectate-
 ## 2) Queueing and processing gameplay actions
 
 - Unified path: all actions go through `'game-action'`. The server attempts to enqueue to BullMQ via `queueService.addGameAction`; if queues are unavailable or not initialised, it falls back to inline processing through `GameActionProcessor` and still acks the client. This removes the previous “queued but never processed” stall.
-- Workers: `GameActionWorker` pops jobs, validates via `GameService`, and emits fog‑aware deltas using `DeltaEmitter`/`realtimeEmitter` (see section 3). Job idempotency is handled by `jobIdempotencyService` so retries don’t double‑apply.
+- Workers: `GameActionWorker` pops jobs, validates via `GameService`, and now emits only fog-aware log text through `realtimeEmitter` (see section 3). Job idempotency is handled by `jobIdempotencyService` so retries don’t double-apply while state convergence flows through deterministic frames.
 - Acknowledgements: the server acks immediately on both paths with `{ ok: true, queued: boolean, acceptedAt }`. The client treats game‑action acks as delivery confirmation (not success of the move), and converges on subsequent deltas/snapshot.
 
 Status: Inline fallback and acks are implemented; job idempotency exists server‑side, and the client now emits idempotency keys and automatically retries timeouts with the same key.

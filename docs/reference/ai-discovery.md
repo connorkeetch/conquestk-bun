@@ -6,7 +6,7 @@ _Last updated: March 7, 2026_
 
 1. **HTTP & socket layer** – player actions enter the backend through the game routes in `backend/src/routes/game.ts` and the socket handlers in `backend/src/services/socketService.ts`. The HTTP route delegates to `backend/src/controllers/gameController.ts`, which orchestrates room management and turn control via `GameRoomService`, `GameLifecycleService`, and `GameService`.
 2. **Action validation** – `GameService.processGameAction` (and its typed helpers) load the cached state, enforce that the acting user matches `currentPlayer`, and pass validated actions to `GameEngine.processAction`. All phases (reinforcement → attack → fortify → next turn) advance inside `GameEngine`, so AI decisions must still flow through these methods.
-3. **State persistence + fan-out** – `GameService` serializes the updated `GameState` back through `gameStateCache` while `GameLifecycleService`, `DeltaEmitter`, and `socketService` broadcast lifecycle deltas. Any AI module should therefore submit actions through the same service to ensure caches, triggers, and sockets stay consistent.
+3. **State persistence + fan-out** – `GameService` serializes the updated `GameState` back through `gameStateCache` while `GameLifecycleService` schedules timers and `realtimeEmitter` handles fog-aware log text. Any AI module should therefore submit actions through the same service to keep caches, triggers, and sockets consistent.
 
 This path keeps AI decisions aligned with human input—inject the AI after `GameService.initializeGame` assigns turns but before `processGameAction` persists the result. The existing `executeAiTurn` helper wraps `processAction` with validation and fallback handling.
 

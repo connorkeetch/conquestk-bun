@@ -149,7 +149,7 @@ Implementation notes (2025‑10‑08)
   - `frontend/src/store` reducers/selectors to apply deltas without forcing full re-normalization
 - Steps:
   - Confirm every action path emits appropriate deltas: deploy, attack, transfer on conquest, fortify, go-back-to-reinforcement, phase changes, game end.
-  - Add convergence fallback: when a client joins or signals out‑of‑sync, send a one‑off reveal snapshot with fog applied (`DeltaEmitter.emitRevealTo`).
+- Add convergence fallback: when a client joins or signals out-of-sync, send a one-off reveal snapshot with fog applied (`emitRevealSnapshot`).
   - Tag outgoing deltas with monotonically increasing `version` (already supported in `DeltaBuilder` signatures). Store last-acked version per socket; on mismatch, trigger convergence fallback.
 - Done when:
   - All turn actions emit at least one delta (and no redundant full-state emits) and clients converge without manual refresh.
