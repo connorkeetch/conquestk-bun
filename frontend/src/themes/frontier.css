@@ -189,10 +189,6 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
-[data-theme="frontier"]::-webkit-scrollbar-thumb {
-  background: linear-gradient(var(--color-primary), var(--color-accent));
-}
-
 [data-theme="frontier"] .btn-primary {
   background: linear-gradient(180deg, #f2b469 0%, #c97f39 55%, #8f5221 100%);
   border-color: rgba(193, 140, 79, 0.7);

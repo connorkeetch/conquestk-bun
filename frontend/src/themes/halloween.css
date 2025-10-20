@@ -253,15 +253,6 @@
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
 }
 
-/* Halloween scrollbar */
-[data-theme="halloween"]::-webkit-scrollbar-track {
-  background: var(--color-bg-deep);
-}
-
-[data-theme="halloween"]::-webkit-scrollbar-thumb {
-  background: linear-gradient(var(--color-primary), var(--color-accent));
-}
-
 /* Halloween theme uses the standard cursor; custom cursor removed for clarity */
 
 /* Halloween call-to-action embellishments */

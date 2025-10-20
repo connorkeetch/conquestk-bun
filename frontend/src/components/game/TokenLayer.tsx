@@ -172,6 +172,10 @@ export function TokenLayer({
               left: t.xPx,
               top: t.yPx,
               transform: 'translate(-50%, -50%)',
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              lineHeight: 0,
             }}
             title={
               isFogged ? `${t.name} — Unknown (fog)` : isNeutral ? `${t.name} — Neutral` : t.name
