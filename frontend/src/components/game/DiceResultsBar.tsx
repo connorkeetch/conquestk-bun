@@ -11,6 +11,10 @@ type DiceProps = {
   pureWhite?: boolean
 }
 
+type DiceResultsBarProps = {
+  allowFinished?: boolean
+}
+
 function Dice({ value, color, glow, effect, pureWhite }: DiceProps) {
   const premiumEffectClass = effect ? ` premium-effect premium-effect-${effect}` : ''
   return (
@@ -29,10 +33,11 @@ function Dice({ value, color, glow, effect, pureWhite }: DiceProps) {
   )
 }
 
-export function DiceResultsBar() {
+export function DiceResultsBar({ allowFinished = false }: DiceResultsBarProps = {}) {
   const history = useAppSelector((s) => s.uiRoom.battleHistory ?? [])
   const game = useAppSelector((s) => s.game.currentGame)
   const phase = game?.phase
+  const roomStatus = useAppSelector((s) => s.room.currentRoom?.status)
   const remainingReinforcements = useAppSelector((s) => s.game.reinforcementArmies)
   const placementServerSpent = useAppSelector((s) => s.uiRoom.placementServerSpent ?? 0)
   const placementHistory = useAppSelector((s) => s.uiRoom.placementHistory ?? [])
@@ -41,6 +46,9 @@ export function DiceResultsBar() {
 
   const last = history.length > 0 ? history[history.length - 1] : null
   const neutralGrey = 'var(--color-gray-500)'
+  const shouldHideBar =
+    !allowFinished &&
+    (phase === 'finished' || roomStatus === 'completed' || roomStatus === 'abandoned')
 
   const { attacker, defender } = useMemo(() => {
     if (!game || !last) {
@@ -95,6 +103,10 @@ export function DiceResultsBar() {
       },
     }
   }, [game, last])
+
+  if (shouldHideBar) {
+    return null
+  }
 
   // Reinforcement phase: show deployed/total summary for the active player only
   if (phase === 'reinforcement') {

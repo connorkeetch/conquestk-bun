@@ -1,4 +1,3 @@
-import type { TreasureConfig } from '@conquestk/shared'
 import { Activity, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -3146,59 +3145,6 @@ export default function GameRoom() {
           onClose={() => setShowGameOver(false)}
           onBackToMenu={() => navigate('/lobby')}
           roomId={currentRoom?.id}
-          onNewGame={async () => {
-            try {
-              if (!currentRoom) return
-              const aiOpponents = (currentRoom.players ?? [])
-                .filter((p) => p.isAi)
-                .map((p) => ({
-                  difficulty: (p.aiDifficulty ?? 'recruit') as AIDifficulty,
-                  ...(typeof p.aiPersonalitySeed === 'number'
-                    ? { personalitySeed: p.aiPersonalitySeed }
-                    : { personalitySeed: null }),
-                }))
-
-              const payload = {
-                name: `${currentRoom.name} (Rematch)`,
-                maxPlayers: currentRoom.maxPlayers,
-                ...(typeof currentRoom.isPrivate === 'boolean'
-                  ? { isPrivate: currentRoom.isPrivate }
-                  : {}),
-                ...(typeof currentRoom.isRanked === 'boolean'
-                  ? { isRanked: currentRoom.isRanked }
-                  : {}),
-                ...(typeof currentRoom.mapId === 'string' ? { mapId: currentRoom.mapId } : {}),
-                ...(typeof currentRoom.movementType === 'string'
-                  ? { movementType: currentRoom.movementType }
-                  : {}),
-                ...(typeof currentRoom.fogOfWar === 'string'
-                  ? { fogOfWar: currentRoom.fogOfWar as 'off' | 'adjacent' | 'persistent' }
-                  : {}),
-                ...(typeof currentRoom.turnTimerSeconds === 'number'
-                  ? { turnTimerSeconds: currentRoom.turnTimerSeconds }
-                  : {}),
-                aiOpponents,
-                teamMode: (currentRoom.teamMode ?? 'none') as 'none' | 'teams' | 'auto_balance',
-                ...(typeof currentRoom.numberOfTeams === 'number'
-                  ? { numberOfTeams: currentRoom.numberOfTeams }
-                  : {}),
-                ...(() => {
-                  const tc = (currentRoom as unknown as { treasureConfig?: unknown }).treasureConfig
-                  return tc ? { treasureConfig: tc as Partial<TreasureConfig> } : {}
-                })(),
-              }
-              const res = await gameService.createRoom(payload)
-              const newRoomId =
-                (res?.room?.id as string | undefined) ?? (res?.id as string | undefined)
-              if (newRoomId) {
-                setShowGameOver(false)
-                navigate(`/room/${newRoomId}`)
-              }
-            } catch (e) {
-              logger.error('Failed to create rematch room', e)
-            }
-          }}
-          newGameLabel="Rematch Same Seats"
         />
       )}
 
