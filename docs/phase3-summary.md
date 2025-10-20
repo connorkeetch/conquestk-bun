@@ -26,14 +26,13 @@
    - Clear feedback when state diverges
    - Implementation: `socketService.ts` lines 1006-1040
 
-5. **Delta Sequence Tracking** - Gap detection and recovery
-   - Monotonic sequence numbers on all deltas
-   - Client-side gap detection with recovery requests
-   - Server-side sequence service with Redis backing
+5. **Lockstep Resync Flow** - Gap detection and recovery
+   - Deterministic frame sequence numbers and checksums
+   - Client-driven resync via snapshot + frame replay
+   - Server emits targeted reveal snapshots instead of delta sequences
    - Implementation:
-     - Backend: `deltaSequenceService.ts` (new file)
-     - Backend: `realtimeEmitter.ts` modifications
-     - Frontend: `socketService.ts` lines 139-241
+     - Backend: `realtimeEmitter.ts` / `gameActionWorker.ts`
+     - Frontend: `socketService.ts` lockstep resync handlers
 
 ### Code Consolidation (IMPLEMENTED ✅)
 **Commit:** `8a0af6fb`

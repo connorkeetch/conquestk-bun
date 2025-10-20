@@ -1,4 +1,3 @@
-import type { GameDelta } from '@conquestk/shared/types/delta'
 import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
 import { query } from '../config/database.js'
@@ -14,12 +13,10 @@ import {
 } from '../services/metricsService.js'
 import { type GameActionJob, queueService } from '../services/queueService.js'
 import { startWorkerHeartbeat } from '../services/workerHeartbeat.js'
-import { DeltaBuilder } from '../types/deltaUpdates.js'
 import type {
   DeployAction,
   FortifyAction,
   GameAction,
-  GamePhase,
   GameState,
   SerializedGameState,
 } from '../types/game.js'
@@ -28,8 +25,21 @@ import { logger } from '../utils/logger.js'
 
 interface ProcessGameActionResult {
   success: true
-  delta: GameDelta | null
   processed: boolean
+}
+
+type BattleResultPayload = {
+  fromTerritory: { id: string; armies: number }
+  toTerritory: { id: string; armies: number; ownerId?: string | null }
+  attackerLosses: number
+  defenderLosses: number
+  attackerDice: number[]
+  defenderDice: number[]
+  conquered: boolean
+  pendingConquestFor?: string | null
+  gameEnded?: boolean
+  winner?: string
+  eliminatedPlayers?: string[]
 }
 
 export class GameActionWorker {
@@ -83,9 +93,7 @@ export class GameActionWorker {
     this.io.to(channel).emit('game:snapshot', payload)
   }
 
-  private toBattleResultPayload(
-    last: unknown,
-  ): import('@conquestk/shared/types/delta').BattleResultDelta['battleResult'] | null {
+  private toBattleResultPayload(last: unknown): BattleResultPayload | null {
     if (!last || typeof last !== 'object') return null
     const obj = last as Record<string, unknown>
     const from = obj.fromTerritory
@@ -268,7 +276,7 @@ export class GameActionWorker {
           playerId,
           turnNumber,
         })
-        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        const result: ProcessGameActionResult = { success: true, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
@@ -281,7 +289,7 @@ export class GameActionWorker {
           actualTurn: state.turn,
           actualPlayer: state.currentPlayer,
         })
-        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        const result: ProcessGameActionResult = { success: true, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
@@ -293,7 +301,7 @@ export class GameActionWorker {
           playerId,
           turnNumber,
         })
-        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        const result: ProcessGameActionResult = { success: true, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
@@ -337,7 +345,7 @@ export class GameActionWorker {
         })
       }
 
-      const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+      const result: ProcessGameActionResult = { success: true, processed: true }
       await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
       return result
     } catch (error) {
@@ -407,7 +415,7 @@ export class GameActionWorker {
       const stepDelay = Math.min(desiredDelay, maxDelay)
       if (stepDelay > 0) await new Promise((r) => setTimeout(r, stepDelay))
 
-      // Apply action and emit fog-filtered deltas per action
+      // Apply action and emit fog-aware logs per action
       const action = actions[i]
       try {
         switch (action.type) {
@@ -735,7 +743,7 @@ export class GameActionWorker {
             error: e instanceof Error ? e.message : e,
           })
         }
-        const result: ProcessGameActionResult = { success: true, delta: null, processed: true }
+        const result: ProcessGameActionResult = { success: true, processed: true }
         await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
         return result
       }
@@ -751,13 +759,10 @@ export class GameActionWorker {
         throw new Error(`Player ${playerId} cannot perform action ${action.type}`)
       }
 
-      let delta: GameDelta | null = null
-      let shouldBroadcast = true
-
       // Process different action types
       switch (action.type) {
         case 'deploy':
-          delta = await this.processPlaceArmies(gameId, playerId, action)
+          await this.processPlaceArmies(gameId, playerId, action)
           // Record deployment move
           await this.recordMove(gameId, playerId, currentState.turn, 'deploy', action.payload)
           // Emit actor-only snapshot fallback to guarantee convergence even if a delta was missed
@@ -767,7 +772,6 @@ export class GameActionWorker {
           } catch (_e) {
             // best-effort only
           }
-          shouldBroadcast = false
           break
 
         case 'attack': {
@@ -848,62 +852,43 @@ export class GameActionWorker {
                 await emitCombined(this.io as unknown as any, gameId, { moves }, updated)
               }
             } catch (e) {
-              logger.debug('Failed to emit fog-filtered battle delta in worker attack', {
+              logger.debug('Failed to emit battle log in worker attack', {
                 roomId: gameId,
                 error: e instanceof Error ? e.message : e,
               })
             }
           }
-          shouldBroadcast = false
           break
         }
 
         case 'fortify':
-          delta = await this.processFortify(gameId, playerId, action)
+          await this.processFortify(gameId, playerId, action)
           // Record fortify move
           await this.recordMove(gameId, playerId, currentState.turn, 'fortify', action.payload)
           break
 
         case 'end_turn': {
           // Manual end-turn: just end immediately
-          delta = await this.processEndTurn(gameId, playerId)
+          await this.processEndTurn(gameId, playerId)
           // Record end turn
           await this.recordMove(gameId, playerId, currentState.turn, 'end_turn', {})
           break
         }
 
         case 'transfer_conquest': {
-          // Post-conquest transfer: emit concise territory deltas
+          // Post-conquest transfer: update state and record a move
           const payload = (
             action as Extract<import('../types/game.js').GameAction, { type: 'transfer_conquest' }>
           ).payload as { fromTerritoryId: string; toTerritoryId: string; armies: number }
-          const transfer = await this.gameService.transferConquestArmies(
+          await this.gameService.transferConquestArmies(
             gameId,
             playerId,
             payload.fromTerritoryId,
             payload.toTerritoryId,
             payload.armies,
           )
-          try {
-            const updates: import('@conquestk/shared/types/delta').GameDelta[] = [
-              DeltaBuilder.territoryUpdate(gameId, payload.fromTerritoryId, {
-                armies: transfer.fromArmies,
-              }),
-              DeltaBuilder.territoryUpdate(gameId, payload.toTerritoryId, {
-                armies: transfer.toArmies,
-              }),
-            ]
-            const { emitFogFilteredDelta } = await import('../services/fogService.js')
-            for (const d of updates) {
-              await emitFogFilteredDelta(this.io, gameId, d)
-            }
-          } catch {
-            // best-effort
-          }
           // Record move
           await this.recordMove(gameId, playerId, currentState.turn, 'transfer_conquest', payload)
-          // Do not broadcast extra delta below
-          shouldBroadcast = false
           break
         }
         case 'trade_cards': {
@@ -995,7 +980,7 @@ export class GameActionWorker {
               error: logErr instanceof Error ? logErr.message : logErr,
             })
           }
-          // Co-emit concise deltas + textual move in one sweep
+          // If we computed a positive gain, emit a textual trade summary
           try {
             const postPlayer = serialized?.players?.find((p) => p.id === playerId)
             const postBank = postPlayer?.armies ?? prevBank
@@ -1027,22 +1012,17 @@ export class GameActionWorker {
               this.emitGameSnapshot(`game:${gameId}`, serialized)
             }
           }
-          shouldBroadcast = false
-          delta = null
           break
         }
         case 'go_back_to_reinforcement': {
           await this.gameService.processGoBackToReinforcement(gameId, playerId)
           await this.recordMove(gameId, playerId, currentState.turn, 'go_back_to_reinforcement', {})
-          // Don't broadcast extra delta below
-          shouldBroadcast = false
           break
         }
 
         case 'go_back_to_attack': {
           await this.gameService.processGoBackToAttack(gameId, playerId)
           await this.recordMove(gameId, playerId, currentState.turn, 'go_back_to_attack', {})
-          shouldBroadcast = false
           break
         }
 
@@ -1058,8 +1038,6 @@ export class GameActionWorker {
           if (serialized) {
             this.emitGameSnapshot(`game:${gameId}`, serialized)
           }
-          // Avoid emitting an extra delta below
-          shouldBroadcast = false
           break
         }
 
@@ -1068,7 +1046,6 @@ export class GameActionWorker {
             { type: 'resign', roomId: gameId, playerId },
             playerId,
           )
-          shouldBroadcast = false
           break
         }
 
@@ -1079,14 +1056,8 @@ export class GameActionWorker {
       }
 
       // Broadcast delta update if needed
-      if (shouldBroadcast && delta) {
-        const { emitFogFilteredDelta } = await import('../services/fogService.js')
-        await emitFogFilteredDelta(this.io, gameId, delta)
-      }
-
       const result: ProcessGameActionResult = {
         success: true,
-        delta: delta || null,
         processed: true,
       }
       await jobIdempotencyService.markProcessedJob(this.queueName, idKey, result, 60 * 60)
@@ -1176,16 +1147,12 @@ export class GameActionWorker {
     gameId: string,
     playerId: string,
     action: DeployAction,
-  ): Promise<GameDelta> {
+  ): Promise<void> {
     const territoryId = action.payload?.territoryId || ''
-    const result = await this.gameService.processPlaceArmies(gameId, {
+    await this.gameService.processPlaceArmies(gameId, {
       territoryId,
       armies: action.payload?.armies || 0,
       playerId,
-    })
-
-    return DeltaBuilder.territoryUpdate(gameId, territoryId, {
-      armies: result.armies,
     })
   }
 
@@ -1193,19 +1160,19 @@ export class GameActionWorker {
     gameId: string,
     playerId: string,
     action: FortifyAction,
-  ): Promise<GameDelta> {
+  ): Promise<void> {
     const fromTerritoryId = action.payload?.fromTerritoryId || ''
     const toTerritoryId = action.payload?.toTerritoryId || ''
 
     // Process fortification
-    const result = await this.gameService.processFortify(gameId, {
+    await this.gameService.processFortify(gameId, {
       fromTerritoryId,
       toTerritoryId,
       armies: action.payload?.armies || 0,
       playerId,
     })
 
-    // Co-emit deltas + textual fortify in a single sweep
+    // Emit a textual fortify move for observers
     try {
       const updated = await this.gameService.getGameState(gameId)
       if (updated) {
@@ -1238,12 +1205,9 @@ export class GameActionWorker {
     } catch {
       // best-effort; clients will converge on next snapshot
     }
-
-    // Return a minimal delta for caller broadcast fallback (usually ignored)
-    return DeltaBuilder.territoryUpdate(gameId, toTerritoryId, { armies: result.toArmies })
   }
 
-  private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
+  private async processEndTurn(gameId: string, playerId: string): Promise<void> {
     // Use full endTurn result for parity with inline path
     const result = await this.gameService.endTurn(gameId, playerId)
 
@@ -1292,25 +1256,7 @@ export class GameActionWorker {
       })
     }
 
-    return DeltaBuilder.phaseChange(
-      gameId,
-      result.gameState.phase,
-      result.gameState.currentPlayer,
-      result.gameState.turn,
-      result.reinforcementArmies,
-    )
-  }
-
-  private async processPhaseChange(
-    gameId: string,
-    playerId: string,
-    action: Extract<GameAction, { type: 'trade_cards' | 'go_back_to_reinforcement' }>,
-  ): Promise<GameDelta> {
-    const phase = ((action as { payload?: { phase?: GamePhase } }).payload?.phase ??
-      'reinforcement') as GamePhase
-    await this.gameService.processPhaseChange(gameId, playerId, phase)
-
-    return DeltaBuilder.phaseChange(gameId, phase, playerId, 0, 0)
+    return
   }
 }
 

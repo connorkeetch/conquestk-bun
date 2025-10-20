@@ -71,7 +71,7 @@ describe('GameActionWorker idempotency', () => {
   it('returns cached result when duplicate idempotency key is encountered', async () => {
     jobIdempotencyServiceMock.getProcessedJob.mockResolvedValueOnce({
       exists: true,
-      value: { success: true, delta: null, processed: true },
+      value: { success: true, processed: true },
     })
 
     const worker = new GameActionWorker(ioMock)
@@ -90,7 +90,7 @@ describe('GameActionWorker idempotency', () => {
       },
     })
 
-    expect(result).toEqual({ success: true, delta: null, processed: false })
+    expect(result).toEqual({ success: true, processed: false })
     expect(jobIdempotencyServiceMock.getProcessedJob).toHaveBeenCalledWith(
       expect.any(String),
       'room-1:deploy:test-key',
@@ -138,7 +138,6 @@ describe('GameActionWorker idempotency', () => {
     expect(result).toMatchObject({
       success: true,
       processed: true,
-      delta: null,
     })
 
     expect(jobIdempotencyServiceMock.markProcessedJob).toHaveBeenCalledTimes(1)

@@ -141,24 +141,24 @@ Implementation notes (2025‑10‑08)
 Implementation notes (2025‑10‑08)
 - Server now emits a lean `game:snapshot` snapshot (players/board/config/targets/KOTH only) from `serializeGameStateForClient()`; heavy/unused fields are excluded.
 
-3) Delta compression rollout (server-led, client‑safe)
-- Scope: Use the existing `DeltaBuilder`/fog‑filtered emitters to drive convergence with minimal bytes.
+3) Lockstep-only transport (server-led, client-safe)
+- Scope: Rely exclusively on deterministic lockstep frames for state convergence while keeping fog-aware textual logs lightweight.
 - Where:
-  - `backend/src/services/deltaEmitter.ts`
-  - `backend/src/services/socketService.ts` (ensure all actions emit deltas)
-  - `frontend/src/store` reducers/selectors to apply deltas without forcing full re-normalization
+  - `backend/src/workers/gameActionWorker.ts`
+  - `backend/src/services/realtimeEmitter.ts`
+  - `frontend/src/services/socketService.ts`
 - Steps:
-  - Confirm every action path emits appropriate deltas: deploy, attack, transfer on conquest, fortify, go-back-to-reinforcement, phase changes, game end.
-- Add convergence fallback: when a client joins or signals out-of-sync, send a one-off reveal snapshot with fog applied (`emitRevealSnapshot`).
-  - Tag outgoing deltas with monotonically increasing `version` (already supported in `DeltaBuilder` signatures). Store last-acked version per socket; on mismatch, trigger convergence fallback.
+  - Ensure every action path records textual moves/logs without emitting legacy deltas.
+  - Use `emitRevealSnapshot` sparingly for joins/resyncs; snapshots should not appear on normal turns.
+  - Verify the client simulator consumes `game-action:*` frames exclusively.
 - Done when:
-  - All turn actions emit at least one delta (and no redundant full-state emits) and clients converge without manual refresh.
-  - A simulated packet-loss test still converges via reveal snapshot.
+  - No backend module imports `DeltaBuilder` or delta services; lockstep frames remain the only gameplay transport.
+  - Packet-loss simulations still converge via reveal snapshots and lockstep checksum recovery.
 
-Implementation notes (2025‑10‑08)
-- Frontend now prefers deltas over full snapshots during normal play. Snapshots are only accepted to recover gaps (server version leaps ahead) or on join/resync. See `frontend/src/services/socketService.ts:972`.
-- Turn reminder and audio cues are driven from PHASE_CHANGE deltas; snapshot is no longer required for these UX signals. Covered by test `frontend/src/services/socketService.delta.test.ts`.
-- Selectors optimized: `selectValidTargets` now uses an indexed board and O(1) lookups, reducing recompute time on frequent selection changes. See `frontend/src/store/selectors.ts`.
+Implementation notes (2025-10-08)
+- Frontend lockstep replay handles all reconciliation; `socketService` no longer tracks delta sequences.
+- Fog-aware textual moves flow through `realtimeEmitter`, keeping spectator/chat feeds synced without state payloads.
+- Reveal snapshots remain the fallback path for joins or desync recovery.
 
 4) Move analytics/events off the hot path to BullMQ queues
 
