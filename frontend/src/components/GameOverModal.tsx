@@ -35,9 +35,7 @@ interface GameOverModalProps {
   winner?: GamePlayer | null
   eliminatedPlayers: string[]
   onClose: () => void
-  onNewGame?: () => void
   onBackToMenu?: () => void
-  newGameLabel?: string
   roomId?: string
 }
 
@@ -47,9 +45,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   winner,
   eliminatedPlayers,
   onClose,
-  onNewGame,
   onBackToMenu,
-  newGameLabel = 'New Game',
   roomId,
 }) => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
@@ -58,6 +54,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
     () => (winnersProp?.length ? winnersProp : winner ? [winner] : []),
     [winnersProp, winner],
   )
+  const winnerIds = React.useMemo(() => winners.map((w) => w.id), [winners])
   const winnerNames = React.useMemo(() => winners.map((w) => w.username), [winners])
   const primaryWinnerName =
     winners[0]?.username ?? winner?.username ?? winnerNames[0] ?? 'Unknown commander'
@@ -298,7 +295,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
             {/* Player Debrief + Final Standings */}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <FinalStandings className="h-full" {...(roomId ? { roomId } : {})} />
+              <FinalStandings className="h-full" roomId={roomId} winnerIds={winnerIds} />
               {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
             </div>
 
@@ -321,15 +318,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 >
                   ▶ Watch Replay
                 </a>
-              )}
-              {onNewGame && (
-                <button
-                  type="button"
-                  onClick={onNewGame}
-                  className="flex-1 rounded-lg bg-primary px-4 py-3 font-semibold text-white transition-all hover:brightness-110 sm:flex-none sm:min-w-[11rem]"
-                >
-                  🎮 {newGameLabel}
-                </button>
               )}
               {onBackToMenu && (
                 <button
@@ -355,7 +343,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   )
 }
 
-const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ className }) => {
+const FinalStandings: React.FC<{
+  className?: string
+  roomId?: string
+  winnerIds?: string[]
+}> = ({ className, winnerIds }) => {
   const game = useAppSelector((s) => s.game.currentGame)
   const players = game?.players ?? []
   const [elimTurn, setElimTurn] = React.useState<Record<string, number | null>>({})
@@ -388,26 +380,32 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
       ? ((activePlayers[0] as unknown as { teamId?: number | null }).teamId ?? null)
       : null
 
-  const entries = players.map((p) => ({
-    id: p.id,
-    name: p.username,
-    color: resolvePlayerColor(p.color),
-    territories: territoriesByPlayer.get(p.id) ?? 0,
-    armies: armiesByPlayer.get(p.id) ?? 0,
-    eliminated: p.isEliminated,
-    eliminatedTurn: elimTurn[p.id] ?? null,
-    teamWinner:
+  const winnerIdSet = new Set(winnerIds ?? [])
+  const entries = players.map((p) => {
+    const teamWinner =
       allowTeamPlay && winningTeamId !== null
         ? ((idToPlayer.get(p.id) as unknown as { teamId?: number | null })?.teamId ?? null) ===
           winningTeamId
-        : false,
-    cp:
-      typeof cpDelta[p.id] === 'number'
-        ? cpDelta[p.id]
-        : typeof cpDelta[(p as unknown as { userId?: string }).userId || ''] === 'number'
-          ? cpDelta[(p as unknown as { userId?: string }).userId as string]
-          : null,
-  }))
+        : false
+    const isWinner = winnerIdSet.has(p.id) || teamWinner
+    return {
+      id: p.id,
+      name: p.username,
+      color: resolvePlayerColor(p.color),
+      territories: territoriesByPlayer.get(p.id) ?? 0,
+      armies: armiesByPlayer.get(p.id) ?? 0,
+      eliminated: p.isEliminated,
+      eliminatedTurn: elimTurn[p.id] ?? null,
+      teamWinner,
+      isWinner,
+      cp:
+        typeof cpDelta[p.id] === 'number'
+          ? cpDelta[p.id]
+          : typeof cpDelta[(p as unknown as { userId?: string }).userId || ''] === 'number'
+            ? cpDelta[(p as unknown as { userId?: string }).userId as string]
+            : null,
+    }
+  })
   const maxTerr = Math.max(1, ...entries.map((e) => e.territories))
   const maxArmy = Math.max(1, ...entries.map((e) => e.armies))
   const sorted = [...entries].sort((a, b) => b.territories - a.territories || b.armies - a.armies)
@@ -424,13 +422,33 @@ const FinalStandings: React.FC<{ className?: string; roomId?: string }> = ({ cla
                 style={{ backgroundColor: e.color }}
               />
               <div className={`font-medium ${e.eliminated ? 'opacity-80' : ''}`}>
-                {idx + 1}. {e.name} {e.eliminated ? <span title="Eliminated">💀</span> : null}
-                {e.eliminated && e.teamWinner ? (
+                {idx + 1}. {e.name}{' '}
+                {e.isWinner ? (
+                  <span
+                    className="ml-1 inline-flex items-center"
+                    role="img"
+                    aria-label={e.teamWinner ? 'Winning team' : 'Winner'}
+                    title={e.teamWinner ? 'Winning team' : 'Winner'}
+                  >
+                    👑
+                  </span>
+                ) : null}
+                {(!e.isWinner || e.eliminated) && (
+                  <span
+                    className="ml-1 inline-flex items-center"
+                    role="img"
+                    aria-label={e.eliminated ? 'Eliminated' : 'Defeated'}
+                    title={e.eliminated ? 'Eliminated' : 'Defeated'}
+                  >
+                    💀
+                  </span>
+                )}
+                {e.teamWinner ? (
                   <span
                     className="ml-2 inline-flex items-center gap-1 rounded bg-[color:var(--surface-2)] px-2 py-0.5 text-[10px] text-success border border-[color:var(--panel-border)]"
                     title="Your team won"
                   >
-                    🏆 Team Victory
+                    👑 Team Victory
                   </span>
                 ) : null}
                 {typeof e.cp === 'number' ? (
