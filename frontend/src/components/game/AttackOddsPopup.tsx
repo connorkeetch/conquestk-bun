@@ -10,6 +10,8 @@ interface AttackOddsPopupProps {
   onCancel: () => void
   autoEnabled: boolean
   onToggleAuto: () => void
+  /** Map scale factor for correct drag offset calculation within transformed container */
+  scale?: number
 }
 
 export default function AttackOddsPopup({
@@ -22,6 +24,7 @@ export default function AttackOddsPopup({
   onCancel,
   autoEnabled,
   onToggleAuto,
+  scale = 1,
 }: AttackOddsPopupProps) {
   // Draggable offset (in pixels) from the default anchored position
   const [offset, setOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 })
@@ -99,8 +102,9 @@ export default function AttackOddsPopup({
     const onMove = (e: MouseEvent) => {
       const d = dragRef.current
       if (!d) return
-      const dx = d.startDx + (e.clientX - d.startX)
-      const dy = d.startDy + (e.clientY - d.startY)
+      // Divide mouse movement by scale to account for transformed container
+      const dx = d.startDx + (e.clientX - d.startX) / scale
+      const dy = d.startDy + (e.clientY - d.startY) / scale
       setOffset(clamp(dx, dy))
     }
     const onEnd = () => {
@@ -113,7 +117,7 @@ export default function AttackOddsPopup({
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onEnd)
     }
-  }, [clamp])
+  }, [clamp, scale])
 
   useEffect(() => {
     const onMove = (e: TouchEvent) => {
@@ -121,8 +125,9 @@ export default function AttackOddsPopup({
       if (!d) return
       if (e.touches.length < 1) return
       const t = e.touches[0]
-      const dx = d.startDx + (t.clientX - d.startX)
-      const dy = d.startDy + (t.clientY - d.startY)
+      // Divide touch movement by scale to account for transformed container
+      const dx = d.startDx + (t.clientX - d.startX) / scale
+      const dy = d.startDy + (t.clientY - d.startY) / scale
       setOffset(clamp(dx, dy))
       // Prevent page scroll while dragging on mobile
       e.preventDefault()
@@ -139,7 +144,7 @@ export default function AttackOddsPopup({
       window.removeEventListener('touchend', onEnd)
       window.removeEventListener('touchcancel', onEnd)
     }
-  }, [clamp])
+  }, [clamp, scale])
 
   // Re-clamp on window resize in case parent size changes
   useEffect(() => {
