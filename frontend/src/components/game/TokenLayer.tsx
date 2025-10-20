@@ -167,7 +167,7 @@ export function TokenLayer({
           <button
             key={t.id}
             type="button"
-            className="absolute focus:outline-none relative"
+            className="absolute focus:outline-none"
             style={{
               left: t.xPx,
               top: t.yPx,
