@@ -1377,7 +1377,7 @@ export class GameLifecycleService {
           move_type: 'player_kicked',
           actor_id: userId,
           created_at: new Date(),
-          payload: { playerName: actorName },
+          payload: { playerName: actorName, actorName },
         }
         const { emitLogAppend } = await import('./logEmitter.js')
         await emitLogAppend(

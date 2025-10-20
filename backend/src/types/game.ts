@@ -261,6 +261,10 @@ export interface BattleResult {
     territoriesGained: number
     troopsGained: number
   }
+  attackerPlayerId?: string
+  defenderPlayerId?: string | null
+  initialFromArmies?: number
+  initialToArmies?: number
 }
 
 export interface GameConfiguration {

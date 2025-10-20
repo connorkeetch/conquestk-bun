@@ -339,6 +339,35 @@ export class GameActionProcessor {
       const fromT = updated.board.find((t) => t.id === fromTerritoryId)
       const toT = updated.board.find((t) => t.id === toTerritoryId)
 
+      const battleCtx = updated.lastBattleResult as {
+        initialFromArmies?: number
+        initialToArmies?: number
+        defenderPlayerId?: string | null
+        fromTerritory?: { armies?: number }
+        toTerritory?: { armies?: number }
+      }
+      const defenderId =
+        typeof battleCtx?.defenderPlayerId === 'string' && battleCtx.defenderPlayerId.length > 0
+          ? battleCtx.defenderPlayerId
+          : null
+      const defender =
+        defenderId && defenderId !== playerId
+          ? updated.players.find((p) => p.id === defenderId)
+          : undefined
+      const defenderName = defender?.username || defenderId || undefined
+      const movedArmies =
+        conquered && typeof battleCtx?.toTerritory?.armies === 'number'
+          ? Math.max(0, battleCtx.toTerritory.armies)
+          : undefined
+      const initialFromArmies =
+        typeof battleCtx?.initialFromArmies === 'number'
+          ? battleCtx.initialFromArmies
+          : typeof battleCtx?.fromTerritory?.armies === 'number'
+            ? battleCtx.fromTerritory.armies + attackerLosses + (movedArmies ?? 0)
+            : undefined
+      const initialToArmies =
+        typeof battleCtx?.initialToArmies === 'number' ? battleCtx.initialToArmies : undefined
+
       const moves: Array<import('./logEmitter.js').DbMove> = [
         {
           id: `${now.getTime()}-atk`,
@@ -355,9 +384,14 @@ export class GameActionProcessor {
             fromName: fromT?.name,
             toName: toT?.name,
             fromOwnerName: actorName,
-            toOwnerName: undefined,
+            toOwnerName: defenderName,
             kills: defenderLosses,
             losses: attackerLosses,
+            defenderName,
+            defenderId: defenderId ?? undefined,
+            initialFromArmies,
+            initialToArmies,
+            conquered,
           },
         },
       ]
@@ -379,6 +413,12 @@ export class GameActionProcessor {
             toName: toT?.name,
             fromOwnerName: actorName,
             toOwnerName: undefined,
+            occupyArmies:
+              typeof movedArmies === 'number'
+                ? movedArmies
+                : typeof battleCtx?.toTerritory?.armies === 'number'
+                  ? battleCtx.toTerritory.armies
+                  : undefined,
           },
         })
       }
@@ -395,7 +435,7 @@ export class GameActionProcessor {
             move_type: 'player_eliminated',
             actor_id: pid,
             created_at: now,
-            payload: { playerName: defeatedName, byName: actorName },
+            payload: { playerName: defeatedName, byName: actorName, actorName: defeatedName },
           })
         }
       }

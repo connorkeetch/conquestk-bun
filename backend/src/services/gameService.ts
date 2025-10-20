@@ -2209,6 +2209,15 @@ export class GameService {
       winner = gameEnded ? (activePlayers[0] ?? null) : null
     }
 
+    const initialFrom =
+      typeof attackerArmiesBeforeRoll === 'number'
+        ? Math.max(0, attackerArmiesBeforeRoll)
+        : Math.max(0, attackingArmiesRemaining + attackerLosses)
+    const initialTo =
+      typeof defenderArmiesBeforeRoll === 'number'
+        ? Math.max(0, defenderArmiesBeforeRoll)
+        : Math.max(0, defendingArmiesRemaining + defenderLosses)
+
     const lastBattleResult = {
       attackerDice: dice.attacker,
       defenderDice: dice.defender,
@@ -2234,6 +2243,10 @@ export class GameService {
       eliminatedPlayers: playersAfterBattle
         .filter((player) => player.isEliminated)
         .map((p) => p.id),
+      attackerPlayerId: attackerId,
+      defenderPlayerId: defenderId,
+      initialFromArmies: initialFrom,
+      initialToArmies: initialTo,
     }
 
     const updatedGameState: GameState = {
@@ -2262,15 +2275,6 @@ export class GameService {
     let serializedState = this.serializeGameState(updatedGameState)
     const playerStats = this.buildPlayerStats(playersAfterBattle, updatedBoard)
     // Derive pre-roll initial stacks if caller didn't provide them
-    const initialFrom =
-      typeof attackerArmiesBeforeRoll === 'number'
-        ? Math.max(0, attackerArmiesBeforeRoll)
-        : Math.max(0, attackingArmiesRemaining + attackerLosses)
-    const initialTo =
-      typeof defenderArmiesBeforeRoll === 'number'
-        ? Math.max(0, defenderArmiesBeforeRoll)
-        : Math.max(0, defendingArmiesRemaining + defenderLosses)
-
     const logTimestamp = new Date().toISOString()
 
     let persistenceOutcome: { applied: boolean; divergence: number }

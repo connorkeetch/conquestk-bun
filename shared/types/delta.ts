@@ -65,6 +65,8 @@ export interface BattleResultDelta extends DeltaBase {
     defenderDice: number[]
     attackerLosses: number
     defenderLosses: number
+    initialFromArmies?: number
+    initialToArmies?: number
     gameEnded?: boolean
     winner?: string
     eliminatedPlayers?: string[]
