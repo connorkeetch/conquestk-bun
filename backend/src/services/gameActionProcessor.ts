@@ -413,7 +413,6 @@ export class GameActionProcessor {
         >,
         gameId,
         { moves },
-        updated as import('../types/game.js').GameState,
       )
     } catch (error) {
       logger.warn('Failed to emit battle log updates', {
@@ -461,7 +460,6 @@ export class GameActionProcessor {
             >,
             gameId,
             { moves: [move] },
-            state,
           )
         }
       } catch (error) {

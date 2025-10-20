@@ -5,7 +5,6 @@ import { findRedeemableSets, normalizeTreasureConfig } from '../game/hiddenTreas
 import { loadMapForEngine } from '../game/mapLoader.js'
 import { assertInvariants } from '../game/stateMachine.js'
 import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans.js'
-import { DeltaBuilder } from '../types/deltaUpdates.js'
 import type {
   AIDifficulty,
   GameAction,
@@ -1583,7 +1582,7 @@ export class GameService {
 
         // Post-archive follow-ups (achievements, clan XP) mirror battle path
         if (finalization.archived) {
-          // Emit a canonical GAME_END delta + fog-aware text in a single sweep
+          // Emit a concise GAME_END textual log for observers
           try {
             const io = tryGetSocketServer()
             if (io) {
@@ -1593,19 +1592,13 @@ export class GameService {
               const eliminated = finalization.playerRankings
                 .filter((r) => r.eliminated)
                 .map((r) => r.userId)
-              const delta = DeltaBuilder.gameEnd(
-                roomId,
-                winnerId,
-                eliminated,
-                (finalSerialized as { version?: number }).version,
-              )
               const { emitCombined } = await import('./realtimeEmitter.js')
               const { createGameEndMoves } = await import('./logEmitter.js')
               const moves = createGameEndMoves(roomId, updatedState, winnerId, eliminated)
-              await emitCombined(io, roomId, { deltas: [delta], moves }, updatedState)
+              await emitCombined(io, roomId, { moves }, updatedState)
             }
           } catch (e) {
-            logger.warn('Failed to emit GAME_END delta on endTurn', {
+            logger.warn('Failed to emit GAME_END log on endTurn', {
               roomId,
               error: e instanceof Error ? e.message : e,
             })
@@ -2568,7 +2561,7 @@ export class GameService {
       )
       battleMetrics.clearGame(gameId)
       if (finalization.archived) {
-        // Emit a canonical GAME_END delta + fog-aware text in a single sweep
+        // Emit a concise GAME_END textual log post-battle
         try {
           const io = tryGetSocketServer()
           if (io) {
@@ -2578,19 +2571,13 @@ export class GameService {
             const eliminated = finalization.playerRankings
               .filter((r) => r.eliminated)
               .map((r) => r.userId)
-            const delta = DeltaBuilder.gameEnd(
-              gameId,
-              winnerId,
-              eliminated,
-              (serializedState as { version?: number }).version,
-            )
             const { emitCombined } = await import('./realtimeEmitter.js')
             const { createGameEndMoves } = await import('./logEmitter.js')
             const moves = createGameEndMoves(gameId, updatedGameState, winnerId, eliminated)
-            await emitCombined(io, gameId, { deltas: [delta], moves }, updatedGameState)
+            await emitCombined(io, gameId, { moves }, updatedGameState)
           }
         } catch (e) {
-          logger.warn('Failed to emit GAME_END delta after battle', {
+          logger.warn('Failed to emit GAME_END log after battle', {
             gameId,
             error: e instanceof Error ? e.message : e,
           })

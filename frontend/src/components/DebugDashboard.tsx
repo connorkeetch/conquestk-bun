@@ -5,7 +5,7 @@ import { type SocketDebugState, socketDebugger } from '@/utils/socketDebugger'
 export function DebugDashboard() {
   const [isVisible, setIsVisible] = useState(false)
   const [debugState, setDebugState] = useState<SocketDebugState>(socketDebugger.getState())
-  const [activeTab, setActiveTab] = useState<'events' | 'rooms' | 'sequences' | 'pending'>('events')
+  const [activeTab, setActiveTab] = useState<'events' | 'rooms' | 'pending'>('events')
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,7 +49,7 @@ export function DebugDashboard() {
 
   if (!isVisible) return null
 
-  const { events, deltaSequences, joinedRooms, pendingActions, connectionMetrics } = debugState
+  const { events, joinedRooms, pendingActions, connectionMetrics } = debugState
   const isEnabled = socketDebugger.isEnabled()
 
   return (
@@ -121,13 +121,6 @@ export function DebugDashboard() {
             className={`px-4 py-2 rounded ${activeTab === 'rooms' ? 'bg-violet text-white' : 'bg-surface-1 text-muted hover:bg-surface-3'}`}
           >
             Rooms ({joinedRooms.size})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('sequences')}
-            className={`px-4 py-2 rounded ${activeTab === 'sequences' ? 'bg-violet text-white' : 'bg-surface-1 text-muted hover:bg-surface-3'}`}
-          >
-            Sequences ({deltaSequences.size})
           </button>
           <button
             type="button"
@@ -204,43 +197,6 @@ export function DebugDashboard() {
               {Array.from(joinedRooms).map((roomId) => (
                 <div key={roomId} className="p-3 rounded border border-border bg-surface-2">
                   <div className="font-mono">{roomId}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {isEnabled && activeTab === 'sequences' && (
-            <div className="space-y-2">
-              {deltaSequences.size === 0 && (
-                <div className="text-center py-8 text-muted">No delta sequences tracked.</div>
-              )}
-              {Array.from(deltaSequences.values()).map((seq) => (
-                <div key={seq.roomId} className="p-3 rounded border border-border bg-surface-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono">{seq.roomId}</span>
-                    <span className="text-sm text-muted">Last: v{seq.lastSequence}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted">Received:</span> {seq.receivedCount}
-                    </div>
-                    <div>
-                      <span className="text-muted">Duplicates:</span> {seq.duplicates}
-                    </div>
-                    <div>
-                      <span className="text-muted">Gaps:</span> {seq.gaps.length}
-                    </div>
-                  </div>
-                  {seq.gaps.length > 0 && (
-                    <div className="mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs">
-                      <strong>Gaps detected:</strong>
-                      {seq.gaps.map((gap) => (
-                        <div key={`${gap.from}-${gap.to}`}>
-                          {gap.from} - {gap.to} (missing {gap.to - gap.from + 1} deltas)
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
