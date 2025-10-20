@@ -560,6 +560,8 @@ export default function GameRoom() {
   const isMember = Boolean(currentPlayer)
   const isHost = currentRoom?.hostId === user?.id
 
+  const canViewAfterActionReport = currentRoom?.status === 'completed' && Boolean(currentGame)
+
   // Removed legacy mute offset calculation (mute integrated in footer)
 
   // Open Game Over modal when game finishes
@@ -1565,38 +1567,52 @@ export default function GameRoom() {
           {/* One-line top banner with room info + actions */}
           <div className="flex items-center justify-between gap-2 rounded border border-border bg-[color:var(--surface-2)] px-3 py-1 text-[length:clamp(12px,1.6vw,14px)] min-h-[42px]">
             <div
-              className="min-w-0 flex-1 truncate text-[color:var(--heading)]"
+              className="min-w-0 flex-1 text-[color:var(--heading)]"
               title={`${currentRoom.name}${
                 typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''
               } • Hosted by ${hostDisplay(currentRoom)} • ${seatUsage(currentRoom).label} • ${formatStatus(currentRoom.status)}`}
             >
-              <span className="truncate">
-                {currentRoom.name}
-                {typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}
-                <span className="mx-2 opacity-60">•</span>
-                Hosted by <span className="font-semibold">{hostDisplay(currentRoom)}</span>
-                <span className="mx-2 opacity-60">•</span>
-                {seatUsage(currentRoom).label}
-                <span className="mx-2 opacity-60">•</span>
-                <span
-                  className={(() => {
-                    switch (currentRoom.status) {
-                      case 'lobby':
-                        return 'text-green-400 font-medium'
-                      case 'initializing':
-                        return 'text-blue-300 font-medium'
-                      case 'active':
-                        return 'text-yellow-400 font-medium'
-                      case 'paused':
-                        return 'text-orange-300 font-medium'
-                      default:
-                        return 'text-muted font-medium'
-                    }
-                  })()}
-                >
-                  {formatStatus(currentRoom.status)}
-                </span>
-              </span>
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1 truncate">
+                  {currentRoom.name}
+                  {typeof currentRoom.roomCode === 'number'
+                    ? ` — Room ${currentRoom.roomCode}`
+                    : ''}
+                  <span className="mx-2 opacity-60">•</span>
+                  Hosted by <span className="font-semibold">{hostDisplay(currentRoom)}</span>
+                  <span className="mx-2 opacity-60">•</span>
+                  {seatUsage(currentRoom).label}
+                  <span className="mx-2 opacity-60">•</span>
+                  <span
+                    className={(() => {
+                      switch (currentRoom.status) {
+                        case 'lobby':
+                          return 'text-green-400 font-medium'
+                        case 'initializing':
+                          return 'text-blue-300 font-medium'
+                        case 'active':
+                          return 'text-yellow-400 font-medium'
+                        case 'paused':
+                          return 'text-orange-300 font-medium'
+                        default:
+                          return 'text-muted font-medium'
+                      }
+                    })()}
+                  >
+                    {formatStatus(currentRoom.status)}
+                  </span>
+                </div>
+                {canViewAfterActionReport && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-xs shrink-0"
+                    onClick={() => setShowGameOver(true)}
+                    title="View After Action Report"
+                  >
+                    View After Action Report
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {!isMember && (

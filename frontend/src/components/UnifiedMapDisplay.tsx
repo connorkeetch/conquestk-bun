@@ -730,6 +730,7 @@ export default function UnifiedMapDisplay({
             attackerDice={oddsTooltip.att}
             defenderDice={oddsTooltip.def}
             winChancePercent={oddsTooltip.winChance}
+            scale={currentScale}
             onAttack={() => {
               const id = selectedTargetTerritoryId ?? hoveredTargetId
               if (!isMyTurn) return
@@ -767,6 +768,7 @@ export default function UnifiedMapDisplay({
             leftPercent={conquestPopup.left}
             topPercent={conquestPopup.top}
             maxArmies={conquestPopup.max}
+            scale={currentScale}
             onConfirm={(amount) => {
               void dispatch(
                 transferConquestArmies({
@@ -796,6 +798,7 @@ export default function UnifiedMapDisplay({
             leftPercent={reinforcementPopup.left}
             topPercent={reinforcementPopup.top}
             maxArmies={reinforcementPopup.max}
+            scale={currentScale}
             onConfirm={(amount) => {
               if (!selectedTerritoryId) return
               void dispatch(deployArmies({ territoryId: selectedTerritoryId, armies: amount }))
@@ -814,6 +817,7 @@ export default function UnifiedMapDisplay({
             leftPercent={fortifyPopup.left}
             topPercent={fortifyPopup.top}
             maxArmies={fortifyPopup.max}
+            scale={currentScale}
             onConfirm={(amount) => {
               if (!selectedTerritoryId || !selectedTargetTerritoryId) return
               void dispatch(
