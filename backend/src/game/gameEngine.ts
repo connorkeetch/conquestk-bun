@@ -1764,6 +1764,15 @@ export class GameEngine {
     }
     gameState.lastBattleResult = undefined
 
+    // Assassination mode: check for hunter victory on resign
+    if (gameState.gameConfig.gameMode === 'assassination') {
+      const winner = this.resolveAssassinationVictory(gameState, [action.playerId]);
+      if (winner) {
+        this.endGame(gameState, winner);
+        return gameState;
+      }
+    }
+
     if (gameState.currentPlayer === action.playerId) {
       this.endPlayerTurn(gameState)
     } else {

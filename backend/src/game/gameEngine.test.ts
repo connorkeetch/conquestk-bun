@@ -734,6 +734,33 @@ describe('GameEngine', () => {
       const resigningPlayer = updatedState.players.find(p => p.id === resigningPlayerId);
       expect(resigningPlayer?.isEliminated).toBe(true);
     });
+
+    it('should declare the hunter as winner when their target resigns in assassination mode', async () => {
+      const players = createPlayers('hunter', 'target', 'bystander');
+      const config = createConfig(players.length, { gameMode: 'assassination' });
+      let gameState = gameEngine.initializeGame('room-assassin-resign', players, config, mapOverrides);
+
+      const hunter = gameState.players.find(p => p.id === 'hunter')!;
+      const target = gameState.players.find(p => p.id === 'target')!;
+
+      gameState.assassinationTargets = {
+        [hunter.id]: target.id,
+        [target.id]: 'bystander',
+        ['bystander']: hunter.id,
+      };
+
+      const action: GameAction = {
+        type: 'resign',
+        roomId: gameState.roomId,
+        playerId: target.id,
+      };
+
+      const { gameState: updatedState } = await gameEngine.processAction(gameState, action);
+
+      expect(updatedState.phase).toBe('finished');
+      const winner = updatedState.players.find(p => !p.isEliminated);
+      expect(winner?.id).toBe(hunter.id);
+    });
   });
 
   describe('go_back_to_reinforcement', () => {
