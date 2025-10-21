@@ -668,15 +668,60 @@ describe('GameEngine resignation', () => {
   it('preserves pending conquest transfers when another player resigns', async () => {
     // Setup a 3-player game
     const players: GamePlayer[] = [
-      { id: 'player-1', username: 'One', color: 'red', armies: 0, territories: ['territory-a'], cards: [], isEliminated: false },
-      { id: 'player-2', username: 'Two', color: 'blue', armies: 0, territories: ['territory-b'], cards: [], isEliminated: false },
-      { id: 'player-3', username: 'Three', color: 'green', armies: 0, territories: ['territory-c'], cards: [], isEliminated: false },
-    ];
+      {
+        id: 'player-1',
+        username: 'One',
+        color: 'red',
+        armies: 0,
+        territories: ['territory-a'],
+        cards: [],
+        isEliminated: false,
+      },
+      {
+        id: 'player-2',
+        username: 'Two',
+        color: 'blue',
+        armies: 0,
+        territories: ['territory-b'],
+        cards: [],
+        isEliminated: false,
+      },
+      {
+        id: 'player-3',
+        username: 'Three',
+        color: 'green',
+        armies: 0,
+        territories: ['territory-c'],
+        cards: [],
+        isEliminated: false,
+      },
+    ]
     const board: Territory[] = [
-      { id: 'territory-a', name: 'A', sector: 'sector-1', ownerId: 'player-1', armies: 10, adjacentTerritories: ['territory-b'] },
-      { id: 'territory-b', name: 'B', sector: 'sector-1', ownerId: 'player-2', armies: 1, adjacentTerritories: ['territory-a'] },
-      { id: 'territory-c', name: 'C', sector: 'sector-2', ownerId: 'player-3', armies: 5, adjacentTerritories: [] },
-    ];
+      {
+        id: 'territory-a',
+        name: 'A',
+        sector: 'sector-1',
+        ownerId: 'player-1',
+        armies: 10,
+        adjacentTerritories: ['territory-b'],
+      },
+      {
+        id: 'territory-b',
+        name: 'B',
+        sector: 'sector-1',
+        ownerId: 'player-2',
+        armies: 1,
+        adjacentTerritories: ['territory-a'],
+      },
+      {
+        id: 'territory-c',
+        name: 'C',
+        sector: 'sector-2',
+        ownerId: 'player-3',
+        armies: 5,
+        adjacentTerritories: [],
+      },
+    ]
     const gameState = createBaseGameState({
       players,
       board,
@@ -684,7 +729,7 @@ describe('GameEngine resignation', () => {
       phase: 'attack',
       // Use a fixed seed to ensure the battle outcome is deterministic
       rngSeed: 'conquest-resign-test-seed',
-    });
+    })
 
     // Player 1 attacks Player 2. With 10 vs 1 armies and a fixed seed, this should result in a conquest.
     const attackAction: AttackAction = {
@@ -692,26 +737,32 @@ describe('GameEngine resignation', () => {
       roomId: gameState.roomId,
       playerId: 'player-1',
       payload: { fromTerritoryId: 'territory-a', toTerritoryId: 'territory-b' },
-    };
+    }
 
-    const { gameState: afterAttackState, battleResult } = await engine.processAction(gameState, attackAction);
+    const { gameState: afterAttackState, battleResult } = await engine.processAction(
+      gameState,
+      attackAction,
+    )
 
     // Verify conquest was successful and a transfer is pending
-    expect(battleResult?.conquered).toBe(true);
-    expect(afterAttackState.lastBattleResult?.pendingConquestFor).toBe('player-1');
+    expect(battleResult?.conquered).toBe(true)
+    expect(afterAttackState.lastBattleResult?.pendingConquestFor).toBe('player-1')
 
     // Now, Player 3 resigns, which should NOT interfere with the pending transfer
     const resignAction: GameAction = {
       type: 'resign',
       roomId: gameState.roomId,
       playerId: 'player-3',
-    };
+    }
 
-    const { gameState: afterResignState } = await engine.processAction(afterAttackState, resignAction);
+    const { gameState: afterResignState } = await engine.processAction(
+      afterAttackState,
+      resignAction,
+    )
 
     // Assert that the pending conquest is still present after another player resigned
-    expect(afterResignState.lastBattleResult).toBeDefined();
-    expect(afterResignState.lastBattleResult?.pendingConquestFor).toBe('player-1');
+    expect(afterResignState.lastBattleResult).toBeDefined()
+    expect(afterResignState.lastBattleResult?.pendingConquestFor).toBe('player-1')
 
     // Finally, verify that Player 1 can still complete their conquest transfer
     const transferAction: GameAction = {
@@ -723,16 +774,16 @@ describe('GameEngine resignation', () => {
         toTerritoryId: 'territory-b',
         armies: 3,
       },
-    };
+    }
 
-    const { gameState: finalState } = await engine.processAction(afterResignState, transferAction);
-    const toTerritory = finalState.board.find(t => t.id === 'territory-b');
+    const { gameState: finalState } = await engine.processAction(afterResignState, transferAction)
+    const toTerritory = finalState.board.find((t) => t.id === 'territory-b')
 
     // With the fixed seed, the battle outcome is predictable:
     // Attacker (10 armies, 3 dice) vs. Defender (1 army, 1 die)
     // Dice: Attacker [6, 5, 2], Defender [1] -> Attacker wins, Defender loses 1 army.
     // Post-battle state: `from` has 9 armies, `to` is conquered and has 1 army.
     // Post-transfer state: `from` has 6 armies, `to` has 4 armies.
-    expect(toTerritory?.armies).toBe(4);
+    expect(toTerritory?.armies).toBe(4)
   })
 })

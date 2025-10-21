@@ -40,7 +40,9 @@ jest.mock('../services/adminService', () => ({
 }))
 
 jest.mock('../utils/assetStorage.js', () => {
-  const actual = jest.requireActual('../utils/assetStorage.js') as typeof import('../utils/assetStorage.js')
+  const actual = jest.requireActual(
+    '../utils/assetStorage.js',
+  ) as typeof import('../utils/assetStorage.js')
   return {
     ...actual,
     deleteAsset: (...args: unknown[]) => mockDeleteAsset(...args),

@@ -312,75 +312,70 @@ router.post(
 )
 
 // System optimization recommendations
-router.get(
-  '/optimization/recommendations',
-  authenticateToken,
-  requireAdmin,
-  async (req, res) => {
-    try {
-      const current = performanceMonitorService.getCurrentMetrics()
-      const recommendations = []
+router.get('/optimization/recommendations', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const current = performanceMonitorService.getCurrentMetrics()
+    const recommendations = []
 
-      if (current) {
-        // Cache optimization
-        if (current.cache.hitRate < 90) {
-          recommendations.push({
-            component: 'cache',
-            priority: 'high',
-            issue: 'Low cache hit rate',
-            recommendation: 'Review cache TTL settings and implement cache warming',
-            metric: `${current.cache.hitRate}% hit rate`,
-          })
-        }
-
-        // Database optimization
-        if (current.database.avgResponseTime > 500) {
-          recommendations.push({
-            component: 'database',
-            priority: 'high',
-            issue: 'High database response time',
-            recommendation: 'Consider adding indexes, optimizing queries, or scaling read replicas',
-            metric: `${current.database.avgResponseTime}ms avg response time`,
-          })
-        }
-
-        // Memory optimization
-        const memoryUsageMB = current.server.memoryUsage.heapUsed / 1024 / 1024
-        if (memoryUsageMB > 800) {
-          recommendations.push({
-            component: 'server',
-            priority: 'medium',
-            issue: 'High memory usage',
-            recommendation: 'Implement memory pooling and optimize data structures',
-            metric: `${Math.round(memoryUsageMB)}MB memory usage`,
-          })
-        }
-
-        // Queue optimization
-        if (current.queues.waitingJobs > 50) {
-          recommendations.push({
-            component: 'queues',
-            priority: 'medium',
-            issue: 'Queue backlog building up',
-            recommendation: 'Scale worker processes or optimize job processing',
-            metric: `${current.queues.waitingJobs} waiting jobs`,
-          })
-        }
+    if (current) {
+      // Cache optimization
+      if (current.cache.hitRate < 90) {
+        recommendations.push({
+          component: 'cache',
+          priority: 'high',
+          issue: 'Low cache hit rate',
+          recommendation: 'Review cache TTL settings and implement cache warming',
+          metric: `${current.cache.hitRate}% hit rate`,
+        })
       }
 
-      res.json({
-        success: true,
-        data: recommendations,
-        meta: {
-          generated: new Date().toISOString(),
-          total: recommendations.length,
-        },
-      })
-    } catch (error) {
-      sendFailure(req, res, error, 'Failed to generate optimization recommendations')
+      // Database optimization
+      if (current.database.avgResponseTime > 500) {
+        recommendations.push({
+          component: 'database',
+          priority: 'high',
+          issue: 'High database response time',
+          recommendation: 'Consider adding indexes, optimizing queries, or scaling read replicas',
+          metric: `${current.database.avgResponseTime}ms avg response time`,
+        })
+      }
+
+      // Memory optimization
+      const memoryUsageMB = current.server.memoryUsage.heapUsed / 1024 / 1024
+      if (memoryUsageMB > 800) {
+        recommendations.push({
+          component: 'server',
+          priority: 'medium',
+          issue: 'High memory usage',
+          recommendation: 'Implement memory pooling and optimize data structures',
+          metric: `${Math.round(memoryUsageMB)}MB memory usage`,
+        })
+      }
+
+      // Queue optimization
+      if (current.queues.waitingJobs > 50) {
+        recommendations.push({
+          component: 'queues',
+          priority: 'medium',
+          issue: 'Queue backlog building up',
+          recommendation: 'Scale worker processes or optimize job processing',
+          metric: `${current.queues.waitingJobs} waiting jobs`,
+        })
+      }
     }
-  },
-)
+
+    res.json({
+      success: true,
+      data: recommendations,
+      meta: {
+        generated: new Date().toISOString(),
+        total: recommendations.length,
+      },
+    })
+  } catch (error) {
+    sendFailure(req, res, error, 'Failed to generate optimization recommendations')
+  }
+})
 
 // Export performance report
 router.get('/report', authenticateToken, requireAdmin, async (req, res) => {

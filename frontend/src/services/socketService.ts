@@ -1,18 +1,15 @@
 import type {
-  BattleResultDelta,
   ClientToServerEvents,
   ConversationCreateAck,
   ConversationCreatePayload,
   ConversationMembersUpdateAck,
   ConversationMembersUpdatePayload,
-  GameDelta,
   MessageSendAck,
   MessageSendPayload,
-  PlayerDelta,
   ReceiptReadAck,
   ServerToClientEvents,
+  GameAction as SharedGameAction,
   GameState as SharedGameState,
-  TerritoryDelta,
 } from '@conquestk/shared'
 import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep'
 import { toast } from 'react-hot-toast'
@@ -42,19 +39,13 @@ import {
   refreshConversation,
 } from '../store/messagesSlice'
 import type { LifecycleUpdatePayload } from '../store/roomSlice'
-import {
-  addPlayerToRoom,
-  applyLifecycleUpdate,
-  removePlayerFromRoom,
-  updateRoom,
-} from '../store/roomSlice'
+import { addPlayerToRoom, applyLifecycleUpdate, removePlayerFromRoom } from '../store/roomSlice'
 import {
   addClientLog,
   addOptimisticMarkers,
   addPing,
   clearOptimisticMarkers,
   clearPlacementHistory,
-  recordBattleResult,
   removeOptimisticMarkers,
   setConnectionStatus,
   setDesyncDetected,
@@ -90,6 +81,15 @@ type LockstepResyncMeta = {
   details?: Record<string, unknown>
 }
 
+type LooseGameActionType = SharedGameAction['type'] | 'undo_fortify'
+
+type LooseGameAction = {
+  type: LooseGameActionType
+  playerId?: string
+  roomId?: string
+  payload?: unknown
+}
+
 const HEARTBEAT_INTERVAL_MS = 5000
 const HEARTBEAT_TIMEOUT_MS = 3000
 const ZOMBIE_CONNECTION_THRESHOLD_MS = 10_000
@@ -103,7 +103,6 @@ const JOIN_BACKOFF_MAX_MS = 1500
 const AUTH_TOAST_THROTTLE_MS = 30_000
 const CONNECTION_RESTORE_TOAST_DURATION_MS = 2000
 const TURN_TOAST_DURATION_MS = 2500
-const TURN_SUPPRESS_WINDOW_MS = 2000
 const RESYNC_DELAY_MS = 100
 const RESYNC_MIN_INTERVAL_MS = 2500
 const PING_TTL_MS = 3000
@@ -134,10 +133,6 @@ class SocketService {
   private lockstepBaselineReady: Set<string> = new Set()
   private lockstepLastResyncAt: Map<string, number> = new Map()
   private lockstepSim = new LockstepSimulationManager()
-  // Placeholder for future convergence timers (no-op currently)
-  private clearConfirmTimer(_roomId: string) {
-    // intentionally empty; used as a hook for future state-convergence timers
-  }
 
   private static stableReplacer(_key: string, value: unknown): unknown {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -499,10 +494,7 @@ class SocketService {
     void (store.dispatch(fetchGameState({ roomId: payload.matchId })) as Promise<unknown>)
   }
 
-  private getActionFingerprint(
-    roomId: string,
-    action: { type: string; playerId?: string; payload?: unknown },
-  ): string | null {
+  private getActionFingerprint(roomId: string, action: LooseGameAction): string | null {
     const base = `${roomId}:${action.type}:${action.playerId ?? ''}`
     if (action.payload === undefined) {
       return base
@@ -691,7 +683,7 @@ class SocketService {
    */
   private async sendActionWithAck(
     roomId: string,
-    action: { type: string; playerId?: string; payload?: unknown },
+    action: LooseGameAction,
     options?: {
       idempotencyKey?: string
       timeoutMs?: number
@@ -704,13 +696,29 @@ class SocketService {
       maxRetries?: number
     },
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
-    const fingerprint = this.getActionFingerprint(roomId, action)
+    const playerId = action.playerId ?? store.getState().auth.user?.id ?? null
+    if (!playerId) {
+      logger.warn('Aborting action send due to missing player context', {
+        roomId,
+        actionType: action.type,
+      })
+      return { ok: false, error: 'Missing player context' }
+    }
+
+    const normalizedAction = {
+      ...(action as Omit<SharedGameAction, 'roomId' | 'playerId'>),
+      roomId,
+      playerId,
+    } as SharedGameAction
+
+    const fingerprint = this.getActionFingerprint(roomId, normalizedAction)
     const fromOptions = options?.idempotencyKey
     const fromFingerprint =
       fromOptions === undefined && fingerprint
         ? this.inFlightActionKeys.get(fingerprint)
         : undefined
-    const idempotencyKey = fromOptions ?? fromFingerprint ?? `${roomId}:${action.type}:${uuidv4()}`
+    const idempotencyKey =
+      fromOptions ?? fromFingerprint ?? `${roomId}:${normalizedAction.type}:${uuidv4()}`
     const timeoutMs = options?.timeoutMs ?? ACTION_TIMEOUT_MS
     const autoRetry = options?.autoRetryOnTimeout ?? true
     const maxRetries = Math.max(1, options?.maxRetries ?? ACTION_RETRY_ATTEMPTS)
@@ -742,7 +750,7 @@ class SocketService {
       options?.optimisticMetadata?.territoryIds?.filter((key): key is string => Boolean(key)) ?? []
     const optimisticLabel =
       options?.optimisticMetadata?.label ??
-      action.type.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+      normalizedAction.type.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
 
     registerOptimisticAction(idempotencyKey, {
       apply: options?.optimisticUpdate,
@@ -762,7 +770,12 @@ class SocketService {
     reliabilityMetrics.recordActionAttempt()
 
     // Send action with ACK
-    const actionPromise = this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
+    const actionPromise = this._sendActionInternal(
+      roomId,
+      normalizedAction,
+      idempotencyKey,
+      timeoutMs,
+    )
     this.pendingActions.set(idempotencyKey, actionPromise)
 
     actionPromise.finally(() => {
@@ -785,14 +798,14 @@ class SocketService {
           const backoff = Math.min(RETRY_BACKOFF_BASE_MS * 2 ** (attempt - 1), RETRY_BACKOFF_MAX_MS)
           logger.warn('Retrying game action after timeout', {
             roomId,
-            actionType: action.type,
+            actionType: normalizedAction.type,
             attempt,
             maxAttempts: maxRetries,
             backoffMs: backoff,
           })
           await new Promise((resolve) => setTimeout(resolve, backoff))
           reliabilityMetrics.recordActionRetry()
-          ack = await this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
+          ack = await this._sendActionInternal(roomId, normalizedAction, idempotencyKey, timeoutMs)
         }
         finalAck = ack
       }
@@ -818,7 +831,7 @@ class SocketService {
    */
   private async _sendActionInternal(
     roomId: string,
-    action: { type: string; playerId?: string; payload?: unknown },
+    action: SharedGameAction,
     idempotencyKey: string,
     timeoutMs: number,
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
@@ -988,10 +1001,7 @@ class SocketService {
    * gameplay through this method (or the Redux thunks that call it).
    */
   // Accept a loose action envelope to support extended client-only action helpers
-  sendGameAction(data: {
-    roomId: string
-    action: { type: string; playerId?: string; payload?: unknown }
-  }) {
+  sendGameAction(data: { roomId: string; action: LooseGameAction }) {
     const { roomId, action } = data
     if (this.lockstepEnabled) {
       void this.sendActionWithAck(roomId, action)
@@ -1095,7 +1105,27 @@ class SocketService {
     }
 
     // Generic emit as a fallback
-    this.socket?.emit('game-action', data)
+    const fallbackPlayerId = data.action.playerId ?? store.getState().auth.user?.id ?? undefined
+    if (!fallbackPlayerId) {
+      logger.warn('Skipping fallback game-action emit due to missing player id', {
+        roomId,
+        actionType: data.action.type,
+      })
+      return
+    }
+
+    const fallbackAction = {
+      ...(data.action as Omit<SharedGameAction, 'roomId' | 'playerId'>),
+      roomId,
+      playerId: fallbackPlayerId,
+    } as SharedGameAction
+
+    const fallbackPacket: Parameters<ClientToServerEvents['game-action']>[0] = {
+      roomId,
+      action: fallbackAction,
+    }
+
+    this.socket?.emit('game-action', fallbackPacket)
   }
 
   private async deployArmies(roomId: string, territoryId: string, armies: number) {
@@ -1380,7 +1410,7 @@ class SocketService {
       // CONNECTION STATE RECOVERY: Check if Socket.io recovered the connection
       // If recovered, the server replayed missed events automatically
       const socket = this.socket
-      const recovered = socket.recovered ?? false
+      const recovered = socket?.recovered ?? false
 
       if (recovered) {
         logger.info('✅ Connection recovered - server replayed missed events')

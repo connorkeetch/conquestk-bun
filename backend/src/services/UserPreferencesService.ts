@@ -71,7 +71,10 @@ export class UserPreferencesService {
         updates.push(`music_enabled = $${paramIndex++}`)
         values.push(preferences.musicEnabled)
       }
-      if (preferences.notificationEnabled !== undefined && existingColumns.has('notification_enabled')) {
+      if (
+        preferences.notificationEnabled !== undefined &&
+        existingColumns.has('notification_enabled')
+      ) {
         updates.push(`notification_enabled = $${paramIndex++}`)
         values.push(preferences.notificationEnabled)
       }
@@ -97,10 +100,7 @@ export class UserPreferencesService {
         updates.push(`show_timer = $${paramIndex++}`)
         values.push(preferences.showTimer)
       }
-      if (
-        preferences.showArmyNumbers !== undefined &&
-        existingColumns.has('show_army_numbers')
-      ) {
+      if (preferences.showArmyNumbers !== undefined && existingColumns.has('show_army_numbers')) {
         updates.push(`show_army_numbers = $${paramIndex++}`)
         values.push(preferences.showArmyNumbers)
       }
@@ -294,9 +294,7 @@ export class UserPreferencesService {
     return fields
   }
 
-  private mapRowToPreferences(
-    row: Partial<UserPreferences> & { userId: string },
-  ): UserPreferences {
+  private mapRowToPreferences(row: Partial<UserPreferences> & { userId: string }): UserPreferences {
     return {
       userId: row.userId,
       theme: normalizeThemeId((row.theme as ThemeId | undefined) ?? DEFAULT_THEME_ID),
@@ -308,7 +306,8 @@ export class UserPreferencesService {
       autoReady: row.autoReady ?? false,
       showTimer: row.showTimer ?? true,
       showArmyNumbers: row.showArmyNumbers ?? true,
-      animationSpeed: (row.animationSpeed as UserPreferences['animationSpeed'] | undefined) ?? 'normal',
+      animationSpeed:
+        (row.animationSpeed as UserPreferences['animationSpeed'] | undefined) ?? 'normal',
       language: row.language ?? 'en',
     }
   }

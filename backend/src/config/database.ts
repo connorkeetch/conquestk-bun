@@ -40,7 +40,7 @@ function isLikelyJsonOperator(sql: string, index: number): boolean {
     return false
   }
 
-  const prevIsIdentifierLike = /[A-Za-z0-9_"\)\]]/.test(previous)
+  const prevIsIdentifierLike = /[A-Za-z0-9_")\]]/.test(previous)
   if (!prevIsIdentifierLike) {
     return false
   }
@@ -53,10 +53,7 @@ function isLikelyJsonOperator(sql: string, index: number): boolean {
   return ["'", '"', '?', '[', '{', '(', '|', '&'].includes(next)
 }
 
-export function convertQuestionMarksToPgPlaceholders(
-  sql: string,
-  params: QueryValues,
-): string {
+export function convertQuestionMarksToPgPlaceholders(sql: string, params: QueryValues): string {
   let placeholderIndex = 0
   let inSingleQuote = false
   let inDoubleQuote = false

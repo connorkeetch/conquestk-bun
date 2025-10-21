@@ -186,12 +186,16 @@ describe('socketService event handlers', () => {
   const createIoMock = () => {
     const roomEmit = jest.fn()
     const sockets = new Map()
+    const adapter = {
+      rooms: new Map<string, Set<string>>(),
+    }
     const io = {
       use: jest.fn(),
       on: jest.fn(),
       to: jest.fn(() => ({ emit: roomEmit })),
       sockets: {
         sockets,
+        adapter,
       },
     } as unknown as Server<ClientToServerEvents, ServerToClientEvents>
     return { io, roomEmit, sockets }
@@ -317,9 +321,10 @@ describe('socketService event handlers', () => {
       gameConfig: {},
     } as unknown as import('../types/game.js').GameState)
 
-    const { socket } = initialiseHandlers()
+    const { socket, io } = initialiseHandlers()
     socket.join.mockResolvedValue()
     socket.rooms.add('game:room-lockstep')
+    io.sockets.adapter.rooms.set('game:room-lockstep', new Set([socket.id]))
     const gameActionHandler = getSocketHandler(socket, 'game-action')
     const baselineAckHandler = getSocketHandler(socket, 'lockstep:baseline-ack')
 

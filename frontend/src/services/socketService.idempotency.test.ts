@@ -51,7 +51,11 @@ describe('socketService idempotency key handling', () => {
 
     internalService._sendActionInternal = stub
 
-    const action = { type: 'deploy', payload: { territoryId: 'alpha', armies: 2 } }
+    const action = {
+      type: 'deploy',
+      playerId: 'tester',
+      payload: { territoryId: 'alpha', armies: 2 },
+    }
     const first = internalService.sendActionWithAck('room-1', action)
     const second = internalService.sendActionWithAck('room-1', action)
 
@@ -84,7 +88,11 @@ describe('socketService idempotency key handling', () => {
 
     internalService._sendActionInternal = stub
 
-    const action = { type: 'deploy', payload: { territoryId: 'beta', armies: 3 } }
+    const action = {
+      type: 'deploy',
+      playerId: 'tester',
+      payload: { territoryId: 'beta', armies: 3 },
+    }
     const resultPromise = internalService.sendActionWithAck('room-2', action, { timeoutMs: 5 })
 
     await vi.runAllTimersAsync()

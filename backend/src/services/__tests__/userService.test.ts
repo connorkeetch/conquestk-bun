@@ -1,5 +1,5 @@
-import { UserService } from '../userService.js'
 import { query } from '../../config/database.js'
+import { UserService } from '../userService.js'
 
 type QueryMock = jest.MockedFunction<typeof query>
 

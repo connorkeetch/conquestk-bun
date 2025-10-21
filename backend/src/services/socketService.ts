@@ -453,11 +453,6 @@ function addLockstepBaselineAck(socketId: string, matchId: string, seq = 0) {
   })
 }
 
-function hasLockstepBaselineAck(socketId: string, matchId: string): boolean {
-  const detailsMap = lockstepBaselineAckDetails.get(matchId)
-  return Boolean(detailsMap?.has(socketId))
-}
-
 function getLockstepBaselineAckInfo(
   socketId: string,
   matchId: string,

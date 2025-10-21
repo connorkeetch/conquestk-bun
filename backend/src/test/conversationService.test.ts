@@ -480,10 +480,10 @@ describe('conversationService', () => {
 
     const summary = await getUnreadSummary('user-soft')
 
-    expect(summary).toEqual([
-      { conversationId: 'conv-soft', unreadCount: 0 },
+    expect(summary).toEqual([{ conversationId: 'conv-soft', unreadCount: 0 }])
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('m.deleted_at IS NULL'), [
+      'user-soft',
     ])
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('m.deleted_at IS NULL'), ['user-soft'])
   })
 
   it('marks conversations as read using the latest message timestamp', async () => {

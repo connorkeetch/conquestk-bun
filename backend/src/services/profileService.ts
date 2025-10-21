@@ -1,6 +1,6 @@
 import { DEFAULT_THEME_ID, normalizeThemeId } from '@conquestk/shared/types/themes'
 import type { QueryResultRow } from 'pg'
-import { withClient } from '../config/database.js'
+import { getPool, withClient } from '../config/database.js'
 import type {
   Achievement,
   AggregatedStatsSummary,
@@ -16,6 +16,7 @@ import type {
 } from '../types/profile.js'
 import { validateBio } from '../utils/contentModeration.js'
 import { logger } from '../utils/logger.js'
+import { UserPreferencesService } from './UserPreferencesService.js'
 
 interface RawLeaderboardRow {
   user_id: string
@@ -69,10 +70,32 @@ const mapGameHistoryRow = (row: GameHistoryRow): GameHistoryEntry => ({
   endedAt: row.ended_at ?? null,
 })
 
+type WritablePreferenceKey = Exclude<keyof UserPreferences, 'userId'>
+
+const WRITABLE_PREFERENCE_KEYS: ReadonlyArray<WritablePreferenceKey> = [
+  'theme',
+  'soundEnabled',
+  'musicEnabled',
+  'notificationEnabled',
+  'dmNotificationsBrowser',
+  'dmNotificationsEmail',
+  'autoReady',
+  'showTimer',
+  'showArmyNumbers',
+  'animationSpeed',
+  'language',
+]
+
 export class ProfileService {
+  private preferencesService?: UserPreferencesService
+
+  constructor(preferencesService?: UserPreferencesService) {
+    this.preferencesService = preferencesService
+  }
+
   // Get complete user profile with all related data
   async getUserProfile(userId: string): Promise<ProfileResponse> {
-    return await withClient(async (client) => {
+    const { profile, statistics, achievements, recentGames } = await withClient(async (client) => {
       // Get profile data
       // user_profiles table removed - profile data is now in users table
       const profileResult = await client.query('SELECT * FROM users WHERE id = $1', [userId])
@@ -112,20 +135,25 @@ export class ProfileService {
         [userId],
       )
 
-      // Get preferences
-      const preferencesResult = await client.query(
-        'SELECT * FROM user_preferences WHERE user_id = $1',
-        [userId],
-      )
-
       return {
         profile: profileResult.rows[0] || this.createDefaultProfile(userId),
         statistics: statsResult.rows[0] || this.createDefaultStats(userId),
         achievements: achievementsResult.rows || [],
         recentGames: (recentGamesResult.rows as GameHistoryRow[]).map(mapGameHistoryRow),
-        preferences: preferencesResult.rows[0] || this.createDefaultPreferences(userId),
       }
     })
+
+    const preferencesService = this.getPreferencesService()
+    const preferences =
+      (await preferencesService.getPreferences(userId)) || this.createDefaultPreferences(userId)
+
+    return {
+      profile,
+      statistics,
+      achievements,
+      recentGames,
+      preferences,
+    }
   }
 
   // Update user profile
@@ -521,59 +549,18 @@ export class ProfileService {
   // Update user preferences
   async updatePreferences(
     userId: string,
-    preferences: Partial<UserPreferences>,
+    preferences: Partial<UserPreferences> | Record<string, unknown>,
   ): Promise<UserPreferences> {
-    return await withClient(async (client) => {
-      const updateFields: string[] = []
-      const values: Array<string | number | boolean> = []
-      let paramCount = 0
+    const sanitized = this.sanitizePreferenceUpdates(preferences)
 
-      Object.keys(preferences).forEach((key) => {
-        if (key !== 'userId' && preferences[key as keyof UserPreferences] !== undefined) {
-          updateFields.push(`${this.camelToSnake(key)} = $${++paramCount}`)
-          const value = preferences[key as keyof UserPreferences]
-          if (key === 'theme' && typeof value === 'string') {
-            values.push(normalizeThemeId(value))
-          } else {
-            values.push(value as string | number | boolean)
-          }
-        }
-      })
+    const updated = await this.getPreferencesService().updatePreferences(userId, sanitized)
+    if (updated) {
+      return updated
+    }
 
-      updateFields.push('updated_at = CURRENT_TIMESTAMP')
-      values.push(userId)
-
-      const query = `
-        UPDATE user_preferences 
-        SET ${updateFields.join(', ')} 
-        WHERE user_id = $${++paramCount}
-      `
-
-      await client.query(query, values)
-
-      // Return updated preferences
-      const result = await client.query('SELECT * FROM user_preferences WHERE user_id = $1', [
-        userId,
-      ])
-
-      const updatedPreferences = result.rows[0] as
-        | (UserPreferences & {
-            theme?: string | null
-          })
-        | undefined
-
-      if (!updatedPreferences) {
-        return this.createDefaultPreferences(userId)
-      }
-
-      return {
-        ...updatedPreferences,
-        theme:
-          typeof updatedPreferences.theme === 'string'
-            ? normalizeThemeId(updatedPreferences.theme)
-            : DEFAULT_THEME_ID,
-      }
-    })
+    // Fall back to in-memory defaults when persistence is unavailable
+    const defaults = this.createDefaultPreferences(userId)
+    return { ...defaults, ...sanitized }
   }
 
   // Get global leaderboard
@@ -614,6 +601,13 @@ export class ProfileService {
   }
 
   // Helper methods
+  private getPreferencesService(): UserPreferencesService {
+    if (!this.preferencesService) {
+      this.preferencesService = new UserPreferencesService(getPool())
+    }
+    return this.preferencesService
+  }
+
   private createDefaultProfile(userId: string): UserProfile {
     return {
       userId,
@@ -651,30 +645,101 @@ export class ProfileService {
     }
   }
 
+  private sanitizePreferenceUpdates(
+    preferences: Partial<UserPreferences> | Record<string, unknown>,
+  ): Partial<UserPreferences> {
+    if (!preferences || typeof preferences !== 'object') {
+      return {}
+    }
+
+    const sanitized: Partial<UserPreferences> = {}
+
+    for (const key of WRITABLE_PREFERENCE_KEYS) {
+      const rawValue = (preferences as Record<string, unknown>)[key]
+      if (rawValue === undefined) {
+        continue
+      }
+
+      switch (key) {
+        case 'theme':
+          if (typeof rawValue === 'string') {
+            sanitized.theme = normalizeThemeId(rawValue)
+          }
+          break
+        case 'soundEnabled':
+          if (typeof rawValue === 'boolean') {
+            sanitized.soundEnabled = rawValue
+          }
+          break
+        case 'musicEnabled':
+          if (typeof rawValue === 'boolean') {
+            sanitized.musicEnabled = rawValue
+          }
+          break
+        case 'notificationEnabled':
+          if (typeof rawValue === 'boolean') {
+            sanitized.notificationEnabled = rawValue
+          }
+          break
+        case 'dmNotificationsBrowser':
+          if (typeof rawValue === 'boolean') {
+            sanitized.dmNotificationsBrowser = rawValue
+          }
+          break
+        case 'dmNotificationsEmail':
+          if (typeof rawValue === 'boolean') {
+            sanitized.dmNotificationsEmail = rawValue
+          }
+          break
+        case 'autoReady':
+          if (typeof rawValue === 'boolean') {
+            sanitized.autoReady = rawValue
+          }
+          break
+        case 'showTimer':
+          if (typeof rawValue === 'boolean') {
+            sanitized.showTimer = rawValue
+          }
+          break
+        case 'showArmyNumbers':
+          if (typeof rawValue === 'boolean') {
+            sanitized.showArmyNumbers = rawValue
+          }
+          break
+        case 'animationSpeed':
+          if (rawValue === 'slow' || rawValue === 'normal' || rawValue === 'fast') {
+            sanitized.animationSpeed = rawValue
+          }
+          break
+        case 'language':
+          if (typeof rawValue === 'string') {
+            const trimmed = rawValue.trim()
+            if (trimmed.length > 0 && trimmed.length <= 10) {
+              sanitized.language = trimmed
+            }
+          }
+          break
+      }
+    }
+
+    return sanitized
+  }
+
   private createDefaultPreferences(userId: string): UserPreferences {
     return {
       userId,
       theme: DEFAULT_THEME_ID,
-      language: 'en',
-      timezone: 'UTC',
-      notificationsEnabled: true,
-      emailNotifications: true,
-      soundEffects: true,
-      backgroundMusic: true,
-      autoSaveFrequency: 30,
+      soundEnabled: true,
+      musicEnabled: true,
+      notificationEnabled: true,
+      dmNotificationsBrowser: true,
+      dmNotificationsEmail: false,
+      autoReady: false,
+      showTimer: true,
+      showArmyNumbers: true,
       animationSpeed: 'normal',
-      showTerritoryNames: true,
-      showArmyCounts: true,
-      confirmActions: true,
-      privacyLevel: 'public',
-      allowFriendRequests: true,
-      showOnlineStatus: true,
-      updatedAt: new Date(),
+      language: 'en',
     }
-  }
-
-  private camelToSnake(str: string): string {
-    return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
   }
 }
 

@@ -1,5 +1,5 @@
-import { MapService } from '../mapService.js'
 import { query } from '../../config/database.js'
+import { MapService } from '../mapService.js'
 
 type MockedQuery = jest.MockedFunction<typeof query>
 
@@ -20,11 +20,7 @@ describe('MapService.validateCapitalTerritories', () => {
   it('returns valid when capitals exist and are not adjacent', async () => {
     mockQuery
       .mockResolvedValueOnce({
-        rows: [
-          { id: '1' },
-          { id: '2' },
-          { id: '3' },
-        ],
+        rows: [{ id: '1' }, { id: '2' }, { id: '3' }],
         rowCount: 3,
       })
       .mockResolvedValueOnce({
@@ -46,10 +42,7 @@ describe('MapService.validateCapitalTerritories', () => {
   it('rejects configurations where capitals are adjacent', async () => {
     mockQuery
       .mockResolvedValueOnce({
-        rows: [
-          { id: '1' },
-          { id: '2' },
-        ],
+        rows: [{ id: '1' }, { id: '2' }],
         rowCount: 2,
       })
       .mockResolvedValueOnce({

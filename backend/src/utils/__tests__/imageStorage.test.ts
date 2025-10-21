@@ -23,8 +23,7 @@ describe('storeImageBuffer filename handling', () => {
 
     const result = await storeImageBuffer(SAMPLE_PNG, {
       mimeType: 'image/png',
-      preferredFilename:
-        ' ..\\..//..\\malicious..//nested/../payload name?.png ',
+      preferredFilename: ' ..\\..//..\\malicious..//nested/../payload name?.png ',
     })
 
     expect(result.storageKey.startsWith('maps/')).toBe(true)
