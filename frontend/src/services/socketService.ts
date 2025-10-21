@@ -117,14 +117,15 @@ class SocketService {
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null
   private lastPongTime: number = Date.now()
   private connectionLatency: number = 0
-  private deltaSequenceTracking: Map<string, number> = new Map() // roomId -> last received sequence
-  private pendingDeltaRequests: Set<string> = new Set() // Track in-flight delta requests
+
+  // Action tracking
   private pendingActions: Map<string, Promise<{ ok: boolean; queued?: boolean; error?: string }>> =
     new Map() // Track in-flight actions by idempotency key
   private inFlightActionKeys: Map<string, string> = new Map() // action fingerprint -> idempotency key
   private lastActionEmitAt: Map<string, number> = new Map() // For throttling actions
+
+  // Room management
   private joiningRooms: Map<string, number> = new Map() // roomId -> attempt count
-  private processDeltaHandler?: (payload: GameDelta) => Promise<void>
   private lastTurnStartByRoom: Map<string, number> = new Map()
   private readonly lockstepEnabled = true
   private lockstepSeqByRoom: Map<string, number> = new Map()
@@ -669,136 +670,6 @@ class SocketService {
     }
   }
 
-  /**
-   * RELIABILITY: Check if a delta sequence has gaps and request missing deltas
-   */
-  private async checkDeltaSequence(
-    roomId: string,
-    delta: { version?: number; type?: string },
-  ): Promise<boolean> {
-    // Skip if delta doesn't have a sequence number
-    if (!delta.version) {
-      return true // Allow it through
-    }
-
-    const lastSeq = this.deltaSequenceTracking.get(roomId) ?? 0
-    const currentSeq = delta.version
-
-    // First delta for this room
-    if (lastSeq === 0) {
-      this.deltaSequenceTracking.set(roomId, currentSeq)
-      return true
-    }
-
-    if (currentSeq === lastSeq) {
-      logger.debug('Received repeated delta version; processing without advancing sequence', {
-        roomId,
-        version: currentSeq,
-      })
-      return true
-    }
-
-    if (currentSeq < lastSeq) {
-      logger.warn('Received stale delta - dropping', {
-        roomId,
-        lastSeq,
-        received: currentSeq,
-      })
-      return false
-    }
-
-    // Expected next sequence number
-    if (currentSeq === lastSeq + 1) {
-      this.deltaSequenceTracking.set(roomId, currentSeq)
-      return true
-    }
-
-    // GAP DETECTED: Missing deltas between lastSeq and currentSeq
-    logger.warn('Delta sequence gap detected', {
-      roomId,
-      lastSeq,
-      currentSeq,
-      missing: currentSeq - lastSeq - 1,
-    })
-    // Request missing deltas (if not already requesting)
-    const requestKey = `${roomId}:${lastSeq}-${currentSeq}`
-    if (!this.pendingDeltaRequests.has(requestKey)) {
-      this.pendingDeltaRequests.add(requestKey)
-
-      try {
-        await this.requestMissingDeltas(roomId, lastSeq + 1, currentSeq - 1)
-      } finally {
-        this.pendingDeltaRequests.delete(requestKey)
-      }
-    }
-
-    // Accept the current delta even though there's a gap
-    // The full state refetch will fix any inconsistencies
-    this.deltaSequenceTracking.set(roomId, currentSeq)
-    return true
-  }
-
-  /**
-   * RELIABILITY: Request missing deltas from server
-   */
-  private async requestMissingDeltas(
-    roomId: string,
-    fromSeq: number,
-    toSeq: number,
-  ): Promise<void> {
-    if (!this.socket) {
-      return
-    }
-
-    logger.info('Requesting missing deltas', { roomId, fromSeq, toSeq })
-    // ResyncBanner shows sync status, no toast needed for delta requests
-
-    return new Promise((resolve) => {
-      this.socket?.emit(
-        'request-missing-deltas',
-        { roomId, fromSeq, toSeq },
-        (response?: { ok: boolean; deltas?: unknown[]; error?: string }) => {
-          if (response?.ok) {
-            if (response.deltas && response.deltas.length > 0) {
-              logger.info('Received missing deltas', { count: response.deltas.length })
-              const handler = this.processDeltaHandler
-              const deltasArray = Array.isArray(response.deltas)
-                ? (response.deltas as unknown[])
-                : []
-              if (handler) {
-                void (async () => {
-                  for (const raw of deltasArray) {
-                    const delta = raw as GameDelta
-                    const rId = (delta as { roomId?: string }).roomId
-                    if (rId) {
-                      const shouldProcess = await this.checkDeltaSequence(rId, delta)
-                      if (!shouldProcess) {
-                        continue
-                      }
-                    }
-                    await handler(delta)
-                  }
-                })().finally(resolve)
-                return
-              }
-              logger.warn('processDeltaHandler not initialized; falling back to full refetch')
-              store.dispatch(fetchGameState({ roomId }))
-            } else {
-              // Server doesn't have deltas - trigger full state refetch
-              logger.info('Server has no cached deltas - refetching full state')
-              store.dispatch(fetchGameState({ roomId }))
-            }
-            resolve()
-          } else {
-            logger.error('Failed to request missing deltas', { error: response?.error })
-            // Status shown in ResyncBanner, no need for toast
-            resolve()
-          }
-        },
-      )
-    })
-  }
-
   private resetPendingActions(_roomId?: string) {
     if (this.pendingActions.size > 0) {
       for (const [id] of this.pendingActions) {
@@ -808,9 +679,6 @@ class SocketService {
     }
     if (this.inFlightActionKeys.size > 0) {
       this.inFlightActionKeys.clear()
-    }
-    if (this.pendingDeltaRequests.size > 0) {
-      this.pendingDeltaRequests.clear()
     }
     rollbackAllOptimisticActions()
     store.dispatch(clearOptimisticMarkers())
@@ -1108,8 +976,6 @@ class SocketService {
     if (!roomId) return
     // Allow immediate rejoin attempts (React StrictMode double-invokes effects)
     this.joiningRooms.delete(roomId)
-    // Reset delta sequence tracking so rejoin starts fresh
-    this.deltaSequenceTracking.delete(roomId)
     this.socket?.emit('leave-room', roomId)
   }
 
@@ -1737,179 +1603,7 @@ class SocketService {
       )
     })
 
-    // Delta update handler - efficient real-time updates
-    const processDelta = async (payload: GameDelta) => {
-      const state = store.getState()
-      const viewerId = state.auth.user?.id ?? null
-      const currentGame = state.game.currentGame
-
-      // Any delta for this room confirms activity — clear pending convergence timer
-      if (payload?.roomId) {
-        this.clearConfirmTimer(payload.roomId)
-      }
-
-      const roomId = payload.roomId
-      const recentTurnEventTs =
-        typeof roomId === 'string' ? this.lastTurnStartByRoom.get(roomId) : undefined
-      const skipTurnStartFromEvent =
-        typeof roomId === 'string' &&
-        typeof recentTurnEventTs === 'number' &&
-        Date.now() - recentTurnEventTs < TURN_SUPPRESS_WINDOW_MS
-      if (skipTurnStartFromEvent && typeof roomId === 'string') {
-        this.lastTurnStartByRoom.delete(roomId)
-      }
-
-      if (!currentGame || currentGame.roomId !== payload.roomId) {
-        if (!this.pendingRoomStateFetches.has(payload.roomId)) {
-          this.pendingRoomStateFetches.add(payload.roomId)
-          void (store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>)
-            .catch(() => {
-              /* swallow fetch errors - fallback is manual refresh */
-            })
-            .finally(() => {
-              this.pendingRoomStateFetches.delete(payload.roomId)
-            })
-        }
-        return
-      }
-
-      // DESYNC DETECTION: Check if we need to resync due to version mismatch or state corruption
-      if (state.game.needsResync) {
-        logger.warn('Desync detected - triggering full state refetch', {
-          roomId: payload.roomId,
-          deltaType: payload.type,
-        })
-        reliabilityMetrics.recordDesyncDetection()
-
-        if (!this.pendingRoomStateFetches.has(payload.roomId)) {
-          this.pendingRoomStateFetches.add(payload.roomId)
-
-          // ResyncBanner shows user-facing sync status
-          void (store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>)
-            .then(() => {
-              logger.info('Desync recovery successful')
-              // ResyncBanner will hide automatically when desync flag clears
-              reliabilityMetrics.recordDesyncRecovery()
-            })
-            .catch((error) => {
-              logger.error('Desync recovery failed', error)
-              // ResyncBanner stays visible with error, no toast needed
-            })
-            .finally(() => {
-              this.pendingRoomStateFetches.delete(payload.roomId)
-            })
-        }
-        return
-      }
-
-      const currentUserId = viewerId
-
-      // Handle a single turn-start notification (avoid per-phase spam)
-      // Only notify when the turn first switches to the current user.
-      if (payload.type === 'PHASE_CHANGE' && payload.currentPlayer === currentUserId) {
-        const wasMyTurn = currentGame?.currentPlayer === currentUserId
-        if (!wasMyTurn && !skipTurnStartFromEvent) {
-          notificationService.addNotification({
-            type: 'turn_reminder',
-            title: "It's your turn!",
-            message: `It's your turn - ${payload.phase} phase`,
-            read: false,
-            ...(payload.roomId ? { actionUrl: `/room/${payload.roomId}` } : {}),
-            actionLabel: 'Go to game',
-            metadata: {
-              gameId: payload.roomId,
-            },
-          })
-          audioService.playEffect('turn')
-        }
-      }
-
-      // Reset local placement tracking at the start of reinforcement
-      if (payload.type === 'PHASE_CHANGE') {
-        if (payload.phase === 'reinforcement') {
-          store.dispatch(clearPlacementHistory())
-          // Server may include reinforcementArmies; server-spent resets to 0 at phase start
-          store.dispatch(setPlacementServerSpent(0))
-        }
-      }
-
-      // Handle battle result audio and record dice recap
-      if (payload.type === 'BATTLE_RESULT') {
-        const br = (payload as BattleResultDelta).battleResult
-        if (br.conquered) {
-          audioService.playEffect('victory')
-        } else {
-          audioService.playEffect('defeat')
-        }
-        try {
-          store.dispatch(
-            recordBattleResult({
-              fromId: br.fromTerritory.id,
-              toId: br.toTerritory.id,
-              ...(br.attackerId !== undefined ? { attackerId: br.attackerId ?? null } : {}),
-              ...(br.defenderId !== undefined ? { defenderId: br.defenderId ?? null } : {}),
-              attackerDice: Array.isArray(br.attackerDice) ? br.attackerDice : [],
-              defenderDice: Array.isArray(br.defenderDice) ? br.defenderDice : [],
-              attackerLosses: br.attackerLosses ?? 0,
-              defenderLosses: br.defenderLosses ?? 0,
-              conquered: Boolean(br.conquered),
-            }),
-          )
-        } catch (error) {
-          logger.warn('Failed to append battle result to UI (best-effort)', { error })
-        }
-      }
-
-      // Basic desync checks before applying - read fresh state right before validation
-      try {
-        if (payload.type === 'TERRITORY_UPDATE') {
-          const td = payload as TerritoryDelta
-          if (!currentGame.board.some((t) => t.id === td.territoryId)) {
-            store.dispatch(setDesyncDetected(true))
-            return
-          }
-        } else if (payload.type === 'PLAYER_UPDATE') {
-          const pd = payload as PlayerDelta
-          if (!currentGame.players.some((p) => p.id === pd.playerId)) {
-            store.dispatch(setDesyncDetected(true))
-            return
-          }
-        } else if (payload.type === 'BATTLE_RESULT') {
-          const br = (payload as BattleResultDelta).battleResult
-          if (
-            !currentGame.board.some((t) => t.id === br.fromTerritory.id) ||
-            !currentGame.board.some((t) => t.id === br.toTerritory.id)
-          ) {
-            store.dispatch(setDesyncDetected(true))
-            return
-          }
-        }
-      } catch {
-        store.dispatch(setDesyncDetected(true))
-        return
-      }
-
-      // Apply delta to Redux store
-      // Legacy delta path removed.
-
-      // Align room lifecycle status with end-of-game signals immediately
-      try {
-        if (payload.type === 'GAME_END') {
-          store.dispatch(updateRoom({ id: payload.roomId, status: 'completed' }))
-        } else if (payload.type === 'PHASE_CHANGE') {
-          const p = payload as import('@shared/types').PhaseChangeDelta
-          if (p.phase === 'finished') {
-            store.dispatch(updateRoom({ id: payload.roomId, status: 'completed' }))
-          }
-        }
-      } catch (error) {
-        logger.warn('Failed to align room status with end-of-game signals', { error })
-      }
-    }
-
-    this.processDeltaHandler = processDelta
-
-    // Legacy `game-delta` listeners removed; lockstep frames now handle reconciliation.
+    // Lockstep frames handle all game state reconciliation
     if (this.lockstepEnabled) {
       this.socket.on('game-action:frame-committed', this.handleLockstepFrame)
       this.socket.on('game-action:checksum', this.handleLockstepChecksum)
@@ -2505,8 +2199,6 @@ class SocketService {
     this.socket.off('typing.start')
     this.socket.off('typing.stop')
     this.socket.off('error')
-
-    this.processDeltaHandler = undefined
   }
 }
 
