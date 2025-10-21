@@ -747,4 +747,53 @@ describe('GameEngine', () => {
       expect(resigningPlayer?.isEliminated).toBe(true);
     });
   });
+
+  describe('go_back_to_reinforcement', () => {
+    it('should not grant extra armies when toggling between reinforcement and attack phases', async () => {
+      const players = createPlayers('player1', 'player2');
+      let gameState = gameEngine.initializeGame(
+        'room-toggle',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      );
+
+      const currentPlayerId = gameState.currentPlayer;
+      const player = gameState.players.find(p => p.id === currentPlayerId)!;
+      const territory = gameState.board.find(t => t.ownerId === currentPlayerId)!;
+      const initialArmies = player.armies;
+
+      // 1. Deploy some armies
+      const deployAmount = 1;
+      gameState = (await gameEngine.processAction(gameState, {
+        type: 'deploy',
+        roomId: 'room-toggle',
+        playerId: currentPlayerId,
+        payload: { territoryId: territory.id, armies: deployAmount },
+      })).gameState;
+
+      const armiesAfterDeploy = initialArmies - deployAmount;
+      expect(player.armies).toBe(armiesAfterDeploy);
+
+      // 2. Advance to attack phase
+      gameState = (await gameEngine.processAction(gameState, {
+        type: 'end_turn',
+        roomId: 'room-toggle',
+        playerId: currentPlayerId,
+      })).gameState;
+      expect(gameState.phase).toBe('attack');
+
+      // 3. Go back to reinforcement phase
+      gameState = (await gameEngine.processAction(gameState, {
+        type: 'go_back_to_reinforcement',
+        roomId: 'room-toggle',
+        playerId: currentPlayerId,
+      })).gameState;
+      expect(gameState.phase).toBe('reinforcement');
+
+      // 4. Verify player armies were not reset
+      const finalPlayer = gameState.players.find(p => p.id === currentPlayerId)!;
+      expect(finalPlayer.armies).toBe(armiesAfterDeploy);
+    });
+  });
 })
