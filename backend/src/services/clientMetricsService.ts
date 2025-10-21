@@ -166,7 +166,7 @@ export async function getClientMetricsSummary(hours = 24): Promise<ClientMetrics
        COALESCE(SUM((ls.metrics->>'reconnectCount')::integer), 0) AS reconnects,
        COALESCE(SUM((ls.metrics->'lockstepResyncs'->>'total')::integer), 0) AS resyncs
      FROM latest_sessions ls
-     LEFT JOIN users u ON u.id = ls.user_id
+     LEFT JOIN users u ON u.id::text = ls.user_id
      WHERE ls.user_id IS NOT NULL AND ls.user_id <> ''
      GROUP BY ls.user_id, u.username
      ORDER BY resyncs DESC, sessions DESC
