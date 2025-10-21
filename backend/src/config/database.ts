@@ -9,7 +9,54 @@ export interface DatabaseQueryResult<T extends QueryResultRow = QueryResultRow> 
 
 type QueryValues = ReadonlyArray<unknown>
 
-function convertQuestionMarksToPgPlaceholders(sql: string, params: QueryValues): string {
+function findPreviousNonWhitespace(sql: string, startIndex: number): string | null {
+  for (let i = startIndex; i >= 0; i--) {
+    const char = sql[i]
+    if (!/\s/.test(char)) {
+      return char
+    }
+  }
+  return null
+}
+
+function findNextNonWhitespace(sql: string, startIndex: number): string | null {
+  for (let i = startIndex; i < sql.length; i++) {
+    const char = sql[i]
+    if (!/\s/.test(char)) {
+      return char
+    }
+  }
+  return null
+}
+
+function isLikelyJsonOperator(sql: string, index: number): boolean {
+  const nextTwo = sql.slice(index, index + 2)
+  if (nextTwo === '?|' || nextTwo === '?&') {
+    return true
+  }
+
+  const previous = findPreviousNonWhitespace(sql, index - 1)
+  if (!previous) {
+    return false
+  }
+
+  const prevIsIdentifierLike = /[A-Za-z0-9_"\)\]]/.test(previous)
+  if (!prevIsIdentifierLike) {
+    return false
+  }
+
+  const next = findNextNonWhitespace(sql, index + 1)
+  if (!next) {
+    return false
+  }
+
+  return ["'", '"', '?', '[', '{', '(', '|', '&'].includes(next)
+}
+
+export function convertQuestionMarksToPgPlaceholders(
+  sql: string,
+  params: QueryValues,
+): string {
   let placeholderIndex = 0
   let inSingleQuote = false
   let inDoubleQuote = false
@@ -43,6 +90,11 @@ function convertQuestionMarksToPgPlaceholders(sql: string, params: QueryValues):
     }
 
     if (!inSingleQuote && !inDoubleQuote && char === '?') {
+      if (isLikelyJsonOperator(sql, i)) {
+        converted += char
+        continue
+      }
+
       placeholderIndex++
       converted += `$${placeholderIndex}`
       continue
