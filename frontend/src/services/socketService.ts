@@ -1707,6 +1707,19 @@ class SocketService {
       const currentUserId = auth.user?.id
       const needsResync = game.needsResync === true
 
+      // CRITICAL: When lockstep is active and we have a baseline, IGNORE snapshots entirely
+      // Snapshots lag behind lockstep frames and will desync the phase/state
+      if (
+        this.lockstepEnabled &&
+        typedGameState.roomId &&
+        this.lockstepBaselineReady.has(typedGameState.roomId)
+      ) {
+        logger.debug('[Lockstep] Ignoring game:snapshot - lockstep state is authoritative', {
+          roomId: typedGameState.roomId,
+        })
+        return
+      }
+
       // Delta-first: ignore snapshots when we already have state and no resync requested,
       // unless the snapshot clearly advances beyond our version (gap detected)
       if (previousState && !needsResync) {
