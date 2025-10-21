@@ -969,12 +969,25 @@ export class GameEngine {
       return
     }
 
-    // Calculate territories per player, distributing as evenly as possible among players
-    const territoriesPerPlayer = Math.floor(territories.length / playerCount)
-
     // Shuffle territories for random distribution
     const shuffledTerritories = [...territories]
     rng.shuffleInPlace(shuffledTerritories)
+
+    // Handle the case where there are more players than territories
+    if (playerCount >= territories.length) {
+      for (let i = 0; i < shuffledTerritories.length; i++) {
+        const territory = shuffledTerritories[i]
+        const player = players[i]
+        territory.ownerId = player.id
+        territory.armies = 3
+        player.territories.push(territory.id)
+      }
+      // No neutral territories in this case, and some players will have 0 territories
+      return
+    }
+
+    // Calculate territories per player, distributing as evenly as possible among players
+    const territoriesPerPlayer = Math.floor(territories.length / playerCount)
 
     let territoryIndex = 0
 
