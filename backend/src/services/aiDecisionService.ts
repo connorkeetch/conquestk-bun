@@ -944,12 +944,13 @@ class AIDecisionService {
             payload: { territoryId: firstTerritoryId, armies: armiesToDeploy },
           })
         }
-        addEndTurn()
-        addEndTurn()
+        addEndTurn() // End reinforcement
+        addEndTurn() // End attack
+        addEndTurn() // End fortify
         break
       case 'attack':
-        addEndTurn()
-        addEndTurn()
+        addEndTurn() // End attack
+        addEndTurn() // End fortify
         break
       case 'fortify':
         addEndTurn()
