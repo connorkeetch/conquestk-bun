@@ -842,6 +842,24 @@ export class GameService {
     const previousPlayerId = gameState.currentPlayer
 
     if (!this.isValidAction(action, userId, gameState)) {
+      // Log detailed validation failure info for debugging
+      const validationContext = {
+        actionType: action.type,
+        playerId: action.playerId,
+        userId,
+        currentPlayer: gameState.currentPlayer,
+        phase: gameState.phase,
+        pendingConquest: gameState.lastBattleResult?.pendingConquestFor,
+        mustCashIn: gameState.mustCashInTreasures,
+      }
+
+      if (action.type === 'attack' || action.type === 'deploy' || action.type === 'fortify') {
+        Object.assign(validationContext, {
+          payload: action.payload,
+        })
+      }
+
+      logger.warn('[GameService] Action validation failed', validationContext)
       throw new Error('Invalid action')
     }
 

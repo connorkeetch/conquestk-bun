@@ -1859,6 +1859,11 @@ export class GameEngine {
       return false
     }
 
+    // Block attacks when there's a pending conquest transfer
+    if (gameState.lastBattleResult?.pendingConquestFor) {
+      return false
+    }
+
     const { fromTerritoryId, toTerritoryId, armies = 0 } = action.payload
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
