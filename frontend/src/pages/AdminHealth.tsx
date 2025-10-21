@@ -8,6 +8,7 @@ import type {
 } from '@conquestk/shared/types/admin'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { Link } from 'react-router-dom'
 import { adminService, type ClientMetricsSummary } from '@/services/adminService'
 
 type HealthResult = {
@@ -686,7 +687,7 @@ export default function AdminHealth() {
             )
           }
 
-          const renderClientMetricsSummaryCard = () => {
+          const _renderClientMetricsSummaryCard = () => {
             const d = (r.data ?? {}) as ClientMetricsSummary
             const sessionCount = d?.sessionCount ?? 0
             const activeGames = d?.activeGames ?? 0
@@ -1050,6 +1051,82 @@ export default function AdminHealth() {
             )
           }
 
+          const renderClientMetricsSummaryKPIs = () => {
+            const d = (r.data ?? {}) as ClientMetricsSummary
+            const sessionCount = d?.sessionCount ?? 0
+            const activeGames = d?.activeGames ?? 0
+            const avgLatency = d?.avgLatency ?? 0
+            const avgSuccessRate = d?.avgSuccessRate ?? 100
+            const totalReconnects = d?.totalReconnects ?? 0
+            const reconnectsPerSession =
+              sessionCount > 0 ? totalReconnects / sessionCount : totalReconnects
+            const lockstep = d?.lockstepResyncs ?? {
+              total: 0,
+              successes: 0,
+              failures: 0,
+              failureRate: 0,
+              avgDurationMs: 0,
+              byReason: [],
+            }
+            const failureRatePct = Math.round((lockstep.failureRate ?? 0) * 1000) / 10
+
+            return (
+              <div className="mt-3 text-xs text-white/80 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Sessions (24h)
+                    </div>
+                    <div className="text-sm font-semibold text-white">{sessionCount}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Active Games
+                    </div>
+                    <div className="text-sm font-semibold text-white">{activeGames}</div>
+                    <div className="text-[10px] text-muted">
+                      {(lockstep.total ?? 0).toLocaleString()} resyncs observed
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">Reconnects</div>
+                    <div className="text-sm font-semibold text-white">{totalReconnects}</div>
+                    <div className="text-[10px] text-muted">
+                      {reconnectsPerSession.toFixed(1)} per session
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Action Success
+                    </div>
+                    <div className="text-sm font-semibold text-white">
+                      {avgSuccessRate.toFixed(1)}%
+                    </div>
+                    <div className="text-[10px] text-muted">
+                      Avg Latency {Math.round(avgLatency)} ms
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Resync Failure Rate
+                    </div>
+                    <div className="text-sm font-semibold text-white">
+                      {failureRatePct.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-1">
+                  <Link
+                    to="/admin/reliability"
+                    className="text-[11px] underline text-[color:var(--heading)]"
+                  >
+                    View reliability →
+                  </Link>
+                </div>
+              </div>
+            )
+          }
+
           const renderPerformanceAlerts = () => {
             const arr = Array.isArray(r.data) ? (r.data as AdminPerformanceAlert[]) : []
             return (
@@ -1102,7 +1179,7 @@ export default function AdminHealth() {
                     : r.label === 'Queues Stats'
                       ? renderQueuesStats()
                       : r.label === 'Client Metrics Summary'
-                        ? renderClientMetricsSummaryCard()
+                        ? renderClientMetricsSummaryKPIs()
                         : r.label === 'Performance Detailed'
                           ? renderPerformanceDetailed()
                           : r.label === 'Performance Alerts'
