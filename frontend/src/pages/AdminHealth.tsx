@@ -56,6 +56,8 @@ export default function AdminHealth() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [results, setResults] = useState<HealthResult[]>([])
   const [lastRunAt, setLastRunAt] = useState<string | null>(null)
+  const [clientSummaryHours, setClientSummaryHours] = useState<number>(24)
+  const [clientSummaryTab, setClientSummaryTab] = useState<'overview' | 'hotspots'>('overview')
   const [realtime, setRealtime] = useState<{
     payloads: {
       gameUpdate: { count: number; p50: number; p95: number; max: number } | null
@@ -128,7 +130,7 @@ export default function AdminHealth() {
           }
         }
         if (e.label === 'Client Metrics Summary') {
-          const data = await adminService.getClientMetricsSummary()
+          const data = await adminService.getClientMetricsSummary(clientSummaryHours)
           const dt = Date.now() - t0
           return {
             label: e.label,
@@ -223,7 +225,7 @@ export default function AdminHealth() {
     setResults(out)
     setLastRunAt(new Date(started).toISOString())
     setLoading(false)
-  }, [])
+  }, [clientSummaryHours])
 
   useEffect(() => {
     run().catch(() => {
@@ -841,130 +843,209 @@ export default function AdminHealth() {
               )
             }
 
+            const handleResetClientMetrics = async () => {
+              try {
+                const proceed = window.confirm(
+                  'Reset client metrics data? This deletes persisted snapshots used for this summary.',
+                )
+                if (!proceed) return
+                await adminService.resetClientMetrics({ scope: 'all' })
+                toast.success('Client metrics cleared')
+                // Refresh to pull the latest (now empty) summary
+                run().catch(() => {
+                  /* ignore */
+                })
+              } catch (_e) {
+                toast.error('Failed to reset client metrics')
+              }
+            }
+
             return (
               <div className="mt-3 text-xs text-white/80 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wide text-muted">
-                      Sessions (24h)
-                    </div>
-                    <div className="text-sm font-semibold text-white">{sessionCount}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wide text-muted">
+                      Timeframe
+                    </span>
+                    <select
+                      className="bg-surface-2/80 border border-border/40 rounded px-2 py-1 text-[12px] text-white/90"
+                      value={clientSummaryHours}
+                      onChange={(e) => {
+                        const val = Number(e.target.value)
+                        setClientSummaryHours(val)
+                        run().catch(() => {
+                          /* ignore */
+                        })
+                      }}
+                    >
+                      <option value={6}>Last 6h</option>
+                      <option value={24}>Last 24h</option>
+                      <option value={72}>Last 72h</option>
+                      <option value={168}>Last 7d</option>
+                    </select>
                   </div>
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wide text-muted">
-                      Active Games
-                    </div>
-                    <div className="text-sm font-semibold text-white">{activeGames}</div>
-                    <div className="text-[10px] text-muted">
-                      {(lockstep.total ?? 0).toLocaleString()} resyncs observed
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wide text-muted">Reconnects</div>
-                    <div className="text-sm font-semibold text-white">{totalReconnects}</div>
-                    <div className="text-[10px] text-muted">
-                      {reconnectsPerSession.toFixed(1)} per session
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
-                    <span>Action Success</span>
-                    <span>{avgSuccessRate.toFixed(1)}%</span>
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${successColor}`}
-                      style={{ width: barWidth(avgSuccessRate) }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
-                    <span>Avg Latency</span>
-                    <span>{Math.round(avgLatency)} ms</span>
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${latencyColor}`}
-                      style={{ width: barWidth((avgLatency / 800) * 100) }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
-                    <span>Resync Failure Rate</span>
-                    <span>{failureRatePct.toFixed(1)}%</span>
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${failureColor}`}
-                      style={{ width: barWidth(failureRatePct) }}
-                    />
-                  </div>
-                  <div className="text-[11px] text-muted mt-1">
-                    Avg duration {avgResyncDuration} ms · successes {lockstep.successes ?? 0} /{' '}
-                    {lockstep.total ?? 0}
-                  </div>
-                  {byReason.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {byReason.map((entry) => (
-                        <span
-                          key={entry.reason}
-                          className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-white/70 border border-border/30"
-                        >
-                          {entry.reason.replaceAll('_', ' ')} · {entry.total}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                {warnings.length > 0 ? (
-                  <div className="space-y-1 rounded-lg border border-red-500/40 bg-red-500/10 p-2">
-                    {warnings.map((warning, index) => (
-                      <div
-                        key={`${warning.message}:${index}`}
-                        className={`flex items-center gap-2 text-[11px] ${warning.severity === 'critical' ? 'text-red-200' : 'text-amber-200'}`}
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex rounded overflow-hidden border border-border/40">
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-[11px] ${
+                          clientSummaryTab === 'overview'
+                            ? 'bg-surface-2 text-white'
+                            : 'bg-surface-1 text-white/70 hover:text-white'
+                        }`}
+                        onClick={() => setClientSummaryTab('overview')}
                       >
-                        <span
-                          className={`h-2 w-2 rounded-full ${warning.severity === 'critical' ? 'bg-red-400' : 'bg-amber-300'} shadow`}
-                        />
-                        {warning.message}
-                      </div>
-                    ))}
+                        Overview
+                      </button>
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-[11px] ${
+                          clientSummaryTab === 'hotspots'
+                            ? 'bg-surface-2 text-white'
+                            : 'bg-surface-1 text-white/70 hover:text-white'
+                        }`}
+                        onClick={() => setClientSummaryTab('hotspots')}
+                      >
+                        Hotspots
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-[11px] rounded bg-surface-2/70 border border-border/40 hover:bg-surface-2"
+                      onClick={handleResetClientMetrics}
+                    >
+                      Reset Data
+                    </button>
                   </div>
+                </div>
+                {clientSummaryTab === 'overview' ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted">
+                          Sessions
+                        </div>
+                        <div className="text-sm font-semibold text-white">{sessionCount}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted">
+                          Active Games
+                        </div>
+                        <div className="text-sm font-semibold text-white">{activeGames}</div>
+                        <div className="text-[10px] text-muted">
+                          {(lockstep.total ?? 0).toLocaleString()} resyncs observed
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted">
+                          Reconnects
+                        </div>
+                        <div className="text-sm font-semibold text-white">{totalReconnects}</div>
+                        <div className="text-[10px] text-muted">
+                          {reconnectsPerSession.toFixed(1)} per session
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                        <span>Action Success</span>
+                        <span>{avgSuccessRate.toFixed(1)}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${successColor}`}
+                          style={{ width: barWidth(avgSuccessRate) }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                        <span>Avg Latency</span>
+                        <span>{Math.round(avgLatency)} ms</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${latencyColor}`}
+                          style={{ width: barWidth((avgLatency / 800) * 100) }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                        <span>Resync Failure Rate</span>
+                        <span>{failureRatePct.toFixed(1)}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${failureColor}`}
+                          style={{ width: barWidth(failureRatePct) }}
+                        />
+                      </div>
+                      <div className="text-[11px] text-muted mt-1">
+                        Avg duration {avgResyncDuration} ms · successes {lockstep.successes ?? 0} /{' '}
+                        {lockstep.total ?? 0}
+                      </div>
+                      {byReason.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {byReason.map((entry) => (
+                            <span
+                              key={entry.reason}
+                              className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-white/70 border border-border/30"
+                            >
+                              {entry.reason.replaceAll('_', ' ')} · {entry.total}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {warnings.length > 0 ? (
+                      <div className="space-y-1 rounded-lg border border-red-500/40 bg-red-500/10 p-2">
+                        {warnings.map((warning, index) => (
+                          <div
+                            key={`${warning.message}:${index}`}
+                            className={`flex items-center gap-2 text-[11px] ${warning.severity === 'critical' ? 'text-red-200' : 'text-amber-200'}`}
+                          >
+                            <span
+                              className={`h-2 w-2 rounded-full ${warning.severity === 'critical' ? 'bg-red-400' : 'bg-amber-300'} shadow`}
+                            />
+                            {warning.message}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-[11px] text-emerald-200">
+                        Client reliability metrics are within healthy ranges.
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-[11px] text-emerald-200">
-                    Client reliability metrics are within healthy ranges.
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
+                        Resync Hotspots · Games
+                      </div>
+                      {renderResyncHotspots(
+                        sessionsPerGame,
+                        'No game sessions recorded',
+                        'Unknown game',
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
+                        Resync Hotspots · Users
+                      </div>
+                      {renderResyncHotspots(
+                        sessionsPerUser,
+                        'No user sessions recorded',
+                        'Unknown user',
+                      )}
+                    </div>
                   </div>
                 )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
-                      Resync Hotspots · Games
-                    </div>
-                    {renderResyncHotspots(
-                      sessionsPerGame,
-                      'No game sessions recorded',
-                      'Unknown game',
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
-                      Resync Hotspots · Users
-                    </div>
-                    {renderResyncHotspots(
-                      sessionsPerUser,
-                      'No user sessions recorded',
-                      'Unknown user',
-                    )}
-                  </div>
-                </div>
               </div>
             )
           }
