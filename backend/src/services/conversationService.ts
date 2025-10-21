@@ -1833,6 +1833,7 @@ export async function getUnreadSummary(userId: string): Promise<UnreadSummaryEnt
       SELECT COUNT(*)::INT AS unread_count
       FROM conversation_messages m
       WHERE m.conversation_id = cm.conversation_id
+        AND m.deleted_at IS NULL
         AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
     ) unread ON TRUE
     WHERE cm.user_id = $1
@@ -1885,6 +1886,7 @@ export async function listConversationsForUser(
       SELECT COUNT(*)::INT AS unread_count
       FROM conversation_messages m
       WHERE m.conversation_id = cm.conversation_id
+        AND m.deleted_at IS NULL
         AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
     ) unread ON TRUE
     LEFT JOIN LATERAL (
