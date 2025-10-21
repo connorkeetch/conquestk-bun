@@ -4,10 +4,10 @@
   "description": "Shared types for ConquestK",
   "type": "module",
   "main": "dist/types/index.js",
-  "types": "types/index.d.ts",
+  "types": "dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./types/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "default": "./dist/types/index.js"
     },
     "./odds": {
@@ -19,12 +19,15 @@
       "default": "./dist/odds/*.js"
     },
     "./types": {
-      "types": "./types/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "default": "./dist/types/index.js"
     },
     "./types/*": {
-      "types": "./types/*.d.ts",
+      "types": "./dist/types/*.d.ts",
       "default": "./dist/types/*.js"
+    },
+    "./types/admin": {
+      "types": "./types/admin.d.ts"
     },
     "./constants/*": {
       "types": "./constants/*.ts",

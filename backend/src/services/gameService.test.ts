@@ -705,8 +705,10 @@ describe('GameService', () => {
 
       expect(result.fallbackUsed).toBe(true)
       expect(result.fallbackReason).toBe('stubbed')
-      const hasDeploy = result.appliedActions.some(action => action.type === 'deploy')
-      const endsWithEndTurn = result.appliedActions.slice(hasDeploy ? 1 : 0).every(action => action.type === 'end_turn')
+      const hasDeploy = result.appliedActions.some((action) => action.type === 'deploy')
+      const endsWithEndTurn = result.appliedActions
+        .slice(hasDeploy ? 1 : 0)
+        .every((action) => action.type === 'end_turn')
       expect(endsWithEndTurn).toBe(true)
 
       const persisted = await gameService.getGameState(roomId)

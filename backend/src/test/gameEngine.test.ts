@@ -646,9 +646,7 @@ describe('GameEngine resignation', () => {
   it('resets army count on resigned territories to a neutral default', async () => {
     const gameState = createBaseGameState()
     const resigningPlayer = gameState.players[0]
-    const resignedTerritory = gameState.board.find(
-      (t) => t.ownerId === resigningPlayer.id,
-    )
+    const resignedTerritory = gameState.board.find((t) => t.ownerId === resigningPlayer.id)
     if (!resignedTerritory) {
       throw new Error('Test setup failed: territory not found for resigning player')
     }

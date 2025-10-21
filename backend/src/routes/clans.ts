@@ -112,8 +112,14 @@ router.post(
     body('tag').isString().isLength({ min: 2, max: 5 }),
     body('motto').optional().isString().isLength({ max: 120 }),
     body('description').optional().isString().isLength({ max: 1024 }),
-    body('crestAssetUrl').optional().isString().isURL({ require_protocol: true, require_valid_protocol: true }),
-    body('bannerAssetUrl').optional().isString().isURL({ require_protocol: true, require_valid_protocol: true }),
+    body('crestAssetUrl')
+      .optional()
+      .isString()
+      .isURL({ require_protocol: true, require_valid_protocol: true }),
+    body('bannerAssetUrl')
+      .optional()
+      .isString()
+      .isURL({ require_protocol: true, require_valid_protocol: true }),
     body('recruitmentPolicy').optional().isIn(['open', 'application', 'invite']),
     body('recruitmentStatus').optional().isIn(['active', 'closed']),
     body('privacy').optional().isIn(['public', 'hidden']),
