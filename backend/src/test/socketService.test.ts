@@ -185,12 +185,16 @@ type MockedSocket = {
 describe('socketService event handlers', () => {
   const createIoMock = () => {
     const roomEmit = jest.fn()
+    const sockets = new Map()
     const io = {
       use: jest.fn(),
       on: jest.fn(),
       to: jest.fn(() => ({ emit: roomEmit })),
+      sockets: {
+        sockets,
+      },
     } as unknown as Server<ClientToServerEvents, ServerToClientEvents>
-    return { io, roomEmit }
+    return { io, roomEmit, sockets }
   }
 
   const createFakeSocket = () => {
@@ -273,13 +277,14 @@ describe('socketService event handlers', () => {
   }
 
   const initialiseHandlers = () => {
-    const { io, roomEmit } = createIoMock()
+    const { io, roomEmit, sockets } = createIoMock()
     setupSocketHandlers(io)
     const onMock = io.on as jest.Mock
     const connectionCall = onMock.mock.calls.find(([event]) => event === 'connection')
     expect(connectionCall).toBeDefined()
     const [, connectionHandler] = connectionCall as [string, (socket: MockedSocket) => void]
     const socket = createFakeSocket()
+    sockets.set(socket.id, socket)
     connectionHandler(socket)
     return { socket, io, roomEmit }
   }
@@ -312,10 +317,15 @@ describe('socketService event handlers', () => {
       gameConfig: {},
     } as unknown as import('../types/game.js').GameState)
 
-    const { socket, roomEmit } = initialiseHandlers()
-    const handler = getSocketHandler(socket, 'game-action')
+    const { socket } = initialiseHandlers()
+    socket.join.mockResolvedValue()
+    socket.rooms.add('game:room-lockstep')
+    const gameActionHandler = getSocketHandler(socket, 'game-action')
+    const baselineAckHandler = getSocketHandler(socket, 'lockstep:baseline-ack')
 
-    await handler({
+    baselineAckHandler({ roomId: 'room-lockstep' })
+
+    await gameActionHandler({
       roomId: 'room-lockstep',
       action: {
         type: 'end_turn',
@@ -331,16 +341,7 @@ describe('socketService event handlers', () => {
       }),
     )
 
-    expect(roomEmit).toHaveBeenCalledWith(
-      'game-action:frame-committed',
-      expect.objectContaining({
-        matchId: 'room-lockstep',
-        seq: 1,
-        playerId: 'user-1',
-      }),
-    )
-
-    expect(roomEmit).toHaveBeenCalledWith(
+    expect(socket.emit).toHaveBeenCalledWith(
       'game-action:checksum',
       expect.objectContaining({
         matchId: 'room-lockstep',
