@@ -1762,7 +1762,12 @@ export class GameEngine {
     if (gameState.lastBattleResult) {
       delete gameState.lastBattleResult.capitalElimination
     }
-    gameState.lastBattleResult = undefined
+
+    // Only clear the last battle result if there is no pending conquest transfer.
+    // This prevents a resignation from interfering with another player's turn.
+    if (!gameState.lastBattleResult?.pendingConquestFor) {
+      gameState.lastBattleResult = undefined
+    }
 
     // Assassination mode: check for hunter victory on resign
     if (gameState.gameConfig.gameMode === 'assassination') {
@@ -1776,9 +1781,13 @@ export class GameEngine {
     if (gameState.currentPlayer === action.playerId) {
       this.endPlayerTurn(gameState)
     } else {
-      // If the resigning player is not the current player, we still need to check
-      // for game end conditions, as this can affect the game state.
-      this.checkGameEnd(gameState)
+      // If another player resigns, we check for game end unless the current
+      // player has a pending conquest transfer.
+      if (gameState.lastBattleResult?.pendingConquestFor) {
+        this.updateEliminatedPlayers(gameState)
+      } else {
+        this.checkGameEnd(gameState)
+      }
     }
 
     return gameState
