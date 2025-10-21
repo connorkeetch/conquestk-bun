@@ -289,6 +289,16 @@ class SocketService {
   private handleLockstepFrame = (frame: InputFrame) => {
     if (!this.lockstepEnabled || !frame || typeof frame.matchId !== 'string') return
     const lastSeq = this.lockstepSeqByRoom.get(frame.matchId) ?? 0
+
+    // Log every frame for debugging sequence issues
+    logger.debug('[Lockstep] Frame received', {
+      matchId: frame.matchId,
+      seq: frame.seq,
+      lastSeq,
+      action: frame.action?.type,
+      playerId: frame.action?.playerId,
+    })
+
     if (
       lastSeq > 0 &&
       frame.seq !== lastSeq + 1 &&
@@ -298,6 +308,8 @@ class SocketService {
         matchId: frame.matchId,
         expected: lastSeq + 1,
         received: frame.seq,
+        gap: frame.seq - (lastSeq + 1),
+        lastSeqSource: lastSeq === 0 ? 'initial' : 'tracked',
       })
       this.requestLockstepResync(frame.matchId, {
         reason: 'frame_gap',
@@ -470,14 +482,27 @@ class SocketService {
       store.dispatch(setResyncing(false))
     }
 
-    this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
-
+    // Set sequence tracking to last replayed frame, NOT checkpoint seq
+    // The checkpoint seq is often from a pruned snapshot and causes frame gaps
     if (Array.isArray(payload.frames) && payload.frames.length > 0) {
       const lastFrame = payload.frames[payload.frames.length - 1]
       if (lastFrame && typeof lastFrame.seq === 'number') {
         this.lockstepSeqByRoom.set(payload.matchId, lastFrame.seq)
         ackSeq = lastFrame.seq
+        logger.info('[Lockstep] Snapshot processed - tracking from last frame', {
+          matchId: payload.matchId,
+          checkpointSeq: payload.seq,
+          lastFrameSeq: lastFrame.seq,
+          frameCount: payload.frames.length,
+        })
       }
+    } else {
+      // No frames provided, checkpoint is current
+      this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
+      logger.info('[Lockstep] Snapshot processed - no frames, tracking from checkpoint', {
+        matchId: payload.matchId,
+        checkpointSeq: payload.seq,
+      })
     }
 
     if (snapshotApplied) {

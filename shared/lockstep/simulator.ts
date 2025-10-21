@@ -1066,6 +1066,11 @@ const simulateAttack = (
   const working = cloneState(state)
   delete working.capitalElimination
 
+  // Block attacks when there's a pending conquest transfer
+  if (working.lastBattleResult?.pendingConquestFor) {
+    return { state, supported: false }
+  }
+
   if (working.phase !== 'attack') {
     return { state, supported: false }
   }
