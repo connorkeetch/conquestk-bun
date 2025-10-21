@@ -522,13 +522,23 @@ class AdminService {
     return (response.data?.data ?? response.data) as AdminPerformanceAlert[]
   }
 
-  async getClientMetricsSummary(): Promise<ClientMetricsSummary> {
-    const response = await apiClient.get('/metrics/client/summary')
+  async getClientMetricsSummary(hours?: number): Promise<ClientMetricsSummary> {
+    const response = await apiClient.get('/metrics/client/summary', {
+      params: typeof hours === 'number' && hours > 0 ? { hours } : undefined,
+    })
     const payload = response.data
     if (payload && typeof payload === 'object' && 'data' in payload) {
       return (payload as { data: ClientMetricsSummary }).data
     }
     return payload as ClientMetricsSummary
+  }
+
+  async resetClientMetrics(
+    params: { scope?: 'all' | 'older_than_hours'; hours?: number } = {},
+  ): Promise<{ ok: boolean; deleted?: number; scope?: string; hours?: number }> {
+    const body = Object.keys(params).length === 0 ? { scope: 'all' } : params
+    const response = await apiClient.post('/metrics/client/reset', body)
+    return response.data
   }
 
   // ============= ODDS METRICS (Performance) =============
