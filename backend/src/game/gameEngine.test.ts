@@ -157,6 +157,37 @@ describe('GameEngine', () => {
       expect(player2Territories.length).toBeGreaterThan(0)
     })
 
+    it('should distribute only the remainder of territories to neutral', () => {
+      const players = createPlayers('player1', 'player2')
+      const territoryCount = 42
+      const territories = Array.from({ length: territoryCount }, (_, i) => ({
+        id: `t-${i}`,
+        name: `Territory ${i}`,
+        sector: 's1',
+        ownerId: null,
+        armies: 0,
+        adjacentTerritories: [],
+        isCapital: false,
+      }))
+
+      const customMapOverrides = {
+        territories,
+        sectorBonuses: [],
+      }
+
+      const gameState = gameEngine.initializeGame(
+        'room-distro-test',
+        players,
+        createConfig(players.length),
+        customMapOverrides,
+      )
+
+      const neutralTerritories = gameState.board.filter((t) => t.ownerId === 'neutral')
+      // With the buggy logic, this will be 14 (42 / 3).
+      // The correct logic should assign the remainder, which is 0 (42 % 2).
+      expect(neutralTerritories.length).toBe(0)
+    })
+
     it('should give each territory at least 1 army', () => {
       const players = createPlayers('player1', 'player2')
       const gameState = gameEngine.initializeGame(
