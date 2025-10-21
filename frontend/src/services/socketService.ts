@@ -2124,10 +2124,12 @@ class SocketService {
           this.lockstepPendingResync.delete(typedGameState.roomId)
           this.lockstepBaselineReady.add(typedGameState.roomId)
           this.lockstepLastResyncAt.delete(typedGameState.roomId)
-          this.socket.emit('lockstep:baseline-ack', {
-            roomId: typedGameState.roomId,
-            seq: 0,
-          } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
+          if (this.socket) {
+            this.socket.emit('lockstep:baseline-ack', {
+              roomId: typedGameState.roomId,
+              seq: 0,
+            } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
+          }
         } catch (error) {
           logger.warn('Failed to initialize lockstep baseline from snapshot', { error })
         }

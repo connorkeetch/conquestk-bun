@@ -824,6 +824,8 @@ export interface ClientToServerEvents {
     payload: { roomId: string; fromSeq: number; toSeq: number },
     callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
   ) => void
+  // Acknowledge receipt and processing of lockstep baseline snapshot
+  'lockstep:baseline-ack': (data: { roomId: string; seq: number }) => void
   'conversation.create': (
     payload: ConversationCreatePayload,
     callback?: (response: ConversationCreateAck) => void,

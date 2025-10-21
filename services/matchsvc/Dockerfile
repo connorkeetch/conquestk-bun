@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1
+# Go 1.25.3 brings:
+# - Container-aware GOMAXPROCS for better CPU limit handling
+# - DWARF 5 debug info (smaller binaries, faster linking)
+# - Fused multiply-add instructions (GOAMD64=v3+)
+# - Concurrent cleanup functions
+# - New testing/synctest for concurrent code testing
 
-FROM golang:1.22-alpine AS build
+FROM golang:1.25.3-alpine AS build
 WORKDIR /src
 RUN apk add --no-cache git
 COPY . ./
