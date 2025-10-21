@@ -1771,10 +1771,23 @@ export class GameEngine {
 
     // Assassination mode: check for hunter victory on resign
     if (gameState.gameConfig.gameMode === 'assassination') {
-      const winner = this.resolveAssassinationVictory(gameState, [action.playerId])
-      if (winner) {
-        this.endGame(gameState, winner)
-        return gameState
+      const { assassinationTargets } = gameState;
+      if (assassinationTargets) {
+        const resignedPlayerId = action.playerId;
+        const newTargetId = assassinationTargets[resignedPlayerId];
+
+        let hunterId;
+        for (const [key, value] of Object.entries(assassinationTargets)) {
+          if (value === resignedPlayerId) {
+            hunterId = key;
+            break;
+          }
+        }
+
+        if (hunterId && newTargetId) {
+          assassinationTargets[hunterId] = newTargetId;
+        }
+        delete assassinationTargets[resignedPlayerId];
       }
     }
 
