@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { stableStringify } from '../stableJson'
+import { stableStringify } from '../stableJson.js'
 
 describe('stableStringify', () => {
   it('serializes bigint values as decimal strings', () => {
