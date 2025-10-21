@@ -1229,10 +1229,7 @@ class SocketService {
     }
 
     // Generic emit as a fallback
-    this.socket?.emit(
-      'game-action',
-      data as unknown as Parameters<ClientToServerEvents['game-action']>[0],
-    )
+    this.socket?.emit('game-action', data)
   }
 
   private async deployArmies(roomId: string, territoryId: string, armies: number) {
@@ -1405,7 +1402,7 @@ class SocketService {
         roomId,
         playerId: (store.getState().auth.user?.id as string | undefined) ?? '',
         payload: { fromTerritoryId, toTerritoryId, armies },
-      } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+      },
     })
   }
 
@@ -1517,7 +1514,7 @@ class SocketService {
       // CONNECTION STATE RECOVERY: Check if Socket.io recovered the connection
       // If recovered, the server replayed missed events automatically
       const socket = this.socket
-      const recovered = (socket as unknown as { recovered?: boolean })?.recovered ?? false
+      const recovered = socket.recovered ?? false
 
       if (recovered) {
         logger.info('✅ Connection recovered - server replayed missed events')

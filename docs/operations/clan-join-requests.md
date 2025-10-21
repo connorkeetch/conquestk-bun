@@ -1,34 +1,26 @@
-Clan Join Requests Consolidation
+---
+last_reviewed: 2025-10-21
+---
 
-Overview
-- Consolidates clan_applications and clan_invitations into a single table: clan_join_requests.
-- Types: 'application' (user applies) and 'invite' (clan invites a user).
-- Preserves statuses (pending, accepted, rejected, withdrawn, revoked, expired) and messages.
+# Clan Join Requests
 
-Schema
-- Table: clan_join_requests
-  - id UUID PK
-  - clan_id UUID NOT NULL → clans(id) ON DELETE CASCADE
-  - user_id UUID NOT NULL → users(id) ON DELETE CASCADE
-  - type TEXT NOT NULL CHECK IN ('application','invite')
-  - status TEXT NOT NULL CHECK IN ('pending','accepted','rejected','withdrawn','revoked','expired') DEFAULT 'pending'
-  - message TEXT
-  - created_by UUID NOT NULL → users(id)
-  - token TEXT UNIQUE (invites)
-  - expires_at TIMESTAMP
-  - reviewed_by UUID → users(id)
-  - reviewed_at TIMESTAMP
-  - created_at, updated_at TIMESTAMP (default NOW)
-  - Partial unique: (clan_id, user_id) WHERE status='pending'
+This document outlines the technical implementation of the clan join request feature.
 
-Migration
-- 085_create_clan_join_requests.sql creates the table and backfills existing clan_applications as type='application'.
-- Code updated to read/write clan_join_requests in clanMembershipService.
+## Overview
 
-Compatibility
-- Existing clan_applications remains (for now). Future cleanup may drop it after rollout.
+The clan join request system allows players to apply to join a clan or accept invitations from a clan. This process is managed through the `clan_join_requests` table in the database.
 
-Next steps
-- Add invite flows that write type='invite' with token/expiry.
-- Add admin/officer UIs to list and manage join requests.
+## Database Schema
 
+The `clan_join_requests` table is defined in the `001_baseline_schema.sql` migration file.
+
+Key columns in this table include:
+- `id`: Unique identifier for the join request.
+- `clan_id`: The ID of the clan being joined.
+- `user_id`: The ID of the user requesting to join or being invited.
+- `type`: The type of request, either 'application' or 'invite'.
+- `status`: The current status of the request (e.g., 'pending', 'accepted', 'rejected').
+- `created_by`: The user who initiated the request.
+- `reviewed_by`: The user who reviewed the request.
+
+This setup allows for a robust and auditable system for managing clan memberships.

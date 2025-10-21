@@ -71,12 +71,12 @@ RetroSpace (or any square theme) automatically gets sharp corners and flat chrom
 5. **When adding a theme**, only override tokens (`--text`, `--panel-bg`, etc.) unless a bespoke selector is unavoidable.
 
 ## RetroSpace Migration Checklist
-Latest status (2025‑03‑12):
+Latest status (2025‑10-20):
 - ✅ Token baseline split into light-first root + dark overrides + RetroSpace token hooks.
 - ✅ Semantic utility layer scaffolding added for surfaces, buttons, forms, nav, tables, lists, modals.
-- 🔄 In progress: convert high-traffic screens to `.panel`/`.btn`/`.form-*` classes and delete redundant Tailwind chains.
-- 🔄 Pending: migrate remaining glass/translucent components, extract hero gradients into tokens, add RetroSpace-only textures via `--body-bg-image` when ready.
-- 🔄 QA: visual diff (default, dark, RetroSpace), run `npm run lint`, `npm run test:frontend`, `npm run build` before launch.
+- ✅ Converted high-traffic screens to `.panel`/`.btn`/`.form-*` classes and delete redundant Tailwind chains.
+- ✅ Migrated remaining glass/translucent components, extract hero gradients into tokens, add RetroSpace-only textures via `--body-bg-image` when ready.
+- ✅ QA: visual diff (default, dark, RetroSpace), run `npm run lint`, `npm run test:frontend`, `npm run build` before launch.
 
 ## Adding or Updating Themes
 1. **Tokens** – update `:root[data-theme="yourtheme"]` (or add a new file in `frontend/src/themes/`). Keep overrides token-only when possible.

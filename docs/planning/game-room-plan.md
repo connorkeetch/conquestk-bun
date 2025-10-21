@@ -1,3 +1,5 @@
+> **Note:** The features described in this plan have been largely implemented. This document is a historical reference for the game room's UI/UX and functionality. Last updated: 2025-10-21.
+
 # Game Room Plan
 
 ## Progress Tracker (Sept 30)
@@ -56,15 +58,6 @@ Notes
 
 - Socket handlers live at `backend/src/services/socketService.ts` in this repo (not `backend/src/socket/gameHandlers.ts`). Keep the plan’s intent but mind the path.
 - We intentionally didn’t restructure the right rail yet. Chat+log already exist; the bottom action bar was the biggest UX win with minimal risk.
-
-Next Steps (suggested)
-
-- Add odds tooltip on attack hover + quick “auto-attack” option — implemented.
-- Add inline transfer slider post-conquest (visual inline slider near border); current MVP uses a numeric "commit on conquer" input in the action bar — implemented.
-- Surface time bank UI alongside the timer when configured; reflect server deltas — implemented, now with local client countdown while in overtime.
-- Implement pan/zoom focus to selected territories from log clicks (ResponsiveMapContainer hook) — implemented.
-- Consolidate `CurrentActionPanel` details into the bottom bar (now that phase controls are moved) and reduce right-rail redundancy — implemented.
-
 
 ## 0. The One‑Screen Mental Model
 
@@ -200,22 +193,6 @@ Implementation status (Sept 30)
 - MVP (complete): post‑game modal with Final Standings (territories + armies), Game Progress charts (Territories | Armies) with turn labels and hover tooltips, Key Moments timeline, and “Rematch same seats.”
 - Persist per‑turn stats (`game_states.turn_stats`) power the charts; see post‑game‑analytics‑plan.md.
 - Next: annotate conquests/eliminations on charts; optional quick replay.
-
-## Open Items / TBD
-
-- Timer auto‑end: best‑effort even placement + cancel pending actions for timeouts.
-- Chat manners: profanity toggle, mute per‑room, and player “Report”.
-- Spectators: clearer labeling in list/header; confirm fog behavior expectations for spectators.
-- Ping polish: optional ping button + per‑user cooldown.
-- Keyboard / undo: broaden hotkeys and add “Undo” for reinforcement placements.
-- Mobile polish: improved drawer animations, safe-area insets, backdrop, and added haptic feedback on filter swipes; hiding the desktop chat panel on small screens is done, but refine thresholds.
-- Mobile: swipe left/right to cycle overlays; compact icon-only filter toggles and mini-HUD on small screens.
-- Right rail: restructure once action bar fully covers phase needs; consolidate info.
-- Rematch for non‑host: allow request + host approval.
-- ELO policy for strikes: confirm rating treatment for kicked/neutralized players.
-- Hidden Treasures polish: optional “trade and auto‑place evenly”; card art across app.
-- Charts: add annotations and series visibility presets; respect reduced motion.
-- Stretch: quick replay with key moments navigation.
 
 ## 14. What the UI Should Literally Look Like
 
