@@ -1123,12 +1123,9 @@ export class GameEngine {
                     gameState.hasAttackedThisTurn ??
                     false
                 }
-              } else {
-                gameState.phase = 'attack'
-                gameState.hasAttackedThisTurn = false
+                gameState.resumePhaseAfterReinforcement = null
+                delete gameState.resumeHasAttackedAfterReinforcement
               }
-              gameState.resumePhaseAfterReinforcement = null
-              delete gameState.resumeHasAttackedAfterReinforcement
             }
           }
         }
