@@ -20,8 +20,7 @@ import { logger } from '../utils/logger.js'
 interface RawLeaderboardRow {
   user_id: string
   username: string
-  avatar_url: string | null
-  level: number
+  skill_rating: number
   games_won: number
   games_played: number
   win_rate: number
@@ -582,15 +581,14 @@ export class ProfileService {
     return await withClient(async (client) => {
       const result = await client.query(
         `
-        SELECT 
+        SELECT
           u.id as user_id,
           u.username,
-          up.avatar_url,
-          up.level,
+          u.skill_rating,
           us.games_won,
           us.games_played,
           CASE WHEN us.games_played > 0 THEN (us.games_won * 100.0 / us.games_played) ELSE 0 END as win_rate,
-          (us.games_won * 10 + up.level * 5) as rating
+          (u.skill_rating + us.games_won * 5) as rating
         FROM users u
         -- JOIN user_profiles up ON u.id = up.user_id  -- Table removed
         JOIN player_stats us ON u.id = us.user_id
@@ -604,13 +602,13 @@ export class ProfileService {
       return result.rows.map((row: RawLeaderboardRow, index: number) => ({
         userId: row.user_id,
         username: row.username,
-        avatarUrl: row.avatar_url ?? undefined,
+        avatarUrl: undefined,
         rank: index + 1,
         rating: row.rating,
         gamesWon: row.games_won,
         gamesPlayed: row.games_played,
         winRate: Math.round(row.win_rate),
-        level: row.level,
+        level: Math.max(1, Math.floor((row.skill_rating ?? 0) / 100)),
       }))
     })
   }
