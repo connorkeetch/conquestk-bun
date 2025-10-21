@@ -685,4 +685,35 @@ describe('GameEngine', () => {
       expect(isValid).toBe(false)
     })
   })
+
+  describe('handleResign', () => {
+    it('should immediately end the game when a player resigns in a two-player game', async () => {
+      const players = createPlayers('player1', 'player2');
+      let gameState = gameEngine.initializeGame(
+        'room-resign',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      );
+
+      const resigningPlayerId = 'player2'
+      const winnerId = 'player1'
+      gameState.currentPlayer = winnerId
+
+      const action: GameAction = {
+        type: 'resign',
+        roomId: gameState.roomId,
+        playerId: resigningPlayerId,
+      };
+
+      const { gameState: updatedState } = await gameEngine.processAction(gameState, action);
+
+      expect(updatedState.phase).toBe('finished');
+      const winner = updatedState.players.find(p => !p.isEliminated);
+      expect(winner).toBeDefined();
+      expect(winner?.id).toBe(winnerId);
+      const resigningPlayer = updatedState.players.find(p => p.id === resigningPlayerId);
+      expect(resigningPlayer?.isEliminated).toBe(true);
+    });
+  });
 })
