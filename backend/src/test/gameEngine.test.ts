@@ -453,6 +453,71 @@ describe('GameEngine', () => {
     expect(deployed.gameState.phase).toBe('attack')
     expect(deployed.gameState.hasAttackedThisTurn).toBe(true)
   })
+
+  it('does not advance phase to attack after deploying all armies, allowing undo', async () => {
+    const gameState = createBaseGameState({
+      phase: 'reinforcement',
+      board: [
+        {
+          id: 'territory-a',
+          name: 'Territory A',
+          sector: 'america',
+          ownerId: 'player-1',
+          armies: 3,
+          adjacentTerritories: ['territory-b'],
+        },
+        {
+          id: 'territory-b',
+          name: 'Territory B',
+          sector: 'america',
+          ownerId: 'player-2',
+          armies: 2,
+          adjacentTerritories: ['territory-a'],
+        },
+      ],
+      reinforcementBaseline: { 'territory-a': 3 },
+    })
+    const player = gameState.players.find((p) => p.id === 'player-1')
+    if (!player) throw new Error('Test setup failed: player not found')
+    player.armies = 2
+
+    // Deploy all armies
+    const deployAction: DeployAction = {
+      type: 'deploy',
+      roomId: gameState.roomId,
+      playerId: 'player-1',
+      payload: {
+        territoryId: 'territory-a',
+        armies: 2,
+      },
+    }
+
+    let result = await engine.processAction(gameState, deployAction)
+    const territoryA = result.gameState.board.find((t) => t.id === 'territory-a')
+    expect(territoryA?.armies).toBe(5)
+    const updatedPlayer = result.gameState.players.find((p) => p.id === 'player-1')
+    expect(updatedPlayer?.armies).toBe(0)
+
+    // Undo the deployment
+    const undoAction: DeployAction = {
+      type: 'deploy',
+      roomId: gameState.roomId,
+      playerId: 'player-1',
+      payload: {
+        territoryId: 'territory-a',
+        armies: -2,
+      },
+    }
+
+    result = await engine.processAction(result.gameState, undoAction)
+
+    // Check that the phase is still reinforcement and armies are returned
+    expect(result.gameState.phase).toBe('reinforcement')
+    const finalTerritoryA = result.gameState.board.find((t) => t.id === 'territory-a')
+    expect(finalTerritoryA?.armies).toBe(3)
+    const finalPlayer = result.gameState.players.find((p) => p.id === 'player-1')
+    expect(finalPlayer?.armies).toBe(2)
+  })
 })
 
 describe('GameService serialization', () => {
