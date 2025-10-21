@@ -1759,7 +1759,11 @@ export class GameEngine {
     gameState.lastBattleResult = undefined
 
     if (gameState.currentPlayer === action.playerId) {
-      return this.handleEndTurn(gameState)
+      this.endPlayerTurn(gameState)
+    } else {
+      // If the resigning player is not the current player, we still need to check
+      // for game end conditions, as this can affect the game state.
+      this.checkGameEnd(gameState)
     }
 
     return gameState
