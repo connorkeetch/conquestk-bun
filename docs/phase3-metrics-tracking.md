@@ -30,6 +30,13 @@ Track client-side metrics to monitor real-time system health, debug issues, and 
 - `desync_recoveries`: Successful full state refetches
 - `desync_recovery_time_avg`: Average recovery time
 
+### Lockstep Transport Metrics
+- `lockstep_resync_started_total`: Count of resync handshakes initiated (tagged by reason)
+- `lockstep_resync_completed_total`: Count of resync handshakes completed with `status=success|failed`
+- `lockstep_checksum_without_baseline_total`: Checksum ticks skipped because the client had not acknowledged a baseline yet
+- `lockstep_unsupported_commands_total`: Frames rejected during playback due to unsupported commands (tagged by command kind)
+- `lockstep_resync_frames` (gauge): Number of frames bundled with the most recent resync snapshot
+
 ## Implementation
 
 ### 1. Reliability Metrics Service (frontend)

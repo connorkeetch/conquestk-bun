@@ -332,6 +332,32 @@ export default function AdminHealth() {
               const resyncGauge =
                 realtime.lockstep?.gauges?.find((g) => g.metric === 'lockstep_resync_frames')
                   ?.value ?? 0
+              const resyncStartedTotal = lockstepCounters
+                .filter((entry) => entry.metric === 'lockstep_resync_started_total')
+                .reduce((sum, entry) => sum + (entry.value ?? 0), 0)
+              const resyncCompletedByStatus = lockstepCounters
+                .filter((entry) => entry.metric === 'lockstep_resync_completed_total')
+                .reduce<Record<string, number>>((acc, entry) => {
+                  const status = entry.labels?.status ?? 'unknown'
+                  acc[status] = (acc[status] ?? 0) + (entry.value ?? 0)
+                  return acc
+                }, {})
+              const resyncCompletedSuccess = resyncCompletedByStatus.success ?? 0
+              const resyncCompletedFailed = resyncCompletedByStatus.failed ?? 0
+              const resyncCompletedUnknown = resyncCompletedByStatus.unknown ?? 0
+              const checksumWithoutBaseline =
+                lockstepTotals.lockstep_checksum_without_baseline_total ?? 0
+              const unsupportedCommandTotals = lockstepCounters
+                .filter((entry) => entry.metric === 'lockstep_unsupported_commands_total')
+                .reduce<Record<string, number>>((acc, entry) => {
+                  const command = entry.labels?.command ?? 'unknown'
+                  acc[command] = (acc[command] ?? 0) + (entry.value ?? 0)
+                  return acc
+                }, {})
+              const topUnsupported = Object.entries(unsupportedCommandTotals)
+                .filter(([, value]) => value > 0)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 4)
 
               return (
                 <div className="text-xs text-white/80 space-y-3">
@@ -408,6 +434,47 @@ export default function AdminHealth() {
                       <div className="bg-surface-3/60 rounded p-2 border border-border/40">
                         <div className="text-muted mb-1">Resyncs</div>
                         <div>{(lockstepTotals.lockstep_resync_total ?? 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Resync Started</div>
+                        <div>{resyncStartedTotal.toLocaleString()}</div>
+                      </div>
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Resync Completed</div>
+                        <div>
+                          {resyncCompletedSuccess.toLocaleString()} success
+                          {resyncCompletedFailed > 0 || resyncCompletedUnknown > 0 ? (
+                            <span className="text-[11px] text-muted ml-1">
+                              · {resyncCompletedFailed.toLocaleString()} failed
+                              {resyncCompletedUnknown > 0
+                                ? ` / ${resyncCompletedUnknown.toLocaleString()} unknown`
+                                : ''}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Checksums w/o Baseline</div>
+                        <div>{checksumWithoutBaseline.toLocaleString()}</div>
+                      </div>
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Unsupported commands</div>
+                        {topUnsupported.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 text-[11px] text-white/70">
+                            {topUnsupported.map(([command, count]) => (
+                              <span
+                                key={command}
+                                className="px-2 py-0.5 rounded-full bg-surface-2/70 border border-border/40"
+                              >
+                                {command}: {count.toLocaleString()}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-muted">None observed</div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-1 text-[10px] text-muted">
