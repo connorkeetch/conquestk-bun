@@ -400,22 +400,76 @@ interface UserRatingRow extends QueryResultRow {
   total_ranked_games: number | null
 }
 
+// Phase 4: Enhanced baseline tracking with timestamps
+interface BaselineAckInfo {
+  socketId: string
+  ackedAt: number // timestamp when ack was received
+  seq: number // sequence number they acked
+}
+
 const lockstepBaselineAcks = new Map<string, Set<string>>()
+const lockstepBaselineAckDetails = new Map<string, Map<string, BaselineAckInfo>>() // matchId -> socketId -> info
 const lockstepResyncReasons = new Map<string, Map<string, string>>()
 
-function addLockstepBaselineAck(socketId: string, matchId: string) {
+function addLockstepBaselineAck(socketId: string, matchId: string, seq = 0) {
   if (!socketId || !matchId) return
+
+  // Add to set (legacy tracking)
   let set = lockstepBaselineAcks.get(matchId)
   if (!set) {
     set = new Set<string>()
     lockstepBaselineAcks.set(matchId, set)
   }
   set.add(socketId)
+
+  // Add detailed info
+  let detailsMap = lockstepBaselineAckDetails.get(matchId)
+  if (!detailsMap) {
+    detailsMap = new Map<string, BaselineAckInfo>()
+    lockstepBaselineAckDetails.set(matchId, detailsMap)
+  }
+
+  const existing = detailsMap.get(socketId)
+  if (existing) {
+    logger.debug('[Lockstep Server] Baseline ack updated', {
+      matchId,
+      socketId,
+      oldSeq: existing.seq,
+      newSeq: seq,
+      timeSinceLastAck: Date.now() - existing.ackedAt,
+    })
+  } else {
+    logger.info('[Lockstep Server] Baseline ack received', {
+      matchId,
+      socketId,
+      seq,
+    })
+  }
+
+  detailsMap.set(socketId, {
+    socketId,
+    ackedAt: Date.now(),
+    seq,
+  })
+}
+
+function hasLockstepBaselineAck(socketId: string, matchId: string): boolean {
+  const detailsMap = lockstepBaselineAckDetails.get(matchId)
+  return Boolean(detailsMap?.has(socketId))
+}
+
+function getLockstepBaselineAckInfo(
+  socketId: string,
+  matchId: string,
+): BaselineAckInfo | undefined {
+  const detailsMap = lockstepBaselineAckDetails.get(matchId)
+  return detailsMap?.get(socketId)
 }
 
 function removeLockstepBaselineAck(socketId: string, matchId?: string) {
   if (!socketId) return
   if (matchId) {
+    // Remove from set
     const set = lockstepBaselineAcks.get(matchId)
     if (set) {
       set.delete(socketId)
@@ -423,11 +477,28 @@ function removeLockstepBaselineAck(socketId: string, matchId?: string) {
         lockstepBaselineAcks.delete(matchId)
       }
     }
+
+    // Remove from detailed tracking
+    const detailsMap = lockstepBaselineAckDetails.get(matchId)
+    if (detailsMap) {
+      detailsMap.delete(socketId)
+      if (detailsMap.size === 0) {
+        lockstepBaselineAckDetails.delete(matchId)
+      }
+    }
     return
   }
+
+  // Remove from all matches
   for (const [match, set] of lockstepBaselineAcks) {
     if (set.delete(socketId) && set.size === 0) {
       lockstepBaselineAcks.delete(match)
+    }
+  }
+
+  for (const [match, detailsMap] of lockstepBaselineAckDetails) {
+    if (detailsMap.delete(socketId) && detailsMap.size === 0) {
+      lockstepBaselineAckDetails.delete(match)
     }
   }
 }
@@ -539,9 +610,33 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         action,
         state: serialized,
       })
+      // Phase 4: Emit frame and track clients without baseline ack
+      const socketsInRoom = io.sockets.adapter.rooms.get(channel)
+      const ackedSockets = lockstepBaselineAcks.get(roomId)
+      const unackedSockets: string[] = []
+
+      if (socketsInRoom) {
+        for (const socketId of socketsInRoom) {
+          if (!ackedSockets || !ackedSockets.has(socketId)) {
+            unackedSockets.push(socketId)
+          }
+        }
+      }
+
+      if (unackedSockets.length > 0) {
+        logger.warn('[Lockstep Server] Emitting frame to clients without baseline ack', {
+          matchId: roomId,
+          frameSeq: frame.seq,
+          unackedCount: unackedSockets.length,
+          totalInRoom: socketsInRoom?.size ?? 0,
+          unackedSocketIds: unackedSockets.slice(0, 5), // Log first 5 to avoid spam
+        })
+      }
+
       io.to(channel).emit('game-action:frame-committed', frame)
       const frameBytes = computePayloadBytes(frame)
       socketPayloadMetrics.record('game-action:frame-committed', frameBytes)
+
       if (socketPayloadMetrics.shouldLog('game-action:frame-committed')) {
         const stats = socketPayloadMetrics.snapshot('game-action:frame-committed')
         if (stats) {
@@ -554,12 +649,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           })
         }
       }
+
       lockstepMetrics.recordFrame()
+
+      // Emit checksums only to clients that have acked baseline
       if (checksum) {
-        const ackedSockets = lockstepBaselineAcks.get(roomId)
         if (ackedSockets && ackedSockets.size > 0) {
           const checksumBytes = computePayloadBytes(checksum)
           const staleSockets: string[] = []
+          let emittedCount = 0
+
           for (const socketId of ackedSockets) {
             const target = io.sockets.sockets.get(socketId)
             if (!target) {
@@ -570,15 +669,47 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
               staleSockets.push(socketId)
               continue
             }
+
+            const ackInfo = getLockstepBaselineAckInfo(socketId, roomId)
+            if (ackInfo) {
+              const timeSinceAck = Date.now() - ackInfo.ackedAt
+              if (timeSinceAck > 300_000) {
+                // 5 minutes
+                logger.warn('[Lockstep Server] Checksum emitted to stale baseline ack', {
+                  matchId: roomId,
+                  socketId,
+                  timeSinceAck,
+                  ackedSeq: ackInfo.seq,
+                  checksumSeq: checksum.seq,
+                })
+              }
+            }
+
             target.emit('game-action:checksum', checksum)
             socketPayloadMetrics.record('game-action:checksum', checksumBytes)
+            emittedCount++
           }
+
+          logger.debug('[Lockstep Server] Checksum emitted', {
+            matchId: roomId,
+            checksumSeq: checksum.seq,
+            crc32: checksum.crc32,
+            emittedTo: emittedCount,
+          })
+
           if (staleSockets.length > 0) {
+            logger.debug('[Lockstep Server] Removing stale baseline acks', {
+              matchId: roomId,
+              count: staleSockets.length,
+            })
             for (const stale of staleSockets) {
               ackedSockets.delete(stale)
+              // Also remove from detailed tracking
+              lockstepBaselineAckDetails.get(roomId)?.delete(stale)
             }
             if (ackedSockets.size === 0) {
               lockstepBaselineAcks.delete(roomId)
+              lockstepBaselineAckDetails.delete(roomId)
             }
           }
           if (socketPayloadMetrics.shouldLog('game-action:checksum')) {
@@ -817,6 +948,52 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const finalState = serializeGameStateForClient(filtered)
             if (finalState) {
               emitGameSnapshotToSocket(socket, finalState)
+
+              // Phase 4: Send initial lockstep sync frame to ensure perfect alignment from start
+              // This prevents any window where client has baseline but server has moved forward
+              void (async () => {
+                try {
+                  const latestSnapshot = await lockstepService.getLatestSnapshot(normalizedRoomId)
+                  if (latestSnapshot && latestSnapshot.seq > 0) {
+                    // Get any frames after the latest snapshot to bring client fully up-to-date
+                    const recentFrames = await lockstepService.getFramesAfter(
+                      normalizedRoomId,
+                      latestSnapshot.seq,
+                      10, // Just get the most recent 10 frames
+                    )
+
+                    logger.debug('[Lockstep Server] Sending initial sync to newly joined client', {
+                      matchId: normalizedRoomId,
+                      socketId: socket.id,
+                      userId,
+                      latestSnapshotSeq: latestSnapshot.seq,
+                      recentFrameCount: recentFrames.length,
+                    })
+
+                    // Emit recent frames to bring client up-to-date
+                    for (const frame of recentFrames) {
+                      socket.emit('game-action:frame-committed', frame)
+                    }
+
+                    // If we have recent activity, this ensures client starts with the exact server state
+                    if (recentFrames.length > 0) {
+                      logger.info('[Lockstep Server] Initial sync completed for joined client', {
+                        matchId: normalizedRoomId,
+                        socketId: socket.id,
+                        framesSent: recentFrames.length,
+                        finalSeq: recentFrames[recentFrames.length - 1]?.seq,
+                      })
+                    }
+                  }
+                } catch (error) {
+                  // Best-effort: don't fail join if initial sync fails
+                  logger.warn('[Lockstep Server] Failed to send initial sync to joined client', {
+                    matchId: normalizedRoomId,
+                    socketId: socket.id,
+                    error: error instanceof Error ? error.message : String(error),
+                  })
+                }
+              })()
             }
           }
 
@@ -1095,9 +1272,15 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
     socket.on('lockstep:baseline-ack', (payload) => {
       if (!payload || typeof payload.roomId !== 'string') {
+        logger.warn('[Lockstep Server] Invalid baseline-ack payload', { socketId: socket.id })
         return
       }
-      addLockstepBaselineAck(socket.id, payload.roomId)
+
+      const seq = typeof payload.seq === 'number' ? payload.seq : 0
+
+      // Use enhanced tracking with timestamp and seq
+      addLockstepBaselineAck(socket.id, payload.roomId, seq)
+
       const storedReason = consumeLockstepResyncReason(payload.roomId, socket.id)
       if (storedReason !== undefined) {
         lockstepMetrics.recordResyncComplete(storedReason, 'success')
@@ -1260,23 +1443,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         callback()
       }
     })
-
-    // RELIABILITY: Handle requests for missing deltas (gap recovery)
-    socket.on(
-      'request-missing-deltas',
-      async (
-        payload: { roomId: string; fromSeq: number; toSeq: number },
-        callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
-      ) => {
-        const { roomId, fromSeq, toSeq } = payload
-        logger.info('Rejected legacy request-missing-deltas call', {
-          roomId,
-          fromSeq,
-          toSeq,
-        })
-        callback?.({ ok: false, error: 'legacy_delta_transport_removed' })
-      },
-    )
 
     socket.on('disconnect', async () => {
       try {
