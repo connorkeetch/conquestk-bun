@@ -148,13 +148,42 @@ export interface ClientMetricsSummary {
   avgLatency: number
   avgSuccessRate: number
   totalReconnects: number
-  lockstepResyncs?: {
+  activeGames: number
+  lockstepResyncs: {
     total: number
     successes: number
     failures: number
     failureRate: number
     avgDurationMs: number
+    byReason: Array<{
+      reason:
+        | 'frame_gap'
+        | 'unsupported_commands'
+        | 'missing_state'
+        | 'checksum_mismatch'
+        | 'snapshot_error'
+        | 'manual'
+      total: number
+    }>
   }
+  sessionsPerGame: Array<{
+    id: string | null
+    label: string | null
+    status: string | null
+    sessions: number
+    reconnects: number
+    resyncs: number
+    resyncsPerSession: number
+  }>
+  sessionsPerUser: Array<{
+    id: string | null
+    label: string | null
+    username: string | null
+    sessions: number
+    reconnects: number
+    resyncs: number
+    resyncsPerSession: number
+  }>
 }
 
 export interface SystemStatus {

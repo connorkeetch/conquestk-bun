@@ -1078,6 +1078,9 @@ const simulateAttack = (
 
   let from = { ...working.board[fromIndex] } as Territory
   let to = { ...working.board[toIndex] } as Territory
+  const attackerInitialArmies = from.armies ?? 0
+  const defenderInitialArmies = to.armies ?? 0
+  const originalDefenderId = (typeof to.ownerId === 'string' ? to.ownerId : null) ?? null
 
   if ((from.ownerId ?? playerId) !== playerId || (from.armies ?? 0) <= 1) {
     return { state, supported: false }
@@ -1194,6 +1197,10 @@ const simulateAttack = (
       gameEnded: gameEndCheck.gameEnded,
       winner: gameEndCheck.winner ?? null,
       eliminatedPlayers: gameEndCheck.eliminatedPlayers,
+      attackerPlayerId: playerId,
+      defenderPlayerId: originalDefenderId,
+      initialFromArmies: attackerInitialArmies,
+      initialToArmies: defenderInitialArmies,
     } as unknown as BattleResult
 
     if (capitalSummary) {
@@ -1237,6 +1244,10 @@ const simulateAttack = (
     gameEnded: gameEndCheck.gameEnded,
     winner: gameEndCheck.winner ?? null,
     eliminatedPlayers: gameEndCheck.eliminatedPlayers,
+    attackerPlayerId: playerId,
+    defenderPlayerId: originalDefenderId,
+    initialFromArmies: attackerInitialArmies,
+    initialToArmies: defenderInitialArmies,
   } as unknown as BattleResult
 
   // No capital elimination in non-conquest case (already deleted at start)

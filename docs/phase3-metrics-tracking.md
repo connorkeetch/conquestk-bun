@@ -70,7 +70,7 @@ The `client_metrics` table stores raw `metrics` + `stats` JSON along with option
 
 ### 4. Admin surfaces
 
-- **Admin Health screen:** `frontend/src/pages/AdminHealth.tsx` hits `/metrics/client/summary` to show the latest session count, average latency, success rate, and reconnect totals.
+- **Admin Health screen:** `frontend/src/pages/AdminHealth.tsx` hits `/metrics/client/summary` to show the latest session count, active games, average latency, success rate, reconnect totals, lockstep failure rate, and the top games/users generating resyncs (including per-session ratios).
 - Further dashboards/alerting are still outstanding (see “Monitoring Dashboard” below for suggested queries).
 ## Monitoring Dashboard
 

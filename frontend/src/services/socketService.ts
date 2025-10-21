@@ -105,6 +105,7 @@ const CONNECTION_RESTORE_TOAST_DURATION_MS = 2000
 const TURN_TOAST_DURATION_MS = 2500
 const TURN_SUPPRESS_WINDOW_MS = 2000
 const RESYNC_DELAY_MS = 100
+const RESYNC_MIN_INTERVAL_MS = 2500
 const PING_TTL_MS = 3000
 const ATTACK_THROTTLE_MS = 120
 
@@ -129,6 +130,8 @@ class SocketService {
   private lockstepSeqByRoom: Map<string, number> = new Map()
   private lockstepPendingResync: Set<string> = new Set()
   private lockstepLastChecksum: Map<string, number> = new Map()
+  private lockstepBaselineReady: Set<string> = new Set()
+  private lockstepLastResyncAt: Map<string, number> = new Map()
   private lockstepSim = new LockstepSimulationManager()
   // Placeholder for future convergence timers (no-op currently)
   private clearConfirmTimer(_roomId: string) {
@@ -166,6 +169,14 @@ class SocketService {
   private requestLockstepResync(roomId: string, meta?: LockstepResyncMeta) {
     if (!this.lockstepEnabled || !this.socket) return
     if (this.lockstepPendingResync.has(roomId)) return
+    const now = Date.now()
+    const last = this.lockstepLastResyncAt.get(roomId) ?? 0
+    if (now - last < RESYNC_MIN_INTERVAL_MS) {
+      return
+    }
+    this.lockstepLastResyncAt.set(roomId, now)
+    this.lockstepBaselineReady.delete(roomId)
+    this.resetPendingActions(roomId)
     this.lockstepPendingResync.add(roomId)
     store.dispatch(setResyncing(true))
     store.dispatch(setDesyncDetected(true))
@@ -205,9 +216,17 @@ class SocketService {
     })
 
     const fromSeq = this.lockstepSeqByRoom.get(roomId) ?? 0
+    const payload: Parameters<ClientToServerEvents['game-action:resync-request']>[0] = {
+      roomId,
+      fromSeq,
+      reason: info.reason,
+    }
+    if (Array.isArray(meta?.unsupported) && meta.unsupported.length > 0) {
+      payload.unsupported = meta.unsupported
+    }
     this.socket.emit(
       'game-action:resync-request',
-      { roomId, fromSeq } as Parameters<ClientToServerEvents['game-action:resync-request']>[0],
+      payload,
       (response?: { ok: boolean; error?: string }) => {
         if (response && !response.ok) {
           logger.warn('Lockstep resync request rejected', {
@@ -321,6 +340,9 @@ class SocketService {
 
   private handleLockstepChecksum = (payload: TickChecksum) => {
     if (!this.lockstepEnabled || !payload || typeof payload.matchId !== 'string') return
+    if (!this.lockstepBaselineReady.has(payload.matchId)) {
+      return
+    }
     this.lockstepLastChecksum.set(payload.matchId, payload.crc32)
     const lastSeq = this.lockstepSeqByRoom.get(payload.matchId) ?? 0
     if (payload.seq > lastSeq) {
@@ -370,6 +392,8 @@ class SocketService {
     if (!this.lockstepEnabled || !payload || typeof payload.matchId !== 'string') return
     this.lockstepPendingResync.delete(payload.matchId)
     this.lockstepLastChecksum.delete(payload.matchId)
+    let ackSeq = payload.seq
+    let snapshotApplied = false
     try {
       const baseline = payload.state as unknown as SharedGameState
       this.lockstepSim.setBaseline(payload.matchId, baseline)
@@ -405,6 +429,7 @@ class SocketService {
           meta: { seq: payload.seq },
         })
       }
+      snapshotApplied = true
       store.dispatch(setLockstepResyncInfo(null))
     } catch (error) {
       logger.warn('Failed to apply lockstep snapshot (falling back to fetch)', { error })
@@ -455,6 +480,18 @@ class SocketService {
       const lastFrame = payload.frames[payload.frames.length - 1]
       if (lastFrame && typeof lastFrame.seq === 'number') {
         this.lockstepSeqByRoom.set(payload.matchId, lastFrame.seq)
+        ackSeq = lastFrame.seq
+      }
+    }
+
+    if (snapshotApplied) {
+      this.lockstepBaselineReady.add(payload.matchId)
+      this.lockstepLastResyncAt.delete(payload.matchId)
+      if (this.socket) {
+        this.socket.emit('lockstep:baseline-ack', {
+          roomId: payload.matchId,
+          seq: ackSeq,
+        } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
       }
     }
 
@@ -762,6 +799,24 @@ class SocketService {
     })
   }
 
+  private resetPendingActions(_roomId?: string) {
+    if (this.pendingActions.size > 0) {
+      for (const [id] of this.pendingActions) {
+        rollbackOptimisticAction(id)
+      }
+      this.pendingActions.clear()
+    }
+    if (this.inFlightActionKeys.size > 0) {
+      this.inFlightActionKeys.clear()
+    }
+    if (this.pendingDeltaRequests.size > 0) {
+      this.pendingDeltaRequests.clear()
+    }
+    rollbackAllOptimisticActions()
+    store.dispatch(clearOptimisticMarkers())
+    this.lastActionEmitAt.clear()
+  }
+
   /**
    * RELIABILITY FIX: Send game action with mandatory acknowledgment and timeout
    * Supports optimistic updates, rollback, throttling, and idempotency
@@ -998,6 +1053,8 @@ class SocketService {
       this.lockstepSeqByRoom.clear()
       this.lockstepPendingResync.clear()
       this.lockstepLastChecksum.clear()
+      this.lockstepBaselineReady.clear()
+      this.lockstepLastResyncAt.clear()
       this.lockstepSim.reset()
       store.dispatch(setLockstepResyncInfo(null))
     }
@@ -2055,6 +2112,25 @@ class SocketService {
         logger.warn('Failed to reconcile placement spent from server baseline (best-effort)', {
           error,
         })
+      }
+
+      if (this.lockstepEnabled && typedGameState.roomId) {
+        try {
+          this.lockstepSim.setBaseline(
+            typedGameState.roomId,
+            typedGameState as unknown as SharedGameState,
+          )
+          this.lockstepSeqByRoom.set(typedGameState.roomId, 0)
+          this.lockstepPendingResync.delete(typedGameState.roomId)
+          this.lockstepBaselineReady.add(typedGameState.roomId)
+          this.lockstepLastResyncAt.delete(typedGameState.roomId)
+          this.socket.emit('lockstep:baseline-ack', {
+            roomId: typedGameState.roomId,
+            seq: 0,
+          } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
+        } catch (error) {
+          logger.warn('Failed to initialize lockstep baseline from snapshot', { error })
+        }
       }
     })
 
