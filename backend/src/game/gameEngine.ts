@@ -959,8 +959,18 @@ export class GameEngine {
     players: GamePlayer[],
     rng: DeterministicRng,
   ): void {
-    // Calculate territories per player (equivalent distribution)
-    const territoriesPerPlayer = Math.floor(territories.length / (players.length + 1)) // +1 for neutral
+    const playerCount = players.length
+    if (playerCount === 0) {
+      // Handle case with no players, though unlikely in a real game
+      territories.forEach((t) => {
+        t.ownerId = 'neutral'
+        t.armies = 3
+      })
+      return
+    }
+
+    // Calculate territories per player, distributing as evenly as possible among players
+    const territoriesPerPlayer = Math.floor(territories.length / playerCount)
 
     // Shuffle territories for random distribution
     const shuffledTerritories = [...territories]
@@ -971,6 +981,7 @@ export class GameEngine {
     // Distribute to players
     for (const player of players) {
       for (let i = 0; i < territoriesPerPlayer; i++) {
+        // This check is redundant if logic is correct, but safe
         if (territoryIndex < shuffledTerritories.length) {
           const territory = shuffledTerritories[territoryIndex]
           territory.ownerId = player.id
@@ -981,7 +992,7 @@ export class GameEngine {
       }
     }
 
-    // Remaining territories become neutral (grey)
+    // Remaining territories (due to Math.floor) become neutral
     while (territoryIndex < shuffledTerritories.length) {
       const territory = shuffledTerritories[territoryIndex]
       territory.ownerId = 'neutral'
