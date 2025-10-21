@@ -363,9 +363,6 @@ function serializeGameStateForClient(
         }
       : {}),
     ...(s.capitalElimination ? { capitalElimination: s.capitalElimination } : {}),
-    ...(s.pendingCapitalAttack !== undefined
-      ? { pendingCapitalAttack: s.pendingCapitalAttack }
-      : {}),
     ...(s.capitalAssignments ? { capitalAssignments: { ...s.capitalAssignments } } : {}),
   }
 
@@ -1002,7 +999,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         socket,
         'game-action:resync-request',
         async (
-          data: { roomId?: string; fromSeq?: number },
+          data: { roomId?: string; fromSeq?: number; reason?: string; unsupported?: string[] },
           ack?: (r: { ok: boolean; error?: string }) => void,
         ) => {
           if (!data || typeof data.roomId !== 'string') {
