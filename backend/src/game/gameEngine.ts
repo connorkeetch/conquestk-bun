@@ -1737,6 +1737,7 @@ export class GameEngine {
     for (const territory of gameState.board) {
       if (territory.ownerId === action.playerId) {
         territory.ownerId = 'neutral'
+        territory.armies = 3
       }
       if (territory.capitalOwnerId === action.playerId) {
         territory.capitalOwnerId = null

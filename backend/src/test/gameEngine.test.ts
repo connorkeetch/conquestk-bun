@@ -639,3 +639,31 @@ describe('GameService capital helpers', () => {
     await expect(service.isCapitalTerritory(roomId, 'territory-regular')).resolves.toBe(false)
   })
 })
+
+describe('GameEngine resignation', () => {
+  const engine = new GameEngine()
+
+  it('resets army count on resigned territories to a neutral default', async () => {
+    const gameState = createBaseGameState()
+    const resigningPlayer = gameState.players[0]
+    const resignedTerritory = gameState.board.find(
+      (t) => t.ownerId === resigningPlayer.id,
+    )
+    if (!resignedTerritory) {
+      throw new Error('Test setup failed: territory not found for resigning player')
+    }
+    resignedTerritory.armies = 10
+
+    const resignAction: GameAction = {
+      type: 'resign',
+      roomId: gameState.roomId,
+      playerId: resigningPlayer.id,
+    }
+
+    const { gameState: nextState } = await engine.processAction(gameState, resignAction)
+    const updatedTerritory = nextState.board.find((t) => t.id === resignedTerritory.id)
+
+    expect(updatedTerritory?.ownerId).toBe('neutral')
+    expect(updatedTerritory?.armies).toBe(3)
+  })
+})
