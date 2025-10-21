@@ -263,6 +263,34 @@ describe('GameEngine', () => {
         expect(assignments[player.id]).not.toBe(player.id)
       }
     })
+
+    it('should handle more players than territories gracefully', () => {
+      const players = createPlayers('player1', 'player2', 'player3');
+      const twoTerritories = sampleTerritories.slice(0, 2);
+      const customMapOverrides = {
+        territories: twoTerritories,
+        sectorBonuses: [],
+      };
+
+      const gameState = gameEngine.initializeGame(
+        'room-too-many-players',
+        players,
+        createConfig(players.length),
+        customMapOverrides,
+      );
+
+      const ownedByPlayers = gameState.board.filter(t => t.ownerId && t.ownerId !== 'neutral');
+      // The bug causes all territories to become neutral.
+      // This assertion will fail until the fix is applied.
+      expect(ownedByPlayers.length).toBe(2);
+
+      // Ensure that players who got territories have them in their list
+      const playersWithTerritories = gameState.players.filter(p => p.territories.length > 0);
+      expect(playersWithTerritories.length).toBe(2);
+
+      const territoryOwners = new Set(ownedByPlayers.map(t => t.ownerId));
+      expect(territoryOwners.size).toBe(2);
+    });
   })
 
   describe('assassination mode victory resolution', () => {
