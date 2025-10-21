@@ -26,6 +26,38 @@ interface QueryMetrics {
   connectionErrors: number
 }
 
+export interface TimedPromise<T> {
+  promise: Promise<T>
+  cancel: () => void
+}
+
+export function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorFactory: () => Error = () => new Error('Query timeout'),
+): TimedPromise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+  const timeoutPromise: Promise<never> = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timeoutId = null
+      reject(errorFactory())
+    }, timeoutMs)
+  })
+
+  const cancel = (): void => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId)
+      timeoutId = null
+    }
+  }
+
+  return {
+    promise: Promise.race([promise, timeoutPromise]),
+    cancel,
+  }
+}
+
 interface DatabaseHealthDetails {
   totalNodes: number
   healthyNodes: number
@@ -320,6 +352,7 @@ export class DatabaseClusterService {
       }
 
       let client: PoolClient | null = null
+      let cancelQueryTimeout: (() => void) | null = null
 
       try {
         // Get connection from pool
@@ -328,11 +361,17 @@ export class DatabaseClusterService {
 
         // Execute query with timeout
         const queryPromise = params ? client.query(text, [...params]) : client.query(text)
-        const timeoutPromise: Promise<never> = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Query timeout')), this.config.queryTimeout)
-        })
+        const { promise: timedQuery, cancel } = withTimeout(
+          queryPromise,
+          this.config.queryTimeout,
+        )
+        cancelQueryTimeout = cancel
 
-        const result = await Promise.race([queryPromise, timeoutPromise])
+        const result = await timedQuery
+        if (cancelQueryTimeout) {
+          cancelQueryTimeout()
+          cancelQueryTimeout = null
+        }
 
         // Update metrics
         const responseTime = Date.now() - startTime
@@ -365,6 +404,10 @@ export class DatabaseClusterService {
         // Wait before retry
         await this.sleep(100 * 2 ** attempt)
       } finally {
+        if (cancelQueryTimeout) {
+          cancelQueryTimeout()
+          cancelQueryTimeout = null
+        }
         if (client) {
           client.release()
           node.connectionCount = Math.max(0, node.connectionCount - 1)
