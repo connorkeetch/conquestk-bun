@@ -37,11 +37,7 @@ const oddsHistoryMock = jest.fn(() => [])
 const oddsSnapshotMock = jest.fn(() => ({ total: 0 }))
 
 jest.mock('../middleware/auth.js', () => ({
-  authenticateToken: (
-    req: express.Request,
-    _res: express.Response,
-    next: express.NextFunction,
-  ) => {
+  authenticateToken: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     const headerUser = req.headers['x-test-user-id']
     req.userId = typeof headerUser === 'string' ? headerUser : 'test-user'
     next()
@@ -51,11 +47,7 @@ jest.mock('../middleware/auth.js', () => ({
 const loggedActions: string[] = []
 
 jest.mock('../middleware/adminAuth.js', () => ({
-  requireAdmin: (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) => {
+  requireAdmin: (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.headers['x-test-admin'] !== 'true') {
       res.status(403).json({ error: 'Admin access required' })
       return

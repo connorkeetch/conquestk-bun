@@ -1,4 +1,4 @@
-import type { ThemeId } from '@conquestk/shared/types/themes'
+import type { UserPreferences as PreferencesServiceUserPreferences } from '../services/UserPreferencesService.js'
 
 // User Profile and Achievement System Types
 
@@ -75,25 +75,7 @@ export interface GameHistoryEntry {
   endedAt: Date | null
 }
 
-export interface UserPreferences {
-  userId: string
-  theme: ThemeId
-  language: string
-  timezone: string
-  notificationsEnabled: boolean
-  emailNotifications: boolean
-  soundEffects: boolean
-  backgroundMusic: boolean
-  autoSaveFrequency: number // seconds
-  animationSpeed: 'slow' | 'normal' | 'fast'
-  showTerritoryNames: boolean
-  showArmyCounts: boolean
-  confirmActions: boolean
-  privacyLevel: 'public' | 'friends' | 'private'
-  allowFriendRequests: boolean
-  showOnlineStatus: boolean
-  updatedAt: Date
-}
+export type UserPreferences = PreferencesServiceUserPreferences
 
 // API Request/Response Types
 export interface ProfileUpdateRequest {

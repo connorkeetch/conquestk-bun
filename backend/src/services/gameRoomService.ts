@@ -129,9 +129,7 @@ export class GameRoomService {
       if (!validTeamOptions.includes(numberOfTeams)) {
         const validOptionsString =
           validTeamOptions.length > 1
-            ? `${validTeamOptions
-                .filter((n) => n > 0)
-                .join(', ')} teams or Free for All.`
+            ? `${validTeamOptions.filter((n) => n > 0).join(', ')} teams or Free for All.`
             : 'Free for All.'
         throw new Error(
           `${numberOfTeams} teams is not valid for ${maxPlayers} players. Valid options: ${validOptionsString}`,

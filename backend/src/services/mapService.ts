@@ -721,9 +721,7 @@ export class MapService {
         [mapId],
       )
 
-      const territoryIds = new Set(
-        territoriesResult.rows.map((territory) => String(territory.id)),
-      )
+      const territoryIds = new Set(territoriesResult.rows.map((territory) => String(territory.id)))
 
       const adjacencyResult = await query(
         `
@@ -755,7 +753,7 @@ export class MapService {
         if (!adjacencyLookup.has(fromId)) {
           adjacencyLookup.set(fromId, new Set())
         }
-        adjacencyLookup.get(fromId)!.add(toId)
+        adjacencyLookup.get(fromId)?.add(toId)
       }
 
       // Validate each player count configuration

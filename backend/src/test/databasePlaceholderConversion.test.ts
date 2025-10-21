@@ -27,6 +27,8 @@ describe('convertQuestionMarksToPgPlaceholders', () => {
 
     const converted = convertQuestionMarksToPgPlaceholders(sql, params)
 
-    expect(converted).toBe("SELECT metadata ?| array['featured', 'spotlight'] FROM maps WHERE published = $1")
+    expect(converted).toBe(
+      "SELECT metadata ?| array['featured', 'spotlight'] FROM maps WHERE published = $1",
+    )
   })
 })

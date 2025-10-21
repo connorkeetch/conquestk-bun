@@ -20,13 +20,10 @@ export default function Login() {
     if (location.state?.message) {
       setSuccessMessage(location.state.message)
       // Clear the message after 5 seconds
-      const timeoutId: ReturnType<typeof setTimeout> = window.setTimeout(
-        () => setSuccessMessage(''),
-        5000,
-      )
+      const timeoutId = window.setTimeout(() => setSuccessMessage(''), 5000)
 
       return () => {
-        clearTimeout(timeoutId)
+        window.clearTimeout(timeoutId)
       }
     }
 

@@ -1771,36 +1771,34 @@ export class GameEngine {
 
     // Assassination mode: check for hunter victory on resign
     if (gameState.gameConfig.gameMode === 'assassination') {
-      const { assassinationTargets } = gameState;
+      const { assassinationTargets } = gameState
       if (assassinationTargets) {
-        const resignedPlayerId = action.playerId;
-        const newTargetId = assassinationTargets[resignedPlayerId];
+        const resignedPlayerId = action.playerId
+        const newTargetId = assassinationTargets[resignedPlayerId]
 
-        let hunterId;
+        let hunterId: string | undefined
         for (const [key, value] of Object.entries(assassinationTargets)) {
           if (value === resignedPlayerId) {
-            hunterId = key;
-            break;
+            hunterId = key
+            break
           }
         }
 
         if (hunterId && newTargetId) {
-          assassinationTargets[hunterId] = newTargetId;
+          assassinationTargets[hunterId] = newTargetId
         }
-        delete assassinationTargets[resignedPlayerId];
+        delete assassinationTargets[resignedPlayerId]
       }
     }
 
     if (gameState.currentPlayer === action.playerId) {
       this.endPlayerTurn(gameState)
-    } else {
+    } else if (gameState.lastBattleResult?.pendingConquestFor) {
       // If another player resigns, we check for game end unless the current
       // player has a pending conquest transfer.
-      if (gameState.lastBattleResult?.pendingConquestFor) {
-        this.updateEliminatedPlayers(gameState)
-      } else {
-        this.checkGameEnd(gameState)
-      }
+      this.updateEliminatedPlayers(gameState)
+    } else {
+      this.checkGameEnd(gameState)
     }
 
     return gameState

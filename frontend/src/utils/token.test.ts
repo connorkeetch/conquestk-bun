@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import { Buffer } from 'node:buffer'
+import { describe, expect, it } from 'vitest'
 
 import { parseJwt } from './token'
 

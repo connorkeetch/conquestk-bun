@@ -13,7 +13,9 @@ const decodeUtf8WithPolyfill = (bytes: Uint8Array): string => {
   try {
     return decodeURIComponent(encoded)
   } catch (error) {
-    throw new Error(`Failed to decode UTF-8 sequence: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(
+      `Failed to decode UTF-8 sequence: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
   }
 }
 
@@ -44,7 +46,9 @@ const decodeBase64Url = (value: string): string => {
 
     if (globalContext.Buffer) {
       const buffer = globalContext.Buffer.from(padded, 'base64')
-      return buffer instanceof Uint8Array ? new Uint8Array(buffer) : Uint8Array.from(buffer as unknown as number[])
+      return buffer instanceof Uint8Array
+        ? new Uint8Array(buffer)
+        : Uint8Array.from(buffer as unknown as number[])
     }
 
     throw new Error('No base64 decoder available in this environment')
@@ -53,7 +57,7 @@ const decodeBase64Url = (value: string): string => {
   if (typeof globalContext.TextDecoder === 'function') {
     try {
       return new globalContext.TextDecoder('utf-8').decode(bytes)
-    } catch (error) {
+    } catch (_error) {
       return decodeUtf8WithPolyfill(bytes)
     }
   }

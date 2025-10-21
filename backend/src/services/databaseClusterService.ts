@@ -361,10 +361,7 @@ export class DatabaseClusterService {
 
         // Execute query with timeout
         const queryPromise = params ? client.query(text, [...params]) : client.query(text)
-        const { promise: timedQuery, cancel } = withTimeout(
-          queryPromise,
-          this.config.queryTimeout,
-        )
+        const { promise: timedQuery, cancel } = withTimeout(queryPromise, this.config.queryTimeout)
         cancelQueryTimeout = cancel
 
         const result = await timedQuery
