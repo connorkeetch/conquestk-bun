@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from 'express'
+import { logAdminActivity, requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { cdnService } from '../services/cdnService.js'
 import { databaseClusterService } from '../services/databaseClusterService.js'
@@ -32,7 +33,7 @@ const sendFailure = (
 }
 
 // Performance dashboard (admin only)
-router.get('/dashboard', authenticateToken, async (req, res) => {
+router.get('/dashboard', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const dashboard = performanceMonitorService.getDashboardData()
 
@@ -46,7 +47,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 })
 
 // Current system metrics
-router.get('/metrics', authenticateToken, async (req, res) => {
+router.get('/metrics', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
 
@@ -60,7 +61,7 @@ router.get('/metrics', authenticateToken, async (req, res) => {
 })
 
 // Historical metrics
-router.get('/metrics/history', authenticateToken, async (req, res) => {
+router.get('/metrics/history', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string, 10) || 1
     const history = performanceMonitorService.getMetricsHistory(hours)
@@ -79,7 +80,7 @@ router.get('/metrics/history', authenticateToken, async (req, res) => {
 })
 
 // Odds engine shadow metrics history (last N hours)
-router.get('/metrics/odds-history', authenticateToken, async (req, res) => {
+router.get('/metrics/odds-history', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const hours = parseInt((req.query.hours as string) || '24', 10)
     const points = oddsMetrics.getHistory(Number.isFinite(hours) ? hours : 24)
@@ -98,7 +99,7 @@ router.get('/metrics/odds-history', authenticateToken, async (req, res) => {
 })
 
 // Performance alerts
-router.get('/alerts', authenticateToken, async (req, res) => {
+router.get('/alerts', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const activeOnly = req.query.active === 'true'
     const alerts = activeOnly
@@ -115,22 +116,28 @@ router.get('/alerts', authenticateToken, async (req, res) => {
 })
 
 // Resolve alert
-router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
-  try {
-    const { alertId } = req.params
-    const resolved = performanceMonitorService.resolveAlert(alertId)
+router.post(
+  '/alerts/:alertId/resolve',
+  authenticateToken,
+  requireAdmin,
+  logAdminActivity('performance.alert_resolve'),
+  async (req, res) => {
+    try {
+      const { alertId } = req.params
+      const resolved = performanceMonitorService.resolveAlert(alertId)
 
-    res.json({
-      success: resolved,
-      message: resolved ? 'Alert resolved' : 'Alert not found',
-    })
-  } catch (error) {
-    sendFailure(req, res, error, 'Failed to resolve alert')
-  }
-})
+      res.json({
+        success: resolved,
+        message: resolved ? 'Alert resolved' : 'Alert not found',
+      })
+    } catch (error) {
+      sendFailure(req, res, error, 'Failed to resolve alert')
+    }
+  },
+)
 
 // Component-specific health checks
-router.get('/health/detailed', authenticateToken, async (req, res) => {
+router.get('/health/detailed', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const [performanceHealth, redisHealth, databaseHealth, cdnHealth] = await Promise.allSettled([
       performanceMonitorService.healthCheck(),
@@ -171,7 +178,7 @@ router.get('/health/detailed', authenticateToken, async (req, res) => {
 })
 
 // Cache management
-router.get('/cache/stats', authenticateToken, async (req, res) => {
+router.get('/cache/stats', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const stats = redisClusterService.getMetrics()
 
@@ -184,32 +191,38 @@ router.get('/cache/stats', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> => {
-  try {
-    const { pattern } = req.body
+router.post(
+  '/cache/clear',
+  authenticateToken,
+  requireAdmin,
+  logAdminActivity('performance.cache_clear'),
+  async (req, res): Promise<void> => {
+    try {
+      const { pattern } = req.body
 
-    if (!pattern) {
-      res.status(400).json({
-        success: false,
-        error: 'Pattern is required',
+      if (!pattern) {
+        res.status(400).json({
+          success: false,
+          error: 'Pattern is required',
+        })
+        return
+      }
+
+      const cleared = await redisClusterService.deletePattern(pattern)
+
+      res.json({
+        success: true,
+        data: { cleared },
+        message: `Cleared ${cleared} keys matching pattern: ${pattern}`,
       })
-      return
+    } catch (error) {
+      sendFailure(req, res, error, 'Failed to clear cache keys')
     }
-
-    const cleared = await redisClusterService.deletePattern(pattern)
-
-    res.json({
-      success: true,
-      data: { cleared },
-      message: `Cleared ${cleared} keys matching pattern: ${pattern}`,
-    })
-  } catch (error) {
-    sendFailure(req, res, error, 'Failed to clear cache keys')
-  }
-})
+  },
+)
 
 // Database performance
-router.get('/database/stats', authenticateToken, async (req, res) => {
+router.get('/database/stats', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const stats = databaseClusterService.getMetrics()
 
@@ -223,7 +236,7 @@ router.get('/database/stats', authenticateToken, async (req, res) => {
 })
 
 // CDN management
-router.get('/cdn/stats', authenticateToken, async (req, res) => {
+router.get('/cdn/stats', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const stats = cdnService.getMetrics()
 
@@ -236,124 +249,141 @@ router.get('/cdn/stats', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/cdn/purge', authenticateToken, async (req, res) => {
-  try {
-    const { paths = [], tags = [] } = req.body
+router.post(
+  '/cdn/purge',
+  authenticateToken,
+  requireAdmin,
+  logAdminActivity('performance.cdn_purge'),
+  async (req, res) => {
+    try {
+      const { paths = [], tags = [] } = req.body
 
-    const purged = await cdnService.purgeCache(paths, tags)
+      const purged = await cdnService.purgeCache(paths, tags)
 
-    res.json({
-      success: purged,
-      message: purged ? 'CDN cache purged successfully' : 'Failed to purge CDN cache',
-      data: { paths: paths.length, tags: tags.length },
-    })
-  } catch (error) {
-    sendFailure(req, res, error, 'Failed to purge CDN cache')
-  }
-})
+      res.json({
+        success: purged,
+        message: purged ? 'CDN cache purged successfully' : 'Failed to purge CDN cache',
+        data: { paths: paths.length, tags: tags.length },
+      })
+    } catch (error) {
+      sendFailure(req, res, error, 'Failed to purge CDN cache')
+    }
+  },
+)
 
 // Performance testing endpoints
-router.post('/test/load', authenticateToken, async (req, res) => {
-  try {
-    const {
-      duration = 60, // seconds
-      concurrency = 10,
-      endpoint = '/api/health',
-    } = req.body
+router.post(
+  '/test/load',
+  authenticateToken,
+  requireAdmin,
+  logAdminActivity('performance.test_load_start'),
+  async (req, res) => {
+    try {
+      const {
+        duration = 60, // seconds
+        concurrency = 10,
+        endpoint = '/api/health',
+      } = req.body
 
-    // Start load test (implementation would depend on testing framework)
-    const testId = `load-test-${Date.now()}`
+      // Start load test (implementation would depend on testing framework)
+      const testId = `load-test-${Date.now()}`
 
-    // Simulate load test initiation
-    setTimeout(() => {
-      // Would implement actual load testing here
-      logger.info(`Load test ${testId} completed`)
-    }, duration * 1000)
+      // Simulate load test initiation
+      setTimeout(() => {
+        // Would implement actual load testing here
+        logger.info(`Load test ${testId} completed`)
+      }, duration * 1000)
 
-    res.json({
-      success: true,
-      data: {
-        testId,
-        duration,
-        concurrency,
-        endpoint,
-        status: 'started',
-      },
-      message: 'Load test started',
-    })
-  } catch (error) {
-    sendFailure(req, res, error, 'Failed to start load test')
-  }
-})
+      res.json({
+        success: true,
+        data: {
+          testId,
+          duration,
+          concurrency,
+          endpoint,
+          status: 'started',
+        },
+        message: 'Load test started',
+      })
+    } catch (error) {
+      sendFailure(req, res, error, 'Failed to start load test')
+    }
+  },
+)
 
 // System optimization recommendations
-router.get('/optimization/recommendations', authenticateToken, async (req, res) => {
-  try {
-    const current = performanceMonitorService.getCurrentMetrics()
-    const recommendations = []
+router.get(
+  '/optimization/recommendations',
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const current = performanceMonitorService.getCurrentMetrics()
+      const recommendations = []
 
-    if (current) {
-      // Cache optimization
-      if (current.cache.hitRate < 90) {
-        recommendations.push({
-          component: 'cache',
-          priority: 'high',
-          issue: 'Low cache hit rate',
-          recommendation: 'Review cache TTL settings and implement cache warming',
-          metric: `${current.cache.hitRate}% hit rate`,
-        })
+      if (current) {
+        // Cache optimization
+        if (current.cache.hitRate < 90) {
+          recommendations.push({
+            component: 'cache',
+            priority: 'high',
+            issue: 'Low cache hit rate',
+            recommendation: 'Review cache TTL settings and implement cache warming',
+            metric: `${current.cache.hitRate}% hit rate`,
+          })
+        }
+
+        // Database optimization
+        if (current.database.avgResponseTime > 500) {
+          recommendations.push({
+            component: 'database',
+            priority: 'high',
+            issue: 'High database response time',
+            recommendation: 'Consider adding indexes, optimizing queries, or scaling read replicas',
+            metric: `${current.database.avgResponseTime}ms avg response time`,
+          })
+        }
+
+        // Memory optimization
+        const memoryUsageMB = current.server.memoryUsage.heapUsed / 1024 / 1024
+        if (memoryUsageMB > 800) {
+          recommendations.push({
+            component: 'server',
+            priority: 'medium',
+            issue: 'High memory usage',
+            recommendation: 'Implement memory pooling and optimize data structures',
+            metric: `${Math.round(memoryUsageMB)}MB memory usage`,
+          })
+        }
+
+        // Queue optimization
+        if (current.queues.waitingJobs > 50) {
+          recommendations.push({
+            component: 'queues',
+            priority: 'medium',
+            issue: 'Queue backlog building up',
+            recommendation: 'Scale worker processes or optimize job processing',
+            metric: `${current.queues.waitingJobs} waiting jobs`,
+          })
+        }
       }
 
-      // Database optimization
-      if (current.database.avgResponseTime > 500) {
-        recommendations.push({
-          component: 'database',
-          priority: 'high',
-          issue: 'High database response time',
-          recommendation: 'Consider adding indexes, optimizing queries, or scaling read replicas',
-          metric: `${current.database.avgResponseTime}ms avg response time`,
-        })
-      }
-
-      // Memory optimization
-      const memoryUsageMB = current.server.memoryUsage.heapUsed / 1024 / 1024
-      if (memoryUsageMB > 800) {
-        recommendations.push({
-          component: 'server',
-          priority: 'medium',
-          issue: 'High memory usage',
-          recommendation: 'Implement memory pooling and optimize data structures',
-          metric: `${Math.round(memoryUsageMB)}MB memory usage`,
-        })
-      }
-
-      // Queue optimization
-      if (current.queues.waitingJobs > 50) {
-        recommendations.push({
-          component: 'queues',
-          priority: 'medium',
-          issue: 'Queue backlog building up',
-          recommendation: 'Scale worker processes or optimize job processing',
-          metric: `${current.queues.waitingJobs} waiting jobs`,
-        })
-      }
+      res.json({
+        success: true,
+        data: recommendations,
+        meta: {
+          generated: new Date().toISOString(),
+          total: recommendations.length,
+        },
+      })
+    } catch (error) {
+      sendFailure(req, res, error, 'Failed to generate optimization recommendations')
     }
-
-    res.json({
-      success: true,
-      data: recommendations,
-      meta: {
-        generated: new Date().toISOString(),
-        total: recommendations.length,
-      },
-    })
-  } catch (error) {
-    sendFailure(req, res, error, 'Failed to generate optimization recommendations')
-  }
-})
+  },
+)
 
 // Export performance report
-router.get('/report', authenticateToken, async (req, res) => {
+router.get('/report', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string, 10) || 24
     const format = (req.query.format as string) || 'json'
