@@ -1,8 +1,8 @@
 import express from 'express'
+import { query } from '../config/database.js'
 import { requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { getClientMetricsSummary, insertClientMetrics } from '../services/clientMetricsService.js'
-import { query } from '../config/database.js'
 
 const router = express.Router()
 
@@ -50,7 +50,10 @@ router.get('/client/summary', authenticateToken, requireAdmin, async (req, res) 
 // Admin: reset persisted client metrics snapshots (dangerous; dev-phase convenience)
 router.post('/client/reset', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { scope, hours } = (req.body ?? {}) as { scope?: 'all' | 'older_than_hours'; hours?: number }
+    const { scope, hours } = (req.body ?? {}) as {
+      scope?: 'all' | 'older_than_hours'
+      hours?: number
+    }
     let deleted = 0
     if (scope === 'older_than_hours' && typeof hours === 'number' && hours > 0) {
       const hrs = Math.floor(hours)
