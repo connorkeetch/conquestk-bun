@@ -781,16 +781,22 @@ export class MapApprovalService {
 
   // Statistics and Analytics
   static async getApprovalStats(): Promise<MapApprovalStatsRow> {
-    const result = await query<MapApprovalStatsRow>(`
+    const result = await query<{
+      total_requests: number
+      approved: number
+      rejected: number
+      pending: number
+      avg_review_hours: number | null
+    }>(`
       SELECT
-        COUNT(*) as total_requests,
-        SUM(CASE WHEN decision = 'approved' THEN 1 ELSE 0 END) as approved,
-        SUM(CASE WHEN decision = 'rejected' THEN 1 ELSE 0 END) as rejected,
-        SUM(CASE WHEN decision IS NULL THEN 1 ELSE 0 END) as pending,
+        COUNT(*)::int as total_requests,
+        COALESCE(SUM(CASE WHEN decision = 'approved' THEN 1 ELSE 0 END), 0)::int as approved,
+        COALESCE(SUM(CASE WHEN decision = 'rejected' THEN 1 ELSE 0 END), 0)::int as rejected,
+        COALESCE(SUM(CASE WHEN decision IS NULL THEN 1 ELSE 0 END), 0)::int as pending,
         AVG(CASE
           WHEN review_completed_at IS NOT NULL AND review_started_at IS NOT NULL
           THEN EXTRACT(EPOCH FROM (review_completed_at - review_started_at)) / 3600
-        END) as avg_review_hours
+        END)::float as avg_review_hours
       FROM map_approval_requests
       WHERE created_at >= NOW() - INTERVAL '30 days'
     `)
