@@ -1189,6 +1189,14 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
           const resyncReasonRaw = typeof data.reason === 'string' ? data.reason.trim() : ''
           const resyncReason = resyncReasonRaw.length > 0 ? resyncReasonRaw : 'unknown'
+          logger.info('[Lockstep Server] Resync requested', {
+            matchId: normalizedRoomId,
+            socketId: socket.id,
+            userId,
+            fromSeq: data.fromSeq ?? null,
+            reason: resyncReason,
+            unsupported: Array.isArray(data.unsupported) ? data.unsupported : undefined,
+          })
           lockstepMetrics.recordResyncStart(resyncReason)
           if (Array.isArray(data.unsupported) && data.unsupported.length > 0) {
             lockstepMetrics.recordUnsupportedCommands(data.unsupported)
@@ -1247,6 +1255,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const baselineSeq = checksumEntry?.seq ?? 0
             const frames = await lockstepService.getFramesAfter(normalizedRoomId, baselineSeq)
             lockstepMetrics.recordResync(frames.length)
+
+            logger.info('[Lockstep Server] Sending resync snapshot', {
+              matchId: normalizedRoomId,
+              socketId: socket.id,
+              baselineSeq,
+              hasSnapshot: Boolean(checksumEntry?.snapshot),
+              frameCount: frames.length,
+              fromSeq: data.fromSeq ?? null,
+              reason: resyncReason,
+            })
 
             socket.emit('game-action:snapshot', {
               matchId: normalizedRoomId,

@@ -225,6 +225,12 @@ class RollingWindowStats {
     if (due) this.lastLogAt.set(key, now)
     return due
   }
+
+  resetAll() {
+    this.windowByKey.clear()
+    this.lastLogAt.clear()
+    this.counts.clear()
+  }
 }
 
 class SocketPayloadMetrics {
@@ -244,6 +250,11 @@ class SocketPayloadMetrics {
 
   shouldLog(event: string) {
     return this.window.shouldLog(event)
+  }
+
+  reset() {
+    this.gauge.resetAll()
+    this.window.resetAll()
   }
 }
 
@@ -316,6 +327,17 @@ class LockstepMetrics {
       ],
       gauges: this.resyncFrameGauge.snapshot(),
     }
+  }
+
+  reset() {
+    this.frameCounter.resetAll()
+    this.checksumCounter.resetAll()
+    this.resyncCounter.resetAll()
+    this.resyncFrameGauge.resetAll()
+    this.resyncStartedCounter.resetAll()
+    this.resyncCompletedCounter.resetAll()
+    this.checksumWithoutBaselineCounter.resetAll()
+    this.unsupportedCommandCounter.resetAll()
   }
 }
 
@@ -419,6 +441,12 @@ class RealtimeLatencyMetrics {
       accepted: this.acceptedCounter.snapshot(),
       byAction,
     }
+  }
+
+  reset() {
+    this.acceptedCounter.resetAll()
+    this.ackWindow.resetAll()
+    this.processWindow.resetAll()
   }
 }
 

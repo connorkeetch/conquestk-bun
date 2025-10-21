@@ -1415,6 +1415,10 @@ const simulateEndTurn = (
       delete working.resumeHasAttackedAfterReinforcement
       return { state: working, supported: true }
     }
+    case 'finished': {
+      // Gracefully accept end_turn in finished games; no-op but supported
+      return { state: working, supported: true }
+    }
     case 'attack': {
       working.phase = 'fortify'
       resetMovementTracking(working)
