@@ -735,7 +735,7 @@ describe('GameEngine', () => {
       expect(resigningPlayer?.isEliminated).toBe(true)
     })
 
-    it('should declare the hunter as winner when their target resigns in assassination mode', async () => {
+    it('should not declare a winner when a target resigns in assassination mode', async () => {
       const players = createPlayers('hunter', 'target', 'bystander')
       const config = createConfig(players.length, { gameMode: 'assassination' })
       let gameState = gameEngine.initializeGame(
@@ -762,9 +762,9 @@ describe('GameEngine', () => {
 
       const { gameState: updatedState } = await gameEngine.processAction(gameState, action)
 
-      expect(updatedState.phase).toBe('finished')
-      const winner = updatedState.players.find((p) => !p.isEliminated)
-      expect(winner?.id).toBe(hunter.id)
+      expect(updatedState.phase).not.toBe('finished')
+      const activePlayers = updatedState.players.filter((p) => !p.isEliminated)
+      expect(activePlayers.length).toBe(2)
     })
   })
 
