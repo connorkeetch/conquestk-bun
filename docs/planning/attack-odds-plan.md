@@ -1,3 +1,9 @@
+> **Note:** This document outlines the original plan for the attack odds overhaul, which has since been implemented. The combat outcomes are now pre-calculated and stored in `shared/data/combatOutcomes.json`. This plan is preserved as a historical reference.
+>
+> ---
+> last_reviewed: 2025-10-21
+---
+
 # Attack Odds Overhaul Plan
 
 ## Objective

@@ -1,3 +1,5 @@
+> **Note:** The clan system has been fully implemented. This document is now a historical reference for the technical planning and rollout process. Last updated: 2025-10-21.
+
 # Unified Clan System Plan
 
 *Last updated: Sept 20, 2025*

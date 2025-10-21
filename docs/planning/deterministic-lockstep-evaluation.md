@@ -1,3 +1,5 @@
+> **Note:** The deterministic lockstep migration is complete. This document is a historical reference detailing the evaluation, rollout, and verification of that architectural change. Last updated: 2025-10-21.
+
 # Deterministic Lockstep & Replay Evaluation
 
 ## TL;DR

@@ -1,5 +1,7 @@
 # 🗺️ ConquestK Map Data Reference
 
+_Last updated: October 20, 2025_
+
 This document consolidates the previous *Map Format* and *Map Schema* guides into a single source of truth for how maps are modeled, edited, stored, and reviewed inside ConquestK.
 
 ## 1. System overview
@@ -239,7 +241,3 @@ Quota guardrails limit non-admin users to five unpublished items across drafts, 
 - **Programmatic seeding** – When generating maps via scripts, build a `CreateMapRequest` payload (see `backend/src/services/mapWorkflowService.ts`) and call `mapService.createMap`. Populate `metadata` so the editor can round-trip the map later.
 - **Testing maps locally** – Authenticate, open `/map-editor`, create a draft, publish it, then launch a game from `/create-game` selecting your map (it will appear once approved or if you are the creator viewing unpublished drafts via admin tools).
 - **Admin review tooling** – `/admin/map-reviews` and `/admin/maps` surfaces queues driven by the workflow tables above.
-
----
-
-*Last updated: February 2025.*

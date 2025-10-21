@@ -1,3 +1,9 @@
+> **Note:** This document outlines the original plan for the achievement system, which has since been implemented. It is preserved here as a historical reference for design decisions.
+>
+> ---
+> last_reviewed: 2025-10-21
+---
+
 # Achievement System Plan
 
 ## Purpose & scope

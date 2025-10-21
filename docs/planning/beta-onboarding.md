@@ -1,3 +1,9 @@
+> **Note:** This document was used for a private beta test in October 2025 and is now outdated. It is preserved here as a historical reference and a template for future onboarding guides.
+>
+> ---
+> last_reviewed: 2025-10-21
+---
+
 # Beta Tester Onboarding & Expectations
 
 _Last updated: October 8, 2025_

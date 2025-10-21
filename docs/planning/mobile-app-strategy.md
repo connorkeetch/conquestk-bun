@@ -1,5 +1,5 @@
 # Mobile App Strategy
-_Last updated: September 21, 2025_
+_Last updated: October 21, 2025_
 
 ## 1. Current Product Context
 - **Frontend:** React 19 + TypeScript application built with Vite and Tailwind CSS. The responsive web client already ships as a progressive web app (PWA) with touch-friendly controls.
@@ -130,11 +130,11 @@ _Last updated: September 21, 2025_
 > **Rule of thumb:** Start where reuse is highest and risk is lowest; deepen investment when live metrics justify the additional build.
 
 ## 6. Recommended Phased Approach
-1. **Phase 1 — PWA Hardening (Weeks 0–2)**  
+1. **Phase 1 — PWA Hardening (Weeks 0–2)**
    Ship responsiveness and interaction polish, a robust service worker, and install prompts. Instrument mobile web analytics to understand behaviour and friction.
-2. **Phase 2 — Capacitor Store Launch (Weeks 2–8)**  
+2. **Phase 2 — Capacitor Store Launch (Weeks 2–8)**
    Wrap the web app, add native touches (push, splash, haptics, secure storage), and prepare review notes that highlight real-time gameplay and native integrations.
-3. **Phase 3 — React Native / Expo Exploration (Month 3+ if metrics warrant)**  
+3. **Phase 3 — React Native / Expo Exploration (Month 3+ if metrics warrant)**
    Prototype React Native board rendering, socket performance, and navigation. If the uplift justifies it, build the RN client sharing `shared/` logic and target a beta within 3–4 months.
 4. **Escalate to Flutter/Native only** if React Native hits hard limits (board performance, background policies) **and** budget/staffing expand to support parallel native development.
 

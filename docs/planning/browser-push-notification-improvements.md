@@ -1,3 +1,9 @@
+> **Note:** This document outlines the plan for hardening browser push notifications. Most of these changes have been implemented. The document is preserved as a historical reference.
+>
+> ---
+> last_reviewed: 2025-10-21
+---
+
 # ✅ Browser Push Notification Hardening Plan
 
 _Last updated: September 20, 2025_
@@ -38,4 +44,3 @@ _Last updated: September 20, 2025_
 - Unit tests for the subscription persistence layer and retry logic.
 - End-to-end flow verifying the Settings toggle accurately reflects backend state, including disabled scenarios.
 - Manual QA of push delivery across at least two browsers and both localhost + staging domains.
-

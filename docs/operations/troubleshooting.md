@@ -1,5 +1,7 @@
 # Troubleshooting Guide
 
+_Last reviewed: 2025-10-21_
+
 ## 🔧 Common Issues & Fixes
 
 ### Common Gotchas
@@ -88,7 +90,7 @@ guide; the hosted Railway port is unreachable from within the sandbox network.
 cd backend && npm run migrate
 
 # Or connect to production DB and run:
-ALTER TABLE user_preferences 
+ALTER TABLE user_preferences
 ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default'
 ```
 
@@ -160,18 +162,19 @@ powershell -ExecutionPolicy Bypass -File ./start-dev.ps1
 
 ## 🎉 Success Indicators
 
-✅ Setup check passes without errors  
-✅ Backend starts on http://localhost:5001  
-✅ Frontend starts on http://localhost:5173  
-✅ Browser shows Risk game interface  
-✅ No console errors in browser developer tools  
-✅ Can register/login successfully  
-✅ Map editor loads at `/map-editor`  
+✅ Setup check passes without errors
+✅ Backend starts on http://localhost:5001
+✅ Frontend starts on http://localhost:5173
+✅ Browser shows Risk game interface
+✅ No console errors in browser developer tools
+✅ Can register/login successfully
+✅ Map editor loads at `/map-editor`
 ✅ Backend responds to `/api/maps` endpoints
-**Post-September 2025: Sector migration related**
+
+**Post-September 2025: Sector-related issues**
 ```bash
-# Errors mentioning map_continents/continent columns
-# indicate the continents→sectors migration wasn't applied.
+# Errors mentioning 'sector' columns
+# may indicate that the database schema is not up-to-date.
 cd backend && npm run migrate
 
 # Verify tables/columns exist
