@@ -7,6 +7,7 @@ import type {
   AdminQueuesStats,
 } from '@conquestk/shared/types/admin'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import { adminService, type ClientMetricsSummary } from '@/services/adminService'
 
 type HealthResult = {
@@ -359,6 +360,16 @@ export default function AdminHealth() {
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 4)
 
+              const handleResetCounters = async () => {
+                try {
+                  const svc = await import('../services/adminService')
+                  await svc.adminService.resetRealtimeMetrics()
+                  toast.success('Realtime metrics reset')
+                } catch (_e) {
+                  toast.error('Failed to reset metrics')
+                }
+              }
+
               return (
                 <div className="text-xs text-white/80 space-y-3">
                   <div>
@@ -389,7 +400,16 @@ export default function AdminHealth() {
                   </div>
 
                   <div>
-                    <div className="font-semibold mb-1">Game action latency (ms)</div>
+                    <div className="font-semibold mb-1 flex items-center justify-between">
+                      <span>Game action latency (ms)</span>
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-[11px] rounded bg-surface-2/70 border border-border/40 hover:bg-surface-2"
+                        onClick={handleResetCounters}
+                      >
+                        Reset Counters
+                      </button>
+                    </div>
                     <div className="space-y-1">
                       {Object.entries(realtime.realtime.byAction || {}).map(([name, stats]) => (
                         <div

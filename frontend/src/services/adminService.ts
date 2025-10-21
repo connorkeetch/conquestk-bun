@@ -212,6 +212,10 @@ class AdminService {
     return response.data
   }
 
+  async resetRealtimeMetrics(): Promise<void> {
+    await apiClient.post(`${this.realtimeUrl}/reset`)
+  }
+
   // ============= USER MANAGEMENT =============
 
   async getUsers(

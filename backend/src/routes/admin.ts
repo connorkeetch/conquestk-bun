@@ -2577,3 +2577,37 @@ router.get('/realtime-metrics', async (_req: Request, res: Response) => {
     res.status(500).json({ ok: false, error: (e as Error)?.message || 'failed' })
   }
 })
+
+// Reset in-memory realtime/lockstep metrics (admin)
+router.post('/realtime-metrics/reset', requirePermission('system.edit'), async (_req, res) => {
+  try {
+    const { lockstepMetrics, realtimeMetrics, socketPayloadMetrics } = await import(
+      '../services/metricsService.js'
+    )
+    // Best-effort resets
+    try {
+      lockstepMetrics.reset()
+    } catch (error) {
+      logger.warn('Failed to reset lockstep metrics (best-effort)', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+    try {
+      realtimeMetrics.reset()
+    } catch (error) {
+      logger.warn('Failed to reset realtime metrics (best-effort)', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+    try {
+      socketPayloadMetrics.reset()
+    } catch (error) {
+      logger.warn('Failed to reset socket payload metrics (best-effort)', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+    res.json({ ok: true, reset: ['lockstep', 'realtime', 'socketPayloads'] })
+  } catch (e) {
+    res.status(500).json({ ok: false, error: (e as Error)?.message || 'failed' })
+  }
+})
