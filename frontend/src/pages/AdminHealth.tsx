@@ -26,7 +26,6 @@ const endpoints = [
   { label: 'Queues Stats', path: '/queues/stats', auth: true },
   { label: 'Client Metrics Summary', path: '/metrics/client/summary', auth: true },
   { label: 'Performance Detailed', path: '/performance/health/detailed', auth: true },
-  { label: 'Performance Metrics', path: '/performance/metrics', auth: true },
   { label: 'Performance Alerts', path: '/performance/alerts?active=true', auth: true },
   { label: 'Odds/WASM Status', path: '/odds/status', auth: false },
   { label: 'Match Service', path: '/matchsvc/status', auth: false },
@@ -147,18 +146,6 @@ export default function AdminHealth() {
             path: e.path,
             ok: !!(data as { success?: boolean }).success,
             statusCode: (data as { success?: boolean }).success ? 200 : 503,
-            durationMs: dt,
-            data,
-          }
-        }
-        if (e.label === 'Performance Metrics') {
-          const data = await adminService.getPerformanceMetrics()
-          const dt = Date.now() - t0
-          return {
-            label: e.label,
-            path: e.path,
-            ok: true,
-            statusCode: 200,
             durationMs: dt,
             data,
           }
@@ -612,12 +599,29 @@ export default function AdminHealth() {
 
           const renderClientMetricsSummaryCard = () => {
             const d = (r.data ?? {}) as ClientMetricsSummary
-            const sessionCount = d.sessionCount ?? 0
-            const avgLatency = d.avgLatency ?? 0
-            const avgSuccessRate = d.avgSuccessRate ?? 100
-            const totalReconnects = d.totalReconnects ?? 0
+            const sessionCount = d?.sessionCount ?? 0
+            const activeGames = d?.activeGames ?? 0
+            const avgLatency = d?.avgLatency ?? 0
+            const avgSuccessRate = d?.avgSuccessRate ?? 100
+            const totalReconnects = d?.totalReconnects ?? 0
             const reconnectsPerSession =
               sessionCount > 0 ? totalReconnects / sessionCount : totalReconnects
+            const lockstep = d?.lockstepResyncs ?? {
+              total: 0,
+              successes: 0,
+              failures: 0,
+              failureRate: 0,
+              avgDurationMs: 0,
+              byReason: [],
+            }
+            const failureRatePct = Math.round((lockstep.failureRate ?? 0) * 1000) / 10
+            const avgResyncDuration = Math.round(lockstep.avgDurationMs ?? 0)
+            const byReason = [...(lockstep.byReason ?? [])]
+              .filter((entry) => (entry?.total ?? 0) > 0)
+              .sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
+              .slice(0, 5)
+            const sessionsPerGame = Array.isArray(d?.sessionsPerGame) ? d.sessionsPerGame : []
+            const sessionsPerUser = Array.isArray(d?.sessionsPerUser) ? d.sessionsPerUser : []
 
             const warnings: Array<{ severity: 'warn' | 'critical'; message: string }> = []
             if (avgSuccessRate < 90) {
@@ -653,6 +657,23 @@ export default function AdminHealth() {
                 message: `Reconnects averaging ${reconnectsPerSession.toFixed(1)} per session`,
               })
             }
+            if (failureRatePct > 10) {
+              warnings.push({
+                severity: 'critical',
+                message: `Lockstep resync failure rate is ${failureRatePct.toFixed(1)}% (> 10%)`,
+              })
+            } else if (failureRatePct > 3) {
+              warnings.push({
+                severity: 'warn',
+                message: `Lockstep resync failure rate is ${failureRatePct.toFixed(1)}%`,
+              })
+            }
+            if (avgResyncDuration > 2000) {
+              warnings.push({
+                severity: 'warn',
+                message: `Resyncs average ${avgResyncDuration} ms`,
+              })
+            }
 
             const barWidth = (value: number) => `${Math.max(0, Math.min(100, value))}%`
             const successColor =
@@ -663,6 +684,75 @@ export default function AdminHealth() {
                   : 'bg-emerald-400'
             const latencyColor =
               avgLatency > 600 ? 'bg-red-500' : avgLatency > 400 ? 'bg-amber-400' : 'bg-sky-400'
+            const failureColor =
+              failureRatePct > 10
+                ? 'bg-red-500'
+                : failureRatePct > 3
+                  ? 'bg-amber-400'
+                  : 'bg-sky-400'
+
+            const formatSessionsLabel = (label: string | null, fallback: string) =>
+              label && label.trim().length > 0 ? label : fallback
+
+            const renderResyncHotspots = (
+              items: Array<{
+                id: string | null
+                label: string | null
+                status?: string | null
+                username?: string | null
+                sessions: number
+                reconnects: number
+                resyncs: number
+                resyncsPerSession: number
+              }>,
+              emptyText: string,
+              fallbackPrefix: string,
+            ) => {
+              if (!items || items.length === 0) {
+                return <div className="text-[11px] text-muted">{emptyText}</div>
+              }
+              return (
+                <div className="space-y-2">
+                  {items.map((item) => {
+                    const severityClass =
+                      item.resyncsPerSession > 2
+                        ? 'text-red-200'
+                        : item.resyncsPerSession > 0.5
+                          ? 'text-amber-200'
+                          : 'text-white/80'
+                    const label = formatSessionsLabel(
+                      item.label ?? item.username ?? null,
+                      fallbackPrefix,
+                    )
+                    const badge =
+                      item.status && item.status !== 'completed'
+                        ? ` · ${item.status.replaceAll('_', ' ')}`
+                        : ''
+                    return (
+                      <div
+                        key={`${fallbackPrefix}-${item.id ?? label}`}
+                        className="rounded-lg border border-border/40 bg-surface-3/60 p-2"
+                      >
+                        <div className="flex items-center justify-between text-sm text-white">
+                          <span className="truncate" title={label}>
+                            {label}
+                            <span className="text-[10px] uppercase text-muted">{badge}</span>
+                          </span>
+                          <span className={`text-xs font-semibold ${severityClass}`}>
+                            {item.resyncs.toLocaleString()} resyncs
+                          </span>
+                        </div>
+                        <div className="mt-1 text-[11px] text-muted">
+                          {item.sessions} session{item.sessions === 1 ? '' : 's'} ·{' '}
+                          {item.reconnects} reconnect{item.reconnects === 1 ? '' : 's'} ·{' '}
+                          {item.resyncsPerSession.toFixed(2)} resyncs/session
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            }
 
             return (
               <div className="mt-3 text-xs text-white/80 space-y-3">
@@ -672,6 +762,15 @@ export default function AdminHealth() {
                       Sessions (24h)
                     </div>
                     <div className="text-sm font-semibold text-white">{sessionCount}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Active Games
+                    </div>
+                    <div className="text-sm font-semibold text-white">{activeGames}</div>
+                    <div className="text-[10px] text-muted">
+                      {(lockstep.total ?? 0).toLocaleString()} resyncs observed
+                    </div>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase tracking-wide text-muted">Reconnects</div>
@@ -708,6 +807,35 @@ export default function AdminHealth() {
                   </div>
                 </div>
 
+                <div>
+                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                    <span>Resync Failure Rate</span>
+                    <span>{failureRatePct.toFixed(1)}%</span>
+                  </div>
+                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                    <div
+                      className={`h-full rounded-full ${failureColor}`}
+                      style={{ width: barWidth(failureRatePct) }}
+                    />
+                  </div>
+                  <div className="text-[11px] text-muted mt-1">
+                    Avg duration {avgResyncDuration} ms · successes {lockstep.successes ?? 0} /{' '}
+                    {lockstep.total ?? 0}
+                  </div>
+                  {byReason.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {byReason.map((entry) => (
+                        <span
+                          key={entry.reason}
+                          className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-white/70 border border-border/30"
+                        >
+                          {entry.reason.replaceAll('_', ' ')} · {entry.total}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
                 {warnings.length > 0 ? (
                   <div className="space-y-1 rounded-lg border border-red-500/40 bg-red-500/10 p-2">
                     {warnings.map((warning, index) => (
@@ -727,107 +855,27 @@ export default function AdminHealth() {
                     Client reliability metrics are within healthy ranges.
                   </div>
                 )}
-              </div>
-            )
-          }
 
-          const renderPerformanceMetrics = () => {
-            const d = (r.data ?? {}) as {
-              server?: {
-                uptime?: number
-                memoryUsage?: { heapUsed?: number }
-                requestsPerSecond?: number
-              }
-              database?: { avgResponseTime?: number; slowQueries?: number }
-              cache?: { hitRate?: number }
-              queues?: { waitingJobs?: number; failedJobs?: number; processedJobs?: number }
-              reliability?: {
-                sessionCount?: number
-                avgLatency?: number
-                avgSuccessRate?: number
-                totalReconnects?: number
-                lockstep?: {
-                  total?: number
-                  successes?: number
-                  failures?: number
-                  failureRate?: number
-                  avgDurationMs?: number
-                }
-              }
-            }
-            const memMb = d.server?.memoryUsage?.heapUsed
-              ? Math.round((d.server.memoryUsage.heapUsed / 1024 / 1024) * 10) / 10
-              : undefined
-            const lockstep = d.reliability?.lockstep
-            const failureRatePct =
-              lockstep?.failureRate != null
-                ? Math.round((lockstep.failureRate ?? 0) * 1000) / 10
-                : 0
-            const avgDurationMs =
-              lockstep?.avgDurationMs != null ? Math.round(lockstep.avgDurationMs) : 0
-            return (
-              <div className="mt-3 text-xs text-white/80 space-y-1">
-                <div>
-                  Uptime:{' '}
-                  {d.server?.uptime != null
-                    ? `${Math.round((d.server.uptime / 60) * 10) / 10} min`
-                    : 'unknown'}
-                </div>
-                <div>
-                  RPS:{' '}
-                  {d.server?.requestsPerSecond != null
-                    ? d.server.requestsPerSecond.toFixed(2)
-                    : 'unknown'}
-                </div>
-                <div>Memory: {memMb != null ? `${memMb} MB` : 'unknown'}</div>
-                <div>
-                  DB avg rt:{' '}
-                  {d.database?.avgResponseTime != null
-                    ? `${d.database.avgResponseTime} ms`
-                    : 'unknown'}
-                </div>
-                <div>Cache hit: {d.cache?.hitRate != null ? `${d.cache.hitRate}%` : 'unknown'}</div>
-                <div>Queue waiting: {d.queues?.waitingJobs ?? 0}</div>
-                <div>Queue failed: {d.queues?.failedJobs ?? 0}</div>
-                <div>Queue processed: {d.queues?.processedJobs ?? 0}</div>
-                <div className="border-t border-border/40 pt-2 mt-2">
-                  <div className="text-white/70 font-semibold mb-1">Lockstep Reliability</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="text-muted">Resyncs</div>
-                      <div>{lockstep?.total ?? 0}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
+                      Resync Hotspots · Games
                     </div>
-                    <div>
-                      <div className="text-muted">Failures</div>
-                      <div>{lockstep?.failures ?? 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Failure Rate</div>
-                      <div>{failureRatePct}%</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Avg Duration</div>
-                      <div>{avgDurationMs} ms</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Sessions</div>
-                      <div>{d.reliability?.sessionCount ?? 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Reconnects</div>
-                      <div>{d.reliability?.totalReconnects ?? 0}</div>
-                    </div>
+                    {renderResyncHotspots(
+                      sessionsPerGame,
+                      'No game sessions recorded',
+                      'Unknown game',
+                    )}
                   </div>
-                  <div className="mt-1 text-muted">
-                    Success rate:{' '}
-                    {d.reliability?.avgSuccessRate != null
-                      ? `${Math.round((d.reliability.avgSuccessRate ?? 0) * 1000) / 10}%`
-                      : 'unknown'}
-                    {' · '}Avg latency:{' '}
-                    {d.reliability?.avgLatency != null
-                      ? Math.round(d.reliability.avgLatency)
-                      : 'unknown'}{' '}
-                    ms
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
+                      Resync Hotspots · Users
+                    </div>
+                    {renderResyncHotspots(
+                      sessionsPerUser,
+                      'No user sessions recorded',
+                      'Unknown user',
+                    )}
                   </div>
                 </div>
               </div>
@@ -889,13 +937,11 @@ export default function AdminHealth() {
                         ? renderClientMetricsSummaryCard()
                         : r.label === 'Performance Detailed'
                           ? renderPerformanceDetailed()
-                          : r.label === 'Performance Metrics'
-                            ? renderPerformanceMetrics()
-                            : r.label === 'Performance Alerts'
-                              ? renderPerformanceAlerts()
-                              : r.label === 'Match Service'
-                                ? renderMatchSvc()
-                                : null
+                          : r.label === 'Performance Alerts'
+                            ? renderPerformanceAlerts()
+                            : r.label === 'Match Service'
+                              ? renderMatchSvc()
+                              : null
                 : null}
             </Card>
           )

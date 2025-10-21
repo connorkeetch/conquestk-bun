@@ -254,6 +254,14 @@ class LockstepMetrics {
   private readonly checksumCounter = new CounterMetric('lockstep_checksums_total')
   private readonly resyncCounter = new CounterMetric('lockstep_resync_total')
   private readonly resyncFrameGauge = new GaugeMetric('lockstep_resync_frames')
+  private readonly resyncStartedCounter = new CounterMetric('lockstep_resync_started_total')
+  private readonly resyncCompletedCounter = new CounterMetric('lockstep_resync_completed_total')
+  private readonly checksumWithoutBaselineCounter = new CounterMetric(
+    'lockstep_checksum_without_baseline_total',
+  )
+  private readonly unsupportedCommandCounter = new CounterMetric(
+    'lockstep_unsupported_commands_total',
+  )
 
   recordFrame(): void {
     this.frameCounter.inc()
@@ -270,12 +278,41 @@ class LockstepMetrics {
     }
   }
 
+  recordResyncStart(reason: string | undefined): void {
+    const label = reason && reason.length > 0 ? reason : 'unknown'
+    this.resyncStartedCounter.inc({ reason: label })
+  }
+
+  recordResyncComplete(reason: string | undefined, status: 'success' | 'failed'): void {
+    const label = reason && reason.length > 0 ? reason : 'unknown'
+    this.resyncCompletedCounter.inc({ reason: label, status })
+  }
+
+  recordChecksumWithoutBaseline(): void {
+    this.checksumWithoutBaselineCounter.inc()
+  }
+
+  recordUnsupportedCommands(commands: string[]): void {
+    if (!Array.isArray(commands) || commands.length === 0) {
+      this.unsupportedCommandCounter.inc({ command: 'unknown' })
+      return
+    }
+    for (const command of commands) {
+      const label = command && command.length > 0 ? command : 'unknown'
+      this.unsupportedCommandCounter.inc({ command: label })
+    }
+  }
+
   snapshot() {
     return {
       counters: [
         ...this.frameCounter.snapshot(),
         ...this.checksumCounter.snapshot(),
         ...this.resyncCounter.snapshot(),
+        ...this.resyncStartedCounter.snapshot(),
+        ...this.resyncCompletedCounter.snapshot(),
+        ...this.checksumWithoutBaselineCounter.snapshot(),
+        ...this.unsupportedCommandCounter.snapshot(),
       ],
       gauges: this.resyncFrameGauge.snapshot(),
     }

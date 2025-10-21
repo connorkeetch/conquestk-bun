@@ -52,7 +52,7 @@ import {
   setPanelZone,
   togglePin,
 } from '@/store/panelsSlice'
-import { setTreasureModalOpen } from '@/store/uiRoomSlice'
+import { recordBattleResult, setTreasureModalOpen } from '@/store/uiRoomSlice'
 /* Unused after merge cleanup
 import RankInsignia from '@/components/RankInsignia'
 import { toggleMuteUser } from '@/store/uiRoomSlice'
@@ -236,6 +236,7 @@ export default function GameRoom() {
   const lifecycleAutoFetchInFlightRef = useRef(false)
   const lifecycleAutoFetchRetryCountRef = useRef(0)
   const lastConquestHandledRef = useRef<string | null>(null)
+  const lastBattleSignatureRef = useRef<string | null>(null)
   const forcedPanelZonesRef = useRef<Partial<Record<PanelId, PanelZone>>>({})
 
   // Drawer resize hooks
@@ -1398,6 +1399,67 @@ export default function GameRoom() {
   // Watch for conquest to show army transfer modal
   const battleResult = useAppSelector((s) => s.game.battleResult)
   const conquestTransfer = useAppSelector((s) => s.game.conquestTransfer)
+
+  useEffect(() => {
+    if (!battleResult) {
+      lastBattleSignatureRef.current = null
+      return
+    }
+
+    const fromId =
+      typeof battleResult.fromTerritory === 'string'
+        ? battleResult.fromTerritory
+        : battleResult.fromTerritory?.id
+    const toId =
+      typeof battleResult.toTerritory === 'string'
+        ? battleResult.toTerritory
+        : battleResult.toTerritory?.id
+
+    if (!fromId || !toId) {
+      return
+    }
+
+    const attackerDice = Array.isArray(battleResult.attackerDice)
+      ? battleResult.attackerDice.map((die) => Math.trunc(die))
+      : []
+    const defenderDice = Array.isArray(battleResult.defenderDice)
+      ? battleResult.defenderDice.map((die) => Math.trunc(die))
+      : []
+
+    const signature = [
+      fromId,
+      toId,
+      attackerDice.join(','),
+      defenderDice.join(','),
+      Math.trunc(battleResult.attackerLosses ?? 0),
+      Math.trunc(battleResult.defenderLosses ?? 0),
+      battleResult.conquered ? '1' : '0',
+      battleResult.pendingConquestFor ?? '',
+    ].join('|')
+
+    if (lastBattleSignatureRef.current === signature) {
+      return
+    }
+
+    lastBattleSignatureRef.current = signature
+
+    const attackerId = battleResult.attackerId ?? battleResult.attackerPlayerId ?? null
+    const defenderId = battleResult.defenderId ?? battleResult.defenderPlayerId ?? null
+
+    dispatch(
+      recordBattleResult({
+        fromId,
+        toId,
+        attackerId: attackerId ?? undefined,
+        defenderId: defenderId ?? undefined,
+        attackerDice,
+        defenderDice,
+        attackerLosses: Math.max(0, Math.trunc(battleResult.attackerLosses ?? 0)),
+        defenderLosses: Math.max(0, Math.trunc(battleResult.defenderLosses ?? 0)),
+        conquered: Boolean(battleResult.conquered),
+      }),
+    )
+  }, [battleResult, dispatch])
 
   useEffect(() => {
     if (!battleResult || !battleResult.conquered || !currentGame || !user) return
