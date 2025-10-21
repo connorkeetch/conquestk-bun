@@ -36,6 +36,28 @@ export type EmailVerificationLog = {
   created_at: Date
 }
 
+function parseCountValue(value: unknown): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0
+  }
+
+  if (typeof value === 'bigint') {
+    return Number(value)
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+
+  if (value == null) {
+    return 0
+  }
+
+  const parsed = Number.parseInt(String(value), 10)
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
 function isMissingColumnError(error: unknown): error is DatabaseError {
   if (!(error instanceof Error)) {
     return false
@@ -199,12 +221,13 @@ export class UserService {
   async getRecentVerificationAttempts(userId: string): Promise<number> {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const countQuery = `
-      SELECT COUNT(*) as count 
-      FROM email_verification_logs 
+      SELECT COUNT(*) as count
+      FROM email_verification_logs
       WHERE user_id = $1 AND created_at > $2
     `
     const result = await query(countQuery, [userId, oneHourAgo])
-    return result.rows[0]?.count || 0
+    const rawCount = result.rows[0]?.count
+    return parseCountValue(rawCount)
   }
 
   async createPasswordResetToken(data: {
@@ -259,12 +282,13 @@ export class UserService {
   async getRecentPasswordResetAttempts(userId: string): Promise<number> {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const countQuery = `
-      SELECT COUNT(*) as count 
-      FROM password_reset_tokens 
+      SELECT COUNT(*) as count
+      FROM password_reset_tokens
       WHERE user_id = $1 AND created_at > $2
     `
     const result = await query(countQuery, [userId, oneHourAgo])
-    return result.rows[0]?.count || 0
+    const rawCount = result.rows[0]?.count
+    return parseCountValue(rawCount)
   }
 
   async deleteUser(userId: string): Promise<void> {
