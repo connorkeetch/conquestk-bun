@@ -99,6 +99,6 @@
     "src/components/game/ConquestKMap.tsx",
     "src/components/ConquestKBoard.tsx",
     "src/pages/GameRoom.tsx",
-    "src/pages/AdminQueues.tsx"
+    "src/pages/AdminReliability.tsx"
   ]
 }
