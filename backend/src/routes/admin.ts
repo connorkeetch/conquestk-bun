@@ -1,6 +1,7 @@
 import { type NextFunction, type Request, type Response, Router } from 'express'
 import { body, param, query as queryParam, validationResult } from 'express-validator'
 import { query as dbQuery, transaction } from '../config/database.js'
+import { LOCKSTEP_CONFIG, lockstepMetrics } from '../config/lockstep.js'
 import { ENV_VARIABLES } from '../config/validateEnv.js'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -298,6 +299,40 @@ router.get('/env/status', async (_req: Request, res: Response) => {
   } catch (error) {
     handleRouteError(error, _req, 'Failed to compute env status', 500)
     res.status(500).json({ error: 'Failed to compute env status' })
+  }
+})
+
+// ============= LOCKSTEP METRICS =============
+
+/**
+ * GET /api/admin/lockstep-metrics
+ * Returns lockstep configuration and runtime metrics.
+ * Useful for monitoring bandwidth savings when LOCKSTEP_ONLY is enabled.
+ */
+router.get('/lockstep-metrics', async (_req: Request, res: Response) => {
+  try {
+    const config = {
+      LOCKSTEP_ONLY: LOCKSTEP_CONFIG.LOCKSTEP_ONLY,
+      MAX_FRAMES: LOCKSTEP_CONFIG.MAX_FRAMES,
+      ENABLE_CHECKSUMS: LOCKSTEP_CONFIG.ENABLE_CHECKSUMS,
+    }
+
+    const metrics = lockstepMetrics.getStats()
+
+    const summary = {
+      mode: LOCKSTEP_CONFIG.LOCKSTEP_ONLY ? 'Pure Lockstep' : 'Hybrid (Lockstep + Snapshots)',
+      snapshotsSkipped: metrics.snapshotsSaved,
+      framesEmitted: metrics.framesEmitted,
+      bandwidthSavingPercent: metrics.bandwidthSavingPercent,
+      description: LOCKSTEP_CONFIG.LOCKSTEP_ONLY
+        ? 'Action snapshots are skipped. Only init/resync/fog snapshots are sent.'
+        : 'Both lockstep frames and snapshots are sent after every action (legacy behavior).',
+    }
+
+    res.json({ config, metrics, summary })
+  } catch (error) {
+    handleRouteError(error, _req, 'Failed to get lockstep metrics', 500)
+    res.status(500).json({ error: 'Failed to get lockstep metrics' })
   }
 })
 
