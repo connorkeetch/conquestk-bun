@@ -306,8 +306,8 @@ router.get('/env/status', async (_req: Request, res: Response) => {
 
 /**
  * GET /api/admin/lockstep-metrics
- * Returns lockstep configuration and runtime metrics.
- * Useful for monitoring bandwidth savings when LOCKSTEP_ONLY is enabled.
+ * Returns Pure Lockstep configuration and runtime metrics.
+ * Shows bandwidth savings from skipping redundant action snapshots.
  */
 router.get('/lockstep-metrics', async (_req: Request, res: Response) => {
   try {
@@ -320,13 +320,13 @@ router.get('/lockstep-metrics', async (_req: Request, res: Response) => {
     const metrics = lockstepMetrics.getStats()
 
     const summary = {
-      mode: LOCKSTEP_CONFIG.LOCKSTEP_ONLY ? 'Pure Lockstep' : 'Hybrid (Lockstep + Snapshots)',
+      mode: LOCKSTEP_CONFIG.LOCKSTEP_ONLY ? 'Pure Lockstep (Default)' : 'Legacy Hybrid Mode',
       snapshotsSkipped: metrics.snapshotsSaved,
       framesEmitted: metrics.framesEmitted,
       bandwidthSavingPercent: metrics.bandwidthSavingPercent,
       description: LOCKSTEP_CONFIG.LOCKSTEP_ONLY
-        ? 'Action snapshots are skipped. Only init/resync/fog snapshots are sent.'
-        : 'Both lockstep frames and snapshots are sent after every action (legacy behavior).',
+        ? 'Pure Lockstep mode (default): Action snapshots are skipped. Only init/resync/fog snapshots are sent.'
+        : 'Legacy hybrid mode: Both lockstep frames and snapshots are sent after every action.',
     }
 
     res.json({ config, metrics, summary })

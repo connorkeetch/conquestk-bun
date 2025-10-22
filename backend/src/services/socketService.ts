@@ -2,7 +2,7 @@ import type * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database.js'
-import { LOCKSTEP_CONFIG, lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
+import { lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
 import { setupChatHandlers } from '../socket/chatHandlers.js'
 import type {
   AttackAction,
@@ -112,22 +112,18 @@ function computePayloadBytes(data: unknown): number {
 }
 
 /**
- * Emit game:snapshot event to a room channel with conditional logic based on LOCKSTEP_ONLY mode.
+ * Emit game:snapshot event to a room channel.
  *
  * Snapshot emission semantics (Pure Lockstep Architecture):
  * - 'init': Initial baseline when joining a game (ALWAYS sent)
  * - 'resync': Explicit client resync request (ALWAYS sent)
  * - 'fog': Fog-of-war filtered view updates (ALWAYS sent)
- * - 'action': Post-action state broadcast (SKIPPED when LOCKSTEP_ONLY=true)
+ * - 'action': Post-action state broadcast (ALWAYS skipped - lockstep frames are used instead)
  *
- * When LOCKSTEP_ONLY=true:
+ * In Pure Lockstep mode:
  * - Real-time state updates use lockstep frames only
- * - Action snapshots are redundant and skipped to save bandwidth
+ * - Action snapshots are redundant and always skipped to save bandwidth
  * - Init/resync/fog snapshots are preserved for their specific purposes
- *
- * When LOCKSTEP_ONLY=false (default):
- * - Hybrid mode: both frames and snapshots are sent
- * - Legacy behavior for backwards compatibility
  */
 function emitGameSnapshotToRoom(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -135,10 +131,10 @@ function emitGameSnapshotToRoom(
   payload: SerializedGameState,
   reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
-  // Skip redundant action snapshots when LOCKSTEP_ONLY is enabled
-  if (LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action') {
+  // Skip redundant action snapshots (Pure Lockstep mode - frames are used instead)
+  if (reason === 'action') {
     lockstepConfigMetrics.recordSnapshotSkipped()
-    logger.debug('[Lockstep] Skipped action snapshot emission (LOCKSTEP_ONLY mode)', {
+    logger.debug('[Lockstep] Skipped action snapshot emission (Pure Lockstep mode)', {
       channel,
       reason,
     })
@@ -163,7 +159,7 @@ function emitGameSnapshotToRoom(
 }
 
 /**
- * Emit game:snapshot event to a specific socket with conditional logic based on LOCKSTEP_ONLY mode.
+ * Emit game:snapshot event to a specific socket.
  * See emitGameSnapshotToRoom() documentation for full snapshot emission semantics.
  */
 function emitGameSnapshotToSocket(
@@ -171,10 +167,10 @@ function emitGameSnapshotToSocket(
   payload: SerializedGameState,
   reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
-  // Skip redundant action snapshots when LOCKSTEP_ONLY is enabled
-  if (LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action') {
+  // Skip redundant action snapshots (Pure Lockstep mode - frames are used instead)
+  if (reason === 'action') {
     lockstepConfigMetrics.recordSnapshotSkipped()
-    logger.debug('[Lockstep] Skipped action snapshot emission to socket (LOCKSTEP_ONLY mode)', {
+    logger.debug('[Lockstep] Skipped action snapshot emission to socket (Pure Lockstep mode)', {
       socketId: socket.id,
       reason,
     })
