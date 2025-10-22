@@ -452,6 +452,40 @@ describe('conversationService', () => {
     ])
   })
 
+  it('ignores soft-deleted messages when summarizing unread counts', async () => {
+    const deletedAt = new Date('2025-09-24T12:00:00Z')
+    const softDeletedMessage = {
+      conversationId: 'conv-soft',
+      createdAt: new Date('2025-09-24T11:00:00Z'),
+      deletedAt,
+    }
+
+    mockQuery.mockImplementationOnce(async (sql: string, params: unknown[]) => {
+      expect(sql).toContain('m.deleted_at IS NULL')
+      expect(params).toEqual(['user-soft'])
+
+      const messages = [softDeletedMessage]
+      const unreadCount = messages.filter((message) => message.deletedAt === null).length
+
+      return {
+        rows: [
+          {
+            conversation_id: softDeletedMessage.conversationId,
+            unread_count: unreadCount,
+          },
+        ],
+        rowCount: 1,
+      }
+    })
+
+    const summary = await getUnreadSummary('user-soft')
+
+    expect(summary).toEqual([{ conversationId: 'conv-soft', unreadCount: 0 }])
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('m.deleted_at IS NULL'), [
+      'user-soft',
+    ])
+  })
+
   it('marks conversations as read using the latest message timestamp', async () => {
     const createdAt = new Date('2025-09-23T12:00:00Z')
 

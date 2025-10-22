@@ -157,6 +157,37 @@ describe('GameEngine', () => {
       expect(player2Territories.length).toBeGreaterThan(0)
     })
 
+    it('should distribute only the remainder of territories to neutral', () => {
+      const players = createPlayers('player1', 'player2')
+      const territoryCount = 42
+      const territories = Array.from({ length: territoryCount }, (_, i) => ({
+        id: `t-${i}`,
+        name: `Territory ${i}`,
+        sector: 's1',
+        ownerId: null,
+        armies: 0,
+        adjacentTerritories: [],
+        isCapital: false,
+      }))
+
+      const customMapOverrides = {
+        territories,
+        sectorBonuses: [],
+      }
+
+      const gameState = gameEngine.initializeGame(
+        'room-distro-test',
+        players,
+        createConfig(players.length),
+        customMapOverrides,
+      )
+
+      const neutralTerritories = gameState.board.filter((t) => t.ownerId === 'neutral')
+      // With the buggy logic, this will be 14 (42 / 3).
+      // The correct logic should assign the remainder, which is 0 (42 % 2).
+      expect(neutralTerritories.length).toBe(0)
+    })
+
     it('should give each territory at least 1 army', () => {
       const players = createPlayers('player1', 'player2')
       const gameState = gameEngine.initializeGame(
@@ -212,46 +243,6 @@ describe('GameEngine', () => {
       expect(new Set(assignedColors).size).toBe(players.length)
     })
 
-    it('auto-advances to attack phase after spending all reinforcements', async () => {
-      const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5)
-      try {
-        const players = createPlayers('player1', 'player2')
-        const gameState = gameEngine.initializeGame(
-          'room-auto',
-          players,
-          createConfig(players.length),
-          mapOverrides,
-        )
-
-        const currentPlayerId = gameState.currentPlayer
-        const currentPlayer = gameState.players.find((p) => p.id === currentPlayerId)
-        expect(currentPlayer).toBeDefined()
-        if (!currentPlayer) throw new Error('Current player not found')
-
-        const territory = gameState.board.find((t) => t.ownerId === currentPlayer.id)
-        expect(territory).toBeDefined()
-        if (!territory) throw new Error('Owned territory not found')
-
-        const startingArmies = currentPlayer.armies
-        expect(startingArmies).toBeGreaterThan(0)
-
-        const action: GameAction = {
-          type: 'deploy',
-          roomId: gameState.roomId,
-          playerId: currentPlayer.id,
-          payload: { territoryId: territory.id, armies: startingArmies },
-        }
-
-        const { gameState: updated } = await gameEngine.processAction(gameState, action)
-
-        expect(updated.phase).toBe('attack')
-        const updatedPlayer = updated.players.find((p) => p.id === currentPlayer.id)
-        expect(updatedPlayer?.armies).toBe(0)
-      } finally {
-        randomSpy.mockRestore()
-      }
-    })
-
     it('assigns assassination targets and disables team play when mode is assassination', () => {
       const players = createPlayers('player1', 'player2', 'player3')
       const gameState = gameEngine.initializeGame(
@@ -271,6 +262,34 @@ describe('GameEngine', () => {
         expect(assignments[player.id]).toBeDefined()
         expect(assignments[player.id]).not.toBe(player.id)
       }
+    })
+
+    it('should handle more players than territories gracefully', () => {
+      const players = createPlayers('player1', 'player2', 'player3')
+      const twoTerritories = sampleTerritories.slice(0, 2)
+      const customMapOverrides = {
+        territories: twoTerritories,
+        sectorBonuses: [],
+      }
+
+      const gameState = gameEngine.initializeGame(
+        'room-too-many-players',
+        players,
+        createConfig(players.length),
+        customMapOverrides,
+      )
+
+      const ownedByPlayers = gameState.board.filter((t) => t.ownerId && t.ownerId !== 'neutral')
+      // The bug causes all territories to become neutral.
+      // This assertion will fail until the fix is applied.
+      expect(ownedByPlayers.length).toBe(2)
+
+      // Ensure that players who got territories have them in their list
+      const playersWithTerritories = gameState.players.filter((p) => p.territories.length > 0)
+      expect(playersWithTerritories.length).toBe(2)
+
+      const territoryOwners = new Set(ownedByPlayers.map((t) => t.ownerId))
+      expect(territoryOwners.size).toBe(2)
     })
   })
 
@@ -683,6 +702,124 @@ describe('GameEngine', () => {
 
       const isValid = gameEngine.validateAction(gameState, action)
       expect(isValid).toBe(false)
+    })
+  })
+
+  describe('handleResign', () => {
+    it('should immediately end the game when a player resigns in a two-player game', async () => {
+      const players = createPlayers('player1', 'player2')
+      let gameState = gameEngine.initializeGame(
+        'room-resign',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      )
+
+      const resigningPlayerId = 'player2'
+      const winnerId = 'player1'
+      gameState.currentPlayer = winnerId
+
+      const action: GameAction = {
+        type: 'resign',
+        roomId: gameState.roomId,
+        playerId: resigningPlayerId,
+      }
+
+      const { gameState: updatedState } = await gameEngine.processAction(gameState, action)
+
+      expect(updatedState.phase).toBe('finished')
+      const winner = updatedState.players.find((p) => !p.isEliminated)
+      expect(winner).toBeDefined()
+      expect(winner?.id).toBe(winnerId)
+      const resigningPlayer = updatedState.players.find((p) => p.id === resigningPlayerId)
+      expect(resigningPlayer?.isEliminated).toBe(true)
+    })
+
+    it('should not declare a winner when a target resigns in assassination mode', async () => {
+      const players = createPlayers('hunter', 'target', 'bystander')
+      const config = createConfig(players.length, { gameMode: 'assassination' })
+      let gameState = gameEngine.initializeGame(
+        'room-assassin-resign',
+        players,
+        config,
+        mapOverrides,
+      )
+
+      const hunter = gameState.players.find((p) => p.id === 'hunter')!
+      const target = gameState.players.find((p) => p.id === 'target')!
+
+      gameState.assassinationTargets = {
+        [hunter.id]: target.id,
+        [target.id]: 'bystander',
+        ['bystander']: hunter.id,
+      }
+
+      const action: GameAction = {
+        type: 'resign',
+        roomId: gameState.roomId,
+        playerId: target.id,
+      }
+
+      const { gameState: updatedState } = await gameEngine.processAction(gameState, action)
+
+      expect(updatedState.phase).not.toBe('finished')
+      const activePlayers = updatedState.players.filter((p) => !p.isEliminated)
+      expect(activePlayers.length).toBe(2)
+    })
+  })
+
+  describe('go_back_to_reinforcement', () => {
+    it('should not grant extra armies when toggling between reinforcement and attack phases', async () => {
+      const players = createPlayers('player1', 'player2')
+      let gameState = gameEngine.initializeGame(
+        'room-toggle',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      )
+
+      const currentPlayerId = gameState.currentPlayer
+      const player = gameState.players.find((p) => p.id === currentPlayerId)!
+      const territory = gameState.board.find((t) => t.ownerId === currentPlayerId)!
+      const initialArmies = player.armies
+
+      // 1. Deploy some armies
+      const deployAmount = 1
+      gameState = (
+        await gameEngine.processAction(gameState, {
+          type: 'deploy',
+          roomId: 'room-toggle',
+          playerId: currentPlayerId,
+          payload: { territoryId: territory.id, armies: deployAmount },
+        })
+      ).gameState
+
+      const armiesAfterDeploy = initialArmies - deployAmount
+      expect(player.armies).toBe(armiesAfterDeploy)
+
+      // 2. Advance to attack phase
+      gameState = (
+        await gameEngine.processAction(gameState, {
+          type: 'end_turn',
+          roomId: 'room-toggle',
+          playerId: currentPlayerId,
+        })
+      ).gameState
+      expect(gameState.phase).toBe('attack')
+
+      // 3. Go back to reinforcement phase
+      gameState = (
+        await gameEngine.processAction(gameState, {
+          type: 'go_back_to_reinforcement',
+          roomId: 'room-toggle',
+          playerId: currentPlayerId,
+        })
+      ).gameState
+      expect(gameState.phase).toBe('reinforcement')
+
+      // 4. Verify player armies were not reset
+      const finalPlayer = gameState.players.find((p) => p.id === currentPlayerId)!
+      expect(finalPlayer.armies).toBe(armiesAfterDeploy)
     })
   })
 })

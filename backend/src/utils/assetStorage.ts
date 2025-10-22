@@ -12,6 +12,7 @@ const endpoint = process.env.ASSET_ENDPOINT?.trim()
 const region = process.env.ASSET_REGION?.trim() || 'auto'
 const publicBaseUrl = process.env.PUBLIC_ASSET_BASE_URL?.trim().replace(/\/$/, '')
 const mapUploadsOverride = process.env.MAP_UPLOADS_DIR?.trim()
+const mapUploadsRoot = mapUploadsOverride ? path.resolve(mapUploadsOverride) : null
 
 // Resolve a stable uploads root without relying on ESM-only APIs.
 // Prefer working-directory relative paths so both dev server and Jest work.
@@ -63,20 +64,56 @@ const getS3Client = (): S3Client => {
   return s3Client
 }
 
-const normalizeKey = (key: string): string => key.replace(/^\/+/, '')
+const normalizeKey = (key: string): string => {
+  const trimmed = key.trim()
+  if (!trimmed) {
+    throw new Error('Asset key must be a non-empty string')
+  }
+
+  const withForwardSlashes = trimmed.replace(/\\+/g, '/')
+  if (path.posix.isAbsolute(withForwardSlashes)) {
+    throw new Error('Asset key must be a relative path')
+  }
+
+  if (/^[a-zA-Z]:/.test(withForwardSlashes)) {
+    throw new Error('Asset key must not include a drive prefix')
+  }
+
+  const normalized = path.posix.normalize(withForwardSlashes)
+
+  if (!normalized || normalized === '.' || normalized === './') {
+    throw new Error('Asset key resolves to an empty path')
+  }
+
+  if (normalized === '..' || normalized.startsWith('../')) {
+    throw new Error('Asset key must not traverse directories')
+  }
+
+  return normalized.replace(/^\/+/, '')
+}
+
+const ensureWithinRoot = (root: string, candidate: string): string => {
+  const relative = path.relative(root, candidate)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('Resolved asset path escapes the uploads root')
+  }
+  return candidate
+}
 
 const buildLocalPath = (key: string): string => {
   const normalizedKey = normalizeKey(key)
 
-  if (mapUploadsOverride) {
+  if (mapUploadsRoot) {
     const stagingPrefix = 'maps/staging/'
     if (normalizedKey.startsWith(stagingPrefix)) {
       const relative = normalizedKey.slice(stagingPrefix.length)
-      return path.join(mapUploadsOverride, relative)
+      const destination = path.resolve(mapUploadsRoot, relative)
+      return ensureWithinRoot(mapUploadsRoot, destination)
     }
   }
 
-  return path.join(LOCAL_ROOT, normalizedKey)
+  const destination = path.resolve(LOCAL_ROOT, normalizedKey)
+  return ensureWithinRoot(LOCAL_ROOT, destination)
 }
 
 const isNotFoundError = (error: unknown): boolean => {

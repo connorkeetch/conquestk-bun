@@ -1,6 +1,6 @@
 # 🧭 ConquestK Roadmap
 
-_Last updated: March 9, 2026_
+_Last updated: October 20, 2025_
 
 ## How to use this document
 - **Purpose:** capture the active product strategy so we are not maintaining scattered TODO files.
@@ -11,7 +11,7 @@ _Last updated: March 9, 2026_
 Highlights from the Winter 2026 cycle that are live in production:
 - **Match Service observability:** `/api/matchsvc/status` aggregates health, Redis, subscriber state, and Prometheus metrics so the Admin Dashboard can display queue depth, matches formed, and live presence without leaving the app.
 - **Admin dashboard uplift:** BullMQ stats, match service health, and odds verification now surface in one view with refresh actions and CTA links to queue tools.
-- **AI evaluator hardening:** Grandmaster difficulty exclusively uses the Rust/WASM evaluator with persistent handles and typed-array bulk odds while Recruit/Commander stick with the fast TypeScript heuristics for throughput.
+- **AI opponents:** Initial implementation of AI opponents is complete, with three difficulty tiers (Recruit, Commander, Grandmaster). Grandmaster difficulty exclusively uses a Rust/WASM evaluator, while Recruit and Commander use TypeScript heuristics.
 - **Exact optional typing rollout:** shared clients (including `@conquestk/match-client`) now satisfy `exactOptionalPropertyTypes`, keeping the repo type-clean with stricter TS compiler settings.
 
 ## 🔄 In progress (Spring 2026 focus)
@@ -31,7 +31,6 @@ Highlights from the Winter 2026 cycle that are live in production:
 
 ## 🔭 Future opportunities (longer-term)
 - **Advanced game modes:** Zombie Apocalypse, Sudden Death, Battle Royale, Fog of War enhancements.
-- **AI opponents:** staged rollout from basic random AI to personality-driven strategies with difficulty settings.
 - **Tournament framework:** brackets, swiss/elim formats, rewards, and spectator overlays.
 - **Theme experiments:** additional visual styles, accessibility presets, and a potential community theme creator.
 

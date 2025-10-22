@@ -490,7 +490,7 @@ export class AdminService {
           reason = EXCLUDED.reason,
           admin_user_id = EXCLUDED.admin_user_id,
           expires_at = EXCLUDED.expires_at,
-          updated_at = CURRENT_TIMESTAMP
+          status_changed_at = CURRENT_TIMESTAMP
       `,
         [targetUserId, status, reason, adminUserId, expiresAt?.toISOString()],
       )

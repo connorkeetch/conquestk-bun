@@ -36,6 +36,20 @@ const mimeToExtension = (mimeType: string | undefined): string => {
   }
 }
 
+const sanitizePreferredFilename = (preferred?: string): string | null => {
+  if (!preferred) return null
+  const trimmed = preferred.trim()
+  if (!trimmed) return null
+
+  const base = path.basename(trimmed)
+  const sanitized = base.replace(/[^a-zA-Z0-9._-]/g, '')
+  const withoutLeadingDots = sanitized.replace(/^\.+/, '')
+
+  if (!withoutLeadingDots) return null
+
+  return withoutLeadingDots
+}
+
 export const storeBase64Image = async (
   base64Data: string,
   options: StoreImageOptions = {},
@@ -55,13 +69,19 @@ export const storeImageBuffer = async (
   buffer: Buffer,
   options: StoreImageOptions = {},
 ): Promise<StoredImageInfo> => {
-  const extension = options.preferredFilename
-    ? path.extname(options.preferredFilename) || mimeToExtension(options.mimeType)
-    : mimeToExtension(options.mimeType)
+  const sanitizedPreferred = sanitizePreferredFilename(options.preferredFilename)
+  const fallbackExtension = mimeToExtension(options.mimeType)
+  const preferredWithExtension = sanitizedPreferred
+    ? sanitizedPreferred + (path.extname(sanitizedPreferred) ? '' : fallbackExtension)
+    : null
+  const extension = preferredWithExtension
+    ? path.extname(preferredWithExtension) || fallbackExtension
+    : fallbackExtension
+  const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(7)}`
 
-  const uniqueFilename = options.preferredFilename
-    ? `${Date.now()}-${Math.random().toString(36).substring(7)}-${options.preferredFilename.replace(/\s+/g, '-')}`
-    : `map-${Date.now()}-${Math.random().toString(36).substring(7)}${extension}`
+  const uniqueFilename = preferredWithExtension
+    ? `${uniqueSuffix}-${preferredWithExtension}`
+    : `map-${uniqueSuffix}${extension}`
 
   const storageKey = buildStorageKey(uniqueFilename, options.subdirectory)
 

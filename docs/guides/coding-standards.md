@@ -277,7 +277,7 @@ When Claude Code works on this project, it should:
 ```bash
 npm run lint        # Check code style
 npm run test        # Run tests
-npm run check:schema # Validate database
+npm run docs:schema # Validate database
 ```
 
 ### CI/CD Pipeline

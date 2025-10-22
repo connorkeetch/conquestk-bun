@@ -998,18 +998,42 @@ export class GameEngine {
     players: GamePlayer[],
     rng: DeterministicRng,
   ): void {
-    // Calculate territories per player (equivalent distribution)
-    const territoriesPerPlayer = Math.floor(territories.length / (players.length + 1)) // +1 for neutral
+    const playerCount = players.length
+    if (playerCount === 0) {
+      // Handle case with no players, though unlikely in a real game
+      territories.forEach((t) => {
+        t.ownerId = 'neutral'
+        t.armies = 3
+      })
+      return
+    }
 
     // Shuffle territories for random distribution
     const shuffledTerritories = [...territories]
     rng.shuffleInPlace(shuffledTerritories)
+
+    // Handle the case where there are more players than territories
+    if (playerCount >= territories.length) {
+      for (let i = 0; i < shuffledTerritories.length; i++) {
+        const territory = shuffledTerritories[i]
+        const player = players[i]
+        territory.ownerId = player.id
+        territory.armies = 3
+        player.territories.push(territory.id)
+      }
+      // No neutral territories in this case, and some players will have 0 territories
+      return
+    }
+
+    // Calculate territories per player, distributing as evenly as possible among players
+    const territoriesPerPlayer = Math.floor(territories.length / playerCount)
 
     let territoryIndex = 0
 
     // Distribute to players
     for (const player of players) {
       for (let i = 0; i < territoriesPerPlayer; i++) {
+        // This check is redundant if logic is correct, but safe
         if (territoryIndex < shuffledTerritories.length) {
           const territory = shuffledTerritories[territoryIndex]
           territory.ownerId = player.id
@@ -1020,7 +1044,7 @@ export class GameEngine {
       }
     }
 
-    // Remaining territories become neutral (grey)
+    // Remaining territories (due to Math.floor) become neutral
     while (territoryIndex < shuffledTerritories.length) {
       const territory = shuffledTerritories[territoryIndex]
       territory.ownerId = 'neutral'
@@ -1160,12 +1184,9 @@ export class GameEngine {
                     gameState.hasAttackedThisTurn ??
                     false
                 }
-              } else {
-                gameState.phase = 'attack'
-                gameState.hasAttackedThisTurn = false
+                gameState.resumePhaseAfterReinforcement = null
+                delete gameState.resumeHasAttackedAfterReinforcement
               }
-              gameState.resumePhaseAfterReinforcement = null
-              delete gameState.resumeHasAttackedAfterReinforcement
             }
           }
         }
@@ -1769,22 +1790,6 @@ export class GameEngine {
     // Can only go back if in attack phase and haven't attacked yet
     if (gameState.phase === 'attack' && !gameState.hasAttackedThisTurn) {
       gameState.phase = 'reinforcement'
-
-      // Recalculate reinforcement armies for current player and account for prior placements
-      const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayer)
-      if (currentPlayer) {
-        const baseReinforcements = this.calculateReinforcementArmies(
-          currentPlayer.territories,
-          gameState.board,
-          gameState.gameConfig,
-        )
-        const history = (gameState.reinforcementHistory ?? []).filter(
-          (entry) => entry.playerId === currentPlayer.id,
-        )
-        const netPlacements = history.reduce((sum, entry) => sum + entry.armies, 0)
-        const remaining = Math.max(0, baseReinforcements - netPlacements)
-        currentPlayer.armies = remaining
-      }
     }
 
     return gameState
@@ -1814,6 +1819,7 @@ export class GameEngine {
     for (const territory of gameState.board) {
       if (territory.ownerId === action.playerId) {
         territory.ownerId = 'neutral'
+        territory.armies = 3
       }
       if (territory.capitalOwnerId === action.playerId) {
         territory.capitalOwnerId = null
@@ -1838,10 +1844,43 @@ export class GameEngine {
     if (gameState.lastBattleResult) {
       delete gameState.lastBattleResult.capitalElimination
     }
-    gameState.lastBattleResult = undefined
+
+    // Only clear the last battle result if there is no pending conquest transfer.
+    // This prevents a resignation from interfering with another player's turn.
+    if (!gameState.lastBattleResult?.pendingConquestFor) {
+      gameState.lastBattleResult = undefined
+    }
+
+    // Assassination mode: check for hunter victory on resign
+    if (gameState.gameConfig.gameMode === 'assassination') {
+      const { assassinationTargets } = gameState
+      if (assassinationTargets) {
+        const resignedPlayerId = action.playerId
+        const newTargetId = assassinationTargets[resignedPlayerId]
+
+        let hunterId: string | undefined
+        for (const [key, value] of Object.entries(assassinationTargets)) {
+          if (value === resignedPlayerId) {
+            hunterId = key
+            break
+          }
+        }
+
+        if (hunterId && newTargetId) {
+          assassinationTargets[hunterId] = newTargetId
+        }
+        delete assassinationTargets[resignedPlayerId]
+      }
+    }
 
     if (gameState.currentPlayer === action.playerId) {
-      return this.handleEndTurn(gameState)
+      this.endPlayerTurn(gameState)
+    } else if (gameState.lastBattleResult?.pendingConquestFor) {
+      // If another player resigns, we check for game end unless the current
+      // player has a pending conquest transfer.
+      this.updateEliminatedPlayers(gameState)
+    } else {
+      this.checkGameEnd(gameState)
     }
 
     return gameState
@@ -1899,6 +1938,11 @@ export class GameEngine {
 
   private validateAttack(gameState: GameState, action: AttackAction): boolean {
     if (gameState.mustCashInTreasures) {
+      return false
+    }
+
+    // Block attacks when there's a pending conquest transfer
+    if (gameState.lastBattleResult?.pendingConquestFor) {
       return false
     }
 

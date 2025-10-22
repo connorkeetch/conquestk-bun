@@ -714,14 +714,47 @@ export class MapService {
       // Get all territories for this map
       const territoriesResult = await query(
         `
-        SELECT id, adjacencies FROM map_territories 
+        SELECT id
+        FROM map_territories
         WHERE map_id = $1
       `,
         [mapId],
       )
 
-      const territories = territoriesResult.rows
-      const territoryIds = new Set(territories.map((t) => t.id))
+      const territoryIds = new Set(territoriesResult.rows.map((territory) => String(territory.id)))
+
+      const adjacencyResult = await query(
+        `
+        SELECT
+          mt_from.id AS from_id,
+          mt_to.id AS to_id
+        FROM territory_adjacencies ta
+        JOIN map_territories mt_from
+          ON mt_from.map_id = ta.map_id
+         AND (
+           mt_from.name = ta.territory_from
+           OR (mt_from.polygon_data::jsonb ->> 'originalId') = ta.territory_from
+         )
+        JOIN map_territories mt_to
+          ON mt_to.map_id = ta.map_id
+         AND (
+           mt_to.name = ta.territory_to
+           OR (mt_to.polygon_data::jsonb ->> 'originalId') = ta.territory_to
+         )
+        WHERE ta.map_id = $1
+      `,
+        [mapId],
+      )
+
+      const adjacencyLookup = new Map<string, Set<string>>()
+      for (const row of adjacencyResult.rows) {
+        const fromId = String(row.from_id)
+        const toId = String(row.to_id)
+        if (!adjacencyLookup.has(fromId)) {
+          adjacencyLookup.set(fromId, new Set())
+        }
+        adjacencyLookup.get(fromId)?.add(toId)
+      }
 
       // Validate each player count configuration
       for (const [playerCount, capitals] of Object.entries(capitalTerritories)) {
@@ -742,7 +775,8 @@ export class MapService {
 
         // Check all capital IDs exist
         for (const capitalId of capitals) {
-          if (!territoryIds.has(capitalId)) {
+          const normalizedCapitalId = String(capitalId)
+          if (!territoryIds.has(normalizedCapitalId)) {
             return { valid: false, error: `Territory ${capitalId} does not exist in this map` }
           }
         }
@@ -750,16 +784,16 @@ export class MapService {
         // Check capitals are not adjacent (minimum 2 territories apart)
         for (let i = 0; i < capitals.length; i++) {
           for (let j = i + 1; j < capitals.length; j++) {
-            const territory1 = territories.find((t) => t.id === capitals[i])
-            const territory2 = territories.find((t) => t.id === capitals[j])
+            const capitalA = String(capitals[i])
+            const capitalB = String(capitals[j])
 
-            if (territory1 && territory2) {
-              const adjacencies1 = this.safeJsonParse<number[]>(territory1.adjacencies, [])
-              if (adjacencies1.includes(capitals[j])) {
-                return {
-                  valid: false,
-                  error: `Capitals ${capitals[i]} and ${capitals[j]} are adjacent (too close)`,
-                }
+            const adjacencyFromA = adjacencyLookup.get(capitalA)
+            const adjacencyFromB = adjacencyLookup.get(capitalB)
+
+            if (adjacencyFromA?.has(capitalB) || adjacencyFromB?.has(capitalA)) {
+              return {
+                valid: false,
+                error: `Capitals ${capitals[i]} and ${capitals[j]} are adjacent (too close)`,
               }
             }
           }

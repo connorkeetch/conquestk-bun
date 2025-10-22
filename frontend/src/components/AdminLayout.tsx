@@ -1,4 +1,4 @@
-import { Activity, FileText, Gamepad2, Map as MapIcon, Server, Shield, Users } from 'lucide-react'
+import { Activity, FileText, Gamepad2, Map as MapIcon, Shield, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { logger } from '@/utils/logger'
@@ -62,9 +62,9 @@ const AdminLayout: React.FC = () => {
       exact: false,
     },
     {
-      path: '/admin/queue-tools',
-      label: 'Queues',
-      icon: <Server className="w-4 h-4" />,
+      path: '/admin/reliability',
+      label: 'Reliability',
+      icon: <Activity className="w-4 h-4" />,
       exact: false,
     },
     {

@@ -2,6 +2,8 @@
 
 _Last updated: March 9, 2026_
 
+> See also: docs/planning/lockstep-architecture-refactor.md for the plan to consolidate real‑time state sync on pure lockstep with on‑demand snapshots.
+
 ## Stack Overview
 - **Frontend:** React 19 + Vite 7 + Redux Toolkit + Tailwind CSS v4, written in TypeScript (`frontend/`).
 - **Backend:** Node.js 24 on Express 5 with Socket.io, BullMQ, and PostgreSQL, also TypeScript-first (`backend/`).

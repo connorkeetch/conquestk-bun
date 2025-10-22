@@ -7,6 +7,8 @@ import type {
   AdminQueuesStats,
 } from '@conquestk/shared/types/admin'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'react-hot-toast'
+import { Link } from 'react-router-dom'
 import { adminService, type ClientMetricsSummary } from '@/services/adminService'
 
 type HealthResult = {
@@ -26,7 +28,6 @@ const endpoints = [
   { label: 'Queues Stats', path: '/queues/stats', auth: true },
   { label: 'Client Metrics Summary', path: '/metrics/client/summary', auth: true },
   { label: 'Performance Detailed', path: '/performance/health/detailed', auth: true },
-  { label: 'Performance Metrics', path: '/performance/metrics', auth: true },
   { label: 'Performance Alerts', path: '/performance/alerts?active=true', auth: true },
   { label: 'Odds/WASM Status', path: '/odds/status', auth: false },
   { label: 'Match Service', path: '/matchsvc/status', auth: false },
@@ -56,6 +57,8 @@ export default function AdminHealth() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [results, setResults] = useState<HealthResult[]>([])
   const [lastRunAt, setLastRunAt] = useState<string | null>(null)
+  const [clientSummaryHours, setClientSummaryHours] = useState<number>(24)
+  const [clientSummaryTab, setClientSummaryTab] = useState<'overview' | 'hotspots'>('overview')
   const [realtime, setRealtime] = useState<{
     payloads: {
       gameUpdate: { count: number; p50: number; p95: number; max: number } | null
@@ -128,7 +131,7 @@ export default function AdminHealth() {
           }
         }
         if (e.label === 'Client Metrics Summary') {
-          const data = await adminService.getClientMetricsSummary()
+          const data = await adminService.getClientMetricsSummary(clientSummaryHours)
           const dt = Date.now() - t0
           return {
             label: e.label,
@@ -147,18 +150,6 @@ export default function AdminHealth() {
             path: e.path,
             ok: !!(data as { success?: boolean }).success,
             statusCode: (data as { success?: boolean }).success ? 200 : 503,
-            durationMs: dt,
-            data,
-          }
-        }
-        if (e.label === 'Performance Metrics') {
-          const data = await adminService.getPerformanceMetrics()
-          const dt = Date.now() - t0
-          return {
-            label: e.label,
-            path: e.path,
-            ok: true,
-            statusCode: 200,
             durationMs: dt,
             data,
           }
@@ -235,7 +226,7 @@ export default function AdminHealth() {
     setResults(out)
     setLastRunAt(new Date(started).toISOString())
     setLoading(false)
-  }, [])
+  }, [clientSummaryHours])
 
   useEffect(() => {
     run().catch(() => {
@@ -345,6 +336,42 @@ export default function AdminHealth() {
               const resyncGauge =
                 realtime.lockstep?.gauges?.find((g) => g.metric === 'lockstep_resync_frames')
                   ?.value ?? 0
+              const resyncStartedTotal = lockstepCounters
+                .filter((entry) => entry.metric === 'lockstep_resync_started_total')
+                .reduce((sum, entry) => sum + (entry.value ?? 0), 0)
+              const resyncCompletedByStatus = lockstepCounters
+                .filter((entry) => entry.metric === 'lockstep_resync_completed_total')
+                .reduce<Record<string, number>>((acc, entry) => {
+                  const status = entry.labels?.status ?? 'unknown'
+                  acc[status] = (acc[status] ?? 0) + (entry.value ?? 0)
+                  return acc
+                }, {})
+              const resyncCompletedSuccess = resyncCompletedByStatus.success ?? 0
+              const resyncCompletedFailed = resyncCompletedByStatus.failed ?? 0
+              const resyncCompletedUnknown = resyncCompletedByStatus.unknown ?? 0
+              const checksumWithoutBaseline =
+                lockstepTotals.lockstep_checksum_without_baseline_total ?? 0
+              const unsupportedCommandTotals = lockstepCounters
+                .filter((entry) => entry.metric === 'lockstep_unsupported_commands_total')
+                .reduce<Record<string, number>>((acc, entry) => {
+                  const command = entry.labels?.command ?? 'unknown'
+                  acc[command] = (acc[command] ?? 0) + (entry.value ?? 0)
+                  return acc
+                }, {})
+              const topUnsupported = Object.entries(unsupportedCommandTotals)
+                .filter(([, value]) => value > 0)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 4)
+
+              const handleResetCounters = async () => {
+                try {
+                  const svc = await import('../services/adminService')
+                  await svc.adminService.resetRealtimeMetrics()
+                  toast.success('Realtime metrics reset')
+                } catch (_e) {
+                  toast.error('Failed to reset metrics')
+                }
+              }
 
               return (
                 <div className="text-xs text-white/80 space-y-3">
@@ -376,7 +403,16 @@ export default function AdminHealth() {
                   </div>
 
                   <div>
-                    <div className="font-semibold mb-1">Game action latency (ms)</div>
+                    <div className="font-semibold mb-1 flex items-center justify-between">
+                      <span>Game action latency (ms)</span>
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-[11px] rounded bg-surface-2/70 border border-border/40 hover:bg-surface-2"
+                        onClick={handleResetCounters}
+                      >
+                        Reset Counters
+                      </button>
+                    </div>
                     <div className="space-y-1">
                       {Object.entries(realtime.realtime.byAction || {}).map(([name, stats]) => (
                         <div
@@ -421,6 +457,47 @@ export default function AdminHealth() {
                       <div className="bg-surface-3/60 rounded p-2 border border-border/40">
                         <div className="text-muted mb-1">Resyncs</div>
                         <div>{(lockstepTotals.lockstep_resync_total ?? 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Resync Started</div>
+                        <div>{resyncStartedTotal.toLocaleString()}</div>
+                      </div>
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Resync Completed</div>
+                        <div>
+                          {resyncCompletedSuccess.toLocaleString()} success
+                          {resyncCompletedFailed > 0 || resyncCompletedUnknown > 0 ? (
+                            <span className="text-[11px] text-muted ml-1">
+                              · {resyncCompletedFailed.toLocaleString()} failed
+                              {resyncCompletedUnknown > 0
+                                ? ` / ${resyncCompletedUnknown.toLocaleString()} unknown`
+                                : ''}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Checksums w/o Baseline</div>
+                        <div>{checksumWithoutBaseline.toLocaleString()}</div>
+                      </div>
+                      <div className="bg-surface-3/60 rounded p-2 border border-border/40">
+                        <div className="text-muted mb-1">Unsupported commands</div>
+                        {topUnsupported.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 text-[11px] text-white/70">
+                            {topUnsupported.map(([command, count]) => (
+                              <span
+                                key={command}
+                                className="px-2 py-0.5 rounded-full bg-surface-2/70 border border-border/40"
+                              >
+                                {command}: {count.toLocaleString()}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-muted">None observed</div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-1 text-[10px] text-muted">
@@ -610,14 +687,31 @@ export default function AdminHealth() {
             )
           }
 
-          const renderClientMetricsSummaryCard = () => {
+          const _renderClientMetricsSummaryCard = () => {
             const d = (r.data ?? {}) as ClientMetricsSummary
-            const sessionCount = d.sessionCount ?? 0
-            const avgLatency = d.avgLatency ?? 0
-            const avgSuccessRate = d.avgSuccessRate ?? 100
-            const totalReconnects = d.totalReconnects ?? 0
+            const sessionCount = d?.sessionCount ?? 0
+            const activeGames = d?.activeGames ?? 0
+            const avgLatency = d?.avgLatency ?? 0
+            const avgSuccessRate = d?.avgSuccessRate ?? 100
+            const totalReconnects = d?.totalReconnects ?? 0
             const reconnectsPerSession =
               sessionCount > 0 ? totalReconnects / sessionCount : totalReconnects
+            const lockstep = d?.lockstepResyncs ?? {
+              total: 0,
+              successes: 0,
+              failures: 0,
+              failureRate: 0,
+              avgDurationMs: 0,
+              byReason: [],
+            }
+            const failureRatePct = Math.round((lockstep.failureRate ?? 0) * 1000) / 10
+            const avgResyncDuration = Math.round(lockstep.avgDurationMs ?? 0)
+            const byReason = [...(lockstep.byReason ?? [])]
+              .filter((entry) => (entry?.total ?? 0) > 0)
+              .sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
+              .slice(0, 5)
+            const sessionsPerGame = Array.isArray(d?.sessionsPerGame) ? d.sessionsPerGame : []
+            const sessionsPerUser = Array.isArray(d?.sessionsPerUser) ? d.sessionsPerUser : []
 
             const warnings: Array<{ severity: 'warn' | 'critical'; message: string }> = []
             if (avgSuccessRate < 90) {
@@ -653,6 +747,23 @@ export default function AdminHealth() {
                 message: `Reconnects averaging ${reconnectsPerSession.toFixed(1)} per session`,
               })
             }
+            if (failureRatePct > 10) {
+              warnings.push({
+                severity: 'critical',
+                message: `Lockstep resync failure rate is ${failureRatePct.toFixed(1)}% (> 10%)`,
+              })
+            } else if (failureRatePct > 3) {
+              warnings.push({
+                severity: 'warn',
+                message: `Lockstep resync failure rate is ${failureRatePct.toFixed(1)}%`,
+              })
+            }
+            if (avgResyncDuration > 2000) {
+              warnings.push({
+                severity: 'warn',
+                message: `Resyncs average ${avgResyncDuration} ms`,
+              })
+            }
 
             const barWidth = (value: number) => `${Math.max(0, Math.min(100, value))}%`
             const successColor =
@@ -663,6 +774,301 @@ export default function AdminHealth() {
                   : 'bg-emerald-400'
             const latencyColor =
               avgLatency > 600 ? 'bg-red-500' : avgLatency > 400 ? 'bg-amber-400' : 'bg-sky-400'
+            const failureColor =
+              failureRatePct > 10
+                ? 'bg-red-500'
+                : failureRatePct > 3
+                  ? 'bg-amber-400'
+                  : 'bg-sky-400'
+
+            const formatSessionsLabel = (label: string | null, fallback: string) =>
+              label && label.trim().length > 0 ? label : fallback
+
+            const renderResyncHotspots = (
+              items: Array<{
+                id: string | null
+                label: string | null
+                status?: string | null
+                username?: string | null
+                sessions: number
+                reconnects: number
+                resyncs: number
+                resyncsPerSession: number
+              }>,
+              emptyText: string,
+              fallbackPrefix: string,
+            ) => {
+              if (!items || items.length === 0) {
+                return <div className="text-[11px] text-muted">{emptyText}</div>
+              }
+              return (
+                <div className="space-y-2">
+                  {items.map((item) => {
+                    const severityClass =
+                      item.resyncsPerSession > 2
+                        ? 'text-red-200'
+                        : item.resyncsPerSession > 0.5
+                          ? 'text-amber-200'
+                          : 'text-white/80'
+                    const label = formatSessionsLabel(
+                      item.label ?? item.username ?? null,
+                      fallbackPrefix,
+                    )
+                    const badge =
+                      item.status && item.status !== 'completed'
+                        ? ` · ${item.status.replaceAll('_', ' ')}`
+                        : ''
+                    return (
+                      <div
+                        key={`${fallbackPrefix}-${item.id ?? label}`}
+                        className="rounded-lg border border-border/40 bg-surface-3/60 p-2"
+                      >
+                        <div className="flex items-center justify-between text-sm text-white">
+                          <span className="truncate" title={label}>
+                            {label}
+                            <span className="text-[10px] uppercase text-muted">{badge}</span>
+                          </span>
+                          <span className={`text-xs font-semibold ${severityClass}`}>
+                            {item.resyncs.toLocaleString()} resyncs
+                          </span>
+                        </div>
+                        <div className="mt-1 text-[11px] text-muted">
+                          {item.sessions} session{item.sessions === 1 ? '' : 's'} ·{' '}
+                          {item.reconnects} reconnect{item.reconnects === 1 ? '' : 's'} ·{' '}
+                          {item.resyncsPerSession.toFixed(2)} resyncs/session
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            }
+
+            const handleResetClientMetrics = async () => {
+              try {
+                const proceed = window.confirm(
+                  'Reset client metrics data? This deletes persisted snapshots used for this summary.',
+                )
+                if (!proceed) return
+                await adminService.resetClientMetrics({ scope: 'all' })
+                toast.success('Client metrics cleared')
+                // Refresh to pull the latest (now empty) summary
+                run().catch(() => {
+                  /* ignore */
+                })
+              } catch (_e) {
+                toast.error('Failed to reset client metrics')
+              }
+            }
+
+            return (
+              <div className="mt-3 text-xs text-white/80 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wide text-muted">
+                      Timeframe
+                    </span>
+                    <select
+                      className="bg-surface-2/80 border border-border/40 rounded px-2 py-1 text-[12px] text-white/90"
+                      value={clientSummaryHours}
+                      onChange={(e) => {
+                        const val = Number(e.target.value)
+                        setClientSummaryHours(val)
+                        run().catch(() => {
+                          /* ignore */
+                        })
+                      }}
+                    >
+                      <option value={6}>Last 6h</option>
+                      <option value={24}>Last 24h</option>
+                      <option value={72}>Last 72h</option>
+                      <option value={168}>Last 7d</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex rounded overflow-hidden border border-border/40">
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-[11px] ${
+                          clientSummaryTab === 'overview'
+                            ? 'bg-surface-2 text-white'
+                            : 'bg-surface-1 text-white/70 hover:text-white'
+                        }`}
+                        onClick={() => setClientSummaryTab('overview')}
+                      >
+                        Overview
+                      </button>
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-[11px] ${
+                          clientSummaryTab === 'hotspots'
+                            ? 'bg-surface-2 text-white'
+                            : 'bg-surface-1 text-white/70 hover:text-white'
+                        }`}
+                        onClick={() => setClientSummaryTab('hotspots')}
+                      >
+                        Hotspots
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-[11px] rounded bg-surface-2/70 border border-border/40 hover:bg-surface-2"
+                      onClick={handleResetClientMetrics}
+                    >
+                      Reset Data
+                    </button>
+                  </div>
+                </div>
+                {clientSummaryTab === 'overview' ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted">
+                          Sessions
+                        </div>
+                        <div className="text-sm font-semibold text-white">{sessionCount}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted">
+                          Active Games
+                        </div>
+                        <div className="text-sm font-semibold text-white">{activeGames}</div>
+                        <div className="text-[10px] text-muted">
+                          {(lockstep.total ?? 0).toLocaleString()} resyncs observed
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted">
+                          Reconnects
+                        </div>
+                        <div className="text-sm font-semibold text-white">{totalReconnects}</div>
+                        <div className="text-[10px] text-muted">
+                          {reconnectsPerSession.toFixed(1)} per session
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                        <span>Action Success</span>
+                        <span>{avgSuccessRate.toFixed(1)}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${successColor}`}
+                          style={{ width: barWidth(avgSuccessRate) }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                        <span>Avg Latency</span>
+                        <span>{Math.round(avgLatency)} ms</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${latencyColor}`}
+                          style={{ width: barWidth((avgLatency / 800) * 100) }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
+                        <span>Resync Failure Rate</span>
+                        <span>{failureRatePct.toFixed(1)}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${failureColor}`}
+                          style={{ width: barWidth(failureRatePct) }}
+                        />
+                      </div>
+                      <div className="text-[11px] text-muted mt-1">
+                        Avg duration {avgResyncDuration} ms · successes {lockstep.successes ?? 0} /{' '}
+                        {lockstep.total ?? 0}
+                      </div>
+                      {byReason.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {byReason.map((entry) => (
+                            <span
+                              key={entry.reason}
+                              className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-white/70 border border-border/30"
+                            >
+                              {entry.reason.replaceAll('_', ' ')} · {entry.total}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {warnings.length > 0 ? (
+                      <div className="space-y-1 rounded-lg border border-red-500/40 bg-red-500/10 p-2">
+                        {warnings.map((warning, index) => (
+                          <div
+                            key={`${warning.message}:${index}`}
+                            className={`flex items-center gap-2 text-[11px] ${warning.severity === 'critical' ? 'text-red-200' : 'text-amber-200'}`}
+                          >
+                            <span
+                              className={`h-2 w-2 rounded-full ${warning.severity === 'critical' ? 'bg-red-400' : 'bg-amber-300'} shadow`}
+                            />
+                            {warning.message}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-[11px] text-emerald-200">
+                        Client reliability metrics are within healthy ranges.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
+                        Resync Hotspots · Games
+                      </div>
+                      {renderResyncHotspots(
+                        sessionsPerGame,
+                        'No game sessions recorded',
+                        'Unknown game',
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted mb-1">
+                        Resync Hotspots · Users
+                      </div>
+                      {renderResyncHotspots(
+                        sessionsPerUser,
+                        'No user sessions recorded',
+                        'Unknown user',
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          }
+
+          const renderClientMetricsSummaryKPIs = () => {
+            const d = (r.data ?? {}) as ClientMetricsSummary
+            const sessionCount = d?.sessionCount ?? 0
+            const activeGames = d?.activeGames ?? 0
+            const avgLatency = d?.avgLatency ?? 0
+            const avgSuccessRate = d?.avgSuccessRate ?? 100
+            const totalReconnects = d?.totalReconnects ?? 0
+            const reconnectsPerSession =
+              sessionCount > 0 ? totalReconnects / sessionCount : totalReconnects
+            const lockstep = d?.lockstepResyncs ?? {
+              total: 0,
+              successes: 0,
+              failures: 0,
+              failureRate: 0,
+              avgDurationMs: 0,
+              byReason: [],
+            }
+            const failureRatePct = Math.round((lockstep.failureRate ?? 0) * 1000) / 10
 
             return (
               <div className="mt-3 text-xs text-white/80 space-y-3">
@@ -674,161 +1080,48 @@ export default function AdminHealth() {
                     <div className="text-sm font-semibold text-white">{sessionCount}</div>
                   </div>
                   <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Active Games
+                    </div>
+                    <div className="text-sm font-semibold text-white">{activeGames}</div>
+                    <div className="text-[10px] text-muted">
+                      {(lockstep.total ?? 0).toLocaleString()} resyncs observed
+                    </div>
+                  </div>
+                  <div>
                     <div className="text-[10px] uppercase tracking-wide text-muted">Reconnects</div>
                     <div className="text-sm font-semibold text-white">{totalReconnects}</div>
                     <div className="text-[10px] text-muted">
                       {reconnectsPerSession.toFixed(1)} per session
                     </div>
                   </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
-                    <span>Action Success</span>
-                    <span>{avgSuccessRate.toFixed(1)}%</span>
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${successColor}`}
-                      style={{ width: barWidth(avgSuccessRate) }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-[10px] text-muted uppercase tracking-wide">
-                    <span>Avg Latency</span>
-                    <span>{Math.round(avgLatency)} ms</span>
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${latencyColor}`}
-                      style={{ width: barWidth((avgLatency / 800) * 100) }}
-                    />
-                  </div>
-                </div>
-
-                {warnings.length > 0 ? (
-                  <div className="space-y-1 rounded-lg border border-red-500/40 bg-red-500/10 p-2">
-                    {warnings.map((warning, index) => (
-                      <div
-                        key={`${warning.message}:${index}`}
-                        className={`flex items-center gap-2 text-[11px] ${warning.severity === 'critical' ? 'text-red-200' : 'text-amber-200'}`}
-                      >
-                        <span
-                          className={`h-2 w-2 rounded-full ${warning.severity === 'critical' ? 'bg-red-400' : 'bg-amber-300'} shadow`}
-                        />
-                        {warning.message}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-[11px] text-emerald-200">
-                    Client reliability metrics are within healthy ranges.
-                  </div>
-                )}
-              </div>
-            )
-          }
-
-          const renderPerformanceMetrics = () => {
-            const d = (r.data ?? {}) as {
-              server?: {
-                uptime?: number
-                memoryUsage?: { heapUsed?: number }
-                requestsPerSecond?: number
-              }
-              database?: { avgResponseTime?: number; slowQueries?: number }
-              cache?: { hitRate?: number }
-              queues?: { waitingJobs?: number; failedJobs?: number; processedJobs?: number }
-              reliability?: {
-                sessionCount?: number
-                avgLatency?: number
-                avgSuccessRate?: number
-                totalReconnects?: number
-                lockstep?: {
-                  total?: number
-                  successes?: number
-                  failures?: number
-                  failureRate?: number
-                  avgDurationMs?: number
-                }
-              }
-            }
-            const memMb = d.server?.memoryUsage?.heapUsed
-              ? Math.round((d.server.memoryUsage.heapUsed / 1024 / 1024) * 10) / 10
-              : undefined
-            const lockstep = d.reliability?.lockstep
-            const failureRatePct =
-              lockstep?.failureRate != null
-                ? Math.round((lockstep.failureRate ?? 0) * 1000) / 10
-                : 0
-            const avgDurationMs =
-              lockstep?.avgDurationMs != null ? Math.round(lockstep.avgDurationMs) : 0
-            return (
-              <div className="mt-3 text-xs text-white/80 space-y-1">
-                <div>
-                  Uptime:{' '}
-                  {d.server?.uptime != null
-                    ? `${Math.round((d.server.uptime / 60) * 10) / 10} min`
-                    : 'unknown'}
-                </div>
-                <div>
-                  RPS:{' '}
-                  {d.server?.requestsPerSecond != null
-                    ? d.server.requestsPerSecond.toFixed(2)
-                    : 'unknown'}
-                </div>
-                <div>Memory: {memMb != null ? `${memMb} MB` : 'unknown'}</div>
-                <div>
-                  DB avg rt:{' '}
-                  {d.database?.avgResponseTime != null
-                    ? `${d.database.avgResponseTime} ms`
-                    : 'unknown'}
-                </div>
-                <div>Cache hit: {d.cache?.hitRate != null ? `${d.cache.hitRate}%` : 'unknown'}</div>
-                <div>Queue waiting: {d.queues?.waitingJobs ?? 0}</div>
-                <div>Queue failed: {d.queues?.failedJobs ?? 0}</div>
-                <div>Queue processed: {d.queues?.processedJobs ?? 0}</div>
-                <div className="border-t border-border/40 pt-2 mt-2">
-                  <div className="text-white/70 font-semibold mb-1">Lockstep Reliability</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="text-muted">Resyncs</div>
-                      <div>{lockstep?.total ?? 0}</div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Action Success
                     </div>
-                    <div>
-                      <div className="text-muted">Failures</div>
-                      <div>{lockstep?.failures ?? 0}</div>
+                    <div className="text-sm font-semibold text-white">
+                      {avgSuccessRate.toFixed(1)}%
                     </div>
-                    <div>
-                      <div className="text-muted">Failure Rate</div>
-                      <div>{failureRatePct}%</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Avg Duration</div>
-                      <div>{avgDurationMs} ms</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Sessions</div>
-                      <div>{d.reliability?.sessionCount ?? 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted">Reconnects</div>
-                      <div>{d.reliability?.totalReconnects ?? 0}</div>
+                    <div className="text-[10px] text-muted">
+                      Avg Latency {Math.round(avgLatency)} ms
                     </div>
                   </div>
-                  <div className="mt-1 text-muted">
-                    Success rate:{' '}
-                    {d.reliability?.avgSuccessRate != null
-                      ? `${Math.round((d.reliability.avgSuccessRate ?? 0) * 1000) / 10}%`
-                      : 'unknown'}
-                    {' · '}Avg latency:{' '}
-                    {d.reliability?.avgLatency != null
-                      ? Math.round(d.reliability.avgLatency)
-                      : 'unknown'}{' '}
-                    ms
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">
+                      Resync Failure Rate
+                    </div>
+                    <div className="text-sm font-semibold text-white">
+                      {failureRatePct.toFixed(1)}%
+                    </div>
                   </div>
+                </div>
+                <div className="pt-1">
+                  <Link
+                    to="/admin/reliability"
+                    className="text-[11px] underline text-[color:var(--heading)]"
+                  >
+                    View reliability →
+                  </Link>
                 </div>
               </div>
             )
@@ -886,16 +1179,14 @@ export default function AdminHealth() {
                     : r.label === 'Queues Stats'
                       ? renderQueuesStats()
                       : r.label === 'Client Metrics Summary'
-                        ? renderClientMetricsSummaryCard()
+                        ? renderClientMetricsSummaryKPIs()
                         : r.label === 'Performance Detailed'
                           ? renderPerformanceDetailed()
-                          : r.label === 'Performance Metrics'
-                            ? renderPerformanceMetrics()
-                            : r.label === 'Performance Alerts'
-                              ? renderPerformanceAlerts()
-                              : r.label === 'Match Service'
-                                ? renderMatchSvc()
-                                : null
+                          : r.label === 'Performance Alerts'
+                            ? renderPerformanceAlerts()
+                            : r.label === 'Match Service'
+                              ? renderMatchSvc()
+                              : null
                 : null}
             </Card>
           )

@@ -2,6 +2,7 @@ import type * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database.js'
+import { lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
 import { setupChatHandlers } from '../socket/chatHandlers.js'
 import type {
   AttackAction,
@@ -110,12 +111,36 @@ function computePayloadBytes(data: unknown): number {
   }
 }
 
-// Emit helpers that record payload sizes and periodically log p50/p95
+/**
+ * Emit game:snapshot event to a room channel.
+ *
+ * Snapshot emission semantics (Pure Lockstep Architecture):
+ * - 'init': Initial baseline when joining a game (ALWAYS sent)
+ * - 'resync': Explicit client resync request (ALWAYS sent)
+ * - 'fog': Fog-of-war filtered view updates (ALWAYS sent)
+ * - 'action': Post-action state broadcast (ALWAYS skipped - lockstep frames are used instead)
+ *
+ * In Pure Lockstep mode:
+ * - Real-time state updates use lockstep frames only
+ * - Action snapshots are redundant and always skipped to save bandwidth
+ * - Init/resync/fog snapshots are preserved for their specific purposes
+ */
 function emitGameSnapshotToRoom(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   channel: string,
   payload: SerializedGameState,
+  reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
+  // Skip redundant action snapshots (Pure Lockstep mode - frames are used instead)
+  if (reason === 'action') {
+    lockstepConfigMetrics.recordSnapshotSkipped()
+    logger.debug('[Lockstep] Skipped action snapshot emission (Pure Lockstep mode)', {
+      channel,
+      reason,
+    })
+    return
+  }
+
   const bytes = computePayloadBytes(payload)
   socketPayloadMetrics.record('game:snapshot', bytes)
   if (socketPayloadMetrics.shouldLog('game:snapshot')) {
@@ -133,10 +158,25 @@ function emitGameSnapshotToRoom(
   io.to(channel).emit('game:snapshot', payload)
 }
 
+/**
+ * Emit game:snapshot event to a specific socket.
+ * See emitGameSnapshotToRoom() documentation for full snapshot emission semantics.
+ */
 function emitGameSnapshotToSocket(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   payload: SerializedGameState,
+  reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
+  // Skip redundant action snapshots (Pure Lockstep mode - frames are used instead)
+  if (reason === 'action') {
+    lockstepConfigMetrics.recordSnapshotSkipped()
+    logger.debug('[Lockstep] Skipped action snapshot emission to socket (Pure Lockstep mode)', {
+      socketId: socket.id,
+      reason,
+    })
+    return
+  }
+
   const bytes = computePayloadBytes(payload)
   socketPayloadMetrics.record('game:snapshot', bytes)
   if (socketPayloadMetrics.shouldLog('game:snapshot')) {
@@ -327,6 +367,50 @@ function serializeGameStateForClient(
     ...(s.movementTracking ? { movementTracking: s.movementTracking } : {}),
   }
 
+  const extras: Partial<SerializedGameState> = {
+    ...(s.lastBattleResult ? { lastBattleResult: s.lastBattleResult } : {}),
+    ...(Array.isArray(s.reinforcementHistory) && s.reinforcementHistory.length > 0
+      ? {
+          reinforcementHistory: s.reinforcementHistory.map((entry) => ({
+            playerId: entry.playerId,
+            territoryId: entry.territoryId,
+            armies: entry.armies,
+            ts: entry.ts,
+          })),
+        }
+      : {}),
+    ...(s.reinforcementBaseline ? { reinforcementBaseline: { ...s.reinforcementBaseline } } : {}),
+    ...(Array.isArray(s.fortifyHistory) && s.fortifyHistory.length > 0
+      ? {
+          fortifyHistory: s.fortifyHistory.map((entry) => ({
+            playerId: entry.playerId,
+            fromTerritoryId: entry.fromTerritoryId,
+            toTerritoryId: entry.toTerritoryId,
+            armies: entry.armies,
+            ts: entry.ts,
+          })),
+        }
+      : {}),
+    ...(typeof s.rngSeed === 'string' ? { rngSeed: s.rngSeed } : {}),
+    ...(s.rngState
+      ? {
+          rngState: {
+            a: s.rngState.a,
+            b: s.rngState.b,
+            c: s.rngState.c,
+            d: s.rngState.d,
+          },
+        }
+      : {}),
+    ...(s.capitalElimination ? { capitalElimination: s.capitalElimination } : {}),
+    ...(s.capitalAssignments ? { capitalAssignments: { ...s.capitalAssignments } } : {}),
+  }
+
+  const baseWithExtras: SerializedGameState = {
+    ...base,
+    ...extras,
+  }
+
   // Include territory modifiers when present (convert Map to plain object)
   const hasModifiers = (obj: unknown): obj is { territoryModifiers: unknown } =>
     Boolean(obj && typeof obj === 'object' && 'territoryModifiers' in obj)
@@ -335,7 +419,7 @@ function serializeGameStateForClient(
     const obj = Object.fromEntries(
       state.territoryModifiers.entries(),
     ) as SerializedGameState['territoryModifiers']
-    return { ...base, territoryModifiers: obj }
+    return { ...baseWithExtras, territoryModifiers: obj }
   }
   if (
     hasModifiers(state) &&
@@ -343,17 +427,151 @@ function serializeGameStateForClient(
     !(state.territoryModifiers instanceof Map)
   ) {
     return {
-      ...base,
+      ...baseWithExtras,
       territoryModifiers: state.territoryModifiers as SerializedGameState['territoryModifiers'],
     }
   }
-  return base
+  return baseWithExtras
 }
 
 interface UserRatingRow extends QueryResultRow {
   id: string
   skill_rating: number | null
   total_ranked_games: number | null
+}
+
+// Phase 4: Enhanced baseline tracking with timestamps
+interface BaselineAckInfo {
+  socketId: string
+  ackedAt: number // timestamp when ack was received
+  seq: number // sequence number they acked
+}
+
+const lockstepBaselineAcks = new Map<string, Set<string>>()
+const lockstepBaselineAckDetails = new Map<string, Map<string, BaselineAckInfo>>() // matchId -> socketId -> info
+const lockstepResyncReasons = new Map<string, Map<string, string>>()
+
+function addLockstepBaselineAck(socketId: string, matchId: string, seq = 0) {
+  if (!socketId || !matchId) return
+
+  // Add to set (legacy tracking)
+  let set = lockstepBaselineAcks.get(matchId)
+  if (!set) {
+    set = new Set<string>()
+    lockstepBaselineAcks.set(matchId, set)
+  }
+  set.add(socketId)
+
+  // Add detailed info
+  let detailsMap = lockstepBaselineAckDetails.get(matchId)
+  if (!detailsMap) {
+    detailsMap = new Map<string, BaselineAckInfo>()
+    lockstepBaselineAckDetails.set(matchId, detailsMap)
+  }
+
+  const existing = detailsMap.get(socketId)
+  if (existing) {
+    logger.debug('[Lockstep Server] Baseline ack updated', {
+      matchId,
+      socketId,
+      oldSeq: existing.seq,
+      newSeq: seq,
+      timeSinceLastAck: Date.now() - existing.ackedAt,
+    })
+  } else {
+    logger.info('[Lockstep Server] Baseline ack received', {
+      matchId,
+      socketId,
+      seq,
+    })
+  }
+
+  detailsMap.set(socketId, {
+    socketId,
+    ackedAt: Date.now(),
+    seq,
+  })
+}
+
+function getLockstepBaselineAckInfo(
+  socketId: string,
+  matchId: string,
+): BaselineAckInfo | undefined {
+  const detailsMap = lockstepBaselineAckDetails.get(matchId)
+  return detailsMap?.get(socketId)
+}
+
+function removeLockstepBaselineAck(socketId: string, matchId?: string) {
+  if (!socketId) return
+  if (matchId) {
+    // Remove from set
+    const set = lockstepBaselineAcks.get(matchId)
+    if (set) {
+      set.delete(socketId)
+      if (set.size === 0) {
+        lockstepBaselineAcks.delete(matchId)
+      }
+    }
+
+    // Remove from detailed tracking
+    const detailsMap = lockstepBaselineAckDetails.get(matchId)
+    if (detailsMap) {
+      detailsMap.delete(socketId)
+      if (detailsMap.size === 0) {
+        lockstepBaselineAckDetails.delete(matchId)
+      }
+    }
+    return
+  }
+
+  // Remove from all matches
+  for (const [match, set] of lockstepBaselineAcks) {
+    if (set.delete(socketId) && set.size === 0) {
+      lockstepBaselineAcks.delete(match)
+    }
+  }
+
+  for (const [match, detailsMap] of lockstepBaselineAckDetails) {
+    if (detailsMap.delete(socketId) && detailsMap.size === 0) {
+      lockstepBaselineAckDetails.delete(match)
+    }
+  }
+}
+
+function storeLockstepResyncReason(matchId: string, socketId: string, reason: string) {
+  if (!matchId || !socketId) return
+  let socketMap = lockstepResyncReasons.get(matchId)
+  if (!socketMap) {
+    socketMap = new Map<string, string>()
+    lockstepResyncReasons.set(matchId, socketMap)
+  }
+  socketMap.set(socketId, reason)
+}
+
+function consumeLockstepResyncReason(matchId: string, socketId: string): string | undefined {
+  const socketMap = lockstepResyncReasons.get(matchId)
+  if (!socketMap) return undefined
+  const reason = socketMap.get(socketId)
+  if (reason !== undefined) {
+    socketMap.delete(socketId)
+    if (socketMap.size === 0) {
+      lockstepResyncReasons.delete(matchId)
+    }
+  }
+  return reason
+}
+
+function clearLockstepResyncReason(socketId: string, matchId?: string) {
+  if (!socketId) return
+  if (matchId) {
+    consumeLockstepResyncReason(matchId, socketId)
+    return
+  }
+  for (const [match, socketMap] of lockstepResyncReasons) {
+    if (socketMap.delete(socketId) && socketMap.size === 0) {
+      lockstepResyncReasons.delete(match)
+    }
+  }
 }
 
 // Error handler wrapper for socket events
@@ -427,9 +645,33 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         action,
         state: serialized,
       })
+      // Phase 4: Emit frame and track clients without baseline ack
+      const socketsInRoom = io.sockets.adapter.rooms.get(channel)
+      const ackedSockets = lockstepBaselineAcks.get(roomId)
+      const unackedSockets: string[] = []
+
+      if (socketsInRoom) {
+        for (const socketId of socketsInRoom) {
+          if (!ackedSockets || !ackedSockets.has(socketId)) {
+            unackedSockets.push(socketId)
+          }
+        }
+      }
+
+      if (unackedSockets.length > 0) {
+        logger.warn('[Lockstep Server] Emitting frame to clients without baseline ack', {
+          matchId: roomId,
+          frameSeq: frame.seq,
+          unackedCount: unackedSockets.length,
+          totalInRoom: socketsInRoom?.size ?? 0,
+          unackedSocketIds: unackedSockets.slice(0, 5), // Log first 5 to avoid spam
+        })
+      }
+
       io.to(channel).emit('game-action:frame-committed', frame)
       const frameBytes = computePayloadBytes(frame)
       socketPayloadMetrics.record('game-action:frame-committed', frameBytes)
+
       if (socketPayloadMetrics.shouldLog('game-action:frame-committed')) {
         const stats = socketPayloadMetrics.snapshot('game-action:frame-committed')
         if (stats) {
@@ -442,24 +684,85 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           })
         }
       }
+
       lockstepMetrics.recordFrame()
+
+      // Emit checksums only to clients that have acked baseline
       if (checksum) {
-        io.to(channel).emit('game-action:checksum', checksum)
-        const checksumBytes = computePayloadBytes(checksum)
-        socketPayloadMetrics.record('game-action:checksum', checksumBytes)
-        if (socketPayloadMetrics.shouldLog('game-action:checksum')) {
-          const stats = socketPayloadMetrics.snapshot('game-action:checksum')
-          if (stats) {
-            logger.info('Checksum payload metrics', {
-              event: 'game-action:checksum',
-              count: stats.count,
-              p50: stats.p50,
-              p95: stats.p95,
-              max: stats.max,
-            })
+        if (ackedSockets && ackedSockets.size > 0) {
+          const checksumBytes = computePayloadBytes(checksum)
+          const staleSockets: string[] = []
+          let emittedCount = 0
+
+          for (const socketId of ackedSockets) {
+            const target = io.sockets.sockets.get(socketId)
+            if (!target) {
+              staleSockets.push(socketId)
+              continue
+            }
+            if (!target.rooms.has(channel)) {
+              staleSockets.push(socketId)
+              continue
+            }
+
+            const ackInfo = getLockstepBaselineAckInfo(socketId, roomId)
+            if (ackInfo) {
+              const timeSinceAck = Date.now() - ackInfo.ackedAt
+              if (timeSinceAck > 300_000) {
+                // 5 minutes
+                logger.warn('[Lockstep Server] Checksum emitted to stale baseline ack', {
+                  matchId: roomId,
+                  socketId,
+                  timeSinceAck,
+                  ackedSeq: ackInfo.seq,
+                  checksumSeq: checksum.seq,
+                })
+              }
+            }
+
+            target.emit('game-action:checksum', checksum)
+            socketPayloadMetrics.record('game-action:checksum', checksumBytes)
+            emittedCount++
           }
+
+          logger.debug('[Lockstep Server] Checksum emitted', {
+            matchId: roomId,
+            checksumSeq: checksum.seq,
+            crc32: checksum.crc32,
+            emittedTo: emittedCount,
+          })
+
+          if (staleSockets.length > 0) {
+            logger.debug('[Lockstep Server] Removing stale baseline acks', {
+              matchId: roomId,
+              count: staleSockets.length,
+            })
+            for (const stale of staleSockets) {
+              ackedSockets.delete(stale)
+              // Also remove from detailed tracking
+              lockstepBaselineAckDetails.get(roomId)?.delete(stale)
+            }
+            if (ackedSockets.size === 0) {
+              lockstepBaselineAcks.delete(roomId)
+              lockstepBaselineAckDetails.delete(roomId)
+            }
+          }
+          if (socketPayloadMetrics.shouldLog('game-action:checksum')) {
+            const stats = socketPayloadMetrics.snapshot('game-action:checksum')
+            if (stats) {
+              logger.info('Checksum payload metrics', {
+                event: 'game-action:checksum',
+                count: stats.count,
+                p50: stats.p50,
+                p95: stats.p95,
+                max: stats.max,
+              })
+            }
+          }
+          lockstepMetrics.recordChecksum()
+        } else {
+          lockstepMetrics.recordChecksumWithoutBaseline()
         }
-        lockstepMetrics.recordChecksum()
       }
     } catch (error) {
       logger.warn('Failed to emit lockstep frame (best-effort)', {
@@ -679,7 +982,53 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             )
             const finalState = serializeGameStateForClient(filtered)
             if (finalState) {
-              emitGameSnapshotToSocket(socket, finalState)
+              emitGameSnapshotToSocket(socket, finalState, 'init')
+
+              // Phase 4: Send initial lockstep sync frame to ensure perfect alignment from start
+              // This prevents any window where client has baseline but server has moved forward
+              void (async () => {
+                try {
+                  const latestSnapshot = await lockstepService.getLatestSnapshot(normalizedRoomId)
+                  if (latestSnapshot && latestSnapshot.seq > 0) {
+                    // Get any frames after the latest snapshot to bring client fully up-to-date
+                    const recentFrames = await lockstepService.getFramesAfter(
+                      normalizedRoomId,
+                      latestSnapshot.seq,
+                      10, // Just get the most recent 10 frames
+                    )
+
+                    logger.debug('[Lockstep Server] Sending initial sync to newly joined client', {
+                      matchId: normalizedRoomId,
+                      socketId: socket.id,
+                      userId,
+                      latestSnapshotSeq: latestSnapshot.seq,
+                      recentFrameCount: recentFrames.length,
+                    })
+
+                    // Emit recent frames to bring client up-to-date
+                    for (const frame of recentFrames) {
+                      socket.emit('game-action:frame-committed', frame)
+                    }
+
+                    // If we have recent activity, this ensures client starts with the exact server state
+                    if (recentFrames.length > 0) {
+                      logger.info('[Lockstep Server] Initial sync completed for joined client', {
+                        matchId: normalizedRoomId,
+                        socketId: socket.id,
+                        framesSent: recentFrames.length,
+                        finalSeq: recentFrames[recentFrames.length - 1]?.seq,
+                      })
+                    }
+                  }
+                } catch (error) {
+                  // Best-effort: don't fail join if initial sync fails
+                  logger.warn('[Lockstep Server] Failed to send initial sync to joined client', {
+                    matchId: normalizedRoomId,
+                    socketId: socket.id,
+                    error: error instanceof Error ? error.message : String(error),
+                  })
+                }
+              })()
             }
           }
 
@@ -712,6 +1061,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Room not found')
         }
 
+        removeLockstepBaselineAck(socket.id, normalizedRoomId)
         const userId = requireUserId(socket)
         const channel = getGameChannel(normalizedRoomId)
 
@@ -842,7 +1192,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 const updatedState = await gameService.processGameAction(normalizedAction, userId)
                 const serialized = serializeGameStateForClient(updatedState)
                 if (serialized) {
-                  emitGameSnapshotToRoom(io, channel, serialized)
+                  emitGameSnapshotToRoom(io, channel, serialized, 'action')
                 }
                 break
               }
@@ -861,7 +1211,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         socket,
         'game-action:resync-request',
         async (
-          data: { roomId?: string; fromSeq?: number },
+          data: { roomId?: string; fromSeq?: number; reason?: string; unsupported?: string[] },
           ack?: (r: { ok: boolean; error?: string }) => void,
         ) => {
           if (!data || typeof data.roomId !== 'string') {
@@ -877,61 +1227,118 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             return
           }
 
-          const checksumEntry = await lockstepService.getLatestSnapshot(
-            normalizedRoomId,
-            data.fromSeq,
-          )
-
-          let serializedState: SerializedGameState | null = null
-          if (checksumEntry?.snapshot) {
-            try {
-              const parsed = JSON.parse(
-                checksumEntry.snapshot.toString('utf8'),
-              ) as SerializedGameState
-              const hydrated = hydrateSerializedGameState(parsed)
-              const filtered = filterGameStateForPlayer(hydrated, userId)
-              const finalState = serializeGameStateForClient(filtered)
-              if (finalState) {
-                serializedState = finalState
-              }
-            } catch (error) {
-              logger.warn('Failed to parse lockstep snapshot; falling back to live state', {
-                roomId: normalizedRoomId,
-                error: error instanceof Error ? error.message : String(error),
-              })
-            }
-          }
-
-          if (!serializedState) {
-            const currentState = await gameService.getGameState(normalizedRoomId)
-            if (!currentState) {
-              ack?.({ ok: false, error: 'Unable to load game state for resync' })
-              return
-            }
-            const filtered = filterGameStateForPlayer(currentState, userId)
-            const finalState = serializeGameStateForClient(filtered)
-            if (!finalState) {
-              ack?.({ ok: false, error: 'Unable to serialize game state' })
-              return
-            }
-            serializedState = finalState
-          }
-
-          const baselineSeq = checksumEntry?.seq ?? 0
-          const frames = await lockstepService.getFramesAfter(normalizedRoomId, baselineSeq)
-          lockstepMetrics.recordResync(frames.length)
-
-          socket.emit('game-action:snapshot', {
+          const resyncReasonRaw = typeof data.reason === 'string' ? data.reason.trim() : ''
+          const resyncReason = resyncReasonRaw.length > 0 ? resyncReasonRaw : 'unknown'
+          logger.info('[Lockstep Server] Resync requested', {
             matchId: normalizedRoomId,
-            seq: baselineSeq,
-            state: serializedState,
-            frames,
+            socketId: socket.id,
+            userId,
+            fromSeq: data.fromSeq ?? null,
+            reason: resyncReason,
+            unsupported: Array.isArray(data.unsupported) ? data.unsupported : undefined,
           })
+          lockstepMetrics.recordResyncStart(resyncReason)
+          if (Array.isArray(data.unsupported) && data.unsupported.length > 0) {
+            lockstepMetrics.recordUnsupportedCommands(data.unsupported)
+          } else if (resyncReason === 'unsupported_commands') {
+            lockstepMetrics.recordUnsupportedCommands([])
+          }
+          storeLockstepResyncReason(normalizedRoomId, socket.id, resyncReason)
 
-          ack?.({ ok: true })
+          removeLockstepBaselineAck(socket.id, normalizedRoomId)
+
+          try {
+            const checksumEntry = await lockstepService.getLatestSnapshot(
+              normalizedRoomId,
+              data.fromSeq,
+            )
+
+            let serializedState: SerializedGameState | null = null
+            if (checksumEntry?.snapshot) {
+              try {
+                const parsed = JSON.parse(
+                  checksumEntry.snapshot.toString('utf8'),
+                ) as SerializedGameState
+                const hydrated = hydrateSerializedGameState(parsed)
+                const filtered = filterGameStateForPlayer(hydrated, userId)
+                const finalState = serializeGameStateForClient(filtered)
+                if (finalState) {
+                  serializedState = finalState
+                }
+              } catch (error) {
+                logger.warn('Failed to parse lockstep snapshot; falling back to live state', {
+                  roomId: normalizedRoomId,
+                  error: error instanceof Error ? error.message : String(error),
+                })
+              }
+            }
+
+            if (!serializedState) {
+              const currentState = await gameService.getGameState(normalizedRoomId)
+              if (!currentState) {
+                lockstepMetrics.recordResyncComplete(resyncReason, 'failed')
+                clearLockstepResyncReason(socket.id, normalizedRoomId)
+                ack?.({ ok: false, error: 'Unable to load game state for resync' })
+                return
+              }
+              const filtered = filterGameStateForPlayer(currentState, userId)
+              const finalState = serializeGameStateForClient(filtered)
+              if (!finalState) {
+                lockstepMetrics.recordResyncComplete(resyncReason, 'failed')
+                clearLockstepResyncReason(socket.id, normalizedRoomId)
+                ack?.({ ok: false, error: 'Unable to serialize game state' })
+                return
+              }
+              serializedState = finalState
+            }
+
+            const baselineSeq = checksumEntry?.seq ?? 0
+            const frames = await lockstepService.getFramesAfter(normalizedRoomId, baselineSeq)
+            lockstepMetrics.recordResync(frames.length)
+
+            logger.info('[Lockstep Server] Sending resync snapshot', {
+              matchId: normalizedRoomId,
+              socketId: socket.id,
+              baselineSeq,
+              hasSnapshot: Boolean(checksumEntry?.snapshot),
+              frameCount: frames.length,
+              fromSeq: data.fromSeq ?? null,
+              reason: resyncReason,
+            })
+
+            socket.emit('game-action:snapshot', {
+              matchId: normalizedRoomId,
+              seq: baselineSeq,
+              state: serializedState,
+              frames,
+            })
+
+            ack?.({ ok: true })
+          } catch (error) {
+            lockstepMetrics.recordResyncComplete(resyncReason, 'failed')
+            clearLockstepResyncReason(socket.id, normalizedRoomId)
+            throw error
+          }
         },
       ),
     )
+
+    socket.on('lockstep:baseline-ack', (payload) => {
+      if (!payload || typeof payload.roomId !== 'string') {
+        logger.warn('[Lockstep Server] Invalid baseline-ack payload', { socketId: socket.id })
+        return
+      }
+
+      const seq = typeof payload.seq === 'number' ? payload.seq : 0
+
+      // Use enhanced tracking with timestamp and seq
+      addLockstepBaselineAck(socket.id, payload.roomId, seq)
+
+      const storedReason = consumeLockstepResyncReason(payload.roomId, socket.id)
+      if (storedReason !== undefined) {
+        lockstepMetrics.recordResyncComplete(storedReason, 'success')
+      }
+    })
 
     // Capital warning check
     socket.on(
@@ -1017,7 +1424,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const filtered = filterGameStateForPlayer(freshState, userId)
             const finalState = serializeGameStateForClient(filtered)
             if (finalState) {
-              emitGameSnapshotToRoom(io, getGameChannel(roomId), finalState)
+              emitGameSnapshotToRoom(io, getGameChannel(roomId), finalState, 'resync')
             }
           }
         },
@@ -1090,23 +1497,6 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }
     })
 
-    // RELIABILITY: Handle requests for missing deltas (gap recovery)
-    socket.on(
-      'request-missing-deltas',
-      async (
-        payload: { roomId: string; fromSeq: number; toSeq: number },
-        callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
-      ) => {
-        const { roomId, fromSeq, toSeq } = payload
-        logger.info('Rejected legacy request-missing-deltas call', {
-          roomId,
-          fromSeq,
-          toSeq,
-        })
-        callback?.({ ok: false, error: 'legacy_delta_transport_removed' })
-      },
-    )
-
     socket.on('disconnect', async () => {
       try {
         const userId = socket.userId
@@ -1115,6 +1505,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         logger.info(`User ${userId} disconnected`)
+        removeLockstepBaselineAck(socket.id)
+        clearLockstepResyncReason(socket.id)
 
         // Clean up latency tracking
         socketLatencies.delete(userId)

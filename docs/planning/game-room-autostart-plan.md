@@ -1,3 +1,5 @@
+> **Note:** The game room auto-start feature has been implemented. This document is now a historical reference. Last updated: 2025-10-21.
+
 # Game Room Auto-Start & Phase Flow Plan
 
 ## Goals

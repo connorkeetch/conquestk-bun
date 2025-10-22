@@ -393,9 +393,10 @@ export interface ClientToServerEvents {
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
   'game-action:resync-request': (
-    data: { roomId: string; fromSeq?: number },
+    data: { roomId: string; fromSeq?: number; reason?: string; unsupported?: string[] },
     callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
+  'lockstep:baseline-ack': (data: { roomId: string; seq?: number | null }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
   'turn:begin': (data: { roomId: string }) => void
   goBackToReinforcement: (data: { roomId: string }) => void

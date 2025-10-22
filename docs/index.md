@@ -1,6 +1,6 @@
 # 📚 ConquestK Documentation
 
- _Last updated: March 9, 2026_
+ _Last updated: October 21, 2025_
 
 Welcome! Every guide, decision record, and troubleshooting note lives in the `docs/` directory.
 Note: The project is currently development‑only and not publicly live. Expect breaking changes and destructive migrations during this phase.
@@ -50,8 +50,8 @@ Use this index to jump directly to the information you need.
 - [guides/email-verification.md](guides/email-verification.md) – verification, password reset, and notifications
 - [guides/achievements.md](guides/achievements.md) – achievements system overview and rules
 - [guides/hidden-treasures.md](guides/hidden-treasures.md) – Hidden Treasures ruleset and configuration
+- [guides/real-time-reliability.md](guides/real-time-reliability.md) – real-time reliability features
 - [planning/game-room-plan.md](planning/game-room-plan.md) – canonical Game Room UI/UX plan and implementation notes
-- [planning/game-room-ux-review.md](planning/game-room-ux-review.md) – Game Room UI/UX audit and improvements
 - [planning/clan-system-plan.md](planning/clan-system-plan.md) – future social/clan feature planning
 - [planning/mobile-app-strategy.md](planning/mobile-app-strategy.md) – recommended mobile distribution approach
 
@@ -75,7 +75,7 @@ Use this index to jump directly to the information you need.
 - [planning/slack-discord-notification-plan.md](planning/slack-discord-notification-plan.md) – Slack/Discord notifications plan
 
 ### Analysis & audits
-- [analysis/documentation-audit-2026-03-09.md](analysis/documentation-audit-2026-03-09.md) – March 2026 documentation audit outcomes
+- [analysis/documentation-audit-2025-10-21.md](analysis/documentation-audit-2025-10-21.md) – October 2025 documentation audit outcomes
 
 ---
 
