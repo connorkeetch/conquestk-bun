@@ -73,7 +73,20 @@ function isMissingColumnError(error: unknown): error is DatabaseError {
   )
 }
 
+/**
+ * The UserService class is responsible for managing user data, including
+ * creation, retrieval, and updates. It also handles email verification and
+ * password reset functionality.
+ *
+ * @class UserService
+ */
 export class UserService {
+  /**
+   * Creates a new user.
+   *
+   * @param {CreateUserInput} userData - The data for the new user.
+   * @returns {Promise<User>} A promise that resolves to the created user.
+   */
   async create(userData: CreateUserInput): Promise<User> {
     // Try with email verification columns first
     try {
@@ -128,26 +141,55 @@ export class UserService {
     }
   }
 
+  /**
+   * Finds a user by their ID.
+   *
+   * @param {string} id - The ID of the user to find.
+   * @returns {Promise<User | null>} A promise that resolves to the user, or `null` if not found.
+   */
   async findById(id: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE id = $1', [id])
     return (result.rows[0] as User) || null
   }
 
+  /**
+   * Finds a user by their email address.
+   *
+   * @param {string} email - The email address of the user to find.
+   * @returns {Promise<User | null>} A promise that resolves to the user, or `null` if not found.
+   */
   async findByEmail(email: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE email = $1', [email])
     return (result.rows[0] as User) || null
   }
 
+  /**
+   * Finds a user by their username.
+   *
+   * @param {string} username - The username of the user to find.
+   * @returns {Promise<User | null>} A promise that resolves to the user, or `null` if not found.
+   */
   async findByUsername(username: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE username = $1', [username])
     return (result.rows[0] as User) || null
   }
 
+  /**
+   * Finds a user by their email verification token.
+   *
+   * @param {string} token - The verification token to search for.
+   * @returns {Promise<User | null>} A promise that resolves to the user, or `null` if not found.
+   */
   async findByVerificationToken(token: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE verification_token = $1', [token])
     return (result.rows[0] as User) || null
   }
 
+  /**
+   * Verifies a user's email address.
+   *
+   * @param {string} userId - The ID of the user to verify.
+   */
   async verifyEmail(userId: string): Promise<void> {
     const updateQuery = `
       UPDATE users 
@@ -159,6 +201,12 @@ export class UserService {
     await query(updateQuery, [userId])
   }
 
+  /**
+   * Updates a user's email verification token.
+   *
+   * @param {string} userId - The ID of the user to update.
+   * @param {string} token - The new verification token.
+   */
   async updateVerificationToken(userId: string, token: string): Promise<void> {
     const updateQuery = `
       UPDATE users 
@@ -169,6 +217,11 @@ export class UserService {
     await query(updateQuery, [token, userId])
   }
 
+  /**
+   * Logs an email verification attempt.
+   *
+   * @param {{ user_id: string; email: string; token: string; }} data - The data for the email verification log entry.
+   */
   async logEmailVerification(data: {
     user_id: string
     email: string
@@ -181,6 +234,11 @@ export class UserService {
     await query(insertQuery, [data.user_id, data.email, data.token])
   }
 
+  /**
+   * Updates an email verification log entry to mark it as verified.
+   *
+   * @param {string} token - The verification token.
+   */
   async updateEmailVerificationLog(token: string): Promise<void> {
     const updateQuery = `
       UPDATE email_verification_logs
@@ -190,6 +248,12 @@ export class UserService {
     await query(updateQuery, [token])
   }
 
+  /**
+   * Gets an email verification log entry by token.
+   *
+   * @param {string} token - The verification token.
+   * @returns {Promise<EmailVerificationLog | null>} A promise that resolves to the email verification log entry, or `null` if not found.
+   */
   async getEmailVerificationLogByToken(token: string): Promise<EmailVerificationLog | null> {
     const findQuery = `
       SELECT user_id, email, token, created_at
@@ -218,6 +282,12 @@ export class UserService {
     }
   }
 
+  /**
+   * Gets the number of recent email verification attempts for a user.
+   *
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<number>} A promise that resolves to the number of recent verification attempts.
+   */
   async getRecentVerificationAttempts(userId: string): Promise<number> {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const countQuery = `
@@ -230,6 +300,11 @@ export class UserService {
     return parseCountValue(rawCount)
   }
 
+  /**
+   * Creates a password reset token for a user.
+   *
+   * @param {{ user_id: string; token: string; expires_at: Date; }} data - The data for the password reset token.
+   */
   async createPasswordResetToken(data: {
     user_id: string
     token: string
@@ -242,6 +317,12 @@ export class UserService {
     await query(insertQuery, [data.user_id, data.token, data.expires_at])
   }
 
+  /**
+   * Finds a password reset token.
+   *
+   * @param {string} token - The password reset token to find.
+   * @returns {Promise<PasswordResetToken | null>} A promise that resolves to the password reset token, or `null` if not found.
+   */
   async findPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
     const findQuery = `
       SELECT * FROM password_reset_tokens 
@@ -260,6 +341,11 @@ export class UserService {
     }
   }
 
+  /**
+   * Marks a password reset token as used.
+   *
+   * @param {string} token - The password reset token to mark as used.
+   */
   async markPasswordResetTokenUsed(token: string): Promise<void> {
     const updateQuery = `
       UPDATE password_reset_tokens 
@@ -269,6 +355,12 @@ export class UserService {
     await query(updateQuery, [token])
   }
 
+  /**
+   * Updates a user's password.
+   *
+   * @param {string} userId - The ID of the user to update.
+   * @param {string} hashedPassword - The user's new hashed password.
+   */
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const updateQuery = `
       UPDATE users 
@@ -279,6 +371,12 @@ export class UserService {
     await query(updateQuery, [hashedPassword, userId])
   }
 
+  /**
+   * Gets the number of recent password reset attempts for a user.
+   *
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<number>} A promise that resolves to the number of recent password reset attempts.
+   */
   async getRecentPasswordResetAttempts(userId: string): Promise<number> {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const countQuery = `
@@ -291,12 +389,22 @@ export class UserService {
     return parseCountValue(rawCount)
   }
 
+  /**
+   * Deletes a user.
+   *
+   * @param {string} userId - The ID of the user to delete.
+   */
   async deleteUser(userId: string): Promise<void> {
     // Delete user and all related data (cascade delete should handle most references)
     const deleteQuery = `DELETE FROM users WHERE id = $1`
     await query(deleteQuery, [userId])
   }
 
+  /**
+   * Updates a user's last login timestamp.
+   *
+   * @param {string} userId - The ID of the user to update.
+   */
   async updateLastLogin(userId: string): Promise<void> {
     const updateQuery = `
       UPDATE users 

@@ -14,6 +14,21 @@ ConquestK is an open-source, real-time strategy game inspired by *Risk*. The pro
 React + TypeScript frontend with an Express/Socket.io backend to deliver multiplayer battles,
 community-built maps, and rich administrative tooling.
 
+### About the Project
+
+ConquestK is a passion project that aims to create a modern, web-based version of the classic
+strategy game *Risk*. The game is designed to be highly customizable, with support for custom
+maps, game modes, and rulesets. The project is built with a focus on performance, scalability,
+and maintainability, using a modern tech stack and best practices.
+
+### Built With
+
+The project is built with a modern tech stack that includes:
+
+*   **Frontend**: React 19, Redux Toolkit, Tailwind CSS, Vite
+*   **Backend**: Node.js, Express, Socket.io, PostgreSQL, Redis
+*   **Tooling**: TypeScript, Biome, Jest, Vitest, Docker
+
 ---
 
 ## 🔗 Quick links

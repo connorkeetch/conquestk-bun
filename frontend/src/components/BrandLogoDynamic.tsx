@@ -14,10 +14,22 @@ type Props = {
 }
 
 /**
- * Theme-aware wrapper around the brand SVG.
- * - Crops to a square using preserveAspectRatio slice
- * - Applies a theme-aware glow using CSS variable `--ck-glow` with a neutral fallback
- * - Keeps the original SVG artwork intact
+ * Renders a theme-aware, dynamically scalable, and croppable version of the brand logo SVG.
+ *
+ * This component provides several advantages over a static image:
+ * - **Theme-aware Glow**: Applies a glow effect that adapts to the current theme using CSS variables.
+ * - **Dynamic Sizing and Cropping**: Allows for custom width, height, scaling, and vertical cropping bias.
+ * - **Accessibility**: Includes `role="img"` and an `aria-labelledby` attribute for screen readers.
+ *
+ * @param {Props} props - The component props.
+ * @param {number} [props.width=28] - The width of the SVG.
+ * @param {number} [props.height=28] - The height of the SVG.
+ * @param {string} [props.className=''] - Additional CSS classes to apply to the SVG.
+ * @param {string} [props.title='ConquestK logo'] - The title of the SVG for accessibility.
+ * @param {boolean} [props.withGlow=true] - Whether to apply the theme-aware glow effect.
+ * @param {number} [props.scale=1.25] - The scale of the brand artwork (>1 zooms in).
+ * @param {number} [props.yBias=0] - The vertical crop bias for extra top visibility (0..1). 0.5 = center.
+ * @returns {JSX.Element} The rendered SVG component.
  */
 export default function BrandLogoDynamic({
   width = 28,

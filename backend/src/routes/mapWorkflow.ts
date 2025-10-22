@@ -4,6 +4,12 @@ import { logAdminActivity, requireAdmin, requirePermission } from '../middleware
 import { authenticateToken } from '../middleware/auth.js'
 import { standardLimiter } from '../middleware/rateLimiter.js'
 
+/**
+ * This file contains the routes for the map creation and review workflow.
+ * It includes routes for managing drafts, submitting maps for review, and admin-only routes for managing the review process.
+ * All routes in this file are protected by the `authenticateToken` middleware.
+ */
+
 const router = Router()
 const mapWorkflowController = new MapWorkflowController()
 

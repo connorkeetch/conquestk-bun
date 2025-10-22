@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for handling terms of service (ToS) acceptance.
+ * It includes endpoints for checking if a user has accepted terms for a feature, accepting terms,
+ * retrieving a user's acceptance history, and fetching the content of the terms.
+ * @module routes/terms
+ */
 import type { Request, RequestHandler, Response } from 'express'
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.js'
@@ -13,7 +19,14 @@ const authenticateRequest: RequestHandler = async (req, res, next) => {
   }
 }
 
-// Check if user has accepted terms for a feature
+/**
+ * Route to check if a user has accepted the terms for a specific feature.
+ * @name GET /terms/check/:featureType
+ * @function
+ * @memberof module:routes/terms
+ * @param {Request} req - The Express request object, with `featureType` as a URL parameter.
+ * @param {Response} res - The Express response object, returning whether the terms have been accepted and the current terms content if not.
+ */
 router.get(
   '/check/:featureType',
   authenticateRequest,
@@ -44,7 +57,14 @@ router.get(
   },
 )
 
-// Accept terms for a feature
+/**
+ * Route for a user to accept the terms for a specific feature.
+ * @name POST /terms/accept/:featureType
+ * @function
+ * @memberof module:routes/terms
+ * @param {Request} req - The Express request object, with `featureType` as a URL parameter.
+ * @param {Response} res - The Express response object, confirming the acceptance.
+ */
 router.post(
   '/accept/:featureType',
   authenticateRequest,
@@ -75,7 +95,14 @@ router.post(
   },
 )
 
-// Get user's terms acceptance history
+/**
+ * Route to get a user's history of terms acceptance.
+ * @name GET /terms/history
+ * @function
+ * @memberof module:routes/terms
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, returning the user's acceptance history.
+ */
 router.get('/history', authenticateRequest, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.userId || req.user?.id
@@ -93,7 +120,15 @@ router.get('/history', authenticateRequest, async (req: Request, res: Response):
   }
 })
 
-// Get terms content for a feature (public)
+/**
+ * Route to get the content of the terms for a specific feature.
+ * This is a public endpoint.
+ * @name GET /terms/content/:featureType
+ * @function
+ * @memberof module:routes/terms
+ * @param {Request} req - The Express request object, with `featureType` as a URL parameter.
+ * @param {Response} res - The Express response object, returning the terms content.
+ */
 router.get('/content/:featureType', (req: Request, res: Response): void => {
   try {
     const { featureType } = req.params

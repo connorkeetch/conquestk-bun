@@ -39,6 +39,20 @@ interface GameOverModalProps {
   roomId?: string
 }
 
+/**
+ * Renders a modal dialog that displays the game over screen, including the
+ * winner(s), final standings, and other game statistics.
+ *
+ * @param {GameOverModalProps} props - The component props.
+ * @param {boolean} props.isOpen - Whether the modal is open.
+ * @param {GamePlayer[]} [props.winners] - An array of winning players.
+ * @param {GamePlayer | null} [props.winner] - The winning player (for backward compatibility).
+ * @param {string[]} props.eliminatedPlayers - An array of eliminated player IDs.
+ * @param {() => void} props.onClose - A callback to close the modal.
+ * @param {() => void} [props.onBackToMenu] - An optional callback to return to the main menu.
+ * @param {string} [props.roomId] - The ID of the room.
+ * @returns {JSX.Element | null} The rendered modal, or `null` if it is not open.
+ */
 export const GameOverModal: React.FC<GameOverModalProps> = ({
   isOpen,
   winners: winnersProp,

@@ -7,6 +7,12 @@ import { getErrorMessage } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
 
 /**
+ * This file contains rate limiting configurations for different endpoint types.
+ * It uses `express-rate-limit` and `express-slow-down` to protect the application from abuse.
+ * It also includes a custom `SuspiciousActivityTracker` to block IPs that repeatedly hit rate limits.
+ */
+
+/**
  * Rate limiting configurations for different endpoint types
  */
 
@@ -99,7 +105,10 @@ if (useInMemoryLogin && loginAttemptsStore) {
   loginCleanupInterval = interval
 }
 
-// Allow tests to explicitly stop the background cleanup if needed
+/**
+ * Stops the background cleanup interval for the in-memory login attempts store.
+ * This is primarily used in tests to prevent timers from keeping the process alive.
+ */
 export function stopRateLimiterCleanup(): void {
   if (loginCleanupInterval) {
     clearInterval(loginCleanupInterval)
@@ -235,8 +244,7 @@ export const socketConnectionLimiter = rateLimit({
 })
 
 /**
- * Custom rate limiter for tracking suspicious activity
- * Blocks IPs that repeatedly hit rate limits
+ * Tracks suspicious activity and blocks IPs that repeatedly hit rate limits.
  */
 export class SuspiciousActivityTracker {
   private suspiciousIPs = new Map<string, number>()
@@ -248,6 +256,10 @@ export class SuspiciousActivityTracker {
     return getRedisClient()
   }
 
+  /**
+   * Records a rate limit violation for a given IP address.
+   * @param {string} ip - The IP address to record a violation for.
+   */
   async recordViolation(ip: string): Promise<void> {
     const redisClient = this.getRedis()
     if (redisClient) {
@@ -282,6 +294,10 @@ export class SuspiciousActivityTracker {
     }
   }
 
+  /**
+   * Blocks an IP address for a configured duration.
+   * @param {string} ip - The IP address to block.
+   */
   async blockIP(ip: string): Promise<void> {
     const redisClient = this.getRedis()
     if (redisClient) {
@@ -310,6 +326,11 @@ export class SuspiciousActivityTracker {
     timeout.unref()
   }
 
+  /**
+   * Checks if an IP address is currently blocked.
+   * @param {string} ip - The IP address to check.
+   * @returns {Promise<boolean>} A promise that resolves to `true` if the IP is blocked, otherwise `false`.
+   */
   async isBlocked(ip: string): Promise<boolean> {
     const redisClient = this.getRedis()
     if (redisClient) {
@@ -325,6 +346,10 @@ export class SuspiciousActivityTracker {
     return this.blockedIPs.has(ip)
   }
 
+  /**
+   * Returns an Express middleware function that checks for and blocks suspicious IPs.
+   * @returns {RequestHandler} The Express middleware function.
+   */
   middleware() {
     const shouldEvaluateRequest = (req: Request) => {
       const base = req.baseUrl ?? ''

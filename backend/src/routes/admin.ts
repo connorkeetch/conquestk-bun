@@ -12,6 +12,12 @@ import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 import { resolveAssetUrl } from '../utils/url.js'
 
+/**
+ * This file contains the admin routes for the application.
+ * It includes routes for user management, content moderation, game management, and system status.
+ * All routes in this file are protected by the `authenticateToken` and `requireAdmin` middleware.
+ */
+
 const router = Router()
 
 type AdminGameRow = {

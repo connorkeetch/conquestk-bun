@@ -41,6 +41,13 @@ function compareHighest(att: number[], def: number[]) {
   return { attackerLosses, defenderLosses }
 }
 
+/**
+ * Computes the odds of a single dice roll in a battle.
+ *
+ * @param {1 | 2 | 3} attDice - The number of dice for the attacker.
+ * @param {1 | 2} defDice - The number of dice for the defender.
+ * @returns {RollOdds} An object containing the roll odds.
+ */
 export function computeRollOdds(attDice: 1 | 2 | 3, defDice: 1 | 2): RollOdds {
   const outcomes: Record<string, number> = {}
   let total = 0

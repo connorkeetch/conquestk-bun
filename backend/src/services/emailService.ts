@@ -1,7 +1,15 @@
+/**
+ * @fileoverview Service for sending emails using the Resend API.
+ * @module services/emailService
+ */
 import { Resend } from 'resend'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger.js'
 
+/**
+ * @interface EmailOptions
+ * @description Represents the options for sending an email.
+ */
 interface EmailOptions {
   to: string
   subject: string
@@ -9,6 +17,10 @@ interface EmailOptions {
   text: string
 }
 
+/**
+ * @interface VerificationEmailData
+ * @description Represents the data needed to send a verification email.
+ */
 interface VerificationEmailData {
   username: string
   email: string
@@ -16,14 +28,25 @@ interface VerificationEmailData {
   expiresIn: string
 }
 
+/**
+ * @class EmailService
+ * @description Handles the sending of emails for various purposes like account verification and password resets.
+ */
 class EmailService {
   private resend: Resend | null = null
   private emailEnabled: boolean = false
 
+  /**
+   * @constructor
+   */
   constructor() {
     this.initialize()
   }
 
+  /**
+   * Initializes the email service by configuring the Resend client.
+   * @private
+   */
   private initialize() {
     // Use Resend API key from environment only (no hardcoded fallback for security)
     const apiKey = process.env.RESEND_API_KEY
@@ -42,6 +65,12 @@ class EmailService {
     }
   }
 
+  /**
+   * Sends an email using the configured Resend client.
+   * @param {EmailOptions} options - The options for the email to send.
+   * @returns {Promise<boolean>} A promise that resolves to true if the email was sent successfully, false otherwise.
+   * @private
+   */
   private async sendEmail(options: EmailOptions): Promise<boolean> {
     if (!this.emailEnabled || !this.resend) {
       logger.debug('⚠️ Email not sent - service disabled')
@@ -74,10 +103,19 @@ class EmailService {
     }
   }
 
+  /**
+   * Generates a new verification token.
+   * @returns {string} A new UUID version 4 token.
+   */
   public generateVerificationToken(): string {
     return uuidv4()
   }
 
+  /**
+   * Sends a verification email to a new user.
+   * @param {VerificationEmailData} data - The data needed to populate the email template.
+   * @returns {Promise<boolean>} A promise that resolves to true if the email was sent successfully, false otherwise.
+   */
   public async sendVerificationEmail(data: VerificationEmailData): Promise<boolean> {
     const subject = 'Verify Your ConquestK Account'
 
@@ -217,6 +255,15 @@ If you didn't create an account, you can safely ignore this email.
     })
   }
 
+  /**
+   * Sends a password reset email to a user.
+   * @param {object} data - The data needed to populate the email template.
+   * @param {string} data.username - The user's username.
+   * @param {string} data.email - The user's email address.
+   * @param {string} data.resetLink - The password reset link.
+   * @param {string} data.expiresIn - The expiration time for the link.
+   * @returns {Promise<boolean>} A promise that resolves to true if the email was sent successfully, false otherwise.
+   */
   public async sendPasswordResetEmail(data: {
     username: string
     email: string
@@ -359,6 +406,10 @@ If you didn't request a password reset, please ignore this email. Your password 
     })
   }
 
+  /**
+   * Checks if the email service is enabled.
+   * @returns {boolean} True if the service is enabled, false otherwise.
+   */
   public isEnabled(): boolean {
     return this.emailEnabled
   }

@@ -273,6 +273,14 @@ const CLAN_XP_TOP_PLACEMENTS: Record<number, number> = {
 const CLAN_XP_TERRITORY_FACTOR = 5
 const CLAN_XP_TERRITORY_CAP = 150
 
+/**
+ * The GameService class is responsible for managing the lifecycle of a game,
+ * including initialization, player actions, and game finalization. It uses a
+ * GameEngine to enforce game rules and persists game state to the database and
+ * cache.
+ *
+ * @class GameService
+ */
 export class GameService {
   private gameEngine = new GameEngine()
   // Removed: private activeGames = new Map<string, GameState>()
@@ -399,7 +407,12 @@ export class GameService {
     })
   }
 
-  // Expose safe wrapper for other services to persist a full snapshot
+  /**
+   * Persists a snapshot of the game state to the database and cache.
+   *
+   * @param {string} roomId - The ID of the room to save the snapshot for.
+   * @param {SerializedGameState} state - The game state to save.
+   */
   async saveSnapshot(roomId: string, state: SerializedGameState): Promise<void> {
     await this.persistGameStateSnapshot(roomId, state)
   }
@@ -652,6 +665,15 @@ export class GameService {
     return restState
   }
 
+  /**
+   * Executes a turn for an AI player. This method uses the AIDecisionService to
+   * choose the best action for the AI, applies the action to the game state,
+   * and persists the updated state.
+   *
+   * @param {string} roomId - The ID of the room where the AI turn should be executed.
+   * @param {Partial<DecisionBudget>} [budgetOverrides] - Optional overrides for the AI's decision budget.
+   * @returns {Promise<{ plan: AIDecisionPlan; appliedActions: GameAction[]; fallbackUsed: boolean; fallbackReason?: string; gameState: GameState; }>} A promise that resolves to the result of the AI turn.
+   */
   async executeAiTurn(
     roomId: string,
     budgetOverrides?: Partial<DecisionBudget>,
@@ -818,6 +840,13 @@ export class GameService {
     }
   }
 
+  /**
+   * Checks if a territory is a capital territory.
+   *
+   * @param {string} roomId - The ID of the room to check.
+   * @param {(string | number)} territoryId - The ID of the territory to check.
+   * @returns {Promise<boolean>} A promise that resolves to `true` if the territory is a capital, otherwise `false`.
+   */
   async isCapitalTerritory(roomId: string, territoryId: string | number): Promise<boolean> {
     const rawState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!rawState) {
@@ -831,6 +860,13 @@ export class GameService {
     return territory?.isCapital === true
   }
 
+  /**
+   * Processes a game action and returns the updated game state.
+   *
+   * @param {GameAction} action - The game action to process.
+   * @param {string} userId - The ID of the user performing the action.
+   * @returns {Promise<GameState>} A promise that resolves to the updated game state.
+   */
   async processGameAction(action: GameAction, userId: string): Promise<GameState> {
     const cachedState = await gameStateCache.getGameState<SerializedGameState>(action.roomId)
 
@@ -911,6 +947,14 @@ export class GameService {
     return updatedState
   }
 
+  /**
+   * Initializes a new game.
+   *
+   * @param {string} roomId - The ID of the room where the game should be initialized.
+   * @param {PlayerConfig[]} players - An array of player configurations.
+   * @param {Partial<GameConfiguration>} [gameConfig] - Optional partial game configuration.
+   * @returns {Promise<GameState>} A promise that resolves to the initial game state.
+   */
   async initializeGame(
     roomId: string,
     players: PlayerConfig[],
@@ -1045,6 +1089,14 @@ export class GameService {
     return gameState
   }
 
+  /**
+   * Neutralizes a player in the game and resolves the game state. This is
+   * typically used when a player disconnects or is removed from the game.
+   *
+   * @param {string} roomId - The ID of the room.
+   * @param {string} userId - The ID of the player to neutralize.
+   * @returns {Promise<{ state: SerializedGameState; elimination: { gameEnded: boolean; winner: GamePlayer | null; eliminatedPlayers: string[]; }; } | null>} A promise that resolves to the result of the neutralization, or `null` if the game is not found.
+   */
   async neutralizePlayerAndResolve(
     roomId: string,
     userId: string,
@@ -1160,6 +1212,12 @@ export class GameService {
     return { state: serializedState, elimination }
   }
 
+  /**
+   * Retrieves the current state of a game.
+   *
+   * @param {string} roomId - The ID of the room to get the game state for.
+   * @returns {Promise<GameState | null>} A promise that resolves to the game state, or `null` if the game is not found.
+   */
   async getGameState(roomId: string): Promise<GameState | null> {
     // Try Redis cache first
     let cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
@@ -1210,6 +1268,15 @@ export class GameService {
     return hydratedState
   }
 
+  /**
+   * Deploys armies to a territory.
+   *
+   * @param {string} roomId - The ID of the room.
+   * @param {string} userId - The ID of the user deploying armies.
+   * @param {string} territoryId - The ID of the territory to deploy armies to.
+   * @param {number} armies - The number of armies to deploy.
+   * @returns {Promise<{ gameState: SerializedGameState; territoryId: string; armies: number; }>} A promise that resolves to the result of the deployment.
+   */
   async deployArmies(roomId: string, userId: string, territoryId: string, armies: number) {
     const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
@@ -1241,10 +1308,13 @@ export class GameService {
   }
 
   /**
-   * Test-friendly, synchronous attack helper.
-   * Production traffic uses Socket.io + applyBattleResult; this method exists
-   * primarily for unit/integration tests that spy on dice rolls and assert
-   * assassination telemetry.
+   * Processes an attack action.
+   *
+   * @param {string} roomId - The ID of the room.
+   * @param {string} userId - The ID of the user attacking.
+   * @param {string} fromTerritoryId - The ID of the territory to attack from.
+   * @param {string} toTerritoryId - The ID of the territory to attack.
+   * @returns {Promise<{ gameEnded: boolean; winner: GamePlayer | null; eliminatedPlayers: string[]; }>} A promise that resolves to the result of the attack.
    */
   async attack(
     roomId: string,
@@ -1306,6 +1376,16 @@ export class GameService {
   // Attacks are handled via Socket.io (see socketService.ts), which routes
   // through queued or inline processing and applies results via applyBattleResult.
 
+  /**
+   * Transfers armies after a conquest.
+   *
+   * @param {string} roomId - The ID of the room.
+   * @param {string} userId - The ID of the user transferring armies.
+   * @param {string} fromTerritoryId - The ID of the territory to transfer armies from.
+   * @param {string} toTerritoryId - The ID of the territory to transfer armies to.
+   * @param {number} armies - The number of armies to transfer.
+   * @returns {Promise<{ gameState: SerializedGameState; fromArmies: number; toArmies: number; }>} A promise that resolves to the result of the transfer.
+   */
   async transferConquestArmies(
     roomId: string,
     userId: string,
@@ -1352,6 +1432,16 @@ export class GameService {
     }
   }
 
+  /**
+   * Fortifies a territory.
+   *
+   * @param {string} roomId - The ID of the room.
+   * @param {string} userId - The ID of the user fortifying.
+   * @param {string} fromTerritoryId - The ID of the territory to fortify from.
+   * @param {string} toTerritoryId - The ID of the territory to fortify to.
+   * @param {number} armies - The number of armies to move.
+   * @returns {Promise<{ gameState: SerializedGameState; fromTerritoryId: string; toTerritoryId: string; fromArmies: number; toArmies: number; }>} A promise that resolves to the result of the fortification.
+   */
   async fortify(
     roomId: string,
     userId: string,
@@ -1390,6 +1480,14 @@ export class GameService {
     }
   }
 
+  /**
+   * Ends the current player's turn.
+   *
+   * @param {string} roomId - The ID of the room.
+   * @param {string} userId - The ID of the user ending the turn.
+   * @param {{ allowEarlyEnd?: boolean; endedByTimeout?: boolean; }} [options] - Optional parameters for ending the turn.
+   * @returns {Promise<{ gameState: SerializedGameState; reinforcementArmies: number; treasureAwarded: import('../types/game.js').Metal | undefined; turnAdvanced: boolean; }>} A promise that resolves to the result of ending the turn.
+   */
   async endTurn(
     roomId: string,
     userId: string,

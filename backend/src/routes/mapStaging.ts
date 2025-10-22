@@ -6,6 +6,12 @@ import { authenticateToken } from '../middleware/auth.js'
 import { mapStagingService } from '../services/mapStagingService.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * This file contains the routes for managing map staging images.
+ * It includes routes for uploading, viewing, and deleting staging images, as well as admin-only routes for managing all images.
+ * All routes in this file are protected by the `authenticateToken` middleware.
+ */
+
 const router = Router()
 
 // Configure multer for memory storage
@@ -24,7 +30,14 @@ const upload = multer({
   },
 })
 
-// Check user's quota
+/**
+ * @api {get} /staging/quota Get the user's staging image quota
+ * @apiName GetStagingQuota
+ * @apiGroup MapStaging
+ * @apiPermission user
+ *
+ * @apiSuccess {Object} quotaSummary The user's quota summary.
+ */
 router.get('/quota', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.userId || req.user?.id
@@ -41,7 +54,15 @@ router.get('/quota', authenticateToken, async (req: Request, res: Response): Pro
   }
 })
 
-// Upload an image to staging
+/**
+ * @api {post} /staging/upload Upload an image to staging
+ * @apiName UploadStagingImage
+ * @apiGroup MapStaging
+ * @apiPermission user
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} image The uploaded staging image.
+ */
 router.post(
   '/upload',
   authenticateToken,
@@ -72,7 +93,14 @@ router.post(
   },
 )
 
-// Get user's staging images
+/**
+ * @api {get} /staging/my-images Get the user's staging images
+ * @apiName GetMyStagingImages
+ * @apiGroup MapStaging
+ * @apiPermission user
+ *
+ * @apiSuccess {Object[]} images The list of the user's staging images.
+ */
 router.get('/my-images', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.userId || req.user?.id
@@ -89,7 +117,16 @@ router.get('/my-images', authenticateToken, async (req: Request, res: Response):
   }
 })
 
-// Delete a staging image
+/**
+ * @api {delete} /staging/images/:imageId Delete a staging image
+ * @apiName DeleteStagingImage
+ * @apiGroup MapStaging
+ * @apiPermission user
+ *
+ * @apiParam {String} imageId The ID of the image to delete.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ */
 router.delete(
   '/images/:imageId',
   authenticateToken,
@@ -115,7 +152,14 @@ router.delete(
   },
 )
 
-// Admin: Get all staging images
+/**
+ * @api {get} /staging/admin/all-images Get all staging images (admin only)
+ * @apiName GetAllStagingImages
+ * @apiGroup MapStaging
+ * @apiPermission admin
+ *
+ * @apiSuccess {Object[]} images The list of all staging images.
+ */
 router.get(
   '/admin/all-images',
   authenticateToken,
@@ -131,7 +175,16 @@ router.get(
   },
 )
 
-// Admin: Delete any staging image
+/**
+ * @api {delete} /staging/admin/images/:imageId Delete any staging image (admin only)
+ * @apiName AdminDeleteStagingImage
+ * @apiGroup MapStaging
+ * @apiPermission admin
+ *
+ * @apiParam {String} imageId The ID of the image to delete.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ */
 router.delete(
   '/admin/images/:imageId',
   authenticateToken,
@@ -156,6 +209,17 @@ router.delete(
   },
 )
 
+/**
+ * @api {post} /staging/admin/images/:imageId/reclaim Reclaim a staging image (admin only)
+ * @apiName AdminReclaimStagingImage
+ * @apiGroup MapStaging
+ * @apiPermission admin
+ *
+ * @apiParam {String} imageId The ID of the image to reclaim.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} image The reclaimed staging image.
+ */
 router.post(
   '/admin/images/:imageId/reclaim',
   authenticateToken,
@@ -180,6 +244,14 @@ router.post(
   },
 )
 
+/**
+ * @api {get} /staging/admin/purge-runs Get recent purge runs (admin only)
+ * @apiName GetPurgeRuns
+ * @apiGroup MapStaging
+ * @apiPermission admin
+ *
+ * @apiSuccess {Object[]} runs The list of recent purge runs.
+ */
 router.get(
   '/admin/purge-runs',
   authenticateToken,
@@ -195,6 +267,18 @@ router.get(
   },
 )
 
+/**
+ * @api {post} /staging/admin/purge Purge deleted images (admin only)
+ * @apiName PurgeDeletedImages
+ * @apiGroup MapStaging
+ * @apiPermission admin
+ *
+ * @apiBody {Number} [batchSize] The number of images to delete in each batch.
+ * @apiBody {Number} [minAgeMinutes] The minimum age of images to delete in minutes.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} summary A summary of the purge operation.
+ */
 router.post(
   '/admin/purge',
   authenticateToken,

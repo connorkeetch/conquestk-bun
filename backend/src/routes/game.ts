@@ -2,6 +2,12 @@ import { Router } from 'express'
 import { GameController } from '../controllers/gameController.js'
 import { authenticateToken } from '../middleware/auth.js'
 
+/**
+ * This file contains the routes for managing games and game rooms.
+ * It includes routes for listing, creating, and joining rooms, as well as managing game state and actions.
+ * All routes in this file are protected by the `authenticateToken` middleware.
+ */
+
 const router = Router()
 const gameController = new GameController()
 

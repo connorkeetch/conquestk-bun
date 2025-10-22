@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Service for managing the lifecycle of a game, from lobby to completion.
+ * @module services/gameLifecycleService
+ */
 import { getClient, query } from '../config/database.js'
 import { acquireLock, releaseLock } from '../config/redis.js'
 import type { GameConfiguration, GameState } from '../types/game.js'
@@ -10,6 +14,7 @@ import { mapService } from './mapService.js'
 import { queueService } from './queueService.js'
 import { tryGetSocketServer } from './socketRegistry.js'
 
+/** @private */
 interface ReadyPlayerRow {
   id: string
   user_id: string | null
@@ -24,6 +29,10 @@ interface ReadyPlayerRow {
   selected_color: string | null
 }
 
+/**
+ * @interface LifecycleSnapshot
+ * @description Represents a snapshot of the game's lifecycle state.
+ */
 export interface LifecycleSnapshot {
   room: GameRoom | null
   readyStates: Array<{
@@ -36,6 +45,10 @@ export interface LifecycleSnapshot {
   statusMessageLevel?: 'error' | 'info' | 'warn'
 }
 
+/**
+ * @class GameLifecycleService
+ * @description Manages the lifecycle of a game, including ready states, starting the game, and turn timeouts.
+ */
 export class GameLifecycleService {
   private gameRoomService = new GameRoomService()
   private gameService = new GameService()
@@ -43,6 +56,14 @@ export class GameLifecycleService {
   // Keyed by roomId. Never used in production.
   private static localTurnTimeouts: Map<string, NodeJS.Timeout> = new Map()
 
+  /**
+   * Sets the ready state for a player in a game room.
+   * @param {string} roomId - The ID of the game room.
+   * @param {string} userId - The ID of the player.
+   * @param {boolean} ready - The ready state to set.
+   * @returns {Promise<LifecycleSnapshot>} A snapshot of the updated lifecycle state.
+   * @throws {Error} If the room is not found, the game has already started, or the player is not in the room.
+   */
   async setReadyState(roomId: string, userId: string, ready: boolean): Promise<LifecycleSnapshot> {
     // Acquire distributed lock to prevent race conditions
     const lockKey = `lock:game:ready:${roomId}`
@@ -249,6 +270,11 @@ export class GameLifecycleService {
     return snapshot
   }
 
+  /**
+   * Checks if a game can be automatically started and starts it if the conditions are met.
+   * @param {string} roomId - The ID of the game room.
+   * @returns {Promise<boolean>} True if the game was started, false otherwise.
+   */
   async maybeAutoStart(roomId: string): Promise<boolean> {
     const lockKey = `lock:game:ready:${roomId}`
     const lockToken = await acquireLock(lockKey, 5000)
@@ -433,6 +459,11 @@ export class GameLifecycleService {
     return true
   }
 
+  /**
+   * Gets a snapshot of the current lifecycle state of a game.
+   * @param {string} roomId - The ID of the game room.
+   * @returns {Promise<LifecycleSnapshot>} The lifecycle snapshot.
+   */
   async getLifecycleSnapshot(roomId: string): Promise<LifecycleSnapshot> {
     const room = await this.gameRoomService.getRoomById(roomId)
 
@@ -448,6 +479,15 @@ export class GameLifecycleService {
     }
   }
 
+  /**
+   * Starts a game.
+   * @param {string} roomId - The ID of the game room.
+   * @param {ReadyPlayerRow[]} players - The list of players in the room.
+   * @param {number} turnTimer - The duration of each turn in seconds.
+   * @returns {Promise<void>}
+   * @private
+   * @throws {Error} If prerequisites for starting the game are not met.
+   */
   private async startGame(roomId: string, players: ReadyPlayerRow[], turnTimer: number) {
     const room = await this.gameRoomService.getRoomById(roomId)
 
@@ -777,6 +817,11 @@ export class GameLifecycleService {
     await this.scheduleAiTurn(roomId)
   }
 
+  /**
+   * Broadcasts the current lifecycle state to all players in a game room.
+   * @param {LifecycleSnapshot} snapshot - The lifecycle snapshot to broadcast.
+   * @private
+   */
   private async broadcastLifecycle(snapshot: LifecycleSnapshot) {
     const io = tryGetSocketServer()
     if (!io || !snapshot.room) {
@@ -873,12 +918,24 @@ export class GameLifecycleService {
     })
   }
 
+  /**
+   * Persists the game state to the database.
+   * @param {string} roomId - The ID of the game room.
+   * @param {GameState} gameState - The game state to persist.
+   * @private
+   */
   private async persistGameState(roomId: string, gameState: GameState) {
     const serializable = this.toSerializableGameState(gameState)
     // Delegate to GameService’s canonical snapshot path (DRY)
     await this.gameService.saveSnapshot(roomId, serializable)
   }
 
+  /**
+   * Converts a GameState object to a serializable format for sending to clients.
+   * @param {GameState} gameState - The game state to convert.
+   * @returns {object} The serializable game state.
+   * @private
+   */
   private toSerializableGameState(gameState: GameState) {
     return {
       ...gameState,
@@ -889,6 +946,12 @@ export class GameLifecycleService {
     }
   }
 
+  /**
+   * Normalizes a game room status string to a known GameLifecycleStatus.
+   * @param {string | null} status - The status string to normalize.
+   * @returns {GameLifecycleStatus} The normalized status.
+   * @private
+   */
   private normalizeStatus(status: string | null): GameLifecycleStatus {
     if (!status) {
       return 'lobby'
@@ -918,12 +981,25 @@ export class GameLifecycleService {
     }
   }
 
+  /**
+   * Refreshes and broadcasts the lifecycle state for a game room.
+   * @param {string} roomId - The ID of the game room.
+   * @returns {Promise<LifecycleSnapshot>} The refreshed lifecycle snapshot.
+   */
   async refreshLifecycle(roomId: string): Promise<LifecycleSnapshot> {
     const snapshot = await this.getLifecycleSnapshot(roomId)
     await this.broadcastLifecycle(snapshot)
     return snapshot
   }
 
+  /**
+   * Schedules a turn timeout for the current player.
+   * @param {string} roomId - The ID of the game room.
+   * @param {object} [options] - Options for the timeout.
+   * @param {number} [options.seconds] - The duration of the timeout in seconds.
+   * @param {boolean} [options.usingTimeBank] - Whether the player is using their time bank.
+   * @returns {Promise<void>}
+   */
   async scheduleTurnTimeout(
     roomId: string,
     options?: { seconds?: number; usingTimeBank?: boolean },
@@ -1028,6 +1104,13 @@ export class GameLifecycleService {
     }
   }
 
+  /**
+   * Schedules an AI turn if the current player is an AI.
+   * @param {string} roomId - The ID of the game room.
+   * @param {object} [options] - Options for scheduling the turn.
+   * @param {number} [options.delayMs] - The delay in milliseconds before the AI takes its turn.
+   * @returns {Promise<void>}
+   */
   async scheduleAiTurn(roomId: string, options?: { delayMs?: number }): Promise<void> {
     try {
       const state = await this.gameService.getGameState(roomId)
@@ -1088,6 +1171,12 @@ export class GameLifecycleService {
     }
   }
 
+  /**
+   * Computes the default decision budget for an AI based on its difficulty.
+   * @param {import('../types/game.js').AIDifficulty} difficulty - The difficulty of the AI.
+   * @returns {Partial<import('../services/aiDecisionService.js').DecisionBudget>} The decision budget.
+   * @private
+   */
   private computeDefaultBudgetForDifficulty(
     difficulty: import('../types/game.js').AIDifficulty,
   ): Partial<import('../services/aiDecisionService.js').DecisionBudget> {
@@ -1120,6 +1209,11 @@ export class GameLifecycleService {
     }
   }
 
+  /**
+   * Handles a turn timeout event for a game.
+   * @param {string} roomId - The ID of the game room.
+   * @returns {Promise<void>}
+   */
   async handleTurnTimeout(roomId: string): Promise<void> {
     const client = await getClient()
     let strikes = 0
@@ -1351,6 +1445,13 @@ export class GameLifecycleService {
     await this.scheduleTurnTimeout(roomId)
   }
 
+  /**
+   * Kicks a player from a game and neutralizes their territories.
+   * @param {string} roomId - The ID of the game room.
+   * @param {string} userId - The ID of the player to kick.
+   * @param {'timeout' | 'resignation' | 'booted'} [reason='timeout'] - The reason for kicking the player.
+   * @returns {Promise<Awaited<ReturnType<GameService['neutralizePlayerAndResolve']>>>} The result of the neutralization.
+   */
   async kickAndNeutralize(
     roomId: string,
     userId: string,

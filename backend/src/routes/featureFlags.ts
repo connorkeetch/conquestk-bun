@@ -6,9 +6,21 @@ import { authenticateToken } from '../middleware/auth.js'
 import { type AccessLevel, featureFlagService } from '../services/featureFlagService.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * This file contains the routes for managing feature flags.
+ * It includes routes for listing all feature flags, as well as admin-only routes for
+ * updating flags, viewing the audit log, and setting user overrides.
+ */
+
 const router = Router()
 
-// Get all feature flags evaluated for current user
+/**
+ * @api {get} /feature-flags Get all feature flags evaluated for the current user
+ * @apiName GetFeatureFlags
+ * @apiGroup FeatureFlags
+ *
+ * @apiSuccess {Object[]} flags The list of feature flags.
+ */
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     // Get user from request if authenticated
@@ -20,7 +32,14 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
-// Admin: Get all feature flags with details
+/**
+ * @api {get} /feature-flags/admin Get all feature flags with details (admin only)
+ * @apiName GetFeatureFlagsAdmin
+ * @apiGroup FeatureFlags
+ * @apiPermission admin
+ *
+ * @apiSuccess {Object[]} flags The list of feature flags with their details.
+ */
 router.get(
   '/admin',
   authenticateToken,
@@ -37,7 +56,21 @@ router.get(
   },
 )
 
-// Admin: Update a feature flag
+/**
+ * @api {put} /feature-flags/:flagName Update a feature flag (admin only)
+ * @apiName UpdateFeatureFlag
+ * @apiGroup FeatureFlags
+ * @apiPermission admin
+ *
+ * @apiParam {String} flagName The name of the feature flag to update.
+ *
+ * @apiBody {Boolean} [enabled] Whether the feature flag should be enabled.
+ * @apiBody {String} [access_level] The access level for the feature flag.
+ * @apiBody {Object} [target_criteria] The targeting criteria for the feature flag.
+ * @apiBody {String} [reason] The reason for the update.
+ *
+ * @apiSuccess {Object} flag The updated feature flag.
+ */
 router.put(
   '/:flagName',
   authenticateToken,
@@ -82,7 +115,17 @@ router.put(
   },
 )
 
-// Admin: Get audit log
+/**
+ * @api {get} /feature-flags/audit Get the audit log for feature flags (admin only)
+ * @apiName GetFeatureFlagAuditLog
+ * @apiGroup FeatureFlags
+ * @apiPermission admin
+ *
+ * @apiParam {String} [flag_name] The name of the feature flag to get the audit log for.
+ * @apiParam {Number} [limit=50] The maximum number of audit log entries to return.
+ *
+ * @apiSuccess {Object[]} audit The list of audit log entries.
+ */
 router.get(
   '/audit',
   authenticateToken,
@@ -100,7 +143,18 @@ router.get(
   },
 )
 
-// Admin: Set user override
+/**
+ * @api {post} /feature-flags/user-override Set a user override for a feature flag (admin only)
+ * @apiName SetFeatureFlagUserOverride
+ * @apiGroup FeatureFlags
+ * @apiPermission admin
+ *
+ * @apiBody {String} user_id The ID of the user to set the override for.
+ * @apiBody {String} flag_name The name of the feature flag.
+ * @apiBody {Boolean} enabled Whether the feature flag should be enabled for the user.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ */
 router.post(
   '/user-override',
   authenticateToken,

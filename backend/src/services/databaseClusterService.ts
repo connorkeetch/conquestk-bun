@@ -1,7 +1,15 @@
+/**
+ * @fileoverview This service manages a cluster of database nodes, providing load balancing, health checks, and failover for database queries.
+ * @module services/databaseClusterService
+ */
 import { URL } from 'node:url'
 import { Pool, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg'
 import { logger } from '../utils/logger.js'
 
+/**
+ * @interface DatabaseNode
+ * @description Represents a single node in the database cluster.
+ */
 interface DatabaseNode {
   id: string
   host: string
@@ -17,6 +25,10 @@ interface DatabaseNode {
   avgResponseTime: number
 }
 
+/**
+ * @interface QueryMetrics
+ * @description Represents the metrics for the database cluster.
+ */
 interface QueryMetrics {
   totalQueries: number
   successfulQueries: number
@@ -65,6 +77,10 @@ interface DatabaseHealthDetails {
   metrics: ReturnType<DatabaseClusterService['getMetrics']>
 }
 
+/**
+ * @interface LoadBalancerConfig
+ * @description Configuration for the load balancer.
+ */
 interface LoadBalancerConfig {
   strategy: 'round_robin' | 'least_connections' | 'weighted_round_robin' | 'health_weighted'
   healthCheckInterval: number
@@ -73,6 +89,10 @@ interface LoadBalancerConfig {
   slowQueryThreshold: number
 }
 
+/**
+ * @class DatabaseClusterService
+ * @description Manages a cluster of database nodes, providing load balancing, health checks, and failover.
+ */
 export class DatabaseClusterService {
   private nodes: Map<string, DatabaseNode> = new Map()
   private metrics: QueryMetrics = {
@@ -95,6 +115,10 @@ export class DatabaseClusterService {
   private currentRoundRobinIndex = 0
   private healthCheckInterval?: NodeJS.Timeout
 
+  /**
+   * Initializes the database cluster service, adding the primary node and any configured replicas.
+   * @returns {Promise<void>}
+   */
   async initialize(): Promise<void> {
     try {
       logger.info('🔄 Initializing Database Cluster Service...')
@@ -180,10 +204,23 @@ export class DatabaseClusterService {
     }
   }
 
+  /**
+   * Retrieves an environment variable value with a default fallback.
+   * @param {string} key - The environment variable key.
+   * @param {string} defaultValue - The default value to use if the key is not found.
+   * @returns {string} The environment variable value or the default.
+   * @private
+   */
   private getEnvValue(key: string, defaultValue: string): string {
     return process.env[key] || defaultValue
   }
 
+  /**
+   * Adds a new database node to the cluster.
+   * @param {object} nodeConfig - The configuration for the new node.
+   * @returns {Promise<void>}
+   * @private
+   */
   private async addDatabaseNode(
     nodeConfig: Omit<
       DatabaseNode,
@@ -259,6 +296,11 @@ export class DatabaseClusterService {
   }
 
   // Load balancing strategies
+  /**
+   * Selects a database node for a read query based on the configured load balancing strategy.
+   * @returns {DatabaseNode | null} The selected database node, or null if no healthy nodes are available.
+   * @private
+   */
   private selectNodeForRead(): DatabaseNode | null {
     const healthyNodes = Array.from(this.nodes.values()).filter((node) => node.isHealthy)
 
@@ -281,6 +323,11 @@ export class DatabaseClusterService {
     }
   }
 
+  /**
+   * Selects the primary database node for a write query.
+   * @returns {DatabaseNode | null} The primary database node, or null if it's not healthy or available.
+   * @private
+   */
   private selectNodeForWrite(): DatabaseNode | null {
     const primaryNode = Array.from(this.nodes.values()).find(
       (node) => node.role === 'primary' && node.isHealthy,
@@ -293,18 +340,36 @@ export class DatabaseClusterService {
     return primaryNode || null
   }
 
+  /**
+   * Selects a node using the round-robin strategy.
+   * @param {DatabaseNode[]} nodes - The list of healthy nodes.
+   * @returns {DatabaseNode} The selected node.
+   * @private
+   */
   private selectRoundRobin(nodes: DatabaseNode[]): DatabaseNode {
     const selected = nodes[this.currentRoundRobinIndex % nodes.length]
     this.currentRoundRobinIndex++
     return selected
   }
 
+  /**
+   * Selects a node using the least connections strategy.
+   * @param {DatabaseNode[]} nodes - The list of healthy nodes.
+   * @returns {DatabaseNode} The selected node.
+   * @private
+   */
   private selectLeastConnections(nodes: DatabaseNode[]): DatabaseNode {
     return nodes.reduce((prev, current) =>
       current.connectionCount < prev.connectionCount ? current : prev,
     )
   }
 
+  /**
+   * Selects a node using the weighted round-robin strategy.
+   * @param {DatabaseNode[]} nodes - The list of healthy nodes.
+   * @returns {DatabaseNode} The selected node.
+   * @private
+   */
   private selectWeightedRoundRobin(nodes: DatabaseNode[]): DatabaseNode {
     const totalWeight = nodes.reduce((sum, node) => sum + node.weight, 0)
     let random = Math.random() * totalWeight
@@ -319,6 +384,12 @@ export class DatabaseClusterService {
     return nodes[0] // Fallback
   }
 
+  /**
+   * Selects a node using a health-weighted strategy, considering connections, response time, and weight.
+   * @param {DatabaseNode[]} nodes - The list of healthy nodes.
+   * @returns {DatabaseNode} The selected node.
+   * @private
+   */
   private selectHealthWeighted(nodes: DatabaseNode[]): DatabaseNode {
     // Combine connection count, response time, and base weight
     const scoredNodes = nodes.map((node) => {
@@ -334,6 +405,14 @@ export class DatabaseClusterService {
   }
 
   // Query execution with automatic retry and failover
+  /**
+   * Executes a database query with automatic failover and retry logic.
+   * @param {string} text - The SQL query text.
+   * @param {readonly unknown[]} [params] - The query parameters.
+   * @param {object} [options] - Options for the query, including whether it's a write query and the number of retries.
+   * @returns {Promise<QueryResult<QueryResultRow>>} The result of the query.
+   * @throws {Error} If the query fails after all retries.
+   */
   async query(
     text: string,
     params?: readonly unknown[],
@@ -415,6 +494,13 @@ export class DatabaseClusterService {
     throw new Error('Query execution failed after retries')
   }
 
+  /**
+   * Updates the metrics for a database node after a query.
+   * @param {DatabaseNode} node - The node to update.
+   * @param {number} responseTime - The response time of the query.
+   * @param {boolean} _success - Whether the query was successful.
+   * @private
+   */
   private updateNodeMetrics(node: DatabaseNode, responseTime: number, _success: boolean): void {
     node.queryCount++
 
@@ -428,11 +514,22 @@ export class DatabaseClusterService {
     this.metrics.avgResponseTime = totalResponseTime / this.metrics.totalQueries
   }
 
+  /**
+   * Checks if an error is a connection-related error.
+   * @param {Error} error - The error to check.
+   * @returns {boolean} True if it is a connection error, false otherwise.
+   * @private
+   */
   private isConnectionError(error: Error): boolean {
     const connectionErrorCodes = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET']
     return connectionErrorCodes.some((code) => error.message.includes(code))
   }
 
+  /**
+   * Marks a node as unhealthy.
+   * @param {string} nodeId - The ID of the node to mark as unhealthy.
+   * @private
+   */
   private markNodeUnhealthy(nodeId: string): void {
     const node = this.nodes.get(nodeId)
     if (node) {
@@ -441,11 +538,21 @@ export class DatabaseClusterService {
     }
   }
 
+  /**
+   * Pauses execution for a specified duration.
+   * @param {number} ms - The number of milliseconds to sleep.
+   * @returns {Promise<void>}
+   * @private
+   */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   // Health monitoring
+  /**
+   * Starts the periodic health monitoring of the database nodes.
+   * @private
+   */
   private startHealthMonitoring(): void {
     this.healthCheckInterval = setInterval(
       () => this.performHealthChecks(),
@@ -455,6 +562,10 @@ export class DatabaseClusterService {
     logger.info('🔍 Started database health monitoring')
   }
 
+  /**
+   * Performs health checks on all nodes in the cluster.
+   * @private
+   */
   private async performHealthChecks(): Promise<void> {
     const healthCheckPromises = Array.from(this.nodes.entries()).map(async ([nodeId, node]) => {
       try {
@@ -483,6 +594,10 @@ export class DatabaseClusterService {
   }
 
   // Monitoring and metrics
+  /**
+   * Retrieves the current metrics for the database cluster.
+   * @returns {QueryMetrics & { nodes: Array<{ id: string; role: string; isHealthy: boolean; connectionCount: number; avgResponseTime: number; }> }} The current metrics.
+   */
   getMetrics(): QueryMetrics & {
     nodes: Array<{
       id: string
@@ -506,6 +621,10 @@ export class DatabaseClusterService {
     }
   }
 
+  /**
+   * Performs a health check on the database cluster.
+   * @returns {Promise<{ status: 'healthy' | 'degraded' | 'not_configured'; details: DatabaseHealthDetails }>} The health status and details of the cluster.
+   */
   async healthCheck(): Promise<{
     status: 'healthy' | 'degraded' | 'not_configured'
     details: DatabaseHealthDetails
@@ -549,6 +668,10 @@ export class DatabaseClusterService {
     }
   }
 
+  /**
+   * Shuts down the database cluster service, closing all connection pools.
+   * @returns {Promise<void>}
+   */
   async shutdown(): Promise<void> {
     logger.info('🔄 Shutting down Database Cluster Service...')
 

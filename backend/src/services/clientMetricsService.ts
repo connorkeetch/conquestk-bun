@@ -1,6 +1,14 @@
+/**
+ * @fileoverview This service handles the insertion and retrieval of client-side metrics.
+ * @module services/clientMetricsService
+ */
 import { query } from '../config/database.js'
 import { logger } from '../utils/logger.js'
 
+/**
+ * @interface ClientMetricsPayload
+ * @description Defines the structure for the client metrics payload.
+ */
 export interface ClientMetricsPayload {
   userId?: string | null
   sessionId: string
@@ -9,6 +17,12 @@ export interface ClientMetricsPayload {
   stats: Record<string, unknown>
 }
 
+/**
+ * Inserts a new client metrics record into the database.
+ * @param {ClientMetricsPayload} payload - The metrics payload to insert.
+ * @returns {Promise<void>} A promise that resolves when the metrics have been inserted.
+ * @throws {Error} If the database insertion fails.
+ */
 export async function insertClientMetrics(payload: ClientMetricsPayload): Promise<void> {
   const { userId, sessionId, gameId, metrics, stats } = payload
 
