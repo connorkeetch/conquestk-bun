@@ -2,6 +2,7 @@ import type * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database.js'
+import { LOCKSTEP_CONFIG, lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
 import { setupChatHandlers } from '../socket/chatHandlers.js'
 import type {
   AttackAction,
@@ -111,11 +112,23 @@ function computePayloadBytes(data: unknown): number {
 }
 
 // Emit helpers that record payload sizes and periodically log p50/p95
+// Phase 2: Conditional snapshot emission based on LOCKSTEP_ONLY mode
 function emitGameSnapshotToRoom(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   channel: string,
   payload: SerializedGameState,
+  reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
+  // Skip redundant snapshots when LOCKSTEP_ONLY is enabled
+  if (LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action') {
+    lockstepConfigMetrics.recordSnapshotSkipped()
+    logger.debug('[Lockstep] Skipped snapshot emission (LOCKSTEP_ONLY mode)', {
+      channel,
+      reason,
+    })
+    return
+  }
+
   const bytes = computePayloadBytes(payload)
   socketPayloadMetrics.record('game:snapshot', bytes)
   if (socketPayloadMetrics.shouldLog('game:snapshot')) {
@@ -136,7 +149,18 @@ function emitGameSnapshotToRoom(
 function emitGameSnapshotToSocket(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   payload: SerializedGameState,
+  reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
+  // Skip redundant snapshots when LOCKSTEP_ONLY is enabled
+  if (LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action') {
+    lockstepConfigMetrics.recordSnapshotSkipped()
+    logger.debug('[Lockstep] Skipped snapshot emission to socket (LOCKSTEP_ONLY mode)', {
+      socketId: socket.id,
+      reason,
+    })
+    return
+  }
+
   const bytes = computePayloadBytes(payload)
   socketPayloadMetrics.record('game:snapshot', bytes)
   if (socketPayloadMetrics.shouldLog('game:snapshot')) {
@@ -942,7 +966,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             )
             const finalState = serializeGameStateForClient(filtered)
             if (finalState) {
-              emitGameSnapshotToSocket(socket, finalState)
+              emitGameSnapshotToSocket(socket, finalState, 'init')
 
               // Phase 4: Send initial lockstep sync frame to ensure perfect alignment from start
               // This prevents any window where client has baseline but server has moved forward
@@ -1152,7 +1176,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 const updatedState = await gameService.processGameAction(normalizedAction, userId)
                 const serialized = serializeGameStateForClient(updatedState)
                 if (serialized) {
-                  emitGameSnapshotToRoom(io, channel, serialized)
+                  emitGameSnapshotToRoom(io, channel, serialized, 'action')
                 }
                 break
               }
@@ -1384,7 +1408,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const filtered = filterGameStateForPlayer(freshState, userId)
             const finalState = serializeGameStateForClient(filtered)
             if (finalState) {
-              emitGameSnapshotToRoom(io, getGameChannel(roomId), finalState)
+              emitGameSnapshotToRoom(io, getGameChannel(roomId), finalState, 'resync')
             }
           }
         },
