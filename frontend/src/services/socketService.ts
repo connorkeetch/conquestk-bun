@@ -295,8 +295,8 @@ class SocketService {
       matchId: frame.matchId,
       seq: frame.seq,
       lastSeq,
-      action: frame.action?.type,
-      playerId: frame.action?.playerId,
+      commands: frame.commands.map((c) => c.kind),
+      playerId: frame.playerId,
     })
 
     if (
@@ -304,6 +304,14 @@ class SocketService {
       frame.seq !== lastSeq + 1 &&
       !this.lockstepPendingResync.has(frame.matchId)
     ) {
+      logger.error('Lockstep frame gap DETECTED', {
+        matchId: frame.matchId,
+        expected: lastSeq + 1,
+        received: frame.seq,
+        lastSeq,
+        lockstepSeqByRoom: Object.fromEntries(this.lockstepSeqByRoom.entries()),
+        frame,
+      });
       logger.warn('Lockstep frame gap detected; requesting resync', {
         matchId: frame.matchId,
         expected: lastSeq + 1,
