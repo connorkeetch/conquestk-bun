@@ -111,18 +111,34 @@ function computePayloadBytes(data: unknown): number {
   }
 }
 
-// Emit helpers that record payload sizes and periodically log p50/p95
-// Phase 2: Conditional snapshot emission based on LOCKSTEP_ONLY mode
+/**
+ * Emit game:snapshot event to a room channel with conditional logic based on LOCKSTEP_ONLY mode.
+ *
+ * Snapshot emission semantics (Pure Lockstep Architecture):
+ * - 'init': Initial baseline when joining a game (ALWAYS sent)
+ * - 'resync': Explicit client resync request (ALWAYS sent)
+ * - 'fog': Fog-of-war filtered view updates (ALWAYS sent)
+ * - 'action': Post-action state broadcast (SKIPPED when LOCKSTEP_ONLY=true)
+ *
+ * When LOCKSTEP_ONLY=true:
+ * - Real-time state updates use lockstep frames only
+ * - Action snapshots are redundant and skipped to save bandwidth
+ * - Init/resync/fog snapshots are preserved for their specific purposes
+ *
+ * When LOCKSTEP_ONLY=false (default):
+ * - Hybrid mode: both frames and snapshots are sent
+ * - Legacy behavior for backwards compatibility
+ */
 function emitGameSnapshotToRoom(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   channel: string,
   payload: SerializedGameState,
   reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
-  // Skip redundant snapshots when LOCKSTEP_ONLY is enabled
+  // Skip redundant action snapshots when LOCKSTEP_ONLY is enabled
   if (LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action') {
     lockstepConfigMetrics.recordSnapshotSkipped()
-    logger.debug('[Lockstep] Skipped snapshot emission (LOCKSTEP_ONLY mode)', {
+    logger.debug('[Lockstep] Skipped action snapshot emission (LOCKSTEP_ONLY mode)', {
       channel,
       reason,
     })
@@ -146,15 +162,19 @@ function emitGameSnapshotToRoom(
   io.to(channel).emit('game:snapshot', payload)
 }
 
+/**
+ * Emit game:snapshot event to a specific socket with conditional logic based on LOCKSTEP_ONLY mode.
+ * See emitGameSnapshotToRoom() documentation for full snapshot emission semantics.
+ */
 function emitGameSnapshotToSocket(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   payload: SerializedGameState,
   reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
 ) {
-  // Skip redundant snapshots when LOCKSTEP_ONLY is enabled
+  // Skip redundant action snapshots when LOCKSTEP_ONLY is enabled
   if (LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action') {
     lockstepConfigMetrics.recordSnapshotSkipped()
-    logger.debug('[Lockstep] Skipped snapshot emission to socket (LOCKSTEP_ONLY mode)', {
+    logger.debug('[Lockstep] Skipped action snapshot emission to socket (LOCKSTEP_ONLY mode)', {
       socketId: socket.id,
       reason,
     })
