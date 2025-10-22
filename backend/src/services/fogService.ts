@@ -117,6 +117,8 @@ export async function emitRevealSnapshot(
 
   const filtered = filterFullStateForViewer(gameState, viewerId)
   const serialized = serializeForClient(filtered)
+  // Fog-of-war snapshots are always sent (even in LOCKSTEP_ONLY mode)
+
   try {
     const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8')
     socketPayloadMetrics.record('game:snapshot', bytes)

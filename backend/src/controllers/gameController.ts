@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { query } from '../config/database.js'
+import { LOCKSTEP_CONFIG, lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
 import {
   PREMIUM_COLOR_MESSAGE,
   PREMIUM_GAME_LIMIT_MESSAGE,
@@ -299,7 +300,20 @@ export class GameController {
       try {
         const io = tryGetSocketServer()
         if (io) {
-          io.to(`game:${roomId}`).emit('game:snapshot', result.gameState)
+          const reason = 'action' // Action-triggered snapshot
+          // Skip redundant snapshots when LOCKSTEP_ONLY is enabled
+          if (!(LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action')) {
+            io.to(`game:${roomId}`).emit('game:snapshot', result.gameState)
+          } else {
+            lockstepConfigMetrics.recordSnapshotSkipped()
+            logger.debug(
+              '[Lockstep] Skipped snapshot emission in REST controller (LOCKSTEP_ONLY mode)',
+              {
+                roomId,
+                reason,
+              },
+            )
+          }
         }
       } catch {
         // ignore broadcast errors
