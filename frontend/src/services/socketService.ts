@@ -517,6 +517,7 @@ class SocketService {
       this.lockstepBaselineReady.add(payload.matchId)
       this.lockstepLastResyncAt.delete(payload.matchId)
       if (this.socket) {
+        logger.debug('[Lockstep] Emitting baseline-ack', { roomId: payload.matchId, seq: ackSeq });
         this.socket.emit('lockstep:baseline-ack', {
           roomId: payload.matchId,
           seq: ackSeq,
