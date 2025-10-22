@@ -1068,31 +1068,16 @@ const simulateAttack = (
 
   // Block attacks when there's a pending conquest transfer
   if (working.lastBattleResult?.pendingConquestFor) {
-    console.warn('[Lockstep Simulator] Attack blocked: pending conquest transfer', {
-      playerId,
-      pendingFor: working.lastBattleResult.pendingConquestFor,
-    })
     return { state, supported: false }
   }
 
   if (working.phase !== 'attack') {
-    console.warn('[Lockstep Simulator] Attack blocked: wrong phase', {
-      playerId,
-      phase: working.phase,
-    })
     return { state, supported: false }
   }
 
   const fromIndex = working.board.findIndex((t) => t.id === fromTerritoryId)
   const toIndex = working.board.findIndex((t) => t.id === toTerritoryId)
   if (fromIndex === -1 || toIndex === -1) {
-    console.warn('[Lockstep Simulator] Attack blocked: territory not found', {
-      playerId,
-      fromId: fromTerritoryId,
-      toId: toTerritoryId,
-      fromFound: fromIndex !== -1,
-      toFound: toIndex !== -1,
-    })
     return { state, supported: false }
   }
 
@@ -1103,21 +1088,10 @@ const simulateAttack = (
   const originalDefenderId = (typeof to.ownerId === 'string' ? to.ownerId : null) ?? null
 
   if ((from.ownerId ?? playerId) !== playerId || (from.armies ?? 0) <= 1) {
-    console.warn('[Lockstep Simulator] Attack blocked: ownership or army check failed', {
-      playerId,
-      fromOwner: from.ownerId,
-      fromArmies: from.armies,
-      ownershipOk: (from.ownerId ?? playerId) === playerId,
-      armiesOk: (from.armies ?? 0) > 1,
-    })
     return { state, supported: false }
   }
 
   if (isFriendlyTerritory(working, playerId, to.ownerId)) {
-    console.warn('[Lockstep Simulator] Attack blocked: friendly territory', {
-      playerId,
-      toOwner: to.ownerId,
-    })
     return { state, supported: false }
   }
 
@@ -1298,13 +1272,6 @@ const simulateTransferConquest = (
     typeof payload.toTerritoryId !== 'string' ||
     typeof payload.armies !== 'number'
   ) {
-    console.warn('[Lockstep Simulator] Transfer conquest blocked: invalid payload', {
-      playerId,
-      hasPayload: !!payload,
-      fromId: payload?.fromTerritoryId,
-      toId: payload?.toTerritoryId,
-      armies: payload?.armies,
-    })
     return { state, supported: false }
   }
 
@@ -1318,11 +1285,6 @@ const simulateTransferConquest = (
     | undefined
 
   if (!lastBattle || lastBattle.pendingConquestFor !== playerId) {
-    console.warn('[Lockstep Simulator] Transfer conquest blocked: no pending conquest', {
-      playerId,
-      hasLastBattle: !!lastBattle,
-      pendingFor: lastBattle?.pendingConquestFor,
-    })
     return { state, supported: false }
   }
 
@@ -1330,26 +1292,12 @@ const simulateTransferConquest = (
     lastBattle.fromTerritory?.id !== payload.fromTerritoryId ||
     lastBattle.toTerritory?.id !== payload.toTerritoryId
   ) {
-    console.warn('[Lockstep Simulator] Transfer conquest blocked: territory mismatch', {
-      playerId,
-      payloadFrom: payload.fromTerritoryId,
-      payloadTo: payload.toTerritoryId,
-      battleFrom: lastBattle.fromTerritory?.id,
-      battleTo: lastBattle.toTerritory?.id,
-    })
     return { state, supported: false }
   }
 
   const fromIndex = working.board.findIndex((t) => t.id === payload.fromTerritoryId)
   const toIndex = working.board.findIndex((t) => t.id === payload.toTerritoryId)
   if (fromIndex === -1 || toIndex === -1) {
-    console.warn('[Lockstep Simulator] Transfer conquest blocked: territory not found on board', {
-      playerId,
-      fromId: payload.fromTerritoryId,
-      toId: payload.toTerritoryId,
-      fromFound: fromIndex !== -1,
-      toFound: toIndex !== -1,
-    })
     return { state, supported: false }
   }
 
@@ -1358,11 +1306,6 @@ const simulateTransferConquest = (
 
   const armies = Math.max(0, Math.trunc(payload.armies))
   if (armies >= (from.armies ?? 0)) {
-    console.warn('[Lockstep Simulator] Transfer conquest blocked: not enough armies', {
-      playerId,
-      requestedArmies: armies,
-      availableArmies: from.armies,
-    })
     return { state, supported: false }
   }
 

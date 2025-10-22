@@ -311,7 +311,7 @@ class SocketService {
         lastSeq,
         lockstepSeqByRoom: Object.fromEntries(this.lockstepSeqByRoom.entries()),
         frame,
-      });
+      })
       logger.warn('Lockstep frame gap detected; requesting resync', {
         matchId: frame.matchId,
         expected: lastSeq + 1,
@@ -410,42 +410,68 @@ class SocketService {
     this.lockstepLastChecksum.delete(payload.matchId)
     let ackSeq = payload.seq
     let snapshotApplied = false
+    let framesApplied = false
     try {
       const baseline = payload.state as unknown as SharedGameState
       this.lockstepSim.setBaseline(payload.matchId, baseline)
+
+      // CRITICAL FIX: Mark baseline as ready immediately after setBaseline
+      // This ensures we send baseline-ack even if frame replay fails
+      this.lockstepBaselineReady.add(payload.matchId)
+      this.lockstepLastResyncAt.delete(payload.matchId)
+      snapshotApplied = true
+
       if (Array.isArray(payload.frames) && payload.frames.length > 0) {
         const frameResult = this.lockstepSim.applyFrames(payload.matchId, payload.frames)
         if (!frameResult.ok) {
-          logger.warn('Lockstep snapshot frames contain unsupported commands', {
+          logger.error('[Lockstep] Frame replay failed during snapshot apply', {
             matchId: payload.matchId,
+            baselineSeq: payload.seq,
+            frameCount: payload.frames.length,
+            firstFrameSeq: payload.frames[0]?.seq,
+            lastFrameSeq: payload.frames[payload.frames.length - 1]?.seq,
             reason: frameResult.reason,
             unsupported: frameResult.unsupported,
+            baselinePhase: baseline.phase,
+            baselineCurrentPlayer: baseline.currentPlayer,
           })
+          // Still request resync for frames, but DON'T return - we must ack baseline
           this.requestLockstepResync(payload.matchId, {
-            reason: frameResult.reason === 'missing_state' ? 'missing_state' : 'snapshot_error',
+            reason:
+              frameResult.reason === 'missing_state' ? 'missing_state' : 'unsupported_commands',
             unsupported: frameResult.unsupported,
-            details: { reason: frameResult.reason },
+            details: {
+              reason: frameResult.reason,
+              baselinePhase: baseline.phase,
+              failedFrameCount: payload.frames.length,
+            },
           })
-          return
+          // Use baseline state since frames failed
+          store.dispatch(setGameState(baseline as unknown as GameState))
+        } else {
+          framesApplied = true
+          const workingState = this.lockstepSim.getState(payload.matchId)
+          if (workingState) {
+            store.dispatch(setGameState(workingState as unknown as GameState))
+          } else {
+            store.dispatch(setGameState(baseline as unknown as GameState))
+          }
         }
-      }
-      const workingState = this.lockstepSim.getState(payload.matchId)
-      if (workingState) {
-        store.dispatch(setGameState(workingState as unknown as GameState))
       } else {
+        // No frames to apply, use baseline
         store.dispatch(setGameState(baseline as unknown as GameState))
       }
+
       store.dispatch(setDesyncDetected(false))
       const currentResync = store.getState().uiRoom.lockstepResync
       if (currentResync && currentResync.roomId === payload.matchId) {
         reliabilityMetrics.resolveLockstepResync(currentResync.traceId, {
-          success: true,
+          success: framesApplied,
           roomId: payload.matchId,
           reason: currentResync.reason,
-          meta: { seq: payload.seq },
+          meta: { seq: payload.seq, framesApplied },
         })
       }
-      snapshotApplied = true
       store.dispatch(setLockstepResyncInfo(null))
     } catch (error) {
       logger.warn('Failed to apply lockstep snapshot (falling back to fetch)', { error })
@@ -492,7 +518,7 @@ class SocketService {
 
     // Set sequence tracking to last replayed frame, NOT checkpoint seq
     // The checkpoint seq is often from a pruned snapshot and causes frame gaps
-    if (Array.isArray(payload.frames) && payload.frames.length > 0) {
+    if (framesApplied && Array.isArray(payload.frames) && payload.frames.length > 0) {
       const lastFrame = payload.frames[payload.frames.length - 1]
       if (lastFrame && typeof lastFrame.seq === 'number') {
         this.lockstepSeqByRoom.set(payload.matchId, lastFrame.seq)
@@ -505,24 +531,30 @@ class SocketService {
         })
       }
     } else {
-      // No frames provided, checkpoint is current
+      // No frames provided or frames failed, checkpoint is current
       this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
-      logger.info('[Lockstep] Snapshot processed - no frames, tracking from checkpoint', {
-        matchId: payload.matchId,
-        checkpointSeq: payload.seq,
-      })
+      logger.info(
+        '[Lockstep] Snapshot processed - no frames or frames failed, tracking from checkpoint',
+        {
+          matchId: payload.matchId,
+          checkpointSeq: payload.seq,
+          framesApplied,
+        },
+      )
     }
 
-    if (snapshotApplied) {
-      this.lockstepBaselineReady.add(payload.matchId)
-      this.lockstepLastResyncAt.delete(payload.matchId)
-      if (this.socket) {
-        logger.debug('[Lockstep] Emitting baseline-ack', { roomId: payload.matchId, seq: ackSeq });
-        this.socket.emit('lockstep:baseline-ack', {
-          roomId: payload.matchId,
-          seq: ackSeq,
-        } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
-      }
+    // CRITICAL FIX: Always send baseline-ack if baseline was set successfully
+    // This breaks the infinite resync loop when frames fail
+    if (snapshotApplied && this.socket) {
+      logger.info('[Lockstep] Emitting baseline-ack', {
+        roomId: payload.matchId,
+        seq: ackSeq,
+        framesApplied,
+      })
+      this.socket.emit('lockstep:baseline-ack', {
+        roomId: payload.matchId,
+        seq: ackSeq,
+      } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
     }
 
     void (store.dispatch(fetchGameState({ roomId: payload.matchId })) as Promise<unknown>)
