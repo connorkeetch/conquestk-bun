@@ -1,7 +1,7 @@
 import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
 import { query } from '../config/database.js'
-import { LOCKSTEP_CONFIG, lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
+import { lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
 import { acquireLock, releaseLock } from '../config/redis.js'
 import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService.js'
 import { gameStateCache } from '../services/cacheService.js'
@@ -84,10 +84,10 @@ export class GameActionWorker {
     payload: SerializedGameState,
     reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
   ) {
-    // Skip redundant snapshots when LOCKSTEP_ONLY is enabled
-    if (LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action') {
+    // Skip redundant action snapshots (Pure Lockstep mode - frames are used instead)
+    if (reason === 'action') {
       lockstepConfigMetrics.recordSnapshotSkipped()
-      logger.debug('[Lockstep] Skipped snapshot emission in worker (LOCKSTEP_ONLY mode)', {
+      logger.debug('[Lockstep] Skipped snapshot emission in worker (Pure Lockstep mode)', {
         channel,
         reason,
       })

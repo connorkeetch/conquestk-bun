@@ -1,19 +1,20 @@
 /**
  * Lockstep Configuration
  *
- * LOCKSTEP_ONLY mode disables redundant snapshot emission after actions.
- * Snapshots are still used for initialization, resync, and fog-of-war updates.
+ * Pure Lockstep Architecture: Real-time state updates use lockstep frames exclusively.
+ * Snapshots are reserved for initialization, explicit resync, and fog-of-war updates.
  *
- * Phase 1 of lockstep architecture refactor (see docs/planning/lockstep-architecture-refactor.md)
+ * This is the recommended configuration for optimal bandwidth usage and state consistency.
+ * See: docs/planning/lockstep-architecture-refactor.md
  */
 
 export const LOCKSTEP_CONFIG = {
   /**
-   * When true, only emit snapshots for initialization/resync/fog.
-   * When false, emit snapshots after every action (legacy behavior).
-   * Default: false (preserves current behavior)
+   * When true, only emit snapshots for initialization/resync/fog (RECOMMENDED).
+   * When false, emit snapshots after every action (legacy hybrid mode).
+   * Default: true (Pure Lockstep mode)
    */
-  LOCKSTEP_ONLY: process.env.LOCKSTEP_ONLY === 'true',
+  LOCKSTEP_ONLY: process.env.LOCKSTEP_ONLY !== 'false',
 
   /**
    * Maximum frames to retain in database before pruning.
