@@ -1,3 +1,4 @@
+import type { InputFrame } from '@conquestk/shared/types/lockstep'
 import type * as jwt from 'jsonwebtoken'
 import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
@@ -984,51 +985,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             if (finalState) {
               emitGameSnapshotToSocket(socket, finalState, 'init')
 
-              // Phase 4: Send initial lockstep sync frame to ensure perfect alignment from start
-              // This prevents any window where client has baseline but server has moved forward
-              void (async () => {
-                try {
-                  const latestSnapshot = await lockstepService.getLatestSnapshot(normalizedRoomId)
-                  if (latestSnapshot && latestSnapshot.seq > 0) {
-                    // Get any frames after the latest snapshot to bring client fully up-to-date
-                    const recentFrames = await lockstepService.getFramesAfter(
-                      normalizedRoomId,
-                      latestSnapshot.seq,
-                      10, // Just get the most recent 10 frames
-                    )
-
-                    logger.debug('[Lockstep Server] Sending initial sync to newly joined client', {
-                      matchId: normalizedRoomId,
-                      socketId: socket.id,
-                      userId,
-                      latestSnapshotSeq: latestSnapshot.seq,
-                      recentFrameCount: recentFrames.length,
-                    })
-
-                    // Emit recent frames to bring client up-to-date
-                    for (const frame of recentFrames) {
-                      socket.emit('game-action:frame-committed', frame)
-                    }
-
-                    // If we have recent activity, this ensures client starts with the exact server state
-                    if (recentFrames.length > 0) {
-                      logger.info('[Lockstep Server] Initial sync completed for joined client', {
-                        matchId: normalizedRoomId,
-                        socketId: socket.id,
-                        framesSent: recentFrames.length,
-                        finalSeq: recentFrames[recentFrames.length - 1]?.seq,
-                      })
-                    }
-                  }
-                } catch (error) {
-                  // Best-effort: don't fail join if initial sync fails
-                  logger.warn('[Lockstep Server] Failed to send initial sync to joined client', {
-                    matchId: normalizedRoomId,
-                    socketId: socket.id,
-                    error: error instanceof Error ? error.message : String(error),
-                  })
-                }
-              })()
+              // Phase 4: Initial lockstep sync
+              // DISABLED: Let normal frame flow catch up the client instead of sending historical frames
+              // This prevents potential state/frame mismatches during join
+              // The client will receive the current snapshot via game:snapshot above,
+              // and then receive new frames as they're emitted via normal flow
+              logger.debug('[Lockstep Server] Client joined - will sync via normal frame flow', {
+                matchId: normalizedRoomId,
+                socketId: socket.id,
+                userId,
+              })
             }
           }
 
@@ -1293,17 +1259,24 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             }
 
             const baselineSeq = checksumEntry?.seq ?? 0
-            const frames = await lockstepService.getFramesAfter(normalizedRoomId, baselineSeq)
-            lockstepMetrics.recordResync(frames.length)
+
+            // CRITICAL FIX: Send snapshot-only (no frames) to prevent snapshot/frame inconsistency
+            // The race condition where frames are written between snapshot query and frame query
+            // causes clients to receive incompatible state+frames bundles.
+            // By sending only the snapshot, we let normal frame flow catch the client up,
+            // which is safer and prevents frame validation errors during replay.
+            const frames: InputFrame[] = []
+            lockstepMetrics.recordResync(0)
 
             logger.info('[Lockstep Server] Sending resync snapshot', {
               matchId: normalizedRoomId,
               socketId: socket.id,
               baselineSeq,
               hasSnapshot: Boolean(checksumEntry?.snapshot),
-              frameCount: frames.length,
+              frameCount: 0,
               fromSeq: data.fromSeq ?? null,
               reason: resyncReason,
+              note: 'Snapshot-only mode to prevent state/frame mismatch',
             })
 
             socket.emit('game-action:snapshot', {
