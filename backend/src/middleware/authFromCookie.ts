@@ -36,8 +36,12 @@ const resolveSameSite = (host: string | undefined): 'lax' | 'none' => {
 }
 
 /**
- * Authenticate using Bearer token header if present, otherwise fall back to a cookie.
- * Intended for UI routes (like Bull Board) where browser navigation cannot attach headers.
+ * Middleware that authenticates a user's JWT token from a cookie.
+ * This is intended for UI routes where browser navigation cannot attach headers.
+ * It will fall back to the standard `Authorization` header if present.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
  */
 export const authenticateTokenFromCookie: RequestHandler = (
   req: Request,

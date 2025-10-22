@@ -27,6 +27,13 @@ interface MenuItem {
   icon: string
 }
 
+/**
+ * Renders the main header for the application. It includes the brand logo,
+ * navigation links, and user authentication status. It also provides access to
+ * the side menu, notifications, and messages.
+ *
+ * @returns {JSX.Element} The rendered header component.
+ */
 export default function Header() {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth)
   const preferredColor: PlayerColor = useAppSelector(

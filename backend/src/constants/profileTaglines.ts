@@ -1,5 +1,7 @@
+/** The default tagline for new user profiles. */
 export const DEFAULT_TAGLINE = 'Commander of the Conquest Realms'
 
+/** A list of pre-defined taglines that users can select for their profiles. */
 export const PROFILE_TAGLINES: string[] = [
   'The Conqueror of Realms',
   'High Warlord of the Iron Banner',
@@ -54,5 +56,10 @@ export const PROFILE_TAGLINES: string[] = [
   'The Eternal Runner-Up',
 ]
 
+/**
+ * Checks if a given value is an allowed profile tagline.
+ * @param {unknown} value The value to check.
+ * @returns {value is string} True if the value is an allowed tagline.
+ */
 export const isAllowedTagline = (value: unknown): value is string =>
   typeof value === 'string' && PROFILE_TAGLINES.includes(value)

@@ -1,16 +1,38 @@
+/**
+ * @fileoverview This file defines the AchievementService class, which is responsible for handling
+ * the logic of unlocking achievements for players based on game outcomes.
+ * @module services/achievementService
+ */
 import { query } from '../config/database.js'
 import { logger } from '../utils/logger.js'
 import { profileService } from './profileService.js'
 
+/**
+ * A minimal representation of a player's ranking in a completed game.
+ * @typedef {object} MinimalRanking
+ * @property {string} userId - The ID of the user.
+ * @property {boolean} isWinner - Whether the user was a winner of the game.
+ * @property {boolean} eliminated - Whether the user was eliminated.
+ */
 type MinimalRanking = {
   userId: string
   isWinner: boolean
   eliminated: boolean
 }
 
+/**
+ * A service class for managing achievements.
+ * @class AchievementService
+ */
 class AchievementService {
   private nameToId: Map<string, string> = new Map()
 
+  /**
+   * Retrieves the ID of an achievement by its name, using a cache to avoid repeated database lookups.
+   * @private
+   * @param {string} name - The name of the achievement.
+   * @returns {Promise<string | null>} A promise that resolves to the achievement ID, or null if not found or an error occurs.
+   */
   private async getAchievementIdByName(name: string): Promise<string | null> {
     if (this.nameToId.has(name)) return this.nameToId.get(name) ?? null
     try {
@@ -24,6 +46,13 @@ class AchievementService {
     }
   }
 
+  /**
+   * Unlocks an achievement for a user by the achievement's name.
+   * @private
+   * @param {string} userId - The ID of the user.
+   * @param {string} name - The name of the achievement to unlock.
+   * @returns {Promise<void>} A promise that resolves when the operation is complete.
+   */
   private async unlockByName(userId: string, name: string): Promise<void> {
     const id = await this.getAchievementIdByName(name)
     if (!id) return
@@ -35,6 +64,12 @@ class AchievementService {
     }
   }
 
+  /**
+   * Handles the logic for awarding achievements at the completion of a game.
+   * @param {string} gameId - The ID of the completed game.
+   * @param {MinimalRanking[]} rankings - An array of player rankings for the game.
+   * @returns {Promise<void>} A promise that resolves when all achievement checks are complete.
+   */
   async handleGameCompleted(gameId: string, rankings: MinimalRanking[]): Promise<void> {
     if (!rankings || rankings.length === 0) return
 

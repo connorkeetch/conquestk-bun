@@ -1,8 +1,21 @@
+/**
+ * @fileoverview This file defines the AuthTrackingService class, which is responsible for tracking
+ * authentication-related events and managing user sessions.
+ * @module services/authTrackingService
+ */
 import { query } from '../config/database.js'
 import { logger } from '../utils/logger.js'
 
+/**
+ * The type of authentication event.
+ * @typedef {'user_login' | 'user_logout' | 'user_registration'} AuthEventType
+ */
 export type AuthEventType = 'user_login' | 'user_logout' | 'user_registration'
 
+/**
+ * @interface RecordAuthEventParams
+ * @description Parameters for recording an authentication event.
+ */
 interface RecordAuthEventParams {
   userId: string
   eventType: AuthEventType
@@ -12,6 +25,10 @@ interface RecordAuthEventParams {
   metadata?: Record<string, unknown>
 }
 
+/**
+ * @interface StartUserSessionParams
+ * @description Parameters for starting a new user session.
+ */
 interface StartUserSessionParams {
   userId: string
   ipAddress?: string | null
@@ -20,7 +37,17 @@ interface StartUserSessionParams {
   sessionData?: Record<string, unknown>
 }
 
+/**
+ * A service class for tracking authentication events and user sessions.
+ * @class AuthTrackingService
+ */
 class AuthTrackingService {
+  /**
+   * A lightweight parser for user agent strings to extract basic device, OS, and browser information.
+   * @private
+   * @param {string | null | undefined} userAgent - The user agent string to parse.
+   * @returns {Record<string, unknown>} An object containing the parsed information.
+   */
   private parseUserAgentLite(userAgent: string | null | undefined): Record<string, unknown> {
     if (!userAgent) return {}
 
@@ -66,6 +93,11 @@ class AuthTrackingService {
       ua,
     }
   }
+  /**
+   * Records an authentication event in the database.
+   * @param {RecordAuthEventParams} params - The parameters for the authentication event.
+   * @returns {Promise<void>} A promise that resolves when the event has been recorded.
+   */
   async recordAuthEvent({
     userId,
     eventType,
@@ -97,6 +129,11 @@ class AuthTrackingService {
     }
   }
 
+  /**
+   * Starts a new user session and records it in the database.
+   * @param {StartUserSessionParams} params - The parameters for starting the session.
+   * @returns {Promise<string | null>} A promise that resolves to the new session ID, or null if an error occurs.
+   */
   async startUserSession({
     userId,
     ipAddress,
@@ -134,6 +171,11 @@ class AuthTrackingService {
     }
   }
 
+  /**
+   * Ends a user session by updating its `ended_at` timestamp.
+   * @param {string} sessionId - The ID of the session to end.
+   * @returns {Promise<void>} A promise that resolves when the session has been ended.
+   */
   async endUserSession(sessionId: string): Promise<void> {
     try {
       await query(
@@ -152,6 +194,11 @@ class AuthTrackingService {
     }
   }
 
+  /**
+   * Closes any stale user sessions that have been open for longer than a specified duration.
+   * @param {number} maxAgeHours - The maximum age of a session in hours before it is considered stale.
+   * @returns {Promise<number>} A promise that resolves to the number of stale sessions that were closed.
+   */
   async closeStaleSessions(maxAgeHours: number): Promise<number> {
     // Close sessions that have been open longer than maxAgeHours
     // and have not been explicitly ended

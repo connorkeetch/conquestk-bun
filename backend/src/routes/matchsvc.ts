@@ -1,3 +1,10 @@
+/**
+ * @fileoverview This file defines the Express routes for interacting with the matchmaking service (MatchSvc).
+ * It includes a comprehensive status endpoint that checks the health of the matchmaking service,
+ * its connection to Redis, and its authentication configuration.
+ * @module routes/matchsvc
+ */
+
 import { MatchSvcClient } from '@conquestk/match-client'
 import { Router } from 'express'
 import { checkRedisHealth, getRedisClient } from '../config/redis.js'
@@ -6,8 +13,25 @@ import { logger } from '../utils/logger.js'
 
 const router = Router()
 
+/**
+ * Route to get the status of the matchmaking service.
+ * This endpoint performs a series of checks to determine the health and operational status of the service,
+ * including its own health, Redis connectivity, authentication, and key metrics.
+ * @name GET /matchsvc/status
+ * @function
+ * @memberof module:routes/matchsvc
+ * @param {import('express').Request} _req - The Express request object (unused).
+ * @param {import('express').Response} res - The Express response object, which will contain the status payload.
+ * @returns {Promise<void>}
+ */
 router.get('/status', async (_req, res) => {
   const USE_MATCHSVC = String(process.env.USE_MATCHSVC || '').toLowerCase() === 'true'
+
+  /**
+   * Normalizes a base URL by ensuring it has a scheme and no trailing slashes.
+   * @param {string | undefined} u - The URL to normalize.
+   * @returns {string} The normalized URL.
+   */
   const normalizeBaseUrl = (u: string | undefined): string => {
     const raw = (u || 'http://localhost:8085').trim()
     const withScheme = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`

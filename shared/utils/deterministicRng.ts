@@ -19,6 +19,12 @@ export const RNG_ALGORITHM = 'sfc32' as const
  * Hash a string into four 32-bit unsigned integers using cyrb128.
  * Mirrors the implementation we previously inlined inside the GameEngine.
  */
+/**
+ * Hashes a string into four 32-bit unsigned integers using cyrb128.
+ *
+ * @param {string} seed - The seed string to hash.
+ * @returns {Sfc32State} The hashed state.
+ */
 export function cyrb128(seed: string): Sfc32State {
   let h1 = 1779033703
   let h2 = 3144134277
@@ -54,6 +60,12 @@ const normalizeSeed = (seed?: string): string => {
   return `${RNG_PREFIX}${trimmed}`
 }
 
+/**
+ * Derives a deterministic RNG state from a seed string.
+ *
+ * @param {string} [seed] - The seed string. If not provided, a default seed will be used.
+ * @returns {{ seed: string; state: Sfc32State; }} An object containing the normalized seed and the derived state.
+ */
 export const deriveStateFromSeed = (seed?: string): { seed: string; state: Sfc32State } => {
   const normalizedSeed = normalizeSeed(seed)
   const state = cyrb128(normalizedSeed)
@@ -61,7 +73,10 @@ export const deriveStateFromSeed = (seed?: string): { seed: string; state: Sfc32
 }
 
 /**
- * Deterministic RNG based on SFC32, safe to serialize via getState().
+ * A deterministic random number generator based on the SFC32 algorithm. This
+ * class is safe to serialize and deserialize via `getState()` and `fromState()`.
+ *
+ * @class DeterministicRng
  */
 export class DeterministicRng {
   private state: Sfc32State
@@ -74,10 +89,23 @@ export class DeterministicRng {
     this.state = initialState ? { ...initialState } : { ...state }
   }
 
+  /**
+   * Creates a new `DeterministicRng` instance from a seed and a state object.
+   *
+   * @static
+   * @param {string} seed - The seed string.
+   * @param {Sfc32State} state - The initial state.
+   * @returns {DeterministicRng} A new `DeterministicRng` instance.
+   */
   static fromState(seed: string, state: Sfc32State): DeterministicRng {
     return new DeterministicRng(seed, state)
   }
 
+  /**
+   * Creates a clone of the current RNG instance.
+   *
+   * @returns {DeterministicRng} A new `DeterministicRng` instance with the same seed and state.
+   */
   clone(): DeterministicRng {
     return DeterministicRng.fromState(this.seed, this.getState())
   }

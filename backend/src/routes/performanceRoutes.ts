@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for the performance monitoring and management dashboard.
+ * It includes endpoints for retrieving performance metrics, health checks, cache and database stats,
+ * and other performance-related information. Most routes are protected and require authentication.
+ * @module routes/performanceRoutes
+ */
 import express, { type Request, type Response } from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { cdnService } from '../services/cdnService.js'
@@ -16,6 +22,16 @@ type ServiceHealthResult = {
 
 const router = express.Router()
 
+/**
+ * A helper function to send a standardized failure response.
+ * It logs the error using `handleRouteError` and sends a JSON response with a success flag set to false and an error message.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {unknown} error - The error object.
+ * @param {string} logMessage - A message to be logged for the error.
+ * @param {number} [status=500] - The HTTP status code to send in the response.
+ * @returns {void}
+ */
 const sendFailure = (
   req: Request,
   res: Response,
@@ -31,7 +47,16 @@ const sendFailure = (
   })
 }
 
-// Performance dashboard (admin only)
+/**
+ * Route to get the main performance dashboard data.
+ * This is an admin-only endpoint.
+ * @name GET /performance/dashboard
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the dashboard data.
+ * @returns {Promise<void>}
+ */
 router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
     const dashboard = performanceMonitorService.getDashboardData()
@@ -45,7 +70,15 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
   }
 })
 
-// Current system metrics
+/**
+ * Route to get the current system metrics.
+ * @name GET /performance/metrics
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the current metrics.
+ * @returns {Promise<void>}
+ */
 router.get('/metrics', authenticateToken, async (req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
@@ -59,7 +92,15 @@ router.get('/metrics', authenticateToken, async (req, res) => {
   }
 })
 
-// Historical metrics
+/**
+ * Route to get historical system metrics for a specified number of hours.
+ * @name GET /performance/metrics/history
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, which can contain an `hours` query parameter.
+ * @param {Response} res - The Express response object, containing the historical metrics.
+ * @returns {Promise<void>}
+ */
 router.get('/metrics/history', authenticateToken, async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string, 10) || 1
@@ -78,7 +119,15 @@ router.get('/metrics/history', authenticateToken, async (req, res) => {
   }
 })
 
-// Odds engine shadow metrics history (last N hours)
+/**
+ * Route to get the history of odds engine shadow metrics.
+ * @name GET /performance/metrics/odds-history
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, which can contain an `hours` query parameter.
+ * @param {Response} res - The Express response object, containing the odds metrics history.
+ * @returns {Promise<void>}
+ */
 router.get('/metrics/odds-history', authenticateToken, async (req, res) => {
   try {
     const hours = parseInt((req.query.hours as string) || '24', 10)
@@ -97,7 +146,16 @@ router.get('/metrics/odds-history', authenticateToken, async (req, res) => {
   }
 })
 
-// Performance alerts
+/**
+ * Route to get performance alerts.
+ * It can be filtered to show only active alerts.
+ * @name GET /performance/alerts
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, which can contain an `active` query parameter.
+ * @param {Response} res - The Express response object, containing the list of alerts.
+ * @returns {Promise<void>}
+ */
 router.get('/alerts', authenticateToken, async (req, res) => {
   try {
     const activeOnly = req.query.active === 'true'
@@ -114,7 +172,15 @@ router.get('/alerts', authenticateToken, async (req, res) => {
   }
 })
 
-// Resolve alert
+/**
+ * Route to resolve a performance alert.
+ * @name POST /performance/alerts/:alertId/resolve
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, with `alertId` as a URL parameter.
+ * @param {Response} res - The Express response object, indicating the success of the resolution.
+ * @returns {Promise<void>}
+ */
 router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
   try {
     const { alertId } = req.params
@@ -129,7 +195,16 @@ router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
   }
 })
 
-// Component-specific health checks
+/**
+ * Route to get a detailed health check of various system components.
+ * This includes performance monitoring, Redis, database, and CDN.
+ * @name GET /performance/health/detailed
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the detailed health status.
+ * @returns {Promise<void>}
+ */
 router.get('/health/detailed', authenticateToken, async (req, res) => {
   try {
     const [performanceHealth, redisHealth, databaseHealth, cdnHealth] = await Promise.allSettled([
@@ -170,7 +245,15 @@ router.get('/health/detailed', authenticateToken, async (req, res) => {
   }
 })
 
-// Cache management
+/**
+ * Route to get statistics about the cache (Redis).
+ * @name GET /performance/cache/stats
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the cache statistics.
+ * @returns {Promise<void>}
+ */
 router.get('/cache/stats', authenticateToken, async (req, res) => {
   try {
     const stats = redisClusterService.getMetrics()
@@ -184,6 +267,15 @@ router.get('/cache/stats', authenticateToken, async (req, res) => {
   }
 })
 
+/**
+ * Route to clear cache keys matching a specific pattern.
+ * @name POST /performance/cache/clear
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, containing a `pattern` in the body.
+ * @param {Response} res - The Express response object, indicating the number of cleared keys.
+ * @returns {Promise<void>}
+ */
 router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { pattern } = req.body
@@ -208,7 +300,15 @@ router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> =
   }
 })
 
-// Database performance
+/**
+ * Route to get statistics about the database performance.
+ * @name GET /performance/database/stats
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the database statistics.
+ * @returns {Promise<void>}
+ */
 router.get('/database/stats', authenticateToken, async (req, res) => {
   try {
     const stats = databaseClusterService.getMetrics()
@@ -222,7 +322,15 @@ router.get('/database/stats', authenticateToken, async (req, res) => {
   }
 })
 
-// CDN management
+/**
+ * Route to get statistics about the CDN.
+ * @name GET /performance/cdn/stats
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the CDN statistics.
+ * @returns {Promise<void>}
+ */
 router.get('/cdn/stats', authenticateToken, async (req, res) => {
   try {
     const stats = cdnService.getMetrics()
@@ -236,6 +344,15 @@ router.get('/cdn/stats', authenticateToken, async (req, res) => {
   }
 })
 
+/**
+ * Route to purge the CDN cache for specified paths or tags.
+ * @name POST /performance/cdn/purge
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, containing `paths` and/or `tags` in the body.
+ * @param {Response} res - The Express response object, indicating the success of the purge operation.
+ * @returns {Promise<void>}
+ */
 router.post('/cdn/purge', authenticateToken, async (req, res) => {
   try {
     const { paths = [], tags = [] } = req.body
@@ -252,7 +369,16 @@ router.post('/cdn/purge', authenticateToken, async (req, res) => {
   }
 })
 
-// Performance testing endpoints
+/**
+ * Route to initiate a load test.
+ * This is a placeholder and simulates the start of a load test.
+ * @name POST /performance/test/load
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, which can contain load test parameters like `duration` and `concurrency`.
+ * @param {Response} res - The Express response object, confirming the start of the test.
+ * @returns {Promise<void>}
+ */
 router.post('/test/load', authenticateToken, async (req, res) => {
   try {
     const {
@@ -286,7 +412,15 @@ router.post('/test/load', authenticateToken, async (req, res) => {
   }
 })
 
-// System optimization recommendations
+/**
+ * Route to get system optimization recommendations based on current metrics.
+ * @name GET /performance/optimization/recommendations
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing a list of recommendations.
+ * @returns {Promise<void>}
+ */
 router.get('/optimization/recommendations', authenticateToken, async (req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
@@ -352,7 +486,16 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
   }
 })
 
-// Export performance report
+/**
+ * Route to export a performance report.
+ * Supports JSON format and has a placeholder for CSV.
+ * @name GET /performance/report
+ * @function
+ * @memberof module:routes/performanceRoutes
+ * @param {Request} req - The Express request object, which can contain `hours` and `format` query parameters.
+ * @param {Response} res - The Express response object, containing the performance report.
+ * @returns {Promise<void>}
+ */
 router.get('/report', authenticateToken, async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string, 10) || 24

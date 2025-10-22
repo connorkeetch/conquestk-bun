@@ -1,9 +1,17 @@
+/**
+ * @fileoverview Service for calculating and managing Elo ratings for players.
+ * @module services/eloService
+ */
 import { RANKS } from '@conquestk/shared/constants/ranks'
 import type { PoolClient, QueryResultRow } from 'pg'
 import type { DatabaseQueryResult } from '../config/database.js'
 import { query, transaction } from '../config/database.js'
 import { logger } from '../utils/logger.js'
 
+/**
+ * @interface PlayerRating
+ * @description Represents a player's rating information for a single game.
+ */
 export interface PlayerRating {
   userId: string
   currentRating: number
@@ -11,6 +19,10 @@ export interface PlayerRating {
   position: number // 1 = winner, 2 = second place, etc.
 }
 
+/**
+ * @interface RatingChange
+ * @description Represents the change in a player's rating after a game.
+ */
 export interface RatingChange {
   userId: string
   oldRating: number
@@ -21,6 +33,10 @@ export interface RatingChange {
   kFactor: number
 }
 
+/**
+ * @interface SkillTier
+ * @description Represents a skill tier in the ranking system.
+ */
 export interface SkillTier {
   name: string
   minRating: number
@@ -29,6 +45,7 @@ export interface SkillTier {
   color: string
 }
 
+/** @private */
 interface RatingHistoryEntryRow extends QueryResultRow {
   id: string
   user_id: string
@@ -40,6 +57,7 @@ interface RatingHistoryEntryRow extends QueryResultRow {
   created_at: string
 }
 
+/** @private */
 interface LeaderboardRow extends QueryResultRow {
   user_id: string
   username: string
@@ -49,6 +67,7 @@ interface LeaderboardRow extends QueryResultRow {
   ranked_losses?: number | null
 }
 
+/** @private */
 interface MonthlyLeaderboardRow extends QueryResultRow {
   user_id: string
   username: string
@@ -73,6 +92,11 @@ const TIER_META: Record<string, { icon: string; color: string }> = {
   Worldbreaker: { icon: '☄️', color: '#8B0000' },
 }
 
+/**
+ * An array of skill tiers, combining rank data with metadata.
+ * @constant
+ * @type {SkillTier[]}
+ */
 export const SKILL_TIERS: SkillTier[] = RANKS.map(
   (r: { name: string; minRating: number }, i: number) => {
     const nextMin = i < RANKS.length - 1 ? RANKS[i + 1].minRating : 10000
@@ -87,12 +111,25 @@ export const SKILL_TIERS: SkillTier[] = RANKS.map(
   },
 )
 
+/**
+ * The EloService class is responsible for calculating and applying Elo rating
+ * changes for players in ranked games. It also provides methods for retrieving
+ * leaderboard and rating history data.
+ *
+ * @class EloService
+ */
 export class EloService {
   private static readonly D = 400
   private static readonly K_BASE = 24
   private static readonly K_PROVISIONAL = 40 // first 20 ranked games
   private static readonly R_FLOOR = 800
 
+  /**
+   * Resolves the start and end dates for a monthly leaderboard period.
+   * @param {string} [month] - The month in YYYY-MM format. Defaults to the current month.
+   * @returns {{ periodStart: Date; periodEnd: Date }} The start and end dates of the period.
+   * @private
+   */
   private resolveMonthlyBounds(month?: string): { periodStart: Date; periodEnd: Date } {
     let base = new Date()
     if (typeof month === 'string' && /^[0-9]{4}-[0-9]{2}$/.test(month)) {
@@ -114,12 +151,26 @@ export class EloService {
     return { periodStart, periodEnd }
   }
 
+  /**
+   * Determines the K-factor for a player based on their number of games played and the number of players in the game.
+   * @param {number} gamesPlayed - The number of games the player has played.
+   * @param {number} nPlayers - The number of players in the game.
+   * @returns {number} The calculated K-factor.
+   * @private
+   */
   private kForPlayer(gamesPlayed: number, nPlayers: number): number {
     const provisional = gamesPlayed < 20
     const kUsed = provisional ? EloService.K_PROVISIONAL : EloService.K_BASE
     return kUsed * Math.sqrt(Math.max(1, nPlayers - 1))
   }
 
+  /**
+   * Calculates the rating changes for a list of players based on their
+   * performance in a game.
+   *
+   * @param {PlayerRating[]} players - An array of player rating objects.
+   * @returns {RatingChange[]} An array of rating change objects.
+   */
   calculateRatingChanges(players: PlayerRating[]): RatingChange[] {
     if (players.length < 2) {
       return []
@@ -189,6 +240,13 @@ export class EloService {
     return deltas
   }
 
+  /**
+   * Applies the calculated rating changes to the database.
+   *
+   * @param {string} gameId - The ID of the game the rating changes are for.
+   * @param {RatingChange[]} changes - An array of rating change objects.
+   * @param {PoolClient} [client] - Optional database client to use for the transaction.
+   */
   async applyRatingChanges(
     gameId: string,
     changes: RatingChange[],
@@ -232,6 +290,14 @@ export class EloService {
     }
   }
 
+  /**
+   * Bulk inserts rating history entries into the database.
+   * @param {PoolClient} client - The database client.
+   * @param {string} gameId - The ID of the game.
+   * @param {RatingChange[]} changes - The rating changes to insert.
+   * @returns {Promise<void>}
+   * @private
+   */
   private async bulkInsertRatingHistory(
     client: PoolClient,
     gameId: string,
@@ -272,6 +338,13 @@ export class EloService {
     )
   }
 
+  /**
+   * Bulk updates user ratings in the database.
+   * @param {PoolClient} client - The database client.
+   * @param {RatingChange[]} changes - The rating changes to apply.
+   * @returns {Promise<void>}
+   * @private
+   */
   private async bulkUpdateUserRatings(client: PoolClient, changes: RatingChange[]): Promise<void> {
     if (changes.length === 0) return
 
@@ -320,6 +393,12 @@ export class EloService {
     }
   }
 
+  /**
+   * Gets the skill tier for a given rating.
+   *
+   * @param {number} rating - The rating to get the skill tier for.
+   * @returns {SkillTier} The skill tier.
+   */
   getSkillTier(rating: number): SkillTier {
     return (
       SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) ||
@@ -327,6 +406,15 @@ export class EloService {
     )
   }
 
+  /**
+   * Checks if a player can join a ranked game based on their rating and the
+   * average rating of the game.
+   *
+   * @param {number} playerRating - The player's rating.
+   * @param {number} gameAvgRating - The average rating of the game.
+   * @param {number} [maxSkillGap=500] - The maximum allowed skill gap.
+   * @returns {boolean} `true` if the player can join, otherwise `false`.
+   */
   canJoinRankedGame(
     playerRating: number,
     gameAvgRating: number,
@@ -335,6 +423,13 @@ export class EloService {
     return Math.abs(playerRating - gameAvgRating) <= maxSkillGap
   }
 
+  /**
+   * Gets the rating history for a user.
+   *
+   * @param {string} userId - The ID of the user to get the rating history for.
+   * @param {number} [limit=30] - The maximum number of history entries to return.
+   * @returns {Promise<RatingHistoryEntryRow[]>} A promise that resolves to an array of rating history entries.
+   */
   async getRatingHistory(userId: string, limit: number = 30): Promise<RatingHistoryEntryRow[]> {
     const result = await query<RatingHistoryEntryRow>(
       `
@@ -350,6 +445,12 @@ export class EloService {
     return result.rows
   }
 
+  /**
+   * Gets the monthly leaderboard.
+   *
+   * @param {{ limit?: number; offset?: number; month?: string; userIds?: string[]; }} [options] - Optional parameters for filtering the leaderboard.
+   * @returns {Promise<{ rows: MonthlyLeaderboardRow[]; periodStart: Date; periodEnd: Date; }>} A promise that resolves to the leaderboard data.
+   */
   async getMonthlyLeaderboard(options?: {
     limit?: number
     offset?: number
@@ -421,6 +522,13 @@ export class EloService {
     return { rows: result.rows, periodStart, periodEnd }
   }
 
+  /**
+   * Gets the all-time leaderboard.
+   *
+   * @param {number} [limit=100] - The maximum number of leaderboard entries to return.
+   * @param {number} [offset=0] - The number of leaderboard entries to skip.
+   * @returns {Promise<LeaderboardRow[]>} A promise that resolves to an array of leaderboard entries.
+   */
   async getLeaderboard(limit: number = 100, offset: number = 0): Promise<LeaderboardRow[]> {
     const result = await query<LeaderboardRow>(
       `
@@ -464,6 +572,13 @@ export class EloService {
     return fallback.rows
   }
 
+  /**
+   * Gets the leaderboard for a specific set of users.
+   *
+   * @param {string[]} userIds - An array of user IDs to get the leaderboard for.
+   * @param {{ limit?: number; offset?: number; }} [options] - Optional parameters for pagination.
+   * @returns {Promise<LeaderboardRow[]>} A promise that resolves to an array of leaderboard entries.
+   */
   async getLeaderboardForUsers(
     userIds: string[],
     options?: { limit?: number; offset?: number },
@@ -507,6 +622,11 @@ export class EloService {
     return result.rows
   }
 
+  /**
+   * Updates the leaderboard cache.
+   *
+   * @param {PoolClient} [client] - Optional database client to use for the transaction.
+   */
   async updateLeaderboardCache(client?: PoolClient): Promise<void> {
     const executeQuery = async <T extends QueryResultRow>(
       sql: string,

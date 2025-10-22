@@ -4,9 +4,28 @@ import { authenticateToken } from '../middleware/auth.js'
 import { queueService } from '../services/queueService.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * This file contains the admin routes for managing the application's queues.
+ * It includes routes for listing jobs in the dead-letter queue, requeueing jobs,
+ * listing jobs by state, and retrying failed jobs.
+ * All routes in this file are protected by the `authenticateToken` and `requireAdmin` middleware.
+ */
+
 const router = Router()
 
-// GET /api/admin/queues/dlq?queue=gameActions&offset=0&limit=50
+/**
+ * @api {get} /api/admin/queues/dlq List jobs in the dead-letter queue
+ * @apiName GetDlqJobs
+ * @apiGroup AdminQueues
+ * @apiPermission admin
+ *
+ * @apiParam {String} [queue=gameActions] The name of the queue.
+ * @apiParam {Number} [offset=0] The number of jobs to skip.
+ * @apiParam {Number} [limit=50] The maximum number of jobs to return.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object[]} items The list of jobs in the dead-letter queue.
+ */
 router.get('/dlq', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const _q = String(
@@ -24,7 +43,18 @@ router.get('/dlq', authenticateToken, requireAdmin, async (req, res) => {
   }
 })
 
-// POST /api/admin/queues/dlq/requeue { queue: 'gameActions', jobId: '...' }
+/**
+ * @api {post} /api/admin/queues/dlq/requeue Requeue a job from the dead-letter queue
+ * @apiName RequeueDlqJob
+ * @apiGroup AdminQueues
+ * @apiPermission admin
+ *
+ * @apiBody {String} [queue=gameActions] The name of the queue.
+ * @apiBody {String} jobId The ID of the job to requeue.
+ *
+ * @apiSuccess {Boolean} success Whether the job was successfully requeued.
+ * @apiSuccess {String} [newJobId] The ID of the new job created.
+ */
 router.post('/dlq/requeue', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const key =
@@ -42,7 +72,20 @@ router.post('/dlq/requeue', authenticateToken, requireAdmin, async (req, res) =>
   }
 })
 
-// GET /api/admin/queues/jobs?queue=gameActions&state=active&offset=0&limit=50
+/**
+ * @api {get} /api/admin/queues/jobs List jobs by state
+ * @apiName GetJobsByState
+ * @apiGroup AdminQueues
+ * @apiPermission admin
+ *
+ * @apiParam {String} [queue=gameActions] The name of the queue.
+ * @apiParam {String} [state=active] The state of the jobs to list.
+ * @apiParam {Number} [offset=0] The number of jobs to skip.
+ * @apiParam {Number} [limit=50] The maximum number of jobs to return.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object[]} items The list of jobs.
+ */
 router.get('/jobs', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const key =
@@ -64,7 +107,18 @@ router.get('/jobs', authenticateToken, requireAdmin, async (req, res) => {
   }
 })
 
-// POST /api/admin/queues/jobs/retry { queue: 'gameActions', jobId: '...' }
+/**
+ * @api {post} /api/admin/queues/jobs/retry Retry a failed job
+ * @apiName RetryJob
+ * @apiGroup AdminQueues
+ * @apiPermission admin
+ *
+ * @apiBody {String} [queue=gameActions] The name of the queue.
+ * @apiBody {String} jobId The ID of the job to retry.
+ *
+ * @apiSuccess {Boolean} success Whether the job was successfully retried.
+ * @apiSuccess {String} message A message indicating the result of the retry attempt.
+ */
 router.post('/jobs/retry', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const key =

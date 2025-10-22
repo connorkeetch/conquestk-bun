@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the CapitalGeneratorService class, which is responsible for generating
+ * optimal starting capital positions for maps. It uses a maximin distance algorithm to ensure that
+ * capitals are as spread out as possible.
+ * @module services/capitalGeneratorService
+ */
 import { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import type { Pool } from 'pg'
 import { logger } from '../utils/logger.js'
@@ -22,15 +28,22 @@ interface CapitalAssignments {
 }
 
 /**
- * Service for generating optimal capital positions using maximin distance algorithm
- * Capitals are calculated once during map creation and stored for game use
+ * Service for generating optimal capital positions using a maximin distance algorithm.
+ * The capitals are calculated once during map creation and stored for later use in games.
+ * @class CapitalGeneratorService
  */
 export class CapitalGeneratorService {
+  /**
+   * Creates an instance of CapitalGeneratorService.
+   * @param {Pool} db - The PostgreSQL connection pool.
+   */
   constructor(private db: Pool) {}
 
   /**
-   * Generate capital assignments for all player counts (2-12)
-   * This is called once when a map is created/edited
+   * Generates capital assignments for all player counts (from 2 up to 12).
+   * This method is intended to be called when a map is created or edited.
+   * @param {string} mapId - The ID of the map for which to generate capitals.
+   * @returns {Promise<CapitalAssignments>} A promise that resolves to an object containing the capital assignments for each player count.
    */
   async generateCapitalsForMap(mapId: string): Promise<CapitalAssignments> {
     try {
@@ -93,8 +106,14 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Core algorithm: Select capitals maximizing minimum distance between them
-   * Uses a greedy approach with maximin distance heuristic
+   * The core algorithm for selecting optimal capitals. It uses a greedy approach with a maximin distance heuristic
+   * to select a set of capitals that are as far apart from each other as possible.
+   * @private
+   * @param {Territory[]} territories - The list of territories to choose from.
+   * @param {Map<string, Set<string>>} graph - The adjacency graph of the map.
+   * @param {number} count - The number of capitals to select.
+   * @param {DeterministicRng} rng - A deterministic random number generator for fallbacks.
+   * @returns {string[]} An array of territory IDs representing the selected capitals.
    */
   private selectOptimalCapitals(
     territories: Territory[],
@@ -158,8 +177,12 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Find the territory with the best "centrality" score
-   * Centrality = low total distance to all territories + high connection count
+   * Finds the most "central" territory on the map, which is used as the starting point for capital selection.
+   * Centrality is determined by the total distance to all other territories and the number of connections.
+   * @private
+   * @param {Territory[]} territories - The list of territories.
+   * @param {Map<string, Set<string>>} graph - The adjacency graph of the map.
+   * @returns {string} The ID of the most central territory.
    */
   private findMostCentralTerritory(
     territories: Territory[],
@@ -197,8 +220,12 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * BFS (Breadth-First Search) to find shortest path distance between territories
-   * Returns Infinity if territories are not connected
+   * Calculates the shortest path distance between two territories using a Breadth-First Search (BFS).
+   * @private
+   * @param {string} from - The starting territory ID.
+   * @param {string} to - The ending territory ID.
+   * @param {Map<string, Set<string>>} graph - The adjacency graph of the map.
+   * @returns {number} The shortest distance, or Infinity if the territories are not connected.
    */
   private getDistance(from: string, to: string, graph: Map<string, Set<string>>): number {
     if (from === to) return 0
@@ -231,7 +258,12 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Find minimum distance from a candidate to any existing capital
+   * Finds the minimum distance from a candidate territory to any of the existing capitals.
+   * @private
+   * @param {string} candidateId - The ID of the candidate territory.
+   * @param {string[]} capitals - An array of the current capital territory IDs.
+   * @param {Map<string, Set<string>>} graph - The adjacency graph of the map.
+   * @returns {number} The minimum distance.
    */
   private getMinDistanceToCapitals(
     candidateId: string,
@@ -249,8 +281,12 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Calculate total distance from one territory to all others
-   * Used for centrality calculation
+   * Calculates the total distance from one territory to all other territories in a given list.
+   * @private
+   * @param {string} from - The starting territory ID.
+   * @param {string[]} allTerritories - An array of all territory IDs to calculate the distance to.
+   * @param {Map<string, Set<string>>} graph - The adjacency graph of the map.
+   * @returns {number} The sum of all distances.
    */
   private getTotalDistanceToAll(
     from: string,
@@ -269,8 +305,11 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Find all connected components in the graph
-   * Returns array of territory groups that are connected to each other
+   * Finds all connected components in the map's graph.
+   * @private
+   * @param {Territory[]} territories - The list of all territories.
+   * @param {Map<string, Set<string>>} graph - The adjacency graph of the map.
+   * @returns {Territory[][]} An array of arrays, where each inner array is a connected component.
    */
   private findConnectedComponents(
     territories: Territory[],
@@ -316,7 +355,11 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Build bidirectional adjacency graph from territories and adjacencies
+   * Builds a bidirectional adjacency graph from the list of territories and their adjacencies.
+   * @private
+   * @param {Territory[]} territories - The list of territories.
+   * @param {Adjacency[]} adjacencies - The list of adjacencies.
+   * @returns {Map<string, Set<string>>} The constructed adjacency graph.
    */
   private buildAdjacencyGraph(
     territories: Territory[],
@@ -342,7 +385,10 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Get all territories for a map from the database
+   * Retrieves all territories for a given map from the database.
+   * @private
+   * @param {string} mapId - The ID of the map.
+   * @returns {Promise<Territory[]>} A promise that resolves to an array of territories.
    */
   private async getTerritories(mapId: string): Promise<Territory[]> {
     const result = await this.db.query(
@@ -356,7 +402,10 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Get all adjacencies for territories in a map
+   * Retrieves all adjacencies for a given map from the database.
+   * @private
+   * @param {string} mapId - The ID of the map.
+   * @returns {Promise<Adjacency[]>} A promise that resolves to an array of adjacencies.
    */
   private async getAdjacencies(mapId: string): Promise<Adjacency[]> {
     const result = await this.db.query(
@@ -379,7 +428,11 @@ export class CapitalGeneratorService {
   }
 
   /**
-   * Manually update capitals for a specific player count
+   * Manually updates the capital assignments for a specific player count.
+   * @param {string} mapId - The ID of the map.
+   * @param {number} playerCount - The player count for which to update the capitals.
+   * @param {string[]} territoryIds - An array of territory IDs to be set as capitals.
+   * @returns {Promise<void>} A promise that resolves when the update is complete.
    */
   async updateCapitalsForPlayerCount(
     mapId: string,

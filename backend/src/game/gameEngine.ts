@@ -39,6 +39,14 @@ import {
   redeemSet,
 } from './hiddenTreasures.js'
 
+/**
+ * The GameEngine class is responsible for managing the state of a game,
+ * processing player actions, and enforcing game rules. It is designed to be
+ * deterministic and stateless, with all game state passed in and returned from
+ * its methods.
+ *
+ * @class GameEngine
+ */
 export class GameEngine {
   // Cache modifiers per room to prevent memory leaks
   private gameModifiersCache: Map<string, Map<string, GameTerritoryModifier>> = new Map()
@@ -75,12 +83,27 @@ export class GameEngine {
   }
 
   /**
-   * Clear cached modifiers for a specific room (call when game ends)
+   * Clears the cached territory modifiers for a specific game room. This should
+   * be called when a game ends to prevent memory leaks.
+   *
+   * @param {string} roomId - The ID of the room to clear from the cache.
    */
   clearModifiersCache(roomId: string): void {
     this.gameModifiersCache.delete(roomId)
   }
 
+  /**
+   * Initializes a new game state from a set of player configurations, game
+   * settings, and map data. This method sets up the game board, distributes
+   * territories, and prepares the game for the first turn.
+   *
+   * @param {string} roomId - The unique identifier for the game room.
+   * @param {Array<{ userId: string; username?: string; teamId?: number | null; isAi?: boolean; aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null; aiPersonalitySeed?: number | null; skillRating?: number | null; }>} playerConfigs - An array of player configurations.
+   * @param {GameConfiguration} gameConfig - The configuration for the game.
+   * @param {{ territories: Territory[]; sectorBonuses: SectorBonus[]; }} mapOverrides - The map data, including territories and sector bonuses.
+   * @param {{ rngSeed?: string }} [options] - Optional parameters, including an RNG seed.
+   * @returns {GameState} The initial state of the game.
+   */
   initializeGame(
     roomId: string,
     playerConfigs: Array<{
@@ -190,6 +213,15 @@ export class GameEngine {
     return gameState
   }
 
+  /**
+   * Processes a player action and returns the updated game state. This method
+   * is the main entry point for all player actions, and it delegates to the
+   * appropriate handler based on the action type.
+   *
+   * @param {GameState} gameState - The current state of the game.
+   * @param {GameAction} action - The action to be processed.
+   * @returns {Promise<ProcessActionResult>} A promise that resolves to the result of the action, including the new game state.
+   */
   async processAction(gameState: GameState, action: GameAction): Promise<ProcessActionResult> {
     const newState = { ...gameState }
     // Increment version on every state mutation for desync detection
@@ -236,6 +268,13 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Validates a player action against the current game state and rules.
+   *
+   * @param {GameState} gameState - The current state of the game.
+   * @param {GameAction} action - The action to be validated.
+   * @returns {boolean} `true` if the action is valid, otherwise `false`.
+   */
   validateAction(gameState: GameState, action: GameAction): boolean {
     if (action.type === 'resign') {
       return this.validateResign(gameState, action as ResignAction)
@@ -1002,6 +1041,15 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Calculates the number of reinforcement armies a player should receive at the
+   * beginning of their turn.
+   *
+   * @param {string[]} playerTerritories - An array of territory IDs owned by the player.
+   * @param {Territory[]} allTerritories - An array of all territories on the board.
+   * @param {GameConfiguration} [gameConfig] - The configuration for the game.
+   * @returns {number} The number of reinforcement armies.
+   */
   calculateReinforcementArmies(
     playerTerritories: string[],
     allTerritories: Territory[],
@@ -1298,6 +1346,18 @@ export class GameEngine {
     return result
   }
 
+  /**
+   * Transfers armies from a conquering territory to a newly conquered territory.
+   * This action is only valid immediately after a successful attack that results
+   * in a conquest.
+   *
+   * @param {GameState} gameState - The current state of the game.
+   * @param {string} playerId - The ID of the player performing the transfer.
+   * @param {string} fromTerritoryId - The ID of the territory to move armies from.
+   * @param {string} toTerritoryId - The ID of the territory to move armies to.
+   * @param {number} armies - The number of armies to transfer.
+   * @returns {GameState} The updated game state.
+   */
   transferConquestArmies(
     gameState: GameState,
     playerId: string,
@@ -1639,7 +1699,15 @@ export class GameEngine {
     gameState.conqueredDuringTurn = false
   }
 
-  // Get valid fortify targets for a given source territory
+  /**
+   * Gets a list of valid target territories for a fortification move from a
+   * given source territory.
+   *
+   * @param {GameState} gameState - The current state of the aame.
+   * @param {string} fromTerritoryId - The ID of the source territory.
+   * @param {string} playerId - The ID of the player performing the fortification.
+   * @returns {string[]} An array of valid target territory IDs.
+   */
   getValidFortifyTargets(
     gameState: GameState,
     fromTerritoryId: string,
@@ -1666,6 +1734,14 @@ export class GameEngine {
     return validTargets
   }
 
+  /**
+   * Calculates the base number of reinforcement armies for a player, without
+   * accounting for any armies already placed during the reinforcement phase.
+   *
+   * @param {GameState} gameState - The current state of the game.
+   * @param {string} playerId - The ID of the player.
+   * @returns {number} The base number of reinforcement armies.
+   */
   calculateBaseReinforcementArmies(gameState: GameState, playerId: string): number {
     const player = gameState.players.find((p) => p.id === playerId)
     if (!player) {
@@ -1679,6 +1755,12 @@ export class GameEngine {
     )
   }
 
+  /**
+   * Advances the game to the next phase.
+   *
+   * @param {GameState} gameState - The current state of the game.
+   * @returns {GameState} The updated game state.
+   */
   advancePhase(gameState: GameState): GameState {
     return this.handleEndTurn(gameState)
   }
@@ -2275,7 +2357,12 @@ export class GameEngine {
     return null
   }
 
-  // Check if game should end after territory conquest
+  /**
+   * Checks if the game should end after a territory conquest.
+   *
+   * @param {GameState} gameState - The current state of the game.
+   * @returns {{ gameEnded: boolean; winner: GamePlayer | null; eliminatedPlayers: string[]; }} An object indicating whether the game has ended, the winner (if any), and a list of eliminated players.
+   */
   checkGameEnd(gameState: GameState): {
     gameEnded: boolean
     winner: GamePlayer | null

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for handling user blocking and the conversation/messaging system.
+ * It includes endpoints for creating and managing user blocks, creating and managing conversations (DMs, groups, games),
+ * sending messages, and listing conversations and messages.
+ * @module routes/messages
+ */
 import { type Request, type Response, Router } from 'express'
 import { requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -28,6 +34,15 @@ import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 
+/**
+ * Route to create a block between the authenticated user and another user.
+ * @name POST /messages/blocks
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, containing the `blockedUserId` in the body.
+ * @param {Response} res - The Express response object, returning the created block record.
+ * @returns {Promise<void>}
+ */
 router.post('/blocks', authenticateToken, async (req: Request, res: Response) => {
   try {
     const blockerId = req.userId
@@ -53,6 +68,15 @@ router.post('/blocks', authenticateToken, async (req: Request, res: Response) =>
   }
 })
 
+/**
+ * Route to remove a block between the authenticated user and another user.
+ * @name DELETE /messages/blocks/:blockedUserId
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, with `blockedUserId` as a URL parameter.
+ * @param {Response} res - The Express response object, indicating the success of the removal.
+ * @returns {Promise<void>}
+ */
 router.delete('/blocks/:blockedUserId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const blockerId = req.userId
@@ -70,6 +94,15 @@ router.delete('/blocks/:blockedUserId', authenticateToken, async (req: Request, 
   }
 })
 
+/**
+ * Route to get a list of all users blocked by the authenticated user.
+ * @name GET /messages/blocks
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the list of block records.
+ * @returns {Promise<void>}
+ */
 router.get('/blocks', authenticateToken, async (req: Request, res: Response) => {
   try {
     const records = await getBlocksForUser(req.userId)
@@ -80,6 +113,16 @@ router.get('/blocks', authenticateToken, async (req: Request, res: Response) => 
   }
 })
 
+/**
+ * Route for admins to get a list of all block records.
+ * This endpoint is protected by admin authentication and supports filtering by blocker or blocked user, with pagination.
+ * @name GET /messages/blocks/admin
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, which can contain query parameters for filtering and pagination.
+ * @param {Response} res - The Express response object, containing the list of block records.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/blocks/admin',
   authenticateToken,
@@ -112,6 +155,11 @@ router.get(
   },
 )
 
+/**
+ * Maps a ConversationError to an appropriate HTTP status code.
+ * @param {ConversationError} error - The conversation error to map.
+ * @returns {number} The corresponding HTTP status code.
+ */
 const mapConversationErrorToStatus = (error: ConversationError): number => {
   switch (error.code) {
     case 'INVALID_TARGET':
@@ -129,6 +177,16 @@ const mapConversationErrorToStatus = (error: ConversationError): number => {
   }
 }
 
+/**
+ * Route to ensure a direct message (DM) conversation exists between the authenticated user and a target user.
+ * If a conversation doesn't exist, it will be created.
+ * @name POST /messages/dm
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, containing the `targetUserId` in the body.
+ * @param {Response} res - The Express response object, returning the DM conversation details.
+ * @returns {Promise<void>}
+ */
 router.post('/dm', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { targetUserId } = req.body ?? {}
@@ -149,6 +207,15 @@ router.post('/dm', authenticateToken, async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * Route to create a new group conversation.
+ * @name POST /messages/conversations
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, containing the conversation details (kind, title, memberIds, metadata).
+ * @param {Response} res - The Express response object, returning the newly created conversation.
+ * @returns {Promise<void>}
+ */
 router.post('/conversations', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { kind, title, memberIds, metadata } = req.body ?? {}
@@ -186,6 +253,15 @@ router.post('/conversations', authenticateToken, async (req: Request, res: Respo
   }
 })
 
+/**
+ * Route to add one or more members to a conversation.
+ * @name POST /messages/conversations/:conversationId/members
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, with `conversationId` as a URL parameter and `memberIds` in the body.
+ * @param {Response} res - The Express response object, returning the updated list of members.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/conversations/:conversationId/members',
   authenticateToken,
@@ -217,6 +293,15 @@ router.post(
   },
 )
 
+/**
+ * Route for the authenticated user to leave a conversation.
+ * @name POST /messages/conversations/:conversationId/leave
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, with `conversationId` as a URL parameter.
+ * @param {Response} res - The Express response object, indicating the success of the operation.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/conversations/:conversationId/leave',
   authenticateToken,
@@ -237,6 +322,16 @@ router.post(
   },
 )
 
+/**
+ * Route to remove a member from a conversation.
+ * This is typically an admin or group owner action.
+ * @name DELETE /messages/conversations/:conversationId/members/:memberId
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, with `conversationId` and `memberId` as URL parameters.
+ * @param {Response} res - The Express response object, indicating the success of the removal.
+ * @returns {Promise<void>}
+ */
 router.delete(
   '/conversations/:conversationId/members/:memberId',
   authenticateToken,
@@ -262,7 +357,15 @@ router.delete(
   },
 )
 
-// Place the unread summary route before parameterized routes to avoid matching "unread" as an ID
+/**
+ * Route to get a summary of unread conversations for the authenticated user.
+ * @name GET /messages/conversations/unread
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, containing the unread conversation summary.
+ * @returns {Promise<void>}
+ */
 router.get('/conversations/unread', authenticateToken, async (req: Request, res: Response) => {
   try {
     const summary = await getUnreadSummary(req.userId)
@@ -273,6 +376,16 @@ router.get('/conversations/unread', authenticateToken, async (req: Request, res:
   }
 })
 
+/**
+ * Route to get the details of a specific conversation.
+ * It can also mark the conversation as read.
+ * @name GET /messages/conversations/:conversationId
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, with `conversationId` as a URL parameter.
+ * @param {Response} res - The Express response object, containing the conversation details.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/conversations/:conversationId',
   authenticateToken,
@@ -304,6 +417,16 @@ router.get(
   },
 )
 
+/**
+ * Route to send a message to a conversation.
+ * This endpoint is rate-limited.
+ * @name POST /messages/conversations/:conversationId/messages
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, with `conversationId` as a URL parameter and message data in the body.
+ * @param {Response} res - The Express response object, returning the sent message.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/conversations/:conversationId/messages',
   messageLimiter,
@@ -344,6 +467,16 @@ router.post(
   },
 )
 
+/**
+ * Route to ensure a game conversation exists for a given game ID.
+ * If a conversation doesn't exist, it will be created.
+ * @name POST /messages/conversations/game
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, containing the `gameId` in the body.
+ * @param {Response} res - The Express response object, returning the game conversation details.
+ * @returns {Promise<void>}
+ */
 router.post('/conversations/game', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { gameId } = req.body ?? {}
@@ -368,6 +501,16 @@ router.post('/conversations/game', authenticateToken, async (req: Request, res: 
   }
 })
 
+/**
+ * Route to ensure a team conversation exists for a given game and team ID.
+ * If a conversation doesn't exist, it will be created.
+ * @name POST /messages/conversations/team
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, containing the `gameId` and `teamId` in the body.
+ * @param {Response} res - The Express response object, returning the team conversation details.
+ * @returns {Promise<void>}
+ */
 router.post('/conversations/team', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { gameId, teamId } = req.body ?? {}
@@ -395,6 +538,15 @@ router.post('/conversations/team', authenticateToken, async (req: Request, res: 
   }
 })
 
+/**
+ * Route to list all conversations for the authenticated user, with pagination.
+ * @name GET /messages/conversations
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, which can contain `limit` and `offset` query parameters.
+ * @param {Response} res - The Express response object, containing the list of conversations.
+ * @returns {Promise<void>}
+ */
 router.get('/conversations', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { limit, offset } = req.query
@@ -421,6 +573,15 @@ router.get('/conversations', authenticateToken, async (req: Request, res: Respon
   }
 })
 
+/**
+ * Route to list messages in a conversation, with pagination.
+ * @name GET /messages/conversations/:conversationId/messages
+ * @function
+ * @memberof module:routes/messages
+ * @param {Request} req - The Express request object, with `conversationId` as a URL parameter and optional `before` and `limit` query parameters.
+ * @param {Response} res - The Express response object, containing the list of messages.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/conversations/:conversationId/messages',
   authenticateToken,

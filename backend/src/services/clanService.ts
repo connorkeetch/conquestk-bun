@@ -1,3 +1,7 @@
+/**
+ * @fileoverview This service provides functionalities for managing clans, including creation, retrieval, and member management.
+ * @module services/clanService
+ */
 import type { PoolClient } from 'pg'
 import { query, transaction } from '../config/database.js'
 import type {
@@ -18,6 +22,10 @@ import type {
 import { logClanActivity } from './clanActivityService.js'
 import { clanProgressionService } from './clanProgressionService.js'
 
+/**
+ * @interface ClanRow
+ * @description Represents the database schema for a clan row.
+ */
 interface ClanRow {
   id: string
   owner_user_id: string
@@ -45,6 +53,10 @@ interface ClanRow {
   owner_username?: string | null
 }
 
+/**
+ * @interface ClanMemberRow
+ * @description Represents the database schema for a clan member row.
+ */
 interface ClanMemberRow {
   id: string
   clan_id: string
@@ -63,6 +75,10 @@ interface ClanMemberRow {
   hierarchy_rank?: number | string | null
 }
 
+/**
+ * @interface ClanAnnouncementRow
+ * @description Represents the database schema for a clan announcement row.
+ */
 interface ClanAnnouncementRow {
   id: string
   clan_id: string
@@ -75,6 +91,10 @@ interface ClanAnnouncementRow {
   expires_at?: string | Date | null
 }
 
+/**
+ * @interface ClanActivityRow
+ * @description Represents the database schema for a clan activity log row.
+ */
 interface ClanActivityRow {
   id: string
   clan_id: string
@@ -86,9 +106,19 @@ interface ClanActivityRow {
   actor_username: string | null
 }
 
+/**
+ * @class ClanServiceError
+ * @extends Error
+ * @description Custom error class for clan service operations.
+ */
 export class ClanServiceError extends Error {
   code: string
 
+  /**
+   * @constructor
+   * @param {string} code - The error code.
+   * @param {string} message - The error message.
+   */
   constructor(code: string, message: string) {
     super(message)
     this.code = code
@@ -150,7 +180,17 @@ const DEFAULT_ROLE_DEFINITIONS = [
   },
 ] as const
 
+/**
+ * @class ClanService
+ * @description Provides services for managing clans.
+ */
 export class ClanService {
+  /**
+   * Normalizes a clan name.
+   * @param {string} name - The clan name to normalize.
+   * @returns {string} The normalized clan name.
+   * @private
+   */
   private normalizeName(name: string): string {
     const trimmed = name.trim()
     if (trimmed.length < 3) {
@@ -162,6 +202,12 @@ export class ClanService {
     return trimmed
   }
 
+  /**
+   * Normalizes a clan tag.
+   * @param {string} tag - The clan tag to normalize.
+   * @returns {string} The normalized clan tag.
+   * @private
+   */
   private normalizeTag(tag: string): string {
     const normalized = tag.trim().toUpperCase()
     if (!/^[A-Z0-9]{2,5}$/.test(normalized)) {
@@ -173,6 +219,12 @@ export class ClanService {
     return normalized
   }
 
+  /**
+   * Normalizes a clan's recruitment policy.
+   * @param {ClanRecruitmentPolicy} [policy] - The recruitment policy to normalize.
+   * @returns {ClanRecruitmentPolicy} The normalized recruitment policy.
+   * @private
+   */
   private normalizeRecruitmentPolicy(policy?: ClanRecruitmentPolicy): ClanRecruitmentPolicy {
     if (!policy) {
       return 'application'
@@ -180,6 +232,12 @@ export class ClanService {
     return policy
   }
 
+  /**
+   * Normalizes the base for a clan slug from a clan name.
+   * @param {string} name - The clan name.
+   * @returns {string} The normalized slug base.
+   * @private
+   */
   private normalizeSlugBase(name: string): string {
     const lower = name.toLowerCase()
     const slug = lower
@@ -191,6 +249,12 @@ export class ClanService {
     return slug || `clan-${Date.now()}`
   }
 
+  /**
+   * Maps a database row to a Clan object.
+   * @param {ClanRow} row - The database row.
+   * @returns {Clan} The mapped clan object.
+   * @private
+   */
   private mapClan(row: ClanRow): Clan {
     return {
       id: row.id,
@@ -225,6 +289,12 @@ export class ClanService {
     }
   }
 
+  /**
+   * Maps a database row to a ClanMember object.
+   * @param {ClanMemberRow} row - The database row.
+   * @returns {ClanMember} The mapped clan member object.
+   * @private
+   */
   private mapMember(row: ClanMemberRow): ClanMember {
     return {
       id: row.id,
@@ -254,6 +324,12 @@ export class ClanService {
     }
   }
 
+  /**
+   * Maps a database row to a ClanAnnouncement object.
+   * @param {ClanAnnouncementRow} row - The database row.
+   * @returns {ClanAnnouncement} The mapped clan announcement object.
+   * @private
+   */
   private mapAnnouncement(row: ClanAnnouncementRow): ClanAnnouncement {
     return {
       id: row.id,
@@ -268,6 +344,13 @@ export class ClanService {
     }
   }
 
+  /**
+   * Builds the WHERE conditions for the clan list query.
+   * @param {ClanListFilters} filters - The filters to apply.
+   * @param {unknown[]} values - The array of values for the query parameters.
+   * @returns {string} The SQL WHERE clause.
+   * @private
+   */
   private buildListConditions(filters: ClanListFilters, values: unknown[]): string {
     const clauses: string[] = ['c.deleted_at IS NULL']
 
@@ -308,6 +391,13 @@ export class ClanService {
     return clauses.join(' AND ')
   }
 
+  /**
+   * Builds the complete SQL query for listing clans with filters.
+   * @param {ClanListFilters} filters - The filters to apply.
+   * @param {unknown[]} values - The array of values for the query parameters.
+   * @returns {string} The complete SQL query.
+   * @private
+   */
   private buildListQuery(filters: ClanListFilters, values: unknown[]): string {
     const limit = Math.min(Math.max(filters.limit ?? 20, 1), 50)
     values.push(limit + 1)
@@ -346,6 +436,13 @@ export class ClanService {
     `
   }
 
+  /**
+   * Ensures that a clan slug is unique, appending a suffix if necessary.
+   * @param {string} baseSlug - The base slug to check.
+   * @param {PoolClient} client - The database client.
+   * @returns {Promise<string>} A unique slug.
+   * @private
+   */
   private async ensureUniqueSlug(baseSlug: string, client: PoolClient): Promise<string> {
     let candidate = baseSlug
     let suffix = 1
@@ -360,6 +457,11 @@ export class ClanService {
     }
   }
 
+  /**
+   * Lists clans based on a set of filters.
+   * @param {ClanListFilters} [filters={}] - The filters to apply.
+   * @returns {Promise<ClanListResult>} A list of clans and a cursor for pagination.
+   */
   async listClans(filters: ClanListFilters = {}): Promise<ClanListResult> {
     const values: unknown[] = []
     const sql = this.buildListQuery(filters, values)
@@ -378,6 +480,11 @@ export class ClanService {
     return { clans, nextCursor }
   }
 
+  /**
+   * Retrieves detailed information for a clan by its slug.
+   * @param {string} slug - The slug of the clan.
+   * @returns {Promise<ClanDetails | null>} The detailed clan information, or null if not found.
+   */
   async getClanBySlug(slug: string): Promise<ClanDetails | null> {
     const sql = `
       SELECT
@@ -477,6 +584,11 @@ export class ClanService {
     }
   }
 
+  /**
+   * Retrieves basic clan information by its ID.
+   * @param {string} clanId - The ID of the clan.
+   * @returns {Promise<Clan | null>} The clan information, or null if not found.
+   */
   async getClanById(clanId: string): Promise<Clan | null> {
     const result = await query<ClanRow>(
       'SELECT * FROM clans WHERE id = $1 AND deleted_at IS NULL',
@@ -489,6 +601,13 @@ export class ClanService {
     return this.mapClan(row)
   }
 
+  /**
+   * Creates a new clan.
+   * @param {string} ownerUserId - The ID of the user creating the clan.
+   * @param {ClanCreateRequest} payload - The data for the new clan.
+   * @returns {Promise<ClanDetails>} The details of the newly created clan.
+   * @throws {ClanServiceError} If the user is already in a clan.
+   */
   async createClan(ownerUserId: string, payload: ClanCreateRequest): Promise<ClanDetails> {
     const name = this.normalizeName(payload.name)
     const tag = this.normalizeTag(payload.tag)
@@ -606,6 +725,13 @@ export class ClanService {
     return clanDetails
   }
 
+  /**
+   * Retrieves the ID of a specific role in a clan by its name.
+   * @param {string} clanId - The ID of the clan.
+   * @param {string} roleName - The name of the role.
+   * @param {PoolClient} [client] - Optional database client for transactions.
+   * @returns {Promise<string | null>} The role ID, or null if not found.
+   */
   async getMemberRoleId(
     clanId: string,
     roleName: string,
@@ -626,6 +752,11 @@ export class ClanService {
     return result.rows[0]?.id ?? null
   }
 
+  /**
+   * Retrieves the active clan membership for a given user.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<{clanId: string, clanSlug: string, clanName: string, roleName?: string | null, status: ClanMember-Status} | null>} The user's active membership, or null if they are not in a clan.
+   */
   async getActiveMembership(userId: string): Promise<{
     clanId: string
     clanSlug: string

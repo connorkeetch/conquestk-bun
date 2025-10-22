@@ -20,11 +20,28 @@ import { handleRouteError } from '../utils/routeErrorHandler.js'
 import { parseJsonField, parseTags } from '../utils/tagParser.js'
 import { resolveAssetUrl } from '../utils/url.js'
 
+/**
+ * @fileoverview This file contains the Express routes for managing maps.
+ * It includes routes for creating, updating, deleting, and listing maps,
+ * as well as managing map content like territories and sectors. Many routes
+ * in this file are protected by the `authenticateToken` middleware.
+ * @module routes/maps
+ */
 const router = Router()
 
+/**
+ * A type alias for query parameters, which can be a string, number, boolean, array of strings, or null.
+ * @typedef {string | number | boolean | string[] | null} QueryParam
+ */
 type QueryParam = string | number | boolean | string[] | null
 
-// Configure multer for image uploads (memory storage to support direct CDN uploads)
+/**
+ * Multer instance configured for handling image uploads.
+ * It uses memory storage to support direct uploads to a CDN.
+ * It also sets limits for file size, file count, and fields, and includes a file filter
+ * to allow only specific image MIME types and extensions.
+ * @const {object}
+ */
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -49,7 +66,10 @@ const upload = multer({
   },
 })
 
-// Validation middleware
+/**
+ * An array of Express-validator middleware for validating the request body when creating a new map.
+ * @type {Array<import('express-validator').ValidationChain>}
+ */
 const validateCreateMap = [
   body('name').isLength({ min: 1, max: 100 }).withMessage('Map name must be 1-100 characters'),
   body('description')
@@ -97,6 +117,10 @@ const validateCreateMap = [
     .withMessage('Metadata must be a valid JSON object or string'),
 ]
 
+/**
+ * An array of Express-validator middleware for validating the request body when updating a map.
+ * @type {Array<import('express-validator').ValidationChain>}
+ */
 const validateUpdateMap = [
   param('mapId').isUUID().withMessage('Invalid map ID'),
   body('name')
@@ -111,6 +135,10 @@ const validateUpdateMap = [
   body('tags').optional().isArray().withMessage('Tags must be an array'),
 ]
 
+/**
+ * An array of Express-validator middleware for validating the request body when creating a new territory.
+ * @type {Array<import('express-validator').ValidationChain>}
+ */
 const validateCreateTerritory = [
   param('mapId').isUUID().withMessage('Invalid map ID'),
   body('territoryId')
@@ -131,6 +159,10 @@ const validateCreateTerritory = [
     .withMessage('Army position Y must be a positive integer'),
 ]
 
+/**
+ * An array of Express-validator middleware for validating the request body when creating a new sector.
+ * @type {Array<import('express-validator').ValidationChain>}
+ */
 const validateCreateSector = [
   param('mapId').isUUID().withMessage('Invalid map ID'),
   body('name').isLength({ min: 1, max: 100 }).withMessage('Sector name must be 1-100 characters'),
@@ -138,6 +170,10 @@ const validateCreateSector = [
   body('color').optional().isHexColor().withMessage('Color must be a valid hex color'),
 ]
 
+/**
+ * An array of Express-validator middleware for validating the request body when creating a new adjacency.
+ * @type {Array<import('express-validator').ValidationChain>}
+ */
 const validateCreateAdjacency = [
   body('fromTerritoryId').isUUID().withMessage('Invalid from territory ID'),
   body('toTerritoryId').isUUID().withMessage('Invalid to territory ID'),
@@ -148,6 +184,10 @@ const validateCreateAdjacency = [
   body('isBidirectional').optional().isBoolean().withMessage('isBidirectional must be boolean'),
 ]
 
+/**
+ * An array of Express-validator middleware for validating the request body when rating a map.
+ * @type {Array<import('express-validator').ValidationChain>}
+ */
 const validateRating = [
   param('mapId').isUUID().withMessage('Invalid map ID'),
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be 1-5'),
@@ -157,7 +197,15 @@ const validateRating = [
     .withMessage('Review must be under 1000 characters'),
 ]
 
-// Middleware to check validation results
+/**
+ * Middleware function to check for validation errors from express-validator.
+ * If validation errors are found, it sends a 400 Bad Request response with the errors.
+ * Otherwise, it passes control to the next middleware.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next middleware function.
+ * @returns {void}
+ */
 const checkValidation = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
@@ -166,7 +214,16 @@ const checkValidation = (req: Request, res: Response, next: NextFunction) => {
   return next()
 }
 
-// Multer error handling middleware
+/**
+ * Middleware function to handle errors from Multer.
+ * It checks for specific Multer errors, such as file size limits, and sends an appropriate
+ * 400 Bad Request response. For other errors, it passes them to the next error-handling middleware.
+ * @param {unknown} error - The error object, which could be a MulterError or other Error.
+ * @param {Request} _req - The Express request object (unused).
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next middleware function.
+ * @returns {void}
+ */
 const handleMulterError = (error: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -189,7 +246,16 @@ const handleMulterError = (error: unknown, _req: Request, res: Response, next: N
 
 // ============= PUBLIC ROUTES =============
 
-// Get maps specifically for game creation (approved maps, plus VIP maps for eligible creators)
+/**
+ * Route to get maps that are available for game creation.
+ * It fetches approved maps and optionally includes VIP maps if the user is authenticated and has the appropriate permissions.
+ * @name GET /maps/available-for-game
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object containing the list of available maps.
+ * @returns {Promise<void>}
+ */
 router.get('/available-for-game', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
@@ -302,7 +368,16 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
   }
 })
 
-// Get all public maps with filtering and pagination
+/**
+ * Route to get a list of public maps.
+ * This endpoint supports filtering by status and tags, as well as sorting and pagination.
+ * @name GET /maps
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, which can contain query parameters for filtering, sorting, and pagination.
+ * @param {Response} res - The Express response object containing the list of public maps.
+ * @returns {Promise<void>}
+ */
 router.get('/', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
@@ -423,7 +498,15 @@ router.get('/', async (req: Request, res: Response) => {
   }
 })
 
-// Get user's maps (both routes for compatibility)
+/**
+ * Route to get the maps created by the currently authenticated user.
+ * @name GET /maps/my-maps
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object containing the list of the user's maps.
+ * @returns {Promise<void>}
+ */
 router.get('/my-maps', authenticateToken, async (req: Request, res: Response) => {
   try {
     const filters = {
@@ -467,7 +550,15 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
   }
 })
 
-// Legacy route for compatibility
+/**
+ * Legacy route to get the maps created by the currently authenticated user.
+ * @name GET /maps/my/maps
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object containing the list of the user's maps.
+ * @returns {Promise<void>}
+ */
 router.get('/my/maps', authenticateToken, async (req: Request, res: Response) => {
   try {
     const filters = {
@@ -486,7 +577,17 @@ router.get('/my/maps', authenticateToken, async (req: Request, res: Response) =>
   }
 })
 
-// Get specific map details
+/**
+ * Route to get the full details of a specific map, including territories, sectors, and adjacencies.
+ * Access is granted if the map is public or if the requester is the map's creator.
+ * It also attaches responsive image variants (AVIF/WebP) if they are available.
+ * @name GET /maps/:mapId
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, with `mapId` as a URL parameter.
+ * @param {Response} res - The Express response object containing the map data.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/:mapId',
   param('mapId').isUUID().withMessage('Invalid map ID'),
@@ -581,7 +682,17 @@ router.get(
   },
 )
 
-// Validate a map's playability (owner or public maps)
+/**
+ * Route to validate a map's playability.
+ * This checks if the map has a valid structure for starting a game, such as having enough territories and sectors.
+ * Access is restricted to the map owner or collaborators for non-public maps.
+ * @name GET /maps/:mapId/validate
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, with `mapId` as a URL parameter.
+ * @param {Response} res - The Express response object containing the validation result.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/:mapId/validate',
   authenticateToken,
@@ -618,7 +729,15 @@ router.get(
   },
 )
 
-// Get game modes
+/**
+ * Route to get a list of available game modes.
+ * @name GET /maps/game-modes/list
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} _req - The Express request object (unused).
+ * @param {Response} res - The Express response object containing the list of game modes.
+ * @returns {Promise<void>}
+ */
 router.get('/game-modes/list', async (_req: Request, res: Response) => {
   try {
     const gameModes = await mapService.getGameModes()
@@ -629,7 +748,15 @@ router.get('/game-modes/list', async (_req: Request, res: Response) => {
   }
 })
 
-// Get territory ability types
+/**
+ * Route to get a list of available territory ability types.
+ * @name GET /maps/abilities/list
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} _req - The Express request object (unused).
+ * @param {Response} res - The Express response object containing the list of territory abilities.
+ * @returns {Promise<void>}
+ */
 router.get('/abilities/list', async (_req: Request, res: Response) => {
   try {
     const abilities = await mapService.getTerritoryAbilityTypes()
@@ -642,7 +769,16 @@ router.get('/abilities/list', async (_req: Request, res: Response) => {
 
 // ============= AUTHENTICATED ROUTES =============
 
-// Create new map (JSON with base64 image)
+/**
+ * Route to create a new map from JSON data.
+ * This endpoint is authenticated and expects the map data, including an optional base64-encoded image, in the request body.
+ * @name POST /maps/json
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map data in the body.
+ * @param {Response} res - The Express response object, which will contain the newly created map.
+ * @returns {Promise<void>}
+ */
 router.post('/json', authenticateToken, async (req: Request, res: Response) => {
   try {
     logger.info('Creating map with JSON data:', {
@@ -768,7 +904,17 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
   }
 })
 
-// Create new map (FormData - backward compatibility)
+/**
+ * Route to create a new map from FormData.
+ * This is a backward-compatible endpoint that handles multipart/form-data, including an image upload.
+ * It is protected by authentication and validation middleware.
+ * @name POST /maps
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing form data for the new map.
+ * @param {Response} res - The Express response object, which will contain the newly created map.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/',
   authenticateToken,
@@ -857,7 +1003,17 @@ router.post(
   },
 )
 
-// Update map
+/**
+ * Route to update an existing map.
+ * This endpoint handles both JSON data and FormData for updates, including uploading a new map image.
+ * It is protected by authentication and validation middleware, and it checks for map ownership or admin privileges.
+ * @name PUT /maps/:mapId
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID and the update data.
+ * @param {Response} res - The Express response object, which will contain the updated map.
+ * @returns {Promise<void>}
+ */
 router.put(
   '/:mapId',
   authenticateToken,
@@ -916,7 +1072,16 @@ router.put(
   },
 )
 
-// Delete map
+/**
+ * Route to delete a map.
+ * This endpoint is protected by authentication and ensures that only the map owner or an admin can delete the map.
+ * @name DELETE /maps/:mapId
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID to be deleted.
+ * @param {Response} res - The Express response object, which will return a success message.
+ * @returns {Promise<void>}
+ */
 router.delete(
   '/:mapId',
   authenticateToken,
@@ -947,7 +1112,16 @@ router.delete(
 
 // ============= TERRITORY MANAGEMENT =============
 
-// Create sector
+/**
+ * Route to create a new sector for a map.
+ * This endpoint is protected by authentication and requires the user to have edit permissions for the map.
+ * @name POST /maps/:mapId/sectors
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID and sector data.
+ * @param {Response} res - The Express response object, which will return the newly created sector.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/:mapId/sectors',
   authenticateToken,
@@ -985,7 +1159,16 @@ router.post(
   },
 )
 
-// Create territory
+/**
+ * Route to create a new territory for a map.
+ * This endpoint is protected by authentication and requires the user to have edit permissions for the map.
+ * @name POST /maps/:mapId/territories
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID and territory data.
+ * @param {Response} res - The Express response object, which will return the newly created territory.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/:mapId/territories',
   authenticateToken,
@@ -1037,7 +1220,16 @@ router.post(
   },
 )
 
-// Create adjacency
+/**
+ * Route to create an adjacency between two territories.
+ * This endpoint is protected by authentication and requires the user to have edit permissions for the territories involved.
+ * @name POST /maps/adjacencies
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the adjacency data.
+ * @param {Response} res - The Express response object, which will return the newly created adjacency.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/adjacencies',
   authenticateToken,
@@ -1078,7 +1270,16 @@ router.post(
 
 // ============= RATING SYSTEM =============
 
-// Rate a map
+/**
+ * Route to rate a map.
+ * This endpoint allows an authenticated user to submit a rating and an optional review for a map.
+ * @name POST /maps/:mapId/rate
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID, rating, and review.
+ * @param {Response} res - The Express response object, which will return the new rating.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/:mapId/rate',
   authenticateToken,
@@ -1103,7 +1304,16 @@ router.post(
 
 // ============= CAPITAL ASSIGNMENTS =============
 
-// Generate capitals for all player counts
+/**
+ * Route to generate capital assignments for all player counts for a given map.
+ * This endpoint is protected by authentication and requires the user to have edit permissions for the map.
+ * @name POST /maps/:mapId/generate-capitals
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID.
+ * @param {Response} res - The Express response object, which will return the generated capital assignments.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/:mapId/generate-capitals',
   authenticateToken,
@@ -1158,7 +1368,16 @@ router.post(
   },
 )
 
-// Update capitals for a specific player count
+/**
+ * Route to update the capital assignments for a specific player count on a map.
+ * This endpoint is protected by authentication and requires the user to have edit permissions for the map.
+ * @name PATCH /maps/:mapId/capitals/:playerCount
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID, player count, and new territory IDs for capitals.
+ * @param {Response} res - The Express response object, which will return a success message along with the updated capitals.
+ * @returns {Promise<void>}
+ */
 router.patch(
   '/:mapId/capitals/:playerCount',
   authenticateToken,
@@ -1213,7 +1432,16 @@ router.patch(
   },
 )
 
-// Get current capital assignments
+/**
+ * Route to get the current capital assignments for a map.
+ * Access is granted for public maps or if the user has edit permissions for the map.
+ * @name GET /maps/:mapId/capitals
+ * @function
+ * @memberof module:routes/maps
+ * @param {Request} req - The Express request object, containing the map ID.
+ * @param {Response} res - The Express response object, which will return the capital assignments and metadata.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/:mapId/capitals',
   param('mapId').isUUID().withMessage('Invalid map ID'),

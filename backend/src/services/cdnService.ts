@@ -1,6 +1,16 @@
+/**
+ * @fileoverview This file defines the CDNService class, which manages all aspects of the Content Delivery Network.
+ * This includes initializing CDN providers, configuring asset optimization and versioning, generating asset URLs,
+ * and monitoring the performance and health of the CDN.
+ * @module services/cdnService
+ */
 import { join } from 'node:path'
 import { logger } from '../utils/logger.js'
 
+/**
+ * @interface CDNProvider
+ * @description Represents a CDN provider's configuration.
+ */
 interface CDNProvider {
   name: string
   baseUrl: string
@@ -9,6 +19,10 @@ interface CDNProvider {
   apiKey?: string
 }
 
+/**
+ * @interface AssetConfig
+ * @description Represents the configuration for a specific type of asset.
+ */
 interface AssetConfig {
   path: string
   type: 'image' | 'script' | 'style' | 'font' | 'audio' | 'video' | 'document'
@@ -18,6 +32,10 @@ interface AssetConfig {
   version?: string
 }
 
+/**
+ * @interface PerformanceMetrics
+ * @description Represents the performance metrics of the CDN.
+ */
 interface PerformanceMetrics {
   cdnHits: number
   cdnMisses: number
@@ -27,6 +45,10 @@ interface PerformanceMetrics {
   cacheHitRate: number
 }
 
+/**
+ * @interface ProviderHealthCheck
+ * @description Represents the result of a health check for a single CDN provider.
+ */
 interface ProviderHealthCheck {
   provider: string
   healthy: boolean
@@ -34,6 +56,10 @@ interface ProviderHealthCheck {
   error?: string
 }
 
+/**
+ * @interface CDNHealthDetails
+ * @description Represents the detailed health status of the entire CDN service.
+ */
 interface CDNHealthDetails {
   totalProviders: number
   healthyProviders: number
@@ -41,6 +67,10 @@ interface CDNHealthDetails {
   checks: Array<ProviderHealthCheck | { error: unknown }>
 }
 
+/**
+ * A service class for managing the Content Delivery Network.
+ * @class CDNService
+ */
 export class CDNService {
   private providers: CDNProvider[] = []
   private assetConfigs: Map<string, AssetConfig> = new Map()
@@ -83,6 +113,10 @@ export class CDNService {
     },
   } as const
 
+  /**
+   * Initializes the CDN service by setting up providers, asset configurations, and versioning.
+   * @returns {Promise<void>} A promise that resolves when the service is initialized.
+   */
   async initialize(): Promise<void> {
     try {
       logger.info('🔄 Initializing CDN Service...')
@@ -106,6 +140,11 @@ export class CDNService {
     }
   }
 
+  /**
+   * Initializes the CDN providers from environment variables.
+   * @private
+   * @returns {Promise<void>}
+   */
   private async initializeCDNProviders(): Promise<void> {
     // Primary CDN (e.g., CloudFlare, AWS CloudFront)
     const primaryCDN = process.env.CDN_PRIMARY_URL
@@ -167,6 +206,11 @@ export class CDNService {
     logger.info(`🌐 Configured ${this.providers.length} CDN providers`)
   }
 
+  /**
+   * Configures asset optimization rules based on predefined settings.
+   * @private
+   * @returns {Promise<void>}
+   */
   private async configureAssetOptimization(): Promise<void> {
     const _publicPath = join(process.cwd(), 'public')
 
@@ -197,6 +241,11 @@ export class CDNService {
     logger.info(`📁 Configured optimization for ${this.assetConfigs.size} asset types`)
   }
 
+  /**
+   * Generates versions for assets to enable cache busting.
+   * @private
+   * @returns {Promise<void>}
+   */
   private async generateAssetVersions(): Promise<void> {
     try {
       const _publicPath = join(process.cwd(), 'public')
@@ -214,7 +263,14 @@ export class CDNService {
     }
   }
 
-  // Asset URL generation with CDN selection
+  /**
+   * Generates the full URL for an asset, selecting the optimal CDN provider based on region or preference.
+   * @param {string} assetPath - The path to the asset.
+   * @param {object} [options] - Options for URL generation.
+   * @param {string} [options.region='global'] - The region to select a CDN for.
+   * @param {string} [options.provider] - A preferred CDN provider to use.
+   * @returns {string} The full CDN URL for the asset.
+   */
   getAssetUrl(assetPath: string, options: { region?: string; provider?: string } = {}): string {
     const { region = 'global', provider } = options
 
@@ -237,6 +293,13 @@ export class CDNService {
     return cdnUrl
   }
 
+  /**
+   * Selects the best CDN provider based on region and preference.
+   * @private
+   * @param {string} region - The target region.
+   * @param {string} [preferredProvider] - A preferred provider name.
+   * @returns {CDNProvider | null} The selected CDN provider, or null if none are available.
+   */
   private selectProvider(region: string, preferredProvider?: string): CDNProvider | null {
     if (preferredProvider) {
       const provider = this.providers.find((p) => p.name === preferredProvider)
@@ -251,6 +314,12 @@ export class CDNService {
     return regionalProvider || this.providers[0] || null
   }
 
+  /**
+   * Gets the asset configuration for a given asset path.
+   * @private
+   * @param {string} assetPath - The path to the asset.
+   * @returns {AssetConfig | null} The configuration for the asset, or null if not found.
+   */
   private getAssetConfig(assetPath: string): AssetConfig | null {
     // Use URLPattern if available (Node.js 24+) for better performance
     if (typeof URLPattern !== 'undefined') {
@@ -278,7 +347,10 @@ export class CDNService {
     return null
   }
 
-  // Asset preloading for critical resources
+  /**
+   * Generates `<link>` tags for preloading critical assets.
+   * @returns {string[]} An array of HTML preload and prefetch tags.
+   */
   generatePreloadTags(): string[] {
     const preloadTags: string[] = []
 
@@ -309,7 +381,10 @@ export class CDNService {
     return preloadTags
   }
 
-  // Resource hints for performance optimization
+  /**
+   * Generates `<link>` tags for resource hints like `dns-prefetch` and `preconnect`.
+   * @returns {string[]} An array of HTML resource hint tags.
+   */
   generateResourceHints(): string[] {
     const hints: string[] = []
 
@@ -328,7 +403,16 @@ export class CDNService {
     return hints
   }
 
-  // Image optimization with responsive breakpoints
+  /**
+   * Generates a `<picture>` element with responsive image sources.
+   * @param {string} imagePath - The path to the base image.
+   * @param {string} alt - The alt text for the image.
+   * @param {object} [options] - Options for the image tag.
+   * @param {string} [options.sizes='100vw'] - The sizes attribute for the `<img>` tag.
+   * @param {'lazy' | 'eager'} [options.loading='lazy'] - The loading attribute.
+   * @param {boolean} [options.priority=false] - Whether to add `fetchpriority="high"`.
+   * @returns {string} The HTML for the responsive image.
+   */
   generateResponsiveImageTag(
     imagePath: string,
     alt: string,
@@ -367,7 +451,12 @@ export class CDNService {
     `.trim()
   }
 
-  // Cache management and purging
+  /**
+   * Purges the cache for specified assets or tags across all configured CDN providers.
+   * @param {string[]} [assetPaths=[]] - An array of asset paths to purge.
+   * @param {string[]} [tags=[]] - An array of cache tags to purge.
+   * @returns {Promise<boolean>} A promise that resolves to true if the purge was successful for at least one provider.
+   */
   async purgeCache(assetPaths: string[] = [], tags: string[] = []): Promise<boolean> {
     const purgePromises = this.providers.map(async (provider) => {
       if (!provider.apiKey) return false
@@ -398,7 +487,11 @@ export class CDNService {
     return successful > 0
   }
 
-  // Performance monitoring
+  /**
+   * Records a CDN cache hit and updates performance metrics.
+   * @param {number} loadTime - The load time of the asset in milliseconds.
+   * @param {number} bandwidth - The bandwidth used in bytes.
+   */
   recordCDNHit(loadTime: number, bandwidth: number): void {
     this.metrics.cdnHits++
     this.metrics.totalRequests++
@@ -414,12 +507,19 @@ export class CDNService {
     this.metrics.cacheHitRate = (this.metrics.cdnHits / this.metrics.totalRequests) * 100
   }
 
+  /**
+   * Records a CDN cache miss and updates performance metrics.
+   */
   recordCDNMiss(): void {
     this.metrics.cdnMisses++
     this.metrics.totalRequests++
     this.metrics.cacheHitRate = (this.metrics.cdnHits / this.metrics.totalRequests) * 100
   }
 
+  /**
+   * Retrieves the current performance metrics for the CDN service.
+   * @returns {PerformanceMetrics & { providers: number; totalAssetConfigs: number }} An object containing the performance metrics.
+   */
   getMetrics(): PerformanceMetrics & { providers: number; totalAssetConfigs: number } {
     return {
       ...this.metrics,
@@ -428,6 +528,10 @@ export class CDNService {
     }
   }
 
+  /**
+   * Performs a health check on all configured CDN providers.
+   * @returns {Promise<{status: 'healthy' | 'unhealthy' | 'not_configured', details: CDNHealthDetails}>} A promise that resolves to an object containing the overall health status and detailed results for each provider.
+   */
   async healthCheck(): Promise<{
     status: 'healthy' | 'unhealthy' | 'not_configured'
     details: CDNHealthDetails

@@ -8,6 +8,10 @@ import type {
 import { logClanActivity } from './clanActivityService.js'
 import { clanService } from './clanService.js'
 
+/**
+ * @interface ClanApplicationRow
+ * @description Represents the database schema for a clan application row.
+ */
 interface ClanApplicationRow {
   id: string
   clan_id: string
@@ -29,15 +33,30 @@ const APPLICATION_STATUS_ORDER: Record<ClanApplicationStatus, number> = {
 
 const ACTIVE_MEMBER_STATUSES: ClanMemberStatus[] = ['active']
 
+/**
+ * @class ClanMembershipServiceError
+ * @extends Error
+ * @description Custom error class for clan membership service operations.
+ */
 export class ClanMembershipServiceError extends Error {
   code: string
 
+  /**
+   * @constructor
+   * @param {string} code - The error code.
+   * @param {string} message - The error message.
+   */
   constructor(code: string, message: string) {
     super(message)
     this.code = code
   }
 }
 
+/**
+ * Maps a database row to a ClanApplication object.
+ * @param {ClanApplicationRow} row - The database row.
+ * @returns {ClanApplication} The mapped clan application.
+ */
 const mapApplication = (row: ClanApplicationRow): ClanApplication => ({
   id: row.id,
   clanId: row.clan_id,
@@ -50,7 +69,19 @@ const mapApplication = (row: ClanApplicationRow): ClanApplication => ({
   updatedAt: row.updated_at,
 })
 
+/**
+ * @class ClanMembershipService
+ * @description Provides services for managing clan memberships, applications, and roles.
+ */
 export class ClanMembershipService {
+  /**
+   * Submits an application to join a clan.
+   * @param {string} userId - The ID of the user applying.
+   * @param {string} clanId - The ID of the clan to apply to.
+   * @param {string | null} [message] - An optional message with the application.
+   * @returns {Promise<ClanApplication>} The newly created clan application.
+   * @throws {ClanMembershipServiceError} If the clan is not found, not accepting members, or the user is already in a clan or has a pending application.
+   */
   async applyToClan(
     userId: string,
     clanId: string,
@@ -134,6 +165,13 @@ export class ClanMembershipService {
     return mapApplication(applicationRow)
   }
 
+  /**
+   * Ensures that a user has the necessary permissions to review clan applications.
+   * @param {ClanMemberStatus} status - The membership status of the user.
+   * @param {Record<string, boolean>} [permissions] - The permissions of the user.
+   * @private
+   * @throws {ClanMembershipServiceError} If the user is not an active member or lacks the 'manage_applications' permission.
+   */
   private ensureCanReview(status: ClanMemberStatus, permissions?: Record<string, boolean>): void {
     if (!ACTIVE_MEMBER_STATUSES.includes(status)) {
       throw new ClanMembershipServiceError(
@@ -150,6 +188,15 @@ export class ClanMembershipService {
     }
   }
 
+  /**
+   * Reviews a clan application, accepting or rejecting it.
+   * @param {string} reviewerId - The ID of the user reviewing the application.
+   * @param {string} clanId - The ID of the clan.
+   * @param {string} applicationId - The ID of the application to review.
+   * @param {'accepted' | 'rejected'} decision - The decision on the application.
+   * @returns {Promise<ClanApplication>} The updated clan application.
+   * @throws {ClanMembershipServiceError} If the application is not found, has already been reviewed, or the reviewer lacks permission.
+   */
   async reviewApplication(
     reviewerId: string,
     clanId: string,
@@ -265,6 +312,11 @@ export class ClanMembershipService {
     return mapApplication(updatedApplication)
   }
 
+  /**
+   * Retrieves the active clan membership for a given user.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<ClanMember | null>} The user's clan membership, or null if they are not in a clan.
+   */
   async getMembershipForUser(userId: string): Promise<ClanMember | null> {
     const result = await query<{
       id: string
