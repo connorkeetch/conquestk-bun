@@ -4,12 +4,17 @@ import { logger } from '../utils/logger.js'
 
 let redisClient: IORedis | null = null
 
+/**
+ * Represents the collection of Redis clients used in the application.
+ */
 export interface RedisClients {
+  /** The primary Redis client for general use. */
   redisClient: IORedis | null
 }
 
 /**
- * Initialize Redis clients for different purposes
+ * Initializes the Redis client.
+ * @returns {Promise<RedisClients>} A promise that resolves with the Redis clients.
  */
 export async function initializeRedis(): Promise<RedisClients> {
   // Prefer Railway private reference. Fall back to a public TLS URL if provided.
@@ -197,19 +202,16 @@ export async function initializeRedis(): Promise<RedisClients> {
 }
 
 /**
- * Get the Redis client instance
+ * Gets the singleton instance of the Redis client.
+ * @returns {IORedis | null} The Redis client instance, or null if not initialized.
  */
 export function getRedisClient(): IORedis | null {
   return redisClient
 }
 
 /**
- * Get pub/sub clients for Socket.io
- */
-// Pub/Sub clients removed; single client is used for Streams adapter
-
-/**
- * Graceful shutdown
+ * Gracefully closes all Redis connections.
+ * @returns {Promise<void>} A promise that resolves when the connections are closed.
  */
 export async function closeRedisConnections(): Promise<void> {
   const clients = [redisClient].filter(Boolean)
@@ -224,7 +226,8 @@ export async function closeRedisConnections(): Promise<void> {
 }
 
 /**
- * Health check for Redis
+ * Checks the health of the Redis connection.
+ * @returns {Promise<{ healthy: boolean; message: string }>} A promise that resolves with the health status.
  */
 export async function checkRedisHealth(): Promise<{ healthy: boolean; message: string }> {
   if (!redisClient) {
@@ -246,10 +249,10 @@ export async function checkRedisHealth(): Promise<{ healthy: boolean; message: s
 }
 
 /**
- * Acquire a distributed lock using Redis
- * @param key Lock key (e.g., 'lock:game:room123')
- * @param ttlMs Lock TTL in milliseconds (default 5000ms)
- * @returns Lock token if acquired, null otherwise
+ * Acquires a distributed lock using Redis.
+ * @param {string} key The lock key (e.g., 'lock:game:room123').
+ * @param {number} [ttlMs=5000] The lock's time-to-live in milliseconds.
+ * @returns {Promise<string | null>} A promise that resolves with a lock token if acquired, otherwise null.
  */
 export async function acquireLock(key: string, ttlMs = 5000): Promise<string | null> {
   if (!redisClient) {
@@ -263,9 +266,10 @@ export async function acquireLock(key: string, ttlMs = 5000): Promise<string | n
 }
 
 /**
- * Release a distributed lock using Redis
- * @param key Lock key
- * @param token Lock token returned from acquireLock
+ * Releases a distributed lock using Redis.
+ * @param {string} key The lock key.
+ * @param {string} token The lock token returned from acquireLock.
+ * @returns {Promise<void>} A promise that resolves when the lock is released.
  */
 export async function releaseLock(key: string, token: string): Promise<void> {
   if (!redisClient) {

@@ -15,11 +15,19 @@ import type { AuthenticatedRequest } from '../types/express.js'
 import type { GameAction, TreasureConfig } from '../types/game.js'
 import { logger } from '../utils/logger.js'
 
+/**
+ * Handles game-related requests, including creating and managing game rooms and game state.
+ */
 export class GameController {
   private gameRoomService = new GameRoomService()
   private lifecycleService = new GameLifecycleService()
   private gameService = new GameService()
 
+  /**
+   * Gets a list of active game rooms.
+   * @param {Request} _req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   getRooms = async (_req: Request, res: Response) => {
     try {
       const rooms = await this.gameRoomService.getActiveRooms()
@@ -30,6 +38,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Creates a new game room.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   createRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
@@ -200,8 +213,11 @@ export class GameController {
   }
 
   /**
-   * HTTP fallback for submitting a game action when WebSocket is unavailable.
-   * Designed to be used with Background Sync from the PWA service worker.
+   * Submits a game action.
+   * This is an HTTP fallback for submitting a game action when WebSocket is unavailable.
+   * It is designed to be used with Background Sync from the PWA service worker.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   submitAction = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -264,8 +280,11 @@ export class GameController {
   }
 
   /**
-   * HTTP fallback for transferring conquest armies after a capture.
+   * Transfers armies after a successful conquest.
+   * This is an HTTP fallback for transferring conquest armies after a capture.
    * Accepts JSON body: { fromTerritoryId, toTerritoryId, armies }
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   transferConquest = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -312,6 +331,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Updates a player's team assignment.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   updateTeamAssignment = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -376,6 +400,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Sets a player's ready state.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   setReadyState = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -421,6 +450,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Joins a game room.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   joinRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -468,6 +502,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Leaves a game room.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   leaveRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -487,7 +526,11 @@ export class GameController {
     }
   }
 
-  // Host-only close for lobbies that haven't started
+  /**
+   * Closes a game room. This can only be done by the host and only if the game has not started.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   closeRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -518,6 +561,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Updates the AI opponents in a game room.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   updateAiOpponents = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -605,6 +653,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Gets the details of a game room.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   getRoomDetails = async (req: Request, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -622,6 +675,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Gets the current state of a game.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   getRoomState = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params
@@ -706,6 +764,11 @@ export class GameController {
     }
   }
 
+  /**
+   * Gets a list of games that the current user is a part of.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   getMyGames = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.userId
@@ -771,7 +834,12 @@ export class GameController {
     }
   }
 
-  // Aggregate queue/timer metadata for all of the current user's games
+  /**
+   * Gets metadata for all of the current user's games.
+   * This includes information about the current turn, timers, and queue position.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   getMyGamesMeta = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.userId
@@ -890,9 +958,11 @@ export class GameController {
     }
   }
 
-  // (intentionally blank to avoid exposing legacy route handler)
-
-  // Fog-aware textual backfill for game logs
+  /**
+   * Gets the game log for a room, with fog-of-war applied.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   getRoomLogText = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId: rawRoom } = req.params

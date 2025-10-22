@@ -9,9 +9,14 @@ import type { AuthenticatedRequest } from '../types/express.js'
 import type { MapDraft, MapStatus } from '../types/maps.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * Handles requests related to the map creation and review workflow.
+ */
 export class MapWorkflowController {
   /**
-   * Save a draft
+   * Saves a map draft.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async saveDraft(req: AuthenticatedRequest, res: Response) {
     try {
@@ -37,7 +42,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Get user's drafts
+   * Gets the drafts for the currently authenticated user.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async getUserDrafts(req: AuthenticatedRequest, res: Response) {
     try {
@@ -61,6 +68,11 @@ export class MapWorkflowController {
     }
   }
 
+  /**
+   * Gets a specific draft by its ID.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   async getDraft(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.userId
@@ -87,6 +99,11 @@ export class MapWorkflowController {
     }
   }
 
+  /**
+   * Publishes a draft, creating a new map from it.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   async publishDraft(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.userId
@@ -110,7 +127,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Submit map for review
+   * Submits a map for review.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async submitForReview(req: AuthenticatedRequest, res: Response) {
     try {
@@ -146,7 +165,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Get pending reviews (admin only)
+   * Gets a list of maps that are pending review. (Admin only)
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async getPendingReviews(req: AuthenticatedRequest, res: Response) {
     try {
@@ -171,7 +192,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Approve map (admin only)
+   * Approves a map. (Admin only)
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async approveMap(req: AuthenticatedRequest, res: Response) {
     try {
@@ -209,7 +232,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Reject map (admin only)
+   * Rejects a map. (Admin only)
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async rejectMap(req: AuthenticatedRequest, res: Response) {
     try {
@@ -254,7 +279,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Get admin notifications
+   * Gets admin notifications for the map workflow.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async getAdminNotifications(req: AuthenticatedRequest, res: Response) {
     try {
@@ -283,7 +310,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Mark notification as read
+   * Marks a notification as read.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async markNotificationRead(req: AuthenticatedRequest, res: Response) {
     try {
@@ -311,7 +340,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Archive map (admin only)
+   * Archives a map. (Admin only)
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async archiveMap(req: AuthenticatedRequest, res: Response) {
     try {
@@ -347,7 +378,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Toggle map featured status (admin only)
+   * Toggles the featured status of a map. (Admin only)
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async toggleFeatured(req: AuthenticatedRequest, res: Response) {
     try {
@@ -383,7 +416,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Get maps by status (admin only)
+   * Gets a list of maps by their status. (Admin only)
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async getMapsByStatus(req: AuthenticatedRequest, res: Response) {
     try {
@@ -419,7 +454,9 @@ export class MapWorkflowController {
   }
 
   /**
-   * Get map submission history
+   * Gets the submission history for a map.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
    */
   async getMapHistory(req: AuthenticatedRequest, res: Response) {
     try {

@@ -62,6 +62,10 @@ const DEFAULT_CONFIG: Required<TreasureConfig> = {
   diamondSetBonus: 3,
 }
 
+/**
+ * Returns a copy of the default treasure configuration.
+ * @returns {TreasureConfig} The default treasure configuration.
+ */
 export const getDefaultTreasureConfig = (): TreasureConfig => ({ ...DEFAULT_CONFIG })
 
 export const clampDiamondsPercent = (value: number): number => {

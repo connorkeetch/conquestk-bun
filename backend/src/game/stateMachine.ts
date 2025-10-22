@@ -22,6 +22,12 @@ function isAllowedPhase(phase: unknown): phase is GamePhase {
   )
 }
 
+/**
+ * Asserts that the game state satisfies all invariants. Throws an error if
+ * any invariant is violated.
+ *
+ * @param {GameState} state - The game state to check.
+ */
 export function assertInvariants(state: GameState): void {
   if (!isAllowedPhase(state.phase)) {
     throw new Error(`Illegal game phase: ${String(state.phase)}`)
@@ -52,6 +58,14 @@ export function assertInvariants(state: GameState): void {
   }
 }
 
+/**
+ * Checks if the game state is terminal (i.e., if there is a winner). If the
+ * game is terminal, it updates the game state to reflect the winner and returns
+ * `true`.
+ *
+ * @param {GameState} state - The game state to check.
+ * @returns {boolean} `true` if the game is terminal, otherwise `false`.
+ */
 export function finalizeIfTerminal(state: GameState): boolean {
   const active = state.players.filter((p) => !p.isEliminated)
   if (active.length === 0) {

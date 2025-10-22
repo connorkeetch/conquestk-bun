@@ -15,10 +15,24 @@ import {
 } from '../services/friendService.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * This file contains the routes for managing friendships.
+ * It includes routes for listing friends, managing friend requests, and viewing friendship status.
+ * All routes in this file are protected by the `authenticateToken` middleware.
+ */
+
 const router = Router()
 
 router.use(authenticateToken)
 
+/**
+ * @api {get} /friends List all friends
+ * @apiName ListFriends
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiSuccess {Object[]} friends The list of friends.
+ */
 router.get('/', async (req: Request, res: Response) => {
   try {
     const friends = await listFriends(req.userId)
@@ -29,6 +43,14 @@ router.get('/', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * @api {get} /friends/requests List pending friend requests
+ * @apiName ListFriendRequests
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiSuccess {Object} result The list of pending friend requests.
+ */
 router.get('/requests', async (req: Request, res: Response) => {
   try {
     const result = await listPendingRequests(req.userId)
@@ -39,6 +61,17 @@ router.get('/requests', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * @api {get} /friends/status/:otherUserId Get the friendship status with another user
+ * @apiName GetFriendshipStatus
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiParam {String} otherUserId The ID of the other user.
+ *
+ * @apiSuccess {String} status The friendship status.
+ * @apiSuccess {String} [since] The date the friendship was accepted.
+ */
 router.get('/status/:otherUserId', async (req: Request, res: Response) => {
   try {
     const { otherUserId } = req.params
@@ -63,6 +96,17 @@ router.get('/status/:otherUserId', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * @api {get} /friends/mutual/:otherUserId Get mutual friends with another user
+ * @apiName GetMutualFriends
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiParam {String} otherUserId The ID of the other user.
+ * @apiParam {Number} [limit=6] The maximum number of mutual friends to return.
+ *
+ * @apiSuccess {Object} result The list of mutual friends.
+ */
 router.get('/mutual/:otherUserId', async (req: Request, res: Response) => {
   try {
     const { otherUserId } = req.params
@@ -75,6 +119,16 @@ router.get('/mutual/:otherUserId', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * @api {post} /friends/requests Send a friend request
+ * @apiName SendFriendRequest
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiBody {String} targetUserId The ID of the user to send the request to.
+ *
+ * @apiSuccess {Object} request The created friend request.
+ */
 router.post('/requests', async (req: Request, res: Response) => {
   try {
     const { targetUserId } = req.body ?? {}
@@ -102,6 +156,17 @@ router.post('/requests', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * @api {post} /friends/requests/:requesterId/accept Accept a friend request
+ * @apiName AcceptFriendRequest
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiParam {String} requesterId The ID of the user who sent the request.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} friendship The created friendship.
+ */
 router.post('/requests/:requesterId/accept', async (req: Request, res: Response) => {
   try {
     const { requesterId } = req.params
@@ -118,6 +183,16 @@ router.post('/requests/:requesterId/accept', async (req: Request, res: Response)
   }
 })
 
+/**
+ * @api {post} /friends/requests/:requesterId/decline Decline a friend request
+ * @apiName DeclineFriendRequest
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiParam {String} requesterId The ID of the user who sent the request.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ */
 router.post('/requests/:requesterId/decline', async (req: Request, res: Response) => {
   try {
     const { requesterId } = req.params
@@ -129,6 +204,16 @@ router.post('/requests/:requesterId/decline', async (req: Request, res: Response
   }
 })
 
+/**
+ * @api {delete} /friends/requests/:targetUserId Cancel an outgoing friend request
+ * @apiName CancelFriendRequest
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiParam {String} targetUserId The ID of the user to whom the request was sent.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ */
 router.delete('/requests/:targetUserId', async (req: Request, res: Response) => {
   try {
     const { targetUserId } = req.params
@@ -140,6 +225,16 @@ router.delete('/requests/:targetUserId', async (req: Request, res: Response) => 
   }
 })
 
+/**
+ * @api {delete} /friends/:friendId Remove a friend
+ * @apiName RemoveFriend
+ * @apiGroup Friends
+ * @apiPermission user
+ *
+ * @apiParam {String} friendId The ID of the friend to remove.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ */
 router.delete('/:friendId', async (req: Request, res: Response) => {
   try {
     const { friendId } = req.params

@@ -17,6 +17,12 @@ declare module 'express-serve-static-core' {
   }
 }
 
+/**
+ * Middleware that requires the user to be an admin.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
+ */
 export const requireAdmin: RequestHandler = async (
   req: Request,
   res: Response,
@@ -65,6 +71,11 @@ export const requireAdmin: RequestHandler = async (
   }
 }
 
+/**
+ * Middleware that requires the user to have a specific permission.
+ * @param {string} permission - The permission to require.
+ * @returns {RequestHandler} The Express middleware function.
+ */
 export const requirePermission = (permission: string): RequestHandler => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -113,6 +124,11 @@ export const requirePermission = (permission: string): RequestHandler => {
   }
 }
 
+/**
+ * Middleware that logs admin activity.
+ * @param {string} actionType - The type of action to log.
+ * @returns {RequestHandler} The Express middleware function.
+ */
 export const logAdminActivity = (actionType: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     // Store original send function

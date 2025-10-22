@@ -2,6 +2,12 @@ import { computeRollOdds } from './combatOdds.js'
 
 // Optional precomputed lookup table; can be injected at runtime by frontend
 let precomputed: number[][] | null = null
+/**
+ * Injects a precomputed lookup table for battle outcomes. This is used by the
+ * frontend to avoid expensive calculations.
+ *
+ * @param {number[][]} data - The precomputed outcome data.
+ */
 export function setPrecomputedOutcomes(data: number[][]) {
   precomputed = data
 }
@@ -144,6 +150,13 @@ function expectedDefendersGivenLoss(a: number, d: number): number {
   return val
 }
 
+/**
+ * Computes the probability of an attacker winning a battle.
+ *
+ * @param {number} attArmies - The number of attacking armies.
+ * @param {number} defArmies - The number of defending armies.
+ * @returns {number} The probability of the attacker winning.
+ */
 export function computeConquestProbability(attArmies: number, defArmies: number): number {
   const a = Math.max(0, Math.floor(attArmies))
   const d = Math.max(0, Math.floor(defArmies))
@@ -154,6 +167,14 @@ export function computeConquestProbability(attArmies: number, defArmies: number)
   return winProb(a, d)
 }
 
+/**
+ * Computes the odds of a conquest, including the win probability and expected
+ * army counts.
+ *
+ * @param {number} attArmies - The number of attacking armies.
+ * @param {number} defArmies - The number of defending armies.
+ * @returns {ConquestOdds} An object containing the conquest odds.
+ */
 export function computeConquestOdds(attArmies: number, defArmies: number): ConquestOdds {
   const a = Math.max(0, Math.floor(attArmies))
   const d = Math.max(0, Math.floor(defArmies))

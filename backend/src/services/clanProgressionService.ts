@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Service for managing clan progression, including experience, levels, and objectives.
+ * @module services/clanProgressionService
+ */
 import type { PoolClient } from 'pg'
 import { query, transaction } from '../config/database.js'
 import type {
@@ -9,11 +13,19 @@ import type {
 } from '../types/clans.js'
 import { logClanActivity } from './clanActivityService.js'
 
+/**
+ * @interface ClanProgressionRow
+ * @description Represents the database schema for a clan's progression row.
+ */
 interface ClanProgressionRow {
   total_xp: string | number
   level: string | number
 }
 
+/**
+ * @interface ClanObjectiveRow
+ * @description Represents the database schema for a clan objective row.
+ */
 interface ClanObjectiveRow {
   id: string
   clan_id: string
@@ -25,12 +37,20 @@ interface ClanObjectiveRow {
   reward: Record<string, unknown> | string | null
 }
 
+/**
+ * @interface ObjectiveTemplate
+ * @description Defines the structure for a clan objective template.
+ */
 interface ObjectiveTemplate {
   objectiveType: ClanObjectiveType
   targetValue: number
   reward: Record<string, unknown>
 }
 
+/**
+ * @interface AwardContributionOptions
+ * @description Represents the options for awarding a contribution to a clan.
+ */
 interface AwardContributionOptions {
   clanId: string
   userId: string
@@ -68,26 +88,59 @@ const DEFAULT_OBJECTIVE_POOL: ObjectiveTemplate[] = [
   },
 ]
 
+/**
+ * Clamps a number between a minimum and maximum value.
+ * @param {number} value - The number to clamp.
+ * @param {number} min - The minimum value.
+ * @param {number} max - The maximum value.
+ * @returns {number} The clamped number.
+ */
 const clamp = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max)
 }
 
+/**
+ * @class ClanProgressionServiceError
+ * @extends Error
+ * @description Custom error class for clan progression service operations.
+ */
 export class ClanProgressionServiceError extends Error {
   code: string
 
+  /**
+   * @constructor
+   * @param {string} code - The error code.
+   * @param {string} message - The error message.
+   */
   constructor(code: string, message: string) {
     super(message)
     this.code = code
   }
 }
 
+/**
+ * @class ClanProgressionService
+ * @description Manages clan progression, including experience, levels, and objectives.
+ */
 class ClanProgressionService {
+  /**
+   * Gets the experience required to advance from a given level.
+   * @param {number} level - The current level.
+   * @returns {number} The experience required for the next level.
+   * @private
+   */
   private getLevelIncrement(level: number): number {
     const base = 1000
     const step = 500
     return base + (level - 1) * step
   }
 
+  /**
+   * Calculates the clan's level and progression based on total experience points.
+   * @param {number} totalXp - The total experience points of the clan.
+   * @returns {{level: number, currentLevelXp: number, nextLevelXp: number, xpIntoLevel: number, xpToNextLevel: number, progressPercent: number}} An object containing detailed level and progression information.
+   * @private
+   */
   private calculateLevelInternal(totalXp: number): {
     level: number
     currentLevelXp: number
@@ -122,6 +175,13 @@ class ClanProgressionService {
     }
   }
 
+  /**
+   * Maps the calculated level progression to a ClanProgressionSummary object.
+   * @param {string} clanId - The ID of the clan.
+   * @param {number} totalXp - The total experience points of the clan.
+   * @returns {ClanProgressionSummary} The clan progression summary.
+   * @private
+   */
   private mapProgression(clanId: string, totalXp: number): ClanProgressionSummary {
     const calculated = this.calculateLevelInternal(totalXp)
     return {
@@ -136,6 +196,12 @@ class ClanProgressionService {
     }
   }
 
+  /**
+   * Maps a database row to a ClanObjective object.
+   * @param {ClanObjectiveRow} row - The database row.
+   * @returns {ClanObjective} The mapped clan objective.
+   * @private
+   */
   private mapObjective(row: ClanObjectiveRow): ClanObjective {
     return {
       id: row.id,
@@ -158,6 +224,13 @@ class ClanProgressionService {
     }
   }
 
+  /**
+   * Retrieves the progression row for a clan from the database.
+   * @param {string} clanId - The ID of the clan.
+   * @param {PoolClient} [client] - Optional database client for transactions.
+   * @returns {Promise<ClanProgressionRow | null>} The clan progression row, or null if not found.
+   * @private
+   */
   private async getProgressionRow(
     clanId: string,
     client?: PoolClient,
@@ -172,6 +245,13 @@ class ClanProgressionService {
     return rows[0] ?? null
   }
 
+  /**
+   * Selects a set of objective templates for a clan's weekly objectives.
+   * @param {string} clanId - The ID of the clan.
+   * @param {Date} windowStart - The start date of the objective window.
+   * @returns {ObjectiveTemplate[]} An array of selected objective templates.
+   * @private
+   */
   private pickObjectiveTemplates(clanId: string, windowStart: Date): ObjectiveTemplate[] {
     const seedSource = `${clanId}:${windowStart.toISOString()}`
     let seed = 0
@@ -188,6 +268,15 @@ class ClanProgressionService {
     return weighted.slice(0, 3).map((item) => item.template)
   }
 
+  /**
+   * Retrieves active objectives for a clan from the database.
+   * @param {string} clanId - The ID of the clan.
+   * @param {Date} now - The current date.
+   * @param {PoolClient} [client] - Optional database client for transactions.
+   * @param {boolean} [forUpdate=false] - Whether to lock the rows for update.
+   * @returns {Promise<ClanObjectiveRow[]>} A list of active clan objective rows.
+   * @private
+   */
   private async getActiveObjectivesInternal(
     clanId: string,
     now: Date,
@@ -210,6 +299,12 @@ class ClanProgressionService {
     return rows
   }
 
+  /**
+   * Determines the start and end dates for the current objective window.
+   * @param {Date} now - The current date.
+   * @returns {{start: Date, end: Date}} The start and end dates of the objective window.
+   * @private
+   */
   private getObjectiveWindow(now: Date): { start: Date; end: Date } {
     const start = new Date(now)
     start.setUTCHours(0, 0, 0, 0)
@@ -217,6 +312,12 @@ class ClanProgressionService {
     return { start, end }
   }
 
+  /**
+   * Retrieves a summary of a clan's progression, including level and experience.
+   * @param {string} clanId - The ID of the clan.
+   * @returns {Promise<ClanProgressionSummary>} The clan's progression summary.
+   * @throws {ClanProgressionServiceError} If the clan is not found.
+   */
   async getProgressionSummary(clanId: string): Promise<ClanProgressionSummary> {
     const sql = 'SELECT total_xp FROM clans WHERE id = $1'
     const result = await query<ClanProgressionRow>(sql, [clanId])
@@ -229,6 +330,12 @@ class ClanProgressionService {
     return this.mapProgression(clanId, totalXp)
   }
 
+  /**
+   * Ensures that a clan has active weekly objectives, creating them if necessary.
+   * @param {string} clanId - The ID of the clan.
+   * @param {Date} [now=new Date()] - The current date, for determining the objective window.
+   * @returns {Promise<ClanObjective[]>} A list of the clan's active weekly objectives.
+   */
   async ensureWeeklyObjectives(clanId: string, now = new Date()): Promise<ClanObjective[]> {
     return transaction(async (client) => {
       const active = await this.getActiveObjectivesInternal(clanId, now, client)
@@ -306,6 +413,18 @@ class ClanProgressionService {
     })
   }
 
+  /**
+   * Applies progress to a clan's active objectives based on recent activity.
+   * @param {string} clanId - The ID of the clan.
+   * @param {object} params - The progress parameters.
+   * @param {number} params.xpGain - The amount of experience gained.
+   * @param {number} params.matchesPlayed - The number of matches played.
+   * @param {number} params.matchesWon - The number of matches won.
+   * @param {Date} params.now - The current date.
+   * @param {PoolClient} params.client - The database client.
+   * @returns {Promise<ClanObjectiveProgressUpdate[]>} A list of updates to the clan's objectives.
+   * @private
+   */
   private async applyObjectiveProgress(
     clanId: string,
     {
@@ -386,6 +505,12 @@ class ClanProgressionService {
     return updates
   }
 
+  /**
+   * Awards a contribution to a clan, updating experience, progression, and objectives.
+   * @param {AwardContributionOptions} options - The options for the contribution.
+   * @returns {Promise<ClanContributionResult>} The result of the contribution, including progression and objective updates.
+   * @throws {ClanProgressionServiceError} If the clan is not found or the user is not an active member.
+   */
   async awardContribution(options: AwardContributionOptions): Promise<ClanContributionResult> {
     const now = options.now ?? new Date()
     const xpGain = Math.max(0, Math.floor(options.xp))

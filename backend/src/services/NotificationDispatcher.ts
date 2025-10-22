@@ -1,17 +1,36 @@
+/**
+ * @fileoverview This file defines the NotificationDispatcher class, which is responsible for sending notifications
+ * to various registered channels like web push, Slack, and Discord. It manages which channels are enabled and
+ * handles the logic for dispatching events to them.
+ * @module services/NotificationDispatcher
+ */
 import type { NotificationEvent, NotificationResult } from '@conquestk/shared/types/notifications'
 import { logger } from '../utils/logger.js'
 import { DiscordWebhookChannel, discordWebhookChannel } from './channels/DiscordWebhookChannel.js'
 import { SlackWebhookChannel } from './channels/SlackWebhookChannel.js'
 import { webPushChannel } from './channels/WebPushChannel.js'
 
+/**
+ * A type alias for the name of a notification channel.
+ * @typedef {'webpush' | 'slack' | 'discord' | (string & {})} NotificationChannelName
+ */
 export type NotificationChannelName = 'webpush' | 'slack' | 'discord' | (string & {})
 
+/**
+ * An interface representing a notification channel.
+ * Each channel must have a name and a `send` method.
+ * @interface NotificationChannel
+ */
 export interface NotificationChannel {
   name: NotificationChannelName
   send(event: NotificationEvent): Promise<NotificationResult>
   isAvailable?(): boolean | Promise<boolean>
 }
 
+/**
+ * An interface for the options that can be passed to the NotificationDispatcher constructor.
+ * @interface NotificationDispatcherOptions
+ */
 interface NotificationDispatcherOptions {
   channels?: NotificationChannel[]
   loggerContext?: Record<string, unknown>
@@ -21,6 +40,11 @@ interface NotificationDispatcherOptions {
 
 const SERVICE_LOGGER = logger.child({ service: 'NotificationDispatcher' })
 
+/**
+ * The main class for dispatching notifications.
+ * It manages a collection of notification channels and sends events to the enabled ones.
+ * @class NotificationDispatcher
+ */
 export class NotificationDispatcher {
   private logger = SERVICE_LOGGER
 
@@ -30,6 +54,10 @@ export class NotificationDispatcher {
 
   private readonly channels = new Map<string, NotificationChannel>()
 
+  /**
+   * Creates an instance of NotificationDispatcher.
+   * @param {NotificationDispatcherOptions} [options={}] - The options for the dispatcher.
+   */
   constructor(options: NotificationDispatcherOptions = {}) {
     if (options.loggerContext) {
       this.logger = SERVICE_LOGGER.child(options.loggerContext)
@@ -48,20 +76,37 @@ export class NotificationDispatcher {
     })
   }
 
+  /**
+   * Registers a new notification channel with the dispatcher.
+   * @param {NotificationChannel} channel - The channel to register.
+   */
   registerChannel(channel: NotificationChannel): void {
     const key = this.normalizeChannelName(channel.name)
     this.channels.set(key, channel)
     this.logger.debug('Registered notification channel', { channel: channel.name })
   }
 
+  /**
+   * Gets a list of all registered notification channels.
+   * @returns {NotificationChannel[]} An array of the registered channels.
+   */
   getRegisteredChannels(): NotificationChannel[] {
     return Array.from(this.channels.values())
   }
 
+  /**
+   * Gets a list of all enabled notification channels.
+   * @returns {NotificationChannel[]} An array of the enabled channels.
+   */
   getEnabledChannels(): NotificationChannel[] {
     return this.getRegisteredChannels().filter((channel) => this.shouldDispatchTo(channel.name))
   }
 
+  /**
+   * Dispatches a notification event to all enabled channels.
+   * @param {NotificationEvent} event - The notification event to dispatch.
+   * @returns {Promise<NotificationResult[]>} A promise that resolves to an array of results from each channel.
+   */
   async dispatch(event: NotificationEvent): Promise<NotificationResult[]> {
     const channels = this.getEnabledChannels()
 

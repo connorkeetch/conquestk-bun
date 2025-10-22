@@ -1,5 +1,11 @@
 import { Link } from 'react-router-dom'
 
+/**
+ * Renders the main footer for the application. It includes copyright
+ * information, navigation links, and the beta version number.
+ *
+ * @returns {JSX.Element} The rendered footer component.
+ */
 export default function Footer() {
   const currentYear = new Date().getFullYear()
 

@@ -10,6 +10,12 @@ import {
 import { getErrorMessage } from '../utils/errorHelpers.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * This file contains the routes for the map approval workflow.
+ * It includes routes for managing map versions, submitting for approval, and admin/moderator actions.
+ * All routes in this file are protected by the `authenticateToken` middleware.
+ */
+
 const router = express.Router()
 
 // Apply auth middleware to all routes
@@ -17,7 +23,16 @@ router.use(authenticateToken)
 
 // Version Management Routes
 
-// Get version history for a map
+/**
+ * @api {get} /maps/:mapId/versions Get version history for a map
+ * @apiName GetMapVersionHistory
+ * @apiGroup MapApproval
+ * @apiPermission user
+ *
+ * @apiParam {String} mapId The ID of the map.
+ *
+ * @apiSuccess {Object[]} versions The list of map versions.
+ */
 router.get('/maps/:mapId/versions', async (req, res) => {
   try {
     const { mapId } = req.params
@@ -53,7 +68,16 @@ router.get('/maps/:mapId/versions', async (req, res) => {
   }
 })
 
-// Get specific version details
+/**
+ * @api {get} /versions/:versionId Get specific version details
+ * @apiName GetMapVersionDetails
+ * @apiGroup MapApproval
+ * @apiPermission user
+ *
+ * @apiParam {String} versionId The ID of the version.
+ *
+ * @apiSuccess {Object} version The details of the map version.
+ */
 router.get('/versions/:versionId', async (req, res) => {
   try {
     const { versionId } = req.params
@@ -89,7 +113,16 @@ router.get('/versions/:versionId', async (req, res) => {
   }
 })
 
-// Create new version of a map
+/**
+ * @api {post} /maps/:mapId/versions Create a new version of a map
+ * @apiName CreateMapVersion
+ * @apiGroup MapApproval
+ * @apiPermission user
+ *
+ * @apiParam {String} mapId The ID of the map.
+ *
+ * @apiSuccess {Object} version The newly created map version.
+ */
 router.post('/maps/:mapId/versions', async (req, res) => {
   try {
     const { mapId } = req.params
@@ -124,7 +157,16 @@ router.post('/maps/:mapId/versions', async (req, res) => {
   }
 })
 
-// Set current version
+/**
+ * @api {put} /versions/:versionId/current Set the current version of a map
+ * @apiName SetCurrentMapVersion
+ * @apiGroup MapApproval
+ * @apiPermission user
+ *
+ * @apiParam {String} versionId The ID of the version to set as current.
+ *
+ * @apiSuccess {String} message A confirmation message.
+ */
 router.put('/versions/:versionId/current', async (req, res) => {
   try {
     const { versionId } = req.params
@@ -162,7 +204,16 @@ router.put('/versions/:versionId/current', async (req, res) => {
 
 // Approval Request Routes
 
-// Submit version for approval
+/**
+ * @api {post} /versions/:versionId/submit Submit a version for approval
+ * @apiName SubmitMapVersionForApproval
+ * @apiGroup MapApproval
+ * @apiPermission user
+ *
+ * @apiParam {String} versionId The ID of the version to submit.
+ *
+ * @apiSuccess {Object} approvalRequest The created approval request.
+ */
 router.post('/versions/:versionId/submit', async (req, res) => {
   try {
     const { versionId } = req.params
@@ -200,7 +251,17 @@ router.post('/versions/:versionId/submit', async (req, res) => {
   }
 })
 
-// Get approval request details
+/**
+ * @api {get} /approval-requests/:requestId Get approval request details
+ * @apiName GetApprovalRequestDetails
+ * @apiGroup MapApproval
+ * @apiPermission user
+ *
+ * @apiParam {String} requestId The ID of the approval request.
+ *
+ * @apiSuccess {Object} approvalRequest The details of the approval request.
+ * @apiSuccess {Object[]} reviewResults The results of the reviews for the request.
+ */
 router.get('/approval-requests/:requestId', async (req, res) => {
   try {
     const { requestId } = req.params
@@ -223,7 +284,14 @@ router.get('/approval-requests/:requestId', async (req, res) => {
 
 // Admin/Moderator Routes - Require admin permissions
 
-// Get pending approval requests
+/**
+ * @api {get} /approval-requests Get pending approval requests (admin only)
+ * @apiName GetPendingApprovalRequests
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiSuccess {Object[]} requests The list of pending approval requests.
+ */
 router.get(
   '/approval-requests',
   requireAdmin,
@@ -239,7 +307,17 @@ router.get(
   },
 )
 
-// Assign reviewer to approval request
+/**
+ * @api {put} /approval-requests/:requestId/assign Assign a reviewer to an approval request (admin only)
+ * @apiName AssignReviewer
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiParam {String} requestId The ID of the approval request.
+ * @apiBody {String} [moderatorId] The ID of the moderator to assign. Defaults to the current user.
+ *
+ * @apiSuccess {String} message A confirmation message.
+ */
 router.put(
   '/approval-requests/:requestId/assign',
   requireAdmin,
@@ -272,7 +350,16 @@ router.put(
   },
 )
 
-// Unassign reviewer from approval request
+/**
+ * @api {delete} /approval-requests/:requestId/assign Unassign a reviewer from an approval request (admin only)
+ * @apiName UnassignReviewer
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiParam {String} requestId The ID of the approval request.
+ *
+ * @apiSuccess {String} message A confirmation message.
+ */
 router.delete(
   '/approval-requests/:requestId/assign',
   requireAdmin,
@@ -302,7 +389,14 @@ router.delete(
   },
 )
 
-// Get review criteria
+/**
+ * @api {get} /review-criteria Get the review criteria (admin only)
+ * @apiName GetReviewCriteria
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiSuccess {Object[]} criteria The list of review criteria.
+ */
 router.get(
   '/review-criteria',
   requireAdmin,
@@ -318,7 +412,20 @@ router.get(
   },
 )
 
-// Submit review results
+/**
+ * @api {post} /approval-requests/:requestId/review Submit review results (admin only)
+ * @apiName SubmitReviewResults
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiParam {String} requestId The ID of the approval request.
+ *
+ * @apiBody {Object[]} results The review results.
+ * @apiBody {String} decision The decision of the review ('approved' or 'rejected').
+ * @apiBody {String} [moderatorFeedback] Feedback from the moderator.
+ *
+ * @apiSuccess {String} message A confirmation message.
+ */
 router.post(
   '/approval-requests/:requestId/review',
   requireAdmin,
@@ -362,7 +469,16 @@ router.post(
   },
 )
 
-// Publish approved version
+/**
+ * @api {post} /versions/:versionId/publish Publish an approved version (admin only)
+ * @apiName PublishMapVersion
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiParam {String} versionId The ID of the version to publish.
+ *
+ * @apiSuccess {String} message A confirmation message.
+ */
 router.post(
   '/versions/:versionId/publish',
   requireAdmin,
@@ -392,7 +508,17 @@ router.post(
   },
 )
 
-// Archive map
+/**
+ * @api {post} /maps/:mapId/archive Archive a map (admin only)
+ * @apiName ArchiveMap
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiParam {String} mapId The ID of the map to archive.
+ * @apiBody {String} reason The reason for archiving the map.
+ *
+ * @apiSuccess {String} message A confirmation message.
+ */
 router.post(
   '/maps/:mapId/archive',
   requireAdmin,
@@ -423,7 +549,16 @@ router.post(
   },
 )
 
-// Get map moderation history
+/**
+ * @api {get} /maps/:mapId/moderation-history Get the moderation history for a map (admin only)
+ * @apiName GetMapModerationHistory
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiParam {String} mapId The ID of the map.
+ *
+ * @apiSuccess {Object[]} history The moderation history for the map.
+ */
 router.get(
   '/maps/:mapId/moderation-history',
   requireAdmin,
@@ -442,7 +577,14 @@ router.get(
   },
 )
 
-// Get approval statistics (admin dashboard)
+/**
+ * @api {get} /stats/approvals Get approval statistics (admin only)
+ * @apiName GetApprovalStats
+ * @apiGroup MapApproval
+ * @apiPermission admin
+ *
+ * @apiSuccess {Object} stats The approval statistics.
+ */
 router.get(
   '/stats/approvals',
   requireAdmin,
@@ -460,7 +602,14 @@ router.get(
 
 // User Permission Routes
 
-// Get user's maps and their permissions
+/**
+ * @api {get} /my-maps Get the current user's maps and their permissions
+ * @apiName GetMyMaps
+ * @apiGroup MapApproval
+ * @apiPermission user
+ *
+ * @apiSuccess {Object[]} maps The list of the user's maps.
+ */
 router.get('/my-maps', async (req, res) => {
   try {
     const userId = req.userId

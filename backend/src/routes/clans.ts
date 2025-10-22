@@ -17,6 +17,11 @@ import type {
 import type { AuthenticatedRequest } from '../types/express.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * This file contains the routes for managing clans.
+ * It includes routes for listing, creating, and viewing clans, as well as managing applications.
+ */
+
 const router = Router()
 
 const validateRequest = (req: Request, res: Response): boolean => {

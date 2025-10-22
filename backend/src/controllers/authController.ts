@@ -17,6 +17,9 @@ import { UserService } from '../services/userService.js'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
 
+/**
+ * Handles authentication-related requests, including user registration, login, and profile management.
+ */
 export class AuthController {
   private userService = new UserService()
 
@@ -33,6 +36,11 @@ export class AuthController {
     return secret
   })()
 
+  /**
+   * Registers a new user.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   register = async (req: Request, res: Response) => {
     try {
       const { username, email, password } = req.body
@@ -230,6 +238,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Logs in a user.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   login = async (req: Request, res: Response) => {
     try {
       // Support both email and identifier fields for backwards compatibility
@@ -393,6 +406,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Logs out a user.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   logout = async (req: Request, res: Response) => {
     try {
       const userId = req.userId
@@ -424,6 +442,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Gets the profile of the currently authenticated user.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   getProfile = async (req: Request, res: Response) => {
     try {
       const userId = req.userId
@@ -502,6 +525,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Verifies a user's email address.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   verifyEmail = async (req: Request, res: Response) => {
     try {
       const { token } = req.params
@@ -560,6 +588,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Sends a password reset email to a user.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   forgotPassword = async (req: Request, res: Response) => {
     try {
       const { email } = req.body
@@ -624,6 +657,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Resets a user's password.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   resetPassword = async (req: Request, res: Response) => {
     try {
       const { token, password } = req.body
@@ -681,6 +719,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Resends a verification email to a user.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   resendVerification = async (req: Request, res: Response) => {
     try {
       const { email } = req.body
@@ -747,6 +790,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Changes a user's password.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   changePassword = async (req: Request, res: Response) => {
     try {
       const userId = req.userId
@@ -802,6 +850,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Updates a user's settings.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   updateSettings = async (req: Request, res: Response) => {
     try {
       const userId = req.userId
@@ -935,6 +988,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Deletes a user's account.
+   * @param {Request} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
   deleteAccount = async (req: Request, res: Response) => {
     try {
       const userId = req.userId

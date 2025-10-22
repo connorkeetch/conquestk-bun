@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines an adapter for the AI evaluation service. It allows switching between
+ * different evaluation engines, such as a TypeScript implementation and a more performant WebAssembly (WASM) version.
+ * It also includes a 'shadow' mode for comparing the outputs of both engines.
+ * @module services/aiEvalAdapter
+ */
 import {
   computeConquestProbability,
   evaluateCandidates as wasmEvaluate,
@@ -5,14 +11,38 @@ import {
 import { isAiEvalWasmAvailable } from '../config/runtimeFlags.js'
 import { logger } from '../utils/logger.js'
 
+/**
+ * The type of evaluation engine to use.
+ * @typedef {'ts' | 'wasm' | 'shadow'} EvalEngine
+ */
 export type EvalEngine = 'ts' | 'wasm' | 'shadow'
 
+/**
+ * A simplified representation of a territory for evaluation purposes.
+ * @typedef {object} EvalTerritory
+ */
 export type EvalTerritory = { id: string; ownerId?: string | null; armies: number }
+/**
+ * A candidate action to be evaluated.
+ * @typedef {object} EvalCandidate
+ */
 export type EvalCandidate =
   | { kind: 'attack'; from: string; to: string }
   | { kind: 'deploy'; territory: string; armies?: number }
   | { kind: 'fortify'; from: string; to: string; armies?: number }
 
+/**
+ * An adapter function that evaluates a list of candidate AI actions using the configured evaluation engine.
+ * It can switch between a TypeScript implementation and a WebAssembly implementation, and also supports a 'shadow'
+ * mode to compare their results.
+ * @param {object} state - The current game state for evaluation.
+ * @param {EvalTerritory[]} state.territories - A simplified list of territories.
+ * @param {string} state.currentPlayerId - The ID of the current player.
+ * @param {EvalCandidate[]} candidates - An array of candidate actions to evaluate.
+ * @param {object} [opts] - Optional parameters.
+ * @param {'recruit' | 'commander' | 'grandmaster'} [opts.difficulty] - The difficulty level of the AI.
+ * @returns {Promise<number[]>} A promise that resolves to an array of scores for each candidate action.
+ */
 export async function evaluateCandidatesAdapter(
   state: { territories: EvalTerritory[]; currentPlayerId: string },
   candidates: EvalCandidate[],
@@ -62,6 +92,15 @@ export async function evaluateCandidatesAdapter(
   return scoreCandidatesTs(state, candidates)
 }
 
+/**
+ * A TypeScript implementation for scoring candidate actions.
+ * This function is used as a fallback or for comparison with the WASM engine.
+ * @param {object} state - The current game state for evaluation.
+ * @param {EvalTerritory[]} state.territories - A simplified list of territories.
+ * @param {string} state.currentPlayerId - The ID of the current player.
+ * @param {EvalCandidate[]} candidates - An array of candidate actions to evaluate.
+ * @returns {number[]} An array of scores for each candidate action.
+ */
 function scoreCandidatesTs(
   state: { territories: EvalTerritory[]; currentPlayerId: string },
   candidates: EvalCandidate[],

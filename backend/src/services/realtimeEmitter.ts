@@ -7,6 +7,15 @@ import { collectPlayerRefs, type DbMove, type FogView, renderLogText } from './l
 
 type SocketData = { userId?: string }
 
+/**
+ * Emits a combined set of game log moves to all clients in a room, taking
+ * into account fog of war for each player.
+ *
+ * @param {Server<ClientToServerEvents, ServerToClientEvents, Record<string, unknown>, SocketData>} io - The Socket.io server instance.
+ * @param {string} roomId - The ID of the room to emit the moves to.
+ * @param {{ moves?: DbMove[]; }} payload - The payload containing the moves to emit.
+ * @param {GameState} [state] - Optional game state. If not provided, it will be fetched from the database.
+ */
 export async function emitCombined(
   io: Server<ClientToServerEvents, ServerToClientEvents, Record<string, unknown>, SocketData>,
   roomId: string,

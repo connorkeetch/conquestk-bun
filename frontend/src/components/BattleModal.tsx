@@ -12,6 +12,17 @@ interface BattleModalProps {
   onContinueAttack?: () => void
 }
 
+/**
+ * Renders a modal dialog that displays the results of a battle, including dice
+ * rolls, army losses, and whether a territory was conquered.
+ *
+ * @param {BattleModalProps} props - The component props.
+ * @param {boolean} props.isOpen - Whether the modal is open.
+ * @param {BattleResult | null} props.battleResult - The result of the battle.
+ * @param {() => void} props.onClose - A callback to close the modal.
+ * @param {() => void} [props.onContinueAttack] - An optional callback to continue attacking.
+ * @returns {JSX.Element | null} The rendered modal, or `null` if it is not open.
+ */
 export const BattleModal: React.FC<BattleModalProps> = ({
   isOpen,
   battleResult,

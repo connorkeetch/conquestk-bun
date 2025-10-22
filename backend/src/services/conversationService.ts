@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Service for managing conversations, messages, and members.
+ * @module services/conversationService
+ */
 import type { PoolClient } from 'pg'
 import { query, transaction } from '../config/database.js'
 import { logger } from '../utils/logger.js'
@@ -9,11 +13,18 @@ import {
 } from './messagingPolicyService.js'
 import { tryGetSocketServer } from './socketRegistry.js'
 
+/** Maximum length of a conversation message. */
 export const MAX_MESSAGE_LENGTH = 2000
+/** Maximum number of members in a group conversation. */
 export const MAX_GROUP_MEMBERS = 50
 
+/** Type of conversation. */
 export type ConversationKind = 'direct' | 'group' | 'game'
 
+/**
+ * @interface ConversationRecord
+ * @description Represents a conversation in the database.
+ */
 export interface ConversationRecord {
   id: string
   kind: ConversationKind
@@ -28,6 +39,10 @@ export interface ConversationRecord {
   metadata: Record<string, unknown>
 }
 
+/**
+ * @interface ConversationMemberRole
+ * @description Represents the role of a member in a conversation.
+ */
 export interface ConversationMemberRole {
   userId: string
   role: 'owner' | 'admin' | 'member'
@@ -36,11 +51,20 @@ export interface ConversationMemberRole {
   username: string
 }
 
+/**
+ * @interface ConversationWithMembers
+ * @extends ConversationRecord
+ * @description Represents a conversation with its members.
+ */
 export interface ConversationWithMembers extends ConversationRecord {
   memberIds: string[]
   memberRoles: ConversationMemberRole[]
 }
 
+/**
+ * @interface ConversationMessageRecord
+ * @description Represents a message in a conversation.
+ */
 export interface ConversationMessageRecord {
   id: string
   conversationId: string
@@ -54,6 +78,10 @@ export interface ConversationMessageRecord {
   shadowMuted: boolean
 }
 
+/**
+ * @interface ConversationMessageEventPayload
+ * @description Represents the payload for a new message event.
+ */
 export interface ConversationMessageEventPayload {
   conversationId: string
   id: string
@@ -63,9 +91,19 @@ export interface ConversationMessageEventPayload {
   metadata: Record<string, unknown>
 }
 
+/**
+ * @class ConversationError
+ * @extends Error
+ * @description Custom error class for conversation service operations.
+ */
 export class ConversationError extends Error {
   code: string
 
+  /**
+   * @constructor
+   * @param {string} code - The error code.
+   * @param {string} message - The error message.
+   */
   constructor(code: string, message: string) {
     super(message)
     this.name = 'ConversationError'
@@ -86,6 +124,7 @@ const CONVERSATION_COLUMNS = `
   metadata
 `
 
+/** @private */
 type ConversationRow = {
   id: string
   kind: ConversationKind
@@ -100,6 +139,7 @@ type ConversationRow = {
   metadata: Record<string, unknown> | null
 }
 
+/** @private */
 type ConversationMessageRow = {
   id: string
   conversation_id: string
@@ -113,6 +153,7 @@ type ConversationMessageRow = {
   shadow_muted: boolean | null
 }
 
+/** @private */
 type ConversationMemberRow = {
   user_id: string
   role: 'owner' | 'admin' | 'member'
@@ -120,20 +161,24 @@ type ConversationMemberRow = {
   shadow_muted: boolean | null
 }
 
+/** @private */
 type ConversationMemberRoleRow = ConversationMemberRow & {
   username: string
 }
 
+/** @private */
 type ConversationMemberRoleWithConversationRow = ConversationMemberRoleRow & {
   conversation_id: string
 }
 
+/** @private */
 type ConversationMembershipRow = {
   role: 'owner' | 'admin' | 'member'
   shadow_muted: boolean | null
   joined_at: Date
 }
 
+/** @private */
 type ConversationMembershipDetailRow = ConversationMembershipRow & {
   is_muted: boolean | null
   is_pinned: boolean | null
@@ -141,22 +186,32 @@ type ConversationMembershipDetailRow = ConversationMembershipRow & {
   last_read_at: Date | null
 }
 
+/** @private */
 type ConversationAccessLevel = 'member' | 'spectator'
 
+/** @private */
 interface ResolveConversationAccessOptions {
   allowSpectatorGameAccess?: boolean
 }
 
+/** @private */
 interface ConversationAccessResult {
   conversation: ConversationRecord
   membership?: ConversationMembershipDetailRow
   accessLevel: ConversationAccessLevel
 }
 
+/** @private */
 type DirectMemberRow = {
   user_id: string
 }
 
+/**
+ * Maps a database row to a ConversationRecord object.
+ * @param {ConversationRow} row - The database row.
+ * @returns {ConversationRecord} The mapped conversation record.
+ * @private
+ */
 const mapConversationRow = (row: ConversationRow): ConversationRecord => ({
   id: row.id,
   kind: row.kind,
@@ -171,6 +226,12 @@ const mapConversationRow = (row: ConversationRow): ConversationRecord => ({
   metadata: row.metadata ?? {},
 })
 
+/**
+ * Maps a database row to a ConversationMessageRecord object.
+ * @param {ConversationMessageRow} row - The database row.
+ * @returns {ConversationMessageRecord} The mapped message record.
+ * @private
+ */
 const mapMessageRow = (row: ConversationMessageRow): ConversationMessageRecord => ({
   id: row.id,
   conversationId: row.conversation_id,
@@ -184,6 +245,12 @@ const mapMessageRow = (row: ConversationMessageRow): ConversationMessageRecord =
   shadowMuted: row.shadow_muted ?? false,
 })
 
+/**
+ * Retrieves the roles of all members in a conversation.
+ * @param {string} conversationId - The ID of the conversation.
+ * @returns {Promise<ConversationMemberRole[]>} A list of member roles.
+ * @private
+ */
 const getConversationMemberRoles = async (
   conversationId: string,
 ): Promise<ConversationMemberRole[]> => {
@@ -207,6 +274,12 @@ const getConversationMemberRoles = async (
   }))
 }
 
+/**
+ * Retrieves the member roles for multiple conversations in a single query.
+ * @param {string[]} conversationIds - An array of conversation IDs.
+ * @returns {Promise<Map<string, ConversationMemberRole[]>>} A map of conversation IDs to their member roles.
+ * @private
+ */
 const getConversationMemberRolesBulk = async (
   conversationIds: string[],
 ): Promise<Map<string, ConversationMemberRole[]>> => {
@@ -259,6 +332,13 @@ const getConversationMemberRolesBulk = async (
   return memberMap
 }
 
+/**
+ * Builds a complete conversation descriptor, including member information.
+ * @param {ConversationRecord} conversation - The base conversation record.
+ * @param {ConversationMemberRole[]} [memberRolesOverride] - Optional override for member roles to avoid an extra query.
+ * @returns {Promise<ConversationWithMembers>} The conversation with its members.
+ * @private
+ */
 const buildConversationDescriptor = async (
   conversation: ConversationRecord,
   memberRolesOverride?: ConversationMemberRole[],
@@ -273,6 +353,11 @@ const buildConversationDescriptor = async (
   }
 }
 
+/**
+ * Handles messaging policy errors by re-throwing them as ConversationErrors.
+ * @param {unknown} error - The error to handle.
+ * @private
+ */
 const handlePolicyError = (error: unknown): never => {
   if (error instanceof MessagingPolicyError) {
     throw new ConversationError(error.code, error.message)
@@ -280,6 +365,13 @@ const handlePolicyError = (error: unknown): never => {
   throw error
 }
 
+/**
+ * Retrieves an existing direct conversation between two users.
+ * @param {string} userA - The ID of the first user.
+ * @param {string} userB - The ID of the second user.
+ * @returns {Promise<ConversationWithMembers | null>} The conversation, or null if it doesn't exist.
+ * @private
+ */
 const getDirectConversation = async (
   userA: string,
   userB: string,
@@ -308,6 +400,14 @@ const getDirectConversation = async (
   return buildConversationDescriptor(conversation)
 }
 
+/**
+ * Inserts a new member into a conversation.
+ * @param {PoolClient} client - The database client.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {string} userId - The ID of the user to add.
+ * @param {'owner' | 'admin' | 'member'} role - The role of the new member.
+ * @private
+ */
 const insertConversationMember = async (
   client: PoolClient,
   conversationId: string,
@@ -329,6 +429,14 @@ type ConversationMemberSummaryRow = {
   role: 'owner' | 'admin' | 'member'
 }
 
+/**
+ * Synchronizes the members of a conversation with a desired list of user IDs.
+ * @param {string} conversationId - The ID of the conversation to sync.
+ * @param {string[]} desiredUserIds - The list of user IDs that should be in the conversation.
+ * @param {string} [ownerUserId] - The ID of the conversation owner, who cannot be removed.
+ * @returns {Promise<{ added: string[]; removed: string[] }>} An object containing the user IDs of added and removed members.
+ * @private
+ */
 const syncConversationMembers = async (
   conversationId: string,
   desiredUserIds: string[],
@@ -393,6 +501,13 @@ const syncConversationMembers = async (
   return { added: toAdd, removed: toRemove }
 }
 
+/**
+ * Ensures a direct conversation exists between two users, creating one if it doesn't.
+ * @param {string} initiatorId - The ID of the user initiating the conversation.
+ * @param {string} targetUserId - The ID of the other user in the conversation.
+ * @returns {Promise<ConversationWithMembers>} The direct conversation between the two users.
+ * @throws {ConversationError} If the initiator is not allowed to start a conversation with the target.
+ */
 export async function ensureDirectConversation(
   initiatorId: string,
   targetUserId: string,
@@ -438,6 +553,12 @@ export async function ensureDirectConversation(
   }
 }
 
+/**
+ * Normalizes a group conversation title.
+ * @param {string | null} [title] - The title to normalize.
+ * @returns {string | null} The normalized title.
+ * @private
+ */
 const normalizeGroupTitle = (title?: string | null): string | null => {
   if (!title) return null
   const trimmed = title.trim()
@@ -448,6 +569,12 @@ const normalizeGroupTitle = (title?: string | null): string | null => {
   return trimmed
 }
 
+/**
+ * Normalizes and stringifies conversation metadata.
+ * @param {Record<string, unknown>} [metadata] - The metadata to normalize.
+ * @returns {string} The JSON stringified metadata.
+ * @private
+ */
 const normalizeMetadata = (metadata?: Record<string, unknown>): string => {
   if (!metadata) {
     return '{}'
@@ -462,6 +589,12 @@ const normalizeMetadata = (metadata?: Record<string, unknown>): string => {
   }
 }
 
+/**
+ * Creates a new group conversation.
+ * @param {CreateGroupConversationOptions} options - The options for creating the group conversation.
+ * @returns {Promise<ConversationWithMembers>} The newly created group conversation.
+ * @throws {ConversationError} If there are not enough members, the member limit is exceeded, or an invitee is not allowed.
+ */
 export async function createGroupConversation(
   options: CreateGroupConversationOptions,
 ): Promise<ConversationWithMembers> {
@@ -527,6 +660,12 @@ export async function createGroupConversation(
   return descriptor
 }
 
+/**
+ * Adds members to a group conversation.
+ * @param {AddConversationMembersOptions} options - The options for adding members.
+ * @returns {Promise<ConversationMemberRole[]>} The roles of the newly added members.
+ * @throws {ConversationError} If the operation is invalid, the user lacks permission, or the group limit is exceeded.
+ */
 export async function addMembersToConversation(
   options: AddConversationMembersOptions,
 ): Promise<ConversationMemberRole[]> {
@@ -595,6 +734,11 @@ export async function addMembersToConversation(
   return addedMemberRoles
 }
 
+/**
+ * Ensures a conversation exists for a game, creating one if necessary and syncing its members.
+ * @param {string} gameId - The ID of the game.
+ * @returns {Promise<ConversationWithMembers>} The game's conversation.
+ */
 export async function ensureGameConversation(gameId: string): Promise<ConversationWithMembers> {
   const { hostId, name, roomId } = await getGameRoomHost(gameId)
 
@@ -657,6 +801,12 @@ export async function ensureGameConversation(gameId: string): Promise<Conversati
   return descriptor
 }
 
+/**
+ * Ensures a conversation exists for a clan, creating one if necessary and syncing its members.
+ * @param {string} clanId - The ID of the clan.
+ * @returns {Promise<ConversationWithMembers>} The clan's conversation.
+ * @throws {ConversationError} If the clan is not found.
+ */
 export async function ensureClanConversation(clanId: string): Promise<ConversationWithMembers> {
   // Lookup clan owner and name
   const clanResult = await query<{ id: string; owner_user_id: string; name: string }>(
@@ -723,6 +873,12 @@ export async function ensureClanConversation(clanId: string): Promise<Conversati
   return descriptor
 }
 
+/**
+ * Ensures a conversation exists for a team in a game, creating one if necessary and syncing its members.
+ * @param {string} gameId - The ID of the game.
+ * @param {number} teamId - The ID of the team.
+ * @returns {Promise<ConversationWithMembers>} The team's conversation.
+ */
 export async function ensureTeamConversation(
   gameId: string,
   teamId: number,
@@ -793,6 +949,13 @@ export async function ensureTeamConversation(
   return descriptor
 }
 
+/**
+ * Allows a user to leave a group conversation.
+ * @param {string} conversationId - The ID of the conversation to leave.
+ * @param {string} userId - The ID of the user leaving.
+ * @returns {Promise<void>}
+ * @throws {ConversationError} If the conversation is not a group or the user is not a member.
+ */
 export async function leaveConversation(conversationId: string, userId: string): Promise<void> {
   const conversation = await getConversationRow(conversationId)
   if (conversation.kind !== 'group') {
@@ -875,6 +1038,12 @@ export async function leaveConversation(conversationId: string, userId: string):
   emitConversationMembersRemovedEvent(conversationId, [userId], descriptor.memberIds)
 }
 
+/**
+ * Removes a member from a group conversation.
+ * @param {RemoveConversationMemberOptions} options - The options for removing the member.
+ * @returns {Promise<void>}
+ * @throws {ConversationError} If the operation is invalid, the actor lacks permission, or the target is not a member.
+ */
 export async function removeConversationMember(
   options: RemoveConversationMemberOptions,
 ): Promise<void> {
@@ -952,6 +1121,12 @@ export async function removeConversationMember(
   emitConversationMembersRemovedEvent(conversationId, [targetUserId], descriptor.memberIds)
 }
 
+/**
+ * Updates the role of a member in a conversation.
+ * @param {UpdateConversationMemberRoleOptions} options - The options for updating the member's role.
+ * @returns {Promise<ConversationMemberRole>} The updated member role.
+ * @throws {ConversationError} If the role is invalid, the operation is not supported, or the user lacks permission.
+ */
 export async function updateConversationMemberRole(
   options: UpdateConversationMemberRoleOptions,
 ): Promise<ConversationMemberRole> {
@@ -1060,6 +1235,12 @@ export async function updateConversationMemberRole(
   return updatedMember
 }
 
+/**
+ * Sets the archived status of a conversation.
+ * @param {SetConversationArchivedOptions} options - The options for setting the archived status.
+ * @returns {Promise<ConversationWithMembers>} The updated conversation.
+ * @throws {ConversationError} If the operation is not supported or the user lacks permission.
+ */
 export async function setConversationArchived(
   options: SetConversationArchivedOptions,
 ): Promise<ConversationWithMembers> {
@@ -1135,6 +1316,14 @@ export async function setConversationArchived(
   return descriptor
 }
 
+/**
+ * Ensures that a user is a member of a conversation.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<{ role: string; shadowMuted: boolean; joinedAt: Date }>} The user's membership details.
+ * @throws {ConversationError} If the user is not a member.
+ * @private
+ */
 const ensureMembership = async (
   conversationId: string,
   userId: string,
@@ -1156,6 +1345,13 @@ const ensureMembership = async (
   return { role: row.role, shadowMuted: row.shadow_muted ?? false, joinedAt: row.joined_at }
 }
 
+/**
+ * Retrieves a conversation's database row by its ID.
+ * @param {string} conversationId - The ID of the conversation.
+ * @returns {Promise<ConversationRecord>} The conversation record.
+ * @throws {ConversationError} If the conversation is not found.
+ * @private
+ */
 const getConversationRow = async (conversationId: string): Promise<ConversationRecord> => {
   const result = await query<ConversationRow>(
     `SELECT ${CONVERSATION_COLUMNS} FROM conversations WHERE id = $1`,
@@ -1169,6 +1365,15 @@ const getConversationRow = async (conversationId: string): Promise<ConversationR
   return mapConversationRow(result.rows[0])
 }
 
+/**
+ * Resolves a user's access level to a conversation.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {string} userId - The ID of the user.
+ * @param {ResolveConversationAccessOptions} [options={}] - Options for resolving access.
+ * @returns {Promise<ConversationAccessResult>} The user's access level and membership details.
+ * @throws {ConversationError} If the user does not have access.
+ * @private
+ */
 const resolveConversationAccess = async (
   conversationId: string,
   userId: string,
@@ -1216,6 +1421,13 @@ const resolveConversationAccess = async (
   throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation')
 }
 
+/**
+ * Retrieves the other member in a direct conversation.
+ * @param {string} conversationId - The ID of the direct conversation.
+ * @param {string} senderId - The ID of the known member (sender).
+ * @returns {Promise<string | null>} The ID of the other member, or null if not found.
+ * @private
+ */
 const getOtherDirectMember = async (
   conversationId: string,
   senderId: string,
@@ -1242,6 +1454,13 @@ type RoomPlayerRow = {
   team_id: number | null
 }
 
+/**
+ * Retrieves the host and other details of a game room.
+ * @param {string} gameIdentifier - The ID or room code of the game.
+ * @returns {Promise<{ hostId: string; name: string | null; roomId: string }>} The game room details.
+ * @throws {ConversationError} If the game room is not found or the identifier is invalid.
+ * @private
+ */
 const getGameRoomHost = async (
   gameIdentifier: string,
 ): Promise<{ hostId: string; name: string | null; roomId: string }> => {
@@ -1284,6 +1503,12 @@ const getGameRoomHost = async (
   return { hostId: row.host_id, name: row.name, roomId: row.id }
 }
 
+/**
+ * Retrieves the active players in a game room.
+ * @param {string} gameId - The ID of the game room.
+ * @returns {Promise<RoomPlayerRow[]>} A list of active players in the room.
+ * @private
+ */
 const getActiveRoomPlayers = async (gameId: string): Promise<RoomPlayerRow[]> => {
   const result = await query<RoomPlayerRow>(
     `
@@ -1297,9 +1522,16 @@ const getActiveRoomPlayers = async (gameId: string): Promise<RoomPlayerRow[]> =>
   return result.rows
 }
 
+/** @private */
 const toIsoString = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : value
 
+/**
+ * Serializes a conversation for a socket.io event.
+ * @param {ConversationWithMembers} conversation - The conversation to serialize.
+ * @returns {object} The serialized conversation.
+ * @private
+ */
 const serializeConversationForEvent = (conversation: ConversationWithMembers) => ({
   id: conversation.id,
   kind: conversation.kind,
@@ -1314,6 +1546,12 @@ const serializeConversationForEvent = (conversation: ConversationWithMembers) =>
   memberIds: conversation.memberIds,
 })
 
+/**
+ * Emits a 'conversation.created' event to the relevant user sockets.
+ * @param {ConversationWithMembers} conversation - The conversation that was created.
+ * @param {string[]} [recipients] - Optional list of recipient user IDs. If not provided, all members of the conversation will be notified.
+ * @private
+ */
 const emitConversationCreatedEvent = (
   conversation: ConversationWithMembers,
   recipients?: string[],
@@ -1345,6 +1583,13 @@ const emitConversationCreatedEvent = (
   }
 }
 
+/**
+ * Emits a 'conversation.members.added' event to the relevant user sockets.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {ConversationMemberRole[]} addedMembers - The members that were added.
+ * @param {string[]} recipients - The list of recipient user IDs.
+ * @private
+ */
 const emitConversationMembersAddedEvent = (
   conversationId: string,
   addedMembers: ConversationMemberRole[],
@@ -1376,6 +1621,13 @@ const emitConversationMembersAddedEvent = (
   }
 }
 
+/**
+ * Emits a 'conversation.members.removed' event to the relevant user sockets.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {string[]} removedUserIds - The IDs of the members that were removed.
+ * @param {string[]} recipients - The list of recipient user IDs.
+ * @private
+ */
 const emitConversationMembersRemovedEvent = (
   conversationId: string,
   removedUserIds: string[],
@@ -1407,6 +1659,13 @@ const emitConversationMembersRemovedEvent = (
   }
 }
 
+/**
+ * Emits a 'conversation.members.changed' event to the relevant user sockets.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {ConversationMemberRole[]} members - The members whose roles have changed.
+ * @param {string[]} recipients - The list of recipient user IDs.
+ * @private
+ */
 const emitConversationMembersChangedEvent = (
   conversationId: string,
   members: ConversationMemberRole[],
@@ -1439,6 +1698,12 @@ const emitConversationMembersChangedEvent = (
   }
 }
 
+/**
+ * Emits a 'conversation.message.new' event to the relevant user sockets.
+ * @param {ConversationWithMembers} descriptor - The conversation descriptor.
+ * @param {ConversationMessageRecord} message - The new message.
+ * @private
+ */
 const emitConversationMessageEvent = (
   descriptor: ConversationWithMembers,
   message: ConversationMessageRecord,
@@ -1472,6 +1737,11 @@ const emitConversationMessageEvent = (
   }
 }
 
+/**
+ * Emits a 'conversation.updated' event to the relevant user sockets.
+ * @param {ConversationWithMembers} conversation - The updated conversation.
+ * @private
+ */
 const emitConversationUpdatedEvent = (conversation: ConversationWithMembers) => {
   try {
     const io = tryGetSocketServer()
@@ -1495,6 +1765,10 @@ const emitConversationUpdatedEvent = (conversation: ConversationWithMembers) => 
   }
 }
 
+/**
+ * @interface SendMessageOptions
+ * @description Options for sending a message to a conversation.
+ */
 export interface SendMessageOptions {
   conversationId: string
   senderId: string
@@ -1503,6 +1777,10 @@ export interface SendMessageOptions {
   metadata?: Record<string, unknown>
 }
 
+/**
+ * @interface CreateGroupConversationOptions
+ * @description Options for creating a new group conversation.
+ */
 export interface CreateGroupConversationOptions {
   creatorId: string
   title?: string | null
@@ -1510,18 +1788,30 @@ export interface CreateGroupConversationOptions {
   metadata?: Record<string, unknown>
 }
 
+/**
+ * @interface AddConversationMembersOptions
+ * @description Options for adding members to a conversation.
+ */
 export interface AddConversationMembersOptions {
   actorId: string
   conversationId: string
   memberIds: string[]
 }
 
+/**
+ * @interface RemoveConversationMemberOptions
+ * @description Options for removing a member from a conversation.
+ */
 export interface RemoveConversationMemberOptions {
   actorId: string
   conversationId: string
   targetUserId: string
 }
 
+/**
+ * @interface UpdateConversationMemberRoleOptions
+ * @description Options for updating a member's role in a conversation.
+ */
 export interface UpdateConversationMemberRoleOptions {
   actorId: string
   conversationId: string
@@ -1529,12 +1819,22 @@ export interface UpdateConversationMemberRoleOptions {
   role: 'admin' | 'member'
 }
 
+/**
+ * @interface SetConversationArchivedOptions
+ * @description Options for setting the archived status of a conversation.
+ */
 export interface SetConversationArchivedOptions {
   actorId: string
   conversationId: string
   archived: boolean
 }
 
+/**
+ * Sends a message to a conversation.
+ * @param {SendMessageOptions} options - The options for sending the message.
+ * @returns {Promise<ConversationMessageRecord>} The newly created message record.
+ * @throws {ConversationError} If the message body is empty, too long, or the sender is not allowed to send a message.
+ */
 export async function sendMessage(options: SendMessageOptions): Promise<ConversationMessageRecord> {
   const { conversationId, senderId, body, clientMessageId, metadata } = options
 
@@ -1630,6 +1930,15 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
   return message
 }
 
+/**
+ * Lists messages in a conversation.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {string} userId - The ID of the user requesting the messages.
+ * @param {number} [limit=50] - The maximum number of messages to return.
+ * @param {string} [before] - A cursor for pagination (message ID to fetch messages before).
+ * @returns {Promise<ConversationMessageRecord[]>} A list of messages.
+ * @throws {ConversationError} If the user does not have access to the conversation or the limit is invalid.
+ */
 export async function listMessages(
   conversationId: string,
   userId: string,
@@ -1685,6 +1994,10 @@ interface ConversationListRow extends ConversationRow {
   last_message_metadata: Record<string, unknown> | null
 }
 
+/**
+ * @interface ConversationMembershipInfo
+ * @description Represents a user's membership information in a conversation.
+ */
 export interface ConversationMembershipInfo {
   role: 'owner' | 'admin' | 'member'
   joinedAt: Date
@@ -1696,6 +2009,10 @@ export interface ConversationMembershipInfo {
   accessLevel: ConversationAccessLevel
 }
 
+/**
+ * @interface ConversationListEntry
+ * @description Represents an entry in a user's list of conversations.
+ */
 export interface ConversationListEntry {
   conversation: ConversationWithMembers
   membership: ConversationMembershipInfo
@@ -1709,11 +2026,21 @@ export interface ConversationListEntry {
   }
 }
 
+/**
+ * @interface ConversationListOptions
+ * @description Options for listing a user's conversations.
+ */
 export interface ConversationListOptions {
   limit?: number
   offset?: number
 }
 
+/**
+ * Marks a conversation as read by a user.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<void>}
+ */
 export async function markConversationRead(conversationId: string, userId: string): Promise<void> {
   const access = await resolveConversationAccess(conversationId, userId, {
     allowSpectatorGameAccess: true,
@@ -1757,6 +2084,13 @@ export interface ConversationDetailResult {
   unreadCount: number
 }
 
+/**
+ * Retrieves the detailed information for a single conversation.
+ * @param {string} conversationId - The ID of the conversation.
+ * @param {string} userId - The ID of the user requesting the details.
+ * @param {ResolveConversationAccessOptions} [options={}] - Options for resolving access.
+ * @returns {Promise<ConversationDetailResult>} The detailed conversation information.
+ */
 export async function getConversationDetail(
   conversationId: string,
   userId: string,
@@ -1822,6 +2156,11 @@ export interface UnreadSummaryEntry {
   unreadCount: number
 }
 
+/**
+ * Retrieves a summary of unread messages for a user.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<UnreadSummaryEntry[]>} A list of conversations with their unread counts.
+ */
 export async function getUnreadSummary(userId: string): Promise<UnreadSummaryEntry[]> {
   const result = await query<{ conversation_id: string; unread_count: number }>(
     `
@@ -1846,6 +2185,12 @@ export async function getUnreadSummary(userId: string): Promise<UnreadSummaryEnt
   }))
 }
 
+/**
+ * Lists all conversations for a user.
+ * @param {string} userId - The ID of the user.
+ * @param {ConversationListOptions} [options={}] - Options for pagination.
+ * @returns {Promise<ConversationListEntry[]>} A list of the user's conversations.
+ */
 export async function listConversationsForUser(
   userId: string,
   options: ConversationListOptions = {},

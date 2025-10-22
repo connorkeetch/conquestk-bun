@@ -1,15 +1,24 @@
+/**
+ * @fileoverview This file defines a generic caching service with a Redis backend and an in-memory fallback.
+ * It also provides several specialized cache classes for different domains like game state, user profiles, leaderboards, and maps.
+ * @module services/cacheService
+ */
 import { getRedisClient } from '../config/redis.js'
 import { logger } from '../utils/logger.js'
 
 /**
- * Generic caching service with Redis backend
+ * A generic caching service that uses Redis if available, otherwise falls back to an in-memory cache.
+ * @class CacheService
  */
 export class CacheService {
   private redisClient = getRedisClient()
   private inMemoryCache = new Map<string, { data: unknown; expires: number }>()
 
   /**
-   * Get value from cache
+   * Retrieves a value from the cache.
+   * @template T
+   * @param {string} key - The cache key.
+   * @returns {Promise<T | null>} A promise that resolves to the cached value, or null if not found or an error occurs.
    */
   async get<T>(key: string): Promise<T | null> {
     if (this.redisClient) {
@@ -33,7 +42,12 @@ export class CacheService {
   }
 
   /**
-   * Set value in cache with TTL
+   * Sets a value in the cache with a specified time-to-live (TTL).
+   * @template T
+   * @param {string} key - The cache key.
+   * @param {T} value - The value to cache.
+   * @param {number} [ttlSeconds=300] - The TTL in seconds.
+   * @returns {Promise<void>} A promise that resolves when the value has been set.
    */
   async set<T>(key: string, value: T, ttlSeconds = 300): Promise<void> {
     if (this.redisClient) {
@@ -49,6 +63,14 @@ export class CacheService {
     }
   }
 
+  /**
+   * Sets a value in the in-memory fallback cache.
+   * @private
+   * @template T
+   * @param {string} key - The cache key.
+   * @param {T} value - The value to cache.
+   * @param {number} ttlSeconds - The TTL in seconds.
+   */
   private setInMemory<T>(key: string, value: T, ttlSeconds: number) {
     this.inMemoryCache.set(key, {
       data: value,
@@ -62,7 +84,9 @@ export class CacheService {
   }
 
   /**
-   * Delete value from cache
+   * Deletes a value from the cache.
+   * @param {string} key - The cache key to delete.
+   * @returns {Promise<void>} A promise that resolves when the key has been deleted.
    */
   async delete(key: string): Promise<void> {
     if (this.redisClient) {
@@ -76,14 +100,18 @@ export class CacheService {
   }
 
   /**
-   * Delete game state from cache (alias for delete with game key prefix)
+   * Deletes a game state from the cache. This is an alias for `delete` with a game-specific key prefix.
+   * @param {string} gameId - The ID of the game whose state is to be deleted.
+   * @returns {Promise<void>} A promise that resolves when the game state has been deleted.
    */
   async deleteGameState(gameId: string): Promise<void> {
     await this.delete(`game:${gameId}`)
   }
 
   /**
-   * Clear all cache entries with a specific prefix
+   * Clears all cache entries that match a specific prefix.
+   * @param {string} prefix - The prefix to match.
+   * @returns {Promise<void>} A promise that resolves when the matching entries have been cleared.
    */
   async clearPrefix(prefix: string): Promise<void> {
     if (this.redisClient) {
@@ -110,7 +138,13 @@ export class CacheService {
   }
 
   /**
-   * Cache wrapper for expensive operations
+   * A cache-aside implementation that retrieves a value from the cache if it exists,
+   * otherwise it generates the value using a factory function, caches it, and then returns it.
+   * @template T
+   * @param {string} key - The cache key.
+   * @param {() => Promise<T>} factory - A function that generates the value if it's not in the cache.
+   * @param {number} [ttlSeconds=300] - The TTL for the newly cached value.
+   * @returns {Promise<T>} A promise that resolves to the cached or newly generated value.
    */
   async getOrSet<T>(key: string, factory: () => Promise<T>, ttlSeconds = 300): Promise<T> {
     // Try to get from cache first
@@ -129,7 +163,9 @@ export class CacheService {
   }
 
   /**
-   * Invalidate related cache entries
+   * Invalidates cache entries by clearing all keys that match the given patterns (prefixes).
+   * @param {string[]} patterns - An array of key patterns (prefixes) to invalidate.
+   * @returns {Promise<void>} A promise that resolves when the invalidation is complete.
    */
   async invalidate(patterns: string[]): Promise<void> {
     for (const pattern of patterns) {
@@ -137,6 +173,10 @@ export class CacheService {
     }
   }
 
+  /**
+   * Cleans up expired entries from the in-memory cache.
+   * @private
+   */
   private cleanupInMemoryCache() {
     const now = Date.now()
     const keysToDelete: string[] = []
@@ -157,10 +197,9 @@ export class CacheService {
 export const cacheService = new CacheService()
 
 /**
- * Specific cache services for different domains
+ * A specialized cache service for managing game state.
+ * @class GameStateCache
  */
-
-// Game state caching
 export class GameStateCache {
   private cache = new CacheService()
   private readonly DEFAULT_TTL = 3600 // 1 hour for active games
@@ -197,7 +236,10 @@ export class GameStateCache {
   }
 }
 
-// User profile caching
+/**
+ * A specialized cache service for managing user profiles and stats.
+ * @class UserCache
+ */
 export class UserCache {
   private cache = new CacheService()
   private readonly TTL = 600 // 10 minutes
@@ -223,7 +265,10 @@ export class UserCache {
   }
 }
 
-// Leaderboard caching
+/**
+ * A specialized cache service for managing leaderboards.
+ * @class LeaderboardCache
+ */
 export class LeaderboardCache {
   private cache = new CacheService()
   private readonly TTL = 300 // 5 minutes
@@ -241,7 +286,10 @@ export class LeaderboardCache {
   }
 }
 
-// Map data caching
+/**
+ * A specialized cache service for managing map data.
+ * @class MapCache
+ */
 export class MapCache {
   private cache = new CacheService()
   private readonly TTL = 3600 // 1 hour
@@ -264,7 +312,9 @@ export class MapCache {
 }
 
 /**
- * Territory modifier cache with optimized batch operations
+ * A specialized cache service for territory modifiers, with optimized batch operations.
+ * @class TerritoryModifierCache
+ * @extends {CacheService}
  */
 export class TerritoryModifierCache extends CacheService {
   private readonly CACHE_PREFIX = 'territory_modifiers'
@@ -272,28 +322,38 @@ export class TerritoryModifierCache extends CacheService {
   private readonly DEFAULT_TTL = 1800 // 30 minutes
 
   /**
-   * Get cached modifier templates
+   * Gets the cached modifier templates.
+   * @returns {Promise<unknown>} A promise that resolves to the cached templates.
    */
   async getTemplates() {
     return this.get(`${this.CACHE_PREFIX}:${this.TEMPLATES_KEY}`)
   }
 
   /**
-   * Cache modifier templates
+   * Caches the modifier templates.
+   * @template T
+   * @param {T[]} templates - The templates to cache.
+   * @returns {Promise<void>}
    */
   async setTemplates<T>(templates: T[]) {
     await this.set(`${this.CACHE_PREFIX}:${this.TEMPLATES_KEY}`, templates, this.DEFAULT_TTL)
   }
 
   /**
-   * Get cached game modifiers
+   * Gets the cached modifiers for a specific game.
+   * @param {string} gameId - The ID of the game.
+   * @returns {Promise<unknown>} A promise that resolves to the cached game modifiers.
    */
   async getGameModifiers(gameId: string) {
     return this.get(`${this.CACHE_PREFIX}:game:${gameId}`)
   }
 
   /**
-   * Cache game modifiers
+   * Caches the modifiers for a specific game.
+   * @template T
+   * @param {string} gameId - The ID of the game.
+   * @param {Map<string, T>} modifiers - A map of territory modifiers to cache.
+   * @returns {Promise<void>}
    */
   async setGameModifiers<T>(gameId: string, modifiers: Map<string, T>) {
     const serializedModifiers = Object.fromEntries(modifiers)
@@ -301,21 +361,29 @@ export class TerritoryModifierCache extends CacheService {
   }
 
   /**
-   * Remove game modifiers from cache
+   * Removes the modifiers for a specific game from the cache.
+   * @param {string} gameId - The ID of the game.
+   * @returns {Promise<void>}
    */
   async removeGameModifiers(gameId: string) {
     await this.delete(`${this.CACHE_PREFIX}:game:${gameId}`)
   }
 
   /**
-   * Cache map modifiers
+   * Caches the modifiers for a specific map.
+   * @template T
+   * @param {string} mapId - The ID of the map.
+   * @param {T[]} modifiers - The map modifiers to cache.
+   * @returns {Promise<void>}
    */
   async setMapModifiers<T>(mapId: string, modifiers: T[]) {
     await this.set(`${this.CACHE_PREFIX}:map:${mapId}`, modifiers, this.DEFAULT_TTL * 4) // 2 hours
   }
 
   /**
-   * Get cached map modifiers
+   * Gets the cached modifiers for a specific map.
+   * @param {string} mapId - The ID of the map.
+   * @returns {Promise<unknown>} A promise that resolves to the cached map modifiers.
    */
   async getMapModifiers(mapId: string) {
     return this.get(`${this.CACHE_PREFIX}:map:${mapId}`)

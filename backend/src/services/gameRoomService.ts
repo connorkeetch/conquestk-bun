@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Service for managing game rooms, including creation, joining, and player management.
+ * @module services/gameRoomService
+ */
 import { randomUUID } from 'node:crypto'
 import { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import { getClient, query, transaction } from '../config/database.js'
@@ -13,6 +17,10 @@ import { logger } from '../utils/logger.js'
 
 type AIDifficultyOption = NonNullable<Player['aiDifficulty']>
 
+/**
+ * @interface CreateRoomData
+ * @description Represents the data needed to create a new game room.
+ */
 export interface CreateRoomData {
   name: string
   hostId: string
@@ -36,6 +44,7 @@ export interface CreateRoomData {
   timeBankSeconds?: number
 }
 
+/** @private */
 interface GameRoomRow {
   id: string
   name: string
@@ -74,6 +83,7 @@ interface GameRoomRow {
   [key: string]: unknown
 }
 
+/** @private */
 interface ActiveGameRoomRow extends GameRoomRow {
   current_players: number | string | null
   host_username: string | null
@@ -82,6 +92,7 @@ interface ActiveGameRoomRow extends GameRoomRow {
   map_name: string | null
 }
 
+/** @private */
 interface PlayerRow {
   id: string
   userId?: string | null
@@ -103,13 +114,26 @@ interface PlayerRow {
   lastMissedTurnAt?: Date | string | null
 }
 
+/** @private */
 interface GameRoomWithPlayersRow extends GameRoomRow {
   players: (PlayerRow | null)[] | null
 }
 
 const ACTIVE_ROOM_STATUS_VALUES = Array.from(PREMIUM_ACTIVE_STATUS_VALUES)
 
+/**
+ * @class GameRoomService
+ * @description Service for managing game rooms.
+ */
 export class GameRoomService {
+  /**
+   * Validates the team configuration for a game room.
+   * @param {number} maxPlayers - The maximum number of players in the room.
+   * @param {'none' | 'teams' | 'auto_balance'} teamMode - The team mode.
+   * @param {number} [numberOfTeams] - The number of teams.
+   * @private
+   * @throws {Error} If the team configuration is invalid.
+   */
   private validateTeamConfiguration(
     maxPlayers: number,
     teamMode: 'none' | 'teams' | 'auto_balance',
@@ -134,6 +158,12 @@ export class GameRoomService {
     }
   }
 
+  /**
+   * Gets the valid team options for a given number of players.
+   * @param {number} playerCount - The number of players.
+   * @returns {number[]} An array of valid team counts.
+   * @private
+   */
   private getValidTeamOptions(playerCount: number): number[] {
     const validOptions: number[] = [0] // 0 represents Free for All
 
@@ -148,6 +178,13 @@ export class GameRoomService {
     return validOptions
   }
 
+  /**
+   * Normalizes the team mode value.
+   * @param {CreateRoomData['teamMode']} teamMode - The team mode to normalize.
+   * @param {boolean} [allowTeamPlay] - Whether team play is allowed.
+   * @returns {'none' | 'teams' | 'auto_balance'} The normalized team mode.
+   * @private
+   */
   private normalizeTeamMode(
     teamMode: CreateRoomData['teamMode'],
     allowTeamPlay?: boolean,
@@ -171,6 +208,13 @@ export class GameRoomService {
     return 'none'
   }
 
+  /**
+   * Normalizes the number of teams.
+   * @param {'none' | 'teams' | 'auto_balance'} teamMode - The team mode.
+   * @param {number | null | undefined} requested - The requested number of teams.
+   * @returns {number | null} The normalized number of teams.
+   * @private
+   */
   private normalizeNumberOfTeams(
     teamMode: 'none' | 'teams' | 'auto_balance',
     requested: number | null | undefined,
@@ -187,6 +231,12 @@ export class GameRoomService {
     return normalized > 0 ? normalized : null
   }
 
+  /**
+   * Maps a database value to a team mode.
+   * @param {GameRoomRow['team_mode']} value - The database value.
+   * @returns {'none' | 'teams' | 'auto_balance'} The team mode.
+   * @private
+   */
   private mapTeamMode(value: GameRoomRow['team_mode']): 'none' | 'teams' | 'auto_balance' {
     if (value === 'auto_balance' || value === 'teams' || value === 'none') {
       return value
@@ -210,6 +260,12 @@ export class GameRoomService {
     return 'none'
   }
 
+  /**
+   * Normalizes the fog of war value.
+   * @param {unknown} value - The value to normalize.
+   * @returns {'off' | 'adjacent' | 'persistent' | undefined} The normalized fog of war value.
+   * @private
+   */
   private normalizeFogOfWar(value: unknown): 'off' | 'adjacent' | 'persistent' | undefined {
     if (typeof value !== 'string') {
       return undefined
@@ -227,6 +283,12 @@ export class GameRoomService {
     return undefined
   }
 
+  /**
+   * Normalizes a game room status string to a known GameLifecycleStatus.
+   * @param {string | null | undefined} status - The status to normalize.
+   * @returns {GameLifecycleStatus} The normalized status.
+   * @private
+   */
   private normalizeStatus(status: string | null | undefined): GameLifecycleStatus {
     if (!status) {
       return 'lobby'
@@ -261,6 +323,12 @@ export class GameRoomService {
     return allowedStatuses.includes(normalized) ? normalized : 'lobby'
   }
 
+  /**
+   * Converts a value to a Date object if possible.
+   * @param {Date | string | null | undefined} value - The value to convert.
+   * @returns {Date | undefined} The Date object, or undefined.
+   * @private
+   */
   private toDate(value: Date | string | null | undefined): Date | undefined {
     if (!value) {
       return undefined
@@ -268,6 +336,12 @@ export class GameRoomService {
     return value instanceof Date ? value : new Date(value)
   }
 
+  /**
+   * Parses a value to a number if possible.
+   * @param {unknown} value - The value to parse.
+   * @returns {number | undefined} The number, or undefined.
+   * @private
+   */
   private parseNullableNumber(value: unknown): number | undefined {
     if (value === null || value === undefined) {
       return undefined
@@ -282,10 +356,22 @@ export class GameRoomService {
     return undefined
   }
 
+  /**
+   * Type guard to check if a value is a PlayerRow.
+   * @param {unknown} value - The value to check.
+   * @returns {value is PlayerRow} True if the value is a PlayerRow.
+   * @private
+   */
   private isPlayerRow(value: unknown): value is PlayerRow {
     return typeof value === 'object' && value !== null && 'id' in value && 'joinedAt' in value
   }
 
+  /**
+   * Normalizes a player's tier.
+   * @param {string | null | undefined} tier - The tier to normalize.
+   * @returns {Player['current_tier']} The normalized tier.
+   * @private
+   */
   private normalizePlayerTier(tier: string | null | undefined): Player['current_tier'] {
     if (!tier) {
       return undefined

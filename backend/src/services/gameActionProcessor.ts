@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Processor for handling game actions, such as deployments, attacks, and fortifications.
+ * @module services/gameActionProcessor
+ */
 import type { Server } from 'socket.io'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
 import { logger } from '../utils/logger.js'
@@ -6,12 +10,8 @@ import { ActionLockManager } from './locking/ActionLockManager.js'
 import { GameLogPersister } from './persistence/GameLogPersister.js'
 
 /**
- * Unified game action processor
- * Single code path for all game actions - handles queue vs inline internally
- *
- * Refactored to use specialized services for better separation of concerns:
- * - GameLogPersister: Manages game log persistence
- * - ActionLockManager: Handles Redis lock acquisition/release
+ * @class GameActionProcessor
+ * @description Processes game actions, handling locking, persistence, and real-time updates.
  */
 export class GameActionProcessor {
   private gameService: GameService
@@ -39,8 +39,12 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process a deployment action
-   * Attempts to queue, falls back to inline if no workers
+   * Processes a deployment action.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player making the deployment.
+   * @param {string} territoryId - The ID of the territory to deploy to.
+   * @param {number} armies - The number of armies to deploy.
+   * @returns {Promise<void>}
    */
   async processDeployment(
     gameId: string,
@@ -63,7 +67,13 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process deployment inline (synchronously)
+   * Processes a deployment action inline.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @param {string} territoryId - The ID of the territory.
+   * @param {number} armies - The number of armies.
+   * @returns {Promise<void>}
+   * @private
    */
   private async processDeploymentInline(
     gameId: string,
@@ -86,8 +96,13 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process a fortify action
-   * Attempts to queue, falls back to inline if no workers
+   * Processes a fortify action.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @param {string} fromTerritoryId - The ID of the source territory.
+   * @param {string} toTerritoryId - The ID of the target territory.
+   * @param {number} armies - The number of armies to move.
+   * @returns {Promise<void>}
    */
   async processFortify(
     gameId: string,
@@ -101,7 +116,14 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process fortify inline (synchronously)
+   * Processes a fortify action inline.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @param {string} fromTerritoryId - The ID of the source territory.
+   * @param {string} toTerritoryId - The ID of the target territory.
+   * @param {number} armies - The number of armies.
+   * @returns {Promise<void>}
+   * @private
    */
   private async processFortifyInline(
     gameId: string,
@@ -181,7 +203,13 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process post-conquest transfer (during attack phase)
+   * Processes the transfer of armies after a conquest.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @param {string} fromTerritoryId - The ID of the source territory.
+   * @param {string} toTerritoryId - The ID of the conquered territory.
+   * @param {number} armies - The number of armies to transfer.
+   * @returns {Promise<void>}
    */
   async processTransferConquest(
     gameId: string,
@@ -200,8 +228,10 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process a go-back-to-reinforcement action
-   * Attempts to queue, falls back to inline if no workers
+   * Processes an action to go back to the reinforcement phase.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @returns {Promise<void>}
    */
   async processGoBackToReinforcement(gameId: string, playerId: string): Promise<void> {
     // Process inline and emit deltas
@@ -209,7 +239,11 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process go-back inline (synchronously)
+   * Processes a go-back-to-reinforcement action inline.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @returns {Promise<void>}
+   * @private
    */
   private async processGoBackToReinforcementInline(
     gameId: string,
@@ -233,6 +267,12 @@ export class GameActionProcessor {
     }
   }
 
+  /**
+   * Processes an action to go back to the attack phase.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @returns {Promise<void>}
+   */
   async processGoBackToAttack(gameId: string, playerId: string): Promise<void> {
     logger.info('Processing go-back-to-attack inline (no queue)', {
       gameId,
@@ -253,8 +293,13 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process an attack action. Queues when workers available; otherwise inline via GameEngine.
-   * Refactored to use specialized services for cleaner separation of concerns.
+   * Processes an attack action.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @param {string} fromTerritoryId - The ID of the attacking territory.
+   * @param {string} toTerritoryId - The ID of the defending territory.
+   * @param {number} [armies] - The number of armies to attack with.
+   * @returns {Promise<void>}
    */
   async processAttack(
     gameId: string,
@@ -307,8 +352,15 @@ export class GameActionProcessor {
   }
 
   /**
-   * Build battle moves and emit them via combined delta
-   * Extracted from processAttack for better readability
+   * Builds and emits battle moves based on the result of an attack.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the attacking player.
+   * @param {string} fromTerritoryId - The ID of the attacking territory.
+   * @param {string} toTerritoryId - The ID of the defending territory.
+   * @param {unknown} battleResult - The result of the battle.
+   * @param {object} updated - The updated game state.
+   * @returns {Promise<void>}
+   * @private
    */
   private async buildAndEmitBattleMoves(
     gameId: string,
@@ -467,7 +519,10 @@ export class GameActionProcessor {
   }
 
   /**
-   * Process an end turn action. Queues when workers available; otherwise inline via GameService.
+   * Processes an end-turn action.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player ending their turn.
+   * @returns {Promise<void>}
    */
   async processEndTurn(gameId: string, playerId: string): Promise<void> {
     const result = await this.gameService.endTurn(gameId, playerId)

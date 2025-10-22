@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for fetching game replay data.
+ * It includes endpoints for retrieving a replay summary, chunks of replay data by turn, and individual replay frames.
+ * Access to replays is controlled to ensure that only authorized users can view them.
+ * @module routes/replay
+ */
 import crypto from 'node:crypto'
 import { Router } from 'express'
 import { query } from '../config/database.js'
@@ -7,7 +13,13 @@ import { logger } from '../utils/logger.js'
 
 const router = Router()
 
-// Helper: ensure viewer has access (participant or public game)
+/**
+ * Checks if a user is authorized to view a game replay.
+ * A user can view a replay if the game is public, if they were a participant in the game, or if they are the host.
+ * @param {string} gameId - The ID of the game.
+ * @param {string | null | undefined} viewerId - The ID of the user attempting to view the replay.
+ * @returns {Promise<boolean>} A promise that resolves to true if the user is authorized, and false otherwise.
+ */
 async function canViewReplay(gameId: string, viewerId?: string | null): Promise<boolean> {
   try {
     const res = await query<{
@@ -36,7 +48,16 @@ async function canViewReplay(gameId: string, viewerId?: string | null): Promise<
   }
 }
 
-// GET /api/games/:id/replay/summary
+/**
+ * Route to get a summary of a game replay.
+ * This includes metadata about the game, such as the players, number of turns, and game options.
+ * @name GET /replay/:id/replay/summary
+ * @function
+ * @memberof module:routes/replay
+ * @param {import('express').Request} req - The Express request object, with the game ID as a URL parameter.
+ * @param {import('express').Response} res - The Express response object, returning the replay summary.
+ * @returns {Promise<import('express').Response>}
+ */
 router.get('/:id/replay/summary', authenticateToken, async (req, res) => {
   try {
     const gameId = String(req.params.id)
@@ -150,7 +171,16 @@ router.get('/:id/replay/summary', authenticateToken, async (req, res) => {
   }
 })
 
-// GET /api/games/:id/replay/chunk?fromTurn=..&toTurn=..
+/**
+ * Route to get a chunk of replay data for a specified range of turns.
+ * This includes game logs and state snapshots to reconstruct the game state for the given turns.
+ * @name GET /replay/:id/replay/chunk
+ * @function
+ * @memberof module:routes/replay
+ * @param {import('express').Request} req - The Express request object, with the game ID and turn range as parameters.
+ * @param {import('express').Response} res - The Express response object, returning the replay data chunk.
+ * @returns {Promise<import('express').Response>}
+ */
 router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
   try {
     const gameId = String(req.params.id)
@@ -437,6 +467,16 @@ router.get('/:id/replay/chunk', authenticateToken, async (req, res) => {
   }
 })
 
+/**
+ * Route to get a sequence of replay frames.
+ * This is used for a more granular, frame-by-frame replay playback.
+ * @name GET /replay/:id/replay/frames
+ * @function
+ * @memberof module:routes/replay
+ * @param {import('express').Request} req - The Express request object, with the game ID and pagination parameters (`fromSeq`, `limit`).
+ * @param {import('express').Response} res - The Express response object, returning the replay frames.
+ * @returns {Promise<import('express').Response>}
+ */
 router.get('/:id/replay/frames', authenticateToken, async (req, res) => {
   try {
     const gameId = String(req.params.id)
