@@ -784,6 +784,8 @@ export class GameLifecycleService {
     const io = tryGetSocketServer()
     if (io) {
       const serialized = this.toSerializableGameState(gameState)
+      // Game initialization snapshots are always sent (even in LOCKSTEP_ONLY mode)
+
       try {
         const bytes = Buffer.byteLength(JSON.stringify(serialized), 'utf8')
         const { socketPayloadMetrics } = await import('./metricsService.js')

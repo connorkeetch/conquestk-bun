@@ -6,6 +6,9 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 let mockQuery: jest.Mock
 const mockCreateNotification = jest.fn()
 const mockGetActiveAdmins = jest.fn().mockResolvedValue(['admin-1'])
+const mockDeleteAsset = jest.fn()
+const mockLoggerError = jest.fn()
+const mockLoggerWarn = jest.fn()
 
 jest.mock('../config/database', () => {
   mockQuery = jest.fn()
@@ -13,6 +16,15 @@ jest.mock('../config/database', () => {
     query: (...args: unknown[]) => mockQuery(...args),
   }
 })
+
+jest.mock('../utils/logger', () => ({
+  logger: {
+    error: (...args: unknown[]) => mockLoggerError(...args),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
+    info: jest.fn(),
+    debug: jest.fn(),
+  },
+}))
 
 jest.mock('../services/notificationService', () => ({
   __esModule: true,
@@ -27,6 +39,16 @@ jest.mock('../services/adminService', () => ({
   },
 }))
 
+jest.mock('../utils/assetStorage.js', () => {
+  const actual = jest.requireActual(
+    '../utils/assetStorage.js',
+  ) as typeof import('../utils/assetStorage.js')
+  return {
+    ...actual,
+    deleteAsset: (...args: unknown[]) => mockDeleteAsset(...args),
+  }
+})
+
 describe('mapStagingService', () => {
   let mapStagingService: typeof import('../services/mapStagingService.js').mapStagingService
   let tempDir: string
@@ -35,9 +57,30 @@ describe('mapStagingService', () => {
     jest.resetModules()
     mockCreateNotification.mockReset()
     mockGetActiveAdmins.mockResolvedValue(['admin-1'])
+    mockLoggerError.mockReset()
+    mockLoggerWarn.mockReset()
 
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'staging-'))
     process.env.MAP_UPLOADS_DIR = tempDir
+
+    mockDeleteAsset.mockReset()
+    mockDeleteAsset.mockImplementation(async (...args: [string]) => {
+      const [key] = args
+      const relative = key.replace(/^maps\/staging\//, '')
+      const target = path.join(tempDir, relative)
+      try {
+        await fs.promises.unlink(target)
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          'code' in error &&
+          (error as NodeJS.ErrnoException).code === 'ENOENT'
+        ) {
+          return
+        }
+        throw error
+      }
+    })
 
     // Reload service after setting env
     ;({ mapStagingService } = require('../services/mapStagingService'))
@@ -115,5 +158,55 @@ describe('mapStagingService', () => {
     expect(image).toMatchObject({ id: 'image-2', is_deleted: false })
     expect(fs.existsSync(filePath)).toBe(true)
     expect(mockQuery).toHaveBeenCalledTimes(2)
+  })
+
+  it('attempts to delete the staging asset immediately after soft-delete', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rowCount: 1,
+      rows: [
+        {
+          filename: 'delete-me.png',
+          file_url: 'https://example.com/maps/delete-me.png',
+        },
+      ],
+    })
+
+    mockDeleteAsset.mockResolvedValueOnce(undefined)
+
+    await mapStagingService.deleteStagingImage('user-1', 'image-123')
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('RETURNING filename, file_url'),
+      ['image-123', 'user-1'],
+    )
+    expect(mockDeleteAsset).toHaveBeenCalledWith('maps/staging/delete-me.png')
+    expect(mockLoggerWarn).not.toHaveBeenCalled()
+  })
+
+  it('logs a warning when immediate staging asset deletion fails but does not throw', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rowCount: 1,
+      rows: [
+        {
+          filename: 'delete-fail.png',
+        },
+      ],
+    })
+
+    mockDeleteAsset.mockRejectedValueOnce(new Error('network timeout'))
+
+    await expect(
+      mapStagingService.deleteStagingImage('user-1', 'image-999'),
+    ).resolves.toBeUndefined()
+
+    expect(mockDeleteAsset).toHaveBeenCalledWith('maps/staging/delete-fail.png')
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      'Failed to delete staging asset immediately after soft-delete',
+      expect.objectContaining({
+        imageId: 'image-999',
+        filename: 'delete-fail.png',
+      }),
+    )
+    expect(mockLoggerError).not.toHaveBeenCalled()
   })
 })

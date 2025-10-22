@@ -265,14 +265,15 @@ export class MapStagingService {
       const params = isAdmin ? [imageId] : [imageId, userId]
 
       const result = await query(
-        `UPDATE map_images_staging 
+        `UPDATE map_images_staging
          SET is_deleted = TRUE,
              deleted_at = CURRENT_TIMESTAMP,
              deletion_attempts = 0,
              last_deletion_attempt = NULL,
              last_deletion_error = NULL,
              purged_at = NULL
-         WHERE id = $1 ${ownershipCheck}`,
+         WHERE id = $1 ${ownershipCheck}
+         RETURNING filename, file_url`,
         params,
       )
 
@@ -280,7 +281,24 @@ export class MapStagingService {
         throw new Error('Image not found or unauthorized')
       }
 
-      // TODO: Optionally delete the physical file
+      const updatedRow = result.rows[0] as
+        | { filename?: string | null; file_url?: string | null }
+        | undefined
+
+      const filename = updatedRow?.filename ?? null
+
+      if (filename) {
+        const storageKey = this.buildStorageKey(filename)
+        try {
+          await deleteAsset(storageKey)
+        } catch (storageError) {
+          logger.warn('Failed to delete staging asset immediately after soft-delete', {
+            imageId,
+            filename,
+            error: storageError,
+          })
+        }
+      }
     } catch (error) {
       logger.error('Error deleting staging image:', error)
       throw error

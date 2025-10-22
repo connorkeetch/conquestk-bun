@@ -48,79 +48,8 @@ export class UserPreferencesService {
    */
   async getPreferences(userId: string): Promise<UserPreferences | null> {
     try {
-      // First check what columns exist
-      const columnsResult = await this.pool.query(
-        `SELECT column_name FROM information_schema.columns 
-         WHERE table_name = 'user_preferences' AND table_schema = 'public'`,
-      )
-      const existingColumns = columnsResult.rows.map((r) => r.column_name)
-
-      // Build dynamic SELECT based on what exists
-      const selectFields = []
-      selectFields.push('user_id as "userId"')
-      selectFields.push('theme')
-
-      // Add audio columns if they exist
-      if (existingColumns.includes('sound_enabled')) {
-        selectFields.push('sound_enabled as "soundEnabled"')
-      } else {
-        selectFields.push('true as "soundEnabled"') // Default value
-      }
-
-      if (existingColumns.includes('music_enabled')) {
-        selectFields.push('music_enabled as "musicEnabled"')
-      } else {
-        selectFields.push('true as "musicEnabled"') // Default value
-      }
-
-      // Add other columns with defaults if missing
-      if (existingColumns.includes('notification_enabled')) {
-        selectFields.push('notification_enabled as "notificationEnabled"')
-      } else {
-        selectFields.push('true as "notificationEnabled"')
-      }
-
-      if (existingColumns.includes('dm_notifications_browser')) {
-        selectFields.push('dm_notifications_browser as "dmNotificationsBrowser"')
-      } else {
-        selectFields.push('true as "dmNotificationsBrowser"')
-      }
-
-      if (existingColumns.includes('dm_notifications_email')) {
-        selectFields.push('dm_notifications_email as "dmNotificationsEmail"')
-      } else {
-        selectFields.push('false as "dmNotificationsEmail"')
-      }
-
-      if (existingColumns.includes('auto_ready')) {
-        selectFields.push('auto_ready as "autoReady"')
-      } else {
-        selectFields.push('false as "autoReady"')
-      }
-
-      if (existingColumns.includes('show_timer')) {
-        selectFields.push('show_timer as "showTimer"')
-      } else {
-        selectFields.push('true as "showTimer"')
-      }
-
-      if (existingColumns.includes('show_army_numbers')) {
-        selectFields.push('show_army_numbers as "showArmyNumbers"')
-      } else {
-        selectFields.push('true as "showArmyNumbers"')
-      }
-
-      if (existingColumns.includes('animation_speed')) {
-        selectFields.push('animation_speed as "animationSpeed"')
-      } else {
-        selectFields.push('\'normal\' as "animationSpeed"')
-      }
-
-      if (existingColumns.includes('language')) {
-        selectFields.push('language')
-      } else {
-        selectFields.push('\'en\' as "language"')
-      }
+      const existingColumns = await this.getExistingColumns()
+      const selectFields = this.buildSelectFields(existingColumns)
 
       const result = await this.pool.query(
         `SELECT ${selectFields.join(', ')}
@@ -131,15 +60,12 @@ export class UserPreferencesService {
 
       if (result.rows.length === 0) {
         // Create default preferences if none exist
-        return this.createDefaultPreferences(userId)
+        return this.createDefaultPreferences(userId, {}, existingColumns)
       }
 
-      const updatedPreferences = result.rows[0] as UserPreferences
+      const row = result.rows[0] as Partial<UserPreferences> & { userId: string }
 
-      return {
-        ...updatedPreferences,
-        theme: normalizeThemeId(updatedPreferences.theme),
-      }
+      return this.mapRowToPreferences(row)
     } catch (error) {
       logger.error('❌ Error fetching user preferences', { userId, error })
       return null
@@ -158,52 +84,63 @@ export class UserPreferencesService {
     preferences: Partial<UserPreferences>,
   ): Promise<UserPreferences | null> {
     try {
+      const existingColumns = await this.getExistingColumns()
+
       // Build dynamic update query
       const updates: string[] = []
       const values: Array<string | boolean | number> = []
       let paramIndex = 1
 
-      if (preferences.theme !== undefined) {
+      if (preferences.theme !== undefined && existingColumns.has('theme')) {
         updates.push(`theme = $${paramIndex++}`)
         values.push(normalizeThemeId(preferences.theme))
       }
-      if (preferences.soundEnabled !== undefined) {
+      if (preferences.soundEnabled !== undefined && existingColumns.has('sound_enabled')) {
         updates.push(`sound_enabled = $${paramIndex++}`)
         values.push(preferences.soundEnabled)
       }
-      if (preferences.musicEnabled !== undefined) {
+      if (preferences.musicEnabled !== undefined && existingColumns.has('music_enabled')) {
         updates.push(`music_enabled = $${paramIndex++}`)
         values.push(preferences.musicEnabled)
       }
-      if (preferences.notificationEnabled !== undefined) {
+      if (
+        preferences.notificationEnabled !== undefined &&
+        existingColumns.has('notification_enabled')
+      ) {
         updates.push(`notification_enabled = $${paramIndex++}`)
         values.push(preferences.notificationEnabled)
       }
-      if (preferences.dmNotificationsBrowser !== undefined) {
+      if (
+        preferences.dmNotificationsBrowser !== undefined &&
+        existingColumns.has('dm_notifications_browser')
+      ) {
         updates.push(`dm_notifications_browser = $${paramIndex++}`)
         values.push(preferences.dmNotificationsBrowser)
       }
-      if (preferences.dmNotificationsEmail !== undefined) {
+      if (
+        preferences.dmNotificationsEmail !== undefined &&
+        existingColumns.has('dm_notifications_email')
+      ) {
         updates.push(`dm_notifications_email = $${paramIndex++}`)
         values.push(preferences.dmNotificationsEmail)
       }
-      if (preferences.autoReady !== undefined) {
+      if (preferences.autoReady !== undefined && existingColumns.has('auto_ready')) {
         updates.push(`auto_ready = $${paramIndex++}`)
         values.push(preferences.autoReady)
       }
-      if (preferences.showTimer !== undefined) {
+      if (preferences.showTimer !== undefined && existingColumns.has('show_timer')) {
         updates.push(`show_timer = $${paramIndex++}`)
         values.push(preferences.showTimer)
       }
-      if (preferences.showArmyNumbers !== undefined) {
+      if (preferences.showArmyNumbers !== undefined && existingColumns.has('show_army_numbers')) {
         updates.push(`show_army_numbers = $${paramIndex++}`)
         values.push(preferences.showArmyNumbers)
       }
-      if (preferences.animationSpeed !== undefined) {
+      if (preferences.animationSpeed !== undefined && existingColumns.has('animation_speed')) {
         updates.push(`animation_speed = $${paramIndex++}`)
         values.push(preferences.animationSpeed)
       }
-      if (preferences.language !== undefined) {
+      if (preferences.language !== undefined && existingColumns.has('language')) {
         updates.push(`language = $${paramIndex++}`)
         values.push(preferences.language)
       }
@@ -214,35 +151,24 @@ export class UserPreferencesService {
 
       values.push(userId)
 
+      const returningFields = this.buildSelectFields(existingColumns)
+
       const result = await this.pool.query(
         `UPDATE user_preferences
         SET ${updates.join(', ')}
         WHERE user_id = $${paramIndex}
-        RETURNING 
-          user_id as "userId",
-          theme,
-          sound_enabled as "soundEnabled",
-          music_enabled as "musicEnabled",
-          notification_enabled as "notificationEnabled",
-          auto_ready as "autoReady",
-          show_timer as "showTimer",
-          show_army_numbers as "showArmyNumbers",
-          animation_speed as "animationSpeed",
-          language`,
+        RETURNING ${returningFields.join(', ')}`,
         values,
       )
 
       if (result.rows.length === 0) {
         // If no row exists, create one with the preferences
-        return this.createDefaultPreferences(userId, preferences)
+        return this.createDefaultPreferences(userId, preferences, existingColumns)
       }
 
-      const createdPreferences = result.rows[0] as UserPreferences
+      const createdPreferences = result.rows[0] as Partial<UserPreferences> & { userId: string }
 
-      return {
-        ...createdPreferences,
-        theme: normalizeThemeId(createdPreferences.theme),
-      }
+      return this.mapRowToPreferences(createdPreferences)
     } catch (error) {
       logger.error('❌ Error updating user preferences', {
         userId,
@@ -290,8 +216,10 @@ export class UserPreferencesService {
   private async createDefaultPreferences(
     userId: string,
     overrides: Partial<UserPreferences> = {},
+    existingColumns?: Set<string>,
   ): Promise<UserPreferences> {
     try {
+      const columnSet = existingColumns ?? (await this.getExistingColumns())
       const defaults: UserPreferences = {
         userId,
         theme: normalizeThemeId(overrides.theme ?? DEFAULT_THEME_ID),
@@ -307,61 +235,52 @@ export class UserPreferencesService {
         language: overrides.language ?? 'en',
       }
 
-      const result = await this.pool.query(
-        `INSERT INTO user_preferences (
-          user_id, theme, sound_enabled, music_enabled,
-          notification_enabled, dm_notifications_browser, dm_notifications_email,
-          auto_ready, show_timer,
-          show_army_numbers, animation_speed, language
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        ON CONFLICT (user_id) DO UPDATE
-        SET 
-          theme = EXCLUDED.theme,
-          sound_enabled = EXCLUDED.sound_enabled,
-          music_enabled = EXCLUDED.music_enabled,
-          notification_enabled = EXCLUDED.notification_enabled,
-          dm_notifications_browser = EXCLUDED.dm_notifications_browser,
-          dm_notifications_email = EXCLUDED.dm_notifications_email,
-          auto_ready = EXCLUDED.auto_ready,
-          show_timer = EXCLUDED.show_timer,
-          show_army_numbers = EXCLUDED.show_army_numbers,
-          animation_speed = EXCLUDED.animation_speed,
-          language = EXCLUDED.language
-        RETURNING 
-          user_id as "userId",
-          theme,
-          sound_enabled as "soundEnabled",
-          music_enabled as "musicEnabled",
-          notification_enabled as "notificationEnabled",
-          dm_notifications_browser as "dmNotificationsBrowser",
-          dm_notifications_email as "dmNotificationsEmail",
-          auto_ready as "autoReady",
-          show_timer as "showTimer",
-          show_army_numbers as "showArmyNumbers",
-          animation_speed as "animationSpeed",
-          language`,
-        [
-          userId,
-          defaults.theme,
-          defaults.soundEnabled,
-          defaults.musicEnabled,
-          defaults.notificationEnabled,
-          defaults.dmNotificationsBrowser,
-          defaults.dmNotificationsEmail,
-          defaults.autoReady,
-          defaults.showTimer,
-          defaults.showArmyNumbers,
-          defaults.animationSpeed,
-          defaults.language,
-        ],
+      const columns: string[] = ['user_id']
+      const placeholders: string[] = ['$1']
+      const values: unknown[] = [userId]
+      const updatableColumns: string[] = []
+      let paramIndex = 2
+
+      const maybeIncludeColumn = (column: string, value: unknown) => {
+        if (!columnSet.has(column)) {
+          return
+        }
+        columns.push(column)
+        placeholders.push(`$${paramIndex}`)
+        values.push(value)
+        updatableColumns.push(column)
+        paramIndex++
+      }
+
+      maybeIncludeColumn('theme', defaults.theme)
+      maybeIncludeColumn('sound_enabled', defaults.soundEnabled)
+      maybeIncludeColumn('music_enabled', defaults.musicEnabled)
+      maybeIncludeColumn('notification_enabled', defaults.notificationEnabled)
+      maybeIncludeColumn('dm_notifications_browser', defaults.dmNotificationsBrowser)
+      maybeIncludeColumn('dm_notifications_email', defaults.dmNotificationsEmail)
+      maybeIncludeColumn('auto_ready', defaults.autoReady)
+      maybeIncludeColumn('show_timer', defaults.showTimer)
+      maybeIncludeColumn('show_army_numbers', defaults.showArmyNumbers)
+      maybeIncludeColumn('animation_speed', defaults.animationSpeed)
+      maybeIncludeColumn('language', defaults.language)
+
+      const updateAssignments = updatableColumns
+        .filter((column) => column !== 'user_id')
+        .map((column) => `${column} = EXCLUDED.${column}`)
+
+      const onConflictClause =
+        updateAssignments.length > 0
+          ? `DO UPDATE SET ${updateAssignments.join(', ')}`
+          : 'DO NOTHING'
+
+      await this.pool.query(
+        `INSERT INTO user_preferences (${columns.join(', ')})
+        VALUES (${placeholders.join(', ')})
+        ON CONFLICT (user_id) ${onConflictClause}`,
+        values,
       )
 
-      const createdPreferences = result.rows[0] as UserPreferences
-
-      return {
-        ...createdPreferences,
-        theme: normalizeThemeId(createdPreferences.theme),
-      }
+      return this.mapRowToPreferences(defaults)
     } catch (error) {
       logger.error('❌ Error creating default preferences', {
         userId,
@@ -369,20 +288,73 @@ export class UserPreferencesService {
         error,
       })
       // Return in-memory defaults as fallback
-      return {
-        userId,
-        theme: normalizeThemeId(overrides.theme ?? DEFAULT_THEME_ID),
-        soundEnabled: overrides.soundEnabled ?? true,
-        musicEnabled: overrides.musicEnabled ?? true,
-        notificationEnabled: overrides.notificationEnabled ?? true,
-        dmNotificationsBrowser: overrides.dmNotificationsBrowser ?? true,
-        dmNotificationsEmail: overrides.dmNotificationsEmail ?? false,
-        autoReady: overrides.autoReady ?? false,
-        showTimer: overrides.showTimer ?? true,
-        showArmyNumbers: overrides.showArmyNumbers ?? true,
-        animationSpeed: overrides.animationSpeed ?? 'normal',
-        language: overrides.language ?? 'en',
-      }
+      return this.mapRowToPreferences({ userId, ...overrides })
+    }
+  }
+
+  private async getExistingColumns(): Promise<Set<string>> {
+    const result = await this.pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'user_preferences' AND table_schema = 'public'`,
+    )
+    return new Set(result.rows.map((row) => row.column_name))
+  }
+
+  private buildSelectFields(existingColumns: Set<string>): string[] {
+    const fields = ['user_id as "userId"']
+
+    if (existingColumns.has('theme')) {
+      fields.push('theme as "theme"')
+    }
+    if (existingColumns.has('sound_enabled')) {
+      fields.push('sound_enabled as "soundEnabled"')
+    }
+    if (existingColumns.has('music_enabled')) {
+      fields.push('music_enabled as "musicEnabled"')
+    }
+    if (existingColumns.has('notification_enabled')) {
+      fields.push('notification_enabled as "notificationEnabled"')
+    }
+    if (existingColumns.has('dm_notifications_browser')) {
+      fields.push('dm_notifications_browser as "dmNotificationsBrowser"')
+    }
+    if (existingColumns.has('dm_notifications_email')) {
+      fields.push('dm_notifications_email as "dmNotificationsEmail"')
+    }
+    if (existingColumns.has('auto_ready')) {
+      fields.push('auto_ready as "autoReady"')
+    }
+    if (existingColumns.has('show_timer')) {
+      fields.push('show_timer as "showTimer"')
+    }
+    if (existingColumns.has('show_army_numbers')) {
+      fields.push('show_army_numbers as "showArmyNumbers"')
+    }
+    if (existingColumns.has('animation_speed')) {
+      fields.push('animation_speed as "animationSpeed"')
+    }
+    if (existingColumns.has('language')) {
+      fields.push('language as "language"')
+    }
+
+    return fields
+  }
+
+  private mapRowToPreferences(row: Partial<UserPreferences> & { userId: string }): UserPreferences {
+    return {
+      userId: row.userId,
+      theme: normalizeThemeId((row.theme as ThemeId | undefined) ?? DEFAULT_THEME_ID),
+      soundEnabled: row.soundEnabled ?? true,
+      musicEnabled: row.musicEnabled ?? true,
+      notificationEnabled: row.notificationEnabled ?? true,
+      dmNotificationsBrowser: row.dmNotificationsBrowser ?? true,
+      dmNotificationsEmail: row.dmNotificationsEmail ?? false,
+      autoReady: row.autoReady ?? false,
+      showTimer: row.showTimer ?? true,
+      showArmyNumbers: row.showArmyNumbers ?? true,
+      animationSpeed:
+        (row.animationSpeed as UserPreferences['animationSpeed'] | undefined) ?? 'normal',
+      language: row.language ?? 'en',
     }
   }
 }

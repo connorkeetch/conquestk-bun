@@ -148,13 +148,42 @@ export interface ClientMetricsSummary {
   avgLatency: number
   avgSuccessRate: number
   totalReconnects: number
-  lockstepResyncs?: {
+  activeGames: number
+  lockstepResyncs: {
     total: number
     successes: number
     failures: number
     failureRate: number
     avgDurationMs: number
+    byReason: Array<{
+      reason:
+        | 'frame_gap'
+        | 'unsupported_commands'
+        | 'missing_state'
+        | 'checksum_mismatch'
+        | 'snapshot_error'
+        | 'manual'
+      total: number
+    }>
   }
+  sessionsPerGame: Array<{
+    id: string | null
+    label: string | null
+    status: string | null
+    sessions: number
+    reconnects: number
+    resyncs: number
+    resyncsPerSession: number
+  }>
+  sessionsPerUser: Array<{
+    id: string | null
+    label: string | null
+    username: string | null
+    sessions: number
+    reconnects: number
+    resyncs: number
+    resyncsPerSession: number
+  }>
 }
 
 export interface SystemStatus {
@@ -181,6 +210,10 @@ class AdminService {
   async getAdminInfo(): Promise<AdminUser> {
     const response = await apiClient.get(`${this.baseUrl}/me`)
     return response.data
+  }
+
+  async resetRealtimeMetrics(): Promise<void> {
+    await apiClient.post(`${this.realtimeUrl}/reset`)
   }
 
   // ============= USER MANAGEMENT =============
@@ -489,13 +522,23 @@ class AdminService {
     return (response.data?.data ?? response.data) as AdminPerformanceAlert[]
   }
 
-  async getClientMetricsSummary(): Promise<ClientMetricsSummary> {
-    const response = await apiClient.get('/metrics/client/summary')
+  async getClientMetricsSummary(hours?: number): Promise<ClientMetricsSummary> {
+    const response = await apiClient.get('/metrics/client/summary', {
+      params: typeof hours === 'number' && hours > 0 ? { hours } : undefined,
+    })
     const payload = response.data
     if (payload && typeof payload === 'object' && 'data' in payload) {
       return (payload as { data: ClientMetricsSummary }).data
     }
     return payload as ClientMetricsSummary
+  }
+
+  async resetClientMetrics(
+    params: { scope?: 'all' | 'older_than_hours'; hours?: number } = {},
+  ): Promise<{ ok: boolean; deleted?: number; scope?: string; hours?: number }> {
+    const body = Object.keys(params).length === 0 ? { scope: 'all' } : params
+    const response = await apiClient.post('/metrics/client/reset', body)
+    return response.data
   }
 
   // ============= ODDS METRICS (Performance) =============

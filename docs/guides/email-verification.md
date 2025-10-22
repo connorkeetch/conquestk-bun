@@ -1,5 +1,7 @@
 # Email Verification System Documentation
 
+_Last updated: October 20, 2025_
+
 ## Overview
 The email verification system ensures users confirm their email addresses before accessing game features. This document covers the complete implementation including backend services, frontend flows, and troubleshooting.
 
@@ -159,14 +161,14 @@ EMAIL_OVERRIDE=dev@example.com               # Override recipient (dev only)
 4. **Manual token verification**
    ```sql
    -- Check user's verification status
-   SELECT email, email_verified, verification_token 
-   FROM users 
+   SELECT email, email_verified, verification_token
+   FROM users
    WHERE email = 'user@example.com';
-   
+
    -- Manually verify (testing only)
-   UPDATE users 
-   SET email_verified = true, 
-       verification_token = NULL 
+   UPDATE users
+   SET email_verified = true,
+       verification_token = NULL
    WHERE email = 'user@example.com';
    ```
 
@@ -198,73 +200,6 @@ useEffect(() => {
 - Frontend displays user-friendly messages
 - Automatic logout on invalid tokens
 - Graceful degradation if email service fails
-
-## Recent Updates (January 2025)
-
-1. **Dedicated Verification Page**
-   - Replaced inline error messages with full page
-   - Better UX for unverified users
-   - Clear call-to-action for email verification
-
-2. **Settings Integration**
-   - Added verification status indicator
-   - Color-coded status (blue=verified, red=unverified)
-   - Integrated with account management section
-
-3. **Auth State Fixes**
-   - Fixed token/user synchronization issues
-   - Proper loading states during verification
-   - Persistent login across page refreshes
-
-4. **Rate Limiting Adjustments**
-   - Refined limits based on usage patterns
-   - Separate limits for different operations
-   - Suspicious activity tracking
-
-## Troubleshooting Guide
-
-### Current Issues (January 2025)
-1. **No UI feedback** - Registration succeeds but user doesn't know email verification is required
-2. **Emails not sending** - Resend API may not be properly configured
-3. **Silent failures** - Email errors are logged but user isn't notified
-
-### Debug Steps
-1. **Check if email service is initialized**:
-   - Look for "✅ Email service initialized with Resend" in logs
-   - Or "⚠️ Email service disabled" if EMAIL_ENABLED=false
-
-2. **Check Resend API**:
-   - Go to https://resend.com/domains
-   - Verify send.conquestk.com is verified
-   - Check API key is active
-
-3. **Test email directly**:
-   ```bash
-   cd backend
-   npm run test:email
-   ```
-
-4. **Check logs for**:
-   - "Sending verification email to: [email]"
-   - "Failed to send verification email:" (indicates error)
-
-### Known Issues
-
-**Problem 1: No UI Feedback**
-- Location: `frontend/src/store/authSlice.ts` (line 100-105)
-- After successful registration, user is automatically logged in
-- No message about email verification
-
-**Problem 2: Email Sending Silently Fails**
-- Location: `backend/src/controllers/authController.ts` (line 113-116)
-- Errors are caught but user isn't notified
-- Registration succeeds even if email fails
-
-### Quick Fixes Needed
-1. Add UI notification after registration
-2. Return email verification status in registration response
-3. Add /api/auth/resend-verification endpoint
-4. Show verification required message on login if not verified
 
 ## Future Enhancements
 

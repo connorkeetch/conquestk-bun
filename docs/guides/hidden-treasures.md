@@ -1,6 +1,6 @@
 # Hidden Treasures Ruleset
 
-Last updated: January 2026
+_Last updated: October 20, 2025_
 
 Hidden Treasures is ConquestK’s treasure set system. Players draw treasures on conquest, collect sets, and trade them for troop reinforcements.
 
@@ -35,7 +35,3 @@ Engine behavior
 
 Validation & tests
 - Backend unit tests live at `backend/src/test/hiddenTreasures.test.ts` covering normalization, draws, set patterns, payouts, and disabled mode.
-
-Notes & limitations
-- Room-level persistence uses a cache bridge; for very long-lived lobbies or process restarts, consider persisting `treasureConfig` in the DB (e.g., a JSONB settings column).
-- The current frontend does not yet include an in-game “Treasure Hand” UI or a “Redeem Set” panel; the server endpoints and engine logic are ready for those actions.

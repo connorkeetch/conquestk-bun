@@ -127,10 +127,29 @@ router.post('/maps/:mapId/versions', async (req, res) => {
   try {
     const { mapId } = req.params
     const userId = req.userId
-    const versionData = req.body
+
+    const {
+      name,
+      description,
+      imageUrl,
+      imageWidth,
+      imageHeight,
+      tags,
+      changelog,
+      versionType,
+      data,
+      territories,
+      sectors,
+      adjacencies,
+    } = req.body ?? {}
 
     if (!userId) {
       res.status(401).json({ message: 'User not authenticated' })
+      return
+    }
+
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      res.status(400).json({ message: 'Version name is required' })
       return
     }
 
@@ -139,7 +158,23 @@ router.post('/maps/:mapId/versions', async (req, res) => {
       isAdmin: Boolean(req.user?.isAdmin),
     })
 
-    const version = await MapApprovalService.createVersion(mapId, userId, versionData)
+    const version = await MapApprovalService.createVersion(mapId, userId, {
+      name,
+      description,
+      imageUrl,
+      imageWidth: typeof imageWidth === 'number' ? imageWidth : undefined,
+      imageHeight: typeof imageHeight === 'number' ? imageHeight : undefined,
+      tags: Array.isArray(tags)
+        ? (tags.filter((tag) => typeof tag === 'string') as string[])
+        : undefined,
+      changelog,
+      versionType,
+      data: typeof data === 'object' && data !== null ? data : undefined,
+      territories: Array.isArray(territories) ? territories : undefined,
+      sectors: Array.isArray(sectors) ? sectors : undefined,
+      adjacencies: Array.isArray(adjacencies) ? adjacencies : undefined,
+    })
+
     res.status(201).json({ version })
   } catch (error) {
     if (error instanceof MapPermissionError) {

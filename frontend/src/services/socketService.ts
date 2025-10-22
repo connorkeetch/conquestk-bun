@@ -1,18 +1,15 @@
 import type {
-  BattleResultDelta,
   ClientToServerEvents,
   ConversationCreateAck,
   ConversationCreatePayload,
   ConversationMembersUpdateAck,
   ConversationMembersUpdatePayload,
-  GameDelta,
   MessageSendAck,
   MessageSendPayload,
-  PlayerDelta,
   ReceiptReadAck,
   ServerToClientEvents,
+  GameAction as SharedGameAction,
   GameState as SharedGameState,
-  TerritoryDelta,
 } from '@conquestk/shared'
 import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep'
 import { toast } from 'react-hot-toast'
@@ -42,19 +39,13 @@ import {
   refreshConversation,
 } from '../store/messagesSlice'
 import type { LifecycleUpdatePayload } from '../store/roomSlice'
-import {
-  addPlayerToRoom,
-  applyLifecycleUpdate,
-  removePlayerFromRoom,
-  updateRoom,
-} from '../store/roomSlice'
+import { addPlayerToRoom, applyLifecycleUpdate, removePlayerFromRoom } from '../store/roomSlice'
 import {
   addClientLog,
   addOptimisticMarkers,
   addPing,
   clearOptimisticMarkers,
   clearPlacementHistory,
-  recordBattleResult,
   removeOptimisticMarkers,
   setConnectionStatus,
   setDesyncDetected,
@@ -90,6 +81,15 @@ type LockstepResyncMeta = {
   details?: Record<string, unknown>
 }
 
+type LooseGameActionType = SharedGameAction['type'] | 'undo_fortify'
+
+type LooseGameAction = {
+  type: LooseGameActionType
+  playerId?: string
+  roomId?: string
+  payload?: unknown
+}
+
 const HEARTBEAT_INTERVAL_MS = 5000
 const HEARTBEAT_TIMEOUT_MS = 3000
 const ZOMBIE_CONNECTION_THRESHOLD_MS = 10_000
@@ -103,8 +103,8 @@ const JOIN_BACKOFF_MAX_MS = 1500
 const AUTH_TOAST_THROTTLE_MS = 30_000
 const CONNECTION_RESTORE_TOAST_DURATION_MS = 2000
 const TURN_TOAST_DURATION_MS = 2500
-const TURN_SUPPRESS_WINDOW_MS = 2000
 const RESYNC_DELAY_MS = 100
+const RESYNC_MIN_INTERVAL_MS = 2500
 const PING_TTL_MS = 3000
 const ATTACK_THROTTLE_MS = 120
 
@@ -116,24 +116,23 @@ class SocketService {
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null
   private lastPongTime: number = Date.now()
   private connectionLatency: number = 0
-  private deltaSequenceTracking: Map<string, number> = new Map() // roomId -> last received sequence
-  private pendingDeltaRequests: Set<string> = new Set() // Track in-flight delta requests
+
+  // Action tracking
   private pendingActions: Map<string, Promise<{ ok: boolean; queued?: boolean; error?: string }>> =
     new Map() // Track in-flight actions by idempotency key
   private inFlightActionKeys: Map<string, string> = new Map() // action fingerprint -> idempotency key
   private lastActionEmitAt: Map<string, number> = new Map() // For throttling actions
+
+  // Room management
   private joiningRooms: Map<string, number> = new Map() // roomId -> attempt count
-  private processDeltaHandler?: (payload: GameDelta) => Promise<void>
   private lastTurnStartByRoom: Map<string, number> = new Map()
   private readonly lockstepEnabled = true
   private lockstepSeqByRoom: Map<string, number> = new Map()
   private lockstepPendingResync: Set<string> = new Set()
   private lockstepLastChecksum: Map<string, number> = new Map()
+  private lockstepBaselineReady: Set<string> = new Set()
+  private lockstepLastResyncAt: Map<string, number> = new Map()
   private lockstepSim = new LockstepSimulationManager()
-  // Placeholder for future convergence timers (no-op currently)
-  private clearConfirmTimer(_roomId: string) {
-    // intentionally empty; used as a hook for future state-convergence timers
-  }
 
   private static stableReplacer(_key: string, value: unknown): unknown {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -166,6 +165,14 @@ class SocketService {
   private requestLockstepResync(roomId: string, meta?: LockstepResyncMeta) {
     if (!this.lockstepEnabled || !this.socket) return
     if (this.lockstepPendingResync.has(roomId)) return
+    const now = Date.now()
+    const last = this.lockstepLastResyncAt.get(roomId) ?? 0
+    if (now - last < RESYNC_MIN_INTERVAL_MS) {
+      return
+    }
+    this.lockstepLastResyncAt.set(roomId, now)
+    this.lockstepBaselineReady.delete(roomId)
+    this.resetPendingActions(roomId)
     this.lockstepPendingResync.add(roomId)
     store.dispatch(setResyncing(true))
     store.dispatch(setDesyncDetected(true))
@@ -205,9 +212,17 @@ class SocketService {
     })
 
     const fromSeq = this.lockstepSeqByRoom.get(roomId) ?? 0
+    const payload: Parameters<ClientToServerEvents['game-action:resync-request']>[0] = {
+      roomId,
+      fromSeq,
+      reason: info.reason,
+    }
+    if (Array.isArray(meta?.unsupported) && meta.unsupported.length > 0) {
+      payload.unsupported = meta.unsupported
+    }
     this.socket.emit(
       'game-action:resync-request',
-      { roomId, fromSeq } as Parameters<ClientToServerEvents['game-action:resync-request']>[0],
+      payload,
       (response?: { ok: boolean; error?: string }) => {
         if (response && !response.ok) {
           logger.warn('Lockstep resync request rejected', {
@@ -274,15 +289,35 @@ class SocketService {
   private handleLockstepFrame = (frame: InputFrame) => {
     if (!this.lockstepEnabled || !frame || typeof frame.matchId !== 'string') return
     const lastSeq = this.lockstepSeqByRoom.get(frame.matchId) ?? 0
+
+    // Log every frame for debugging sequence issues
+    logger.debug('[Lockstep] Frame received', {
+      matchId: frame.matchId,
+      seq: frame.seq,
+      lastSeq,
+      commands: frame.commands.map((c) => c.kind),
+      playerId: frame.playerId,
+    })
+
     if (
       lastSeq > 0 &&
       frame.seq !== lastSeq + 1 &&
       !this.lockstepPendingResync.has(frame.matchId)
     ) {
+      logger.error('Lockstep frame gap DETECTED', {
+        matchId: frame.matchId,
+        expected: lastSeq + 1,
+        received: frame.seq,
+        lastSeq,
+        lockstepSeqByRoom: Object.fromEntries(this.lockstepSeqByRoom.entries()),
+        frame,
+      });
       logger.warn('Lockstep frame gap detected; requesting resync', {
         matchId: frame.matchId,
         expected: lastSeq + 1,
         received: frame.seq,
+        gap: frame.seq - (lastSeq + 1),
+        lastSeqSource: lastSeq === 0 ? 'initial' : 'tracked',
       })
       this.requestLockstepResync(frame.matchId, {
         reason: 'frame_gap',
@@ -321,6 +356,9 @@ class SocketService {
 
   private handleLockstepChecksum = (payload: TickChecksum) => {
     if (!this.lockstepEnabled || !payload || typeof payload.matchId !== 'string') return
+    if (!this.lockstepBaselineReady.has(payload.matchId)) {
+      return
+    }
     this.lockstepLastChecksum.set(payload.matchId, payload.crc32)
     const lastSeq = this.lockstepSeqByRoom.get(payload.matchId) ?? 0
     if (payload.seq > lastSeq) {
@@ -370,6 +408,8 @@ class SocketService {
     if (!this.lockstepEnabled || !payload || typeof payload.matchId !== 'string') return
     this.lockstepPendingResync.delete(payload.matchId)
     this.lockstepLastChecksum.delete(payload.matchId)
+    let ackSeq = payload.seq
+    let snapshotApplied = false
     try {
       const baseline = payload.state as unknown as SharedGameState
       this.lockstepSim.setBaseline(payload.matchId, baseline)
@@ -405,6 +445,7 @@ class SocketService {
           meta: { seq: payload.seq },
         })
       }
+      snapshotApplied = true
       store.dispatch(setLockstepResyncInfo(null))
     } catch (error) {
       logger.warn('Failed to apply lockstep snapshot (falling back to fetch)', { error })
@@ -449,22 +490,45 @@ class SocketService {
       store.dispatch(setResyncing(false))
     }
 
-    this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
-
+    // Set sequence tracking to last replayed frame, NOT checkpoint seq
+    // The checkpoint seq is often from a pruned snapshot and causes frame gaps
     if (Array.isArray(payload.frames) && payload.frames.length > 0) {
       const lastFrame = payload.frames[payload.frames.length - 1]
       if (lastFrame && typeof lastFrame.seq === 'number') {
         this.lockstepSeqByRoom.set(payload.matchId, lastFrame.seq)
+        ackSeq = lastFrame.seq
+        logger.info('[Lockstep] Snapshot processed - tracking from last frame', {
+          matchId: payload.matchId,
+          checkpointSeq: payload.seq,
+          lastFrameSeq: lastFrame.seq,
+          frameCount: payload.frames.length,
+        })
+      }
+    } else {
+      // No frames provided, checkpoint is current
+      this.lockstepSeqByRoom.set(payload.matchId, payload.seq)
+      logger.info('[Lockstep] Snapshot processed - no frames, tracking from checkpoint', {
+        matchId: payload.matchId,
+        checkpointSeq: payload.seq,
+      })
+    }
+
+    if (snapshotApplied) {
+      this.lockstepBaselineReady.add(payload.matchId)
+      this.lockstepLastResyncAt.delete(payload.matchId)
+      if (this.socket) {
+        logger.debug('[Lockstep] Emitting baseline-ack', { roomId: payload.matchId, seq: ackSeq });
+        this.socket.emit('lockstep:baseline-ack', {
+          roomId: payload.matchId,
+          seq: ackSeq,
+        } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
       }
     }
 
     void (store.dispatch(fetchGameState({ roomId: payload.matchId })) as Promise<unknown>)
   }
 
-  private getActionFingerprint(
-    roomId: string,
-    action: { type: string; playerId?: string; payload?: unknown },
-  ): string | null {
+  private getActionFingerprint(roomId: string, action: LooseGameAction): string | null {
     const base = `${roomId}:${action.type}:${action.playerId ?? ''}`
     if (action.payload === undefined) {
       return base
@@ -632,134 +696,19 @@ class SocketService {
     }
   }
 
-  /**
-   * RELIABILITY: Check if a delta sequence has gaps and request missing deltas
-   */
-  private async checkDeltaSequence(
-    roomId: string,
-    delta: { version?: number; type?: string },
-  ): Promise<boolean> {
-    // Skip if delta doesn't have a sequence number
-    if (!delta.version) {
-      return true // Allow it through
-    }
-
-    const lastSeq = this.deltaSequenceTracking.get(roomId) ?? 0
-    const currentSeq = delta.version
-
-    // First delta for this room
-    if (lastSeq === 0) {
-      this.deltaSequenceTracking.set(roomId, currentSeq)
-      return true
-    }
-
-    if (currentSeq === lastSeq) {
-      logger.debug('Received repeated delta version; processing without advancing sequence', {
-        roomId,
-        version: currentSeq,
-      })
-      return true
-    }
-
-    if (currentSeq < lastSeq) {
-      logger.warn('Received stale delta - dropping', {
-        roomId,
-        lastSeq,
-        received: currentSeq,
-      })
-      return false
-    }
-
-    // Expected next sequence number
-    if (currentSeq === lastSeq + 1) {
-      this.deltaSequenceTracking.set(roomId, currentSeq)
-      return true
-    }
-
-    // GAP DETECTED: Missing deltas between lastSeq and currentSeq
-    logger.warn('Delta sequence gap detected', {
-      roomId,
-      lastSeq,
-      currentSeq,
-      missing: currentSeq - lastSeq - 1,
-    })
-    // Request missing deltas (if not already requesting)
-    const requestKey = `${roomId}:${lastSeq}-${currentSeq}`
-    if (!this.pendingDeltaRequests.has(requestKey)) {
-      this.pendingDeltaRequests.add(requestKey)
-
-      try {
-        await this.requestMissingDeltas(roomId, lastSeq + 1, currentSeq - 1)
-      } finally {
-        this.pendingDeltaRequests.delete(requestKey)
+  private resetPendingActions(_roomId?: string) {
+    if (this.pendingActions.size > 0) {
+      for (const [id] of this.pendingActions) {
+        rollbackOptimisticAction(id)
       }
+      this.pendingActions.clear()
     }
-
-    // Accept the current delta even though there's a gap
-    // The full state refetch will fix any inconsistencies
-    this.deltaSequenceTracking.set(roomId, currentSeq)
-    return true
-  }
-
-  /**
-   * RELIABILITY: Request missing deltas from server
-   */
-  private async requestMissingDeltas(
-    roomId: string,
-    fromSeq: number,
-    toSeq: number,
-  ): Promise<void> {
-    if (!this.socket) {
-      return
+    if (this.inFlightActionKeys.size > 0) {
+      this.inFlightActionKeys.clear()
     }
-
-    logger.info('Requesting missing deltas', { roomId, fromSeq, toSeq })
-    // ResyncBanner shows sync status, no toast needed for delta requests
-
-    return new Promise((resolve) => {
-      this.socket?.emit(
-        'request-missing-deltas',
-        { roomId, fromSeq, toSeq },
-        (response?: { ok: boolean; deltas?: unknown[]; error?: string }) => {
-          if (response?.ok) {
-            if (response.deltas && response.deltas.length > 0) {
-              logger.info('Received missing deltas', { count: response.deltas.length })
-              const handler = this.processDeltaHandler
-              const deltasArray = Array.isArray(response.deltas)
-                ? (response.deltas as unknown[])
-                : []
-              if (handler) {
-                void (async () => {
-                  for (const raw of deltasArray) {
-                    const delta = raw as GameDelta
-                    const rId = (delta as { roomId?: string }).roomId
-                    if (rId) {
-                      const shouldProcess = await this.checkDeltaSequence(rId, delta)
-                      if (!shouldProcess) {
-                        continue
-                      }
-                    }
-                    await handler(delta)
-                  }
-                })().finally(resolve)
-                return
-              }
-              logger.warn('processDeltaHandler not initialized; falling back to full refetch')
-              store.dispatch(fetchGameState({ roomId }))
-            } else {
-              // Server doesn't have deltas - trigger full state refetch
-              logger.info('Server has no cached deltas - refetching full state')
-              store.dispatch(fetchGameState({ roomId }))
-            }
-            resolve()
-          } else {
-            logger.error('Failed to request missing deltas', { error: response?.error })
-            // Status shown in ResyncBanner, no need for toast
-            resolve()
-          }
-        },
-      )
-    })
+    rollbackAllOptimisticActions()
+    store.dispatch(clearOptimisticMarkers())
+    this.lastActionEmitAt.clear()
   }
 
   /**
@@ -768,7 +717,7 @@ class SocketService {
    */
   private async sendActionWithAck(
     roomId: string,
-    action: { type: string; playerId?: string; payload?: unknown },
+    action: LooseGameAction,
     options?: {
       idempotencyKey?: string
       timeoutMs?: number
@@ -781,13 +730,29 @@ class SocketService {
       maxRetries?: number
     },
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
-    const fingerprint = this.getActionFingerprint(roomId, action)
+    const playerId = action.playerId ?? store.getState().auth.user?.id ?? null
+    if (!playerId) {
+      logger.warn('Aborting action send due to missing player context', {
+        roomId,
+        actionType: action.type,
+      })
+      return { ok: false, error: 'Missing player context' }
+    }
+
+    const normalizedAction = {
+      ...(action as Omit<SharedGameAction, 'roomId' | 'playerId'>),
+      roomId,
+      playerId,
+    } as SharedGameAction
+
+    const fingerprint = this.getActionFingerprint(roomId, normalizedAction)
     const fromOptions = options?.idempotencyKey
     const fromFingerprint =
       fromOptions === undefined && fingerprint
         ? this.inFlightActionKeys.get(fingerprint)
         : undefined
-    const idempotencyKey = fromOptions ?? fromFingerprint ?? `${roomId}:${action.type}:${uuidv4()}`
+    const idempotencyKey =
+      fromOptions ?? fromFingerprint ?? `${roomId}:${normalizedAction.type}:${uuidv4()}`
     const timeoutMs = options?.timeoutMs ?? ACTION_TIMEOUT_MS
     const autoRetry = options?.autoRetryOnTimeout ?? true
     const maxRetries = Math.max(1, options?.maxRetries ?? ACTION_RETRY_ATTEMPTS)
@@ -819,7 +784,7 @@ class SocketService {
       options?.optimisticMetadata?.territoryIds?.filter((key): key is string => Boolean(key)) ?? []
     const optimisticLabel =
       options?.optimisticMetadata?.label ??
-      action.type.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+      normalizedAction.type.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
 
     registerOptimisticAction(idempotencyKey, {
       apply: options?.optimisticUpdate,
@@ -839,7 +804,12 @@ class SocketService {
     reliabilityMetrics.recordActionAttempt()
 
     // Send action with ACK
-    const actionPromise = this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
+    const actionPromise = this._sendActionInternal(
+      roomId,
+      normalizedAction,
+      idempotencyKey,
+      timeoutMs,
+    )
     this.pendingActions.set(idempotencyKey, actionPromise)
 
     actionPromise.finally(() => {
@@ -862,14 +832,14 @@ class SocketService {
           const backoff = Math.min(RETRY_BACKOFF_BASE_MS * 2 ** (attempt - 1), RETRY_BACKOFF_MAX_MS)
           logger.warn('Retrying game action after timeout', {
             roomId,
-            actionType: action.type,
+            actionType: normalizedAction.type,
             attempt,
             maxAttempts: maxRetries,
             backoffMs: backoff,
           })
           await new Promise((resolve) => setTimeout(resolve, backoff))
           reliabilityMetrics.recordActionRetry()
-          ack = await this._sendActionInternal(roomId, action, idempotencyKey, timeoutMs)
+          ack = await this._sendActionInternal(roomId, normalizedAction, idempotencyKey, timeoutMs)
         }
         finalAck = ack
       }
@@ -895,7 +865,7 @@ class SocketService {
    */
   private async _sendActionInternal(
     roomId: string,
-    action: { type: string; playerId?: string; payload?: unknown },
+    action: SharedGameAction,
     idempotencyKey: string,
     timeoutMs: number,
   ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
@@ -998,6 +968,8 @@ class SocketService {
       this.lockstepSeqByRoom.clear()
       this.lockstepPendingResync.clear()
       this.lockstepLastChecksum.clear()
+      this.lockstepBaselineReady.clear()
+      this.lockstepLastResyncAt.clear()
       this.lockstepSim.reset()
       store.dispatch(setLockstepResyncInfo(null))
     }
@@ -1051,8 +1023,6 @@ class SocketService {
     if (!roomId) return
     // Allow immediate rejoin attempts (React StrictMode double-invokes effects)
     this.joiningRooms.delete(roomId)
-    // Reset delta sequence tracking so rejoin starts fresh
-    this.deltaSequenceTracking.delete(roomId)
     this.socket?.emit('leave-room', roomId)
   }
 
@@ -1065,10 +1035,7 @@ class SocketService {
    * gameplay through this method (or the Redux thunks that call it).
    */
   // Accept a loose action envelope to support extended client-only action helpers
-  sendGameAction(data: {
-    roomId: string
-    action: { type: string; playerId?: string; payload?: unknown }
-  }) {
+  sendGameAction(data: { roomId: string; action: LooseGameAction }) {
     const { roomId, action } = data
     if (this.lockstepEnabled) {
       void this.sendActionWithAck(roomId, action)
@@ -1172,10 +1139,27 @@ class SocketService {
     }
 
     // Generic emit as a fallback
-    this.socket?.emit(
-      'game-action',
-      data as unknown as Parameters<ClientToServerEvents['game-action']>[0],
-    )
+    const fallbackPlayerId = data.action.playerId ?? store.getState().auth.user?.id ?? undefined
+    if (!fallbackPlayerId) {
+      logger.warn('Skipping fallback game-action emit due to missing player id', {
+        roomId,
+        actionType: data.action.type,
+      })
+      return
+    }
+
+    const fallbackAction = {
+      ...(data.action as Omit<SharedGameAction, 'roomId' | 'playerId'>),
+      roomId,
+      playerId: fallbackPlayerId,
+    } as SharedGameAction
+
+    const fallbackPacket: Parameters<ClientToServerEvents['game-action']>[0] = {
+      roomId,
+      action: fallbackAction,
+    }
+
+    this.socket?.emit('game-action', fallbackPacket)
   }
 
   private async deployArmies(roomId: string, territoryId: string, armies: number) {
@@ -1348,7 +1332,7 @@ class SocketService {
         roomId,
         playerId: (store.getState().auth.user?.id as string | undefined) ?? '',
         payload: { fromTerritoryId, toTerritoryId, armies },
-      } as unknown as Parameters<ClientToServerEvents['game-action']>[0]['action'],
+      },
     })
   }
 
@@ -1460,7 +1444,7 @@ class SocketService {
       // CONNECTION STATE RECOVERY: Check if Socket.io recovered the connection
       // If recovered, the server replayed missed events automatically
       const socket = this.socket
-      const recovered = (socket as unknown as { recovered?: boolean })?.recovered ?? false
+      const recovered = socket?.recovered ?? false
 
       if (recovered) {
         logger.info('✅ Connection recovered - server replayed missed events')
@@ -1683,179 +1667,7 @@ class SocketService {
       )
     })
 
-    // Delta update handler - efficient real-time updates
-    const processDelta = async (payload: GameDelta) => {
-      const state = store.getState()
-      const viewerId = state.auth.user?.id ?? null
-      const currentGame = state.game.currentGame
-
-      // Any delta for this room confirms activity — clear pending convergence timer
-      if (payload?.roomId) {
-        this.clearConfirmTimer(payload.roomId)
-      }
-
-      const roomId = payload.roomId
-      const recentTurnEventTs =
-        typeof roomId === 'string' ? this.lastTurnStartByRoom.get(roomId) : undefined
-      const skipTurnStartFromEvent =
-        typeof roomId === 'string' &&
-        typeof recentTurnEventTs === 'number' &&
-        Date.now() - recentTurnEventTs < TURN_SUPPRESS_WINDOW_MS
-      if (skipTurnStartFromEvent && typeof roomId === 'string') {
-        this.lastTurnStartByRoom.delete(roomId)
-      }
-
-      if (!currentGame || currentGame.roomId !== payload.roomId) {
-        if (!this.pendingRoomStateFetches.has(payload.roomId)) {
-          this.pendingRoomStateFetches.add(payload.roomId)
-          void (store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>)
-            .catch(() => {
-              /* swallow fetch errors - fallback is manual refresh */
-            })
-            .finally(() => {
-              this.pendingRoomStateFetches.delete(payload.roomId)
-            })
-        }
-        return
-      }
-
-      // DESYNC DETECTION: Check if we need to resync due to version mismatch or state corruption
-      if (state.game.needsResync) {
-        logger.warn('Desync detected - triggering full state refetch', {
-          roomId: payload.roomId,
-          deltaType: payload.type,
-        })
-        reliabilityMetrics.recordDesyncDetection()
-
-        if (!this.pendingRoomStateFetches.has(payload.roomId)) {
-          this.pendingRoomStateFetches.add(payload.roomId)
-
-          // ResyncBanner shows user-facing sync status
-          void (store.dispatch(fetchGameState({ roomId: payload.roomId })) as Promise<unknown>)
-            .then(() => {
-              logger.info('Desync recovery successful')
-              // ResyncBanner will hide automatically when desync flag clears
-              reliabilityMetrics.recordDesyncRecovery()
-            })
-            .catch((error) => {
-              logger.error('Desync recovery failed', error)
-              // ResyncBanner stays visible with error, no toast needed
-            })
-            .finally(() => {
-              this.pendingRoomStateFetches.delete(payload.roomId)
-            })
-        }
-        return
-      }
-
-      const currentUserId = viewerId
-
-      // Handle a single turn-start notification (avoid per-phase spam)
-      // Only notify when the turn first switches to the current user.
-      if (payload.type === 'PHASE_CHANGE' && payload.currentPlayer === currentUserId) {
-        const wasMyTurn = currentGame?.currentPlayer === currentUserId
-        if (!wasMyTurn && !skipTurnStartFromEvent) {
-          notificationService.addNotification({
-            type: 'turn_reminder',
-            title: "It's your turn!",
-            message: `It's your turn - ${payload.phase} phase`,
-            read: false,
-            ...(payload.roomId ? { actionUrl: `/room/${payload.roomId}` } : {}),
-            actionLabel: 'Go to game',
-            metadata: {
-              gameId: payload.roomId,
-            },
-          })
-          audioService.playEffect('turn')
-        }
-      }
-
-      // Reset local placement tracking at the start of reinforcement
-      if (payload.type === 'PHASE_CHANGE') {
-        if (payload.phase === 'reinforcement') {
-          store.dispatch(clearPlacementHistory())
-          // Server may include reinforcementArmies; server-spent resets to 0 at phase start
-          store.dispatch(setPlacementServerSpent(0))
-        }
-      }
-
-      // Handle battle result audio and record dice recap
-      if (payload.type === 'BATTLE_RESULT') {
-        const br = (payload as BattleResultDelta).battleResult
-        if (br.conquered) {
-          audioService.playEffect('victory')
-        } else {
-          audioService.playEffect('defeat')
-        }
-        try {
-          store.dispatch(
-            recordBattleResult({
-              fromId: br.fromTerritory.id,
-              toId: br.toTerritory.id,
-              ...(br.attackerId !== undefined ? { attackerId: br.attackerId ?? null } : {}),
-              ...(br.defenderId !== undefined ? { defenderId: br.defenderId ?? null } : {}),
-              attackerDice: Array.isArray(br.attackerDice) ? br.attackerDice : [],
-              defenderDice: Array.isArray(br.defenderDice) ? br.defenderDice : [],
-              attackerLosses: br.attackerLosses ?? 0,
-              defenderLosses: br.defenderLosses ?? 0,
-              conquered: Boolean(br.conquered),
-            }),
-          )
-        } catch (error) {
-          logger.warn('Failed to append battle result to UI (best-effort)', { error })
-        }
-      }
-
-      // Basic desync checks before applying - read fresh state right before validation
-      try {
-        if (payload.type === 'TERRITORY_UPDATE') {
-          const td = payload as TerritoryDelta
-          if (!currentGame.board.some((t) => t.id === td.territoryId)) {
-            store.dispatch(setDesyncDetected(true))
-            return
-          }
-        } else if (payload.type === 'PLAYER_UPDATE') {
-          const pd = payload as PlayerDelta
-          if (!currentGame.players.some((p) => p.id === pd.playerId)) {
-            store.dispatch(setDesyncDetected(true))
-            return
-          }
-        } else if (payload.type === 'BATTLE_RESULT') {
-          const br = (payload as BattleResultDelta).battleResult
-          if (
-            !currentGame.board.some((t) => t.id === br.fromTerritory.id) ||
-            !currentGame.board.some((t) => t.id === br.toTerritory.id)
-          ) {
-            store.dispatch(setDesyncDetected(true))
-            return
-          }
-        }
-      } catch {
-        store.dispatch(setDesyncDetected(true))
-        return
-      }
-
-      // Apply delta to Redux store
-      // Legacy delta path removed.
-
-      // Align room lifecycle status with end-of-game signals immediately
-      try {
-        if (payload.type === 'GAME_END') {
-          store.dispatch(updateRoom({ id: payload.roomId, status: 'completed' }))
-        } else if (payload.type === 'PHASE_CHANGE') {
-          const p = payload as import('@shared/types').PhaseChangeDelta
-          if (p.phase === 'finished') {
-            store.dispatch(updateRoom({ id: payload.roomId, status: 'completed' }))
-          }
-        }
-      } catch (error) {
-        logger.warn('Failed to align room status with end-of-game signals', { error })
-      }
-    }
-
-    this.processDeltaHandler = processDelta
-
-    // Legacy `game-delta` listeners removed; lockstep frames now handle reconciliation.
+    // Lockstep frames handle all game state reconciliation
     if (this.lockstepEnabled) {
       this.socket.on('game-action:frame-committed', this.handleLockstepFrame)
       this.socket.on('game-action:checksum', this.handleLockstepChecksum)
@@ -1903,6 +1715,19 @@ class SocketService {
       const previousState = game.currentGame
       const currentUserId = auth.user?.id
       const needsResync = game.needsResync === true
+
+      // CRITICAL: When lockstep is active and we have a baseline, IGNORE snapshots entirely
+      // Snapshots lag behind lockstep frames and will desync the phase/state
+      if (
+        this.lockstepEnabled &&
+        typedGameState.roomId &&
+        this.lockstepBaselineReady.has(typedGameState.roomId)
+      ) {
+        logger.debug('[Lockstep] Ignoring game:snapshot - lockstep state is authoritative', {
+          roomId: typedGameState.roomId,
+        })
+        return
+      }
 
       // Delta-first: ignore snapshots when we already have state and no resync requested,
       // unless the snapshot clearly advances beyond our version (gap detected)
@@ -2055,6 +1880,27 @@ class SocketService {
         logger.warn('Failed to reconcile placement spent from server baseline (best-effort)', {
           error,
         })
+      }
+
+      if (this.lockstepEnabled && typedGameState.roomId) {
+        try {
+          this.lockstepSim.setBaseline(
+            typedGameState.roomId,
+            typedGameState as unknown as SharedGameState,
+          )
+          this.lockstepSeqByRoom.set(typedGameState.roomId, 0)
+          this.lockstepPendingResync.delete(typedGameState.roomId)
+          this.lockstepBaselineReady.add(typedGameState.roomId)
+          this.lockstepLastResyncAt.delete(typedGameState.roomId)
+          if (this.socket) {
+            this.socket.emit('lockstep:baseline-ack', {
+              roomId: typedGameState.roomId,
+              seq: 0,
+            } as Parameters<ClientToServerEvents['lockstep:baseline-ack']>[0])
+          }
+        } catch (error) {
+          logger.warn('Failed to initialize lockstep baseline from snapshot', { error })
+        }
       }
     })
 
@@ -2430,8 +2276,6 @@ class SocketService {
     this.socket.off('typing.start')
     this.socket.off('typing.stop')
     this.socket.off('error')
-
-    this.processDeltaHandler = undefined
   }
 }
 

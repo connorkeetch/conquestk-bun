@@ -792,7 +792,7 @@ export interface ClientToServerEvents {
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
   'game-action:resync-request': (
-    data: { roomId: string; fromSeq?: number },
+    data: { roomId: string; fromSeq?: number; reason?: string; unsupported?: string[] },
     callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
@@ -824,6 +824,8 @@ export interface ClientToServerEvents {
     payload: { roomId: string; fromSeq: number; toSeq: number },
     callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
   ) => void
+  // Acknowledge receipt and processing of lockstep baseline snapshot
+  'lockstep:baseline-ack': (data: { roomId: string; seq: number }) => void
   'conversation.create': (
     payload: ConversationCreatePayload,
     callback?: (response: ConversationCreateAck) => void,

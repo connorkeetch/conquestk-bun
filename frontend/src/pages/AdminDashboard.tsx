@@ -583,9 +583,20 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div className="pt-1">
-                <a href="/admin/queue-tools" className="underline text-[color:var(--heading)]">
-                  Open queue tools →
-                </a>
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.open(
+                      'https://bullboard-production-e18d.up.railway.app/?status=active',
+                      '_blank',
+                      'noopener,noreferrer',
+                    )
+                  }
+                  className="underline text-[color:var(--heading)]"
+                  title="Open Bull Board in new tab"
+                >
+                  Open Bull Board →
+                </button>
               </div>
             </div>
           </div>

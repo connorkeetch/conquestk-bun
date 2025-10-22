@@ -685,7 +685,12 @@ export interface ClientToServerEvents {
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
   'game-action:resync-request': (
-    data: { roomId: string; fromSeq?: number },
+    data: {
+      roomId: string
+      fromSeq?: number
+      reason?: string
+      unsupported?: string[]
+    },
     callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
   deployArmies: (

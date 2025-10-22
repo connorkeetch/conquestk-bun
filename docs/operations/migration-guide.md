@@ -1,5 +1,7 @@
 # Database Migration Guide
 
+_Last reviewed: 2025-10-21_
+
 ## 🚀 Quick Reference
 
 ### Run Migrations
@@ -55,7 +57,7 @@ cd backend && npm run migrate
 
 # Emergency fix (production)
 # Connect with pgAdmin and run:
-ALTER TABLE table_name 
+ALTER TABLE table_name
 ADD COLUMN IF NOT EXISTS column_name TYPE DEFAULT value;
 ```
 
@@ -67,8 +69,8 @@ ADD COLUMN IF NOT EXISTS column_name TYPE DEFAULT value;
 # Check schema status
 cd backend && npm run check:schema
 
-# If table missing, check migration 011
-# May need to run manually via pgAdmin
+# If a table is missing, it may not have been included in the baseline schema.
+# Check 'backend/migrations/001_baseline_schema.sql'.
 ```
 
 ### Issue: Admin panel 500 errors
@@ -78,12 +80,7 @@ cd backend && npm run check:schema
 1. Clear browser cache (removes bad JWT tokens)
 2. Check database schema: `npm run check:schema`
 3. Run migrations: `npm run migrate`
-4. Check specific tables:
-   - `user_account_status` (from migration 011)
-   - `user_preferences.theme` (from migration 004)
-   - `maps.status` (from migration 014)
-   - `users.is_vip`, `users.premium_tier` (from migration 016)
-   - `maps.is_vip_only` (from migration 016)
+4. Check that critical tables like `users`, `maps`, and `user_account_status` exist.
 
 ### Issue: "Unexpected token '*'" in JWT
 **Cause**: Browser caching null token as string "*"
@@ -106,12 +103,12 @@ localStorage.removeItem('token')
 -- Purpose: Brief description
 
 -- Add new column (safe)
-ALTER TABLE table_name 
+ALTER TABLE table_name
 ADD COLUMN IF NOT EXISTS column_name TYPE DEFAULT value;
 
 -- Add constraint (safe)
-ALTER TABLE table_name 
-ADD CONSTRAINT IF NOT EXISTS constraint_name 
+ALTER TABLE table_name
+ADD CONSTRAINT IF NOT EXISTS constraint_name
 CHECK (condition);
 
 -- Create table (safe)
@@ -121,11 +118,11 @@ CREATE TABLE IF NOT EXISTS table_name (
 );
 
 -- Create index (safe)
-CREATE INDEX IF NOT EXISTS idx_name 
+CREATE INDEX IF NOT EXISTS idx_name
 ON table_name(column_name);
 
 -- Drop column (careful!)
-ALTER TABLE table_name 
+ALTER TABLE table_name
 DROP COLUMN IF EXISTS old_column;
 ```
 
@@ -153,7 +150,7 @@ DROP COLUMN IF EXISTS old_column;
 ### Rollback Procedure
 ```sql
 -- Example rollback for adding column
-ALTER TABLE table_name 
+ALTER TABLE table_name
 DROP COLUMN IF EXISTS column_name;
 
 -- Example rollback for creating table
@@ -163,8 +160,9 @@ DROP TABLE IF EXISTS table_name CASCADE;
 ## 📊 Monitoring Migration Health
 
 ### Check Script
-Create `backend/src/scripts/migrationHealth.ts`:
+A health check script can be created to verify the schema. Here is a basic example:
 ```typescript
+// backend/src/scripts/migrationHealth.ts
 import { Pool } from 'pg'
 
 const pool = new Pool({
@@ -174,13 +172,13 @@ const pool = new Pool({
 
 async function checkMigrationHealth() {
   const issues = []
-  
+
   // Check critical tables
   const tables = ['users', 'maps', 'user_preferences', 'user_account_status']
   for (const table of tables) {
     const result = await pool.query(
       `SELECT EXISTS (
-        SELECT FROM information_schema.tables 
+        SELECT FROM information_schema.tables
         WHERE table_name = $1
       )`,
       [table]
@@ -189,7 +187,7 @@ async function checkMigrationHealth() {
       issues.push(`Missing table: ${table}`)
     }
   }
-  
+
   // Check critical columns
   const columns = [
     { table: 'user_preferences', column: 'theme' },
@@ -200,11 +198,11 @@ async function checkMigrationHealth() {
     { table: 'users', column: 'is_admin' },
     { table: 'maps', column: 'is_vip_only' }
   ]
-  
+
   for (const { table, column } of columns) {
     const result = await pool.query(
       `SELECT EXISTS (
-        SELECT FROM information_schema.columns 
+        SELECT FROM information_schema.columns
         WHERE table_name = $1 AND column_name = $2
       )`,
       [table, column]
@@ -213,14 +211,14 @@ async function checkMigrationHealth() {
       issues.push(`Missing column: ${table}.${column}`)
     }
   }
-  
+
   if (issues.length > 0) {
     console.log('❌ Migration issues found:')
     issues.forEach(issue => console.log(`  - ${issue}`))
   } else {
     console.log('✅ All migrations appear healthy')
   }
-  
+
   await pool.end()
 }
 

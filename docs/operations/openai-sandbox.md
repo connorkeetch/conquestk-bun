@@ -1,5 +1,7 @@
 # OpenAI Sandbox Deployment Guide
 
+_Last reviewed: 2025-10-21_
+
 This guide documents the exact steps required to run ConquestK inside the OpenAI
 agent sandbox. The environment blocks arbitrary outbound TCP ports and starts
 without PostgreSQL, so a few extra provisioning steps are required compared to a
@@ -19,13 +21,13 @@ npm run build:shared
 ## 2. Provision PostgreSQL locally
 
 The sandbox disallows direct connections to Railway's dev database (port 46553
-is blocked behind an HTTP CONNECT proxy), so we install PostgreSQL 16 locally
+is blocked behind an HTTP CONNECT proxy), so we install PostgreSQL 17 locally
 instead.
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y postgresql
-sudo pg_ctlcluster 16 main start
+sudo pg_ctlcluster 17 main start
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'localpassword123';"
 sudo -u postgres psql -c "CREATE DATABASE conquestk_local;"
 ```
@@ -67,7 +69,7 @@ URL (managed in the Railway dashboard). Production/staging never load a `.env` f
    files in `backend/migrations/`.
 
 2. **Run the app’s migration runner** (safe to rerun):
-   
+
    ```bash
    cd backend
    npm run migrate
@@ -110,7 +112,7 @@ back to in-memory rate limiting, which is sufficient for smoke testing.
 | --- | --- |
 | `connect ENETUNREACH 66.33.22.242:46553` | Confirm you're using the local `DATABASE_URL` from step 3. The sandbox blocks outbound TCP tunnels to Railway. |
 | `Cannot find module '@/config/database'` while running `npm run dev` | Run `npm run build:shared` once before starting the backend so the workspace dependency is compiled. |
-| `psql: could not connect to server` | Ensure `pg_ctlcluster 16 main start` succeeded and rerun it if necessary. |
+| `psql: could not connect to server` | Ensure `pg_ctlcluster 17 main start` succeeded and rerun it if necessary. |
 
 With the steps above the backend starts cleanly, migrations run against the
 local database, and the sandbox build behaves the same as Railway deployments

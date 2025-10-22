@@ -1,5 +1,7 @@
 # Game Modes Expansion Plan
 
+*Last updated: 2025-10-21*
+
 ## Purpose & scope
 - Capture detailed product and technical requirements for the next wave of ConquestK game modes.
 - Document gameplay rules, UX expectations, telemetry, and rollout sequencing so backend and frontend teams can work in parallel.
@@ -40,6 +42,8 @@
 ---
 
 ## Assassination
+
+- **Status:** Completed
 
 ### Core rules
 - Each player receives a hidden target (another player). Targets form a closed loop to guarantee everyone is hunted.
@@ -129,6 +133,8 @@
 ---
 
 ## King of the Hill
+
+- **Status:** Completed
 
 ### Core rules
 - A designated "Hill" territory (static or rotating) awards 1 victory point to its controller at the end of each turn.

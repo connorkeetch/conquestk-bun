@@ -195,6 +195,33 @@ describe('Map approval permissions', () => {
     expect(response.body).toEqual({ requests: [{ id: 'req-1' }] })
   })
 
+  it('returns numeric approval stats for the admin dashboard', async () => {
+    const dashboardStats = {
+      total_requests: 9,
+      approved: 4,
+      rejected: 3,
+      pending: 2,
+      avg_review_hours: 5.25,
+    }
+
+    mapApprovalService.getApprovalStats.mockResolvedValueOnce(dashboardStats)
+
+    const response = await request(createApp())
+      .get('/api/map-approval/stats/approvals')
+      .set('x-test-admin', 'true')
+      .set('x-test-permissions', 'map_approval')
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({ stats: dashboardStats })
+    const { stats } = response.body as { stats: typeof dashboardStats }
+    expect(typeof stats.total_requests).toBe('number')
+    expect(typeof stats.approved).toBe('number')
+    expect(typeof stats.rejected).toBe('number')
+    expect(typeof stats.pending).toBe('number')
+    expect(typeof stats.avg_review_hours === 'number' || stats.avg_review_hours === null).toBe(true)
+    expect(mapApprovalService.getApprovalStats).toHaveBeenCalledTimes(1)
+  })
+
   it('denies version history when user lacks map access', async () => {
     mapPermissionService.getMapEditorContext.mockResolvedValueOnce({
       exists: true,

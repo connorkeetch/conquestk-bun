@@ -97,6 +97,6 @@
   ],
   "expected": {
     "finalSeq": 1,
-    "finalCrc32": 3855182730
+    "finalCrc32": 1726938712
   }
 }

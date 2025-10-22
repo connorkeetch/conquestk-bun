@@ -138,6 +138,8 @@ tests/*.spec.ts
 *.test.ts
 !frontend/src/**/*.test.ts
 !backend/src/test/*.test.ts
+!backend/src/services/__tests__/*.test.ts
+!shared/utils/__tests__/*.test.ts
 
 # Playwright
 /playwright-report/

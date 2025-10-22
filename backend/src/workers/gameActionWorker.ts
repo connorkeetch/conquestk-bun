@@ -1,6 +1,7 @@
 import { type Job, Worker } from 'bullmq'
 import type { Server } from 'socket.io'
 import { query } from '../config/database.js'
+import { lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
 import { acquireLock, releaseLock } from '../config/redis.js'
 import { aiDecisionService, type DecisionBudget } from '../services/aiDecisionService.js'
 import { gameStateCache } from '../services/cacheService.js'
@@ -78,7 +79,21 @@ export class GameActionWorker {
     }
   }
 
-  private emitGameSnapshot(channel: string, payload: SerializedGameState) {
+  private emitGameSnapshot(
+    channel: string,
+    payload: SerializedGameState,
+    reason: 'action' | 'init' | 'resync' | 'fog' = 'action',
+  ) {
+    // Skip redundant action snapshots (Pure Lockstep mode - frames are used instead)
+    if (reason === 'action') {
+      lockstepConfigMetrics.recordSnapshotSkipped()
+      logger.debug('[Lockstep] Skipped snapshot emission in worker (Pure Lockstep mode)', {
+        channel,
+        reason,
+      })
+      return
+    }
+
     const bytes = this.computePayloadBytes(payload)
     socketPayloadMetrics.record('game:snapshot', bytes)
     if (socketPayloadMetrics.shouldLog('game:snapshot')) {

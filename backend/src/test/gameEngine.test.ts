@@ -453,6 +453,71 @@ describe('GameEngine', () => {
     expect(deployed.gameState.phase).toBe('attack')
     expect(deployed.gameState.hasAttackedThisTurn).toBe(true)
   })
+
+  it('does not advance phase to attack after deploying all armies, allowing undo', async () => {
+    const gameState = createBaseGameState({
+      phase: 'reinforcement',
+      board: [
+        {
+          id: 'territory-a',
+          name: 'Territory A',
+          sector: 'america',
+          ownerId: 'player-1',
+          armies: 3,
+          adjacentTerritories: ['territory-b'],
+        },
+        {
+          id: 'territory-b',
+          name: 'Territory B',
+          sector: 'america',
+          ownerId: 'player-2',
+          armies: 2,
+          adjacentTerritories: ['territory-a'],
+        },
+      ],
+      reinforcementBaseline: { 'territory-a': 3 },
+    })
+    const player = gameState.players.find((p) => p.id === 'player-1')
+    if (!player) throw new Error('Test setup failed: player not found')
+    player.armies = 2
+
+    // Deploy all armies
+    const deployAction: DeployAction = {
+      type: 'deploy',
+      roomId: gameState.roomId,
+      playerId: 'player-1',
+      payload: {
+        territoryId: 'territory-a',
+        armies: 2,
+      },
+    }
+
+    let result = await engine.processAction(gameState, deployAction)
+    const territoryA = result.gameState.board.find((t) => t.id === 'territory-a')
+    expect(territoryA?.armies).toBe(5)
+    const updatedPlayer = result.gameState.players.find((p) => p.id === 'player-1')
+    expect(updatedPlayer?.armies).toBe(0)
+
+    // Undo the deployment
+    const undoAction: DeployAction = {
+      type: 'deploy',
+      roomId: gameState.roomId,
+      playerId: 'player-1',
+      payload: {
+        territoryId: 'territory-a',
+        armies: -2,
+      },
+    }
+
+    result = await engine.processAction(result.gameState, undoAction)
+
+    // Check that the phase is still reinforcement and armies are returned
+    expect(result.gameState.phase).toBe('reinforcement')
+    const finalTerritoryA = result.gameState.board.find((t) => t.id === 'territory-a')
+    expect(finalTerritoryA?.armies).toBe(3)
+    const finalPlayer = result.gameState.players.find((p) => p.id === 'player-1')
+    expect(finalPlayer?.armies).toBe(2)
+  })
 })
 
 describe('GameService serialization', () => {
@@ -572,5 +637,153 @@ describe('GameService capital helpers', () => {
 
     await expect(service.isCapitalTerritory(roomId, 'territory-capital')).resolves.toBe(true)
     await expect(service.isCapitalTerritory(roomId, 'territory-regular')).resolves.toBe(false)
+  })
+})
+
+describe('GameEngine resignation', () => {
+  const engine = new GameEngine()
+
+  it('resets army count on resigned territories to a neutral default', async () => {
+    const gameState = createBaseGameState()
+    const resigningPlayer = gameState.players[0]
+    const resignedTerritory = gameState.board.find((t) => t.ownerId === resigningPlayer.id)
+    if (!resignedTerritory) {
+      throw new Error('Test setup failed: territory not found for resigning player')
+    }
+    resignedTerritory.armies = 10
+
+    const resignAction: GameAction = {
+      type: 'resign',
+      roomId: gameState.roomId,
+      playerId: resigningPlayer.id,
+    }
+
+    const { gameState: nextState } = await engine.processAction(gameState, resignAction)
+    const updatedTerritory = nextState.board.find((t) => t.id === resignedTerritory.id)
+
+    expect(updatedTerritory?.ownerId).toBe('neutral')
+    expect(updatedTerritory?.armies).toBe(3)
+  })
+
+  it('preserves pending conquest transfers when another player resigns', async () => {
+    // Setup a 3-player game
+    const players: GamePlayer[] = [
+      {
+        id: 'player-1',
+        username: 'One',
+        color: 'red',
+        armies: 0,
+        territories: ['territory-a'],
+        cards: [],
+        isEliminated: false,
+      },
+      {
+        id: 'player-2',
+        username: 'Two',
+        color: 'blue',
+        armies: 0,
+        territories: ['territory-b'],
+        cards: [],
+        isEliminated: false,
+      },
+      {
+        id: 'player-3',
+        username: 'Three',
+        color: 'green',
+        armies: 0,
+        territories: ['territory-c'],
+        cards: [],
+        isEliminated: false,
+      },
+    ]
+    const board: Territory[] = [
+      {
+        id: 'territory-a',
+        name: 'A',
+        sector: 'sector-1',
+        ownerId: 'player-1',
+        armies: 10,
+        adjacentTerritories: ['territory-b'],
+      },
+      {
+        id: 'territory-b',
+        name: 'B',
+        sector: 'sector-1',
+        ownerId: 'player-2',
+        armies: 1,
+        adjacentTerritories: ['territory-a'],
+      },
+      {
+        id: 'territory-c',
+        name: 'C',
+        sector: 'sector-2',
+        ownerId: 'player-3',
+        armies: 5,
+        adjacentTerritories: [],
+      },
+    ]
+    const gameState = createBaseGameState({
+      players,
+      board,
+      currentPlayer: 'player-1',
+      phase: 'attack',
+      // Use a fixed seed to ensure the battle outcome is deterministic
+      rngSeed: 'conquest-resign-test-seed',
+    })
+
+    // Player 1 attacks Player 2. With 10 vs 1 armies and a fixed seed, this should result in a conquest.
+    const attackAction: AttackAction = {
+      type: 'attack',
+      roomId: gameState.roomId,
+      playerId: 'player-1',
+      payload: { fromTerritoryId: 'territory-a', toTerritoryId: 'territory-b' },
+    }
+
+    const { gameState: afterAttackState, battleResult } = await engine.processAction(
+      gameState,
+      attackAction,
+    )
+
+    // Verify conquest was successful and a transfer is pending
+    expect(battleResult?.conquered).toBe(true)
+    expect(afterAttackState.lastBattleResult?.pendingConquestFor).toBe('player-1')
+
+    // Now, Player 3 resigns, which should NOT interfere with the pending transfer
+    const resignAction: GameAction = {
+      type: 'resign',
+      roomId: gameState.roomId,
+      playerId: 'player-3',
+    }
+
+    const { gameState: afterResignState } = await engine.processAction(
+      afterAttackState,
+      resignAction,
+    )
+
+    // Assert that the pending conquest is still present after another player resigned
+    expect(afterResignState.lastBattleResult).toBeDefined()
+    expect(afterResignState.lastBattleResult?.pendingConquestFor).toBe('player-1')
+
+    // Finally, verify that Player 1 can still complete their conquest transfer
+    const transferAction: GameAction = {
+      type: 'transfer_conquest',
+      roomId: gameState.roomId,
+      playerId: 'player-1',
+      payload: {
+        fromTerritoryId: 'territory-a',
+        toTerritoryId: 'territory-b',
+        armies: 3,
+      },
+    }
+
+    const { gameState: finalState } = await engine.processAction(afterResignState, transferAction)
+    const toTerritory = finalState.board.find((t) => t.id === 'territory-b')
+
+    // With the fixed seed, the battle outcome is predictable:
+    // Attacker (10 armies, 3 dice) vs. Defender (1 army, 1 die)
+    // Dice: Attacker [6, 5, 2], Defender [1] -> Attacker wins, Defender loses 1 army.
+    // Post-battle state: `from` has 9 armies, `to` is conquered and has 1 army.
+    // Post-transfer state: `from` has 6 armies, `to` has 4 armies.
+    expect(toTerritory?.armies).toBe(4)
   })
 })

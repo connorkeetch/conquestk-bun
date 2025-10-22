@@ -123,7 +123,7 @@ graph TD
 
 > **Notes**
 > - Costs assume 35 planning calls and 21 chat calls per match.
-> - Prices pulled from public rate cards as of 2025-02; update quarterly.
+> - Prices pulled from public rate cards as of 2025-10; update quarterly.
 > - Self-hosted estimate assumes 15-minute match on a single A100 80GB instance at $2/hr amortized.
 > - Add ~10% for moderation API usage (e.g., OpenAI or external trust/safety service).
 

@@ -19,7 +19,7 @@ const toSerializable = (value: unknown): unknown => {
   }
 
   if (typeof value === 'bigint') {
-    return Number(value)
+    return value.toString()
   }
 
   if (typeof value === 'string' || typeof value === 'boolean') {

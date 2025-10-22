@@ -376,12 +376,18 @@ const gameSlice = createSlice({
       state.currentGame = action.payload
       state.reinforcementArmies = computeReinforcementArmies(state.currentGame)
       state.gameResult = mergeGameResult(state.currentGame, null)
+      state.battleResult =
+        (action.payload.lastBattleResult as BattleResult | null | undefined) ?? null
     },
     updateGameState: (state, action: PayloadAction<Partial<GameState>>) => {
       if (state.currentGame) {
         state.currentGame = { ...state.currentGame, ...action.payload }
         state.reinforcementArmies = computeReinforcementArmies(state.currentGame)
         state.gameResult = mergeGameResult(state.currentGame, state.gameResult)
+        if ('lastBattleResult' in action.payload) {
+          state.battleResult =
+            (action.payload.lastBattleResult as BattleResult | null | undefined) ?? null
+        }
       }
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
