@@ -1,8 +1,18 @@
+/**
+ * @fileoverview This file defines the UserPreferencesService class, which is responsible for managing user preferences in the database.
+ * It handles getting, creating, and updating user preferences, and is designed to be backward compatible with older database schemas
+ * by dynamically checking for column existence and providing default values.
+ * @module services/UserPreferencesService
+ */
 import type { ThemeId } from '@conquestk/shared/types/themes'
 import { DEFAULT_THEME_ID, normalizeThemeId } from '@conquestk/shared/types/themes'
 import type { Pool } from 'pg'
 import { logger } from '../utils/logger.js'
 
+/**
+ * An interface representing a user's preferences.
+ * @interface UserPreferences
+ */
 export interface UserPreferences {
   userId: string
   theme: ThemeId
@@ -18,9 +28,24 @@ export interface UserPreferences {
   language: string
 }
 
+/**
+ * A service class for managing user preferences.
+ * @class UserPreferencesService
+ */
 export class UserPreferencesService {
+  /**
+   * Creates an instance of UserPreferencesService.
+   * @param {Pool} pool - The PostgreSQL connection pool.
+   */
   constructor(private pool: Pool) {}
 
+  /**
+   * Retrieves the preferences for a given user.
+   * If no preferences are found, it creates and returns default preferences.
+   * This method is backward compatible and will provide default values for columns that may not exist in older schemas.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<UserPreferences | null>} A promise that resolves to the user's preferences, or null if an error occurs.
+   */
   async getPreferences(userId: string): Promise<UserPreferences | null> {
     try {
       const existingColumns = await this.getExistingColumns()
@@ -47,6 +72,13 @@ export class UserPreferencesService {
     }
   }
 
+  /**
+   * Updates the preferences for a given user.
+   * If the user does not have existing preferences, it creates them.
+   * @param {string} userId - The ID of the user.
+   * @param {Partial<UserPreferences>} preferences - An object containing the preferences to update.
+   * @returns {Promise<UserPreferences | null>} A promise that resolves to the updated preferences, or null if an error occurs.
+   */
   async updatePreferences(
     userId: string,
     preferences: Partial<UserPreferences>,
@@ -147,6 +179,12 @@ export class UserPreferencesService {
     }
   }
 
+  /**
+   * Updates the theme for a given user.
+   * @param {string} userId - The ID of the user.
+   * @param {string} theme - The theme to set.
+   * @returns {Promise<ThemeId | null>} A promise that resolves to the updated theme ID, or null if an error occurs.
+   */
   async updateTheme(userId: string, theme: string): Promise<ThemeId | null> {
     try {
       const normalizedTheme = normalizeThemeId(theme)
@@ -167,6 +205,14 @@ export class UserPreferencesService {
     }
   }
 
+  /**
+   * Creates default preferences for a new user, or for a user who doesn't have any preferences set.
+   * This method will also apply any overrides provided.
+   * @private
+   * @param {string} userId - The ID of the user.
+   * @param {Partial<UserPreferences>} [overrides={}] - An object with preference values to override the defaults.
+   * @returns {Promise<UserPreferences>} A promise that resolves to the newly created preferences.
+   */
   private async createDefaultPreferences(
     userId: string,
     overrides: Partial<UserPreferences> = {},

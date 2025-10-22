@@ -14,6 +14,13 @@ const CRC_TABLE = (() => {
   return table
 })()
 
+/**
+ * Calculates the CRC32 checksum of a byte array.
+ *
+ * @param {Uint8Array} data - The byte array to checksum.
+ * @param {number} [seed=0xffffffff] - The initial seed value.
+ * @returns {number} The CRC32 checksum.
+ */
 export const crc32 = (data: Uint8Array, seed = 0xffffffff): number => {
   let crc = seed ^ 0xffffffff
   for (let i = 0; i < data.length; i += 1) {

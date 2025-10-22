@@ -1,3 +1,7 @@
+/**
+ * @fileoverview This service handles Fog of War logic, filtering game state for individual players.
+ * @module services/fogService
+ */
 import type { RemoteSocket, Server } from 'socket.io'
 import type { GameState, GameTerritoryModifier, SerializedGameState } from '../types/game.js'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared.js'
@@ -7,11 +11,24 @@ import { socketPayloadMetrics } from './metricsService.js'
 
 const ROOM_PREFIX = 'game:'
 
+/**
+ * Gets the team ID for a given viewer.
+ * @param {GameState} state - The current game state.
+ * @param {string} viewerId - The ID of the viewer.
+ * @returns {number | null} The team ID, or null if not in a team.
+ * @private
+ */
 function getViewerTeamId(state: GameState, viewerId: string): number | null {
   const p = state.players.find((pl) => pl.id === viewerId)
   return p?.teamId ?? null
 }
 
+/**
+ * Computes the set of visible territories for a given viewer.
+ * @param {GameState} state - The current game state.
+ * @param {string} viewerId - The ID of the viewer.
+ * @returns {Set<string>} A set of territory IDs that are visible to the viewer.
+ */
 export function computeVisibilityMask(state: GameState, viewerId: string): Set<string> {
   const allowTeam = state.gameConfig?.allowTeamPlay === true
   const viewerTeam = allowTeam ? getViewerTeamId(state, viewerId) : null
@@ -44,6 +61,12 @@ export async function emitFogFilteredDelta(
   logger.debug('Skipping legacy game-delta emission', { roomId })
 }
 
+/**
+ * Filters the full game state for a specific viewer, applying Fog of War.
+ * @param {GameState} state - The complete game state.
+ * @param {string} viewerId - The ID of the viewer.
+ * @returns {GameState} The filtered game state.
+ */
 export function filterFullStateForViewer(state: GameState, viewerId: string): GameState {
   const fogMode = (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })?.fogOfWar
   const fogEnabled = fogMode && fogMode !== 'off'
@@ -55,13 +78,23 @@ export function filterFullStateForViewer(state: GameState, viewerId: string): Ga
   }
 }
 
-// For AI planner: filter the game state so the AI only sees what the viewer would see under fog.
-// Currently identical to filterFullStateForViewer, but split for future planner-specific tweaks
-// (e.g., hiding opponent treasure counts or pending effects if needed).
+/**
+ * Filters the game state for the AI planner, applying Fog of War.
+ * This is currently identical to `filterFullStateForViewer` but is separated for potential future AI-specific logic.
+ * @param {GameState} state - The complete game state.
+ * @param {string} viewerId - The ID of the AI player.
+ * @returns {GameState} The filtered game state for the AI planner.
+ */
 export function filterStateForPlanner(state: GameState, viewerId: string): GameState {
   return filterFullStateForViewer(state, viewerId)
 }
 
+/**
+ * Type guard to check if the game state has a Map of territory modifiers.
+ * @param {GameState | SerializedGameState} s - The game state to check.
+ * @returns {boolean} True if the state has a Map of territory modifiers.
+ * @private
+ */
 function hasMapTerritoryModifiers(
   s: GameState | SerializedGameState,
 ): s is GameState & { territoryModifiers: Map<string, GameTerritoryModifier> } {
@@ -73,6 +106,12 @@ function hasMapTerritoryModifiers(
   )
 }
 
+/**
+ * Serializes the game state for the client, converting Maps to objects and adding the round number.
+ * @param {GameState | SerializedGameState} state - The game state to serialize.
+ * @returns {SerializedGameState} The serialized game state.
+ * @private
+ */
 function serializeForClient(state: GameState | SerializedGameState): SerializedGameState {
   const s = state as GameState
   const roundNumber = (() => {
@@ -95,6 +134,14 @@ function serializeForClient(state: GameState | SerializedGameState): SerializedG
   return { ...(state as SerializedGameState), roundNumber }
 }
 
+/**
+ * Emits a full, fog-filtered game state snapshot to a specific viewer.
+ * @param {Server} io - The Socket.IO server instance.
+ * @param {string} roomId - The ID of the game room.
+ * @param {string} viewerId - The ID of the viewer to send the snapshot to.
+ * @param {GameState} [state] - The optional current game state to avoid refetching.
+ * @returns {Promise<void>}
+ */
 export async function emitRevealSnapshot(
   io: Server<ClientToServerEvents, ServerToClientEvents, Record<string, unknown>, SocketData>,
   roomId: string,

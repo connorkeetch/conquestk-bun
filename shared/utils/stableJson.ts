@@ -64,11 +64,23 @@ const toSerializable = (value: unknown): unknown => {
   return undefined
 }
 
+/**
+ * Serializes a value to a stable JSON string.
+ *
+ * @param {unknown} value - The value to serialize.
+ * @returns {string} The stable JSON string.
+ */
 export const stableStringify = (value: unknown): string => {
   const normalised = toSerializable(value)
   return JSON.stringify(normalised)
 }
 
+/**
+ * Serializes a value to a stable JSON string and encodes it as a Uint8Array.
+ *
+ * @param {unknown} value - The value to serialize.
+ * @returns {Uint8Array} The encoded stable JSON string.
+ */
 export const stableStringifyToUint8 = (value: unknown): Uint8Array => {
   return textEncoder.encode(stableStringify(value))
 }

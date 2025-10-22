@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for managing user profiles.
+ * It includes endpoints for updating profiles, and fetching user statistics, achievements, and game history.
+ * All routes in this file require authentication.
+ * @module routes/profile
+ */
 import { Router } from 'express'
 import { requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -12,7 +18,15 @@ router.use(authenticateToken)
 
 // NOTE: GET /api/profile (root) removed in favor of /api/users/profile
 
-// PUT /api/profile - Update user profile
+/**
+ * Route to update the profile of the authenticated user.
+ * @name PUT /profile
+ * @function
+ * @memberof module:routes/profile
+ * @param {import('express').Request} req - The Express request object, containing the profile updates in the body.
+ * @param {import('express').Response} res - The Express response object, returning the updated profile.
+ * @returns {Promise<void>}
+ */
 router.put(
   '/',
   asyncHandler(async (req, res) => {
@@ -24,7 +38,15 @@ router.put(
   }),
 )
 
-// GET /api/profile/stats - Get detailed user statistics
+/**
+ * Route to get detailed statistics for the authenticated user.
+ * @name GET /profile/stats
+ * @function
+ * @memberof module:routes/profile
+ * @param {import('express').Request} req - The Express request object.
+ * @param {import('express').Response} res - The Express response object, returning the user's statistics.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/stats',
   asyncHandler(async (req, res) => {
@@ -34,7 +56,15 @@ router.get(
   }),
 )
 
-// GET /api/profile/achievements - Get user achievements
+/**
+ * Route to get the achievements for the authenticated user.
+ * @name GET /profile/achievements
+ * @function
+ * @memberof module:routes/profile
+ * @param {import('express').Request} req - The Express request object.
+ * @param {import('express').Response} res - The Express response object, returning the user's achievements.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/achievements',
   asyncHandler(async (req, res) => {
@@ -44,7 +74,16 @@ router.get(
   }),
 )
 
-// POST /api/profile/achievements/:achievementId - Unlock achievement (admin/testing only)
+/**
+ * Route for admins to unlock an achievement for a user.
+ * This is intended for testing purposes.
+ * @name POST /profile/achievements/:achievementId
+ * @function
+ * @memberof module:routes/profile
+ * @param {import('express').Request} req - The Express request object, with `achievementId` as a URL parameter.
+ * @param {import('express').Response} res - The Express response object, returning the unlocked achievement.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/achievements/:achievementId',
   requireAdmin,
@@ -57,7 +96,15 @@ router.post(
   }),
 )
 
-// GET /api/profile/history - Get game history
+/**
+ * Route to get the game history for the authenticated user, with pagination.
+ * @name GET /profile/history
+ * @function
+ * @memberof module:routes/profile
+ * @param {import('express').Request} req - The Express request object, which can contain `limit` and `offset` query parameters.
+ * @param {import('express').Response} res - The Express response object, returning the user's game history.
+ * @returns {Promise<void>}
+ */
 router.get(
   '/history',
   asyncHandler(async (req, res) => {
@@ -80,7 +127,15 @@ router.get(
   }),
 )
 
-// PUT /api/profile/preferences - Update user preferences
+/**
+ * Route to update the preferences of the authenticated user.
+ * @name PUT /profile/preferences
+ * @function
+ * @memberof module:routes/profile
+ * @param {import('express').Request} req - The Express request object, containing the preferences to update in the body.
+ * @param {import('express').Response} res - The Express response object, returning the updated preferences.
+ * @returns {Promise<void>}
+ */
 router.put(
   '/preferences',
   asyncHandler(async (req, res) => {

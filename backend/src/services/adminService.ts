@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the AdminService class, which provides a comprehensive set of methods
+ * for administrative functionalities. This includes permission checking, user management (status updates, password resets, etc.),
+ * content moderation, feature flag management, and activity logging.
+ * @module services/adminService
+ */
 // Local UUID validator to avoid ESM-only uuid dependency in tests
 const uuidValidate = (value: string): boolean => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -18,6 +24,10 @@ const domainPermissionMap: Record<string, string[]> = {
   maps: ['maps.*', 'map_approval', 'content_moderation', 'system_admin'],
 }
 
+/**
+ * @interface AdminRole
+ * @description Represents an administrative role in the system.
+ */
 export interface AdminRole {
   id: string
   name: string
@@ -28,6 +38,10 @@ export interface AdminRole {
   updatedAt: Date
 }
 
+/**
+ * @interface AdminUser
+ * @description Represents a user with administrative privileges.
+ */
 export interface AdminUser {
   userId: string
   roleId: string
@@ -39,6 +53,10 @@ export interface AdminUser {
   isActive: boolean
 }
 
+/**
+ * @interface UserAccountStatus
+ * @description Represents the status of a user's account (e.g., active, suspended).
+ */
 export interface UserAccountStatus {
   userId: string
   status: 'active' | 'suspended' | 'banned' | 'pending'
@@ -47,6 +65,10 @@ export interface UserAccountStatus {
   expiresAt?: Date
 }
 
+/**
+ * @interface AdminActivityLog
+ * @description Represents a log of an action performed by an administrator.
+ */
 export interface AdminActivityLog {
   id: string
   adminUserId: string
@@ -59,6 +81,10 @@ export interface AdminActivityLog {
   timestamp: Date
 }
 
+/**
+ * @interface FeatureFlag
+ * @description Represents a feature flag in the system.
+ */
 export interface FeatureFlag {
   id: string
   flagName: string
@@ -73,6 +99,10 @@ export interface FeatureFlag {
   updatedAt: Date
 }
 
+/**
+ * @interface FeatureFlagSettingsUpdate
+ * @description Represents an update to the settings of a feature flag.
+ */
 export interface FeatureFlagSettingsUpdate {
   description?: string | null
   accessLevel?: FeatureFlag['accessLevel']
@@ -81,6 +111,10 @@ export interface FeatureFlagSettingsUpdate {
   dependencies?: string[]
 }
 
+/**
+ * @interface UserFeatureFlagAssignment
+ * @description Represents the assignment of a feature flag to a user, including any overrides.
+ */
 export interface UserFeatureFlagAssignment {
   flagName: string
   description?: string | null
@@ -93,6 +127,10 @@ export interface UserFeatureFlagAssignment {
   updatedAt: Date
 }
 
+/**
+ * @interface AdminUserSummary
+ * @description Represents a summary of a user's profile for administrative purposes.
+ */
 export interface AdminUserSummary {
   id: string
   username: string | null
@@ -118,6 +156,10 @@ export interface AdminUserSummary {
   timezone?: string | null
 }
 
+/**
+ * @interface ContentApprovalQueueItem
+ * @description Represents an item in the content approval queue.
+ */
 export interface ContentApprovalQueueItem {
   id: string
   contentType: string
@@ -158,9 +200,18 @@ type AdminUserQueryRow = {
 
 // ContentApprovalRow type removed (unused)
 
+/**
+ * A service class for handling administrative tasks.
+ * @class AdminService
+ */
 export class AdminService {
   // ============= PERMISSION CHECKING =============
 
+  /**
+   * Checks if a user has administrative privileges.
+   * @param {string} userId - The ID of the user to check.
+   * @returns {Promise<boolean>} A promise that resolves to true if the user is an admin, and false otherwise.
+   */
   async isAdmin(userId: string): Promise<boolean> {
     // First check the is_admin flag on the users table (faster)
     const userResult = await query(`SELECT is_admin FROM users WHERE id = $1`, [userId])
@@ -184,6 +235,13 @@ export class AdminService {
     return result.rows.length > 0
   }
 
+  /**
+   * Checks if a user has a specific permission.
+   * This method supports wildcard permissions (e.g., 'users.*').
+   * @param {string} userId - The ID of the user to check.
+   * @param {string} permission - The permission string to check for (e.g., 'users.edit').
+   * @returns {Promise<boolean>} A promise that resolves to true if the user has the permission, and false otherwise.
+   */
   async hasPermission(userId: string, permission: string): Promise<boolean> {
     const result = await query(
       `
@@ -242,6 +300,10 @@ export class AdminService {
     return false
   }
 
+  /**
+   * Gets a list of all active admin user IDs.
+   * @returns {Promise<string[]>} A promise that resolves to an array of admin user IDs.
+   */
   async getActiveAdminUserIds(): Promise<string[]> {
     const ids = new Set<string>()
 
@@ -264,6 +326,11 @@ export class AdminService {
     return Array.from(ids)
   }
 
+  /**
+   * Retrieves the administrative information for a specific user, including their roles and permissions.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<AdminUser[]>} A promise that resolves to an array of AdminUser objects.
+   */
   async getUserAdminInfo(userId: string): Promise<AdminUser[]> {
     const result = await query(
       `
@@ -291,6 +358,13 @@ export class AdminService {
 
   // ============= USER MANAGEMENT =============
 
+  /**
+   * Retrieves a paginated and searchable list of all users for administrative purposes.
+   * @param {number} [limit=50] - The number of users to retrieve.
+   * @param {number} [offset=0] - The number of users to skip.
+   * @param {string} [search] - An optional search term to filter users by username or email.
+   * @returns {Promise<{users: AdminUserSummary[], total: number}>} A promise that resolves to an object containing the list of user summaries and the total number of users.
+   */
   async getAllUsers(
     limit = 50,
     offset = 0,
@@ -386,6 +460,15 @@ export class AdminService {
     return { users, total }
   }
 
+  /**
+   * Updates the account status of a target user.
+   * @param {string} targetUserId - The ID of the user whose status is to be updated.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {'active' | 'suspended' | 'banned'} status - The new status for the user.
+   * @param {string} [reason] - An optional reason for the status change.
+   * @param {Date} [expiresAt] - An optional expiration date for the status (e.g., for a temporary suspension).
+   * @returns {Promise<void>} A promise that resolves when the status has been updated.
+   */
   async updateUserStatus(
     targetUserId: string,
     adminUserId: string,
@@ -435,6 +518,13 @@ export class AdminService {
     }
   }
 
+  /**
+   * Resets the password for a target user.
+   * @param {string} targetUserId - The ID of the user whose password is to be reset.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {string} newPassword - The new password for the user.
+   * @returns {Promise<void>} A promise that resolves when the password has been reset.
+   */
   async resetUserPassword(
     targetUserId: string,
     adminUserId: string,
@@ -456,6 +546,14 @@ export class AdminService {
     )
   }
 
+  /**
+   * Updates the VIP status of a target user.
+   * @param {string} targetUserId - The ID of the user whose VIP status is to be updated.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {boolean} isVip - The new VIP status.
+   * @param {string} [reason] - An optional reason for the VIP status change.
+   * @returns {Promise<void>} A promise that resolves when the VIP status has been updated.
+   */
   async updateUserVipStatus(
     targetUserId: string,
     adminUserId: string,
@@ -486,6 +584,13 @@ export class AdminService {
     )
   }
 
+  /**
+   * Updates the admin status of a target user by assigning or removing the 'super_admin' role.
+   * @param {string} targetUserId - The ID of the user whose admin status is to be updated.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {boolean} isAdmin - The new admin status.
+   * @returns {Promise<void>} A promise that resolves when the admin status has been updated.
+   */
   async updateUserAdminStatus(
     targetUserId: string,
     adminUserId: string,
@@ -533,6 +638,14 @@ export class AdminService {
     )
   }
 
+  /**
+   * Updates the premium tier for a target user.
+   * @param {string} targetUserId - The ID of the user whose premium tier is to be updated.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {string} tier - The new premium tier.
+   * @param {Date} [expiresAt] - An optional expiration date for the premium tier.
+   * @returns {Promise<void>} A promise that resolves when the premium tier has been updated.
+   */
   async updateUserPremiumTier(
     targetUserId: string,
     adminUserId: string,
@@ -558,6 +671,14 @@ export class AdminService {
     )
   }
 
+  /**
+   * Assigns an administrative role to a user.
+   * @param {string} targetUserId - The ID of the user to assign the role to.
+   * @param {string} roleId - The ID of the role to assign.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {Date} [expiresAt] - An optional expiration date for the role assignment.
+   * @returns {Promise<void>} A promise that resolves when the role has been assigned.
+   */
   async assignAdminRole(
     targetUserId: string,
     roleId: string,
@@ -589,6 +710,13 @@ export class AdminService {
     )
   }
 
+  /**
+   * Removes an administrative role from a user.
+   * @param {string} targetUserId - The ID of the user to remove the role from.
+   * @param {string} roleId - The ID of the role to remove.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @returns {Promise<void>} A promise that resolves when the role has been removed.
+   */
   async removeAdminRole(targetUserId: string, roleId: string, adminUserId: string): Promise<void> {
     await query(
       `
@@ -613,6 +741,12 @@ export class AdminService {
 
   // ============= CONTENT MODERATION =============
 
+  /**
+   * Retrieves items from the content approval queue, which is currently used for user reports.
+   * @param {number} [limit=50] - The number of items to retrieve.
+   * @param {number} [offset=0] - The number of items to skip.
+   * @returns {Promise<{items: ContentApprovalQueueItem[], total: number}>} A promise that resolves to an object containing the queue items and the total number of items.
+   */
   async getContentApprovalQueue(
     limit = 50,
     offset = 0,
@@ -661,6 +795,13 @@ export class AdminService {
     }
   }
 
+  /**
+   * Approves a content item from the queue (resolves a user report).
+   * @param {string} queueId - The ID of the queue item (user report) to approve.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {string} [notes] - Optional notes from the admin.
+   * @returns {Promise<void>} A promise that resolves when the content has been approved.
+   */
   async approveContent(queueId: string, adminUserId: string, notes?: string): Promise<void> {
     const client = await getClient()
     try {
@@ -702,6 +843,13 @@ export class AdminService {
     }
   }
 
+  /**
+   * Rejects a content item from the queue (dismisses a user report).
+   * @param {string} queueId - The ID of the queue item (user report) to reject.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {string} reason - The reason for rejecting the content.
+   * @returns {Promise<void>} A promise that resolves when the content has been rejected.
+   */
   async rejectContent(queueId: string, adminUserId: string, reason: string): Promise<void> {
     const client = await getClient()
     try {
@@ -739,6 +887,10 @@ export class AdminService {
 
   // ============= FEATURE FLAGS =============
 
+  /**
+   * Retrieves a list of all feature flags.
+   * @returns {Promise<FeatureFlag[]>} A promise that resolves to an array of FeatureFlag objects.
+   */
   async getFeatureFlags(): Promise<FeatureFlag[]> {
     try {
       const flags = await featureFlagService.listFlags()
@@ -772,6 +924,14 @@ export class AdminService {
     }
   }
 
+  /**
+   * Safely parses a JSON string, returning a default value if parsing fails.
+   * @private
+   * @template T
+   * @param {string | null | undefined} json - The JSON string to parse.
+   * @param {T} defaultValue - The default value to return on failure.
+   * @returns {T} The parsed object or the default value.
+   */
   private safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {
     if (!json) return defaultValue
     try {
@@ -781,6 +941,13 @@ export class AdminService {
     }
   }
 
+  /**
+   * Toggles a feature flag on or off.
+   * @param {string} flagName - The name of the feature flag to toggle.
+   * @param {boolean} enabled - The new enabled state for the flag.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @returns {Promise<boolean>} A promise that resolves to true if the toggle was successful, and false otherwise.
+   */
   async toggleFeatureFlag(
     flagName: string,
     enabled: boolean,
@@ -818,6 +985,14 @@ export class AdminService {
     return true
   }
 
+  /**
+   * Updates the settings for a feature flag.
+   * @param {string} flagName - The name of the feature flag to update.
+   * @param {FeatureFlagSettingsUpdate} updates - An object containing the settings to update.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {string} [reason] - An optional reason for the update.
+   * @returns {Promise<FeatureFlag | null>} A promise that resolves to the updated feature flag, or null if not found.
+   */
   async updateFeatureFlagSettings(
     flagName: string,
     updates: FeatureFlagSettingsUpdate,
@@ -872,6 +1047,11 @@ export class AdminService {
     return normalizedFlag
   }
 
+  /**
+   * Retrieves all feature flag assignments for a specific user, including their effective values.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<UserFeatureFlagAssignment[]>} A promise that resolves to an array of the user's feature flag assignments.
+   */
   async getUserFeatureFlagAssignments(userId: string): Promise<UserFeatureFlagAssignment[]> {
     const flags = await featureFlagService.listFlags()
     const overrides = await featureFlagService.listUserOverrides(userId)
@@ -942,6 +1122,14 @@ export class AdminService {
     return assignments.sort((a, b) => a.flagName.localeCompare(b.flagName))
   }
 
+  /**
+   * Sets a user-specific override for a feature flag.
+   * @param {string} targetUserId - The ID of the user for whom to set the override.
+   * @param {string} flagName - The name of the feature flag.
+   * @param {boolean} enabled - The override value (true or false).
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @returns {Promise<void>} A promise that resolves when the override has been set.
+   */
   async setUserFeatureFlagOverride(
     targetUserId: string,
     flagName: string,
@@ -963,6 +1151,13 @@ export class AdminService {
     )
   }
 
+  /**
+   * Clears a user-specific override for a feature flag.
+   * @param {string} targetUserId - The ID of the user for whom to clear the override.
+   * @param {string} flagName - The name of the feature flag.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @returns {Promise<void>} A promise that resolves when the override has been cleared.
+   */
   async clearUserFeatureFlagOverride(
     targetUserId: string,
     flagName: string,
@@ -984,6 +1179,17 @@ export class AdminService {
 
   // ============= LOGGING =============
 
+  /**
+   * Logs an action performed by an administrator.
+   * @param {string} adminUserId - The ID of the admin who performed the action.
+   * @param {string} actionType - The type of action performed (e.g., 'user_status_change').
+   * @param {Record<string, unknown>} actionDetails - A JSON object containing details about the action.
+   * @param {string} [targetType] - The type of the entity that was targeted (e.g., 'user').
+   * @param {string} [targetId] - The ID of the targeted entity.
+   * @param {string} [ipAddress] - The IP address from which the action was performed.
+   * @param {string} [userAgent] - The user agent of the client from which the action was performed.
+   * @returns {Promise<void>} A promise that resolves when the action has been logged.
+   */
   async logAdminAction(
     adminUserId: string,
     actionType: string,
@@ -1018,6 +1224,15 @@ export class AdminService {
     )
   }
 
+  /**
+   * Logs a general user activity.
+   * @param {string} userId - The ID of the user who performed the activity.
+   * @param {string} actionType - The type of action performed.
+   * @param {Record<string, unknown>} [actionDetails] - A JSON object containing details about the action.
+   * @param {string} [ipAddress] - The IP address of the user.
+   * @param {string} [userAgent] - The user agent of the client.
+   * @returns {Promise<void>} A promise that resolves when the activity has been logged.
+   */
   async logUserActivity(
     userId: string,
     actionType: string,
@@ -1041,6 +1256,12 @@ export class AdminService {
     )
   }
 
+  /**
+   * Retrieves a paginated list of administrator activity logs.
+   * @param {number} [limit=100] - The number of logs to retrieve.
+   * @param {number} [offset=0] - The number of logs to skip.
+   * @returns {Promise<AdminActivityLog[]>} A promise that resolves to an array of admin activity logs.
+   */
   async getAdminActivityLogs(limit = 100, offset = 0): Promise<AdminActivityLog[]> {
     const result = await query(
       `

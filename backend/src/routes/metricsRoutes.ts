@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for handling client-side metrics.
+ * It includes an endpoint for clients to submit performance and usage metrics,
+ * and an admin-only endpoint to retrieve a summary of these metrics.
+ * @module routes/metricsRoutes
+ */
 import express from 'express'
 import { query } from '../config/database.js'
 import { requireAdmin } from '../middleware/adminAuth.js'
@@ -6,6 +12,15 @@ import { getClientMetricsSummary, insertClientMetrics } from '../services/client
 
 const router = express.Router()
 
+/**
+ * Route for clients to submit metrics and statistics.
+ * @name POST /metrics/client
+ * @function
+ * @memberof module:routes/metricsRoutes
+ * @param {import('express').Request} req - The Express request object, containing metrics, stats, and an optional gameId in the body.
+ * @param {import('express').Response} res - The Express response object, indicating success or failure.
+ * @returns {Promise<import('express').Response>}
+ */
 router.post('/client', authenticateToken, async (req, res) => {
   try {
     const { metrics, stats, gameId } = req.body ?? {}
@@ -35,6 +50,15 @@ router.post('/client', authenticateToken, async (req, res) => {
   }
 })
 
+/**
+ * Route for admins to retrieve a summary of client metrics.
+ * @name GET /metrics/client/summary
+ * @function
+ * @memberof module:routes/metricsRoutes
+ * @param {import('express').Request} _req - The Express request object (unused).
+ * @param {import('express').Response} res - The Express response object, containing the metrics summary.
+ * @returns {Promise<import('express').Response>}
+ */
 router.get('/client/summary', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const hoursRaw = (req.query?.hours as string | undefined) ?? '24'

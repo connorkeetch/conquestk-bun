@@ -1,9 +1,19 @@
+/**
+ * @fileoverview Service for managing feature flags, allowing for dynamic feature toggling.
+ * @module services/featureFlagService
+ */
 import { query } from '../config/database.js'
 import { logger } from '../utils/logger.js'
 
+/** Type representing the access level for a feature flag. */
 export type AccessLevel = 'disabled' | 'internal' | 'beta' | 'public'
+/** Type representing the category of a feature flag. */
 export type FeatureCategory = 'gameplay' | 'ui' | 'experimental' | 'premium' | 'vip'
 
+/**
+ * @interface FeatureFlag
+ * @description Represents a feature flag in the database.
+ */
 interface FeatureFlag {
   id: string
   flag_name: string
@@ -19,6 +29,10 @@ interface FeatureFlag {
   updated_at: Date | string
 }
 
+/**
+ * @interface FeatureFlagAuditEntry
+ * @description Represents an audit log entry for a feature flag change.
+ */
 interface FeatureFlagAuditEntry {
   id: string
   flag_name: string
@@ -31,6 +45,10 @@ interface FeatureFlagAuditEntry {
   username?: string | null
 }
 
+/**
+ * @interface User
+ * @description Represents a user for the purpose of feature flag evaluation.
+ */
 interface User {
   id: string
   role?: string
@@ -48,8 +66,13 @@ const PREMIUM_TIER_RANK: Record<string, number> = {
   enterprise: 3,
 }
 
+/** @private */
 const normalizeTier = (tier?: string | null): string => (tier || 'free').toLowerCase()
 
+/**
+ * @class FeatureFlagService
+ * @description Manages feature flags, including evaluation, caching, and administration.
+ */
 export class FeatureFlagService {
   private static instance: FeatureFlagService
   private flagCache: Map<string, FeatureFlag> = new Map()
@@ -58,6 +81,10 @@ export class FeatureFlagService {
 
   private constructor() {}
 
+  /**
+   * Gets the singleton instance of the FeatureFlagService.
+   * @returns {FeatureFlagService} The singleton instance.
+   */
   public static getInstance(): FeatureFlagService {
     if (!FeatureFlagService.instance) {
       FeatureFlagService.instance = new FeatureFlagService()
@@ -66,7 +93,9 @@ export class FeatureFlagService {
   }
 
   /**
-   * Evaluate all feature flags for a user
+   * Evaluates all feature flags for a given user.
+   * @param {User} [user] - The user to evaluate the flags for.
+   * @returns {Promise<Record<string, boolean>>} A map of flag names to their evaluated boolean values.
    */
   async evaluateForUser(user?: User): Promise<Record<string, boolean>> {
     const flags = await this.getAllFlags()
@@ -80,7 +109,10 @@ export class FeatureFlagService {
   }
 
   /**
-   * Evaluate a single feature flag for a user
+   * Evaluates a single feature flag for a user by its name.
+   * @param {string} flagName - The name of the flag to evaluate.
+   * @param {User} [user] - The user to evaluate the flag for.
+   * @returns {Promise<boolean>} The evaluated boolean value of the flag.
    */
   async evaluateFlagByName(flagName: string, user?: User): Promise<boolean> {
     const flag = await this.getFlag(flagName)
@@ -89,7 +121,11 @@ export class FeatureFlagService {
   }
 
   /**
-   * Core flag evaluation logic
+   * The core logic for evaluating a feature flag.
+   * @param {FeatureFlag} flag - The feature flag to evaluate.
+   * @param {User} [user] - The user to evaluate the flag for.
+   * @returns {Promise<boolean>} The evaluated boolean value of the flag.
+   * @private
    */
   private async evaluateFlag(flag: FeatureFlag, user?: User): Promise<boolean> {
     // Check if flag is globally disabled
@@ -125,7 +161,11 @@ export class FeatureFlagService {
   }
 
   /**
-   * Check if user meets access level requirements
+   * Checks if a user meets the access level requirements for a feature flag.
+   * @param {AccessLevel} accessLevel - The access level to check.
+   * @param {User} [user] - The user to check.
+   * @returns {boolean} True if the user meets the requirements, false otherwise.
+   * @private
    */
   private checkAccessLevel(accessLevel: AccessLevel, user?: User): boolean {
     switch (accessLevel) {
@@ -143,7 +183,11 @@ export class FeatureFlagService {
   }
 
   /**
-   * Check if user matches target criteria
+   * Checks if a user matches the target criteria for a feature flag.
+   * @param {Record<string, unknown>} criteria - The target criteria.
+   * @param {User} [user] - The user to check.
+   * @returns {boolean} True if the user matches the criteria, false otherwise.
+   * @private
    */
   private matchesTargetCriteria(criteria: Record<string, unknown>, user?: User): boolean {
     if (!criteria || Object.keys(criteria).length === 0) {
@@ -203,7 +247,11 @@ export class FeatureFlagService {
   }
 
   /**
-   * Get user-specific flag override
+   * Gets a user-specific override for a feature flag.
+   * @param {string} userId - The ID of the user.
+   * @param {string} flagName - The name of the flag.
+   * @returns {Promise<boolean | null>} The override value, or null if no override is set.
+   * @private
    */
   private async getUserOverride(userId: string, flagName: string): Promise<boolean | null> {
     try {
@@ -227,7 +275,9 @@ export class FeatureFlagService {
   }
 
   /**
-   * Get all feature flags (with caching)
+   * Retrieves all feature flags from the database, using a cache to avoid frequent lookups.
+   * @returns {Promise<FeatureFlag[]>} A list of all feature flags.
+   * @private
    */
   private async getAllFlags(): Promise<FeatureFlag[]> {
     const now = Date.now()
@@ -254,14 +304,18 @@ export class FeatureFlagService {
   }
 
   /**
-   * Return raw feature flag records with caching applied
+   * Lists all raw feature flag records, using the cache.
+   * @returns {Promise<FeatureFlag[]>} A list of all feature flags.
    */
   async listFlags(): Promise<FeatureFlag[]> {
     return this.getAllFlags()
   }
 
   /**
-   * Get a single feature flag
+   * Gets a single feature flag from the cache.
+   * @param {string} flagName - The name of the flag to get.
+   * @returns {Promise<FeatureFlag | null>} The feature flag, or null if not found.
+   * @private
    */
   private async getFlag(flagName: string): Promise<FeatureFlag | null> {
     const _flags = await this.getAllFlags()
@@ -269,7 +323,12 @@ export class FeatureFlagService {
   }
 
   /**
-   * Update a feature flag (admin only)
+   * Updates a feature flag. This is an admin-only operation.
+   * @param {string} flagName - The name of the flag to update.
+   * @param {Partial<FeatureFlag>} updates - The updates to apply to the flag.
+   * @param {string} changedBy - The ID of the user making the change.
+   * @param {string} [reason] - The reason for the change.
+   * @returns {Promise<FeatureFlag | null>} The updated feature flag, or null if the update failed.
    */
   async updateFlag(
     flagName: string,
@@ -349,7 +408,11 @@ export class FeatureFlagService {
   }
 
   /**
-   * Set user-specific flag override
+   * Sets a user-specific override for a feature flag.
+   * @param {string} userId - The ID of the user.
+   * @param {string} flagName - The name of the flag.
+   * @param {boolean} enabled - The override value.
+   * @returns {Promise<void>}
    */
   async setUserOverride(userId: string, flagName: string, enabled: boolean): Promise<void> {
     try {
@@ -370,6 +433,12 @@ export class FeatureFlagService {
     }
   }
 
+  /**
+   * Clears a user-specific override for a feature flag.
+   * @param {string} userId - The ID of the user.
+   * @param {string} flagName - The name of the flag.
+   * @returns {Promise<void>}
+   */
   async clearUserOverride(userId: string, flagName: string): Promise<void> {
     try {
       await query('DELETE FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2', [
@@ -385,6 +454,11 @@ export class FeatureFlagService {
     }
   }
 
+  /**
+   * Lists all user-specific overrides for a given user.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<Map<string, boolean>>} A map of flag names to their override values.
+   */
   async listUserOverrides(userId: string): Promise<Map<string, boolean>> {
     try {
       const result = await query<{ flag_name: string; is_enabled: boolean }>(
@@ -403,7 +477,10 @@ export class FeatureFlagService {
   }
 
   /**
-   * Get audit log for a flag
+   * Gets the audit log for feature flag changes.
+   * @param {string} [flagName] - The name of the flag to get the audit log for. If not provided, the log for all flags is returned.
+   * @param {number} [limit=50] - The maximum number of log entries to return.
+   * @returns {Promise<FeatureFlagAuditEntry[]>} A list of audit log entries.
    */
   async getAuditLog(flagName?: string, limit = 50): Promise<FeatureFlagAuditEntry[]> {
     try {
@@ -435,7 +512,7 @@ export class FeatureFlagService {
   }
 
   /**
-   * Clear the flag cache (useful after updates)
+   * Clears the feature flag cache.
    */
   clearCache(): void {
     this.flagCache.clear()

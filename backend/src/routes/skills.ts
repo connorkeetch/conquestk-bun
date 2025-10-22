@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for handling player skill ratings and leaderboards.
+ * It includes endpoints for fetching user skill ratings, rating history, global and friends leaderboards,
+ * and a user's rank. It also provides an admin endpoint for refreshing the leaderboard cache.
+ * @module routes/skills
+ */
 import { Router } from 'express'
 import { query } from '../config/database.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -8,7 +14,13 @@ import { handleRouteError } from '../utils/routeErrorHandler.js'
 const router = Router()
 
 /**
- * Get user's skill rating info
+ * Route to get a user's skill rating information.
+ * @name GET /skills/users/:userId/rating
+ * @function
+ * @memberof module:routes/skills
+ * @param {import('express').Request} req - The Express request object, with `userId` as a URL parameter.
+ * @param {import('express').Response} res - The Express response object, returning the user's skill rating details.
+ * @returns {Promise<import('express').Response>}
  */
 router.get('/users/:userId/rating', async (req, res) => {
   try {
@@ -72,7 +84,13 @@ router.get('/users/:userId/rating', async (req, res) => {
 })
 
 /**
- * Get user's rating history
+ * Route to get a user's skill rating history.
+ * @name GET /skills/users/:userId/rating-history
+ * @function
+ * @memberof module:routes/skills
+ * @param {import('express').Request} req - The Express request object, with `userId` as a URL parameter and an optional `limit` query parameter.
+ * @param {import('express').Response} res - The Express response object, returning the user's rating history.
+ * @returns {Promise<void>}
  */
 router.get('/users/:userId/rating-history', authenticateToken, async (req, res) => {
   try {
@@ -101,7 +119,14 @@ router.get('/users/:userId/rating-history', authenticateToken, async (req, res) 
 })
 
 /**
- * Get skill leaderboard
+ * Route to get the global skill leaderboard.
+ * It supports pagination and can be filtered by period (monthly or all-time).
+ * @name GET /skills/leaderboards/skill
+ * @function
+ * @memberof module:routes/skills
+ * @param {import('express').Request} req - The Express request object, with optional query parameters for `limit`, `offset`, `period`, and `month`.
+ * @param {import('express').Response} res - The Express response object, returning the leaderboard data.
+ * @returns {Promise<import('express').Response>}
  */
 router.get('/leaderboards/skill', async (req, res) => {
   try {
@@ -182,7 +207,14 @@ router.get('/leaderboards/skill', async (req, res) => {
 })
 
 /**
- * Get skill leaderboard scoped to the authenticated user's friends
+ * Route to get the skill leaderboard scoped to the authenticated user's friends.
+ * It supports pagination and can be filtered by period (monthly or all-time).
+ * @name GET /skills/leaderboards/skill/friends
+ * @function
+ * @memberof module:routes/skills
+ * @param {import('express').Request} req - The Express request object, with optional query parameters for `limit`, `offset`, `period`, and `month`.
+ * @param {import('express').Response} res - The Express response object, returning the friends leaderboard data.
+ * @returns {Promise<import('express').Response>}
  */
 router.get('/leaderboards/skill/friends', authenticateToken, async (req, res) => {
   try {
@@ -273,7 +305,13 @@ router.get('/leaderboards/skill/friends', authenticateToken, async (req, res) =>
 })
 
 /**
- * Get current user's rank position
+ * Route to get a user's current rank position.
+ * @name GET /skills/users/:userId/rank
+ * @function
+ * @memberof module:routes/skills
+ * @param {import('express').Request} req - The Express request object, with `userId` as a URL parameter.
+ * @param {import('express').Response} res - The Express response object, returning the user's rank, total ranked players, and percentile.
+ * @returns {Promise<void>}
  */
 router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
   try {
@@ -315,7 +353,13 @@ router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
 })
 
 /**
- * Refresh leaderboard cache (admin only)
+ * Route for admins to refresh the leaderboard cache.
+ * @name POST /skills/leaderboards/refresh
+ * @function
+ * @memberof module:routes/skills
+ * @param {import('express').Request} req - The Express request object.
+ * @param {import('express').Response} res - The Express response object, confirming the cache refresh.
+ * @returns {Promise<import('express').Response>}
  */
 router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
   try {

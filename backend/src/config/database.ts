@@ -1,9 +1,14 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg'
 import { logger } from '../utils/logger.js'
 
-// Normalized query result interface
+/**
+ * Represents a normalized database query result.
+ * @template T The type of the rows returned by the query.
+ */
 export interface DatabaseQueryResult<T extends QueryResultRow = QueryResultRow> {
+  /** An array of rows returned by the query. */
   rows: T[]
+  /** The number of rows affected by the query, or null if not applicable. */
   rowCount: number | null
 }
 
@@ -195,11 +200,22 @@ try {
   throw error
 }
 
-// Generic query function
+/**
+ * Options for a database query.
+ */
 export interface QueryOptions {
+  /** An optional existing database client to use for the query. */
   client?: PoolClient
 }
 
+/**
+ * Executes a SQL query against the database.
+ * @template T The expected type of the query result rows.
+ * @param {string} text The SQL query string.
+ * @param {QueryValues} [params] Optional array of query parameters.
+ * @param {QueryOptions} [options] Optional query options.
+ * @returns {Promise<DatabaseQueryResult<T>>} A promise that resolves to the query result.
+ */
 export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params?: QueryValues,
@@ -230,7 +246,12 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
   }
 }
 
-// Transaction support
+/**
+ * Executes a callback function within a database transaction.
+ * @template T The return type of the callback function.
+ * @param {(client: PoolClient) => Promise<T>} callback The function to execute within the transaction.
+ * @returns {Promise<T>} A promise that resolves with the result of the callback.
+ */
 export async function transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   if (!pgPool) {
     throw new Error('Database connection not available')
@@ -250,7 +271,11 @@ export async function transaction<T>(callback: (client: PoolClient) => Promise<T
   }
 }
 
+/**
+ * Options for the withClient utility.
+ */
 interface WithClientOptions {
+  /** An optional existing database client to use. */
   client?: PoolClient
 }
 
@@ -261,6 +286,10 @@ interface WithClientOptions {
  * be passed straight through to the callback without touching the pool. When no
  * client is provided, the helper acquires one from the pool and guarantees it
  * is released even if the callback throws.
+ * @template T The return type of the callback function.
+ * @param {(client: PoolClient) => Promise<T>} callback The function to execute with the client.
+ * @param {WithClientOptions} [options={}] Optional options, including an existing client.
+ * @returns {Promise<T>} A promise that resolves with the result of the callback.
  */
 export async function withClient<T>(
   callback: (client: PoolClient) => Promise<T>,
@@ -283,7 +312,10 @@ export async function withClient<T>(
   }
 }
 
-// Initialize database tables
+/**
+ * Initializes the database by checking for the existence of required tables.
+ * @returns {Promise<void>} A promise that resolves when the check is complete.
+ */
 export async function initDatabase(): Promise<void> {
   logger.info('📊 Checking database tables...')
 
@@ -308,7 +340,10 @@ export async function initDatabase(): Promise<void> {
   }
 }
 
-// Cleanup function for graceful shutdown
+/**
+ * Closes the database connection pool.
+ * @returns {Promise<void>} A promise that resolves when the connection is closed.
+ */
 export async function closeDatabase(): Promise<void> {
   if (pgPool) {
     await pgPool.end()
@@ -317,7 +352,7 @@ export async function closeDatabase(): Promise<void> {
 }
 
 /**
- * Helper function for parameterized UPDATE queries
+ * Helper function for parameterized UPDATE queries.
  *
  * ⚠️ SECURITY WARNING: This function does NOT validate table or column names.
  * Column and table names MUST be validated against a strict whitelist before calling this function
@@ -330,6 +365,11 @@ export async function closeDatabase(): Promise<void> {
  *   Object.entries(updates).filter(([key]) => ALLOWED_COLUMNS.includes(key))
  * );
  * const query = buildUpdateQuery('users', safeUpdates, { id: userId });
+ *
+ * @param {string} table The name of the table to update.
+ * @param {Record<string, unknown>} updates An object of columns and values to update.
+ * @param {Record<string, unknown>} conditions An object of columns and values for the WHERE clause.
+ * @returns {{ text: string; values: unknown[] }} The generated SQL query and its parameters.
  */
 export function buildUpdateQuery(
   table: string,
@@ -388,7 +428,7 @@ export function buildUpdateQuery(
 }
 
 /**
- * Helper for INSERT queries with RETURNING clause
+ * Helper for INSERT queries with RETURNING clause.
  *
  * ⚠️ SECURITY WARNING: This function does NOT validate table or column names.
  * Column and table names MUST be validated against a strict whitelist before calling this function
@@ -401,6 +441,11 @@ export function buildUpdateQuery(
  *   Object.entries(data).filter(([key]) => ALLOWED_COLUMNS.includes(key))
  * );
  * const query = buildInsertQuery('users', safeData);
+ *
+ * @param {string} table The name of the table to insert into.
+ * @param {Record<string, unknown>} data An object of columns and values to insert.
+ * @param {string} [returning='*'] The columns to return after insertion.
+ * @returns {{ text: string; values: unknown[] }} The generated SQL query and its parameters.
  */
 export function buildInsertQuery(
   table: string,
@@ -448,7 +493,10 @@ export function buildInsertQuery(
   return { text, values }
 }
 
-// Export getClient function for transaction support
+/**
+ * Acquires a client from the connection pool.
+ * @returns {Promise<PoolClient>} A promise that resolves with a database client.
+ */
 export async function getClient(): Promise<PoolClient> {
   if (!pgPool) {
     throw new Error('Database connection not available')
@@ -456,7 +504,10 @@ export async function getClient(): Promise<PoolClient> {
   return await pgPool.connect()
 }
 
-// Export getPool function for services that need direct pool access
+/**
+ * Gets the singleton instance of the connection pool.
+ * @returns {Pool} The connection pool instance.
+ */
 export function getPool(): Pool {
   if (!pgPool) {
     throw new Error('Database connection not available')
@@ -464,10 +515,15 @@ export function getPool(): Pool {
   return pgPool
 }
 
-// Get detailed pool metrics for monitoring
+/**
+ * Represents database pool metrics for monitoring.
+ */
 interface PoolMetrics {
+  /** The total number of clients in the pool. */
   totalCount: number
+  /** The number of idle clients in the pool. */
   idleCount: number
+  /** The number of queued requests waiting for a client. */
   waitingCount: number
   config: {
     max: number | undefined
@@ -475,9 +531,14 @@ interface PoolMetrics {
     idleTimeoutMillis: number | undefined
     connectionTimeoutMillis: number | undefined | null
   }
+  /** The percentage of the pool that is currently in use. */
   utilization: string
 }
 
+/**
+ * Retrieves detailed metrics about the connection pool for monitoring.
+ * @returns {PoolMetrics | { error: string }} An object with pool metrics or an error object if the pool is not initialized.
+ */
 export function getPoolMetrics(): PoolMetrics | { error: string } {
   if (!pgPool) {
     return { error: 'Pool not initialized' }

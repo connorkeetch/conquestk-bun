@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for the performance monitoring and management dashboard.
+ * It includes endpoints for retrieving performance metrics, health checks, cache and database stats,
+ * and other performance-related information. Most routes are protected and require authentication.
+ * @module routes/performanceRoutes
+ */
 import express, { type Request, type Response } from 'express'
 import { logAdminActivity, requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -17,6 +23,16 @@ type ServiceHealthResult = {
 
 const router = express.Router()
 
+/**
+ * A helper function to send a standardized failure response.
+ * It logs the error using `handleRouteError` and sends a JSON response with a success flag set to false and an error message.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {unknown} error - The error object.
+ * @param {string} logMessage - A message to be logged for the error.
+ * @param {number} [status=500] - The HTTP status code to send in the response.
+ * @returns {void}
+ */
 const sendFailure = (
   req: Request,
   res: Response,

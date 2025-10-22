@@ -1,10 +1,18 @@
 import { logger } from '../utils/logger.js'
 
+/**
+ * Defines the structure for an environment variable's validation rules.
+ */
 interface EnvVariable {
+  /** The name of the environment variable. */
   name: string
+  /** Whether the environment variable is required. */
   required: boolean
+  /** The default value to use if the variable is not set. */
   defaultValue?: string
+  /** A function to validate the variable's value. */
   validator?: (value: string) => boolean
+  /** A description of the environment variable. */
   description?: string
 }
 
@@ -219,6 +227,11 @@ const ENV_VARIABLES: EnvVariable[] = [
   },
 ]
 
+/**
+ * Validates the environment variables based on the defined rules.
+ * Logs errors and warnings, and applies default values where necessary.
+ * Exits the process in production if validation fails.
+ */
 export function validateEnvironmentVariables(): void {
   logger.info('🔍 Validating environment variables...')
 

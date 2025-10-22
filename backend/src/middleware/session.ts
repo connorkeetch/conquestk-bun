@@ -6,6 +6,13 @@ import { getRedisClient } from '../config/redis.js'
 import { getErrorMessage } from '../utils/errorHelpers.js'
 import { logger } from '../utils/logger.js'
 
+/**
+ * This file contains the session middleware for the application.
+ * It uses `express-session` and can be configured to use Redis for session storage.
+ * The middleware can be reconfigured at runtime to switch from an in-memory store to a Redis store
+ * once the Redis connection becomes available.
+ */
+
 // Keep CommonJS interop for connect-redis under ESM
 const requireCjs = createRequire(import.meta.url)
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -52,7 +59,9 @@ function resolveSessionSecret(): string {
 }
 
 /**
- * Create initial session middleware (may use in-memory store initially)
+ * Creates the initial session middleware.
+ * This may use an in-memory store initially and can be reconfigured to use Redis later.
+ * @returns {RequestHandler} The Express session middleware.
  */
 export function createSessionMiddleware() {
   // Base session configuration
@@ -121,8 +130,9 @@ function tryConfigureRedisStore(sessionConfig: session.SessionOptions): boolean 
 }
 
 /**
- * Reconfigure session middleware to use Redis when it becomes available
- * This should be called after Redis initialization completes
+ * Reconfigures the session middleware to use Redis when it becomes available.
+ * This should be called after Redis initialization completes.
+ * @returns {boolean} `true` if the Redis store was successfully enabled, otherwise `false`.
  */
 export function enableRedisSessionStore(): boolean {
   if (isRedisStoreActive) {
@@ -168,7 +178,11 @@ export function enableRedisSessionStore(): boolean {
 }
 
 /**
- * Middleware wrapper that uses the current session middleware
+ * A middleware wrapper that uses the current session middleware.
+ * This allows the session middleware to be reconfigured at runtime without affecting the Express app.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
  */
 export function sessionMiddleware(req: Request, res: Response, next: NextFunction) {
   if (currentSessionMiddleware) {

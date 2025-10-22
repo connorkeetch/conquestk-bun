@@ -4,6 +4,11 @@ import { authenticateToken } from '../middleware/auth.js'
 import { authLimiter, loginSlowDown } from '../middleware/rateLimiter.js'
 import { validateAuth } from '../middleware/validation.js'
 
+/**
+ * This file contains the authentication routes for the application.
+ * It includes routes for user registration, login, logout, profile management, and password reset.
+ */
+
 const router = Router()
 const authController = new AuthController()
 

@@ -1,9 +1,19 @@
+/**
+ * @fileoverview This file defines the CapitalGameService class, which manages the logic for the "Capitals" game mode.
+ * This includes initializing capitals at the start of a game, checking for capital elimination when a capital is conquered,
+ * and handling special rules related to capitals, such as defense bonuses.
+ * @module services/capitalGameService
+ */
 import { query } from '../config/database.js'
 import type { SerializedGameState } from '../types/game.js'
 import { logger } from '../utils/logger.js'
 import { gameStateCache } from './cacheService.js'
 import { mapService } from './mapService.js'
 
+/**
+ * @interface CapitalGameState
+ * @description Represents the state of capitals within a single game.
+ */
 export interface CapitalGameState {
   gameId: string
   capitalsEnabled: boolean
@@ -11,6 +21,10 @@ export interface CapitalGameState {
   eliminatedPlayers: Set<string>
 }
 
+/**
+ * @interface CapitalAttackResult
+ * @description Represents the result of an attack on a capital territory.
+ */
 export interface CapitalAttackResult {
   territoryId: string
   attackerId: string
@@ -23,13 +37,31 @@ export interface CapitalAttackResult {
   }
 }
 
+/**
+ * A service class for managing the "Capitals" game mode.
+ * @class CapitalGameService
+ */
 export class CapitalGameService {
   private gameStates: Map<string, CapitalGameState> = new Map()
 
+  /**
+   * Normalizes a territory ID to a string.
+   * @private
+   * @param {string | number} value - The territory ID to normalize.
+   * @returns {string} The normalized territory ID.
+   */
   private normalizeTerritoryId(value: string | number): string {
     return typeof value === 'number' ? value.toString() : value
   }
 
+  /**
+   * Gets the in-memory state for a game, creating it if it doesn't exist.
+   * It also synchronizes the capital assignments from the cached game state if available.
+   * @private
+   * @param {string} gameId - The ID of the game.
+   * @param {SerializedGameState | null} [cachedState] - The cached game state, if available.
+   * @returns {CapitalGameState} The capital game state.
+   */
   private getOrCreateState(
     gameId: string,
     cachedState?: SerializedGameState | null,
@@ -58,6 +90,12 @@ export class CapitalGameService {
     return state
   }
 
+  /**
+   * Retrieves the serialized game state from the cache.
+   * @private
+   * @param {string} gameId - The ID of the game.
+   * @returns {Promise<SerializedGameState | null>} A promise that resolves to the cached game state, or null if not found.
+   */
   private async getCachedGameState(gameId: string): Promise<SerializedGameState | null> {
     try {
       const state = await gameStateCache.getGameState(gameId)
@@ -68,6 +106,13 @@ export class CapitalGameService {
     }
   }
 
+  /**
+   * Persists the capital assignments to the cached game state.
+   * @private
+   * @param {string} gameId - The ID of the game.
+   * @param {SerializedGameState} cachedState - The serialized game state to update.
+   * @param {CapitalGameState} state - The current capital game state.
+   */
   private persistCapitalState(
     gameId: string,
     cachedState: SerializedGameState,
@@ -79,6 +124,13 @@ export class CapitalGameService {
     })
   }
 
+  /**
+   * Initializes the capitals for a game based on the map's configuration.
+   * @param {string} gameId - The ID of the game.
+   * @param {number} playerCount - The number of players in the game.
+   * @param {string} mapId - The ID of the map being played.
+   * @returns {Promise<void>} A promise that resolves when capitals have been initialized.
+   */
   async initializeCapitals(gameId: string, playerCount: number, mapId: string): Promise<void> {
     try {
       const map = await mapService.getMap(mapId)
@@ -133,6 +185,15 @@ export class CapitalGameService {
     }
   }
 
+  /**
+   * Checks if an attack on a territory results in a capital elimination.
+   * If it does, it processes the elimination, transferring territories and troops.
+   * @param {string} gameId - The ID of the game.
+   * @param {string | number} territoryId - The ID of the conquered territory.
+   * @param {string} attackerId - The ID of the attacking player.
+   * @param {string} defenderId - The ID of the defending player.
+   * @returns {Promise<CapitalAttackResult>} A promise that resolves to the result of the attack, including any elimination details.
+   */
   async checkCapitalElimination(
     gameId: string,
     territoryId: string | number,
@@ -239,11 +300,23 @@ export class CapitalGameService {
     return result
   }
 
+  /**
+   * Emits a capital elimination event. (Placeholder for future implementation)
+   * @private
+   * @param {string} _gameId - The ID of the game.
+   * @param {CapitalAttackResult} result - The result of the capital attack.
+   */
   private emitCapitalElimination(_gameId: string, result: CapitalAttackResult): void {
     if (!result.capitalElimination) return
     // Placeholder for socket emission once real-time events are wired in
   }
 
+  /**
+   * Emits an event when a capital is under attack. (Placeholder for future implementation)
+   * @param {string} gameId - The ID of the game.
+   * @param {string} defenderId - The ID of the defending player.
+   * @param {string | number} territoryId - The ID of the territory under attack.
+   */
   emitCapitalUnderAttack(gameId: string, defenderId: string, territoryId: string | number): void {
     const normalizedTerritoryId = this.normalizeTerritoryId(territoryId)
     const state = this.gameStates.get(gameId)
@@ -260,6 +333,13 @@ export class CapitalGameService {
     }
   }
 
+  /**
+   * Gets the defense bonus for a capital territory.
+   * @param {string} gameId - The ID of the game.
+   * @param {string | number} territoryId - The ID of the territory.
+   * @param {string} defenderId - The ID of the defending player.
+   * @returns {number} The defense bonus (2 if it's the player's capital, otherwise 0).
+   */
   getCapitalDefenseBonus(gameId: string, territoryId: string | number, defenderId: string): number {
     const normalizedTerritoryId = this.normalizeTerritoryId(territoryId)
     const state = this.gameStates.get(gameId)
@@ -268,6 +348,15 @@ export class CapitalGameService {
     return state.capitals.get(defenderId) === normalizedTerritoryId ? 2 : 0
   }
 
+  /**
+   * Checks if a player can move troops from their capital.
+   * A player must leave at least one troop in their capital.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @param {string | number} territoryId - The ID of the territory to move from.
+   * @param {number} troopsToMove - The number of troops to move.
+   * @returns {boolean} True if the move is allowed, false otherwise.
+   */
   canMoveFromCapital(
     gameId: string,
     playerId: string,
@@ -285,16 +374,31 @@ export class CapitalGameService {
     return troopsToMove < 1
   }
 
+  /**
+   * Gets the capital assignments for a game.
+   * @param {string} gameId - The ID of the game.
+   * @returns {Map<string, string> | null} A map of player IDs to their capital territory IDs, or null if not found.
+   */
   getGameCapitals(gameId: string): Map<string, string> | null {
     const state = this.gameStates.get(gameId)
     return state?.capitals ?? null
   }
 
+  /**
+   * Checks if a player has been eliminated in a capitals game.
+   * @param {string} gameId - The ID of the game.
+   * @param {string} playerId - The ID of the player.
+   * @returns {boolean} True if the player has been eliminated, false otherwise.
+   */
   isPlayerEliminated(gameId: string, playerId: string): boolean {
     const state = this.gameStates.get(gameId)
     return state?.eliminatedPlayers.has(playerId) ?? false
   }
 
+  /**
+   * Cleans up the in-memory state for a completed game.
+   * @param {string} gameId - The ID of the game to clean up.
+   */
   cleanupGameState(gameId: string): void {
     this.gameStates.delete(gameId)
   }

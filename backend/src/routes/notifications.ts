@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for handling web push notifications.
+ * It includes endpoints for subscribing, unsubscribing, testing notifications,
+ * and retrieving the VAPID public key. It also includes an admin endpoint for pruning stale subscriptions.
+ * @module routes/notifications
+ */
 import { type Request, type Response, Router } from 'express'
 import { logAdminActivity, requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -6,6 +12,14 @@ import { handleRouteError } from '../utils/routeErrorHandler.js'
 
 const router = Router()
 
+/**
+ * Route to get the VAPID public key for web push notifications.
+ * @name GET /notifications/vapid-public-key
+ * @function
+ * @memberof module:routes/notifications
+ * @param {Request} _req - The Express request object (unused).
+ * @param {Response} res - The Express response object, containing the VAPID public key and an enabled flag.
+ */
 router.get('/vapid-public-key', (_req: Request, res: Response) => {
   res.json({
     publicKey: notificationService.getVapidPublicKey(),
@@ -13,6 +27,15 @@ router.get('/vapid-public-key', (_req: Request, res: Response) => {
   })
 })
 
+/**
+ * Route to subscribe a user to push notifications.
+ * @name POST /notifications/subscribe
+ * @function
+ * @memberof module:routes/notifications
+ * @param {Request} req - The Express request object, containing the push subscription object in the body.
+ * @param {Response} res - The Express response object, indicating the success of the subscription.
+ * @returns {Promise<void>}
+ */
 router.post('/subscribe', authenticateToken, async (req: Request, res: Response) => {
   try {
     if (!notificationService.isEnabled()) {
@@ -48,6 +71,15 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
   }
 })
 
+/**
+ * Route to unsubscribe a user from push notifications.
+ * @name POST /notifications/unsubscribe
+ * @function
+ * @memberof module:routes/notifications
+ * @param {Request} req - The Express request object, which can contain the subscription endpoint to be removed.
+ * @param {Response} res - The Express response object, indicating the success of the unsubscription.
+ * @returns {Promise<void>}
+ */
 router.post('/unsubscribe', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.userId
@@ -73,6 +105,15 @@ router.post('/unsubscribe', authenticateToken, async (req: Request, res: Respons
   }
 })
 
+/**
+ * Route to send a test push notification to the authenticated user.
+ * @name POST /notifications/test
+ * @function
+ * @memberof module:routes/notifications
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, indicating whether the test notification was sent.
+ * @returns {Promise<void>}
+ */
 router.post('/test', authenticateToken, async (req: Request, res: Response) => {
   try {
     if (!notificationService.isEnabled()) {
@@ -105,6 +146,15 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * Route for admins to prune stale or invalid push notification subscriptions from the database.
+ * @name POST /notifications/admin/prune-subscriptions
+ * @function
+ * @memberof module:routes/notifications
+ * @param {Request} req - The Express request object, which can contain pruning criteria in the body.
+ * @param {Response} res - The Express response object, returning the result of the pruning operation.
+ * @returns {Promise<void>}
+ */
 router.post(
   '/admin/prune-subscriptions',
   authenticateToken,

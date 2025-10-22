@@ -1,3 +1,9 @@
+/**
+ * @fileoverview This file defines the Express routes for user-related functionalities.
+ * It includes endpoints for fetching user profiles, searching for users, updating user settings (like username, password, and profile info),
+ * checking username availability, and reporting users.
+ * @module routes/users
+ */
 import { getRankForRating, RANKS } from '@conquestk/shared/constants/ranks'
 import bcrypt from 'bcryptjs'
 import { type Request, type Response, Router } from 'express'
@@ -11,6 +17,12 @@ import { handleRouteError } from '../utils/routeErrorHandler.js'
 const router = Router()
 
 let ensuredUserProfileColumns = false
+/**
+ * Ensures that the `users` table has the necessary columns for user profiles (`bio`, `tagline`, `deleted_at`).
+ * This function is designed to run once and will alter the table to add the columns if they don't exist.
+ * It helps in maintaining backward compatibility with older database schemas.
+ * @returns {Promise<void>} A promise that resolves when the check and potential alteration are complete.
+ */
 const ensureUserProfileColumns = async () => {
   if (ensuredUserProfileColumns) return
 
@@ -28,6 +40,11 @@ const ensureUserProfileColumns = async () => {
 
 const PLAYER_COLOR_DEFAULT = '#DC2626'
 
+/**
+ * A map of legacy color names to their corresponding hex codes.
+ * Used for backward compatibility.
+ * @const {Record<string, string>}
+ */
 const LEGACY_COLOR_MAP: Record<string, string> = {
   red: '#DC2626',
   'bright-red': '#DC2626',
@@ -50,6 +67,10 @@ const LEGACY_COLOR_MAP: Record<string, string> = {
   indigo: '#7C3AED',
 }
 
+/**
+ * A map for normalizing hex color codes to a consistent case.
+ * @const {Record<string, string>}
+ */
 const HEX_NORMALIZATION_MAP: Record<string, string> = {
   '#dc2626': '#DC2626',
   '#851d2d': '#851D2D',
@@ -65,6 +86,12 @@ const HEX_NORMALIZATION_MAP: Record<string, string> = {
   '#7c2d12': '#7C2D12',
 }
 
+/**
+ * Normalizes a user's preferred color to a standardized format.
+ * It handles premium colors, linear gradients, hex codes, and legacy color names.
+ * @param {string | null | undefined} color - The color string to normalize.
+ * @returns {string} The normalized color string.
+ */
 const normalizePreferredColor = (color?: string | null): string => {
   if (!color) {
     return PLAYER_COLOR_DEFAULT
@@ -92,7 +119,10 @@ const normalizePreferredColor = (color?: string | null): string => {
   return PLAYER_COLOR_DEFAULT
 }
 
-// Rank visuals for API output; thresholds/names are centralized in shared RANKS
+/**
+ * Metadata for conquest ranks, providing visual elements like color and insignia.
+ * @const {Record<string, { color: string; insignia: string }>}
+ */
 const RANK_META: Record<string, { color: string; insignia: string }> = {
   Chieftain: { color: '#9CA3AF', insignia: '🛡️' },
   Warlord: { color: '#92400E', insignia: '⚔️' },
@@ -106,6 +136,11 @@ const RANK_META: Record<string, { color: string; insignia: string }> = {
   Worldbreaker: { color: 'linear-gradient(90deg, #EF4444, #F59E0B)', insignia: '☄️' },
 }
 
+/**
+ * Retrieves the conquest rank details for a given skill rating.
+ * @param {number} skillRating - The user's skill rating.
+ * @returns {object} An object containing the rank's name, minRating, color, and insignia.
+ */
 function getConquestRank(skillRating: number) {
   const rank = getRankForRating(skillRating)
   return {
@@ -115,6 +150,15 @@ function getConquestRank(skillRating: number) {
   }
 }
 
+/**
+ * Route to get a user's game history by username, with pagination.
+ * @name GET /users/:username/history
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object, with `username` as a URL parameter and optional `limit` and `offset` query parameters.
+ * @param {Response} res - The Express response object, returning the user's match history.
+ * @returns {Promise<Response>}
+ */
 router.get('/:username/history', async (req: Request, res: Response) => {
   const { username } = req.params
   const rawLimit = parseInt(req.query.limit as string, 10)
@@ -154,7 +198,15 @@ router.get('/:username/history', async (req: Request, res: Response) => {
   }
 })
 
-// Get user profile by username (public route)
+/**
+ * Route to get a user's public profile by username.
+ * @name GET /users/:username/profile
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object, with `username` as a URL parameter.
+ * @param {Response} res - The Express response object, returning the user's public profile.
+ * @returns {Promise<Response>}
+ */
 router.get('/:username/profile', async (req: Request, res: Response) => {
   const { username } = req.params
   try {
@@ -232,7 +284,15 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
   }
 })
 
-// Get own user profile (authenticated)
+/**
+ * Route to get the profile of the currently authenticated user.
+ * @name GET /users/profile
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object, returning the authenticated user's profile.
+ * @returns {Promise<Response>}
+ */
 router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.userId
@@ -312,7 +372,15 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
   }
 })
 
-// Check username availability
+/**
+ * Route to check if a username is available.
+ * @name POST /users/check-username
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object, containing the `username` to check in the body.
+ * @param {Response} res - The Express response object, returning whether the username is available.
+ * @returns {Promise<Response>}
+ */
 router.post('/check-username', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { username } = req.body
@@ -342,7 +410,16 @@ router.post('/check-username', authenticateToken, async (req: Request, res: Resp
   }
 })
 
-// Update user profile
+/**
+ * Route to update the profile of the authenticated user.
+ * This can include changing the username, email, and tagline.
+ * @name PUT /users/profile
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object, containing the profile fields to update in the body.
+ * @param {Response} res - The Express response object, returning the updated user profile.
+ * @returns {Promise<Response>}
+ */
 router.put('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.userId
@@ -442,7 +519,15 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
   }
 })
 
-// Change password
+/**
+ * Route to change the password for the authenticated user.
+ * @name PUT /users/change-password
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object, containing the `currentPassword` and `newPassword` in the body.
+ * @param {Response} res - The Express response object, confirming the password change.
+ * @returns {Promise<Response>}
+ */
 router.put('/change-password', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.userId
@@ -486,7 +571,15 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
 })
 
 export default router
-// Search users by username (prefix/substring)
+/**
+ * Route to search for users by username.
+ * @name GET /users/search
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object, with a search query `q` and optional `limit`.
+ * @param {Response} res - The Express response object, returning a list of matching users.
+ * @returns {Promise<Response>}
+ */
 router.get('/search', authenticateToken, async (req: Request, res: Response) => {
   try {
     const raw = (req.query.q ?? req.query.query ?? '').toString().trim()
@@ -515,7 +608,16 @@ router.get('/search', authenticateToken, async (req: Request, res: Response) => 
   }
 })
 
-// Report a user (create a moderation report)
+/**
+ * Route to report a user.
+ * This creates a moderation report for review.
+ * @name POST /users/:reportedUserId/report
+ * @function
+ * @memberof module:routes/users
+ * @param {Request} req - The Express request object, with `reportedUserId` as a URL parameter and the report details in the body.
+ * @param {Response} res - The Express response object, returning the created report.
+ * @returns {Promise<Response>}
+ */
 router.post('/:reportedUserId/report', authenticateToken, async (req: Request, res: Response) => {
   try {
     const reporterId = req.userId

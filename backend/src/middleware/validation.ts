@@ -3,6 +3,12 @@ import Joi from 'joi'
 import validator from 'validator'
 
 /**
+ * This file contains validation schemas and middleware for various parts of the application.
+ * It uses `Joi` for schema validation and `validator` for sanitization and custom validation.
+ * It also includes custom regular expressions to prevent common security vulnerabilities like SQL injection and XSS.
+ */
+
+/**
  * Custom validators for enhanced security
  */
 
@@ -287,6 +293,12 @@ const mapSchema = Joi.object({
  * Validation middleware functions
  */
 
+/**
+ * Middleware that validates authentication-related requests (register and login).
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
+ */
 export const validateAuth = (req: Request, res: Response, next: NextFunction) => {
   const isRegister = req.path === '/register' || req.path.endsWith('/register')
   const isLogin = req.path === '/login' || req.path.endsWith('/login')
@@ -340,6 +352,12 @@ export const validateAuth = (req: Request, res: Response, next: NextFunction) =>
   return next()
 }
 
+/**
+ * Middleware that validates game creation requests.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
+ */
 export const validateGame = (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = gameSchema.validate(req.body, { abortEarly: false })
 
@@ -371,6 +389,12 @@ export const validateGame = (req: Request, res: Response, next: NextFunction) =>
   return next()
 }
 
+/**
+ * Middleware that validates chat message requests.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
+ */
 export const validateMessage = (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = messageSchema.validate(req.body, { abortEarly: false })
 
@@ -389,6 +413,12 @@ export const validateMessage = (req: Request, res: Response, next: NextFunction)
   return next()
 }
 
+/**
+ * Middleware that validates user profile update requests.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
+ */
 export const validateProfile = (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = profileSchema.validate(req.body, { abortEarly: false })
 
@@ -407,6 +437,12 @@ export const validateProfile = (req: Request, res: Response, next: NextFunction)
   return next()
 }
 
+/**
+ * Middleware that validates map creation and update requests.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
+ */
 export const validateMap = (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = mapSchema.validate(req.body, { abortEarly: false })
 
@@ -426,7 +462,11 @@ export const validateMap = (req: Request, res: Response, next: NextFunction) => 
 }
 
 /**
- * Generic input sanitization middleware for all requests
+ * A generic middleware that sanitizes all incoming request parameters (query and URL).
+ * This helps to prevent XSS and other injection attacks.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
  */
 export const sanitizeAllInputs = (req: Request, res: Response, next: NextFunction): void => {
   // Sanitize query parameters

@@ -146,7 +146,20 @@ const defaultPruneOptions: Required<PruneOptions> = {
   staleRegistrationDays: 90,
 }
 
+/**
+ * The NotificationService class is responsible for sending web push
+ * notifications to users. It handles subscription management, sending
+ * notifications, and pruning stale subscriptions.
+ *
+ * @class NotificationService
+ */
 class NotificationService {
+  /**
+   * Saves a web push subscription to the database.
+   *
+   * @param {string} userId - The ID of the user the subscription belongs to.
+   * @param {webpush.PushSubscription} subscription - The push subscription object.
+   */
   async saveSubscription(userId: string, subscription: webpush.PushSubscription): Promise<void> {
     const { endpoint, expirationTime = null, keys } = subscription
 
@@ -198,6 +211,14 @@ class NotificationService {
     eventLogger.debug('Saved web push subscription')
   }
 
+  /**
+   * Removes a web push subscription from the database.
+   *
+   * @param {string} userId - The ID of the user the subscription belongs to.
+   * @param {string} [endpoint] - The endpoint of the subscription to remove. If not provided, all subscriptions for the user will be removed.
+   * @param {Record<string, unknown>} [parentContext] - Optional parent context for logging.
+   * @returns {Promise<number>} A promise that resolves to the number of subscriptions removed.
+   */
   async removeSubscription(
     userId: string,
     endpoint?: string,
@@ -388,6 +409,13 @@ class NotificationService {
     return false
   }
 
+  /**
+   * Sends a web push notification to a user.
+   *
+   * @param {string} userId - The ID of the user to send the notification to.
+   * @param {NotificationPayload} payload - The notification payload.
+   * @returns {Promise<boolean>} A promise that resolves to `true` if the notification was sent to at least one subscription, otherwise `false`.
+   */
   async sendToUser(userId: string, payload: NotificationPayload): Promise<boolean> {
     const baseMetadata = {
       userId,
@@ -446,6 +474,12 @@ class NotificationService {
     return delivered
   }
 
+  /**
+   * Sends a web push notification to multiple users.
+   *
+   * @param {string[]} userIds - An array of user IDs to send the notification to.
+   * @param {NotificationPayload} payload - The notification payload.
+   */
   async sendToUsers(userIds: string[], payload: NotificationPayload): Promise<void> {
     await Promise.all(
       userIds.map(async (userId) => {
@@ -465,6 +499,12 @@ class NotificationService {
     )
   }
 
+  /**
+   * Checks if a user should receive a direct message push notification.
+   *
+   * @param {string} userId - The ID of the user to check.
+   * @returns {Promise<boolean>} A promise that resolves to `true` if the user should receive the notification, otherwise `false`.
+   */
   async shouldSendDMPush(userId: string): Promise<boolean> {
     try {
       const result = await query<DMNotificationPreferenceRow>(
@@ -492,6 +532,12 @@ class NotificationService {
     }
   }
 
+  /**
+   * Sends a notification to all players in a game that the game has started.
+   *
+   * @param {string} gameId - The ID of the game that has started.
+   * @param {string[]} playerIds - An array of player IDs in the game.
+   */
   async notifyGameStart(gameId: string, playerIds: string[]): Promise<void> {
     const payload: NotificationPayload = {
       title: '🎮 Game Started!',
@@ -510,6 +556,13 @@ class NotificationService {
     await this.sendToUsers(playerIds, payload)
   }
 
+  /**
+   * Sends a notification to a player that it is their turn.
+   *
+   * @param {string} gameId - The ID of the game.
+   * @param {string} userId - The ID of the player whose turn it is.
+   * @param {string} _username - The username of the player.
+   */
   async notifyTurnStart(gameId: string, userId: string, _username: string): Promise<void> {
     const payload: NotificationPayload = {
       title: "⚔️ It's Your Turn!",
@@ -528,6 +581,13 @@ class NotificationService {
     await this.sendToUser(userId, payload)
   }
 
+  /**
+   * Sends a notification to all players in a game that the game has ended.
+   *
+   * @param {string} gameId - The ID of the game that has ended.
+   * @param {string} winnerId - The ID of the winning player.
+   * @param {string[]} playerIds - An array of player IDs in the game.
+   */
   async notifyGameEnd(gameId: string, winnerId: string, playerIds: string[]): Promise<void> {
     const winnerName = `Player ${winnerId}`
 
@@ -557,6 +617,13 @@ class NotificationService {
     }
   }
 
+  /**
+   * Sends a game invitation notification to a user.
+   *
+   * @param {string} userId - The ID of the user to send the invitation to.
+   * @param {string} inviterName - The name of the user who sent the invitation.
+   * @param {string} gameId - The ID of the game the user is invited to.
+   */
   async notifyGameInvite(userId: string, inviterName: string, gameId: string): Promise<void> {
     const payload: NotificationPayload = {
       title: '📨 Game Invitation',
@@ -575,6 +642,12 @@ class NotificationService {
     await this.sendToUser(userId, payload)
   }
 
+  /**
+   * Prunes stale web push subscriptions from the database.
+   *
+   * @param {PruneOptions} [options={}] - Optional parameters for pruning.
+   * @returns {Promise<PruneResult>} A promise that resolves to the result of the pruning operation.
+   */
   async pruneStaleSubscriptions(options: PruneOptions = {}): Promise<PruneResult> {
     const { failureThreshold, failureAgeDays, staleRegistrationDays } = {
       ...defaultPruneOptions,
@@ -672,6 +745,12 @@ class NotificationService {
     return summary
   }
 
+  /**
+   * Sends a test notification to a user.
+   *
+   * @param {string} userId - The ID of the user to send the test notification to.
+   * @returns {Promise<boolean>} A promise that resolves to `true` if the notification was sent successfully, otherwise `false`.
+   */
   async sendTestNotification(userId: string): Promise<boolean> {
     const payload: NotificationPayload = {
       title: '🔔 Test Notification',
@@ -685,6 +764,13 @@ class NotificationService {
     return await this.sendToUser(userId, payload)
   }
 
+  /**
+   * Creates an in-app notification.
+   *
+   * @param {string} userId - The ID of the user to create the notification for.
+   * @param {CreateInAppNotificationOptions} options - The options for creating the notification.
+   * @returns {Promise<InAppNotificationRecord>} A promise that resolves to the created notification record.
+   */
   async createInAppNotification(
     userId: string,
     options: CreateInAppNotificationOptions,
@@ -748,10 +834,20 @@ class NotificationService {
     return { id, createdAt }
   }
 
+  /**
+   * Gets the VAPID public key.
+   *
+   * @returns {string} The VAPID public key.
+   */
   getVapidPublicKey(): string {
     return process.env.VAPID_PUBLIC_KEY || ''
   }
 
+  /**
+   * Checks if the notification service is enabled.
+   *
+   * @returns {boolean} `true` if the service is enabled, otherwise `false`.
+   */
   isEnabled(): boolean {
     return isNotificationServiceEnabled
   }

@@ -21,6 +21,12 @@ declare module 'express-serve-static-core' {
   }
 }
 
+/**
+ * Middleware that authenticates a user's JWT token.
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The Express next function.
+ */
 export const authenticateToken: RequestHandler = async (
   req: Request,
   res: Response,

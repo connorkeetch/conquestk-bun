@@ -8,9 +8,22 @@ import { performanceTestingService } from '../services/performanceTestingService
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
 
+/**
+ * This file contains routes for running performance benchmarks and stress tests on the application.
+ * These routes are intended for development and testing purposes only and should be disabled in production.
+ */
+
 const router = express.Router()
 
-// Get available test scenarios
+/**
+ * @api {get} /benchmark/scenarios Get available test scenarios
+ * @apiName GetBenchmarkScenarios
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {String[]} data The list of available test scenarios.
+ */
 router.get('/scenarios', authenticateToken, async (req, res) => {
   try {
     const scenarios = performanceTestingService.getTestScenarios()
@@ -32,7 +45,17 @@ router.get('/scenarios', authenticateToken, async (req, res) => {
   }
 })
 
-// Run load test
+/**
+ * @api {post} /benchmark/load-test/:scenario Run a load test
+ * @apiName RunLoadTest
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiParam {String} scenario The name of the test scenario to run.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data Information about the started test.
+ */
 router.post('/load-test/:scenario', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { scenario } = req.params
@@ -86,7 +109,21 @@ router.post('/load-test/:scenario', authenticateToken, async (req, res): Promise
   }
 })
 
-// Run game scenario test
+/**
+ * @api {post} /benchmark/game-scenario Run a game scenario test
+ * @apiName RunGameScenarioTest
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiBody {Number} [players=50] The number of players in the scenario.
+ * @apiBody {Number} [gameCount=10] The number of games to simulate.
+ * @apiBody {Number} [actionsPerMinute=30] The number of actions per minute to simulate.
+ * @apiBody {Number} [duration=300] The duration of the test in seconds.
+ * @apiBody {String} [scenario=peak_load] The name of the scenario to run.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data Information about the started test.
+ */
 router.post('/game-scenario', authenticateToken, async (req, res): Promise<void> => {
   try {
     const {
@@ -148,7 +185,17 @@ router.post('/game-scenario', authenticateToken, async (req, res): Promise<void>
   }
 })
 
-// Run stress test
+/**
+ * @api {post} /benchmark/stress-test Run a stress test
+ * @apiName RunStressTest
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiBody {Number} [maxConcurrency=500] The maximum number of concurrent users to simulate.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data Information about the started test.
+ */
 router.post('/stress-test', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { maxConcurrency = 500 } = req.body
@@ -196,7 +243,15 @@ router.post('/stress-test', authenticateToken, async (req, res): Promise<void> =
   }
 })
 
-// Get test status
+/**
+ * @api {get} /benchmark/status Get the status of active and recent benchmark tests
+ * @apiName GetBenchmarkStatus
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data The status of active and recent tests.
+ */
 router.get('/status', authenticateToken, async (req, res) => {
   try {
     const activeTests = performanceTestingService.getActiveTests()
@@ -237,7 +292,21 @@ router.get('/status', authenticateToken, async (req, res) => {
   }
 })
 
-// Run shadow verification for odds engine (TS vs WASM) and emit divergence metric
+/**
+ * @api {post} /benchmark/odds-shadow-verify Run shadow verification for the odds engine
+ * @apiName RunOddsShadowVerification
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiBody {Number} [trials=100000] The number of trials to run.
+ * @apiBody {Number} [attMin=5] The minimum number of attacking armies.
+ * @apiBody {Number} [attMax=40] The maximum number of attacking armies.
+ * @apiBody {Number} [defMin=5] The minimum number of defending armies.
+ * @apiBody {Number} [defMax=35] The maximum number of defending armies.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data The results of the shadow verification.
+ */
 router.post('/odds-shadow-verify', authenticateToken, async (req, res): Promise<void> => {
   try {
     const {
@@ -306,7 +375,21 @@ router.post('/odds-shadow-verify', authenticateToken, async (req, res): Promise<
   }
 })
 
-// Benchmark AI evaluation throughput (TS vs WASM) on randomized candidate sets
+/**
+ * @api {post} /benchmark/ai-eval-bench Benchmark AI evaluation throughput
+ * @apiName BenchmarkAiEvaluation
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiBody {Number} [sets=50] The number of sets of candidates to evaluate.
+ * @apiBody {Number} [candidatesPer=200] The number of candidates per set.
+ * @apiBody {Number} [territories=120] The number of territories to simulate.
+ * @apiBody {Number} [warmupRuns=3] The number of warmup runs to perform.
+ * @apiBody {Number} [measureRuns=5] The number of measurement runs to perform.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data The results of the benchmark.
+ */
 router.post('/ai-eval-bench', authenticateToken, async (req, res): Promise<void> => {
   try {
     const {
@@ -502,7 +585,17 @@ router.post('/ai-eval-bench', authenticateToken, async (req, res): Promise<void>
   }
 })
 
-// Get detailed test results
+/**
+ * @api {get} /benchmark/results/:testId Get detailed test results
+ * @apiName GetBenchmarkResults
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiParam {String} testId The ID of the test to get results for.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data The detailed results of the test.
+ */
 router.get('/results/:testId', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { testId } = req.params
@@ -532,7 +625,17 @@ router.get('/results/:testId', authenticateToken, async (req, res): Promise<void
   }
 })
 
-// Stop active test
+/**
+ * @api {post} /benchmark/stop/:testId Stop an active test
+ * @apiName StopBenchmarkTest
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiParam {String} testId The ID of the test to stop.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {String} message A message indicating the result of the stop request.
+ */
 router.post('/stop/:testId', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { testId } = req.params
@@ -561,7 +664,17 @@ router.post('/stop/:testId', authenticateToken, async (req, res): Promise<void> 
   }
 })
 
-// Get benchmark history
+/**
+ * @api {get} /benchmark/history Get benchmark history
+ * @apiName GetBenchmarkHistory
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiParam {Number} [limit=50] The maximum number of history items to return.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object[]} data The list of benchmark history items.
+ */
 router.get('/history', authenticateToken, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string, 10) || 50
@@ -586,7 +699,15 @@ router.get('/history', authenticateToken, async (req, res) => {
   }
 })
 
-// Generate benchmark report
+/**
+ * @api {get} /benchmark/report Generate a benchmark report
+ * @apiName GenerateBenchmarkReport
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data The generated benchmark report.
+ */
 router.get('/report', authenticateToken, async (req, res) => {
   try {
     const report = performanceTestingService.generateBenchmarkReport()
@@ -608,7 +729,19 @@ router.get('/report', authenticateToken, async (req, res) => {
   }
 })
 
-// Quick benchmark for specific endpoints
+/**
+ * @api {post} /benchmark/quick-test Run a quick benchmark for specific endpoints
+ * @apiName RunQuickBenchmark
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiBody {String[]} [endpoints=['/health']] The endpoints to test.
+ * @apiBody {Number} [duration=60] The duration of the test in seconds.
+ * @apiBody {Number} [concurrency=10] The number of concurrent users to simulate.
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data The results of the quick benchmark.
+ */
 router.post('/quick-test', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { endpoints = ['/health'], duration = 60, concurrency = 10 } = req.body
@@ -661,7 +794,15 @@ router.post('/quick-test', authenticateToken, async (req, res): Promise<void> =>
   }
 })
 
-// System performance baseline
+/**
+ * @api {get} /benchmark/baseline Get system performance baseline
+ * @apiName GetSystemBaseline
+ * @apiGroup Benchmark
+ * @apiPermission admin
+ *
+ * @apiSuccess {Boolean} success Whether the request was successful.
+ * @apiSuccess {Object} data The baseline performance results.
+ */
 router.get('/baseline', authenticateToken, async (req, res) => {
   try {
     const baselineTests = ['api_health_check', 'cache_performance']

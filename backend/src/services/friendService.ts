@@ -1,11 +1,20 @@
+/**
+ * @fileoverview Service for managing friendships, including sending, accepting, and declining friend requests.
+ * @module services/friendService
+ */
 import { query, transaction } from '../config/database.js'
 import { logger } from '../utils/logger.js'
 import notificationService from './notificationService.js'
 import { tryGetSocketServer } from './socketRegistry.js'
 import { isBlocked } from './userBlockService.js'
 
+/** Type representing the status of a friendship. */
 export type FriendshipStatus = 'pending' | 'accepted' | 'blocked'
 
+/**
+ * @interface FriendshipRecord
+ * @description Represents a friendship in the database.
+ */
 export interface FriendshipRecord {
   id: string
   userId: string
@@ -15,6 +24,7 @@ export interface FriendshipRecord {
   acceptedAt: Date | null
 }
 
+/** @private */
 type FriendshipRow = {
   id: string
   user_id: string
@@ -33,18 +43,27 @@ const mapRow = (row: FriendshipRow): FriendshipRecord => ({
   acceptedAt: row.accepted_at,
 })
 
+/**
+ * @interface FriendSummary
+ * @description Represents a summary of a friend.
+ */
 export interface FriendSummary {
   userId: string
   username: string
   since?: Date
 }
 
+/**
+ * @interface FriendRequestSummary
+ * @description Represents a summary of a friend request.
+ */
 export interface FriendRequestSummary {
   requesterId: string
   requesterName: string
   requestedAt: Date
 }
 
+/** Type representing the relationship status between two users. */
 export type RelationshipStatus =
   | 'self'
   | 'none'
@@ -54,6 +73,12 @@ export type RelationshipStatus =
   | 'blocked_by_you'
   | 'blocked_you'
 
+/**
+ * Gets the relationship status between two users.
+ * @param {string} viewerId - The ID of the user viewing the profile.
+ * @param {string} otherUserId - The ID of the user whose profile is being viewed.
+ * @returns {Promise<RelationshipStatus>} The relationship status.
+ */
 export async function getRelationshipStatus(
   viewerId: string,
   otherUserId: string,
@@ -94,6 +119,11 @@ export async function getRelationshipStatus(
   return 'none'
 }
 
+/**
+ * Lists all friends for a given user.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<FriendSummary[]>} A list of the user's friends.
+ */
 export async function listFriends(userId: string): Promise<FriendSummary[]> {
   const result = await query<{
     other_user_id: string
@@ -120,6 +150,11 @@ export async function listFriends(userId: string): Promise<FriendSummary[]> {
   }))
 }
 
+/**
+ * Lists all pending friend requests for a user.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<{ incoming: FriendRequestSummary[]; outgoing: FriendRequestSummary[] }>} An object containing lists of incoming and outgoing friend requests.
+ */
 export async function listPendingRequests(
   userId: string,
 ): Promise<{ incoming: FriendRequestSummary[]; outgoing: FriendRequestSummary[] }> {
@@ -167,8 +202,18 @@ export async function listPendingRequests(
   }
 }
 
+/**
+ * @class FriendshipError
+ * @extends Error
+ * @description Custom error class for friendship operations.
+ */
 export class FriendshipError extends Error {
   code: string
+  /**
+   * @constructor
+   * @param {string} code - The error code.
+   * @param {string} message - The error message.
+   */
   constructor(code: string, message: string) {
     super(message)
     this.name = 'FriendshipError'
@@ -176,6 +221,13 @@ export class FriendshipError extends Error {
   }
 }
 
+/**
+ * Sends a friend request from one user to another.
+ * @param {string} requesterId - The ID of the user sending the request.
+ * @param {string} targetUserId - The ID of the user receiving the request.
+ * @returns {Promise<FriendshipRecord>} The newly created friendship record.
+ * @throws {FriendshipError} If the target is invalid, blocked, or a request is already pending.
+ */
 export async function sendFriendRequest(
   requesterId: string,
   targetUserId: string,
@@ -253,6 +305,13 @@ export async function sendFriendRequest(
   }
 }
 
+/**
+ * Accepts a friend request.
+ * @param {string} currentUserId - The ID of the user accepting the request.
+ * @param {string} requesterId - The ID of the user who sent the request.
+ * @returns {Promise<FriendshipRecord>} The updated friendship record.
+ * @throws {FriendshipError} If there is no pending request or the users are blocked.
+ */
 export async function acceptFriendRequest(
   currentUserId: string,
   requesterId: string,
@@ -307,6 +366,12 @@ export async function acceptFriendRequest(
   return record
 }
 
+/**
+ * Declines a friend request.
+ * @param {string} currentUserId - The ID of the user declining the request.
+ * @param {string} requesterId - The ID of the user who sent the request.
+ * @returns {Promise<boolean>} True if the request was successfully declined, false otherwise.
+ */
 export async function declineFriendRequest(
   currentUserId: string,
   requesterId: string,
@@ -331,6 +396,12 @@ export async function declineFriendRequest(
   return (result.rowCount ?? 0) > 0
 }
 
+/**
+ * Cancels an outgoing friend request.
+ * @param {string} currentUserId - The ID of the user cancelling the request.
+ * @param {string} targetUserId - The ID of the user the request was sent to.
+ * @returns {Promise<boolean>} True if the request was successfully cancelled, false otherwise.
+ */
 export async function cancelOutgoingRequest(
   currentUserId: string,
   targetUserId: string,
@@ -355,6 +426,12 @@ export async function cancelOutgoingRequest(
   return (result.rowCount ?? 0) > 0
 }
 
+/**
+ * Removes a friend.
+ * @param {string} userId - The ID of the user initiating the removal.
+ * @param {string} friendId - The ID of the friend to remove.
+ * @returns {Promise<boolean>} True if the friend was successfully removed, false otherwise.
+ */
 export async function removeFriend(userId: string, friendId: string): Promise<boolean> {
   const result = await query(
     `
@@ -391,6 +468,13 @@ export default {
   getRelationshipStatus,
 }
 
+/**
+ * Gets the mutual friends between two users.
+ * @param {string} userA - The ID of the first user.
+ * @param {string} userB - The ID of the second user.
+ * @param {number} [limit=6] - The maximum number of mutual friends to return.
+ * @returns {Promise<{ total: number; users: Array<{ userId: string; username: string }> }>} An object containing the total number of mutual friends and a sample of them.
+ */
 export async function getMutualFriends(
   userA: string,
   userB: string,
