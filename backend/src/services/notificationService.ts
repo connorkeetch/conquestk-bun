@@ -84,10 +84,13 @@ interface NotificationPayloadData {
 }
 
 interface PushSubscriptionRow {
+  id: number
   user_id: string
   endpoint: string
   subscription: webpush.PushSubscription
   failure_count: number
+  last_failure_at: Date | string | null
+  last_failure_reason: string | null
 }
 
 interface DMNotificationPreferenceRow {
@@ -235,10 +238,13 @@ class NotificationService {
     const result = await query<PushSubscriptionRow>(
       `
         SELECT
+          id,
           user_id,
           endpoint,
           subscription,
-          failure_count
+          failure_count,
+          last_failure_at,
+          last_failure_reason
         FROM web_push_subscriptions
         WHERE user_id = $1
       `,
@@ -268,8 +274,8 @@ class NotificationService {
     userId: string,
     endpoint: string,
     reason: string | null,
-  ): Promise<void> {
-    await query(
+  ): Promise<{ failureCount: number; lastFailureAt: string | null } | null> {
+    const result = await query<{ failure_count: number; last_failure_at: string | null }>(
       `
         UPDATE web_push_subscriptions
         SET
@@ -278,9 +284,29 @@ class NotificationService {
           last_failure_reason = $3,
           updated_at = NOW()
         WHERE user_id = $1 AND endpoint = $2
+        RETURNING failure_count, last_failure_at
       `,
       [userId, endpoint, reason],
     )
+
+    if (result.rows.length === 0) {
+      return null
+    }
+
+    const row = result.rows[0]
+    return { failureCount: row.failure_count, lastFailureAt: row.last_failure_at }
+  }
+
+  private getEndpointDetails(endpoint: string): { host?: string; protocol?: string } {
+    try {
+      const { host, protocol } = new URL(endpoint)
+      return {
+        host,
+        protocol: protocol.replace(/:$/, ''),
+      }
+    } catch {
+      return {}
+    }
   }
 
   private async sendToSubscription(
@@ -289,7 +315,17 @@ class NotificationService {
     parentLogger: EventLogger,
   ): Promise<boolean> {
     const { user_id: userId, endpoint, subscription } = subscriptionRow
-    const eventLogger = createEventLogger({ endpoint }, parentLogger.context)
+    const { host: endpointHost, protocol: endpointProtocol } = this.getEndpointDetails(endpoint)
+    const eventLogger = createEventLogger(
+      {
+        endpoint,
+        endpointHost,
+        endpointProtocol,
+        subscriptionId: subscriptionRow.id,
+        failureCount: subscriptionRow.failure_count,
+      },
+      parentLogger.context,
+    )
 
     for (let attempt = 1; attempt <= retryDelaysMs.length + 1; attempt++) {
       try {
@@ -322,16 +358,28 @@ class NotificationService {
           continue
         }
 
-        const reason = error instanceof Error ? error.message : 'Unknown error'
-        await this.markDeliveryFailure(
-          userId,
-          endpoint,
-          statusCode ? `${reason} (status ${statusCode})` : reason,
-        )
+        const rawReason = error instanceof Error ? error.message : 'Unknown error'
+        const persistedReason = statusCode ? `${rawReason} (status ${statusCode})` : rawReason
+        const failureState = await this.markDeliveryFailure(userId, endpoint, persistedReason)
+
+        const errorCode =
+          error && typeof error === 'object' && 'code' in error
+            ? (error as NodeJS.ErrnoException).code
+            : undefined
+
+        const failureCount = failureState?.failureCount ?? subscriptionRow.failure_count + 1
+        const lastFailureAtIso = failureState?.lastFailureAt
+          ? new Date(failureState.lastFailureAt).toISOString()
+          : undefined
+
         eventLogger.error('Failed to deliver web push notification', {
           statusCode,
           attempt,
-          reason,
+          reason: rawReason,
+          persistedReason,
+          errorCode,
+          failureCount,
+          lastFailureAt: lastFailureAtIso,
         })
         return false
       }
@@ -365,6 +413,19 @@ class NotificationService {
 
     eventLogger.debug('Attempting web push delivery', {
       subscriptionCount: subscriptions.length,
+      subscriptions: subscriptions.map((subscription) => {
+        const { host, protocol } = this.getEndpointDetails(subscription.endpoint)
+        return {
+          id: subscription.id,
+          endpointHost: host,
+          endpointProtocol: protocol,
+          failureCount: subscription.failure_count,
+          lastFailureAt: subscription.last_failure_at
+            ? new Date(subscription.last_failure_at).toISOString()
+            : null,
+          lastFailureReason: subscription.last_failure_reason,
+        }
+      }),
     })
 
     for (const subscription of subscriptions) {
