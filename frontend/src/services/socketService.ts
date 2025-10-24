@@ -1067,9 +1067,47 @@ class SocketService {
    * gameplay through this method (or the Redux thunks that call it).
    */
   // Accept a loose action envelope to support extended client-only action helpers
+  /**
+   * LOCKSTEP FIX: Client-side validation to prevent sending actions that server will reject.
+   * Mirrors server-side validation logic to maintain state consistency.
+   */
+  private canExecuteAction(roomId: string, action: LooseGameAction): boolean {
+    const state = store.getState()
+    const currentGame = state.game.currentGame
+
+    if (!currentGame || currentGame.roomId !== roomId) {
+      return false
+    }
+
+    // Check for pending conquest transfer - blocks ALL actions except transfer_conquest
+    if (currentGame.lastBattleResult?.pendingConquestFor) {
+      if (action.type === 'transfer_conquest') {
+        return true // Allow conquest transfer
+      }
+      logger.info('[Lockstep Client] Blocking action due to pending conquest transfer', {
+        actionType: action.type,
+        pendingFor: currentGame.lastBattleResult.pendingConquestFor,
+        currentPlayer: currentGame.currentPlayer,
+        roomId,
+      })
+      return false // Block all other actions
+    }
+
+    // Additional validations can be added here as needed
+    return true
+  }
+
   sendGameAction(data: { roomId: string; action: LooseGameAction }) {
     const { roomId, action } = data
     if (this.lockstepEnabled) {
+      // CRITICAL FIX: Validate action before sending to prevent server rejections
+      if (!this.canExecuteAction(roomId, action)) {
+        logger.info('[Lockstep Client] Action blocked by client validation', {
+          roomId,
+          actionType: action.type,
+        })
+        return // Don't send to server
+      }
       void this.sendActionWithAck(roomId, action)
       return
     }

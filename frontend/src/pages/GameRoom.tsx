@@ -1463,15 +1463,25 @@ export default function GameRoom() {
 
   useEffect(() => {
     if (!battleResult || !battleResult.conquered || !currentGame || !user) return
-    // pendingConquestFor contains a player ID, not a user ID
-    if (battleResult.pendingConquestFor !== currentGame.currentPlayer) return
+
+    // More robust check: show popup if pendingConquestFor is set at all
+    if (!battleResult.pendingConquestFor) return
 
     const actingPlayer = currentGame.players.find(
       (player) => player.id === currentGame.currentPlayer,
     )
+
+    // Check if the current user controls the current player
     const actingUserId = actingPlayer?.userId ?? actingPlayer?.id ?? null
 
     if (!actingUserId || actingUserId !== user.id) {
+      // Log why popup is NOT showing
+      logger.info("[Conquest Popup] Not showing - not current user's turn", {
+        actingUserId,
+        userId: user.id,
+        pendingFor: battleResult.pendingConquestFor,
+        currentPlayer: currentGame.currentPlayer,
+      })
       return
     }
 
@@ -1517,6 +1527,17 @@ export default function GameRoom() {
     }
 
     lastConquestHandledRef.current = conquestKey
+
+    // Log when popup is showing
+    logger.info('[Conquest Popup] Showing conquest transfer modal', {
+      pendingFor: battleResult.pendingConquestFor,
+      currentPlayer: currentGame.currentPlayer,
+      turn: currentGame.turn,
+      fromTerritory: fromTerritory.id,
+      toTerritory: toTerritory.id,
+      availableArmies,
+    })
+
     dispatch(
       setConquestTransfer({
         fromTerritoryId: fromTerritory.id,
