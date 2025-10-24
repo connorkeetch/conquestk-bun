@@ -209,3 +209,6 @@ backend/health-reports/
 
 # Heap snapshots (from memory leak diagnostics)
 *.heapsnapshot
+
+# CodeMachine/AI tooling directories
+.codemachine/
