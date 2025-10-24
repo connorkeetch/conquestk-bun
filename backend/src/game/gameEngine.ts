@@ -1338,6 +1338,17 @@ export class GameEngine {
       initialToArmies: defenderInitialArmies,
     }
 
+    // Log when pendingConquestFor is set after a conquest
+    if (conquered) {
+      logger.info('[Lockstep Server] Setting pendingConquestFor after conquest', {
+        playerId: action.playerId,
+        fromTerritory: action.payload.fromTerritoryId,
+        toTerritory: action.payload.toTerritoryId,
+        fromArmies: fromTerritory.armies,
+        toArmies: toTerritory.armies,
+      })
+    }
+
     // Store the battle result in game state
     gameState.lastBattleResult = result
     if (capitalSummary) {
@@ -1450,6 +1461,16 @@ export class GameEngine {
       toTerritory: resolvedTo,
       pendingConquestFor: null,
     }
+
+    // Log when pendingConquestFor is cleared after conquest transfer
+    logger.info('[Lockstep Server] Cleared pendingConquestFor after transfer', {
+      playerId,
+      fromTerritory: fromTerritoryId,
+      toTerritory: toTerritoryId,
+      armiesTransferred: armies,
+      finalFromArmies: fromTerritory.armies,
+      finalToArmies: toTerritory.armies,
+    })
 
     return gameState
   }
@@ -1943,6 +1964,12 @@ export class GameEngine {
 
     // Block attacks when there's a pending conquest transfer
     if (gameState.lastBattleResult?.pendingConquestFor) {
+      logger.info('[Lockstep Server] Blocking attack due to pending conquest transfer', {
+        playerId: action.playerId,
+        pendingFor: gameState.lastBattleResult.pendingConquestFor,
+        fromTerritory: action.payload.fromTerritoryId,
+        toTerritory: action.payload.toTerritoryId,
+      })
       return false
     }
 
