@@ -103,6 +103,10 @@ backend/public/
 # Rust build outputs (keep wasm-pack pkg, ignore cargo target)
 shared/wasm-odds/crate/target/
 
+# Prevent accidental check-in of compiled JS in shared sources
+shared/types/*.js
+shared/types/*.js.map
+
 # Archive directory
 _archive/
 
