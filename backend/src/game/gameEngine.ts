@@ -1,8 +1,4 @@
 import { applyCapitalCapture, isCapitalTerritory } from '@conquestk/shared/lockstep'
-import {
-  DeterministicRng,
-  type DeterministicRngState,
-} from '@conquestk/shared/utils/deterministicRng'
 import { treasureMetrics } from '../services/metricsService.js'
 import territoryModifierService, {
   type GameTerritoryModifier,
@@ -51,35 +47,21 @@ export class GameEngine {
   // Cache modifiers per room to prevent memory leaks
   private gameModifiersCache: Map<string, Map<string, GameTerritoryModifier>> = new Map()
 
-  private getRngSeed(gameState: GameState): string {
-    return gameState.rngSeed ?? `${gameState.roomId}`
-  }
-
-  private ensureRngState(gameState: GameState): DeterministicRngState {
-    if (!gameState.rngState) {
-      const rng = new DeterministicRng(this.getRngSeed(gameState))
-      gameState.rngSeed = rng.seed
-      gameState.rngState = rng.getState()
+  /**
+   * Fisher-Yates shuffle using server-authoritative Math.random()
+   */
+  private shuffleArray<T>(array: T[]): void {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[array[i], array[j]] = [array[j], array[i]]
     }
-    return gameState.rngState
   }
 
-  private getRng(gameState: GameState): DeterministicRng {
-    const seed = this.getRngSeed(gameState)
-    const state = this.ensureRngState(gameState)
-    return DeterministicRng.fromState(seed, state)
-  }
-
-  private commitRng(gameState: GameState, rng: DeterministicRng): void {
-    gameState.rngSeed = rng.seed
-    gameState.rngState = rng.getState()
-  }
-
-  private withRng<T>(gameState: GameState, fn: (rng: DeterministicRng) => T): T {
-    const rng = this.getRng(gameState)
-    const result = fn(rng)
-    this.commitRng(gameState, rng)
-    return result
+  /**
+   * Roll a dice (1-6) using server-authoritative Math.random()
+   */
+  private rollDice(): number {
+    return Math.floor(Math.random() * 6) + 1
   }
 
   /**
@@ -101,7 +83,6 @@ export class GameEngine {
    * @param {Array<{ userId: string; username?: string; teamId?: number | null; isAi?: boolean; aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null; aiPersonalitySeed?: number | null; skillRating?: number | null; }>} playerConfigs - An array of player configurations.
    * @param {GameConfiguration} gameConfig - The configuration for the game.
    * @param {{ territories: Territory[]; sectorBonuses: SectorBonus[]; }} mapOverrides - The map data, including territories and sector bonuses.
-   * @param {{ rngSeed?: string }} [options] - Optional parameters, including an RNG seed.
    * @returns {GameState} The initial state of the game.
    */
   initializeGame(
@@ -118,13 +99,11 @@ export class GameEngine {
     }>,
     gameConfig: GameConfiguration,
     mapOverrides: { territories: Territory[]; sectorBonuses: SectorBonus[] },
-    options?: { rngSeed?: string },
   ): GameState {
     if (!mapOverrides || !Array.isArray(mapOverrides.territories)) {
       throw new Error('Map data not provided to GameEngine')
     }
     const baseTerritories = mapOverrides.territories
-    const rng = new DeterministicRng(options?.rngSeed ?? roomId)
     // Ensure we operate on a fresh copy
     const territories = baseTerritories.map((t) => ({
       id: t.id,
@@ -140,17 +119,17 @@ export class GameEngine {
     const players = this.createPlayers(playerConfigs)
 
     // Randomize player order
-    this.randomizePlayerOrder(players, rng)
+    this.randomizePlayerOrder(players)
 
     // Distribute territories fairly with neutrals
-    this.distributeTerritoriesWithNeutrals(territories, players, rng)
+    this.distributeTerritoriesWithNeutrals(territories, players)
 
     let kingConfig: KingOfTheHillConfig | null = null
     let hillRotation: { current: string; queue: string[] } | null = null
 
     if (gameConfig.gameMode === 'king_of_the_hill') {
       kingConfig = this.normalizeKingOfTheHillConfig(gameConfig.kingOfTheHill, territories)
-      hillRotation = this.createInitialHillRotation(territories, kingConfig, rng)
+      hillRotation = this.createInitialHillRotation(territories, kingConfig)
       if (hillRotation) {
         this.prepareInitialHillTerritory(territories, players, kingConfig, hillRotation.current)
       }
@@ -180,7 +159,7 @@ export class GameEngine {
 
     const assassinationTargets =
       hydratedConfig.gameMode === 'assassination'
-        ? this.assignAssassinationTargets(players, rng)
+        ? this.assignAssassinationTargets(players)
         : undefined
 
     const kingOfTheHillState =
@@ -204,9 +183,6 @@ export class GameEngine {
       ...(kingOfTheHillState ? { kingOfTheHillState } : {}),
       ...(treasureConfig.enabled ? { treasureState: ensureTreasureState() } : {}),
     }
-
-    gameState.rngSeed = rng.seed
-    gameState.rngState = rng.getState()
 
     this.prepareReinforcementPhase(gameState, treasureConfig)
 
@@ -506,7 +482,7 @@ export class GameEngine {
     }
 
     const treasureState = ensureTreasureState(gameState.treasureState)
-    const treasure = this.withRng(gameState, (rng) => drawTreasure(treasureConfig, rng))
+    const treasure = drawTreasure(treasureConfig)
     const hand = this.getPlayerTreasureHand(player)
     hand.push(treasure)
     gameState.treasureState = treasureState
@@ -556,9 +532,9 @@ export class GameEngine {
     }
   }
 
-  private randomizePlayerOrder(players: GamePlayer[], rng: DeterministicRng): void {
+  private randomizePlayerOrder(players: GamePlayer[]): void {
     const shuffleInPlace = <T>(items: T[]): void => {
-      rng.shuffleInPlace(items)
+      this.shuffleArray(items)
     }
 
     const teamBuckets = new Map<number, GamePlayer[]>()
@@ -623,21 +599,14 @@ export class GameEngine {
     players.splice(0, players.length, ...ordered)
   }
 
-  private shuffleArray<T>(items: T[], rng: DeterministicRng): void {
-    rng.shuffleInPlace(items)
-  }
-
-  private assignAssassinationTargets(
-    players: GamePlayer[],
-    rng: DeterministicRng,
-  ): Record<string, string> | undefined {
+  private assignAssassinationTargets(players: GamePlayer[]): Record<string, string> | undefined {
     const eligible = players.filter((player) => !player.isEliminated)
     if (eligible.length < 2) {
       return undefined
     }
 
     const shuffled = [...eligible]
-    rng.shuffleInPlace(shuffled)
+    this.shuffleArray(shuffled)
 
     const assignments: Record<string, string> = {}
     for (let i = 0; i < shuffled.length; i++) {
@@ -705,7 +674,6 @@ export class GameEngine {
   private createInitialHillRotation(
     territories: Territory[],
     config: KingOfTheHillConfig,
-    rng: DeterministicRng,
   ): { current: string; queue: string[] } | null {
     const territoryIds = territories.map((territory) => territory.id)
     const territoryIdSet = new Set(territoryIds)
@@ -735,7 +703,7 @@ export class GameEngine {
       rotationPool = [...uniqueOrder, ...remaining]
     } else {
       rotationPool = [...eligiblePool]
-      this.shuffleArray(rotationPool, rng)
+      this.shuffleArray(rotationPool)
     }
 
     const current = rotationPool.shift() ?? eligiblePool[0]
@@ -930,10 +898,8 @@ export class GameEngine {
       pool.push(id)
     }
 
-    return this.withRng(gameState, (rng) => {
-      this.shuffleArray(pool, rng)
-      return pool
-    })
+    this.shuffleArray(pool)
+    return pool
   }
 
   private ensureHillNeutralDefenders(gameState: GameState, territoryId: string): void {
@@ -993,11 +959,7 @@ export class GameEngine {
     return false
   }
 
-  private distributeTerritoriesWithNeutrals(
-    territories: Territory[],
-    players: GamePlayer[],
-    rng: DeterministicRng,
-  ): void {
+  private distributeTerritoriesWithNeutrals(territories: Territory[], players: GamePlayer[]): void {
     const playerCount = players.length
     if (playerCount === 0) {
       // Handle case with no players, though unlikely in a real game
@@ -1010,7 +972,7 @@ export class GameEngine {
 
     // Shuffle territories for random distribution
     const shuffledTerritories = [...territories]
-    rng.shuffleInPlace(shuffledTerritories)
+    this.shuffleArray(shuffledTerritories)
 
     // Handle the case where there are more players than territories
     if (playerCount >= territories.length) {
@@ -2109,7 +2071,7 @@ export class GameEngine {
   }
 
   private simulateBattle(
-    gameState: GameState,
+    _gameState: GameState,
     attackerDiceCount: number,
     defenderDiceCount: number,
     attackBonus: number = 0,
@@ -2121,8 +2083,8 @@ export class GameEngine {
     defenderLosses: number
   } {
     // Roll dice for attacker and defender
-    let attackerDice = this.rollDice(gameState, attackerDiceCount).sort((a, b) => b - a)
-    let defenderDice = this.rollDice(gameState, defenderDiceCount).sort((a, b) => b - a)
+    let attackerDice = this.rollMultipleDice(attackerDiceCount).sort((a, b) => b - a)
+    let defenderDice = this.rollMultipleDice(defenderDiceCount).sort((a, b) => b - a)
 
     // Apply territory modifiers to dice rolls
     // Bonuses are applied to all dice, capped between 1 and 6
@@ -2162,14 +2124,15 @@ export class GameEngine {
     }
   }
 
-  private rollDice(gameState: GameState, count: number): number[] {
-    return this.withRng(gameState, (rng) => {
-      const dice: number[] = []
-      for (let i = 0; i < count; i += 1) {
-        dice.push(rng.nextIntInclusive(1, 6))
-      }
-      return dice
-    })
+  /**
+   * Rolls multiple dice for battle resolution
+   */
+  private rollMultipleDice(count: number): number[] {
+    const dice: number[] = []
+    for (let i = 0; i < count; i++) {
+      dice.push(this.rollDice())
+    }
+    return dice
   }
 
   private getPlayerTeam(gameState: GameState, playerId?: string | null): number | null {

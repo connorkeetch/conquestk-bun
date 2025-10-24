@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express'
 import { query } from '../config/database.js'
-import { LOCKSTEP_CONFIG, lockstepMetrics as lockstepConfigMetrics } from '../config/lockstep.js'
 import {
   PREMIUM_COLOR_MESSAGE,
   PREMIUM_GAME_LIMIT_MESSAGE,
@@ -307,7 +306,7 @@ export class GameController {
         return res.status(400).json({ message: 'Invalid conquest transfer payload' })
       }
 
-      const result = await this.gameService.transferConquestArmies(
+      const _result = await this.gameService.transferConquestArmies(
         roomId,
         userId,
         fromTerritoryId,
@@ -319,20 +318,13 @@ export class GameController {
       try {
         const io = tryGetSocketServer()
         if (io) {
-          const reason = 'action' // Action-triggered snapshot
-          // Skip redundant snapshots when LOCKSTEP_ONLY is enabled
-          if (!(LOCKSTEP_CONFIG.LOCKSTEP_ONLY && reason === 'action')) {
-            io.to(`game:${roomId}`).emit('game:snapshot', result.gameState)
-          } else {
-            lockstepConfigMetrics.recordSnapshotSkipped()
-            logger.debug(
-              '[Lockstep] Skipped snapshot emission in REST controller (LOCKSTEP_ONLY mode)',
-              {
-                roomId,
-                reason,
-              },
-            )
-          }
+          // Skip redundant action snapshots - events are used for granular updates
+          logger.debug(
+            'Skipped snapshot emission in REST controller (events are primary transport)',
+            {
+              roomId,
+            },
+          )
         }
       } catch {
         // ignore broadcast errors

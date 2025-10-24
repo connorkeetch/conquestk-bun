@@ -1162,7 +1162,7 @@ export class GameLifecycleService {
         },
       )
 
-      // Legacy delta hint removed; lockstep frames already signal AI activity.
+      // Game events will signal AI activity through normal event flow.
     } catch (error) {
       logger.warn('Failed to schedule AI turn', {
         roomId,
@@ -1393,7 +1393,7 @@ export class GameLifecycleService {
           break
         }
       }
-      // Delta fan-out removed; lockstep frames reflect timeout state changes.
+      // Game events reflect timeout state changes through normal event flow.
     } catch (error) {
       logger.warn('Turn timeout: endTurn failed', {
         roomId,

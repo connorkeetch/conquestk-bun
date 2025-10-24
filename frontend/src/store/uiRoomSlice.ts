@@ -17,23 +17,6 @@ export interface UIRoomState {
   autoAttacking?: boolean
   desyncDetected: boolean
   resyncing: boolean
-  lockstepResync?: {
-    reason:
-      | 'frame_gap'
-      | 'unsupported_commands'
-      | 'missing_state'
-      | 'checksum_mismatch'
-      | 'snapshot_error'
-      | 'manual'
-    roomId: string
-    traceId: string
-    seq?: number
-    expectedSeq?: number
-    unsupported?: string[]
-    checksum?: { server: number; local?: number }
-    details?: Record<string, unknown>
-    observedAt: number
-  } | null
   // Transient map pings for display (expires client-side)
   pings?: Array<{
     id: string
@@ -83,7 +66,6 @@ const initialState: UIRoomState = {
   autoAttacking: false,
   desyncDetected: false,
   resyncing: false,
-  lockstepResync: null,
   pings: [],
   mutedUserIds: [],
   clientLogs: [],
@@ -190,12 +172,6 @@ const uiRoomSlice = createSlice({
     },
     setResyncing(state, action: PayloadAction<boolean>) {
       state.resyncing = action.payload
-    },
-    setLockstepResyncInfo(
-      state,
-      action: PayloadAction<UIRoomState['lockstepResync'] | undefined | null>,
-    ) {
-      state.lockstepResync = action.payload ?? null
     },
     addPing(
       state,
@@ -387,7 +363,6 @@ export const {
   setAutoAttacking,
   setDesyncDetected,
   setResyncing,
-  setLockstepResyncInfo,
   hydrateFromStorage,
   addPing,
   prunePings,

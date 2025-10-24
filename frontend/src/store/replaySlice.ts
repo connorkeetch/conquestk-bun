@@ -1,6 +1,7 @@
 import type { GameState as SharedGameState } from '@conquestk/shared'
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { LockstepSimulationManager } from '@/services/lockstepSimulationManager'
+// TODO: Refactor replay system to use event-based architecture instead of lockstep frames
+// import { LockstepSimulationManager } from '@/services/lockstepSimulationManager'
 import {
   type ArmyMap,
   getReplayChunk,
@@ -112,7 +113,8 @@ export const ensureLockstepFrames = createAsyncThunk<
     signal as AbortSignal | undefined,
   )
 
-  const simulator = new LockstepSimulationManager()
+  // TODO: Refactor replay system to use event-based architecture
+  // const simulator = new LockstepSimulationManager()
   const frames = Array.isArray(chunk.frames) ? chunk.frames : []
   const finalSeq = chunk.finalSeq ?? lockstepState.finalSeq ?? lockstepState.lastSeq
   const totalFrames = chunk.totalFrames ?? lockstepState.totalFrames
@@ -124,7 +126,7 @@ export const ensureLockstepFrames = createAsyncThunk<
   if (includeSnapshot && chunk.snapshot) {
     baseline = structuredClone(chunk.snapshot) as SharedGameState
     baselineSeq = fromSeq - 1
-    simulator.setBaseline(gameId, structuredClone(baseline))
+    // simulator.setBaseline(gameId, structuredClone(baseline))
     states.push({ seq: baselineSeq, state: structuredClone(baseline) })
   } else {
     const referenceSeq = fromSeq - 1
@@ -139,7 +141,8 @@ export const ensureLockstepFrames = createAsyncThunk<
     if (existingBaseline) {
       baseline = structuredClone(existingBaseline)
       baselineSeq = referenceSeq < 0 ? 0 : referenceSeq
-      simulator.setBaseline(gameId, structuredClone(existingBaseline))
+      // TODO: Replace with event-based replay
+      // simulator.setBaseline(gameId, structuredClone(existingBaseline))
       states.push({ seq: baselineSeq, state: structuredClone(baseline) })
     } else if (frames.length === 0) {
       return {
@@ -166,22 +169,23 @@ export const ensureLockstepFrames = createAsyncThunk<
   }
 
   let failure: LockstepFetchResult['failure']
-  for (const frame of frames) {
-    const result = simulator.applyFrame(gameId, {
-      matchId: gameId,
-      seq: frame.seq,
-      playerId: frame.playerId,
-      commands: frame.commands,
-      committedAt: frame.committedAt,
-    })
-    if (!result.ok) {
-      failure = { reason: result.reason, unsupported: result.unsupported }
-      break
-    }
-    const stateAfter = simulator.getState(gameId)
-    if (stateAfter) {
-      states.push({ seq: frame.seq, state: structuredClone(stateAfter) })
-    }
+  for (const _frame of frames) {
+    // TODO: Replace with event-based replay
+    // const result = simulator.applyFrame(gameId, {
+    //   matchId: gameId,
+    //   seq: frame.seq,
+    //   playerId: frame.playerId,
+    //   commands: frame.commands,
+    //   committedAt: frame.committedAt,
+    // })
+    // if (!result.ok) {
+    //   failure = { reason: result.reason, unsupported: result.unsupported }
+    //   break
+    // }
+    // const stateAfter = simulator.getState(gameId)
+    // if (stateAfter) {
+    //   states.push({ seq: frame.seq, state: structuredClone(stateAfter) })
+    // }
   }
 
   return {

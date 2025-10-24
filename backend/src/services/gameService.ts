@@ -26,7 +26,6 @@ import type { PlayerRating, RatingChange } from './eloService.js'
 import { eloService } from './eloService.js'
 // Pairwise Elo is now built into eloService; no separate service import
 import { featureFlagService } from './featureFlagService.js'
-import { lockstepService } from './lockstepService.js'
 import { mapService } from './mapService.js'
 import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
 import notificationService from './notificationService.js'
@@ -1024,18 +1023,13 @@ export class GameService {
       })
     }
 
-    const gameState = this.gameEngine.initializeGame(
-      roomId,
-      players,
-      config,
-      {
-        territories: loaded.territories,
-        sectorBonuses: loaded.sectorBonuses,
-      },
-      { rngSeed },
-    )
+    const gameState = this.gameEngine.initializeGame(roomId, players, config, {
+      territories: loaded.territories,
+      sectorBonuses: loaded.sectorBonuses,
+    })
 
-    const resolvedSeed = gameState.rngSeed ?? rngSeed
+    // Server-authoritative randomness - no RNG seed needed
+    const resolvedSeed = rngSeed // Keep for logging compatibility
 
     try {
       const entry: RngLogEntry = {
@@ -1066,8 +1060,8 @@ export class GameService {
     // Cache the game state with TTL for automatic cleanup (24 hours)
     const serializedInitialState = this.serializeGameState(gameState)
     await this.persistGameStateSnapshot(roomId, serializedInitialState)
-    await lockstepService.reset(roomId)
-    await lockstepService.recordBaseline({ matchId: roomId, state: serializedInitialState })
+    // TODO: Initialize event log for this game
+    // Event-based architecture will replace lockstep baseline
 
     this.recordAssassinationAssignments(roomId, gameState)
 
