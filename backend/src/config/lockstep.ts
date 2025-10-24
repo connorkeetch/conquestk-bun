@@ -8,13 +8,37 @@
  * See: docs/planning/lockstep-architecture-refactor.md
  */
 
+const parseBoolean = (value: string | undefined, defaultValue: boolean): boolean => {
+  if (value === undefined) {
+    return defaultValue
+  }
+  return value.toLowerCase() === 'true'
+}
+
 export const LOCKSTEP_CONFIG = {
   /**
    * When true, only emit snapshots for initialization/resync/fog (RECOMMENDED).
    * When false, emit snapshots after every action (legacy hybrid mode).
-   * Default: true (Pure Lockstep mode)
+   * Default: false (legacy hybrid mode)
    */
-  LOCKSTEP_ONLY: process.env.LOCKSTEP_ONLY !== 'false',
+<<<<<<< ours
+  LOCKSTEP_ONLY: (() => {
+    const rawValue = process.env.LOCKSTEP_ONLY
+    if (typeof rawValue !== 'string') {
+      return false
+    }
+    const normalized = rawValue.trim().toLowerCase()
+    if (['true', '1', 'yes', 'on'].includes(normalized)) {
+      return true
+    }
+    if (['false', '0', 'no', 'off'].includes(normalized)) {
+      return false
+    }
+    return false
+  })(),
+=======
+  LOCKSTEP_ONLY: parseBoolean(process.env.LOCKSTEP_ONLY, false),
+>>>>>>> theirs
 
   /**
    * Maximum frames to retain in database before pruning.
@@ -26,7 +50,7 @@ export const LOCKSTEP_CONFIG = {
    * Enable checksum validation for desync detection.
    * Default: true
    */
-  ENABLE_CHECKSUMS: process.env.LOCKSTEP_CHECKSUMS !== 'false',
+  ENABLE_CHECKSUMS: parseBoolean(process.env.LOCKSTEP_CHECKSUMS, true),
 } as const
 
 /**
