@@ -1,0 +1,17 @@
+/* Light Theme - neutral, minimal light background */
+:root[data-theme="light"] {
+  /* Keep base light tokens from :root; set only accents/background flavor */
+  --color-primary: #2563eb;
+  --color-primary-soft: #3b82f6;
+  --color-secondary: #ffd700;
+  --color-accent: #dc2626;
+
+  /* Simple soft light gradient */
+  --ck-bg-gradient: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
+  --ck-glow: var(--color-primary-soft);
+
+  /* Light glass feel */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-light: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(15, 23, 42, 0.08);
+}

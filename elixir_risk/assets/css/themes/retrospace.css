@@ -1,0 +1,409 @@
+/* RetroSpace Theme - Early social media tribute */
+:root[data-theme="retrospace"] {
+  --font-family-base: "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
+  /* Decorative heading font applied after fonts are ready */
+  --color-primary: #0b3aa7; /* Classic Myspace blue */
+  --color-primary-soft: #1e4fc4; /* Hover blue */
+  --color-secondary: #ffffff; /* Neutral secondary */
+  --color-accent: #ff9900; /* Retro orange accent */
+
+  --color-bg-deep: #ffffff; /* Plain white backdrop */
+  --color-bg-alt: #f1f4ff; /* Light blue content striping */
+  --color-bg-void: #ffffff; /* No vignette */
+  --color-surface-1: #ffffff; /* Card backgrounds */
+  --color-surface-2: #f3f6ff; /* Raised surfaces */
+
+  --color-text: #111111; /* Prefer near-black text for readability */
+  --color-text-muted: #333333; /* Muted dark gray */
+  --color-border: #b3c1d9; /* Soft blue-gray borders */
+
+  /* Typography tokens */
+  --text: #1f2937;
+  --text-muted: #4b5563;
+  --heading: #0b2f84;
+  --link: #0b3aa7;
+
+  /* Surface tokens */
+  --surface-0: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f3f6ff;
+  --panel-bg: #ffffff;
+  --panel-border: #b3c1d9;
+  --panel-bg-alt: #f1f4ff;
+  /* Lighten nav for black text contrast */
+  --nav-bg: #e7ecff;
+  --nav-border: #0b2f84;
+  --footer-bg: #e7ecff;
+  --modal-bg: #ffffff;
+  --modal-border: #0b2f84;
+  --body-bg-image: none;
+  --body-bg-attachment: scroll;
+
+  /* Interaction tokens */
+  --hover-bg: #dbe4ff;
+  --hover-border: #0b2f84;
+
+  /* Radius tokens */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-surface: 0;
+  --panel-radius: 0;
+
+  /* Shadow tokens */
+  --shadow-0: none;
+  --shadow-1: none;
+  --shadow-2: none;
+  --shadow-modal: none;
+
+  --ck-bg-gradient: linear-gradient(0deg, #ffffff 0%, #ffffff 100%);
+
+  --ck-glow: transparent;
+
+  --glass-bg: #ffffff;
+  --glass-bg-light: #f3f6ff;
+  --glass-border: #b3c1d9;
+  --glass-blur: 0;
+  --glass-shadow: none;
+  --glass-radius-sm: 0;
+  --glass-radius-lg: 0;
+
+  --surface-glass: var(--glass-bg);
+  --surface-glass-light: var(--glass-bg-light);
+
+  /* Box/Card overrides - blocky solid panels */
+  --box-bg: var(--glass-bg);
+  --box-bg-solid: #ffffff;
+  --box-border: var(--glass-border);
+  --box-shadow: none;
+  --box-blur: 0;
+  --box-radius: 0;
+  --box-padding: 1.25rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
+
+  --panel-padding: 1.25rem;
+}
+
+[data-theme="retrospace"] body {
+  background-color: var(--surface-0);
+  background-image: var(--body-bg-image, none);
+  background-attachment: var(--body-bg-attachment, scroll);
+  color: var(--text);
+}
+
+[data-theme="retrospace"] body::after {
+  content: none;
+}
+
+[data-theme="retrospace"] body,
+[data-theme="retrospace"] button,
+[data-theme="retrospace"] input,
+[data-theme="retrospace"] select,
+[data-theme="retrospace"] textarea {
+  font-family: "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* Enable decorative heading font once fonts are ready */
+:root[data-theme="retrospace"][data-fonts="ready"] {
+  --font-family-heading: "Audiowide", "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
+}
+
+/* RetroSpace button treatments - chunky and flat */
+[data-theme="retrospace"] .btn-primary {
+  background: #0b3aa7;
+  border: 1px solid #0b2f84;
+  border-radius: 0;
+  box-shadow: none;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transform: none;
+  transition: background-color 0.15s ease;
+}
+
+[data-theme="retrospace"] .btn-primary::before {
+  display: none;
+}
+
+[data-theme="retrospace"] .btn-primary:hover {
+  background: #0d49c8;
+  box-shadow: none;
+  transform: none;
+}
+
+[data-theme="retrospace"] .btn-primary:active {
+  background: #082d73;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .btn-secondary {
+  background: #e7ecff;
+  border: 1px solid #0b2f84;
+  border-radius: 0;
+  box-shadow: none;
+  color: #0b2f84;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transform: none;
+  backdrop-filter: none;
+  transition: background-color 0.15s ease;
+}
+
+[data-theme="retrospace"] .btn-secondary:hover {
+  background: #dbe4ff;
+  color: #0b2f84;
+  box-shadow: none;
+  transform: none;
+}
+
+[data-theme="retrospace"] .btn-secondary:active {
+  background: #c6d4ff;
+  transform: none;
+}
+
+[data-theme="retrospace"] .btn-tertiary {
+  background: #ffffff;
+  border: 2px solid #ff9900;
+  border-radius: 0;
+  box-shadow: none;
+  color: #c24100;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transform: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+[data-theme="retrospace"] .btn-tertiary::before {
+  display: none;
+}
+
+[data-theme="retrospace"] .btn-tertiary:hover {
+  background: #fff4e5;
+  color: #a43400;
+}
+
+[data-theme="retrospace"] .btn-tertiary:active {
+  background: #ffe0bf;
+}
+
+[data-theme="retrospace"] .segmented-control {
+  background: #e7ecff;
+  border: 1px solid #0b2f84;
+  border-radius: 0;
+  gap: 0;
+  padding: 0;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .segmented-control button {
+  border-radius: 0;
+  border: 1px solid transparent;
+  color: #0b2f84;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: none;
+}
+
+[data-theme="retrospace"] .segmented-control button + button {
+  margin-left: -1px;
+}
+
+[data-theme="retrospace"] .segmented-control button:hover:not(.segmented-active) {
+  background: #dbe4ff;
+  color: #0b2f84;
+}
+
+[data-theme="retrospace"] .segmented-control button.segmented-active {
+  background: #0b3aa7;
+  color: #ffffff;
+  border-color: #0b2f84;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .tabs {
+  gap: 0;
+  border: 1px solid #0b2f84;
+  border-bottom: none;
+  background: #0b3aa7;
+  box-shadow: none;
+  padding: 0.125rem 0.25rem 0 0.25rem;
+}
+
+[data-theme="retrospace"] .tab {
+  color: #ffffff;
+  background: #0b3aa7;
+  border: 1px solid #0b2f84;
+  border-bottom: none;
+  border-radius: 0;
+  padding: 0.5rem 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: none;
+}
+
+[data-theme="retrospace"] .tab + .tab {
+  margin-left: -1px; /* Collapse borders for blocky nav */
+}
+
+[data-theme="retrospace"] .tab:hover:not(.tab-active) {
+  background: #0d49c8;
+  color: #ffffff;
+}
+
+[data-theme="retrospace"] .tab-active {
+  color: #0b2f84;
+  background: #ffffff;
+  border-color: #0b2f84;
+  border-bottom: 0;
+}
+
+[data-theme="retrospace"] .tabs-pills {
+  background: #0b3aa7;
+  border: 1px solid #0b2f84;
+  border-radius: 0;
+  padding: 0.5rem;
+  gap: 0.5rem;
+}
+
+[data-theme="retrospace"] .tab-pill {
+  border-radius: 0;
+  border: 1px solid #0b2f84;
+  background: #0b3aa7;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: none;
+}
+
+[data-theme="retrospace"] .tab-pill + .tab-pill {
+  margin-left: -1px;
+}
+
+[data-theme="retrospace"] .tab-pill:hover:not(.tab-pill-active) {
+  background: #0d49c8;
+  color: #ffffff;
+}
+
+[data-theme="retrospace"] .tab-pill-active {
+  background: #ffffff;
+  color: #0b2f84;
+  border-color: #0b2f84;
+}
+
+[data-theme="retrospace"] .sidebar-menu {
+  background: #ffffff;
+  border-right: 2px solid #0b2f84;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .sidebar-header {
+  background: #e7ecff;
+  border-bottom: 1px solid #0b2f84;
+}
+
+[data-theme="retrospace"] .sidebar-item {
+  color: #1f2937;
+  border-radius: 0;
+}
+
+[data-theme="retrospace"] .sidebar-item:hover:not(.sidebar-item-active) {
+  color: #0b2f84;
+  background: #edf1ff;
+}
+
+[data-theme="retrospace"] .sidebar-item-active {
+  color: #0b2f84;
+  background: #dbe4ff;
+  border-left: 4px solid #0b2f84;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .sidebar-item:focus,
+[data-theme="retrospace"] .sidebar-item-active:focus {
+  outline: 2px solid #0b2f84;
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .box2,
+[data-theme="retrospace"] .glass-box,
+[data-theme="retrospace"] .glass-box-sm,
+[data-theme="retrospace"] .glass-box-lg,
+[data-theme="retrospace"] .glass-box-xl,
+[data-theme="retrospace"] .solid-box,
+[data-theme="retrospace"] .box1 {
+  background-color: #ffffff;
+  backdrop-filter: none;
+  border-radius: 0;
+  border: 1px solid #b3c1d9;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .form-input {
+  background-color: #ffffff;
+  border: 1px solid #b3c1d9;
+  border-radius: 0;
+  color: #1f2937;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .form-input::placeholder {
+  color: #6b7280;
+}
+
+[data-theme="retrospace"] .form-input:focus {
+  background-color: #ffffff;
+  border-color: #0b3aa7;
+  box-shadow: none;
+  outline: 2px solid #0b3aa7;
+  outline-offset: 0;
+}
+
+[data-theme="retrospace"] .form-input:hover {
+  background-color: #f3f6ff;
+}
+
+[data-theme="retrospace"] .form-input:disabled {
+  background-color: #f3f6ff;
+  color: #9ca3af;
+}
+
+[data-theme="retrospace"] .form-label {
+  color: #0b2f84;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 1;
+}
+
+[data-theme="retrospace"] .form-help {
+  color: #4b5563;
+}
+
+[data-theme="retrospace"] .nav-link {
+  color: #0b2f84;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="retrospace"] .nav-link-active {
+  color: #0b3aa7;
+}
+
+[data-theme="retrospace"] .nav-link-inactive {
+  color: #4b5563;
+}
