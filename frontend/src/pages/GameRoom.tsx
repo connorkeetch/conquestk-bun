@@ -1547,6 +1547,62 @@ export default function GameRoom() {
     )
   }, [battleResult, conquestTransfer, currentGame, user, dispatch])
 
+  // REFRESH RECOVERY: Show popup on mount if pendingConquestFor is already set
+  // This handles the case where user refreshes page while conquest transfer is pending
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Mount-only effect intentionally uses current values without re-running
+  useEffect(() => {
+    if (!currentGame || !user) return
+
+    const battleResult = currentGame.lastBattleResult
+    if (!battleResult || !battleResult.conquered || !battleResult.pendingConquestFor) return
+
+    const actingPlayer = currentGame.players.find(
+      (player) => player.id === currentGame.currentPlayer,
+    )
+    const actingUserId = actingPlayer?.userId ?? actingPlayer?.id ?? null
+
+    if (!actingUserId || actingUserId !== user.id) {
+      logger.info("[Conquest Popup] Not showing on mount - not current user's turn", {
+        actingUserId,
+        userId: user.id,
+        pendingFor: battleResult.pendingConquestFor,
+      })
+      return
+    }
+
+    const fromId =
+      typeof battleResult.fromTerritory === 'string'
+        ? battleResult.fromTerritory
+        : battleResult.fromTerritory.id
+    const toId =
+      typeof battleResult.toTerritory === 'string'
+        ? battleResult.toTerritory
+        : battleResult.toTerritory.id
+
+    const fromTerritory = currentGame.board.find((t) => t.id === fromId)
+    const toTerritory = currentGame.board.find((t) => t.id === toId)
+
+    if (!fromTerritory || !toTerritory) return
+
+    const availableArmies = Math.max(0, fromTerritory.armies - 1)
+    if (availableArmies <= 0) return
+
+    logger.info('[Conquest Popup] Showing on mount (refresh recovery)', {
+      pendingFor: battleResult.pendingConquestFor,
+      fromTerritory: fromTerritory.id,
+      toTerritory: toTerritory.id,
+      availableArmies,
+    })
+
+    dispatch(
+      setConquestTransfer({
+        fromTerritoryId: fromTerritory.id,
+        toTerritoryId: toTerritory.id,
+        availableArmies,
+      }),
+    )
+  }, []) // Empty deps - only run on mount
+
   // No ready toggle; start triggers when lobby is full
 
   const handleConfirmJoin = useCallback(async () => {
@@ -3239,6 +3295,54 @@ export default function GameRoom() {
       />
 
       {/* Conquest transfer handled inline on map via ConquestTransferPopup */}
+
+      {/* Persistent UI Indicator: Shows when conquest transfer is required */}
+      {currentGame?.lastBattleResult?.pendingConquestFor === currentGame?.currentPlayer && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-yellow-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-4">
+            <span className="font-bold">⚠️ Conquest Transfer Required</span>
+            <button
+              type="button"
+              onClick={() => {
+                // Force show the popup by dispatching the conquest transfer state
+                if (!currentGame) return
+
+                const battleResult = currentGame.lastBattleResult
+                if (!battleResult) return
+
+                const fromId =
+                  typeof battleResult.fromTerritory === 'string'
+                    ? battleResult.fromTerritory
+                    : battleResult.fromTerritory.id
+                const toId =
+                  typeof battleResult.toTerritory === 'string'
+                    ? battleResult.toTerritory
+                    : battleResult.toTerritory.id
+
+                const fromTerritory = currentGame.board.find((t) => t.id === fromId)
+                const toTerritory = currentGame.board.find((t) => t.id === toId)
+
+                if (fromTerritory && toTerritory) {
+                  logger.info('[Conquest Banner] Manual trigger clicked', {
+                    fromTerritory: fromTerritory.id,
+                    toTerritory: toTerritory.id,
+                  })
+                  dispatch(
+                    setConquestTransfer({
+                      fromTerritoryId: fromTerritory.id,
+                      toTerritoryId: toTerritory.id,
+                      availableArmies: Math.max(0, fromTerritory.armies - 1),
+                    }),
+                  )
+                }
+              }}
+              className="bg-white text-yellow-600 px-4 py-1 rounded font-semibold hover:bg-yellow-50"
+            >
+              Transfer Armies
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Floating mute control - REMOVED: Now integrated into footer on both mobile and desktop */}
     </div>

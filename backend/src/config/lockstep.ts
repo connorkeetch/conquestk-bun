@@ -21,24 +21,7 @@ export const LOCKSTEP_CONFIG = {
    * When false, emit snapshots after every action (legacy hybrid mode).
    * Default: false (legacy hybrid mode)
    */
-<<<<<<< ours
-  LOCKSTEP_ONLY: (() => {
-    const rawValue = process.env.LOCKSTEP_ONLY
-    if (typeof rawValue !== 'string') {
-      return false
-    }
-    const normalized = rawValue.trim().toLowerCase()
-    if (['true', '1', 'yes', 'on'].includes(normalized)) {
-      return true
-    }
-    if (['false', '0', 'no', 'off'].includes(normalized)) {
-      return false
-    }
-    return false
-  })(),
-=======
   LOCKSTEP_ONLY: parseBoolean(process.env.LOCKSTEP_ONLY, false),
->>>>>>> theirs
 
   /**
    * Maximum frames to retain in database before pruning.

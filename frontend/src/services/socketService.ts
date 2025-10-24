@@ -1070,27 +1070,56 @@ class SocketService {
   /**
    * LOCKSTEP FIX: Client-side validation to prevent sending actions that server will reject.
    * Mirrors server-side validation logic to maintain state consistency.
+   *
+   * CRITICAL: Checks lockstep simulator state (source of truth) instead of Redux state
+   * to avoid race conditions when user clicks fast after conquest.
    */
   private canExecuteAction(roomId: string, action: LooseGameAction): boolean {
-    const state = store.getState()
-    const currentGame = state.game.currentGame
+    // CRITICAL FIX: Check lockstep simulator state first (source of truth)
+    // This prevents race condition where Redux state hasn't updated yet but simulator has
+    const simState = this.lockstepSim.getState(roomId)
 
-    if (!currentGame || currentGame.roomId !== roomId) {
-      return false
-    }
-
-    // Check for pending conquest transfer - blocks ALL actions except transfer_conquest
-    if (currentGame.lastBattleResult?.pendingConquestFor) {
-      if (action.type === 'transfer_conquest') {
-        return true // Allow conquest transfer
+    if (simState) {
+      // Simulator has state - use it (most accurate, updated immediately on frame receive)
+      if (simState.lastBattleResult?.pendingConquestFor) {
+        if (action.type === 'transfer_conquest') {
+          return true // Allow conquest transfer
+        }
+        logger.info(
+          '[Lockstep Client] Blocking action due to pending conquest transfer (simulator state)',
+          {
+            actionType: action.type,
+            pendingFor: simState.lastBattleResult.pendingConquestFor,
+            currentPlayer: simState.currentPlayer,
+            roomId,
+          },
+        )
+        return false // Block all other actions
       }
-      logger.info('[Lockstep Client] Blocking action due to pending conquest transfer', {
-        actionType: action.type,
-        pendingFor: currentGame.lastBattleResult.pendingConquestFor,
-        currentPlayer: currentGame.currentPlayer,
-        roomId,
-      })
-      return false // Block all other actions
+    } else {
+      // Fallback to Redux state if simulator doesn't have state yet (e.g., before first frame)
+      const state = store.getState()
+      const currentGame = state.game.currentGame
+
+      if (!currentGame || currentGame.roomId !== roomId) {
+        return false
+      }
+
+      if (currentGame.lastBattleResult?.pendingConquestFor) {
+        if (action.type === 'transfer_conquest') {
+          return true
+        }
+        logger.info(
+          '[Lockstep Client] Blocking action due to pending conquest transfer (Redux fallback)',
+          {
+            actionType: action.type,
+            pendingFor: currentGame.lastBattleResult.pendingConquestFor,
+            currentPlayer: currentGame.currentPlayer,
+            roomId,
+          },
+        )
+        return false
+      }
     }
 
     // Additional validations can be added here as needed
