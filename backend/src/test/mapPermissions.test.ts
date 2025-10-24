@@ -68,7 +68,7 @@ describe('Map permission enforcement', () => {
   })
 
   it('returns 403 when updateMap is attempted without edit access', async () => {
-    const mapId = '11111111-1111-1111-1111-111111111111'
+    const mapId = '667b1615-2156-4999-969b-4599fa529c69'
 
     queryMock
       .mockResolvedValueOnce({ rows: [{ creator_id: 'owner-id' }], rowCount: 1 })
@@ -84,7 +84,7 @@ describe('Map permission enforcement', () => {
   })
 
   it('returns 404 when map is missing during update', async () => {
-    const mapId = '22222222-2222-2222-2222-222222222222'
+    const mapId = 'a98a2523-d38b-4348-a03a-fb96d87acf07'
 
     queryMock.mockResolvedValueOnce({ rows: [], rowCount: 0 })
 
@@ -98,7 +98,7 @@ describe('Map permission enforcement', () => {
   })
 
   it('denies territory creation for non-authorized user', async () => {
-    const mapId = '33333333-3333-3333-3333-333333333333'
+    const mapId = '4158eeab-f47f-44ed-b373-0a8301d929f4'
 
     queryMock
       .mockResolvedValueOnce({ rows: [{ map_id: mapId }], rowCount: 1 })
@@ -125,7 +125,7 @@ describe('Map permission enforcement', () => {
   })
 
   it('denies adjacency creation when user lacks territory access', async () => {
-    const mapId = '44444444-4444-4444-4444-444444444444'
+    const mapId = 'd0f1f81b-7218-4986-a253-605bde43a95b'
 
     queryMock
       .mockResolvedValueOnce({ rows: [{ map_id: mapId }, { map_id: mapId }], rowCount: 2 })
@@ -136,8 +136,8 @@ describe('Map permission enforcement', () => {
       .post('/api/maps/adjacencies')
       .set('x-test-user-id', 'unauthorized-user')
       .send({
-        fromTerritoryId: '55555555-5555-5555-5555-555555555555',
-        toTerritoryId: '66666666-6666-6666-6666-666666666666',
+        fromTerritoryId: '8e5b9ede-6203-43a8-9002-ca85f6d15bc9',
+        toTerritoryId: 'a5b4d32e-af53-49c0-9c4a-2677145be441',
         isBidirectional: true,
       })
 
@@ -146,7 +146,7 @@ describe('Map permission enforcement', () => {
   })
 
   it('returns 403 when deleting a map without ownership', async () => {
-    const mapId = '77777777-7777-7777-7777-777777777777'
+    const mapId = '2668aae8-6f89-466d-b135-9e24b875be91'
 
     queryMock
       .mockResolvedValueOnce({ rows: [{ creator_id: 'actual-owner' }], rowCount: 1 })

@@ -13,13 +13,30 @@ const region = process.env.ASSET_REGION?.trim() || 'auto'
 const publicBaseUrl = process.env.PUBLIC_ASSET_BASE_URL?.trim().replace(/\/$/, '')
 const mapUploadsOverride = process.env.MAP_UPLOADS_DIR?.trim()
 const mapUploadsRoot = mapUploadsOverride ? path.resolve(mapUploadsOverride) : null
+const isTestEnvironment = process.env.NODE_ENV === 'test'
+const allowRemoteInTests = process.env.ASSET_ENABLE_REMOTE_IN_TESTS === 'true'
+
+const hasRemoteConfig = Boolean(bucket && accessKeyId && secretAccessKey && endpoint)
+
+const remoteToggle = process.env.ASSET_REMOTE_ENABLED?.trim().toLowerCase()
+const remoteOverride =
+  remoteToggle === 'true' ? true : remoteToggle === 'false' ? false : null
+
+const disableRemoteInTests =
+  process.env.NODE_ENV === 'test' && remoteOverride !== true
 
 // Resolve a stable uploads root without relying on ESM-only APIs.
 // Prefer working-directory relative paths so both dev server and Jest work.
 const cwd = process.cwd()
 const LOCAL_ROOT = path.join(cwd, path.basename(cwd) === 'backend' ? 'uploads' : 'backend/uploads')
 
-const isRemoteEnabled = Boolean(bucket && accessKeyId && secretAccessKey && endpoint)
+<<<<<<< ours
+const isRemoteEnabled =
+  remoteOverride ?? (hasRemoteConfig && !disableRemoteInTests)
+=======
+const hasRemoteCredentials = Boolean(bucket && accessKeyId && secretAccessKey && endpoint)
+const isRemoteEnabled = hasRemoteCredentials && (!isTestEnvironment || allowRemoteInTests)
+>>>>>>> theirs
 
 type RemoteConfig = {
   bucket: string

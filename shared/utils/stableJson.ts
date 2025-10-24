@@ -72,7 +72,7 @@ const toSerializable = (value: unknown): unknown => {
  */
 export const stableStringify = (value: unknown): string => {
   const normalised = toSerializable(value)
-  return JSON.stringify(normalised)
+  return JSON.stringify(normalised ?? null)
 }
 
 /**

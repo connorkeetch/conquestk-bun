@@ -28,7 +28,8 @@
       "@/types/*": ["src/types/*"],
       "@/utils/*": ["src/utils/*"],
       "@/services/*": ["src/services/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "@conquestk/shared/*": ["../shared/*"]
     }
   },
   "include": ["src"],
