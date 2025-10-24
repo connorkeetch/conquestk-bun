@@ -1,6 +1,10 @@
 import type { GameState as SharedGameState } from '@conquestk/shared'
-import type { LockstepCommand } from '@conquestk/shared/types/lockstep'
+// TODO: Replace with event-based replay types
+// import type { LockstepCommand } from '@conquestk/shared/types/lockstep'
 import apiClient from './api'
+
+// Temporary stub for old lockstep command type - TODO: Replace with event-based replay
+type LockstepCommand = Record<string, unknown>
 
 export type ReplayPlayerMeta = { id: string; username: string; color?: string }
 

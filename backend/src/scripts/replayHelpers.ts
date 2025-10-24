@@ -1,7 +1,9 @@
-import type { LockstepCommand } from '@conquestk/shared/types/lockstep'
+// TODO: Refactor replay system to use event-based architecture
+// import type { LockstepCommand } from '@conquestk/shared/types/lockstep'
 import { query } from '../config/database.js'
 import type { SerializedGameState } from '../types/game.js'
 
+// Temporary stub - replay system needs to be refactored for event-based architecture
 export async function loadInitialSnapshot(matchId: string): Promise<SerializedGameState | null> {
   const baseline = await query<{ snapshot: Buffer | null }>(
     `SELECT snapshot
@@ -45,10 +47,13 @@ export async function loadInitialSnapshot(matchId: string): Promise<SerializedGa
   return current.rows[0]?.game_data ?? null
 }
 
+// Temporary type until replay system is refactored
+type FrameCommand = Record<string, unknown>
+
 export async function loadFrames(
   matchId: string,
-): Promise<Array<{ seq: number; playerId: string; commands: LockstepCommand[] }>> {
-  const frames = await query<{ seq: number; player_id: string; commands: LockstepCommand[] }>(
+): Promise<Array<{ seq: number; playerId: string; commands: FrameCommand[] }>> {
+  const frames = await query<{ seq: number; player_id: string; commands: FrameCommand[] }>(
     `SELECT seq, player_id, commands
        FROM match_frames
        WHERE match_id = $1

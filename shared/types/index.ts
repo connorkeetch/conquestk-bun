@@ -4,12 +4,9 @@
  */
 
 export * from './delta.js'
-export * from './lockstep.js'
 export * from './messaging.js'
 export * from './notifications.js'
 export * from './themes.js'
-
-import type { InputFrame, TickChecksum } from './lockstep.js'
 
 // Import messaging types for internal references
 import type {
@@ -211,6 +208,7 @@ export interface GameState {
   turn: number
   board: Territory[]
   cards: Card[]
+  version?: number // Authoritative Server: version for conflict detection
   hasAttackedThisTurn?: boolean
   lastBattleResult?: BattleResult
   gameConfig: GameConfiguration
@@ -633,13 +631,15 @@ export interface ServerToClientEvents {
   'player-left': (data: PlayerLeftEvent) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game:snapshot': (gameState: GameState) => void
-  'game-action:frame-committed': (frame: InputFrame) => void
-  'game-action:checksum': (checksum: TickChecksum) => void
-  'game-action:snapshot': (payload: {
-    matchId: string
+  'game:event': (event: {
+    id: string
     seq: number
-    state: Record<string, unknown>
-    frames: InputFrame[]
+    type: string
+    gameId: string
+    version: number
+    timestamp: string
+    playerId?: string
+    payload: unknown
   }) => void
   'turn:start': (payload: {
     roomId: string
@@ -791,8 +791,8 @@ export interface ClientToServerEvents {
     data: { roomId: string; action: GameAction; idempotencyKey?: string },
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
-  'game-action:resync-request': (
-    data: { roomId: string; fromSeq?: number; reason?: string; unsupported?: string[] },
+  'request-state': (
+    data: { roomId?: string },
     callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
@@ -824,8 +824,6 @@ export interface ClientToServerEvents {
     payload: { roomId: string; fromSeq: number; toSeq: number },
     callback?: (response: { ok: boolean; deltas?: unknown[]; error?: string }) => void,
   ) => void
-  // Acknowledge receipt and processing of lockstep baseline snapshot
-  'lockstep:baseline-ack': (data: { roomId: string; seq: number }) => void
   'conversation.create': (
     payload: ConversationCreatePayload,
     callback?: (response: ConversationCreateAck) => void,

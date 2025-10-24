@@ -3,7 +3,6 @@
  * These are the core types that both frontend and backend use
  */
 
-import type { InputFrame, TickChecksum } from '@conquestk/shared/types/lockstep'
 import type { ClanProgressionSocketPayload } from './clans.js'
 import type { GameAction, SerializedGameState } from './game.js'
 import type { Player as RoomPlayer } from './gameRoom.js'
@@ -227,13 +226,15 @@ export interface PlayerLeftEvent {
 }
 
 export interface ServerToClientEvents {
-  'game-action:frame-committed': (frame: InputFrame) => void
-  'game-action:checksum': (checksum: TickChecksum) => void
-  'game-action:snapshot': (payload: {
-    matchId: string
+  'game:event': (event: {
+    id: string
     seq: number
-    state: SerializedGameState
-    frames: InputFrame[]
+    type: string
+    gameId: string
+    version: number
+    timestamp: string
+    playerId?: string
+    payload: unknown
   }) => void
   'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
   'player-left': (data: PlayerLeftEvent) => void
@@ -392,11 +393,10 @@ export interface ClientToServerEvents {
     data: { roomId: string; action: GameAction; idempotencyKey?: string },
     callback?: (response: { ok: boolean; queued?: boolean; acceptedAt?: number }) => void,
   ) => void
-  'game-action:resync-request': (
-    data: { roomId: string; fromSeq?: number; reason?: string; unsupported?: string[] },
+  'request-state': (
+    data: { roomId?: string },
     callback?: (response: { ok: boolean; error?: string }) => void,
   ) => void
-  'lockstep:baseline-ack': (data: { roomId: string; seq?: number | null }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
   'turn:begin': (data: { roomId: string }) => void
   goBackToReinforcement: (data: { roomId: string }) => void

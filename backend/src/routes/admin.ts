@@ -1,7 +1,6 @@
 import { type NextFunction, type Request, type Response, Router } from 'express'
 import { body, param, query as queryParam, validationResult } from 'express-validator'
 import { query as dbQuery, transaction } from '../config/database.js'
-import { LOCKSTEP_CONFIG, lockstepMetrics } from '../config/lockstep.js'
 import { ENV_VARIABLES } from '../config/validateEnv.js'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -305,40 +304,6 @@ router.get('/env/status', async (_req: Request, res: Response) => {
   } catch (error) {
     handleRouteError(error, _req, 'Failed to compute env status', 500)
     res.status(500).json({ error: 'Failed to compute env status' })
-  }
-})
-
-// ============= LOCKSTEP METRICS =============
-
-/**
- * GET /api/admin/lockstep-metrics
- * Returns Pure Lockstep configuration and runtime metrics.
- * Shows bandwidth savings from skipping redundant action snapshots.
- */
-router.get('/lockstep-metrics', async (_req: Request, res: Response) => {
-  try {
-    const config = {
-      LOCKSTEP_ONLY: LOCKSTEP_CONFIG.LOCKSTEP_ONLY,
-      MAX_FRAMES: LOCKSTEP_CONFIG.MAX_FRAMES,
-      ENABLE_CHECKSUMS: LOCKSTEP_CONFIG.ENABLE_CHECKSUMS,
-    }
-
-    const metrics = lockstepMetrics.getStats()
-
-    const summary = {
-      mode: LOCKSTEP_CONFIG.LOCKSTEP_ONLY ? 'Pure Lockstep (Default)' : 'Legacy Hybrid Mode',
-      snapshotsSkipped: metrics.snapshotsSaved,
-      framesEmitted: metrics.framesEmitted,
-      bandwidthSavingPercent: metrics.bandwidthSavingPercent,
-      description: LOCKSTEP_CONFIG.LOCKSTEP_ONLY
-        ? 'Pure Lockstep mode (default): Action snapshots are skipped. Only init/resync/fog snapshots are sent.'
-        : 'Legacy hybrid mode: Both lockstep frames and snapshots are sent after every action.',
-    }
-
-    res.json({ config, metrics, summary })
-  } catch (error) {
-    handleRouteError(error, _req, 'Failed to get lockstep metrics', 500)
-    res.status(500).json({ error: 'Failed to get lockstep metrics' })
   }
 })
 
@@ -2597,21 +2562,16 @@ export default router
 // Lightweight realtime metrics for Socket.IO/game actions
 router.get('/realtime-metrics', async (_req: Request, res: Response) => {
   try {
-    const { lockstepMetrics, realtimeMetrics, socketPayloadMetrics } = await import(
-      '../services/metricsService.js'
-    )
+    const { realtimeMetrics, socketPayloadMetrics } = await import('../services/metricsService.js')
     const payloads = {
-      gameUpdate: socketPayloadMetrics.snapshot('game:snapshot'),
-      lockstepFrame: socketPayloadMetrics.snapshot('game-action:frame-committed'),
-      lockstepChecksum: socketPayloadMetrics.snapshot('game-action:checksum'),
+      gameSnapshot: socketPayloadMetrics.snapshot('game:snapshot'),
+      gameEvent: socketPayloadMetrics.snapshot('game:event'),
     }
     const realtime = realtimeMetrics.snapshot()
-    const lockstep = lockstepMetrics.snapshot()
     res.json({
       ok: true,
       payloads,
       realtime,
-      lockstep,
       ts: new Date().toISOString(),
     })
   } catch (e) {
@@ -2619,20 +2579,11 @@ router.get('/realtime-metrics', async (_req: Request, res: Response) => {
   }
 })
 
-// Reset in-memory realtime/lockstep metrics (admin)
+// Reset in-memory realtime metrics (admin)
 router.post('/realtime-metrics/reset', requirePermission('system.edit'), async (_req, res) => {
   try {
-    const { lockstepMetrics, realtimeMetrics, socketPayloadMetrics } = await import(
-      '../services/metricsService.js'
-    )
+    const { realtimeMetrics, socketPayloadMetrics } = await import('../services/metricsService.js')
     // Best-effort resets
-    try {
-      lockstepMetrics.reset()
-    } catch (error) {
-      logger.warn('Failed to reset lockstep metrics (best-effort)', {
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
     try {
       realtimeMetrics.reset()
     } catch (error) {
@@ -2647,7 +2598,7 @@ router.post('/realtime-metrics/reset', requirePermission('system.edit'), async (
         error: error instanceof Error ? error.message : String(error),
       })
     }
-    res.json({ ok: true, reset: ['lockstep', 'realtime', 'socketPayloads'] })
+    res.json({ ok: true, reset: ['realtime', 'socketPayloads'] })
   } catch (e) {
     res.status(500).json({ ok: false, error: (e as Error)?.message || 'failed' })
   }

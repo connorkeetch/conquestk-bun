@@ -31,7 +31,6 @@
  * - Conquest draws occur after successful territory capture.
  * - `trade_cards` with `treasureSet` indexes is validated then redeemed.
  */
-import type { DeterministicRng } from '@conquestk/shared/utils/deterministicRng'
 import type { Metal, TreasureConfig, TreasureState } from '../types/game.js'
 
 export type TreasureSetPattern = 'three_of_a_kind' | 'one_of_each' | 'diamond_combo'
@@ -110,8 +109,8 @@ export function normalizeTreasureConfig(config?: Partial<TreasureConfig>): Treas
  * Draw a treasure according to configured probabilities.
  * Diamonds consume `diamondsPercent`; remaining probability mass is split evenly.
  */
-export function drawTreasure(config: TreasureConfig, rng: DeterministicRng): Metal {
-  const roll = rng.next()
+export function drawTreasure(config: TreasureConfig): Metal {
+  const roll = Math.random()
   if (roll < config.diamondsPercent) {
     return 'diamond'
   }
