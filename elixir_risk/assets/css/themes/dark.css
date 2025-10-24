@@ -1,0 +1,17 @@
+/* Dark Theme - neutral dark background */
+:root[data-theme="dark"] {
+  /* Accents */
+  --color-primary: #2563eb;
+  --color-primary-soft: #3b82f6;
+  --color-secondary: #ffd700;
+  --color-accent: #dc2626;
+
+  /* Neutral, non-violet gradient */
+  --ck-bg-gradient: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
+  --ck-glow: var(--color-primary-soft);
+
+  /* Glass tuning for dark */
+  --glass-bg: rgba(15, 23, 42, 0.55);
+  --glass-bg-light: rgba(17, 24, 39, 0.4);
+  --glass-border: rgba(71, 85, 105, 0.5);
+}
