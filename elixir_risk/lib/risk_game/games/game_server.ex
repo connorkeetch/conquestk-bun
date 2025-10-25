@@ -146,8 +146,8 @@ defmodule RiskGame.Games.GameServer do
               dirty: true
             }
 
-            # Record event
-            record_event(new_state, "player_joined", %{user_id: user_id})
+            # Record event and capture updated state
+            new_state = record_event(new_state, "player_joined", %{user_id: user_id})
 
             # Broadcast update
             broadcast_state_update(new_state)
@@ -178,8 +178,8 @@ defmodule RiskGame.Games.GameServer do
           dirty: true
         }
 
-        # Record event
-        record_event(new_state, "player_left", %{user_id: user_id})
+        # Record event and capture updated state
+        new_state = record_event(new_state, "player_left", %{user_id: user_id})
 
         # Broadcast update
         broadcast_state_update(new_state)
@@ -208,8 +208,8 @@ defmodule RiskGame.Games.GameServer do
           dirty: true
         }
 
-        # Record event
-        record_event(new_state, "player_ready_toggled", %{
+        # Record event and capture updated state
+        new_state = record_event(new_state, "player_ready_toggled", %{
           user_id: user_id,
           is_ready: updated_player.is_ready
         })
@@ -252,8 +252,8 @@ defmodule RiskGame.Games.GameServer do
           dirty: true
         }
 
-        # Record event
-        record_event(new_state, "game_started", %{started_by: user_id})
+        # Record event and capture updated state
+        new_state = record_event(new_state, "game_started", %{started_by: user_id})
 
         # Broadcast update
         broadcast_state_update(new_state)

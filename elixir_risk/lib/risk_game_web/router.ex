@@ -20,7 +20,12 @@ defmodule RiskGameWeb.Router do
   scope "/", RiskGameWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live_session :public,
+      on_mount: [{RiskGameWeb.UserAuth, :mount_current_scope}],
+      layout: {RiskGameWeb.Layouts, :app} do
+      live "/", HomeLive, :index
+      live "/games/:game_id/lobby", GameLobbyLive, :show
+    end
   end
 
   # Other scopes may use custom stacks.
