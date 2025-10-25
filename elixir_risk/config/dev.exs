@@ -3,11 +3,11 @@ import Config
 # Configure your database
 # Using the same PostgreSQL database as Node.js app (Railway) but with separate schema
 config :risk_game, RiskGame.Repo,
-  username: "postgres",
-  password: "REMOVED_INACTIVE_DATABASE_PASSWORD",
-  hostname: "yamanote.proxy.rlwy.net",
-  port: 46553,
-  database: "railway",
+  username: System.get_env("POSTGRES_USER") || "postgres",
+  password: System.get_env("POSTGRES_PASSWORD") || "postgres",
+  hostname: System.get_env("POSTGRES_HOST") || "localhost",
+  port: String.to_integer(System.get_env("POSTGRES_PORT") || "5432"),
+  database: System.get_env("POSTGRES_DATABASE") || "railway",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10,

@@ -29,6 +29,8 @@ defmodule RiskGameWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: RiskGameWeb.Gettext
 
+  import RiskGameWeb.Gettext
+
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -86,7 +88,7 @@ defmodule RiskGameWeb.CoreComponents do
 
       <.button>Send!</.button>
       <.button phx-click="go" variant="primary">Send!</.button>
-      <.button navigate={~p"/"}>Home</.button>
+      <.button navigate={"/"}>Home</.button>
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :string
@@ -468,5 +470,102 @@ defmodule RiskGameWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  Renders the application navigation header.
+  """
+  attr :current_user, :any, default: nil
+
+  def nav_header(assigns) do
+    ~H"""
+    <header class="bg-[color:var(--nav-bg)] border-b border-[color:var(--nav-border)] sticky top-0 z-50">
+      <nav class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <!-- Logo -->
+          <.link navigate={"/"} class="text-2xl font-bold text-[color:var(--color-primary-soft)]">
+            ConquestK
+          </.link>
+
+          <!-- Main Navigation -->
+          <div class="hidden md:flex items-center space-x-6">
+            <.link navigate={"/lobby"} class="text-[color:var(--text)] hover:text-[color:var(--color-primary)] transition">
+              Lobby
+            </.link>
+            <.link navigate={"/maps"} class="text-[color:var(--text)] hover:text-[color:var(--color-primary)] transition">
+              Maps
+            </.link>
+            <.link navigate={"/learn"} class="text-[color:var(--text)] hover:text-[color:var(--color-primary)] transition">
+              Learn
+            </.link>
+            <.link navigate={"/community"} class="text-[color:var(--text)] hover:text-[color:var(--color-primary)] transition">
+              Community
+            </.link>
+          </div>
+
+          <!-- Auth Actions -->
+          <div class="flex items-center space-x-4">
+            <%= if @current_user do %>
+              <!-- User Menu Dropdown (Authenticated) -->
+              <div class="relative">
+                <button class="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-[color:var(--hover-bg)] transition">
+                  <span class="text-[color:var(--heading)]"><%= @current_user.email %></span>
+                </button>
+                <!-- Dropdown menu would go here with Alpine.js or LiveView hooks -->
+              </div>
+              <.link href={"/users/settings"} class="btn-secondary btn-sm">
+                Settings
+              </.link>
+              <.link href={"/users/log-out"} method="delete" class="btn-tertiary btn-sm">
+                Log Out
+              </.link>
+            <% else %>
+              <!-- Guest Actions -->
+              <.link navigate={"/users/log-in"} class="btn-secondary">
+                Login
+              </.link>
+              <.link navigate={"/users/register"} class="btn-primary">
+                Sign Up
+              </.link>
+            <% end %>
+          </div>
+        </div>
+      </nav>
+    </header>
+    """
+  end
+
+  @doc """
+  Renders the application footer.
+  """
+  def footer(assigns) do
+    ~H"""
+    <footer class="bg-[color:var(--footer-bg)] border-t border-[color:var(--nav-border)] mt-auto">
+      <div class="container mx-auto px-6 py-8">
+        <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <!-- Footer Links -->
+          <div class="flex space-x-6 text-sm">
+            <.link navigate={"/"} class="text-muted hover:text-[color:var(--heading)] transition">
+              About
+            </.link>
+            <.link navigate={"/privacy"} class="text-muted hover:text-[color:var(--heading)] transition">
+              Privacy
+            </.link>
+            <.link navigate={"/terms"} class="text-muted hover:text-[color:var(--heading)] transition">
+              Terms
+            </.link>
+            <.link navigate={"/contact"} class="text-muted hover:text-[color:var(--heading)] transition">
+              Contact
+            </.link>
+          </div>
+
+          <!-- Copyright -->
+          <div class="text-sm text-muted">
+            © <%= DateTime.utc_now().year %> ConquestK. All rights reserved.
+          </div>
+        </div>
+      </div>
+    </footer>
+    """
   end
 end

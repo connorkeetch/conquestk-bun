@@ -40,9 +40,19 @@ defmodule RiskGame.Games do
   end
 
   @doc """
-  Get a game by ID.
+  Get a game by ID (raises if not found).
   """
   def get_game!(id), do: Repo.get!(Game, id)
+
+  @doc """
+  Get a game by ID (returns {:ok, game} or {:error, :not_found}).
+  """
+  def get_game(id) do
+    case Repo.get(Game, id) do
+      nil -> {:error, :not_found}
+      game -> {:ok, game}
+    end
+  end
 
   @doc """
   Get a game by public_id.
