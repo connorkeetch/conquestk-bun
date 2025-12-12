@@ -20,6 +20,10 @@
     "isolatedModules": true,
     "moduleDetection": "force",
 
+    // Decorators (required for Colyseus Schema)
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
     // Compatibility & hygiene
     "esModuleInterop": true,
     "skipLibCheck": true,

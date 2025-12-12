@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { getPlayerTextColor, type PlayerColor } from '@/constants/colors'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { socketService } from '@/services/socketService'
+// TODO: Re-add real-time messaging when ChatRoom is implemented
+// import { colyseusService } from '@/services/colyseusService'
 import {
   ensureDirectConversation,
   ensureGameConversation,
@@ -164,7 +165,8 @@ export default function ChatContainer({
         dispatch(refreshConversation(id))
         if (accessLevel === 'member') {
           dispatch(messagesActions.markReadOptimistic(id))
-          socketService.markConversationReadViaSocket(id)
+          // TODO: Re-add when ChatRoom is implemented
+          // socketService.markConversationReadViaSocket(id)
         }
       } catch (ensureError) {
         if (!cancelled) {
@@ -201,7 +203,8 @@ export default function ChatContainer({
       return
     }
     dispatch(messagesActions.markReadOptimistic(resolvedConversationId))
-    socketService.markConversationReadViaSocket(resolvedConversationId)
+    // TODO: Re-add when ChatRoom is implemented
+    // socketService.markConversationReadViaSocket(resolvedConversationId)
   }, [dispatch, resolvedConversationId, rawMessages.length, isSpectator])
 
   const mutedIds = useAppSelector((s) => new Set(s.uiRoom.mutedUserIds ?? []))
@@ -268,30 +271,18 @@ export default function ChatContainer({
         return
       }
 
-      socketService.sendConversationMessage(
-        { conversationId: resolvedConversationId, body: text },
-        (ack) => {
-          if (!ack?.ok && ack?.error) {
-            setError(ack.error)
-          }
-        },
-      )
+      // TODO: Re-add when ChatRoom is implemented
+      // For now, chat messaging is disabled until Colyseus ChatRoom is ready
+      setError('Chat messaging is temporarily disabled during migration')
     },
     [resolvedConversationId],
   )
 
   const handleTyping = useCallback(
-    (isTyping: boolean) => {
-      if (!resolvedConversationId) {
-        return
-      }
-      if (isTyping) {
-        socketService.startConversationTyping(resolvedConversationId)
-      } else {
-        socketService.stopConversationTyping(resolvedConversationId)
-      }
+    (_isTyping: boolean) => {
+      // TODO: Re-add typing indicators when ChatRoom is implemented
     },
-    [resolvedConversationId],
+    [],
   )
 
   // We intentionally suppress the header/subheader inside the chat container

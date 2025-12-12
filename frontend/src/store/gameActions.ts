@@ -1,8 +1,7 @@
-import type { ClientToServerEvents } from '@conquestk/shared'
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from 'react-hot-toast'
 import { API_URL } from '@/config'
-import { socketService } from '@/services/socketService'
+import { colyseusService, type GameAction as ColyseusAction } from '@/services/colyseusService'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
 import type { GameState, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
@@ -33,17 +32,20 @@ type UndoFortifyAction = {
 export type GameAction = SharedGameAction | TransferConquestAction | UndoFortifyAction
 // end imports
 
-// Unified action emitter: routes game actions over socket when connected,
+// Unified action emitter: routes game actions over Colyseus when connected,
 // or POSTs to the HTTP fallback when offline/disconnected.
 async function sendOrQueueAction(state: RootState, action: GameAction): Promise<void> {
   const roomId = action.roomId
   const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine
   const isConnected = state.uiRoom.connectionStatus === 'connected'
 
-  if (isOnline && isConnected) {
-    type SocketAction = Parameters<ClientToServerEvents['game-action']>[0]['action']
-    socketService.sendGameAction({ roomId, action: action as unknown as SocketAction })
-    return
+  if (isOnline && isConnected && colyseusService.isConnected()) {
+    // Convert to Colyseus action format
+    const colyseusAction = convertToColyseusAction(action)
+    if (colyseusAction) {
+      colyseusService.sendGameAction(colyseusAction)
+      return
+    }
   }
 
   // HTTP fallback so service worker can queue when offline
@@ -74,6 +76,30 @@ async function sendOrQueueAction(state: RootState, action: GameAction): Promise<
   }).catch(() => {
     /* offline fallback handled by service worker */
   })
+}
+
+// Convert internal GameAction to Colyseus action format
+function convertToColyseusAction(action: GameAction): ColyseusAction | null {
+  switch (action.type) {
+    case 'deploy':
+      return { type: 'deploy', territoryId: action.payload.territoryId, armies: action.payload.armies }
+    case 'attack':
+      return { type: 'attack', from: action.payload.fromTerritoryId, to: action.payload.toTerritoryId, dice: action.payload.attackingDice }
+    case 'fortify':
+      return { type: 'fortify', from: action.payload.fromTerritoryId, to: action.payload.toTerritoryId, armies: action.payload.armies }
+    case 'end_turn':
+      return { type: 'end_turn' }
+    case 'trade_cards':
+      return { type: 'trade_cards', cardIds: action.payload.cardIds }
+    case 'transfer_conquest':
+      return { type: 'transfer_conquest', armies: (action.payload as { armies: number }).armies }
+    case 'undo_fortify':
+      return { type: 'undo_fortify' }
+    case 'go_back_to_reinforcement':
+      return { type: 'go_back_to_reinforcement' }
+    default:
+      return null
+  }
 }
 
 // Async thunk for handling territory clicks based on game phase

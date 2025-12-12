@@ -75,9 +75,9 @@ import {
   STANDARD_COLORS,
 } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import { colyseusService } from '../services/colyseusService'
 import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
-import { socketService } from '../services/socketService'
 import { store } from '../store'
 import {
   endTurn,
@@ -877,22 +877,12 @@ export default function GameRoom() {
   }, [currentRoom?.name, currentRoom?.roomCode, currentRoom])
 
   // Screen reader announcements for players joining/leaving
+  // Note: Toast notifications are handled by colyseusService.setupRoomListeners()
+  // This effect only updates the live message for screen readers
   useEffect(() => {
-    const onJoined: Parameters<typeof socketService.on<'player-joined'>>[1] = (payload) => {
-      if (!payload || payload.roomId !== currentRoom?.id) return
-      const name = payload.player.username
-      setLiveMessage(`${name} joined the lobby.`)
-    }
-    const onLeft: Parameters<typeof socketService.on<'player-left'>>[1] = (payload) => {
-      if (!payload || payload.roomId !== currentRoom?.id) return
-      setLiveMessage('A player left the lobby.')
-    }
-    socketService.on('player-joined', onJoined)
-    socketService.on('player-left', onLeft)
-    return () => {
-      socketService.off('player-joined', onJoined)
-      socketService.off('player-left', onLeft)
-    }
+    // Player join/leave notifications come through Colyseus room messages
+    // and are handled by colyseusService which dispatches to Redux
+    // Screen reader live messages could be added via Redux state if needed
   }, [currentRoom?.id])
 
   // Lazy-hydrate chat when visible or after idle
@@ -1064,7 +1054,7 @@ export default function GameRoom() {
       return
     }
 
-    socketService.connect()
+    colyseusService.connect()
     // Load persisted UI prefs (e.g., animation speed)
     dispatch(hydrateFromStorage())
 
@@ -1079,9 +1069,9 @@ export default function GameRoom() {
   useEffect(() => {
     if (!roomId) return
 
-    socketService.joinRoom(roomId)
+    colyseusService.joinRoom(roomId)
     return () => {
-      socketService.leaveRoom(roomId)
+      colyseusService.leaveRoom()
     }
   }, [roomId])
 
@@ -2870,11 +2860,7 @@ export default function GameRoom() {
                 onClick={() =>
                   currentRoom &&
                   replacementPendingUserId &&
-                  socketService.emit('host:replacement', {
-                    roomId: currentRoom.id,
-                    targetUserId: replacementPendingUserId,
-                    choice: 'neutral',
-                  })
+                  colyseusService.sendHostReplacement(replacementPendingUserId, 'neutral')
                 }
                 className="btn btn-danger btn-sm"
                 type="button"
@@ -2887,12 +2873,7 @@ export default function GameRoom() {
                   onClick={() =>
                     currentRoom &&
                     replacementPendingUserId &&
-                    socketService.emit('host:replacement', {
-                      roomId: currentRoom.id,
-                      targetUserId: replacementPendingUserId,
-                      choice: 'ai',
-                      aiDifficulty: diff,
-                    })
+                    colyseusService.sendHostReplacement(replacementPendingUserId, 'ai', diff)
                   }
                   className="btn btn-secondary btn-sm"
                   type="button"

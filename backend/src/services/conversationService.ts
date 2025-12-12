@@ -11,7 +11,7 @@ import {
   assertCanStartDirectConversation,
   MessagingPolicyError,
 } from './messagingPolicyService.js'
-import { tryGetSocketServer } from './socketRegistry.js'
+// Socket.io removed - using Colyseus ChatRoom for real-time messaging
 
 /** Maximum length of a conversation message. */
 export const MAX_MESSAGE_LENGTH = 2000
@@ -1522,29 +1522,7 @@ const getActiveRoomPlayers = async (gameId: string): Promise<RoomPlayerRow[]> =>
   return result.rows
 }
 
-/** @private */
-const toIsoString = (value: Date | string): string =>
-  value instanceof Date ? value.toISOString() : value
-
-/**
- * Serializes a conversation for a socket.io event.
- * @param {ConversationWithMembers} conversation - The conversation to serialize.
- * @returns {object} The serialized conversation.
- * @private
- */
-const serializeConversationForEvent = (conversation: ConversationWithMembers) => ({
-  id: conversation.id,
-  kind: conversation.kind,
-  title: conversation.title,
-  createdBy: conversation.createdBy,
-  createdAt: toIsoString(conversation.createdAt),
-  updatedAt: toIsoString(conversation.updatedAt),
-  isArchived: conversation.isArchived,
-  isReadOnly: conversation.isReadOnly,
-  gameId: conversation.gameId,
-  metadata: conversation.metadata,
-  memberIds: conversation.memberIds,
-})
+// toIsoString and serializeConversationForEvent removed - Socket.io replaced by Colyseus
 
 /**
  * Emits a 'conversation.created' event to the relevant user sockets.
@@ -1553,34 +1531,10 @@ const serializeConversationForEvent = (conversation: ConversationWithMembers) =>
  * @private
  */
 const emitConversationCreatedEvent = (
-  conversation: ConversationWithMembers,
-  recipients?: string[],
+  _conversation: ConversationWithMembers,
+  _recipients?: string[],
 ) => {
-  try {
-    const io = tryGetSocketServer()
-    if (!io) {
-      return
-    }
-
-    const payload = {
-      conversation: serializeConversationForEvent(conversation),
-      members: conversation.memberRoles.map(({ userId, role, username }) => ({
-        userId,
-        role,
-        username,
-      })),
-    }
-
-    const targetUserIds = recipients ?? conversation.memberIds
-    for (const userId of targetUserIds) {
-      io.to(`user:${userId}`).emit('conversation.created', payload)
-    }
-  } catch (error) {
-    logger.warn('Failed to emit conversation.created event', {
-      conversationId: conversation.id,
-      error,
-    })
-  }
+  // No-op: Socket.io removed - using Colyseus ChatRoom for real-time messaging
 }
 
 /**
@@ -1591,34 +1545,11 @@ const emitConversationCreatedEvent = (
  * @private
  */
 const emitConversationMembersAddedEvent = (
-  conversationId: string,
-  addedMembers: ConversationMemberRole[],
-  recipients: string[],
+  _conversationId: string,
+  _addedMembers: ConversationMemberRole[],
+  _recipients: string[],
 ) => {
-  if (addedMembers.length === 0) {
-    return
-  }
-
-  try {
-    const io = tryGetSocketServer()
-    if (!io) {
-      return
-    }
-
-    const payload = {
-      conversationId,
-      members: addedMembers.map(({ userId, role, username }) => ({ userId, role, username })),
-    }
-
-    for (const userId of recipients) {
-      io.to(`user:${userId}`).emit('conversation.members.added', payload)
-    }
-  } catch (error) {
-    logger.warn('Failed to emit conversation.members.added event', {
-      conversationId,
-      error,
-    })
-  }
+  // No-op: Socket.io removed - using Colyseus ChatRoom for real-time messaging
 }
 
 /**
@@ -1629,34 +1560,11 @@ const emitConversationMembersAddedEvent = (
  * @private
  */
 const emitConversationMembersRemovedEvent = (
-  conversationId: string,
-  removedUserIds: string[],
-  recipients: string[],
+  _conversationId: string,
+  _removedUserIds: string[],
+  _recipients: string[],
 ) => {
-  if (removedUserIds.length === 0) {
-    return
-  }
-
-  try {
-    const io = tryGetSocketServer()
-    if (!io) {
-      return
-    }
-
-    const payload = {
-      conversationId,
-      members: removedUserIds.map((userId) => ({ userId })),
-    }
-
-    for (const userId of recipients) {
-      io.to(`user:${userId}`).emit('conversation.members.removed', payload)
-    }
-  } catch (error) {
-    logger.warn('Failed to emit conversation.members.removed event', {
-      conversationId,
-      error,
-    })
-  }
+  // No-op: Socket.io removed - using Colyseus ChatRoom for real-time messaging
 }
 
 /**
@@ -1667,35 +1575,11 @@ const emitConversationMembersRemovedEvent = (
  * @private
  */
 const emitConversationMembersChangedEvent = (
-  conversationId: string,
-  members: ConversationMemberRole[],
-  recipients: string[],
+  _conversationId: string,
+  _members: ConversationMemberRole[],
+  _recipients: string[],
 ) => {
-  if (members.length === 0) {
-    return
-  }
-
-  try {
-    const io = tryGetSocketServer()
-    if (!io) {
-      return
-    }
-
-    const payload = {
-      conversationId,
-      members: members.map(({ userId, role }) => ({ userId, role })),
-    }
-
-    io.to(`conversation:${conversationId}`).emit('conversation.members.changed', payload)
-    for (const userId of recipients) {
-      io.to(`user:${userId}`).emit('conversation.members.changed', payload)
-    }
-  } catch (error) {
-    logger.warn('Failed to emit conversation.members.changed event', {
-      conversationId,
-      error,
-    })
-  }
+  // No-op: Socket.io removed - using Colyseus ChatRoom for real-time messaging
 }
 
 /**
@@ -1705,36 +1589,10 @@ const emitConversationMembersChangedEvent = (
  * @private
  */
 const emitConversationMessageEvent = (
-  descriptor: ConversationWithMembers,
-  message: ConversationMessageRecord,
+  _descriptor: ConversationWithMembers,
+  _message: ConversationMessageRecord,
 ) => {
-  try {
-    const io = tryGetSocketServer()
-    if (!io) {
-      return
-    }
-
-    const payload: ConversationMessageEventPayload = {
-      conversationId: descriptor.id,
-      id: message.id,
-      senderId: message.senderId,
-      body: message.body,
-      createdAt: toIsoString(message.createdAt),
-      metadata: message.jsonMetadata ?? {},
-    }
-
-    io.to(`conversation:${descriptor.id}`).emit('conversation.message.new', payload)
-    io.to(`conversation:${descriptor.id}`).emit('message.new', payload)
-    for (const userId of descriptor.memberIds) {
-      io.to(`user:${userId}`).emit('conversation.message.new', payload)
-      io.to(`user:${userId}`).emit('message.new', payload)
-    }
-  } catch (error) {
-    logger.warn('Failed to emit conversation.message.new event', {
-      conversationId: descriptor.id,
-      error,
-    })
-  }
+  // No-op: Socket.io removed - using Colyseus ChatRoom for real-time messaging
 }
 
 /**
@@ -1742,27 +1600,8 @@ const emitConversationMessageEvent = (
  * @param {ConversationWithMembers} conversation - The updated conversation.
  * @private
  */
-const emitConversationUpdatedEvent = (conversation: ConversationWithMembers) => {
-  try {
-    const io = tryGetSocketServer()
-    if (!io) {
-      return
-    }
-
-    const payload = {
-      conversation: serializeConversationForEvent(conversation),
-    }
-
-    io.to(`conversation:${conversation.id}`).emit('conversation.updated', payload)
-    for (const userId of conversation.memberIds) {
-      io.to(`user:${userId}`).emit('conversation.updated', payload)
-    }
-  } catch (error) {
-    logger.warn('Failed to emit conversation.updated event', {
-      conversationId: conversation.id,
-      error,
-    })
-  }
+const emitConversationUpdatedEvent = (_conversation: ConversationWithMembers) => {
+  // No-op: Socket.io removed - using Colyseus ChatRoom for real-time messaging
 }
 
 /**

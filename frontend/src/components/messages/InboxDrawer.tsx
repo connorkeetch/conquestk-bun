@@ -5,7 +5,8 @@ import MessageList, { type DisplayMessage } from '@/components/chat/MessageList'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import friendsService, { type FriendSummary } from '@/services/friendsService'
 import { searchUsers, type UserSearchResult } from '@/services/profileService'
-import { socketService } from '@/services/socketService'
+// TODO: Re-add real-time messaging when ChatRoom is implemented
+// import { colyseusService } from '@/services/colyseusService'
 import {
   loadConversationMessages,
   loadInbox,
@@ -98,7 +99,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const [friendsLoading, setFriendsLoading] = useState(false)
   const [friendsError, setFriendsError] = useState<string | null>(null)
   const [requestedUserIds, setRequestedUserIds] = useState<Record<string, boolean>>({})
-  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null)
+  // TODO: Re-enable when ChatRoom archive is implemented
+  const [deletingConversationId, _setDeletingConversationId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const searchInputId = useId()
   const mobileThreadSelectId = useId()
@@ -326,7 +328,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     if (!isOpen || !drawerActiveConversationId) return
     if ((messagesByConversation[drawerActiveConversationId] ?? []).length === 0) return
     dispatch(messagesActions.markReadOptimistic(drawerActiveConversationId))
-    socketService.markConversationReadViaSocket(drawerActiveConversationId)
+    // TODO: Re-add when ChatRoom is implemented
+    // socketService.markConversationReadViaSocket(drawerActiveConversationId)
   }, [dispatch, isOpen, drawerActiveConversationId, messagesByConversation])
 
   // Auto-select first conversation on open
@@ -353,28 +356,19 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       }
       dispatch(refreshConversation(conversationId))
       dispatch(messagesActions.markReadOptimistic(conversationId))
-      socketService.markConversationReadViaSocket(conversationId)
+      // TODO: Re-add when ChatRoom is implemented
+      // socketService.markConversationReadViaSocket(conversationId)
     },
     [dispatch, messagesByConversation],
   )
 
   const startDirectConversation = useCallback(
-    (targetUserId: string) =>
-      new Promise<string>((resolve, reject) => {
-        socketService.createConversation({ kind: 'direct', targetUserId }, (ack) => {
-          if (!ack?.ok || !ack.conversation) {
-            reject(new Error(ack?.error ?? 'Unable to start conversation'))
-            return
-          }
-          const conversationId = ack.conversation.id
-          dispatch(messagesActions.setActiveConversationId(conversationId))
-          dispatch(refreshConversation(conversationId))
-          dispatch(loadInbox())
-          socketService.markConversationReadViaSocket(conversationId)
-          resolve(conversationId)
-        })
+    (_targetUserId: string) =>
+      new Promise<string>((_resolve, reject) => {
+        // TODO: Re-add when ChatRoom is implemented
+        reject(new Error('Direct messaging is temporarily disabled during migration'))
       }),
-    [dispatch],
+    [],
   )
 
   const handleLoadOlder = useCallback(() => {
@@ -426,34 +420,19 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   }, [activeMessages, currentUserId, selfDisplayName])
 
   const handleSendMessage = useCallback(
-    (text: string) => {
+    (_text: string) => {
       if (!drawerActiveConversationId) return
-      // Optimistic last-message preview for the thread list
-      dispatch(
-        messagesActions.updateLastMessagePreview({
-          conversationId: drawerActiveConversationId,
-          body: text,
-          senderId: currentUserId,
-        }),
-      )
-      socketService.sendConversationMessage(
-        { conversationId: drawerActiveConversationId, body: text },
-        (ack) => {
-          if (!ack?.ok && ack?.error) setSendError(ack.error)
-          else setSendError(null)
-        },
-      )
+      // TODO: Re-add when ChatRoom is implemented
+      setSendError('Messaging is temporarily disabled during migration')
     },
-    [dispatch, drawerActiveConversationId, currentUserId],
+    [drawerActiveConversationId],
   )
 
   const handleTyping = useCallback(
-    (isTyping: boolean) => {
-      if (!drawerActiveConversationId) return
-      if (isTyping) socketService.startConversationTyping(drawerActiveConversationId)
-      else socketService.stopConversationTyping(drawerActiveConversationId)
+    (_isTyping: boolean) => {
+      // TODO: Re-add typing indicators when ChatRoom is implemented
     },
-    [drawerActiveConversationId],
+    [],
   )
 
   const handleAddFriend = useCallback(async (userId: string) => {
@@ -481,26 +460,11 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   )
 
   const handleArchiveConversation = useCallback(
-    async (conversation: ConversationItem) => {
-      try {
-        setDeleteError(null)
-        setDeletingConversationId(conversation.id)
-        // Archive this thread on the server (applies to direct/group)
-        await new Promise<void>((resolve, reject) => {
-          socketService.archiveConversation(conversation.id, (ack) => {
-            if (!ack?.ok) return reject(new Error(ack?.error ?? 'Failed to archive'))
-            resolve()
-          })
-        })
-        // Refresh inbox; also expect conversation.updated event to arrive
-        dispatch(loadInbox())
-      } catch (error) {
-        setDeleteError(error instanceof Error ? error.message : 'Failed to archive conversation')
-      } finally {
-        setDeletingConversationId(null)
-      }
+    async (_conversation: ConversationItem) => {
+      // TODO: Re-add when ChatRoom is implemented
+      setDeleteError('Archive is temporarily disabled during migration')
     },
-    [dispatch],
+    [],
   )
 
   const conversationTitle = useMemo(() => {
@@ -559,7 +523,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                     const unread = c.unreadCount ?? 0
                     if (unread > 0 && !c.isArchived) {
                       dispatch(messagesActions.markReadOptimistic(c.id))
-                      socketService.markConversationReadViaSocket(c.id)
+                      // TODO: Re-add when ChatRoom is implemented
+                      // socketService.markConversationReadViaSocket(c.id)
                     }
                   }
                 }}

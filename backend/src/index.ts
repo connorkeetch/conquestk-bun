@@ -83,13 +83,12 @@ import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setEngine as setOddsEngine, setLogger as setOddsLogger } from '@conquestk/shared/odds'
-import { createAdapter } from '@socket.io/redis-streams-adapter'
 import cors from 'cors'
 // Import types first
 import type { NextFunction, Request, Response } from 'express'
 import express from 'express'
 import helmet from 'helmet'
-import { Server } from 'socket.io'
+// Socket.io removed - using Colyseus in server.ts instead
 import { getPool, initDatabase } from './config/database.js'
 import type { RedisClients } from './config/redis.js'
 import { initializeRedis } from './config/redis.js'
@@ -113,7 +112,7 @@ import mapApprovalRoutes from './routes/mapApproval.js'
 import mapStagingRoutes from './routes/mapStaging.js'
 import mapRoutes from './routes/maps.js'
 import mapWorkflowRoutes from './routes/mapWorkflow.js'
-import matchsvcRoutes from './routes/matchsvc.js'
+// matchsvc routes removed - using Colyseus in server.ts
 import messagesRoutes from './routes/messages.js'
 import metricsRoutes from './routes/metricsRoutes.js'
 import notificationRoutes from './routes/notifications.js'
@@ -130,13 +129,14 @@ import userRoutes from './routes/users.js'
 import { cdnService } from './services/cdnService.js'
 import { databaseClusterService } from './services/databaseClusterService.js'
 import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js'
-import { setupSocketHandlers } from './services/socketService.js'
-import type { ClientToServerEvents, ServerToClientEvents } from './types/shared.js'
+// Socket handlers removed - using Colyseus in server.ts
+// Socket.io types removed - using Colyseus in server.ts
 import { getErrorMessage, toKnownError } from './utils/errorHelpers.js'
 import { ensureTablesExist } from './utils/initTables.js'
 import { logger } from './utils/logger.js'
 import { MigrationRunner } from './utils/migrationRunner.js'
-import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager.js'
+// WorkerManager imports removed - using Colyseus in server.ts
+// getWorkerManagerInstance is dynamically imported in health checks
 
 const app = express()
 const server = createServer(app)
@@ -208,58 +208,14 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }
 
-// Initialize Socket.io first
-const io: Server<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  Record<string, unknown>,
-  { userId?: string }
-> = new Server(server, {
-  cors: corsOptions,
-  // Enable connection state recovery for client resilience on brief disconnects
-  connectionStateRecovery: {
-    // Make recovery window explicit; defaults are short but adequate
-    maxDisconnectionDuration: 2 * 60 * 1000,
-  },
-})
-
-// Log Engine.IO handshake/upgrade issues to aid diagnosis
-io.engine.on('connection_error', (err) => {
-  try {
-    logger.warn('Engine.IO connection error', {
-      code: (err as unknown as { code?: string })?.code,
-      message: (err as Error).message,
-      context: (err as unknown as { context?: unknown })?.context,
-    })
-  } catch {
-    // no-op: avoid throwing from logging path
-  }
-})
+// Socket.io removed - using Colyseus in server.ts
 
 // Background Redis re-initialization with backoff (when not available at boot)
 let redisRetryTimer: NodeJS.Timeout | null = null
 let redisRetryAttempts = 0
 
-async function enableRedisBackedFeatures(
-  ioRef: Server<ClientToServerEvents, ServerToClientEvents>,
-  redisClients: RedisClients,
-) {
+async function enableRedisBackedFeatures(redisClients: RedisClients) {
   const { redisClient } = redisClients
-
-  // Set up Socket.io Redis Streams adapter if Redis is available
-  if (redisClient) {
-    try {
-      ioRef.adapter(createAdapter(redisClient))
-      logger.info('✅ Socket.io using Redis Streams adapter for multi-server support')
-    } catch (error) {
-      logger.warn(
-        '⚠️ Failed to create Redis Streams adapter, using in-memory adapter:',
-        getErrorMessage(error),
-      )
-    }
-  } else {
-    logger.warn('⚠️ Socket.io using in-memory adapter (single server only)')
-  }
 
   // Enable Redis session store only if Redis is available
   if (redisClient) {
@@ -273,28 +229,13 @@ async function enableRedisBackedFeatures(
     logger.warn('⚠️ Using in-memory session store (Redis not available)')
   }
 
-  // Create and initialize WorkerManager AFTER Redis is ready
-  const workerManager = createWorkerManager(ioRef)
-  setWorkerManagerInstance(workerManager)
-  try {
-    await workerManager.initialize()
-    logger.info('✅ WorkerManager created and initialized after Redis connection')
-  } catch (error) {
-    logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error))
-  }
-
-  // Start matchsvc subscriber after Redis is ready
-  if (redisClient) {
-    try {
-      const { startMatchSvcSubscriber } = await import('./services/matchSvcIntegration.js')
-      await startMatchSvcSubscriber(ioRef)
-    } catch (e) {
-      logger.warn('⚠️ Failed to start matchsvc subscriber', getErrorMessage(e))
-    }
-  }
+  // WorkerManager disabled - requires Socket.io which has been removed
+  // Game actions now go through Colyseus rooms in server.ts
+  // TODO: Consolidate REST routes to server.ts and remove this file
+  logger.info('⚠️ WorkerManager disabled - using Colyseus for game actions')
 }
 
-function scheduleRedisRetry(ioRef: Server<ClientToServerEvents, ServerToClientEvents>) {
+function scheduleRedisRetry() {
   if (redisRetryTimer) return
   const attempt = async () => {
     try {
@@ -306,7 +247,7 @@ function scheduleRedisRetry(ioRef: Server<ClientToServerEvents, ServerToClientEv
           redisRetryTimer = null
         }
         redisRetryAttempts = 0
-        await enableRedisBackedFeatures(ioRef, clients)
+        await enableRedisBackedFeatures(clients)
         return
       }
     } catch (e) {
@@ -373,15 +314,15 @@ void (async () => {
   }
 })()
 
-// Initialize Redis asynchronously and set up adapter if successful
+// Initialize Redis asynchronously and set up session/worker features if successful
 initializeRedis()
   .then(async (redisClients: RedisClients) => {
-    await enableRedisBackedFeatures(io, redisClients)
+    await enableRedisBackedFeatures(redisClients)
   })
   .catch((err) => {
     logger.warn('⚠️ Redis initialization failed, starting without Redis:', getErrorMessage(err))
     // Schedule background retries; features will be upgraded when Redis becomes available
-    scheduleRedisRetry(io)
+    scheduleRedisRetry()
   })
 
 const PORT = process.env.PORT || 5001
@@ -515,7 +456,7 @@ app.use('/api/performance', performanceRoutes)
 app.use('/api/rum', rumVitalsRoutes)
 app.use('/api/benchmark', benchmarkRoutes)
 app.use('/api/odds', oddsRoutes)
-app.use('/api/matchsvc', matchsvcRoutes)
+// matchsvc route removed - using Colyseus in server.ts
 app.use('/api/metrics', metricsRoutes)
 app.use('/api/preferences', createPreferencesRouter(getPool()))
 
@@ -906,7 +847,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   })
 })
 
-setupSocketHandlers(io)
+// Socket handlers removed - using Colyseus in server.ts
 
 memoryDiagnosticsService.start()
 

@@ -1,4 +1,5 @@
-import { tryGetSocketServer } from './socketRegistry.js'
+// Socket.io removed - using Colyseus in server.ts
+// TODO: Reimplement notifications through Colyseus ChatRoom
 
 export interface RealtimeNotificationPayload {
   id: string
@@ -14,26 +15,15 @@ export interface RealtimeNotificationPayload {
 }
 
 export const emitNotificationToUsers = (
-  userIds: string[],
-  payload: RealtimeNotificationPayload,
+  _userIds: string[],
+  _payload: RealtimeNotificationPayload,
 ): void => {
-  const io = tryGetSocketServer()
-  if (!io) {
-    return
-  }
-
-  const uniqueIds = Array.from(new Set(userIds.filter(Boolean)))
-  uniqueIds.forEach((userId) => {
-    io.to(`user:${userId}`).emit('notification:new', payload)
-  })
+  // No-op: Socket.io removed, notifications will be handled by Colyseus ChatRoom
 }
 
 export const emitNotificationToAdmin = (
-  userId: string | null | undefined,
-  payload: RealtimeNotificationPayload,
+  _userId: string | null | undefined,
+  _payload: RealtimeNotificationPayload,
 ): void => {
-  if (!userId) {
-    return
-  }
-  emitNotificationToUsers([userId], payload)
+  // No-op: Socket.io removed, notifications will be handled by Colyseus ChatRoom
 }

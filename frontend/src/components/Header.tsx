@@ -6,7 +6,8 @@ import { getColorValue, PLAYER_COLORS, type PlayerColor } from '@/constants/colo
 // Clans are now generally available; no feature flag gating
 import friendsService from '@/services/friendsService'
 import { notificationService } from '@/services/notificationService'
-import { socketService } from '@/services/socketService'
+// TODO: Re-add real-time friend notifications when ChatRoom is implemented
+// import { colyseusService } from '@/services/colyseusService'
 import { closeInbox, openInbox } from '@/store/uiSlice'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 
@@ -90,21 +91,9 @@ export default function Header() {
       }
     }
     void load()
-    const refresh = () => void load()
-    socketService.on('friend.request.received', refresh)
-    socketService.on('friend.request.accepted', refresh)
-    socketService.on('friend.request.declined', refresh)
-    socketService.on('friend.request.cancelled', refresh)
-    socketService.on('friend.added', refresh)
-    socketService.on('friend.removed', refresh)
+    // TODO: Re-add real-time friend notifications when ChatRoom is implemented
     return () => {
       mounted = false
-      socketService.off('friend.request.received', refresh)
-      socketService.off('friend.request.accepted', refresh)
-      socketService.off('friend.request.declined', refresh)
-      socketService.off('friend.request.cancelled', refresh)
-      socketService.off('friend.added', refresh)
-      socketService.off('friend.removed', refresh)
     }
   }, [isAuthenticated])
 

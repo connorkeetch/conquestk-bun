@@ -1,4 +1,4 @@
-import { type ClanProgressionSocketPayload, subscribeToClanProgress } from '@conquestk/shared/types'
+// ClanProgressionSocketPayload type available in @conquestk/shared/types when ChatRoom is implemented
 import {
   AlertTriangle,
   ArrowLeft,
@@ -17,7 +17,7 @@ import { type ReactElement, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 // Clan detail is generally available
 import { clanApi } from '@/services/clanService'
-import { socketService } from '@/services/socketService'
+// TODO: Re-add real-time clan progress updates when ChatRoom is implemented
 import type {
   ClanActivityEvent,
   ClanAnnouncement,
@@ -479,75 +479,9 @@ const ClanDetailPage = () => {
     }
   }, [slug])
 
-  useEffect(() => {
-    const handleProgressUpdate = (payload: ClanProgressionSocketPayload) => {
-      setClan((current) => {
-        if (!current || payload.clanId !== current.id) {
-          return current
-        }
-
-        const objectives = current.activeObjectives.map((objective) => {
-          const update = payload.objectiveUpdates.find((item) => item.objectiveId === objective.id)
-          if (!update) {
-            return objective
-          }
-          return {
-            ...objective,
-            progressValue: update.progressValue,
-          }
-        })
-
-        const members = current.members.map((member) => {
-          if (member.userId !== payload.userId) {
-            return member
-          }
-          return {
-            ...member,
-            contributionXp: member.contributionXp + payload.xpAwarded,
-            contributionMatches: member.contributionMatches + payload.matchesPlayed,
-          }
-        })
-
-        const actorUsername =
-          current.members.find((member) => member.userId === payload.userId)?.username ?? null
-
-        const activityEntry: ClanActivityEvent = {
-          id: `live-${payload.gameId}-${payload.userId}-${Date.now()}`,
-          clanId: current.id,
-          actorUserId: payload.userId,
-          actorUsername,
-          actionType: 'clan_xp_awarded',
-          metadata: {
-            amount: payload.xpAwarded,
-            source: 'game_result',
-            matchesPlayed: payload.matchesPlayed,
-            matchesWon: payload.matchesWon,
-            placement: payload.placement,
-            territories: payload.territories,
-            armies: payload.armies,
-            eliminated: payload.eliminated,
-            gameId: payload.gameId,
-          },
-          targetId: payload.gameId,
-          createdAt: new Date().toISOString(),
-        }
-
-        return {
-          ...current,
-          progression: {
-            ...current.progression,
-            ...payload.progression,
-          },
-          activeObjectives: objectives,
-          members,
-          recentActivity: [activityEntry, ...(current.recentActivity ?? [])].slice(0, 20),
-        }
-      })
-    }
-
-    const unsubscribe = subscribeToClanProgress(socketService, handleProgressUpdate)
-    return unsubscribe
-  }, [])
+  // TODO: Re-add real-time clan progress updates when ChatRoom is implemented
+  // This effect previously subscribed to clan progression events via socketService
+  // For now, clan data is loaded once via REST API and won't update in real-time
 
   const clanCreatedAt = useMemo(() => (clan ? formatDate(clan.createdAt) : null), [clan])
   const objectiveResetAt = useMemo(() => {

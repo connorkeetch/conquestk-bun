@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getPlayerTextColor, type PlayerColor } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
-import { socketService } from '@/services/socketService'
+import { colyseusService, type GameRoomEvents } from '@/services/colyseusService'
 import { deriveRoundMarkers, isParticipantInRoom } from '@/utils/gameLog'
 import { gameService } from '../../services/gameService'
 
@@ -1061,10 +1061,10 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       })
     }
 
-    const onPlayerJoined: Parameters<typeof socketService.on<'player-joined'>>[1] = (payload) => {
-      if (!payload || payload.roomId !== gameId) return
-      const name = payload.player.username
-      const id = (payload.player.userId || payload.player.id) as string
+    const onPlayerJoined = (payload: GameRoomEvents['player-joined']) => {
+      if (!payload) return
+      const name = payload.username
+      const id = payload.oderId
       addRich(
         <>
           <span className="font-semibold" style={{ color: playerColor.get(String(id)) }}>
@@ -1076,7 +1076,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       )
     }
 
-    const onLifecycle: Parameters<typeof socketService.on<'lifecycle:update'>>[1] = (payload) => {
+    const onLifecycle = (payload: GameRoomEvents['lifecycle:update']) => {
       if (!payload || payload.roomId !== gameId) return
       if (aggRef.current) flushAggregate(addRich)
       if (payload.status === 'active') {
@@ -1087,46 +1087,34 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       }
     }
 
-    socketService.on('player-joined', onPlayerJoined)
-    socketService.on('lifecycle:update', onLifecycle)
+    colyseusService.on('player-joined', onPlayerJoined)
+    colyseusService.on('lifecycle:update', onLifecycle)
     // Live rating updates (ranked games)
-    const onRating: Parameters<typeof socketService.on<'ratingUpdate'>>[1] = (payload) => {
+    const onRating = (payload: GameRoomEvents['ratingUpdate']) => {
       try {
-        const p = payload as unknown as {
-          changes?: Array<{
-            userId: string
-            username?: string
-            oldRating: number
-            newRating: number
-            change: number
-          }>
-        }
-        const list = Array.isArray(p?.changes) ? p.changes : []
+        const name = playerName.get(payload.oderId) || payload.oderId
+        const verb = payload.ratingChange > 0 ? 'gained' : 'lost'
         const now = new Date()
-        for (const ch of list) {
-          const name = ch.username || playerName.get(ch.userId) || ch.userId
-          const verb = ch.change > 0 ? 'gained' : 'lost'
-          addRich(
-            <>
-              <span className="font-semibold" style={{ color: playerColor.get(ch.userId) }}>
-                {name}
-              </span>{' '}
-              {verb} {Math.abs(ch.change)} rating.
-            </>,
-            `${name} ${verb} ${Math.abs(ch.change)} rating.`,
-            now,
-          )
-        }
+        addRich(
+          <>
+            <span className="font-semibold" style={{ color: playerColor.get(payload.oderId) }}>
+              {name}
+            </span>{' '}
+            {verb} {Math.abs(payload.ratingChange)} rating.
+          </>,
+          `${name} ${verb} ${Math.abs(payload.ratingChange)} rating.`,
+          now,
+        )
       } catch {
         /* ignore */
       }
     }
-    socketService.on('ratingUpdate', onRating)
+    colyseusService.on('ratingUpdate', onRating)
 
     return () => {
-      socketService.off('player-joined', onPlayerJoined)
-      socketService.off('lifecycle:update', onLifecycle)
-      socketService.off('ratingUpdate', onRating)
+      colyseusService.off('player-joined', onPlayerJoined)
+      colyseusService.off('lifecycle:update', onLifecycle)
+      colyseusService.off('ratingUpdate', onRating)
     }
   }, [gameId, playerName, playerColor, flushAggregate, clientLogs])
 
@@ -1138,7 +1126,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   // Live fog-aware text appends
   useEffect(() => {
     if (!gameId || redact) return
-    const onGameLogAppend: Parameters<typeof socketService.on<'game-log:append'>>[1] = (e) => {
+    const onGameLogAppend = (e: GameRoomEvents['game-log:append']) => {
       try {
         const data = e as unknown as {
           text?: string
@@ -1185,8 +1173,8 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         /* ignore */
       }
     }
-    socketService.on('game-log:append', onGameLogAppend)
-    const onGameLogBatch: Parameters<typeof socketService.on<'game-log:batch'>>[1] = (payload) => {
+    colyseusService.on('game-log:append', onGameLogAppend)
+    const onGameLogBatch = (payload: GameRoomEvents['game-log:batch']) => {
       try {
         const items = Array.isArray((payload as unknown as { items?: unknown[] }).items)
           ? (
@@ -1236,17 +1224,17 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         /* ignore */
       }
     }
-    socketService.on('game-log:batch', onGameLogBatch)
+    colyseusService.on('game-log:batch', onGameLogBatch)
     return () => {
-      socketService.off('game-log:append', onGameLogAppend)
-      socketService.off('game-log:batch', onGameLogBatch)
+      colyseusService.off('game-log:append', onGameLogAppend)
+      colyseusService.off('game-log:batch', onGameLogBatch)
     }
   }, [gameId, redact])
 
   // On reveal, refetch full text history (unredacted)
   useEffect(() => {
     if (!gameId) return
-    const onReveal: Parameters<typeof socketService.on<'game-log:reveal'>>[1] = async () => {
+    const onReveal = async () => {
       try {
         const resp = await gameService.getGameTextLog(gameId, { limit: 150 })
         const formatted = resp.log
@@ -1272,9 +1260,9 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
         setRefreshKey((k) => k + 1)
       }
     }
-    socketService.on('game-log:reveal', onReveal)
+    colyseusService.on('game-log:reveal', onReveal)
     return () => {
-      socketService.off('game-log:reveal', onReveal)
+      colyseusService.off('game-log:reveal', onReveal)
     }
   }, [gameId])
 

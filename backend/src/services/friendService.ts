@@ -5,7 +5,7 @@
 import { query, transaction } from '../config/database.js'
 import { logger } from '../utils/logger.js'
 import notificationService from './notificationService.js'
-import { tryGetSocketServer } from './socketRegistry.js'
+// Socket.io removed - using Colyseus for real-time events
 import { isBlocked } from './userBlockService.js'
 
 /** Type representing the status of a friendship. */
@@ -286,17 +286,7 @@ export async function sendFriendRequest(
       })
       .catch((error) => logger.warn('Failed to create friend request notification', { error }))
 
-    try {
-      const io = tryGetSocketServer()
-      if (io) {
-        io.to(`user:${targetUserId}`).emit('friend.request.received', {
-          requesterId,
-          requestedAt: new Date().toISOString(),
-        })
-      }
-    } catch (error) {
-      logger.warn('Failed to emit friend.request.received', { requesterId, targetUserId, error })
-    }
+    // Socket.io emit removed - friend events will be handled by Colyseus ChatRoom
 
     return record
   } catch (error) {
@@ -346,22 +336,7 @@ export async function acceptFriendRequest(
     })
     .catch((error) => logger.warn('Failed to create friend acceptance notification', { error }))
 
-  try {
-    const io = tryGetSocketServer()
-    if (io) {
-      const now = new Date().toISOString()
-      io.to(`user:${requesterId}`).emit('friend.request.accepted', {
-        userId: currentUserId,
-        acceptedAt: now,
-      })
-      io.to(`user:${currentUserId}`).emit('friend.added', {
-        userId: requesterId,
-        at: now,
-      })
-    }
-  } catch (error) {
-    logger.warn('Failed to emit friend acceptance events', { requesterId, currentUserId, error })
-  }
+  // Socket.io emit removed - friend events will be handled by Colyseus ChatRoom
 
   return record
 }
@@ -380,19 +355,7 @@ export async function declineFriendRequest(
     `DELETE FROM friendships WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
     [requesterId, currentUserId],
   )
-  if ((result.rowCount ?? 0) > 0) {
-    try {
-      const io = tryGetSocketServer()
-      if (io) {
-        io.to(`user:${requesterId}`).emit('friend.request.declined', {
-          userId: currentUserId,
-          at: new Date().toISOString(),
-        })
-      }
-    } catch (error) {
-      logger.warn('Failed to emit friend.request.declined', { requesterId, currentUserId, error })
-    }
-  }
+  // Socket.io emit removed - friend events will be handled by Colyseus ChatRoom
   return (result.rowCount ?? 0) > 0
 }
 
@@ -410,19 +373,7 @@ export async function cancelOutgoingRequest(
     `DELETE FROM friendships WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
     [currentUserId, targetUserId],
   )
-  if ((result.rowCount ?? 0) > 0) {
-    try {
-      const io = tryGetSocketServer()
-      if (io) {
-        io.to(`user:${targetUserId}`).emit('friend.request.cancelled', {
-          userId: currentUserId,
-          at: new Date().toISOString(),
-        })
-      }
-    } catch (error) {
-      logger.warn('Failed to emit friend.request.cancelled', { currentUserId, targetUserId, error })
-    }
-  }
+  // Socket.io emit removed - friend events will be handled by Colyseus ChatRoom
   return (result.rowCount ?? 0) > 0
 }
 
@@ -442,18 +393,7 @@ export async function removeFriend(userId: string, friendId: string): Promise<bo
   `,
     [userId, friendId],
   )
-  if ((result.rowCount ?? 0) > 0) {
-    try {
-      const io = tryGetSocketServer()
-      if (io) {
-        const now = new Date().toISOString()
-        io.to(`user:${friendId}`).emit('friend.removed', { userId, at: now })
-        io.to(`user:${userId}`).emit('friend.removed', { userId: friendId, at: now })
-      }
-    } catch (error) {
-      logger.warn('Failed to emit friend.removed', { userId, friendId, error })
-    }
-  }
+  // Socket.io emit removed - friend events will be handled by Colyseus ChatRoom
   return (result.rowCount ?? 0) > 0
 }
 
