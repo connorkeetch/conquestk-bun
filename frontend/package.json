@@ -19,6 +19,7 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@conquestk/shared": "file:../shared",
     "@fontsource/audiowide": "^5.2.7",
     "@fontsource/chewy": "^5.2.7",
     "@fontsource/creepster": "^5.2.7",
@@ -27,12 +28,12 @@
     "@fontsource/rye": "^5.2.7",
     "@hookform/resolvers": "5.2.2",
     "@reduxjs/toolkit": "^2.9.0",
-    "@conquestk/shared": "file:../shared",
     "@tailwindcss/vite": "^4.1.13",
     "@types/dompurify": "^3.0.5",
     "@types/uuid": "^10.0.0",
     "axios": "^1.11.0",
     "bad-words": "^4.0.0",
+    "colyseus.js": "^0.16.22",
     "dompurify": "^3.2.7",
     "emoji-picker-react": "^4.13.3",
     "favico.js": "^0.3.10",
@@ -54,6 +55,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
+    "@types/howler": "^2.2.11",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.3",
@@ -62,7 +64,6 @@
     "jsdom": "26.1.0",
     "postcss": "8.5.6",
     "sharp": "^0.34.4",
-    "@types/howler": "^2.2.11",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.9.2",
     "vite": "^7.1.11",

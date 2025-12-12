@@ -23,6 +23,7 @@ import type {
   GameConfiguration,
   Territory as EngineTerritory,
 } from '../types/game.js'
+import { computeChecksum } from '@conquestk/shared/lockstep'
 
 // Type for raw map data from database
 interface MapTerritoryData {
@@ -268,13 +269,7 @@ export class GameRoom extends Room<GameState> {
         return
       }
 
-      // Update state version
-      this.state.version++
-
-      // Persist frame for replay
-      await this.persistFrame(action, result)
-
-      // Acknowledge action
+      // Acknowledge action (frame persistence already done in processAction)
       client.send('action-ack', {
         seq: this.frameSeq,
         success: true,
@@ -355,11 +350,15 @@ export class GameRoom extends Room<GameState> {
         this.state.turnExpiresAt = Date.now() + this.state.turnTimerSeconds * 1000
       }
 
+      // Persist frame for replay system
+      await this.persistFrame(playerId, action, result.gameState)
+
       logger.info('Action processed via GameEngine', {
         playerId,
         actionType: action.type,
         newPhase: this.state.phase,
         version: this.state.version,
+        frameSeq: this.frameSeq,
       })
 
       return { success: true, battleResult: schemaBattleResult }
@@ -370,6 +369,68 @@ export class GameRoom extends Room<GameState> {
         success: false,
         error: error instanceof Error ? error.message : 'Action processing failed',
       }
+    }
+  }
+
+  /**
+   * Persist a frame to the database and broadcast to clients
+   * Frames are the core of the lockstep replay system
+   */
+  private async persistFrame(
+    playerId: string,
+    action: GameAction,
+    engineState: EngineGameState
+  ): Promise<void> {
+    // Increment frame sequence
+    this.frameSeq++
+    const seq = this.frameSeq
+
+    // Compute checksum for verification
+    const checksum = computeChecksum(engineState)
+
+    // Format command for storage
+    const commands = [{ kind: action.type, payload: action }]
+
+    try {
+      // Persist frame to match_frames table
+      await query(
+        `INSERT INTO match_frames (match_id, seq, player_id, commands, committed_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [this.state.roomId, seq, playerId, JSON.stringify(commands)]
+      )
+
+      // Persist checksum to match_checksums table
+      await query(
+        `INSERT INTO match_checksums (match_id, seq, crc32, computed_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (match_id, seq) DO UPDATE SET crc32 = $3, computed_at = NOW()`,
+        [this.state.roomId, seq, checksum]
+      )
+
+      // Broadcast frame-committed event to all clients
+      this.broadcast('frame-committed', {
+        seq,
+        playerId,
+        action: { kind: action.type, payload: action },
+        checksum,
+        version: engineState.version,
+      })
+
+      logger.debug('Frame persisted', {
+        roomId: this.state.roomId,
+        seq,
+        playerId,
+        actionType: action.type,
+        checksum,
+      })
+    } catch (error) {
+      // Log error but don't fail the action - frame persistence is non-critical
+      logger.error('Failed to persist frame', {
+        roomId: this.state.roomId,
+        seq,
+        playerId,
+        error: error instanceof Error ? error.message : error,
+      })
     }
   }
 
@@ -748,17 +809,6 @@ export class GameRoom extends Room<GameState> {
         message: error instanceof Error ? error.message : 'Failed to initialize game',
       })
     }
-  }
-
-  private async persistFrame(action: GameAction, result: { success: boolean }) {
-    this.frameSeq++
-
-    // TODO: Persist to match_frames table
-    logger.debug('Frame persisted', {
-      roomId: this.state.roomId,
-      seq: this.frameSeq,
-      action: action.type,
-    })
   }
 
   // Note: checkElimination, checkGameEnd, calculateReinforcements, and rollDice
