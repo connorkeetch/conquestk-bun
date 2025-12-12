@@ -30,7 +30,10 @@ import { mapService } from './mapService.js'
 import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
 import notificationService from './notificationService.js'
 import { queueService } from './queueService.js'
-import { tryGetSocketServer } from './socketRegistry.js'
+// Socket.io removed - game events now handled by Colyseus GameRoom
+// Stub function returns null so all io-based emissions are skipped
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tryGetSocketServer = (): any => null
 import territoryModifierService from './territoryModifierService.js'
 
 type BattleWorkerResult = {
@@ -1367,7 +1370,7 @@ export class GameService {
   }
 
   // Note: direct HTTP attack entry is intentionally not exposed.
-  // Attacks are handled via Socket.io (see socketService.ts), which routes
+  // Attacks are handled via Colyseus GameRoom, which routes
   // through queued or inline processing and applies results via applyBattleResult.
 
   /**

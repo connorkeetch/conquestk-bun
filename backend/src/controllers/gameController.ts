@@ -10,7 +10,7 @@ import { GameLifecycleService } from '../services/gameLifecycleService.js'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService.js'
 import { GameService } from '../services/gameService.js'
 import { queueService } from '../services/queueService.js'
-import { tryGetSocketServer } from '../services/socketRegistry.js'
+// Socket.io removed - using Colyseus in server.ts
 import type { AuthenticatedRequest } from '../types/express.js'
 import type { GameAction, TreasureConfig } from '../types/game.js'
 import { logger } from '../utils/logger.js'
@@ -314,22 +314,7 @@ export class GameController {
         armies,
       )
 
-      // Best-effort broadcast of updated state
-      try {
-        const io = tryGetSocketServer()
-        if (io) {
-          // Skip redundant action snapshots - events are used for granular updates
-          logger.debug(
-            'Skipped snapshot emission in REST controller (events are primary transport)',
-            {
-              roomId,
-            },
-          )
-        }
-      } catch {
-        // ignore broadcast errors
-      }
-
+      // Socket.io broadcast removed - using Colyseus for real-time updates
       return res.status(200).json({ ok: true })
     } catch (error) {
       logger.error('transferConquest error:', error)

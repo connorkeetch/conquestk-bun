@@ -2,7 +2,6 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AuthGuard from './components/AuthGuard'
-import { DebugDashboard } from './components/DebugDashboard'
 import ErrorBoundary from './components/ErrorBoundary'
 import GameErrorBoundary from './components/GameErrorBoundary'
 // Layout
@@ -199,7 +198,6 @@ function App() {
 
   return (
     <ErrorBoundary level="app">
-      <DebugDashboard />
       <Layout>
         <Routes>
           {/* Public Routes */}

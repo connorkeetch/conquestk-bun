@@ -5,7 +5,7 @@ import friendsService, {
   type FriendSummary,
   type MutualFriendsResponse,
 } from '@/services/friendsService'
-import { socketService } from '@/services/socketService'
+// TODO: Re-add real-time friend notifications when ChatRoom is implemented
 import { logger } from '@/utils/logger'
 
 type LoadState = 'idle' | 'loading' | 'error'
@@ -153,24 +153,7 @@ export default function FriendsPage() {
     }
   }
 
-  // Live refresh via socket
-  useEffect(() => {
-    const refresh = () => void load()
-    socketService.on('friend.request.received', refresh)
-    socketService.on('friend.request.accepted', refresh)
-    socketService.on('friend.request.declined', refresh)
-    socketService.on('friend.request.cancelled', refresh)
-    socketService.on('friend.added', refresh)
-    socketService.on('friend.removed', refresh)
-    return () => {
-      socketService.off('friend.request.received', refresh)
-      socketService.off('friend.request.accepted', refresh)
-      socketService.off('friend.request.declined', refresh)
-      socketService.off('friend.request.cancelled', refresh)
-      socketService.off('friend.added', refresh)
-      socketService.off('friend.removed', refresh)
-    }
-  }, [load])
+  // TODO: Re-add real-time friend notifications when ChatRoom is implemented
 
   const toggleMutual = async (userId: string) => {
     setExpanded((e) => ({ ...e, [userId]: !e[userId] }))

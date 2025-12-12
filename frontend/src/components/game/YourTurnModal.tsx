@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getColorValue } from '@/constants/colors'
 import { useAppSelector } from '@/hooks/redux'
-import { socketService } from '@/services/socketService'
+import { colyseusService } from '@/services/colyseusService'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 import { TurnTimer } from './TurnTimer'
 
@@ -144,13 +144,10 @@ export function YourTurnModal({ className = '' }: Props) {
   }
 
   const handleBegin = () => {
-    const roomId = game?.roomId
-    if (roomId) {
-      try {
-        socketService.beginTurn(roomId)
-      } catch {
-        // best effort
-      }
+    try {
+      colyseusService.beginTurn()
+    } catch {
+      // best effort
     }
     handleClose()
   }

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppSelector } from '@/hooks/redux'
 import friendsService from '@/services/friendsService'
-import { socketService } from '@/services/socketService'
+// TODO: Re-add real-time friend notifications when ChatRoom is implemented
 
 // AI menu entries are now generally visible
 
@@ -47,21 +47,9 @@ const PrimaryNav: React.FC = () => {
       }
     }
     void load()
-    const refresh = () => void load()
-    socketService.on('friend.request.received', refresh)
-    socketService.on('friend.request.accepted', refresh)
-    socketService.on('friend.request.declined', refresh)
-    socketService.on('friend.request.cancelled', refresh)
-    socketService.on('friend.added', refresh)
-    socketService.on('friend.removed', refresh)
+    // TODO: Re-add real-time friend notifications when ChatRoom is implemented
     return () => {
       mounted = false
-      socketService.off('friend.request.received', refresh)
-      socketService.off('friend.request.accepted', refresh)
-      socketService.off('friend.request.declined', refresh)
-      socketService.off('friend.request.cancelled', refresh)
-      socketService.off('friend.added', refresh)
-      socketService.off('friend.removed', refresh)
     }
   }, [isAuthenticated])
 

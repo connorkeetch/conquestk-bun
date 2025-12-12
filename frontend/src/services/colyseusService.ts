@@ -10,9 +10,35 @@ import { toast } from 'react-hot-toast'
 import { logger } from '@/utils/logger'
 import { store } from '../store'
 import { setError, setGameState } from '../store/gameSlice'
-import { setConnectionStatus } from '../store/uiRoomSlice'
+import { setConnectionStatus, addPing } from '../store/uiRoomSlice'
 import type { GameState, BattleResult, Territory, GamePlayer, Card } from '../types/game'
+import type { LifecycleUpdatePayload } from '../store/roomSlice'
 import audioService from './audioService'
+
+// Event types for game room events
+export interface GameLogEntry {
+  id: string
+  roomId: string
+  turn: number
+  phase: string
+  timestamp: number
+  text: string
+  isHidden?: boolean
+}
+
+export interface GameRoomEvents {
+  'player-joined': { oderId: string; username: string; color?: string }
+  'player-left': { oderId: string; username: string }
+  'lifecycle:update': LifecycleUpdatePayload
+  'ratingUpdate': { oderId: string; oldRating: number; newRating: number; ratingChange: number }
+  'game-log:append': GameLogEntry
+  'game-log:batch': { entries: GameLogEntry[] }
+  'game-log:reveal': Record<string, never>
+  'ping:territory': { playerId: string; territoryId: string; timestamp: number }
+}
+
+type EventCallback<T> = (data: T) => void
+type EventMap = Map<string, Set<EventCallback<unknown>>>
 
 // Connection settings
 const RECONNECT_DELAY_MS = 1000
@@ -110,6 +136,41 @@ class ColyseusService {
   private gameRoom: Room<SchemaGameState> | null = null
   private reconnectAttempts = 0
   private currentRoomId: string | null = null
+  private eventListeners: EventMap = new Map()
+
+  /**
+   * Subscribe to game room events
+   */
+  on<K extends keyof GameRoomEvents>(event: K, callback: EventCallback<GameRoomEvents[K]>): void {
+    let listeners = this.eventListeners.get(event)
+    if (!listeners) {
+      listeners = new Set()
+      this.eventListeners.set(event, listeners)
+    }
+    listeners.add(callback as EventCallback<unknown>)
+  }
+
+  /**
+   * Unsubscribe from game room events
+   */
+  off<K extends keyof GameRoomEvents>(event: K, callback: EventCallback<GameRoomEvents[K]>): void {
+    const listeners = this.eventListeners.get(event)
+    if (listeners) {
+      listeners.delete(callback as EventCallback<unknown>)
+    }
+  }
+
+  /**
+   * Emit event to all subscribers (internal use)
+   */
+  protected emitEvent<K extends keyof GameRoomEvents>(event: K, data: GameRoomEvents[K]): void {
+    const listeners = this.eventListeners.get(event)
+    if (listeners) {
+      for (const callback of listeners) {
+        callback(data)
+      }
+    }
+  }
 
   /**
    * Initialize the Colyseus client
@@ -253,6 +314,36 @@ class ColyseusService {
   }
 
   /**
+   * Send host replacement action (set disconnected player to neutral or AI)
+   */
+  sendHostReplacement(targetUserId: string, choice: 'neutral' | 'ai', aiDifficulty?: string): void {
+    if (!this.gameRoom) {
+      logger.error('[Colyseus] Cannot send host:replacement - not in a room')
+      toast.error('Not connected to game')
+      return
+    }
+
+    logger.debug('[Colyseus] Sending host:replacement', { targetUserId, choice, aiDifficulty })
+    this.gameRoom.send('host:replacement', { targetUserId, choice, aiDifficulty })
+  }
+
+  /**
+   * Begin turn (acknowledge turn notification)
+   */
+  beginTurn(): void {
+    if (!this.gameRoom) return
+    this.gameRoom.send('begin-turn', {})
+  }
+
+  /**
+   * Send a territory ping to highlight for teammates
+   */
+  pingTerritory(territoryId: string): void {
+    if (!this.gameRoom) return
+    this.gameRoom.send('ping:territory', { territoryId })
+  }
+
+  /**
    * Get current connection status
    */
   isConnected(): boolean {
@@ -300,14 +391,16 @@ class ColyseusService {
       logger.debug('[Colyseus] Chat message', { from: msg.username })
     })
 
-    this.gameRoom.onMessage('player-joined', (data: { oderId: string; username: string }) => {
+    this.gameRoom.onMessage('player-joined', (data: { oderId: string; username: string; color?: string }) => {
       logger.info('[Colyseus] Player joined', { username: data.username })
       toast.success(`${data.username} joined the game`)
+      this.emitEvent('player-joined', data)
     })
 
     this.gameRoom.onMessage('player-left', (data: { oderId: string; username: string }) => {
       logger.info('[Colyseus] Player left', { username: data.username })
       toast(`${data.username} left the game`)
+      this.emitEvent('player-left', data)
     })
 
     this.gameRoom.onMessage('player-eliminated', (data: { oderId: string; reason: string }) => {
@@ -336,6 +429,44 @@ class ColyseusService {
       logger.info('[Colyseus] Your turn')
       toast("It's your turn!", { duration: 2500 })
       audioService.playEffect('turn')
+    })
+
+    // Game log events
+    this.gameRoom.onMessage('game-log:append', (entry: GameLogEntry) => {
+      logger.debug('[Colyseus] Game log append', { id: entry.id, text: entry.text })
+      this.emitEvent('game-log:append', entry)
+    })
+
+    this.gameRoom.onMessage('game-log:batch', (data: { entries: GameLogEntry[] }) => {
+      logger.debug('[Colyseus] Game log batch', { count: data.entries.length })
+      this.emitEvent('game-log:batch', data)
+    })
+
+    this.gameRoom.onMessage('game-log:reveal', () => {
+      logger.debug('[Colyseus] Game log reveal')
+      this.emitEvent('game-log:reveal', {})
+    })
+
+    // Lifecycle and rating events
+    this.gameRoom.onMessage('lifecycle:update', (data: LifecycleUpdatePayload) => {
+      logger.debug('[Colyseus] Lifecycle update', { status: data.status })
+      this.emitEvent('lifecycle:update', data)
+    })
+
+    this.gameRoom.onMessage('ratingUpdate', (data: { oderId: string; oldRating: number; newRating: number; ratingChange: number }) => {
+      logger.debug('[Colyseus] Rating update', { oderId: data.oderId, change: data.ratingChange })
+      this.emitEvent('ratingUpdate', data)
+    })
+
+    // Ping events (territory pings from other players)
+    this.gameRoom.onMessage('ping:territory', (data: { playerId: string; territoryId: string; timestamp: number }) => {
+      logger.debug('[Colyseus] Territory ping', { playerId: data.playerId, territoryId: data.territoryId })
+      store.dispatch(addPing({
+        id: `ping-${data.playerId}-${data.timestamp}`,
+        territoryId: data.territoryId,
+        userId: data.playerId,
+      }))
+      this.emitEvent('ping:territory', data)
     })
 
     // Connection events

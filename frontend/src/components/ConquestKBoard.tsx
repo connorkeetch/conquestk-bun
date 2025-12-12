@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast'
 import { useDispatch, useSelector } from 'react-redux'
 import type { FullMapData } from '@/services/mapService'
 import { mapService } from '@/services/mapService'
-import { socketService } from '@/services/socketService'
+import { colyseusService } from '@/services/colyseusService'
 import type { GamePlayer, PlayerColor, Territory } from '@/types/game'
 import type { AppDispatch, RootState } from '../store'
 // import { endTurn } from '../store/gameActions'
@@ -175,7 +175,7 @@ export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
     }
 
     const first = targetTerritories[0]
-    socketService.emit('ping:territory', { roomId, territoryId: first.id })
+    colyseusService.pingTerritory(first.id)
     toast.success(
       targetName ? `Pinged ${targetName}'s last known position.` : 'Pinged your contract target.',
     )
@@ -193,7 +193,7 @@ export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
       return
     }
 
-    socketService.emit('ping:territory', { roomId, territoryId: hillTerritoryId })
+    colyseusService.pingTerritory(hillTerritoryId)
     toast.success('Pinged the active hill for your team.')
   }, [roomId, hillTerritoryId])
 
@@ -279,7 +279,7 @@ export const ConquestKBoard: React.FC<ConquestKBoardProps> = ({
       const last = lastClickRef.current
       if (last && last.id === territoryId && now - last.ts < 350) {
         if (roomId) {
-          socketService.emit('ping:territory', { roomId, territoryId })
+          colyseusService.pingTerritory(territoryId)
         }
         lastClickRef.current = null
       } else {
