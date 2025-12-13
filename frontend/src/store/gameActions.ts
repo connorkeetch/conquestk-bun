@@ -84,13 +84,13 @@ function convertToColyseusAction(action: GameAction): ColyseusAction | null {
     case 'deploy':
       return { type: 'deploy', territoryId: action.payload.territoryId, armies: action.payload.armies }
     case 'attack':
-      return { type: 'attack', from: action.payload.fromTerritoryId, to: action.payload.toTerritoryId, dice: action.payload.attackingDice }
+      return { type: 'attack', from: action.payload.fromTerritoryId, to: action.payload.toTerritoryId, dice: action.payload.armies ?? 3 }
     case 'fortify':
       return { type: 'fortify', from: action.payload.fromTerritoryId, to: action.payload.toTerritoryId, armies: action.payload.armies }
     case 'end_turn':
       return { type: 'end_turn' }
     case 'trade_cards':
-      return { type: 'trade_cards', cardIds: action.payload.cardIds }
+      return { type: 'trade_cards', cardIds: action.payload?.cards ?? [] }
     case 'transfer_conquest':
       return { type: 'transfer_conquest', armies: (action.payload as { armies: number }).armies }
     case 'undo_fortify':

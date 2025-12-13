@@ -2025,7 +2025,7 @@ export class GameService {
             const owned = new Set(state.board.filter((t) => t.ownerId === userId).map((t) => t.id))
             const list: SectorBonusLogEntry[] = []
             for (const b of bonuses) {
-              const ownsAll = (b.territories || []).every((tid) => owned.has(tid))
+              const ownsAll = (b.territories || []).every((tid: string) => owned.has(tid))
               if (ownsAll && typeof b.bonusArmies === 'number' && b.bonusArmies > 0) {
                 list.push({
                   type: 'SECTOR_BONUS',

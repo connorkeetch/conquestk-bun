@@ -42,7 +42,7 @@
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"],
-      "@conquestk/shared/types": ["../shared/dist/types/index.js"],
+      "@conquestk/shared/types": ["../shared/dist/types/index"],
       "@conquestk/shared/types/*": ["../shared/dist/types/*"],
       "@conquestk/shared/types/lockstep": ["src/types/modules/lockstep-proxy.d.ts"],
       "@conquestk/shared/*": ["../shared/dist/*"]

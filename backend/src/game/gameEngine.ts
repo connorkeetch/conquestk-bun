@@ -679,7 +679,7 @@ export class GameEngine {
     const territoryIdSet = new Set(territoryIds)
     const eligiblePool =
       config.eligibleTerritoryIds && config.eligibleTerritoryIds.length > 0
-        ? config.eligibleTerritoryIds.filter((id) => territoryIdSet.has(id))
+        ? config.eligibleTerritoryIds.filter((id: string) => territoryIdSet.has(id))
         : territoryIds
 
     if (eligiblePool.length === 0) {
@@ -1064,7 +1064,7 @@ export class GameEngine {
     if (Array.isArray(configuredBonuses) && configuredBonuses.length > 0) {
       // Dynamic sector bonuses from database (custom maps)
       for (const sector of configuredBonuses) {
-        const playerOwnsAll = sector.territories.every((territoryId) =>
+        const playerOwnsAll = sector.territories.every((territoryId: string) =>
           playerTerritories.includes(territoryId),
         )
 
