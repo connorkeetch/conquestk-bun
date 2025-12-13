@@ -187,7 +187,7 @@ export default function GameRoom() {
   } | null>(null)
   const [mapPreviewLoading, setMapPreviewLoading] = useState(false)
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
-  const [liveMessage, setLiveMessage] = useState('')
+  const [liveMessage, _setLiveMessage] = useState('')
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
   const [showGameOver, setShowGameOver] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
