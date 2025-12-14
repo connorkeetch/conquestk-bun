@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun run --watch src/server.ts",
     "prebuild": "cd ../shared && bun run build && cd ../shared/match-client && bun run build",
-    "build": "bun build src/server.ts --outdir dist --target bun",
+    "build": "bun build src/server.ts --outdir dist --target bun --external @conquestk/wasm-odds",
     "typecheck": "tsc --noEmit",
     "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
     "postbuild": "bun scripts/copy-migrations.cjs",
