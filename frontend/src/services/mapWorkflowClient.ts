@@ -87,6 +87,18 @@ export const mapWorkflowClient = {
     const res = await api.post(`/maps/${mapId}/submit`)
     return res.data as { ok: boolean }
   },
+
+  async checkMapName(
+    name: string,
+    excludeMapId?: string,
+  ): Promise<{ available: boolean; existingMapId?: string }> {
+    const params = new URLSearchParams({ name })
+    if (excludeMapId) {
+      params.append('excludeMapId', excludeMapId)
+    }
+    const res = await api.get(`/check-name?${params.toString()}`)
+    return res.data as { available: boolean; existingMapId?: string }
+  },
 }
 
 export type { MapDraftPayload as PolygonMapDraftPayload }

@@ -17,6 +17,9 @@ const mapWorkflowController = new MapWorkflowController()
 router.use(authenticateToken)
 router.use(standardLimiter)
 
+// Map name availability check
+router.get('/check-name', mapWorkflowController.checkMapName.bind(mapWorkflowController))
+
 // Draft management
 router.post('/drafts', mapWorkflowController.saveDraft.bind(mapWorkflowController))
 router.get('/drafts', mapWorkflowController.getUserDrafts.bind(mapWorkflowController))

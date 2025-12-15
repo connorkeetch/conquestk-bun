@@ -2280,6 +2280,26 @@ export default function MapEditorTokens() {
         return
       }
 
+      // Check if map name is available before submitting
+      const mapName = state.name?.trim()
+      if (!mapName) {
+        alert('Please enter a name for your map before submitting')
+        return
+      }
+
+      try {
+        const nameCheck = await mapWorkflowApi.checkMapName(mapName, publishedMapId || undefined)
+        if (!nameCheck.available) {
+          alert(
+            `A map named "${mapName}" already exists.\n\nPlease choose a different name for your map.`,
+          )
+          return
+        }
+      } catch (nameCheckError) {
+        // Log but don't block - backend will catch duplicates anyway
+        reportError('Name check failed, proceeding anyway:', nameCheckError)
+      }
+
       const confirmed = confirm(
         'Submit this map for approval?\n\n' +
           'Once submitted, the map will be reviewed by admins.\n' +
@@ -2289,10 +2309,10 @@ export default function MapEditorTokens() {
       if (!confirmed) return
 
       const response = await mapWorkflowApi.publishDraft(draftId)
-      const publishedMapId = extractMapId(response?.map)
+      const newMapId = extractMapId(response?.map)
 
-      if (publishedMapId) {
-        setPublishedMapId(publishedMapId)
+      if (newMapId) {
+        setPublishedMapId(newMapId)
       }
 
       setDraftStatus('submitted')
