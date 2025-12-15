@@ -24,6 +24,7 @@ export default function VerifyEmailToken() {
           headers: {
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({}), // bun-serve-express requires a body for POST with JSON content-type
         })
 
         const data = await response.json()

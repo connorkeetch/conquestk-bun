@@ -1886,6 +1886,7 @@ export default function Settings() {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                   },
+                  body: JSON.stringify({}),
                 })
 
                 let result: { success?: boolean; error?: string; message?: string } | null = null
@@ -2017,6 +2018,7 @@ export default function Settings() {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                   },
+                  body: JSON.stringify({}),
                 })
 
                 if (response.ok) {
