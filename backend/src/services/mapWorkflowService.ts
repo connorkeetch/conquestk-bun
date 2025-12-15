@@ -376,6 +376,24 @@ export class MapWorkflowService {
       }
 
       const draft = this.formatDraftRow(draftRow)
+
+      // Idempotency check: if draft was already published, return the existing map
+      if (draft.draftStatus === 'submitted' && draft.parentMapId) {
+        logger.info('Draft already published, returning existing map', {
+          draftId,
+          mapId: draft.parentMapId,
+        })
+        const existingMap = await mapService.getMap(draft.parentMapId)
+        if (existingMap) {
+          return existingMap
+        }
+        // If the linked map doesn't exist for some reason, continue with creation
+        logger.warn('Draft marked as submitted but linked map not found, recreating', {
+          draftId,
+          parentMapId: draft.parentMapId,
+        })
+      }
+
       const mapPayload = await this.buildMapPayloadFromDraft(draft)
 
       const createdMap = await mapService.createMap(userId, mapPayload)
