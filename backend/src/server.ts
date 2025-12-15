@@ -112,6 +112,7 @@ import {
   testMigrationFiles,
 } from './debugStartup.js'
 // Middleware imports
+import { bunIpPolyfill } from './middleware/bunIpPolyfill.js'
 import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter.js'
 import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js'
 // Room imports
@@ -346,6 +347,9 @@ initializeRedis()
 function configureExpressApp(app: Application) {
   // Trust proxy for Railway deployment
   app.set('trust proxy', 1)
+
+  // Polyfill req.ip for Bun runtime (bun-serve-express doesn't implement it)
+  app.use(bunIpPolyfill)
 
   // Canonical host redirect in production
   app.use((req, res, next) => {
