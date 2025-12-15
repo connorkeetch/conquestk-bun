@@ -33,6 +33,15 @@ export class MapWorkflowController {
         draft,
       })
     } catch (error: unknown) {
+      // Check for quota exceeded error
+      if (error instanceof Error && error.message.includes('Quota exceeded')) {
+        handleRouteError(error, req, 'Quota exceeded', 429)
+        return res.status(429).json({
+          error: 'Quota exceeded',
+          message: error.message,
+        })
+      }
+
       handleRouteError(error, req, 'Failed to save draft')
       return res.status(500).json({
         error: 'Failed to save draft',
@@ -116,6 +125,38 @@ export class MapWorkflowController {
 
       return res.json({ success: true, map })
     } catch (error: unknown) {
+      // Check for PostgreSQL duplicate key violation (unique constraint)
+      const pgError = error as { code?: string; constraint?: string; message?: string }
+      if (pgError.code === '23505') {
+        const isDuplicateName = pgError.constraint === 'maps_name_key'
+        handleRouteError(error, req, 'Duplicate map name', 409, {
+          draftId: req.params.draftId,
+        })
+        return res.status(409).json({
+          error: 'Duplicate map name',
+          message: isDuplicateName
+            ? 'A map with this name already exists. Please choose a different name.'
+            : 'This map conflicts with an existing entry. Please try again with different details.',
+        })
+      }
+
+      // Check for other known errors
+      if (error instanceof Error) {
+        const message = error.message
+        if (message.includes('Draft not found')) {
+          return res.status(404).json({
+            error: 'Draft not found',
+            message: 'The draft could not be found or you do not have access to it.',
+          })
+        }
+        if (message.includes('Quota exceeded')) {
+          return res.status(429).json({
+            error: 'Quota exceeded',
+            message,
+          })
+        }
+      }
+
       handleRouteError(error, req, 'Failed to publish draft', 500, {
         draftId: req.params.draftId,
       })
