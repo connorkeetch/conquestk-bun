@@ -1452,6 +1452,44 @@ export class MapWorkflowService {
       throw error
     }
   }
+
+  /**
+   * Check if a map name is available (not already taken)
+   * @param name - The map name to check
+   * @param excludeMapId - Optional map ID to exclude (for editing existing maps)
+   * @returns Object with available boolean and existing map info if taken
+   */
+  async checkMapNameAvailable(
+    name: string,
+    excludeMapId?: string,
+  ): Promise<{ available: boolean; existingMapId?: string; existingMapCreator?: string }> {
+    try {
+      const trimmedName = name.trim()
+      if (!trimmedName) {
+        return { available: false }
+      }
+
+      const result = await query<{ id: string; creator_id: string }>(
+        excludeMapId
+          ? 'SELECT id, creator_id FROM maps WHERE LOWER(name) = LOWER($1) AND id != $2 LIMIT 1'
+          : 'SELECT id, creator_id FROM maps WHERE LOWER(name) = LOWER($1) LIMIT 1',
+        excludeMapId ? [trimmedName, excludeMapId] : [trimmedName],
+      )
+
+      if (result.rows.length === 0) {
+        return { available: true }
+      }
+
+      return {
+        available: false,
+        existingMapId: result.rows[0].id,
+        existingMapCreator: result.rows[0].creator_id,
+      }
+    } catch (error) {
+      logger.error('Error checking map name availability:', error)
+      throw error
+    }
+  }
 }
 
 export default new MapWorkflowService()

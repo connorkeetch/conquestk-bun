@@ -538,4 +538,40 @@ export class MapWorkflowController {
       })
     }
   }
+
+  /**
+   * Checks if a map name is available.
+   * @param {AuthenticatedRequest} req - The Express request object.
+   * @param {Response} res - The Express response object.
+   */
+  async checkMapName(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
+
+      const { name, excludeMapId } = req.query as { name?: string; excludeMapId?: string }
+
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({
+          error: 'Invalid name',
+          message: 'Map name is required',
+        })
+      }
+
+      const result = await mapWorkflowService.checkMapNameAvailable(name, excludeMapId)
+
+      return res.json({
+        success: true,
+        ...result,
+      })
+    } catch (error: unknown) {
+      handleRouteError(error, req, 'Failed to check map name')
+      return res.status(500).json({
+        error: 'Failed to check name',
+        message: 'An error occurred while checking the map name',
+      })
+    }
+  }
 }

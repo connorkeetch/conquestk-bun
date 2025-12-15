@@ -78,6 +78,22 @@ export const mapWorkflowApi = {
     const response = await api.post<PublishDraftResponse>(`/workflow/drafts/${draftId}/publish`)
     return response.data
   },
+
+  async checkMapName(
+    name: string,
+    excludeMapId?: string,
+  ): Promise<{ success: boolean; available: boolean; existingMapId?: string }> {
+    const params = new URLSearchParams({ name })
+    if (excludeMapId) {
+      params.append('excludeMapId', excludeMapId)
+    }
+    const response = await api.get<{
+      success: boolean
+      available: boolean
+      existingMapId?: string
+    }>(`/workflow/check-name?${params.toString()}`)
+    return response.data
+  },
 }
 
 export default mapWorkflowApi
