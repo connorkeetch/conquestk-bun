@@ -89,28 +89,33 @@ try {
   logger.warn('Could not log JWT secret fingerprints', { error: (e as Error)?.message })
 }
 
+import { BunWebSockets } from '@colyseus/bun-websockets'
+import { RedisDriver } from '@colyseus/redis-driver'
+import { RedisPresence } from '@colyseus/redis-presence'
+// Utility imports
+import { setEngine as setOddsEngine, setLogger as setOddsLogger } from '@conquestk/shared/odds'
 // Colyseus imports
 import { Server } from 'colyseus'
-import { BunWebSockets } from '@colyseus/bun-websockets'
-import { RedisPresence } from '@colyseus/redis-presence'
-import { RedisDriver } from '@colyseus/redis-driver'
-
 // Express middleware imports
 import cors from 'cors'
-import type { NextFunction, Request, Response, Application } from 'express'
+import type { Application, NextFunction, Request, Response } from 'express'
 import express from 'express'
 import helmet from 'helmet'
-
 // Config imports
 import { getPool, initDatabase } from './config/database.js'
 import type { RedisClients } from './config/redis.js'
 import { initializeRedis } from './config/redis.js'
 import { setAiEvalWasmAvailable } from './config/runtimeFlags.js'
-
+import {
+  logStartupDiagnostics,
+  testDatabaseConnection,
+  testMigrationFiles,
+} from './debugStartup.js'
 // Middleware imports
 import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter.js'
 import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js'
-
+// Room imports
+import { GameRoom } from './rooms/GameRoom.js'
 // Route imports
 import adminRoutes from './routes/admin.js'
 import { authRoutes } from './routes/auth.js'
@@ -135,22 +140,10 @@ import rumVitalsRoutes from './routes/rumVitals.js'
 import skillsRoutes from './routes/skills.js'
 import termsRoutes from './routes/terms.js'
 import userRoutes from './routes/users.js'
-
-// Room imports
-import { GameRoom } from './rooms/GameRoom.js'
-
 // Service imports
 import { cdnService } from './services/cdnService.js'
 import { databaseClusterService } from './services/databaseClusterService.js'
 import { memoryDiagnosticsService } from './services/memoryDiagnosticsService.js'
-
-// Utility imports
-import { setEngine as setOddsEngine, setLogger as setOddsLogger } from '@conquestk/shared/odds'
-import {
-  logStartupDiagnostics,
-  testDatabaseConnection,
-  testMigrationFiles,
-} from './debugStartup.js'
 import { getErrorMessage, toKnownError } from './utils/errorHelpers.js'
 import { ensureTablesExist } from './utils/initTables.js'
 import { MigrationRunner } from './utils/migrationRunner.js'
@@ -166,14 +159,26 @@ const PORT = parseInt(process.env.PORT || '5001', 10)
 
 // Configure allowed origins based on environment
 const getAllowedOrigins = (): string[] => {
-  if (process.env.NODE_ENV === 'production') {
-    return ['https://conquestk.com', 'https://www.conquestk.com']
-  }
-  const origins = ['http://localhost:5173', 'http://localhost:3000']
+  const origins: string[] = []
+
+  // Always add FRONTEND_URL if set (primary source of truth)
   if (process.env.FRONTEND_URL) {
     origins.push(process.env.FRONTEND_URL)
   }
-  return origins
+
+  // Add CORS_ORIGIN if set (can be comma-separated)
+  if (process.env.CORS_ORIGIN) {
+    const corsOrigins = process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    origins.push(...corsOrigins)
+  }
+
+  // Add localhost for development
+  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
+    origins.push('http://localhost:5173', 'http://localhost:3000')
+  }
+
+  // Deduplicate
+  return [...new Set(origins)]
 }
 
 const corsOptions = {
@@ -356,7 +361,11 @@ function configureExpressApp(app: Application) {
       if (!headerHost) return next()
 
       const hostWithoutPort = headerHost.split(':')[0]
-      const canonical = (process.env.CANONICAL_HOST || 'conquestk.com').toLowerCase()
+      // Only perform canonical redirect if CANONICAL_HOST is explicitly set
+      const canonical = process.env.CANONICAL_HOST?.trim().toLowerCase()
+
+      // Skip redirect if no canonical host configured
+      if (!canonical) return next()
 
       if (
         hostWithoutPort === canonical ||
@@ -585,7 +594,8 @@ function configureExpressApp(app: Application) {
   }
 
   // Serve static frontend files in production-like environments
-  const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
+  const isProductionLike =
+    process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
   if (isProductionLike) {
     void (async () => {
       const fsModule = await import('node:fs')
