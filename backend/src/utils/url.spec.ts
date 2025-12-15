@@ -15,17 +15,19 @@ describe('URL Utilities', () => {
       expect(buildFrontendUrl(req, '/lobby')).toBe('https://game.net/lobby')
     })
 
-    it('should fall back to production default', () => {
+    it('should fall back to localhost when FRONTEND_URL not set (with warning in production)', () => {
       process.env.NODE_ENV = 'production'
       const req = { protocol: '', get: () => '' } as unknown as Request
-      expect(buildFrontendUrl(req, '/')).toBe('https://conquestk.com/')
+      // Now falls back to localhost with a warning instead of hardcoded domain
+      expect(buildFrontendUrl(req, '/')).toBe('http://localhost:5173/')
       delete process.env.NODE_ENV
     })
 
-    it('should fall back to staging default', () => {
+    it('should fall back to localhost when FRONTEND_URL not set (with warning in staging)', () => {
       process.env.NODE_ENV = 'staging'
       const req = { protocol: '', get: () => '' } as unknown as Request
-      expect(buildFrontendUrl(req, '/')).toBe('https://dev.conquestk.com/')
+      // Now falls back to localhost with a warning instead of hardcoded domain
+      expect(buildFrontendUrl(req, '/')).toBe('http://localhost:5173/')
       delete process.env.NODE_ENV
     })
 

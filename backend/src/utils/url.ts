@@ -1,5 +1,6 @@
 import type { Request } from 'express'
 import { getPublicAssetUrl } from './assetStorage.js'
+import { logger } from './logger.js'
 
 /**
  * Build an absolute URL to the frontend from a request.
@@ -21,12 +22,11 @@ export function buildFrontendUrl(req: Request, path: string): string {
     return joinUrl(`${protocol}://${host}`, path)
   }
 
-  // Environment-based fallback
-  if (process.env.NODE_ENV === 'production') {
-    return joinUrl('https://conquestk.com', path)
-  }
-  if (process.env.NODE_ENV === 'staging') {
-    return joinUrl('https://dev.conquestk.com', path)
+  // Fallback to localhost in development; log warning in production/staging if FRONTEND_URL is missing
+  if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+    logger.warn(
+      'FRONTEND_URL not configured - using localhost fallback (set FRONTEND_URL in production)',
+    )
   }
   return joinUrl('http://localhost:5173', path)
 }
