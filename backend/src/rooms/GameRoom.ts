@@ -9,21 +9,18 @@
  * - Frame persistence for replay
  */
 
-import { Room, type Client } from 'colyseus'
-import { GameState, Player, Territory, BattleResult } from './schemas/index.js'
-import { logger } from '../utils/logger.js'
-import { GameEngine } from '../game/gameEngine.js'
+import { computeChecksum } from '@conquestk/shared/lockstep'
+import { type Client, Room } from 'colyseus'
 import { query } from '../config/database.js'
-import {
-  applyEngineStateToSchema,
-  engineBattleResultToSchema,
-} from './utils/stateConverter.js'
+import { GameEngine } from '../game/gameEngine.js'
 import type {
   GameState as EngineGameState,
-  GameConfiguration,
   Territory as EngineTerritory,
+  GameConfiguration,
 } from '../types/game.js'
-import { computeChecksum } from '@conquestk/shared/lockstep'
+import { logger } from '../utils/logger.js'
+import { BattleResult, GameState, Player, Territory } from './schemas/index.js'
+import { applyEngineStateToSchema, engineBattleResultToSchema } from './utils/stateConverter.js'
 
 // Type for raw map data from database
 interface MapTerritoryData {
@@ -182,9 +179,7 @@ export class GameRoom extends Room<GameState> {
     }
 
     // Check max players
-    const activePlayers = Array.from(this.state.players.values()).filter(
-      (p) => !p.isEliminated
-    )
+    const activePlayers = Array.from(this.state.players.values()).filter((p) => !p.isEliminated)
     if (activePlayers.length >= 8) {
       // Max 8 players
       client.send('error', { message: 'Game is full' })
@@ -275,7 +270,6 @@ export class GameRoom extends Room<GameState> {
         success: true,
         version: this.state.version,
       })
-
     } catch (error) {
       logger.error('Action processing error', { error, action, playerId })
       client.send('error', {
@@ -286,7 +280,7 @@ export class GameRoom extends Room<GameState> {
 
   private async processAction(
     playerId: string,
-    action: GameAction
+    action: GameAction,
   ): Promise<{ success: boolean; error?: string; battleResult?: BattleResult }> {
     // Ensure we have engine state initialized
     if (!this.engineState) {
@@ -362,7 +356,6 @@ export class GameRoom extends Room<GameState> {
       })
 
       return { success: true, battleResult: schemaBattleResult }
-
     } catch (error) {
       logger.error('GameEngine action processing failed', { error, action, playerId })
       return {
@@ -379,7 +372,7 @@ export class GameRoom extends Room<GameState> {
   private async persistFrame(
     playerId: string,
     action: GameAction,
-    engineState: EngineGameState
+    engineState: EngineGameState,
   ): Promise<void> {
     // Increment frame sequence
     this.frameSeq++
@@ -396,7 +389,7 @@ export class GameRoom extends Room<GameState> {
       await query(
         `INSERT INTO match_frames (match_id, seq, player_id, commands, committed_at)
          VALUES ($1, $2, $3, $4, NOW())`,
-        [this.state.roomId, seq, playerId, JSON.stringify(commands)]
+        [this.state.roomId, seq, playerId, JSON.stringify(commands)],
       )
 
       // Persist checksum to match_checksums table
@@ -404,7 +397,7 @@ export class GameRoom extends Room<GameState> {
         `INSERT INTO match_checksums (match_id, seq, crc32, computed_at)
          VALUES ($1, $2, $3, NOW())
          ON CONFLICT (match_id, seq) DO UPDATE SET crc32 = $3, computed_at = NOW()`,
-        [this.state.roomId, seq, checksum]
+        [this.state.roomId, seq, checksum],
       )
 
       // Broadcast frame-committed event to all clients
@@ -437,7 +430,10 @@ export class GameRoom extends Room<GameState> {
   /**
    * Build an engine-compatible action from the simplified room action format
    */
-  private buildEngineAction(playerId: string, action: GameAction): import('../types/game.js').GameAction {
+  private buildEngineAction(
+    playerId: string,
+    action: GameAction,
+  ): import('../types/game.js').GameAction {
     const base = { roomId: this.state.roomId, playerId }
 
     switch (action.type) {
@@ -624,10 +620,7 @@ export class GameRoom extends Room<GameState> {
 
     try {
       // Load map from database
-      const mapResult = await query(
-        `SELECT id, name, data FROM maps WHERE id = $1`,
-        [mapId]
-      )
+      const mapResult = await query(`SELECT id, name, data FROM maps WHERE id = $1`, [mapId])
 
       if (mapResult.rows.length === 0) {
         logger.error('Map not found', { mapId })
@@ -635,9 +628,8 @@ export class GameRoom extends Room<GameState> {
       }
 
       const mapRow = mapResult.rows[0]
-      const mapData: MapDatabaseData = typeof mapRow.data === 'string'
-        ? JSON.parse(mapRow.data)
-        : mapRow.data
+      const mapData: MapDatabaseData =
+        typeof mapRow.data === 'string' ? JSON.parse(mapRow.data) : mapRow.data
 
       // Extract territories with adjacencies
       const territories = (mapData.territories || []).map((t: MapTerritoryData) => ({
@@ -677,7 +669,6 @@ export class GameRoom extends Room<GameState> {
         adjacencies: adjacencies.length,
         sectors: sectors.length,
       })
-
     } catch (error) {
       logger.error('Failed to load map data', { mapId, error })
       this.mapData = null
@@ -700,7 +691,8 @@ export class GameRoom extends Room<GameState> {
         username: player.username,
         teamId: player.teamId || null,
         isAi: player.isAi,
-        aiDifficulty: player.aiDifficulty as 'recruit' | 'commander' | 'grandmaster' | null || null,
+        aiDifficulty:
+          (player.aiDifficulty as 'recruit' | 'commander' | 'grandmaster' | null) || null,
         color: player.color,
       }))
 
@@ -708,9 +700,7 @@ export class GameRoom extends Room<GameState> {
       const mapTerritories = this.mapData.territories
       const sectorBonuses = this.mapData.sectors.map((s) => {
         // Get territories in this sector
-        const sectorTerritories = mapTerritories
-          .filter((t) => t.sector === s.id)
-          .map((t) => t.id)
+        const sectorTerritories = mapTerritories.filter((t) => t.sector === s.id).map((t) => t.id)
         return {
           id: s.id,
           name: s.name,
@@ -750,7 +740,7 @@ export class GameRoom extends Room<GameState> {
         this.state.roomId,
         playerConfigs,
         gameConfig,
-        mapOverrides
+        mapOverrides,
       )
 
       // Apply engine state to Colyseus Schema state
@@ -802,7 +792,6 @@ export class GameRoom extends Room<GameState> {
         firstPlayer: this.state.currentPlayerId,
         turn: this.state.turn,
       })
-
     } catch (error) {
       logger.error('Failed to initialize game via GameEngine', { error })
       this.broadcast('error', {

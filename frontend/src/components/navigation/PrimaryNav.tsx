@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppSelector } from '@/hooks/redux'
 import friendsService from '@/services/friendsService'
+
 // TODO: Re-add real-time friend notifications when ChatRoom is implemented
 
 // AI menu entries are now generally visible

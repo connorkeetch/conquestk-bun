@@ -1,4 +1,4 @@
-import { Schema, type, ArraySchema } from '@colyseus/schema'
+import { ArraySchema, Schema, type } from '@colyseus/schema'
 
 export class Card extends Schema {
   @type('string') id: string = ''

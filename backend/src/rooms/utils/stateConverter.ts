@@ -5,20 +5,23 @@
  * Colyseus uses MapSchema/ArraySchema classes, while GameEngine uses plain interfaces.
  */
 
-import { GameState as SchemaGameState, BattleResult as SchemaBattleResult } from '../schemas/GameState.js'
-import { Player as SchemaPlayer, Card as SchemaCard } from '../schemas/Player.js'
-import { Territory as SchemaTerritory } from '../schemas/Territory.js'
 import type {
-  GameState as EngineGameState,
   BattleResult as EngineBattleResult,
+  GameState as EngineGameState,
 } from '../../types/game.js'
+import type {
+  BattleResult as SchemaBattleResult,
+  GameState as SchemaGameState,
+} from '../schemas/GameState.js'
+import { Card as SchemaCard, Player as SchemaPlayer } from '../schemas/Player.js'
+import { Territory as SchemaTerritory } from '../schemas/Territory.js'
 
 /**
  * Apply GameEngine state changes back to Colyseus Schema state
  */
 export function applyEngineStateToSchema(
   schemaState: SchemaGameState,
-  engineState: EngineGameState
+  engineState: EngineGameState,
 ): void {
   // Update game phase and turn
   schemaState.phase = engineState.phase
@@ -80,7 +83,7 @@ export function applyEngineStateToSchema(
   }
 
   // Check for winner
-  const activePlayers = engineState.players.filter(p => !p.isEliminated)
+  const activePlayers = engineState.players.filter((p) => !p.isEliminated)
   if (activePlayers.length === 1) {
     schemaState.winnerId = activePlayers[0].id
     schemaState.phase = 'finished'
@@ -92,7 +95,7 @@ export function applyEngineStateToSchema(
  */
 export function engineBattleResultToSchema(
   engineResult: EngineBattleResult,
-  schemaBattle: SchemaBattleResult
+  schemaBattle: SchemaBattleResult,
 ): void {
   schemaBattle.attackerId = engineResult.attackerPlayerId || ''
   schemaBattle.defenderId = engineResult.defenderPlayerId || ''

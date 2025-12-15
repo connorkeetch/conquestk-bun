@@ -71,6 +71,8 @@ declare module 'socket.io' {
     InterServerEvents = Record<string, unknown>,
     SocketData = Record<string, unknown>,
   > extends Namespace<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData> {
-    of(nsp: string): Namespace<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
+    of(
+      nsp: string,
+    ): Namespace<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
   }
 }

@@ -428,12 +428,9 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     [drawerActiveConversationId],
   )
 
-  const handleTyping = useCallback(
-    (_isTyping: boolean) => {
-      // TODO: Re-add typing indicators when ChatRoom is implemented
-    },
-    [],
-  )
+  const handleTyping = useCallback((_isTyping: boolean) => {
+    // TODO: Re-add typing indicators when ChatRoom is implemented
+  }, [])
 
   const handleAddFriend = useCallback(async (userId: string) => {
     try {
@@ -459,13 +456,10 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     [startDirectConversation],
   )
 
-  const handleArchiveConversation = useCallback(
-    async (_conversation: ConversationItem) => {
-      // TODO: Re-add when ChatRoom is implemented
-      setDeleteError('Archive is temporarily disabled during migration')
-    },
-    [],
-  )
+  const handleArchiveConversation = useCallback(async (_conversation: ConversationItem) => {
+    // TODO: Re-add when ChatRoom is implemented
+    setDeleteError('Archive is temporarily disabled during migration')
+  }, [])
 
   const conversationTitle = useMemo(() => {
     if (!activeConversation) return 'Messages'

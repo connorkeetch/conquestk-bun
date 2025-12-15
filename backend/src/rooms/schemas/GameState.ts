@@ -1,4 +1,4 @@
-import { Schema, type, MapSchema, ArraySchema } from '@colyseus/schema'
+import { ArraySchema, MapSchema, Schema, type } from '@colyseus/schema'
 import { Player } from './Player.js'
 import { Territory } from './Territory.js'
 
@@ -109,9 +109,7 @@ export class GameState extends Schema {
 
     if (activePlayers.length === 0) return null
 
-    const currentIndex = activePlayers.findIndex(
-      (p) => p.oderId === this.currentPlayerId
-    )
+    const currentIndex = activePlayers.findIndex((p) => p.oderId === this.currentPlayerId)
     const nextIndex = (currentIndex + 1) % activePlayers.length
     return activePlayers[nextIndex]
   }
