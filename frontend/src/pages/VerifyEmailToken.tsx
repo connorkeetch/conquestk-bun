@@ -19,13 +19,7 @@ export default function VerifyEmailToken() {
       }
 
       try {
-        const response = await fetch(`/api/auth/verify-email/${token}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}), // bun-serve-express requires a body for POST with JSON content-type
-        })
+        const response = await fetch(`/api/auth/verify-email/${token}`)
 
         const data = await response.json()
 
