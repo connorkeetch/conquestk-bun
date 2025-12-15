@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from 'react-hot-toast'
 import { API_URL } from '@/config'
-import { colyseusService, type GameAction as ColyseusAction } from '@/services/colyseusService'
+import { type GameAction as ColyseusAction, colyseusService } from '@/services/colyseusService'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
 import type { GameState, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
@@ -82,11 +82,25 @@ async function sendOrQueueAction(state: RootState, action: GameAction): Promise<
 function convertToColyseusAction(action: GameAction): ColyseusAction | null {
   switch (action.type) {
     case 'deploy':
-      return { type: 'deploy', territoryId: action.payload.territoryId, armies: action.payload.armies }
+      return {
+        type: 'deploy',
+        territoryId: action.payload.territoryId,
+        armies: action.payload.armies,
+      }
     case 'attack':
-      return { type: 'attack', from: action.payload.fromTerritoryId, to: action.payload.toTerritoryId, dice: action.payload.armies ?? 3 }
+      return {
+        type: 'attack',
+        from: action.payload.fromTerritoryId,
+        to: action.payload.toTerritoryId,
+        dice: action.payload.armies ?? 3,
+      }
     case 'fortify':
-      return { type: 'fortify', from: action.payload.fromTerritoryId, to: action.payload.toTerritoryId, armies: action.payload.armies }
+      return {
+        type: 'fortify',
+        from: action.payload.fromTerritoryId,
+        to: action.payload.toTerritoryId,
+        armies: action.payload.armies,
+      }
     case 'end_turn':
       return { type: 'end_turn' }
     case 'trade_cards':

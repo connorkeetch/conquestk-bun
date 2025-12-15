@@ -10,9 +10,9 @@ import { toast } from 'react-hot-toast'
 import { logger } from '@/utils/logger'
 import { store } from '../store'
 import { setError, setGameState } from '../store/gameSlice'
-import { setConnectionStatus, addPing } from '../store/uiRoomSlice'
-import type { GameState, BattleResult, Territory, GamePlayer, Card } from '../types/game'
 import type { LifecycleUpdatePayload } from '../store/roomSlice'
+import { addPing, setConnectionStatus } from '../store/uiRoomSlice'
+import type { BattleResult, Card, GamePlayer, GameState, Territory } from '../types/game'
 import audioService from './audioService'
 
 // Event types for game room events
@@ -30,7 +30,7 @@ export interface GameRoomEvents {
   'player-joined': { oderId: string; username: string; color?: string }
   'player-left': { oderId: string; username: string }
   'lifecycle:update': LifecycleUpdatePayload
-  'ratingUpdate': { oderId: string; oldRating: number; newRating: number; ratingChange: number }
+  ratingUpdate: { oderId: string; oldRating: number; newRating: number; ratingChange: number }
   'game-log:append': GameLogEntry
   'game-log:batch': { entries: GameLogEntry[] }
   'game-log:reveal': Record<string, never>
@@ -178,7 +178,8 @@ class ColyseusService {
   connect(): void {
     if (this.client) return
 
-    const wsUrl = import.meta.env.VITE_COLYSEUS_URL ||
+    const wsUrl =
+      import.meta.env.VITE_COLYSEUS_URL ||
       (import.meta.env.MODE === 'production'
         ? `wss://${window.location.host}`
         : 'ws://localhost:5001')
@@ -259,7 +260,6 @@ class ColyseusService {
 
       logger.info('[Colyseus] Joined room successfully', { roomId })
       return true
-
     } catch (error) {
       logger.error('[Colyseus] Failed to join room', { roomId, error })
       store.dispatch(setConnectionStatus('disconnected'))
@@ -374,9 +374,12 @@ class ColyseusService {
       toast.error(message.message)
     })
 
-    this.gameRoom.onMessage('action-ack', (ack: { seq: number; success: boolean; version: number }) => {
-      logger.debug('[Colyseus] Action acknowledged', { seq: ack.seq, version: ack.version })
-    })
+    this.gameRoom.onMessage(
+      'action-ack',
+      (ack: { seq: number; success: boolean; version: number }) => {
+        logger.debug('[Colyseus] Action acknowledged', { seq: ack.seq, version: ack.version })
+      },
+    )
 
     this.gameRoom.onMessage('frame-committed', (frame: FrameCommittedEvent) => {
       logger.debug('[Colyseus] Frame committed', {
@@ -386,16 +389,22 @@ class ColyseusService {
       })
     })
 
-    this.gameRoom.onMessage('chat', (msg: { oderId: string; username: string; text: string; timestamp: number }) => {
-      // Handle chat messages - dispatch to chat slice
-      logger.debug('[Colyseus] Chat message', { from: msg.username })
-    })
+    this.gameRoom.onMessage(
+      'chat',
+      (msg: { oderId: string; username: string; text: string; timestamp: number }) => {
+        // Handle chat messages - dispatch to chat slice
+        logger.debug('[Colyseus] Chat message', { from: msg.username })
+      },
+    )
 
-    this.gameRoom.onMessage('player-joined', (data: { oderId: string; username: string; color?: string }) => {
-      logger.info('[Colyseus] Player joined', { username: data.username })
-      toast.success(`${data.username} joined the game`)
-      this.emitEvent('player-joined', data)
-    })
+    this.gameRoom.onMessage(
+      'player-joined',
+      (data: { oderId: string; username: string; color?: string }) => {
+        logger.info('[Colyseus] Player joined', { username: data.username })
+        toast.success(`${data.username} joined the game`)
+        this.emitEvent('player-joined', data)
+      },
+    )
 
     this.gameRoom.onMessage('player-left', (data: { oderId: string; username: string }) => {
       logger.info('[Colyseus] Player left', { username: data.username })
@@ -414,11 +423,14 @@ class ColyseusService {
       audioService.playEffect('gamestart')
     })
 
-    this.gameRoom.onMessage('game-finished', (data: { winnerId: string; winnerUsername: string }) => {
-      logger.info('[Colyseus] Game finished', { winner: data.winnerUsername })
-      toast.success(`${data.winnerUsername} won the game!`)
-      audioService.playVictoryFanfare()
-    })
+    this.gameRoom.onMessage(
+      'game-finished',
+      (data: { winnerId: string; winnerUsername: string }) => {
+        logger.info('[Colyseus] Game finished', { winner: data.winnerUsername })
+        toast.success(`${data.winnerUsername} won the game!`)
+        audioService.playVictoryFanfare()
+      },
+    )
 
     this.gameRoom.onMessage('spectator-blocked', (data: { message: string }) => {
       logger.info('[Colyseus] Spectating blocked (fog of war)')
@@ -453,21 +465,32 @@ class ColyseusService {
       this.emitEvent('lifecycle:update', data)
     })
 
-    this.gameRoom.onMessage('ratingUpdate', (data: { oderId: string; oldRating: number; newRating: number; ratingChange: number }) => {
-      logger.debug('[Colyseus] Rating update', { oderId: data.oderId, change: data.ratingChange })
-      this.emitEvent('ratingUpdate', data)
-    })
+    this.gameRoom.onMessage(
+      'ratingUpdate',
+      (data: { oderId: string; oldRating: number; newRating: number; ratingChange: number }) => {
+        logger.debug('[Colyseus] Rating update', { oderId: data.oderId, change: data.ratingChange })
+        this.emitEvent('ratingUpdate', data)
+      },
+    )
 
     // Ping events (territory pings from other players)
-    this.gameRoom.onMessage('ping:territory', (data: { playerId: string; territoryId: string; timestamp: number }) => {
-      logger.debug('[Colyseus] Territory ping', { playerId: data.playerId, territoryId: data.territoryId })
-      store.dispatch(addPing({
-        id: `ping-${data.playerId}-${data.timestamp}`,
-        territoryId: data.territoryId,
-        userId: data.playerId,
-      }))
-      this.emitEvent('ping:territory', data)
-    })
+    this.gameRoom.onMessage(
+      'ping:territory',
+      (data: { playerId: string; territoryId: string; timestamp: number }) => {
+        logger.debug('[Colyseus] Territory ping', {
+          playerId: data.playerId,
+          territoryId: data.territoryId,
+        })
+        store.dispatch(
+          addPing({
+            id: `ping-${data.playerId}-${data.timestamp}`,
+            territoryId: data.territoryId,
+            userId: data.playerId,
+          }),
+        )
+        this.emitEvent('ping:territory', data)
+      },
+    )
 
     // Connection events
     this.gameRoom.onLeave((code) => {

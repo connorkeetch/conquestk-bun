@@ -2,11 +2,11 @@
  * Generate a clean schema SQL from current database using SQL queries
  * No pg_dump required - pure TypeScript/SQL approach
  */
-import { writeFileSync, readdirSync, unlinkSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { readdirSync, unlinkSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Pool } from 'pg'
 import dotenv from 'dotenv'
+import { Pool } from 'pg'
 
 dotenv.config()
 
@@ -59,7 +59,10 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
     if (enums.rows.length > 0) {
       sql += '-- Enum Types\n'
       for (const e of enums.rows) {
-        const values = e.enum_values.split(',').map((v: string) => `'${v}'`).join(', ')
+        const values = e.enum_values
+          .split(',')
+          .map((v: string) => `'${v}'`)
+          .join(', ')
         sql += `CREATE TYPE ${e.enum_name} AS ENUM (${values});\n`
       }
       sql += '\n'
@@ -83,7 +86,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
       const tableName = table.table_name
 
       // Get columns
-      const cols = await pool.query(`
+      const cols = await pool.query(
+        `
         SELECT
           a.attname as name,
           pg_catalog.format_type(a.atttypid, a.atttypmod) as type,
@@ -96,18 +100,23 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
           AND a.attnum > 0
           AND NOT a.attisdropped
         ORDER BY a.attnum
-      `, [`public.${tableName}`])
+      `,
+        [`public.${tableName}`],
+      )
 
       // Get primary key columns
-      const pkResult = await pool.query(`
+      const pkResult = await pool.query(
+        `
         SELECT a.attname
         FROM pg_index i
         JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
         WHERE i.indrelid = $1::regclass AND i.indisprimary
         ORDER BY array_position(i.indkey, a.attnum)
-      `, [`public.${tableName}`])
+      `,
+        [`public.${tableName}`],
+      )
 
-      const pkCols = pkResult.rows.map(r => r.attname)
+      const pkCols = pkResult.rows.map((r) => r.attname)
 
       sql += `CREATE TABLE ${tableName} (\n`
 
@@ -191,7 +200,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
     // Delete old migrations
     console.log('\nRemoving old migrations...')
-    const oldMigrations = readdirSync(migrationsDir).filter(f => f.endsWith('.sql'))
+    const oldMigrations = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql'))
     for (const file of oldMigrations) {
       unlinkSync(join(migrationsDir, file))
       console.log(`  Deleted: ${file}`)
@@ -212,7 +221,6 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
     console.log('\n🎉 Done! Migrations squashed into single file.')
     console.log('Your database schema is unchanged - only migration files were updated.')
-
   } catch (error) {
     console.error('❌ Failed:', error)
     process.exit(1)

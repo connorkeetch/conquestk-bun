@@ -3,10 +3,10 @@
  * Strips psql-specific commands and runs pure SQL
  */
 import { readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Pool } from 'pg'
 import dotenv from 'dotenv'
+import { Pool } from 'pg'
 
 // Load env
 dotenv.config()
@@ -39,7 +39,7 @@ async function initFreshDb() {
     // Strip psql-specific commands and problematic statements
     sql = sql
       .split('\n')
-      .filter(line => {
+      .filter((line) => {
         const trimmed = line.trim().toUpperCase()
         // Skip psql commands
         if (trimmed.startsWith('\\')) return false
@@ -75,7 +75,6 @@ async function initFreshDb() {
     for (const row of result.rows) {
       console.log(`  - ${row.table_name}`)
     }
-
   } catch (error) {
     console.error('❌ Failed to apply baseline:', error)
     process.exit(1)

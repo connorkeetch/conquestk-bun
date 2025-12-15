@@ -11,6 +11,7 @@ import capitalGameService from './capitalGameService.js'
 import { GameRoomService } from './gameRoomService.js'
 import { GameService } from './gameService.js'
 import { mapService } from './mapService.js'
+
 // Socket.io and BullMQ queues removed - game events now handled by Colyseus GameRoom
 // Stub function returns null so all io-based emissions are skipped
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

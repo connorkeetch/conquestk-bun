@@ -278,12 +278,9 @@ export default function ChatContainer({
     [resolvedConversationId],
   )
 
-  const handleTyping = useCallback(
-    (_isTyping: boolean) => {
-      // TODO: Re-add typing indicators when ChatRoom is implemented
-    },
-    [],
-  )
+  const handleTyping = useCallback((_isTyping: boolean) => {
+    // TODO: Re-add typing indicators when ChatRoom is implemented
+  }, [])
 
   // We intentionally suppress the header/subheader inside the chat container
   // to keep the panel clean in the game room. Tab labels convey context.
