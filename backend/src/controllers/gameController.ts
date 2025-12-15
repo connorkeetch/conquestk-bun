@@ -9,8 +9,7 @@ import { ensureGameConversation } from '../services/conversationService.js'
 import { GameLifecycleService } from '../services/gameLifecycleService.js'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService.js'
 import { GameService } from '../services/gameService.js'
-import { queueService } from '../services/queueService.js'
-// Socket.io removed - using Colyseus in server.ts
+// Socket.io and BullMQ queues removed - using Colyseus in server.ts
 import type { AuthenticatedRequest } from '../types/express.js'
 import type { GameAction, TreasureConfig } from '../types/game.js'
 import { logger } from '../utils/logger.js'
@@ -244,27 +243,10 @@ export class GameController {
       // Normalize action (server sets roomId/playerId)
       const action: GameAction = { ...(raw as object), roomId, playerId: userId } as GameAction
 
-      const idempotencyKey =
-        (req.headers['x-idempotency-key'] as string | undefined) ||
-        (typeof (req.body as { idempotencyKey?: unknown })?.idempotencyKey === 'string'
-          ? (req.body as { idempotencyKey: string }).idempotencyKey
-          : undefined)
-
-      const job = await queueService.addGameAction({
-        gameId: roomId,
-        playerId: userId,
-        action,
-        ...(idempotencyKey ? { idempotencyKey } : {}),
-      })
-
-      if (job) {
-        return res.status(202).json({ ok: true, queued: true, jobId: job.id })
-      }
-
-      // If queues are unavailable (dev without Redis), process inline
+      // Process action inline (Colyseus handles real-time, this is HTTP fallback)
       try {
         await this.gameService.processGameAction(action, userId)
-        return res.status(200).json({ ok: true, queued: false })
+        return res.status(200).json({ ok: true })
       } catch (inlineError) {
         logger.warn('Inline action processing failed', {
           roomId,

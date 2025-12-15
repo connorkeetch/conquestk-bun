@@ -29,8 +29,7 @@ import { featureFlagService } from './featureFlagService.js'
 import { mapService } from './mapService.js'
 import { aiTurnMetrics, assassinationMetrics, battleMetrics } from './metricsService.js'
 import notificationService from './notificationService.js'
-import { queueService } from './queueService.js'
-// Socket.io removed - game events now handled by Colyseus GameRoom
+// Socket.io and BullMQ queues removed - game events now handled by Colyseus GameRoom
 // Stub function returns null so all io-based emissions are skipped
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tryGetSocketServer = (): any => null
@@ -1632,38 +1631,17 @@ export class GameService {
 
       const stats = this.buildTurnStatsSnapshot(updatedState)
 
-      try {
-        const bulkJobs: Array<{ event: string; gameId: string; data: unknown }> = [
-          { event: 'append_log', gameId: roomId, data: entries },
-          { event: 'append_turn_stats', gameId: roomId, data: stats },
-        ]
-        const added = await queueService.addAnalyticsEventsBulk?.(bulkJobs)
-        if (!added) {
-          // Queue unavailable: best-effort async write
-          setImmediate(() => {
-            this.appendLog(roomId, entries).catch(() => {
-              /* no-op */
-            })
-          })
-          setImmediate(() => {
-            this.appendTurnStats(roomId, stats).catch(() => {
-              /* no-op */
-            })
-          })
-        }
-      } catch {
-        // Fallback to direct writes on any error
-        setImmediate(() => {
-          this.appendLog(roomId, entries).catch(() => {
-            /* no-op */
-          })
+      // Best-effort async write (no queue)
+      setImmediate(() => {
+        this.appendLog(roomId, entries).catch(() => {
+          /* no-op */
         })
-        setImmediate(() => {
-          this.appendTurnStats(roomId, stats).catch(() => {
-            /* no-op */
-          })
+      })
+      setImmediate(() => {
+        this.appendTurnStats(roomId, stats).catch(() => {
+          /* no-op */
         })
-      }
+      })
     }
 
     // Finalize game if this transition ended it outside of battle flow

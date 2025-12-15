@@ -1,13 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { logger } from '../utils/logger.js'
-import { getWorkerManagerInstance } from '../workers/workerManager.js'
 import { adminService } from './adminService.js'
 import { cdnService } from './cdnService.js'
 import { getClientMetricsSummary } from './clientMetricsService.js'
 import { databaseClusterService } from './databaseClusterService.js'
 import { notificationDispatcher } from './NotificationDispatcher.js'
 import { buildPerformanceAlertNotification } from './notifications/performanceAlerts.js'
-import type { QueueStats } from './queueService.js'
 import { redisClusterService } from './redisClusterService.js'
 
 interface SystemMetrics {
@@ -82,7 +80,7 @@ type MetricDetails = Record<string, MetricValue | MetricValue[]>
 
 type WorkerQueueSnapshot = {
   initialized: boolean
-  queues: Record<string, QueueStats>
+  queues: Record<string, unknown>
   timestamp: string
 }
 
@@ -215,10 +213,8 @@ export class PerformanceMonitorService {
       // Cache metrics
       const cacheMetrics = redisClusterService.getMetrics()
 
-      // Queue metrics
-      const workerManager = getWorkerManagerInstance()
-      const queueHealth = workerManager ? await workerManager.getStats() : null
-      const queueMetrics = this.calculateQueueMetrics(queueHealth)
+      // Queue metrics (BullMQ removed - using Colyseus for game actions)
+      const queueMetrics = this.calculateQueueMetrics(null)
 
       // CDN metrics
       const cdnMetrics = cdnService.getMetrics()
@@ -280,37 +276,15 @@ export class PerformanceMonitorService {
     }
   }
 
-  private calculateQueueMetrics(queueStats: WorkerQueueSnapshot | null): SystemMetrics['queues'] {
-    let totalJobs = 0
-    let activeJobs = 0
-    let waitingJobs = 0
-    let failedJobs = 0
-    let processedJobs = 0
-    let deadLetterJobs = 0
-
-    if (queueStats?.queues) {
-      for (const queue of Object.values(queueStats.queues)) {
-        activeJobs += queue.active || 0
-        waitingJobs += queue.waiting || 0
-        failedJobs += queue.failed || 0
-        processedJobs += queue.completed || 0
-        deadLetterJobs += queue.deadLetter || 0
-        totalJobs +=
-          (queue.active || 0) +
-          (queue.waiting || 0) +
-          (queue.failed || 0) +
-          (queue.completed || 0) +
-          (queue.deadLetter || 0)
-      }
-    }
-
+  private calculateQueueMetrics(_queueStats: WorkerQueueSnapshot | null): SystemMetrics['queues'] {
+    // BullMQ queues removed - return zeros
     return {
-      totalJobs,
-      activeJobs,
-      waitingJobs,
-      failedJobs,
-      processedJobs,
-      deadLetterJobs,
+      totalJobs: 0,
+      activeJobs: 0,
+      waitingJobs: 0,
+      failedJobs: 0,
+      processedJobs: 0,
+      deadLetterJobs: 0,
     }
   }
 
