@@ -11,8 +11,7 @@ import capitalGameService from './capitalGameService.js'
 import { GameRoomService } from './gameRoomService.js'
 import { GameService } from './gameService.js'
 import { mapService } from './mapService.js'
-import { queueService } from './queueService.js'
-// Socket.io removed - game events now handled by Colyseus GameRoom
+// Socket.io and BullMQ queues removed - game events now handled by Colyseus GameRoom
 // Stub function returns null so all io-based emissions are skipped
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tryGetSocketServer = (): any => null
@@ -1032,64 +1031,36 @@ export class GameLifecycleService {
         })
       }
 
-      const turnNumber = room?.turnNumber ?? 0
-      const idKey = `turn-timeout:${roomId}:turn:${turnNumber}`
-      // Prefer changing delay on an existing job when rescheduling
-      const changed = await queueService.changeDelayedGameActionDelay(idKey, seconds * 1000)
-      const job = changed
-        ? null
-        : await queueService.addDelayedGameAction(
-            {
-              gameId: roomId,
-              playerId: currentTurnUserId,
-              action: { type: 'end_turn', playerId: currentTurnUserId, roomId },
-              idempotencyKey: idKey,
-              turnTimeoutStage: 'expire',
-            },
-            seconds * 1000,
-            { idempotencyKey: idKey, priority: 10 },
-          )
-
-      // Development fallback: if queue is unavailable, schedule a local timer.
-      // This keeps local dev playable without Redis.
-      if (!job && process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
-        try {
-          const existing = GameLifecycleService.localTurnTimeouts.get(roomId)
-          if (existing) {
-            clearTimeout(existing)
-            GameLifecycleService.localTurnTimeouts.delete(roomId)
-          }
-          const timer: NodeJS.Timeout = setTimeout(
-            () => {
-              // Fire-and-forget; errors are logged inside handleTurnTimeout
-              this.handleTurnTimeout(roomId).catch(() => {
-                /* no-op */
-              })
-            },
-            Math.max(0, seconds * 1000),
-          )
-          // Ensure this timer does not keep the process alive
-          if (typeof timer.unref === 'function') {
-            timer.unref()
-          }
-          GameLifecycleService.localTurnTimeouts.set(roomId, timer)
-          logger.info('Scheduled local (dev) turn timeout fallback', {
-            roomId,
-            seconds,
-          })
-        } catch (e) {
-          logger.warn('Failed to schedule local dev fallback timer', {
-            roomId,
-            error: e instanceof Error ? e.message : e,
-          })
-        }
-      } else {
-        // If queues are available, clear any stray local timers for safety
+      // Schedule turn timeout using local timer (Colyseus GameRoom also handles this)
+      try {
         const existing = GameLifecycleService.localTurnTimeouts.get(roomId)
         if (existing) {
           clearTimeout(existing)
           GameLifecycleService.localTurnTimeouts.delete(roomId)
         }
+        const timer: NodeJS.Timeout = setTimeout(
+          () => {
+            // Fire-and-forget; errors are logged inside handleTurnTimeout
+            this.handleTurnTimeout(roomId).catch(() => {
+              /* no-op */
+            })
+          },
+          Math.max(0, seconds * 1000),
+        )
+        // Ensure this timer does not keep the process alive
+        if (typeof timer.unref === 'function') {
+          timer.unref()
+        }
+        GameLifecycleService.localTurnTimeouts.set(roomId, timer)
+        logger.info('Scheduled turn timeout', {
+          roomId,
+          seconds,
+        })
+      } catch (e) {
+        logger.warn('Failed to schedule turn timeout timer', {
+          roomId,
+          error: e instanceof Error ? e.message : e,
+        })
       }
 
       await this.refreshLifecycle(roomId)
@@ -1109,107 +1080,16 @@ export class GameLifecycleService {
 
   /**
    * Schedules an AI turn if the current player is an AI.
+   * Note: AI turns are now handled by Colyseus GameRoom's tick() method.
+   * This method is kept for API compatibility but is a no-op.
    * @param {string} roomId - The ID of the game room.
    * @param {object} [options] - Options for scheduling the turn.
    * @param {number} [options.delayMs] - The delay in milliseconds before the AI takes its turn.
    * @returns {Promise<void>}
    */
-  async scheduleAiTurn(roomId: string, options?: { delayMs?: number }): Promise<void> {
-    try {
-      const state = await this.gameService.getGameState(roomId)
-      if (!state || state.phase === 'finished') return
-
-      const current = state.players.find((p) => p.id === state.currentPlayer)
-      if (!current || !current.isAi) return
-
-      // Build idempotent job id per turn
-      const idKey = `ai-turn:${roomId}:turn:${state.turn}`
-
-      // Remove any existing scheduled AI job for this turn (best-effort)
-      try {
-        await queueService.removeGameActionJob(idKey)
-      } catch {
-        // ignore
-      }
-
-      // Derive small human-visible delay
-      const delay = Math.max(0, Math.trunc(options?.delayMs ?? 300))
-
-      logger.info('Scheduling AI turn job', {
-        gameId: roomId,
-        playerId: current.id,
-        turnNumber: state.turn,
-        delay,
-      })
-
-      const queue = queueService.getGameActionQueue()
-      const safeId = String(idKey).replace(/[^a-zA-Z0-9_-]/g, '_')
-      await queue.add(
-        'execute-ai-turn',
-        {
-          gameId: roomId,
-          playerId: current.id,
-          turnNumber: state.turn,
-          budgetOverrides: this.computeDefaultBudgetForDifficulty(
-            current.aiDifficulty ?? 'recruit',
-          ),
-          idempotencyKey: idKey,
-        },
-        {
-          jobId: safeId,
-          delay,
-          attempts: 1,
-          removeOnFail: true,
-          removeOnComplete: 10,
-          priority: 7,
-        },
-      )
-
-      // Game events will signal AI activity through normal event flow.
-    } catch (error) {
-      logger.warn('Failed to schedule AI turn', {
-        roomId,
-        error: error instanceof Error ? error.message : error,
-      })
-    }
-  }
-
-  /**
-   * Computes the default decision budget for an AI based on its difficulty.
-   * @param {import('../types/game.js').AIDifficulty} difficulty - The difficulty of the AI.
-   * @returns {Partial<import('../services/aiDecisionService.js').DecisionBudget>} The decision budget.
-   * @private
-   */
-  private computeDefaultBudgetForDifficulty(
-    difficulty: import('../types/game.js').AIDifficulty,
-  ): Partial<import('../services/aiDecisionService.js').DecisionBudget> {
-    switch (difficulty) {
-      case 'recruit':
-        return {
-          maxThinkTimeMs: 5000,
-          maxPlannedActions: 6,
-          readableDelayMs: 300,
-          maxAttackChains: 3,
-          minAttackOddsByTier: { recruit: 0.7 },
-          allowOneSpiceAttack: true,
-        }
-      case 'commander':
-        return {
-          maxThinkTimeMs: 10_000,
-          maxPlannedActions: 10,
-          readableDelayMs: 300,
-          maxAttackChains: 6,
-          minAttackOddsByTier: { commander: 0.68 },
-        }
-      default:
-        return {
-          maxThinkTimeMs: 15_000,
-          maxPlannedActions: 16,
-          readableDelayMs: 300,
-          maxAttackChains: 999,
-          minAttackOddsByTier: { grandmaster: 0.6 },
-        }
-    }
+  async scheduleAiTurn(roomId: string, _options?: { delayMs?: number }): Promise<void> {
+    // AI turns are now handled by Colyseus GameRoom's tick() method
+    logger.debug('scheduleAiTurn called - AI turns handled by Colyseus GameRoom', { roomId })
   }
 
   /**

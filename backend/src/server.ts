@@ -113,7 +113,6 @@ import { createSessionMiddleware, sessionMiddleware } from './middleware/session
 
 // Route imports
 import adminRoutes from './routes/admin.js'
-import adminQueuesRoutes from './routes/adminQueues.js'
 import { authRoutes } from './routes/auth.js'
 import benchmarkRoutes from './routes/benchmarkRoutes.js'
 import clanRoutes from './routes/clans.js'
@@ -131,7 +130,6 @@ import oddsRoutes from './routes/odds.js'
 import performanceRoutes from './routes/performanceRoutes.js'
 import { createPreferencesRouter } from './routes/preferences.js'
 import profileRoutes from './routes/profile.js'
-import queueRoutes from './routes/queueRoutes.js'
 import replayRoutes from './routes/replay.js'
 import rumVitalsRoutes from './routes/rumVitals.js'
 import skillsRoutes from './routes/skills.js'
@@ -442,7 +440,6 @@ function configureExpressApp(app: Application) {
   app.use('/api/profile', profileRoutes)
   app.use('/api/skills', skillsRoutes)
   app.use('/api/admin', adminRoutes)
-  app.use('/api/admin/queues', adminQueuesRoutes)
   app.use('/api/notifications', notificationRoutes)
   app.use('/api/users', userRoutes)
   app.use('/api/messages', messagesRoutes)
@@ -453,7 +450,6 @@ function configureExpressApp(app: Application) {
   app.use('/api/terms', termsRoutes)
   app.use('/api/staging', mapStagingRoutes)
   app.use('/api/feature-flags', featureFlagsRoutes)
-  app.use('/api/queues', queueRoutes)
   app.use('/api/performance', performanceRoutes)
   app.use('/api/rum', rumVitalsRoutes)
   app.use('/api/benchmark', benchmarkRoutes)
