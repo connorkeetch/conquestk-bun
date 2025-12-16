@@ -173,52 +173,34 @@ export const uploadAsset = async (options: UploadAssetOptions): Promise<AssetUpl
   const { key, body, contentType, cacheControl } = options
   const normalizedKey = normalizeKey(key)
 
-  if (isRemoteEnabled) {
-    if (!remoteConfig) {
-      throw new Error('Remote asset storage requested but configuration is missing')
-    }
-    try {
-      const client = getS3Client()
-      const uploader = new Upload({
-        client,
-        params: {
-          Bucket: remoteConfig.bucket,
-          Key: normalizedKey,
-          Body: body,
-          ContentType: contentType,
-          CacheControl: cacheControl,
-        },
-      })
-
-      await uploader.done()
-
-      return {
-        key: normalizedKey,
-        url: fallbackPublicUrl(normalizedKey),
-        storage: 'remote',
-      }
-    } catch (error) {
-      logger.error('Failed to upload asset to remote storage', {
-        key: normalizedKey,
-        error,
-      })
-      throw error
-    }
+  if (!isRemoteEnabled || !remoteConfig) {
+    throw new Error(
+      'Asset storage requires R2 configuration. Set ASSET_BUCKET, ASSET_ENDPOINT, ASSET_ACCESS_KEY_ID, and ASSET_SECRET_ACCESS_KEY environment variables.',
+    )
   }
 
-  // Local fallback
   try {
-    const destination = buildLocalPath(normalizedKey)
-    await fs.mkdir(path.dirname(destination), { recursive: true })
-    await fs.writeFile(destination, body)
+    const client = getS3Client()
+    const uploader = new Upload({
+      client,
+      params: {
+        Bucket: remoteConfig.bucket,
+        Key: normalizedKey,
+        Body: body,
+        ContentType: contentType,
+        CacheControl: cacheControl,
+      },
+    })
+
+    await uploader.done()
 
     return {
       key: normalizedKey,
       url: fallbackPublicUrl(normalizedKey),
-      storage: 'local',
+      storage: 'remote',
     }
   } catch (error) {
-    logger.error('Failed to store asset locally', {
+    logger.error('Failed to upload asset to remote storage', {
       key: normalizedKey,
       error,
     })
