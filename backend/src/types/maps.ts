@@ -22,10 +22,7 @@ export interface CustomMap {
   imageUrl?: string
   imageWidth: number
   imageHeight: number
-  imageVariants?: {
-    avif?: Array<{ url: string; width: number; height?: number }>
-    webp?: Array<{ url: string; width: number; height?: number }>
-  }
+  // Note: Image variants are now handled by Cloudflare Image Transformations on-the-fly
   isPublic: boolean
   isFeatured: boolean
   status: MapStatus

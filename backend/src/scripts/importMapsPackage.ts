@@ -25,6 +25,16 @@ type MapPackageJson = {
   tags?: string[]
   width?: number
   height?: number
+  // Support for scraper meta.json format (canvas_width/canvas_height)
+  canvas_width?: number
+  canvas_height?: number
+  image_width?: number
+  image_height?: number
+  // Scraper metadata to preserve
+  source_url?: string
+  d12_map_id?: number
+  token_size?: number
+  slug?: string
   imageFilename?: string
   image?: { mimeType?: string; data: string }
   territories?: Json
@@ -85,12 +95,19 @@ const listCandidateJsonFiles = (root: string): string[] => {
     }
   }
   scan(root, 0)
-  // Prefer files literally named map.json first, then others
+  // Prefer files named map.json or meta.json first, then others
+  // Priority: map.json > meta.json > others
   return out.sort((a, b) => {
-    const aIsMap = path.basename(a).toLowerCase() === 'map.json'
-    const bIsMap = path.basename(b).toLowerCase() === 'map.json'
+    const aName = path.basename(a).toLowerCase()
+    const bName = path.basename(b).toLowerCase()
+    const aIsMap = aName === 'map.json'
+    const bIsMap = bName === 'map.json'
+    const aIsMeta = aName === 'meta.json'
+    const bIsMeta = bName === 'meta.json'
     if (aIsMap && !bIsMap) return -1
     if (!aIsMap && bIsMap) return 1
+    if (aIsMeta && !bIsMeta) return -1
+    if (!aIsMeta && bIsMeta) return 1
     return a.localeCompare(b)
   })
 }
@@ -586,6 +603,10 @@ async function run(): Promise<void> {
             capitalAssignments: metadata.capitalAssignments,
             width: metadata.width,
             height: metadata.height,
+            // Preserve scraper metadata for reference
+            ...(data.source_url ? { sourceUrl: data.source_url } : {}),
+            ...(data.d12_map_id ? { d12MapId: data.d12_map_id } : {}),
+            ...(data.token_size ? { tokenSize: data.token_size } : {}),
           },
         })
 

@@ -13,7 +13,6 @@ import {
 } from '../services/mapPermissionService.js'
 import { mapService } from '../services/mapService.js'
 import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps.js'
-import { assetExists, extractStorageKeyFromUrl, getPublicAssetUrl } from '../utils/assetStorage.js'
 import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage.js'
 import { logger } from '../utils/logger.js'
 import { handleRouteError } from '../utils/routeErrorHandler.js'
@@ -605,74 +604,8 @@ router.get(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      // Attach responsive image variants when available (AVIF/WebP at intrinsic size)
-      try {
-        const key = extractStorageKeyFromUrl(mapData.map.imageUrl || null)
-        if (key) {
-          const base = key.replace(/\.[^.]+$/, '')
-          const avifKey = `${base}.avif`
-          const webpKey = `${base}.webp`
-          const width = mapData.map.imageWidth
-          const height = mapData.map.imageHeight
-          const variants: {
-            avif?: Array<{ url: string; width: number; height?: number }>
-            webp?: Array<{ url: string; width: number; height?: number }>
-          } = {}
-          // Collect responsive widths (if present), then add original size at end
-          const candidateWidths = [1024, 1536, 2048]
-            .filter((w) => w > 0 && w < width)
-            .sort((a, b) => a - b)
-          const pushIf = async (
-            list: Array<{ url: string; width: number; height?: number }>,
-            key: string,
-            w: number,
-          ) => {
-            try {
-              if (await assetExists(key)) {
-                const h = Math.round((w / width) * height)
-                list.push({ url: getPublicAssetUrl(key), width: w, height: h })
-              }
-            } catch {
-              // ignore
-            }
-          }
-
-          // AVIF widths
-          const avifList: Array<{ url: string; width: number; height?: number }> = []
-          for (const w of candidateWidths) {
-            await pushIf(avifList, `${base}-${w}w.avif`, w)
-          }
-          // Include original AVIF if present
-          try {
-            if (await assetExists(avifKey))
-              avifList.push({ url: getPublicAssetUrl(avifKey), width, height })
-          } catch {
-            /* ignore: original AVIF not present */
-          }
-          if (avifList.length) variants.avif = avifList
-
-          // WebP widths
-          const webpList: Array<{ url: string; width: number; height?: number }> = []
-          for (const w of candidateWidths) {
-            await pushIf(webpList, `${base}-${w}w.webp`, w)
-          }
-          // Include original WebP if present
-          try {
-            if (await assetExists(webpKey))
-              webpList.push({ url: getPublicAssetUrl(webpKey), width, height })
-          } catch {
-            /* ignore: original WebP not present */
-          }
-          if (webpList.length) variants.webp = webpList
-
-          if (variants.avif || variants.webp) {
-            // eslint-disable-next-line no-param-reassign
-            mapData.map.imageVariants = variants
-          }
-        }
-      } catch {
-        // ignore variant detection errors
-      }
+      // Note: Image variants are now handled by Cloudflare Image Transformations on-the-fly.
+      // The frontend generates transform URLs dynamically instead of relying on pre-generated variants.
 
       return res.json(mapData)
     } catch (error) {
