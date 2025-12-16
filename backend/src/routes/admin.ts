@@ -393,6 +393,41 @@ router.post(
   },
 )
 
+// Manually verify a user's email (admin override)
+router.post(
+  '/users/:userId/verify-email',
+  requirePermission('users.edit'),
+  logAdminActivity('email_verification_override'),
+  param('userId').isUUID(),
+  body('note').optional().isString().isLength({ max: 500 }),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { note } = req.body as { note?: string }
+      const adminUserId = req.userId
+
+      const result = await adminService.verifyUserEmail(userId, adminUserId, note)
+      if (!result) {
+        return res.status(404).json({ error: 'User not found' })
+      }
+
+      return res.json({
+        message: result.alreadyVerified
+          ? 'User email was already verified'
+          : 'User email verified successfully',
+        emailVerified: true,
+        alreadyVerified: result.alreadyVerified,
+      })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to verify user email', 500, {
+        targetUserId: req.params.userId,
+      })
+      return res.status(500).json({ error: 'Failed to verify user email' })
+    }
+  },
+)
+
 // Update user VIP status
 router.post(
   '/users/:userId/vip',

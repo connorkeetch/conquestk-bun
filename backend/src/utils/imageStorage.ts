@@ -1,6 +1,5 @@
 import path from 'node:path'
 import { imageSize } from 'image-size'
-import sharp from 'sharp'
 import { getPublicAssetUrl, uploadAsset } from './assetStorage.js'
 import { logger } from './logger.js'
 
@@ -16,10 +15,6 @@ export interface StoredImageInfo {
   width: number
   height: number
   storageKey: string
-  variants?: {
-    avif?: Array<{ key: string; url: string; width: number; height: number }>
-    webp?: Array<{ key: string; url: string; width: number; height: number }>
-  }
 }
 
 const mimeToExtension = (mimeType: string | undefined): string => {
@@ -104,95 +99,8 @@ export const storeImageBuffer = async (
 
   const relativeUrl = getPublicAssetUrl(storageKey)
 
-  // Generate modern format variants alongside the original, using the same intrinsic size.
-  // Keep naming predictable: maps/<base>.avif, maps/<base>.webp
-  const baseKey = storageKey.replace(/\.[^.]+$/, '')
-  const avifKey = `${baseKey}.avif`
-  const webpKey = `${baseKey}.webp`
-  const variants: StoredImageInfo['variants'] = {}
-
-  try {
-    const avifBuf = await sharp(buffer).avif({ quality: 60, effort: 4 }).toBuffer()
-    await uploadAsset({
-      key: avifKey,
-      body: avifBuf,
-      contentType: 'image/avif',
-      cacheControl: 'public, max-age=31536000, immutable',
-    })
-    variants.avif = [{ key: avifKey, url: getPublicAssetUrl(avifKey), width, height }]
-  } catch (err) {
-    logger.warn('Failed to generate AVIF variant for map image (non-fatal)', {
-      storageKey,
-      error: err instanceof Error ? err.message : err,
-    })
-  }
-
-  try {
-    const webpBuf = await sharp(buffer).webp({ quality: 70 }).toBuffer()
-    await uploadAsset({
-      key: webpKey,
-      body: webpBuf,
-      contentType: 'image/webp',
-      cacheControl: 'public, max-age=31536000, immutable',
-    })
-    variants.webp = [{ key: webpKey, url: getPublicAssetUrl(webpKey), width, height }]
-  } catch (err) {
-    logger.warn('Failed to generate WebP variant for map image (non-fatal)', {
-      storageKey,
-      error: err instanceof Error ? err.message : err,
-    })
-  }
-
-  // Responsive widths: generate downscaled variants if beneficial
-  try {
-    const targetWidths = [1024, 1536, 2048].filter((w) => w > 0 && w < width).sort((a, b) => a - b)
-    for (const w of targetWidths) {
-      const h = Math.round((w / width) * height)
-      try {
-        const key = `${baseKey}-${w}w.avif`
-        const buf = await sharp(buffer)
-          .resize({ width: w })
-          .avif({ quality: 60, effort: 4 })
-          .toBuffer()
-        await uploadAsset({
-          key,
-          body: buf,
-          contentType: 'image/avif',
-          cacheControl: 'public, max-age=31536000, immutable',
-        })
-        if (!variants.avif) variants.avif = []
-        variants.avif.push({ key, url: getPublicAssetUrl(key), width: w, height: h })
-      } catch (e) {
-        logger.warn('Failed to generate AVIF responsive variant', {
-          storageKey,
-          width: w,
-          error: e,
-        })
-      }
-      try {
-        const key = `${baseKey}-${w}w.webp`
-        const buf = await sharp(buffer).resize({ width: w }).webp({ quality: 70 }).toBuffer()
-        await uploadAsset({
-          key,
-          body: buf,
-          contentType: 'image/webp',
-          cacheControl: 'public, max-age=31536000, immutable',
-        })
-        if (!variants.webp) variants.webp = []
-        variants.webp.push({ key, url: getPublicAssetUrl(key), width: w, height: h })
-      } catch (e) {
-        logger.warn('Failed to generate WebP responsive variant', {
-          storageKey,
-          width: w,
-          error: e,
-        })
-      }
-    }
-    if (variants.avif) variants.avif.sort((a, b) => a.width - b.width)
-    if (variants.webp) variants.webp.sort((a, b) => a.width - b.width)
-  } catch (e) {
-    logger.warn('Responsive variant generation error (non-fatal)', { storageKey, error: e })
-  }
+  // Cloudflare Image Transformations handles format conversion and resizing on-the-fly.
+  // We only store the original image and let the CDN do the rest.
 
   return {
     filename: uniqueFilename,
@@ -200,6 +108,5 @@ export const storeImageBuffer = async (
     width,
     height,
     storageKey,
-    ...(variants.avif || variants.webp ? { variants } : {}),
   }
 }

@@ -39,7 +39,6 @@
     "wipe:redis:yes": "bun run src/scripts/wipeRedisGames.ts --yes",
     "purge:messages:include-blocks": "bun run src/scripts/purgeMessaging.ts --yes --include-user-blocks",
     "maps:import": "bun run src/scripts/importMapsPackage.ts",
-    "maps:variants": "bun run src/scripts/generateMapImageVariants.ts",
     "maps:fix-image-urls": "bun run src/scripts/fixMapImageUrls.ts",
     "maps:rebuild-adj": "bun run src/scripts/rebuildAdjacencies.ts",
     "replay:match": "bun run src/scripts/replayMatch.ts",

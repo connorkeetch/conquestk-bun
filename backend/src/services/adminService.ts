@@ -65,6 +65,11 @@ export interface UserAccountStatus {
   expiresAt?: Date
 }
 
+type VerifyEmailResult = {
+  emailVerified: boolean
+  alreadyVerified: boolean
+}
+
 /**
  * @interface AdminActivityLog
  * @description Represents a log of an action performed by an administrator.
@@ -544,6 +549,77 @@ export class AdminService {
       'user',
       targetUserId,
     )
+  }
+
+  /**
+   * Marks a user's email address as verified (manual admin override).
+   * @param {string} targetUserId - The ID of the user to verify.
+   * @param {string} adminUserId - The ID of the admin performing the action.
+   * @param {string} [note] - Optional note to store in the admin audit log.
+   */
+  async verifyUserEmail(
+    targetUserId: string,
+    adminUserId: string,
+    note?: string,
+  ): Promise<VerifyEmailResult | null> {
+    const client = await getClient()
+    try {
+      await client.query('BEGIN')
+
+      const existing = await client.query<{ email_verified: boolean | null }>(
+        'SELECT email_verified FROM users WHERE id = $1',
+        [targetUserId],
+      )
+
+      if (!existing.rows[0]) {
+        await client.query('ROLLBACK')
+        return null
+      }
+
+      const alreadyVerified = Boolean(existing.rows[0].email_verified)
+      if (!alreadyVerified) {
+        await client.query(
+          `
+          UPDATE users
+          SET email_verified = TRUE,
+              verification_token = NULL,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1
+        `,
+          [targetUserId],
+        )
+
+        await client.query(
+          `
+          UPDATE email_verification_logs
+          SET verified_at = CURRENT_TIMESTAMP
+          WHERE user_id = $1
+            AND verified_at IS NULL
+        `,
+          [targetUserId],
+        )
+      }
+
+      await this.logAdminAction(
+        adminUserId,
+        'email_verification_override',
+        {
+          targetUserId,
+          alreadyVerified,
+          note,
+        },
+        'user',
+        targetUserId,
+      )
+
+      await client.query('COMMIT')
+      return { emailVerified: true, alreadyVerified }
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      if (client.release) client.release()
+    }
   }
 
   /**

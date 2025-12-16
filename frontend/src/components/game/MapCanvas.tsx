@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import useZoomPan from '@/hooks/useZoomPan'
 import { makeTransform, resetView, setImageSize } from '@/store/mapViewSlice'
+import { cfImage, cfImageSrcSet } from '@/utils/assets'
 
 interface MapCanvasProps {
   imageUrl: string
@@ -11,10 +12,6 @@ interface MapCanvasProps {
   children?: React.ReactNode
   // Optional background click: fires when clicking map image/stage (not tokens)
   onBackgroundClick?: (e: React.MouseEvent) => void
-  variants?: {
-    avif?: Array<{ url: string; width: number; height?: number }>
-    webp?: Array<{ url: string; width: number; height?: number }>
-  }
 }
 
 export function MapCanvas({
@@ -23,7 +20,6 @@ export function MapCanvas({
   imageHeight,
   children,
   onBackgroundClick,
-  variants,
 }: MapCanvasProps) {
   const dispatch = useAppDispatch()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -63,17 +59,19 @@ export function MapCanvas({
     [view.scale, view.tx, view.ty],
   )
 
-  // Build srcset strings from provided variants
-  const avifSrcSet = useMemo(() => {
-    const list = variants?.avif || []
-    if (!list.length) return ''
-    return list.map((v) => `${v.url} ${v.width}w`).join(', ')
-  }, [variants?.avif])
-  const webpSrcSet = useMemo(() => {
-    const list = variants?.webp || []
-    if (!list.length) return ''
-    return list.map((v) => `${v.url} ${v.width}w`).join(', ')
-  }, [variants?.webp])
+  // Build srcset using Cloudflare Image Transformations
+  // Generate responsive widths based on common breakpoints
+  const responsiveSrcSet = useMemo(() => {
+    const widths = [640, 1024, 1536, 2048].filter((w) => w <= imageWidth * 1.5)
+    if (widths.length === 0) return `${imageUrl} ${imageWidth}w`
+    return cfImageSrcSet(imageUrl, widths, { format: 'auto', quality: 85 })
+  }, [imageUrl, imageWidth])
+
+  // Optimized src with format auto-negotiation
+  const optimizedSrc = useMemo(
+    () => cfImage(imageUrl, { format: 'auto', quality: 85 }),
+    [imageUrl],
+  )
 
   return (
     <div
@@ -116,41 +114,32 @@ export function MapCanvas({
         }}
       >
         {/* Base image at intrinsic dimensions so token coords align in image pixel space */}
-        <picture>
-          {avifSrcSet ? (
-            <source type="image/avif" srcSet={avifSrcSet} sizes={`${imageWidth}px`} />
-          ) : null}
-          {webpSrcSet ? (
-            <source type="image/webp" srcSet={webpSrcSet} sizes={`${imageWidth}px`} />
-          ) : null}
-          <img
-            src={imageUrl}
-            alt="Game map"
-            draggable={false}
-            /* Include simple srcset for fallback */
-            srcSet={`${imageUrl} ${imageWidth}w`}
-            sizes={`${imageWidth}px`}
-            /* Reserve intrinsic size to prevent layout shifts and help LCP */
-            width={imageWidth}
-            height={imageHeight}
-            /* Hint browser this is the LCP candidate */
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
-            style={{
-              /* DO NOT set width/height here - let attributes + srcset/sizes work together */
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              objectPosition: 'top left',
-              maxWidth: 'none',
-              maxHeight: 'none',
-              display: 'block',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-          />
-        </picture>
+        {/* Using Cloudflare Image Transformations for on-the-fly format/size optimization */}
+        <img
+          src={optimizedSrc}
+          alt="Game map"
+          draggable={false}
+          srcSet={responsiveSrcSet}
+          sizes={`${imageWidth}px`}
+          /* Reserve intrinsic size to prevent layout shifts and help LCP */
+          width={imageWidth}
+          height={imageHeight}
+          /* Hint browser this is the LCP candidate */
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            objectPosition: 'top left',
+            maxWidth: 'none',
+            maxHeight: 'none',
+            display: 'block',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        />
         {/* Children (tokens/overlays) should be absolutely positioned relative to image top-left */}
         {children}
       </div>

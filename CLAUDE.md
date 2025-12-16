@@ -193,7 +193,7 @@ Set `PUBLIC_ASSET_BASE_URL` in `backend/.env` when the frontend runs on a differ
 
 ### Asset storage (Cloudflare R2)
 ```bash
-ASSET_BUCKET=conquestk
+ASSET_BUCKET=conquestk-bun
 ASSET_ENDPOINT=https://84ad0307fb40b859de005c18c9c76f2a.r2.cloudflarestorage.com
 ASSET_ACCESS_KEY_ID=...
 ASSET_SECRET_ACCESS_KEY=...
@@ -202,6 +202,10 @@ PUBLIC_ASSET_BASE_URL=https://assets.conquestk.com
 VITE_ASSET_BASE_URL=https://assets.conquestk.com
 ```
 If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**`. Static audio/background assets still require `VITE_ASSET_BASE_URL` to point at the CDN.
+
+### Cloudflare Image Transformations
+
+Map images use Cloudflare Image Transformations for on-the-fly format conversion and resizing. The backend stores only original images; the frontend generates transform URLs via `cfImage()` in `frontend/src/utils/assets.ts`. Format: `/cdn-cgi/image/format=auto,quality=85,width=1024/maps/image.png`.
 
 ### Lockstep development mode
 - Lockstep transport is always enabled: backend emits `game-action:frame-committed`/`game-action:checksum` events by default and persists frames in `match_frames`.

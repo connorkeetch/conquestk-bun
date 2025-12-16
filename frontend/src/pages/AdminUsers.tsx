@@ -30,7 +30,7 @@ interface User {
   timezone?: string
 }
 
-type UserActionType = 'ban' | 'unban' | 'vip' | 'admin'
+type UserActionType = 'ban' | 'unban' | 'verifyEmail' | 'vip' | 'admin'
 
 interface ActionDialogState {
   type: UserActionType
@@ -212,6 +212,21 @@ const AdminUsers: React.FC = () => {
           toast.success(`Unbanned ${user.username}`)
           break
         }
+        case 'verifyEmail': {
+          const response = await api.post(
+            `/admin/users/${user.id}/verify-email`,
+            trimmedNotes ? { note: trimmedNotes } : {},
+          )
+          const alreadyVerified = Boolean(
+            (response.data as { alreadyVerified?: boolean } | undefined)?.alreadyVerified,
+          )
+          toast.success(
+            alreadyVerified
+              ? `${user.username} was already verified`
+              : `Verified email for ${user.username}`,
+          )
+          break
+        }
         case 'vip': {
           await api.post(`/admin/users/${user.id}/vip`, {
             isVip: Boolean(newStatus),
@@ -239,6 +254,8 @@ const AdminUsers: React.FC = () => {
             return { ...current, status: 'banned' }
           case 'unban':
             return { ...current, status: 'active' }
+          case 'verifyEmail':
+            return { ...current, emailVerified: true }
           case 'vip': {
             const enableVip = Boolean(newStatus)
             return {
@@ -271,6 +288,11 @@ const AdminUsers: React.FC = () => {
 
   const handleUnbanUser = (user: User) => {
     openActionDialog({ type: 'unban', user })
+  }
+
+  const handleVerifyEmail = (user: User) => {
+    if (user.emailVerified) return
+    openActionDialog({ type: 'verifyEmail', user })
   }
 
   const handleVipStatusChange = (user: User, newStatus: boolean) => {
@@ -311,6 +333,17 @@ const AdminUsers: React.FC = () => {
           description: 'They will regain access immediately.',
           confirmLabel: 'Unban user',
           confirmVariant: 'success',
+          notesRequired: false,
+        }
+      case 'verifyEmail':
+        return {
+          title: `Verify email for ${dialog.user.username}?`,
+          description:
+            "This marks the account as verified even if they can't access the verification email.",
+          confirmLabel: 'Verify email',
+          confirmVariant: 'success',
+          notesLabel: 'Admin note (optional)',
+          notesPlaceholder: 'Explain why this manual verification is being applied...',
           notesRequired: false,
         }
       case 'vip': {
@@ -695,6 +728,15 @@ const AdminUsers: React.FC = () => {
                     className="btn-danger"
                   >
                     Ban user
+                  </button>
+                )}
+                {!selectedUser.emailVerified && (
+                  <button
+                    type="button"
+                    onClick={() => handleVerifyEmail(selectedUser)}
+                    className="btn-success"
+                  >
+                    Verify email
                   </button>
                 )}
                 <button

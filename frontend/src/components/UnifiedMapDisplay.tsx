@@ -140,10 +140,6 @@ export default function UnifiedMapDisplay({
     imageUrl: string
     width: number
     height: number
-    variants?: {
-      avif?: Array<{ url: string; width: number; height?: number }>
-      webp?: Array<{ url: string; width: number; height?: number }>
-    }
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -276,12 +272,6 @@ export default function UnifiedMapDisplay({
             '',
           width: (map?.imageWidth as number | undefined) || 1280,
           height: (map?.imageHeight as number | undefined) || 720,
-          variants: (map as unknown as { imageVariants?: unknown })?.imageVariants as
-            | {
-                avif?: Array<{ url: string; width: number; height?: number }>
-                webp?: Array<{ url: string; width: number; height?: number }>
-              }
-            | undefined,
         })
       } catch (error) {
         logger.error('Failed to load map data', error)
@@ -623,7 +613,6 @@ export default function UnifiedMapDisplay({
         imageUrl={mapData.imageUrl}
         imageWidth={mapData.width}
         imageHeight={mapData.height}
-        variants={mapData.variants}
         onBackgroundClick={handleBackgroundClick}
       >
         {/* Interaction overlays now render above tokens; see placement below TokenLayer */}
