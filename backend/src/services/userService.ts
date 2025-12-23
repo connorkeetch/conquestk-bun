@@ -159,7 +159,14 @@ export class UserService {
    * @returns {Promise<User | null>} A promise that resolves to the user, or `null` if not found.
    */
   async findByEmail(email: string): Promise<User | null> {
-    const result = await query('SELECT * FROM users WHERE email = $1', [email])
+    const normalizedEmail = email.trim()
+    if (!normalizedEmail) {
+      return null
+    }
+
+    const result = await query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [
+      normalizedEmail,
+    ])
     return (result.rows[0] as User) || null
   }
 
@@ -170,7 +177,33 @@ export class UserService {
    * @returns {Promise<User | null>} A promise that resolves to the user, or `null` if not found.
    */
   async findByUsername(username: string): Promise<User | null> {
-    const result = await query('SELECT * FROM users WHERE username = $1', [username])
+    const normalizedUsername = username.trim()
+    if (!normalizedUsername) {
+      return null
+    }
+
+    const result = await query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [
+      normalizedUsername,
+    ])
+    return (result.rows[0] as User) || null
+  }
+
+  /**
+   * Finds a user by email or username (case-insensitive).
+   *
+   * @param {string} identifier - The email or username.
+   * @returns {Promise<User | null>} A promise that resolves to the user, or `null` if not found.
+   */
+  async findByIdentifier(identifier: string): Promise<User | null> {
+    const normalizedIdentifier = identifier.trim()
+    if (!normalizedIdentifier) {
+      return null
+    }
+
+    const result = await query(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)',
+      [normalizedIdentifier],
+    )
     return (result.rows[0] as User) || null
   }
 
