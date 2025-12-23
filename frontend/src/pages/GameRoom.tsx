@@ -1125,26 +1125,27 @@ export default function GameRoom() {
       return
     }
 
-    if (
-      currentRoom &&
-      (currentRoom.id === roomId || String(currentRoom.roomCode ?? '') === roomId)
-    ) {
+    const currentRoomId = currentRoom?.id ?? null
+    const currentRoomCode =
+      typeof currentRoom?.roomCode === 'number' ? String(currentRoom.roomCode) : null
+    const matchesRoom =
+      Boolean(currentRoomId) && (currentRoomId === roomId || currentRoomCode === roomId)
+
+    if (matchesRoom) {
       setRoomError(null)
-      const shouldRefresh =
-        (currentRoom.status === 'lobby' || currentRoom.status === 'initializing') &&
-        !colyseusService.isConnected()
-      if (!shouldRefresh) {
-        return
+      if (currentRoomId && roomId !== currentRoomId) {
+        const qs = typeof window !== 'undefined' ? window.location.search : ''
+        navigate(`/room/${currentRoomId}${qs || ''}`, { replace: true })
       }
+      return
     }
 
-    const lookupId = currentRoom?.id ?? roomId
     let isMounted = true
 
     const loadRoomDetails = async () => {
       setIsRoomLoading(true)
       try {
-        const response = await gameService.getRoomDetails(lookupId)
+        const response = await gameService.getRoomDetails(roomId)
         if (!isMounted) {
           return
         }
@@ -1185,7 +1186,7 @@ export default function GameRoom() {
     return () => {
       isMounted = false
     }
-  }, [currentRoom, dispatch, roomId, navigate])
+  }, [currentRoom?.id, currentRoom?.roomCode, dispatch, roomId, navigate])
 
   useEffect(() => {
     if (!roomError) {
