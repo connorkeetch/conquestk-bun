@@ -3,11 +3,14 @@ import { useAppSelector } from '@/hooks/redux'
 
 export function ConnectionBanner() {
   const status = useAppSelector((s) => s.uiRoom.connectionStatus)
+  const roomStatus = useAppSelector((s) => s.room.currentRoom?.status)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    setVisible(status !== 'connected')
-  }, [status])
+    const shouldShow =
+      roomStatus === 'initializing' || roomStatus === 'active' || roomStatus === 'paused'
+    setVisible(shouldShow && status !== 'connected')
+  }, [roomStatus, status])
 
   if (!visible) return null
 

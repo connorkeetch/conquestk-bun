@@ -603,7 +603,9 @@ class ColyseusService {
   private attemptReconnect(roomId: string): void {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       logger.error('[Colyseus] Max reconnect attempts reached')
-      toast.error('Lost connection to game server')
+      if (this.shouldSurfaceConnectionIssues()) {
+        toast.error('Lost connection to game server')
+      }
       return
     }
 
@@ -618,6 +620,16 @@ class ColyseusService {
     setTimeout(() => {
       this.joinRoom(roomId)
     }, delay)
+  }
+
+  private shouldSurfaceConnectionIssues(): boolean {
+    const state = store.getState()
+    const roomStatus = state.room.currentRoom?.status
+    if (roomStatus === 'initializing' || roomStatus === 'active' || roomStatus === 'paused') {
+      return true
+    }
+    const phase = state.game.currentGame?.phase
+    return Boolean(phase && phase !== 'lobby' && phase !== 'finished')
   }
 }
 
