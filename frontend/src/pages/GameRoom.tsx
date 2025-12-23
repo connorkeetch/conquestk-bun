@@ -828,6 +828,48 @@ export default function GameRoom() {
     return () => window.clearTimeout(t)
   }, [inviteLinkCopied])
 
+  useEffect(() => {
+    if (!roomId || !currentRoom) return
+
+    const status = currentRoom.status
+    if (status !== 'lobby' && status !== 'initializing') {
+      return
+    }
+
+    let cancelled = false
+    let timeoutId: number | null = null
+    const POLL_INTERVAL_MS = 10_000
+
+    const pollRoom = async () => {
+      try {
+        const response = await gameService.getRoomDetails(roomId)
+        if (!cancelled) {
+          dispatch(setCurrentRoom(response.room))
+        }
+      } catch (error) {
+        if (!cancelled) {
+          logger.warn('Lobby poll failed', {
+            roomId,
+            error: error instanceof Error ? error.message : error,
+          })
+        }
+      } finally {
+        if (!cancelled) {
+          timeoutId = window.setTimeout(pollRoom, POLL_INTERVAL_MS)
+        }
+      }
+    }
+
+    timeoutId = window.setTimeout(pollRoom, POLL_INTERVAL_MS)
+
+    return () => {
+      cancelled = true
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [currentRoom?.id, currentRoom?.status, dispatch, roomId])
+
   // Track whether a panel is being dragged to toggle zone highlights
   useEffect(() => {
     const onStart = (e: Event) => {
@@ -1067,13 +1109,13 @@ export default function GameRoom() {
   // Everyone joins as a player - simplified subscription (no spectator mode for now)
   // This ensures all users get real-time game deltas regardless of membership status
   useEffect(() => {
-    if (!roomId) return
+    if (!roomId || !currentRoom) return
 
     colyseusService.joinRoom(roomId)
     return () => {
       colyseusService.leaveRoom()
     }
-  }, [roomId])
+  }, [currentRoom?.id, roomId])
 
   useEffect(() => {
     if (!roomId) {
@@ -1085,7 +1127,12 @@ export default function GameRoom() {
       (currentRoom.id === roomId || String(currentRoom.roomCode ?? '') === roomId)
     ) {
       setRoomError(null)
-      return
+      const shouldRefresh =
+        (currentRoom.status === 'lobby' || currentRoom.status === 'initializing') &&
+        !colyseusService.isConnected()
+      if (!shouldRefresh) {
+        return
+      }
     }
 
     let isMounted = true

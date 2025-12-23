@@ -799,7 +799,7 @@ async function createGameServer() {
   })
 
   // Register game rooms
-  gameServer.define('game', GameRoom)
+  gameServer.define('game', GameRoom).filterBy(['gameId'])
   // gameServer.define('chat', ChatRoom) // TODO: Add ChatRoom later
 
   // Configure Express app via BunWebSockets transport
