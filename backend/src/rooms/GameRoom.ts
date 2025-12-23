@@ -59,6 +59,7 @@ export type GameAction =
 
 interface RoomOptions {
   roomId: string
+  gameId?: string
   mapId: string
   hostId: string
   maxPlayers?: number
@@ -117,7 +118,11 @@ export class GameRoom extends Room<GameState> {
 
     // Initialize game state
     this.setState(new GameState())
-    this.state.roomId = options.roomId
+    const resolvedRoomId = options.roomId || options.gameId
+    if (!resolvedRoomId) {
+      logger.error('GameRoom created without roomId', { mapId: options.mapId })
+    }
+    this.state.roomId = resolvedRoomId || ''
     this.state.mapId = options.mapId
     this.state.gameMode = options.gameMode || 'classic'
     this.state.fogOfWar = options.fogOfWar || false

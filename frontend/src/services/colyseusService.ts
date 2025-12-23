@@ -10,7 +10,7 @@ import { toast } from 'react-hot-toast'
 import { logger } from '@/utils/logger'
 import { store } from '../store'
 import { setError, setGameState } from '../store/gameSlice'
-import type { LifecycleUpdatePayload } from '../store/roomSlice'
+import { addPlayerToRoom, removePlayerFromRoom, type LifecycleUpdatePayload } from '../store/roomSlice'
 import { addPing, setConnectionStatus } from '../store/uiRoomSlice'
 import type { BattleResult, Card, GamePlayer, GameState, Territory } from '../types/game'
 import audioService from './audioService'
@@ -231,6 +231,10 @@ class ColyseusService {
     try {
       const token = localStorage.getItem('token')
       const user = store.getState().auth.user
+      const currentRoom = store.getState().room.currentRoom
+      const currentPlayer = currentRoom?.players?.find(
+        (player) => (player.userId ?? player.id) === user?.id,
+      )
 
       if (!token || !user) {
         logger.error('[Colyseus] Not authenticated')
@@ -241,11 +245,15 @@ class ColyseusService {
       logger.info('[Colyseus] Joining room', { roomId })
       store.dispatch(setConnectionStatus('connecting'))
 
-      // Join existing room by ID
-      this.gameRoom = await this.client.joinById<SchemaGameState>(roomId, {
+      // Join existing room by gameId filter
+      this.gameRoom = await this.client.join<SchemaGameState>('game', {
+        gameId: roomId,
+        roomId,
         token,
         oderId: user.id,
         username: user.username,
+        ...(currentPlayer?.selectedColor ? { color: currentPlayer.selectedColor } : {}),
+        ...(typeof currentPlayer?.teamId === 'number' ? { teamId: currentPlayer.teamId } : {}),
       })
 
       this.currentRoomId = roomId
@@ -402,6 +410,20 @@ class ColyseusService {
       (data: { oderId: string; username: string; color?: string }) => {
         logger.info('[Colyseus] Player joined', { username: data.username })
         toast.success(`${data.username} joined the game`)
+        if (this.currentRoomId) {
+          store.dispatch(
+            addPlayerToRoom({
+              roomId: this.currentRoomId,
+              player: {
+                id: data.oderId,
+                userId: data.oderId,
+                username: data.username,
+                joinedAt: new Date().toISOString(),
+                selectedColor: data.color ?? null,
+              },
+            }),
+          )
+        }
         this.emitEvent('player-joined', data)
       },
     )
@@ -409,6 +431,15 @@ class ColyseusService {
     this.gameRoom.onMessage('player-left', (data: { oderId: string; username: string }) => {
       logger.info('[Colyseus] Player left', { username: data.username })
       toast(`${data.username} left the game`)
+      if (this.currentRoomId) {
+        store.dispatch(
+          removePlayerFromRoom({
+            roomId: this.currentRoomId,
+            playerSlotId: data.oderId,
+            userId: data.oderId,
+          }),
+        )
+      }
       this.emitEvent('player-left', data)
     })
 

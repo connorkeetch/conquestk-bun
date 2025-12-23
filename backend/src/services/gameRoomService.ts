@@ -13,6 +13,7 @@ import {
   PREMIUM_GAME_LIMIT_MESSAGE,
 } from '../constants/premium.js'
 import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom.js'
+import { ensureColyseusLobbyRoom } from './colyseusRoomService.js'
 import { logger } from '../utils/logger.js'
 
 type AIDifficultyOption = NonNullable<Player['aiDifficulty']>
@@ -954,7 +955,26 @@ export class GameRoomService {
     if (!row) {
       return null
     }
-    return this.mapRoomRow(row)
+    const room = this.mapRoomRow(row)
+
+    if (room.status === 'lobby' || room.status === 'initializing') {
+      const mapId = room.mapId ?? undefined
+      if (mapId) {
+        await ensureColyseusLobbyRoom({
+          roomId: room.id,
+          mapId,
+          hostId: room.hostId,
+          maxPlayers: room.maxPlayers,
+          gameMode: room.gameMode ?? null,
+          fogOfWar: room.fogOfWar === 'adjacent' || room.fogOfWar === 'persistent',
+          turnTimerSeconds: room.turnTimerSeconds ?? null,
+          teamMode: room.teamMode === 'teams' || room.teamMode === 'auto_balance',
+          numberOfTeams: room.numberOfTeams ?? null,
+        })
+      }
+    }
+
+    return room
   }
 
   async getRoomByCode(roomCode: number): Promise<GameRoom | null> {
