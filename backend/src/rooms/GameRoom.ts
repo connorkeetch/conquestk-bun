@@ -13,6 +13,7 @@ import { computeChecksum } from '@conquestk/shared/lockstep'
 import { type Client, Room } from 'colyseus'
 import { query } from '../config/database.js'
 import { GameEngine } from '../game/gameEngine.js'
+import { mapService } from '../services/mapService.js'
 import type {
   GameState as EngineGameState,
   Territory as EngineTerritory,
@@ -21,29 +22,6 @@ import type {
 import { logger } from '../utils/logger.js'
 import { BattleResult, GameState, Player, Territory } from './schemas/index.js'
 import { applyEngineStateToSchema, engineBattleResultToSchema } from './utils/stateConverter.js'
-
-// Type for raw map data from database
-interface MapTerritoryData {
-  id: string
-  name: string
-  sector?: string
-  continentId?: string
-  armyPosition?: { x: number; y: number }
-  adjacentTerritories?: string[]
-}
-
-interface MapSectorData {
-  id: string
-  name: string
-  bonus?: number
-  armyBonus?: number
-}
-
-interface MapDatabaseData {
-  territories?: MapTerritoryData[]
-  continents?: MapSectorData[]
-  sectors?: MapSectorData[]
-}
 
 // Action types from the game engine
 export type GameAction =
@@ -624,43 +602,52 @@ export class GameRoom extends Room<GameState> {
     logger.info('Loading map data from database', { mapId })
 
     try {
-      // Load map from database
-      const mapResult = await query(`SELECT id, name, data FROM maps WHERE id = $1`, [mapId])
+      const map = await mapService.getMapWithFullData(mapId)
 
-      if (mapResult.rows.length === 0) {
+      if (!map) {
         logger.error('Map not found', { mapId })
         return
       }
 
-      const mapRow = mapResult.rows[0]
-      const mapData: MapDatabaseData =
-        typeof mapRow.data === 'string' ? JSON.parse(mapRow.data) : mapRow.data
+      const neighbors = new Map<string, Set<string>>()
+      for (const territory of map.territories) {
+        neighbors.set(territory.id, new Set())
+      }
 
-      // Extract territories with adjacencies
-      const territories = (mapData.territories || []).map((t: MapTerritoryData) => ({
-        id: t.id,
-        name: t.name,
-        sector: t.sector || t.continentId || '',
-        armyPosition: t.armyPosition || { x: 0, y: 0 },
-        adjacentTerritories: t.adjacentTerritories || [],
-      }))
-
-      // Build adjacencies from territory data
-      const adjacencies: Array<{ from: string; to: string }> = []
-      for (const t of territories) {
-        for (const adjId of t.adjacentTerritories) {
-          // Only add one direction to avoid duplicates
-          if (t.id < adjId) {
-            adjacencies.push({ from: t.id, to: adjId })
-          }
+      for (const adjacency of map.adjacencies) {
+        const fromId = adjacency.fromTerritoryId
+        const toId = adjacency.toTerritoryId
+        if (!neighbors.has(fromId)) neighbors.set(fromId, new Set())
+        if (!neighbors.has(toId)) neighbors.set(toId, new Set())
+        neighbors.get(fromId)?.add(toId)
+        if (adjacency.isBidirectional !== false) {
+          neighbors.get(toId)?.add(fromId)
         }
       }
 
-      // Extract sector bonuses
-      const sectors = (mapData.continents || mapData.sectors || []).map((s: MapSectorData) => ({
-        id: s.id,
+      const territories = map.territories.map((t) => ({
+        id: t.id,
+        name: t.name,
+        sector: t.sectorId || '',
+        armyPosition: t.armyPosition || { x: 0, y: 0 },
+        adjacentTerritories: Array.from(neighbors.get(t.id) ?? []),
+      }))
+
+      const adjacencies: Array<{ from: string; to: string }> = []
+      const seen = new Set<string>()
+      for (const [fromId, targets] of neighbors.entries()) {
+        for (const toId of targets) {
+          const key = fromId < toId ? `${fromId}:${toId}` : `${toId}:${fromId}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          adjacencies.push({ from: fromId, to: toId })
+        }
+      }
+
+      const sectors = map.sectors.map((s) => ({
+        id: s.name,
         name: s.name,
-        bonus: s.bonus || s.armyBonus || 0,
+        bonus: s.bonusArmies ?? 0,
       }))
 
       this.mapData = { territories, adjacencies, sectors }
