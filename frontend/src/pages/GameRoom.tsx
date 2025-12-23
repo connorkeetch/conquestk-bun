@@ -238,6 +238,7 @@ export default function GameRoom() {
   const lastConquestHandledRef = useRef<string | null>(null)
   const lastBattleSignatureRef = useRef<string | null>(null)
   const forcedPanelZonesRef = useRef<Partial<Record<PanelId, PanelZone>>>({})
+  const roomDetailsFallbackRef = useRef<string | null>(null)
 
   // Drawer resize hooks
   const chatDrawerResize = useDrawerResize({
@@ -840,16 +841,18 @@ export default function GameRoom() {
     let timeoutId: number | null = null
     const POLL_INTERVAL_MS = 10_000
 
+    const pollRoomId = currentRoom.id
+
     const pollRoom = async () => {
       try {
-        const response = await gameService.getRoomDetails(roomId)
+        const response = await gameService.getRoomDetails(pollRoomId)
         if (!cancelled) {
           dispatch(setCurrentRoom(response.room))
         }
       } catch (error) {
         if (!cancelled) {
           logger.warn('Lobby poll failed', {
-            roomId,
+            roomId: pollRoomId,
             error: error instanceof Error ? error.message : error,
           })
         }
@@ -1109,13 +1112,13 @@ export default function GameRoom() {
   // Everyone joins as a player - simplified subscription (no spectator mode for now)
   // This ensures all users get real-time game deltas regardless of membership status
   useEffect(() => {
-    if (!roomId || !currentRoom) return
+    if (!currentRoom?.id) return
 
-    colyseusService.joinRoom(roomId)
+    colyseusService.joinRoom(currentRoom.id)
     return () => {
       colyseusService.leaveRoom()
     }
-  }, [currentRoom?.id, roomId])
+  }, [currentRoom?.id])
 
   useEffect(() => {
     if (!roomId) {
@@ -1135,12 +1138,13 @@ export default function GameRoom() {
       }
     }
 
+    const lookupId = currentRoom?.id ?? roomId
     let isMounted = true
 
     const loadRoomDetails = async () => {
       setIsRoomLoading(true)
       try {
-        const response = await gameService.getRoomDetails(roomId)
+        const response = await gameService.getRoomDetails(lookupId)
         if (!isMounted) {
           return
         }
@@ -1164,6 +1168,10 @@ export default function GameRoom() {
         } else if (error instanceof Error) {
           message = error.message
         }
+        logger.warn('Failed to load room details', {
+          roomId: lookupId,
+          error: error instanceof Error ? error.message : error,
+        })
         setRoomError(message)
       } finally {
         if (isMounted) {
@@ -1178,6 +1186,50 @@ export default function GameRoom() {
       isMounted = false
     }
   }, [currentRoom, dispatch, roomId, navigate])
+
+  useEffect(() => {
+    if (!roomError) {
+      return
+    }
+
+    const fallbackRoomId = currentGame?.roomId
+    if (!fallbackRoomId || fallbackRoomId === roomId || fallbackRoomId === currentRoom?.id) {
+      return
+    }
+
+    if (roomDetailsFallbackRef.current === fallbackRoomId) {
+      return
+    }
+    roomDetailsFallbackRef.current = fallbackRoomId
+
+    let cancelled = false
+
+    const recoverRoomDetails = async () => {
+      try {
+        const response = await gameService.getRoomDetails(fallbackRoomId)
+        if (cancelled) {
+          return
+        }
+        dispatch(setCurrentRoom(response.room))
+        setRoomError(null)
+        const qs = typeof window !== 'undefined' ? window.location.search : ''
+        navigate(`/room/${response.room.id}${qs || ''}`, { replace: true })
+      } catch (error: unknown) {
+        if (!cancelled) {
+          logger.warn('Room details fallback failed', {
+            roomId: fallbackRoomId,
+            error: error instanceof Error ? error.message : error,
+          })
+        }
+      }
+    }
+
+    void recoverRoomDetails()
+
+    return () => {
+      cancelled = true
+    }
+  }, [roomError, currentGame?.roomId, currentRoom?.id, roomId, dispatch, navigate])
 
   useEffect(() => {
     if (isMember) {
