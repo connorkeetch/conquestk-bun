@@ -246,7 +246,8 @@ export class AuthController {
   login = async (req: Request, res: Response) => {
     try {
       // Support both email and identifier fields for backwards compatibility
-      const identifier = req.body.identifier || req.body.email
+      const rawIdentifier = req.body.identifier ?? req.body.email
+      const identifier = typeof rawIdentifier === 'string' ? rawIdentifier.trim() : ''
       const { password } = req.body
 
       if (!identifier) {
@@ -257,11 +258,8 @@ export class AuthController {
         })
       }
 
-      // Check if identifier is email or username
       const isEmail = identifier.includes('@')
-      const user = isEmail
-        ? await this.userService.findByEmail(identifier)
-        : await this.userService.findByUsername(identifier)
+      const user = await this.userService.findByIdentifier(identifier)
 
       if (!user) {
         return res.status(401).json({
