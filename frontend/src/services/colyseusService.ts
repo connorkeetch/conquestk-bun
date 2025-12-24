@@ -208,7 +208,10 @@ class ColyseusService {
    * Join a game room by ID
    */
   async joinRoom(roomId: string): Promise<boolean> {
+    console.log('[Colyseus DEBUG] joinRoom called', { roomId, hasClient: !!this.client, currentRoomId: this.currentRoomId })
+
     if (!this.client) {
+      console.log('[Colyseus DEBUG] No client, calling connect()')
       this.connect()
     }
 
@@ -219,12 +222,14 @@ class ColyseusService {
 
     // Already in this room
     if (this.gameRoom && this.currentRoomId === roomId) {
+      console.log('[Colyseus DEBUG] Already in room, skipping join')
       logger.info('[Colyseus] Already in room', { roomId })
       return true
     }
 
     // Leave current room if different
     if (this.gameRoom) {
+      console.log('[Colyseus DEBUG] Leaving previous room')
       await this.leaveRoom()
     }
 
@@ -242,9 +247,11 @@ class ColyseusService {
         return false
       }
 
+      console.log('[Colyseus DEBUG] Setting status to connecting')
       logger.info('[Colyseus] Joining room', { roomId })
       store.dispatch(setConnectionStatus('connecting'))
 
+      console.log('[Colyseus DEBUG] Calling client.join()')
       // Join existing room by gameId filter
       this.gameRoom = await this.client.join<SchemaGameState>('game', {
         gameId: roomId,
@@ -256,9 +263,11 @@ class ColyseusService {
         ...(typeof currentPlayer?.teamId === 'number' ? { teamId: currentPlayer.teamId } : {}),
       })
 
+      console.log('[Colyseus DEBUG] Join succeeded, setting up listeners')
       this.currentRoomId = roomId
       this.reconnectAttempts = 0
       store.dispatch(setConnectionStatus('connected'))
+      console.log('[Colyseus DEBUG] Status set to connected')
 
       // Setup state listeners
       this.setupRoomListeners()
@@ -269,6 +278,7 @@ class ColyseusService {
       logger.info('[Colyseus] Joined room successfully', { roomId })
       return true
     } catch (error) {
+      console.error('[Colyseus DEBUG] Join failed', { error })
       logger.error('[Colyseus] Failed to join room', { roomId, error })
       store.dispatch(setConnectionStatus('disconnected'))
       store.dispatch(setError(error instanceof Error ? error.message : 'Failed to join room'))
@@ -370,8 +380,11 @@ class ColyseusService {
   private setupRoomListeners(): void {
     if (!this.gameRoom) return
 
+    console.log('[Colyseus DEBUG] Setting up room listeners')
+
     // State change listeners - Colyseus auto-syncs state
     this.gameRoom.onStateChange((state) => {
+      console.log('[Colyseus DEBUG] onStateChange triggered', { version: state.version, phase: state.phase })
       logger.debug('[Colyseus] State changed', { version: state.version })
       this.syncStateToRedux()
     })
@@ -541,9 +554,17 @@ class ColyseusService {
   }
 
   private syncStateToRedux(): void {
-    if (!this.gameRoom?.state) return
+    if (!this.gameRoom?.state) {
+      console.log('[Colyseus DEBUG] syncStateToRedux called but no room state')
+      return
+    }
 
     const state = this.gameRoom.state
+    console.log('[Colyseus DEBUG] Syncing state to Redux', {
+      version: state.version,
+      phase: state.phase,
+      turn: state.turn
+    })
 
     // Convert Colyseus Schema state to Redux-compatible GameState
     const gameState: GameState = {
@@ -567,6 +588,7 @@ class ColyseusService {
     }
 
     store.dispatch(setGameState(gameState))
+    console.log('[Colyseus DEBUG] State synced to Redux')
   }
 
   private convertPlayers(schemaPlayers: Map<string, SchemaPlayer>): GamePlayer[] {
