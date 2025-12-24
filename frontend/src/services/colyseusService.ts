@@ -184,10 +184,10 @@ class ColyseusService {
         ? `wss://${window.location.host}`
         : 'ws://localhost:5001')
 
-    logger.info('[Colyseus] Connecting to server', { wsUrl })
+    logger.info('[Colyseus] Initializing client', { wsUrl })
 
     this.client = new Client(wsUrl)
-    store.dispatch(setConnectionStatus('connecting'))
+    // Note: Don't set connectionStatus here - the actual connection happens in joinRoom()
   }
 
   /**

@@ -60,7 +60,7 @@ const initialState: UIRoomState = {
   attackCommit: 1,
   animationSpeed: 'normal',
   overlays: { sectors: false, attackable: false, threat: false },
-  connectionStatus: 'connected',
+  connectionStatus: 'disconnected',
   conquestOverlay: null,
   optimisticMarkers: {},
   autoAttacking: false,
