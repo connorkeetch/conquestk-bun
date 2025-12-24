@@ -1124,10 +1124,21 @@ export default function GameRoom() {
   // Everyone joins as a player - simplified subscription (no spectator mode for now)
   // This ensures all users get real-time game deltas regardless of membership status
   useEffect(() => {
-    if (!currentRoom?.id) return
+    console.log('[GameRoom DEBUG] Join effect triggered', {
+      hasCurrentRoom: !!currentRoom,
+      currentRoomId: currentRoom?.id,
+      currentRoomStatus: currentRoom?.status
+    })
 
+    if (!currentRoom?.id) {
+      console.log('[GameRoom DEBUG] No currentRoom.id, skipping join')
+      return
+    }
+
+    console.log('[GameRoom DEBUG] Calling colyseusService.joinRoom')
     colyseusService.joinRoom(currentRoom.id)
     return () => {
+      console.log('[GameRoom DEBUG] Cleanup: leaving room')
       colyseusService.leaveRoom()
     }
   }, [currentRoom?.id])

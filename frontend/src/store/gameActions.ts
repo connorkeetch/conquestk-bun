@@ -38,8 +38,18 @@ async function sendOrQueueAction(state: RootState, action: GameAction): Promise<
   const roomId = action.roomId
   const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine
   const isConnected = state.uiRoom.connectionStatus === 'connected'
+  const colyseusConnected = colyseusService.isConnected()
 
-  if (isOnline && isConnected && colyseusService.isConnected()) {
+  console.log('[GameAction DEBUG] sendOrQueueAction', {
+    actionType: action.type,
+    isOnline,
+    connectionStatus: state.uiRoom.connectionStatus,
+    isConnected,
+    colyseusConnected
+  })
+
+  if (isOnline && isConnected && colyseusConnected) {
+    console.log('[GameAction DEBUG] Sending via Colyseus WebSocket')
     // Convert to Colyseus action format
     const colyseusAction = convertToColyseusAction(action)
     if (colyseusAction) {
@@ -48,6 +58,7 @@ async function sendOrQueueAction(state: RootState, action: GameAction): Promise<
     }
   }
 
+  console.log('[GameAction DEBUG] Falling back to HTTP POST')
   // HTTP fallback so service worker can queue when offline
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
