@@ -113,7 +113,11 @@ import {
 } from './debugStartup.js'
 // Middleware imports
 import { bunIpPolyfill } from './middleware/bunIpPolyfill.js'
-import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter.js'
+import {
+  generalApiLimiter,
+  readHeavyLimiter,
+  suspiciousActivityTracker,
+} from './middleware/rateLimiter.js'
 import { createSessionMiddleware, sessionMiddleware } from './middleware/session.js'
 // Room imports
 import { GameRoom } from './rooms/GameRoom.js'
@@ -435,6 +439,12 @@ function configureExpressApp(app: Application) {
   })
 
   // Rate limiting for API routes
+  // Apply lenient rate limiting for read-heavy endpoints (maps, game state, rooms)
+  app.use('/api/maps', readHeavyLimiter)
+  app.use('/api/game', readHeavyLimiter)
+  app.use('/api/games', readHeavyLimiter)
+
+  // Apply general rate limiting to all other API routes
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     if (req.path === '/admin/status') {
       return next()
