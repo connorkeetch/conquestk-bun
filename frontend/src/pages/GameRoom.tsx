@@ -239,6 +239,10 @@ export default function GameRoom() {
   const lastBattleSignatureRef = useRef<string | null>(null)
   const forcedPanelZonesRef = useRef<Partial<Record<PanelId, PanelZone>>>({})
   const roomDetailsFallbackRef = useRef<string | null>(null)
+  const mapFetchCacheRef = useRef<{ mapId: string | null; inFlight: boolean }>({
+    mapId: null,
+    inFlight: false,
+  })
 
   // Drawer resize hooks
   const chatDrawerResize = useDrawerResize({
@@ -780,9 +784,16 @@ export default function GameRoom() {
       setMapPreview(null)
       setMapPreviewError(null)
       setMapPreviewLoading(false)
+      mapFetchCacheRef.current = { mapId: null, inFlight: false }
       return undefined
     }
 
+    // Skip if already fetching this map or if it's the same map we just fetched
+    if (mapFetchCacheRef.current.inFlight && mapFetchCacheRef.current.mapId === mapId) {
+      return undefined
+    }
+
+    mapFetchCacheRef.current = { mapId, inFlight: true }
     setMapPreviewLoading(true)
     setMapPreviewError(null)
 
@@ -812,6 +823,7 @@ export default function GameRoom() {
       } finally {
         if (isActive) {
           setMapPreviewLoading(false)
+          mapFetchCacheRef.current.inFlight = false
         }
       }
     }

@@ -202,17 +202,33 @@ export const mapUploadLimiter = rateLimit({
 
 /**
  * General API rate limiter
- * 100 requests per minute for general endpoints
+ * 300 requests per minute for general endpoints
+ * Increased from 100 to accommodate read-heavy operations (maps, rooms, game state)
  */
 const generalApiStore = createRateLimitStore('general-api')
 export const generalApiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
+  max: 300, // 300 requests per minute
   message: 'Too many requests, please slow down.',
   standardHeaders: true,
   legacyHeaders: false,
   skipFailedRequests: false,
   ...(generalApiStore ? { store: generalApiStore } : {}),
+})
+
+/**
+ * Lenient rate limiter for read-heavy game/map endpoints
+ * 500 requests per minute per IP
+ */
+const readHeavyStore = createRateLimitStore('read-heavy')
+export const readHeavyLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 500, // 500 requests per minute
+  message: 'Too many requests, please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipFailedRequests: false,
+  ...(readHeavyStore ? { store: readHeavyStore } : {}),
 })
 
 /**
