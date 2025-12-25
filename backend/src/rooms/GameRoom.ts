@@ -125,18 +125,38 @@ export class GameRoom extends Room<GameState> {
   async onAuth(client: Client, options: JoinOptions): Promise<ClientUserData> {
     // TODO: Validate JWT token
     // For now, trust the provided userId
-    logger.info('Client authenticating', { oderId: options.oderId })
+    logger.info('Client authenticating', {
+      oderId: options.oderId,
+      username: options.username,
+      hasToken: !!options.token
+    })
 
-    return {
+    if (!options.oderId || !options.username) {
+      logger.error('Missing required auth fields', { options })
+      throw new Error('Missing oderId or username')
+    }
+
+    const userData: ClientUserData = {
       playerId: options.oderId,
       username: options.username,
       isSpectator: options.spectate || false,
       isHost: this.state.players.size === 0, // First player is host
     }
+
+    logger.info('Auth successful, returning userData', { userData })
+    return userData
   }
 
   onJoin(client: Client, options: JoinOptions) {
     const userData = client.userData as ClientUserData
+
+    if (!userData) {
+      logger.error('Client userData is undefined in onJoin', { clientId: client.sessionId, options })
+      client.send('error', { message: 'Authentication failed' })
+      client.leave()
+      return
+    }
+
     logger.info('Client joined', {
       playerId: userData.playerId,
       username: userData.username,
