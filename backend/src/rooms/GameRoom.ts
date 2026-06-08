@@ -13,12 +13,16 @@ import { computeChecksum } from '@conquestk/shared/lockstep'
 import { type Client, Room } from 'colyseus'
 import { query } from '../config/database.js'
 import { GameEngine } from '../game/gameEngine.js'
+import { gameStateCache } from '../services/cacheService.js'
+import { GameService } from '../services/gameService.js'
 import { mapService } from '../services/mapService.js'
 import type {
+  GameAction as EngineGameAction,
   GameState as EngineGameState,
   Territory as EngineTerritory,
   GameConfiguration,
 } from '../types/game.js'
+import { verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 import { BattleResult, GameState, Player, Territory } from './schemas/index.js'
 import { applyEngineStateToSchema, engineBattleResultToSchema } from './utils/stateConverter.js'
@@ -68,11 +72,30 @@ export class GameRoom extends Room<GameState> {
   // Game engine for processing actions (deterministic, stateless)
   private engine: GameEngine = new GameEngine()
 
+  // Authoritative gameplay service. handleAction() is the single WS entry point for
+  // gameplay and delegates the read-modify-write to gameService.processGameAction
+  // (cache → validate → engine → persist cache+DB → bump version), reusing the proven
+  // REST/cache logic instead of duplicating engine ownership in the room. The in-room
+  // engineState/processAction/persistFrame path below is legacy/dormant pending the
+  // later schema-driven cutover (it is only reached by the unused 'start-game'/AI/timeout
+  // paths today). GameService is stateless — it operates on roomId/userId/action.
+  private gameService = new GameService()
+
+  // Serializes authoritative action processing per room. Colyseus onMessage handlers
+  // are async and interleave at await points, so two rapid actions could both read
+  // version N from the cache and both write N+1 (lost update). Chaining every
+  // processGameAction through this promise guarantees one-at-a-time read-modify-write.
+  private actionQueue: Promise<unknown> = Promise.resolve()
+
   // Current engine state (kept in sync with schema state)
   private engineState: EngineGameState | null = null
 
   // Frame sequence for replay persistence
   private frameSeq: number = 0
+
+  // Last authoritative (REST/cache) state version we broadcast a nudge for.
+  // -1 = not yet seeded. See broadcastStateChangeIfAdvanced().
+  private lastBroadcastCacheVersion: number = -1
 
   // AI processing throttle
   private lastAiActionTime: number = 0
@@ -123,27 +146,49 @@ export class GameRoom extends Room<GameState> {
   }
 
   async onAuth(client: Client, options: JoinOptions): Promise<ClientUserData> {
-    // TODO: Validate JWT token
-    // For now, trust the provided userId
-    logger.info('Client authenticating', {
-      oderId: options.oderId,
-      username: options.username,
-      hasToken: !!options.token
-    })
+    // Verify the JWT and derive identity FROM the verified token — NEVER trust the
+    // client-supplied options.oderId. The room and its 'action' handler are registered
+    // unconditionally (server.ts), and handleAction now delegates to the authoritative
+    // gameService.processGameAction, so without this a non-browser WS client could join
+    // with a spoofed oderId and commit moves as whichever player's turn it is
+    // (COLYSEUS_AUTHORITATIVE only gates the legitimate browser's SEND, not this server
+    // handler). JWT verification + the engine's currentPlayer check together close that
+    // hole: an action only commits for the verified user, and only on their own turn.
+    let verifiedUserId: string
+    try {
+      const { payload } = verifyJwtWithAnySecret<{ userId?: string }>(options.token ?? '')
+      if (!payload || typeof payload.userId !== 'string' || !payload.userId) {
+        throw new Error('Invalid token payload')
+      }
+      verifiedUserId = payload.userId
+    } catch (error) {
+      logger.warn('GameRoom auth rejected: invalid or missing token', {
+        hasToken: !!options.token,
+        error: error instanceof Error ? error.message : error,
+      })
+      throw new Error('Authentication required')
+    }
 
-    if (!options.oderId || !options.username) {
-      logger.error('Missing required auth fields', { options })
-      throw new Error('Missing oderId or username')
+    if (!options.username) {
+      throw new Error('Missing username')
     }
 
     const userData: ClientUserData = {
-      playerId: options.oderId,
+      playerId: verifiedUserId,
       username: options.username,
       isSpectator: options.spectate || false,
       isHost: this.state.players.size === 0, // First player is host
     }
 
-    logger.info('Auth successful, returning userData', { userData })
+    // Colyseus assigns the onAuth return value to `client.auth`, NOT `client.userData`
+    // (see @colyseus/core Room.js: `client.auth = await this.onAuth(...)`). onJoin,
+    // onLeave and handleAction all read `client.userData`, so we must populate it
+    // explicitly here — otherwise every join fails with "Client userData is undefined
+    // in onJoin" and the client is kicked (ServerError 1000). This is required for the
+    // authoritative room to accept players at all.
+    client.userData = userData
+
+    logger.info('Auth successful', { userData })
     return userData
   }
 
@@ -239,7 +284,36 @@ export class GameRoom extends Room<GameState> {
     this.broadcast('player-disconnected', { oderId: userData.playerId })
   }
 
-  private async handleAction(client: Client, action: GameAction) {
+  /**
+   * Serialize a unit of authoritative work so concurrent WS messages can't interleave
+   * a cache read-modify-write. Each task waits for the previous to settle; the returned
+   * promise carries the task's real result/rejection, while the internal chain tail is
+   * kept non-rejecting so one failure doesn't poison subsequent actions.
+   */
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.actionQueue.then(() => task())
+    this.actionQueue = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
+  }
+
+  /**
+   * Authoritative WS gameplay entry point (the 'action' message). The room is the
+   * single authoritative writer: it normalizes identity server-side (never trusting the
+   * client's roomId/playerId), delegates the state mutation to the proven, HTTP-free
+   * gameService.processGameAction, and on commit immediately broadcasts a 'state:changed'
+   * nudge so every client refetches the fog-redacted board via REST (no manual refresh,
+   * no 1s tick latency, no fog leak). Turn-ownership is enforced authoritatively inside
+   * processGameAction.isValidAction against the cached state — NOT against the schema's
+   * currentPlayerId, which is not advanced on this delegating path.
+   *
+   * Note: while COLYSEUS_AUTHORITATIVE is false on the client, no browser sends this
+   * message, so this handler is dormant in production; it is exercised by the headless
+   * prototype and becomes live at the gated flip.
+   */
+  private async handleAction(client: Client, action: EngineGameAction) {
     const userData = client.userData as ClientUserData
     const playerId = userData.playerId
 
@@ -249,32 +323,40 @@ export class GameRoom extends Room<GameState> {
       return
     }
 
-    // Validate it's this player's turn (except for certain actions)
-    if (this.state.currentPlayerId !== playerId) {
-      const allowedOffTurn = ['resign']
-      if (!allowedOffTurn.includes(action.type)) {
-        client.send('error', { message: 'Not your turn' })
-        return
-      }
+    if (!this.state.roomId) {
+      client.send('error', { message: 'Game not ready' })
+      return
     }
 
-    // Process the action
+    // Server-authoritative identity: ignore any roomId/playerId the client supplied.
+    const normalized = {
+      ...action,
+      roomId: this.state.roomId,
+      playerId,
+    } as EngineGameAction
+
     try {
-      const result = await this.processAction(playerId, action)
+      const updated = await this.enqueue(() =>
+        this.gameService.processGameAction(normalized, playerId),
+      )
 
-      if (!result.success) {
-        client.send('error', { message: result.error })
-        return
+      // Push the live-update nudge immediately on commit. Record the version we just
+      // broadcast so the tick-poll fallback (broadcastStateChangeIfAdvanced) doesn't
+      // emit a duplicate nudge for the same advance.
+      const version = typeof updated.version === 'number' ? updated.version : undefined
+      if (typeof version === 'number' && version > this.lastBroadcastCacheVersion) {
+        this.lastBroadcastCacheVersion = version
       }
+      this.broadcast('state:changed', version !== undefined ? { version } : {})
 
-      // Acknowledge action (frame persistence already done in processAction)
-      client.send('action-ack', {
-        seq: this.frameSeq,
-        success: true,
-        version: this.state.version,
-      })
+      client.send('action-ack', { success: true, version })
     } catch (error) {
-      logger.error('Action processing error', { error, action, playerId })
+      logger.warn('WS action failed', {
+        roomId: this.state.roomId,
+        playerId,
+        actionType: (action as { type?: string })?.type,
+        error: error instanceof Error ? error.message : error,
+      })
       client.send('error', {
         message: error instanceof Error ? error.message : 'Action failed',
       })
@@ -573,6 +655,12 @@ export class GameRoom extends Room<GameState> {
   }
 
   private tick() {
+    // Live-update bridge: while gameplay still runs on the REST/cache engine, nudge
+    // all joined clients to refetch whenever the authoritative cache state advances.
+    // Runs regardless of this room's own (currently uninitialized) phase, which is
+    // why it precedes the lobby/finished early-return below.
+    void this.broadcastStateChangeIfAdvanced()
+
     if (this.state.phase === 'finished' || this.state.phase === 'lobby') {
       return
     }
@@ -586,6 +674,42 @@ export class GameRoom extends Room<GameState> {
     const currentPlayer = this.state.players.get(this.state.currentPlayerId)
     if (currentPlayer?.isAi) {
       this.processAiTurn(currentPlayer)
+    }
+  }
+
+  /**
+   * Poll the authoritative game-state cache (written by the REST action path) and
+   * broadcast a 'state:changed' nudge to all joined clients when its version
+   * advances. Clients respond by refetching via fetchGameState — giving real-time
+   * updates without a manual refresh, while gameplay stays on the proven REST/cache
+   * engine. The first observation only seeds the baseline (no broadcast); clients
+   * load initial state via their own fetchGameState on mount.
+   */
+  private async broadcastStateChangeIfAdvanced(): Promise<void> {
+    if (!this.state.roomId) return
+    try {
+      const cached = await gameStateCache.getGameState<{ version?: number }>(this.state.roomId)
+      const version = cached?.version
+      if (typeof version !== 'number') return
+
+      // Broadcast on ANY advance above the highest version we've already nudged for —
+      // including the FIRST observation after room (re)creation. The previous code
+      // treated the first observation as "seed only, don't broadcast", which swallowed
+      // the nudge for a client that mounted (and fetched vN) just before an action
+      // advanced the cache to vN+1, leaving it on stale state until the next advance.
+      // `lastBroadcastCacheVersion` is a best-effort, monotonic de-dup hint shared with
+      // handleAction; it is intentionally NOT routed through the action queue, so the
+      // worst case under interleaving is one redundant (idempotent) nudge — never a
+      // missed nudge or lost state (the poll never writes game state).
+      if (version > this.lastBroadcastCacheVersion) {
+        this.lastBroadcastCacheVersion = version
+        this.broadcast('state:changed', { version })
+      }
+    } catch (error) {
+      logger.debug('State-change nudge poll failed', {
+        roomId: this.state.roomId,
+        error: error instanceof Error ? error.message : error,
+      })
     }
   }
 

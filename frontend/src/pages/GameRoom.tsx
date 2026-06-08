@@ -1124,24 +1124,22 @@ export default function GameRoom() {
   // Everyone joins as a player - simplified subscription (no spectator mode for now)
   // This ensures all users get real-time game deltas regardless of membership status
   useEffect(() => {
-    console.log('[GameRoom DEBUG] Join effect triggered', {
-      hasCurrentRoom: !!currentRoom,
-      currentRoomId: currentRoom?.id,
-      currentRoomStatus: currentRoom?.status
-    })
-
     if (!currentRoom?.id) {
-      console.log('[GameRoom DEBUG] No currentRoom.id, skipping join')
+      return
+    }
+    // Wait until auth is hydrated before joining: colyseusService.joinRoom needs
+    // user.id/username for the Colyseus seat reservation. If we join before auth
+    // is ready it bails (and the server's onAuth rejects empty credentials),
+    // surfacing as a spurious "disconnected". Re-runs once user?.id is populated.
+    if (!user?.id) {
       return
     }
 
-    console.log('[GameRoom DEBUG] Calling colyseusService.joinRoom')
     colyseusService.joinRoom(currentRoom.id)
     return () => {
-      console.log('[GameRoom DEBUG] Cleanup: leaving room')
       colyseusService.leaveRoom()
     }
-  }, [currentRoom?.id])
+  }, [currentRoom?.id, user?.id])
 
   useEffect(() => {
     if (!roomId) {
@@ -1193,7 +1191,7 @@ export default function GameRoom() {
           message = error.message
         }
         logger.warn('Failed to load room details', {
-          roomId: lookupId,
+          roomId,
           error: error instanceof Error ? error.message : error,
         })
         setRoomError(message)

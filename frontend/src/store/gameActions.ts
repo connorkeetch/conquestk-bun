@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from 'react-hot-toast'
 import { API_URL } from '@/config'
-import { type GameAction as ColyseusAction, colyseusService } from '@/services/colyseusService'
+import { colyseusService } from '@/services/colyseusService'
 import { computeBoardReinforcements } from '@/utils/reinforcements'
 import type { GameState, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
@@ -32,34 +32,60 @@ type UndoFortifyAction = {
 export type GameAction = SharedGameAction | TransferConquestAction | UndoFortifyAction
 // end imports
 
-// Unified action emitter: routes game actions over Colyseus when connected,
-// or POSTs to the HTTP fallback when offline/disconnected.
-async function sendOrQueueAction(state: RootState, action: GameAction): Promise<void> {
-  const roomId = action.roomId
+// During the Colyseus migration, gameplay actions stay on the proven REST/cache
+// engine (gameService + gameStateCache). The Colyseus room is currently a
+// live-update notification channel: the server broadcasts a 'state:changed' nudge
+// when the cache advances and clients refetch via fetchGameState — it is NOT yet
+// the authoritative engine (its in-room engineState is not initialized for games
+// started via REST). Flip this to true only once the room owns and processes game
+// state end-to-end (full cutover). Routing actions to the room before then makes
+// them fail with "Game not initialized" / "no rooms found".
+const COLYSEUS_AUTHORITATIVE = false
+
+// Send a gameplay action. POST failures are surfaced (not silently swallowed) so a
+// rejected move is visible; genuine offline is left to the service worker queue.
+async function postAction(url: string, body: unknown, headers: Record<string, string>) {
   const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine
-  const isConnected = state.uiRoom.connectionStatus === 'connected'
-  const colyseusConnected = colyseusService.isConnected()
-
-  console.log('[GameAction DEBUG] sendOrQueueAction', {
-    actionType: action.type,
-    isOnline,
-    connectionStatus: state.uiRoom.connectionStatus,
-    isConnected,
-    colyseusConnected
-  })
-
-  if (isOnline && isConnected && colyseusConnected) {
-    console.log('[GameAction DEBUG] Sending via Colyseus WebSocket')
-    // Convert to Colyseus action format
-    const colyseusAction = convertToColyseusAction(action)
-    if (colyseusAction) {
-      colyseusService.sendGameAction(colyseusAction)
-      return
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+    if (!res.ok) {
+      let message = `Action failed (${res.status})`
+      try {
+        const data = (await res.json()) as { message?: string; error?: string }
+        message = data.message || data.error || message
+      } catch {
+        /* non-JSON error body */
+      }
+      toast.error(message)
+    }
+  } catch {
+    // Network-level failure: if we're offline the service worker will queue it;
+    // otherwise surface it so the move isn't silently lost.
+    if (isOnline) {
+      toast.error('Could not reach the game server')
     }
   }
+}
 
-  console.log('[GameAction DEBUG] Falling back to HTTP POST')
-  // HTTP fallback so service worker can queue when offline
+// Unified action emitter. See COLYSEUS_AUTHORITATIVE above for the transitional
+// routing: today everything goes over HTTP to the authoritative cache engine.
+async function sendOrQueueAction(state: RootState, action: GameAction): Promise<void> {
+  const roomId = action.roomId
+
+  if (
+    COLYSEUS_AUTHORITATIVE &&
+    (typeof navigator === 'undefined' ? true : navigator.onLine) &&
+    state.uiRoom.connectionStatus === 'connected' &&
+    colyseusService.isConnected()
+  ) {
+    // Send the canonical action verbatim — the authoritative GameRoom forwards it to
+    // gameService.processGameAction and normalizes identity server-side. No lossy
+    // flat-shape translation (that old converter dropped/garbled attack dice,
+    // trade_cards, transfer_conquest, and resign).
+    colyseusService.sendGameAction(action)
+    return
+  }
+
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token && token !== 'null' && token !== 'undefined') headers.Authorization = `Bearer ${token}`
@@ -70,61 +96,15 @@ async function sendOrQueueAction(state: RootState, action: GameAction): Promise<
       toTerritoryId: string
       armies: number
     }
-    await fetch(`${API_URL}/game/rooms/${roomId}/transfer-conquest`, {
-      method: 'POST',
+    await postAction(
+      `${API_URL}/game/rooms/${roomId}/transfer-conquest`,
+      { fromTerritoryId, toTerritoryId, armies },
       headers,
-      body: JSON.stringify({ fromTerritoryId, toTerritoryId, armies }),
-    }).catch(() => {
-      /* offline fallback handled by service worker */
-    })
+    )
     return
   }
 
-  await fetch(`${API_URL}/game/rooms/${roomId}/actions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ action }),
-  }).catch(() => {
-    /* offline fallback handled by service worker */
-  })
-}
-
-// Convert internal GameAction to Colyseus action format
-function convertToColyseusAction(action: GameAction): ColyseusAction | null {
-  switch (action.type) {
-    case 'deploy':
-      return {
-        type: 'deploy',
-        territoryId: action.payload.territoryId,
-        armies: action.payload.armies,
-      }
-    case 'attack':
-      return {
-        type: 'attack',
-        from: action.payload.fromTerritoryId,
-        to: action.payload.toTerritoryId,
-        dice: action.payload.armies ?? 3,
-      }
-    case 'fortify':
-      return {
-        type: 'fortify',
-        from: action.payload.fromTerritoryId,
-        to: action.payload.toTerritoryId,
-        armies: action.payload.armies,
-      }
-    case 'end_turn':
-      return { type: 'end_turn' }
-    case 'trade_cards':
-      return { type: 'trade_cards', cardIds: action.payload?.cards ?? [] }
-    case 'transfer_conquest':
-      return { type: 'transfer_conquest', armies: (action.payload as { armies: number }).armies }
-    case 'undo_fortify':
-      return { type: 'undo_fortify' }
-    case 'go_back_to_reinforcement':
-      return { type: 'go_back_to_reinforcement' }
-    default:
-      return null
-  }
+  await postAction(`${API_URL}/game/rooms/${roomId}/actions`, { action }, headers)
 }
 
 // Async thunk for handling territory clicks based on game phase

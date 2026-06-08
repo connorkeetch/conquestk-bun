@@ -500,9 +500,23 @@ const gameSlice = createSlice({
       .addCase(fetchGameState.fulfilled, (state, action) => {
         state.isLoading = false
         const payload = action.payload
+        const resolvedRoomId = payload.roomId ?? action.meta.arg.roomId
+        // Drop stale out-of-order responses: the 'state:changed' nudge can trigger
+        // overlapping fetchGameState requests (e.g. rapid actions) that resolve out of
+        // order. Redux Toolkit doesn't cancel a superseded request, so without this an
+        // older response could clobber a newer board, flickering it backward. version is
+        // monotonic (the engine bumps it per action). Only guard within the same room.
+        if (
+          typeof payload.version === 'number' &&
+          typeof state.currentGame?.version === 'number' &&
+          payload.version < state.currentGame.version &&
+          state.currentGame.roomId === resolvedRoomId
+        ) {
+          return
+        }
         state.currentGame = {
           ...payload,
-          roomId: payload.roomId ?? action.meta.arg.roomId,
+          roomId: resolvedRoomId,
         }
         state.gameResult = mergeGameResult(state.currentGame, null)
         if (payload.phase === 'reinforcement') {

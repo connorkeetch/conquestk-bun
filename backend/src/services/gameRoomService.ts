@@ -957,7 +957,12 @@ export class GameRoomService {
     }
     const room = this.mapRoomRow(row)
 
-    if (room.status === 'lobby' || room.status === 'initializing') {
+    // Ensure a Colyseus room exists for any non-terminal game, not just lobbies.
+    // Active/paused games also need a live room so clients can join (client.join
+    // throws "no rooms found" otherwise) and receive 'state:changed' nudges. This
+    // is also the rehydration hook after a server restart, which destroys the
+    // in-memory room while the game_rooms row persists.
+    if (room.status !== 'completed' && room.status !== 'abandoned') {
       const mapId = room.mapId ?? undefined
       if (mapId) {
         await ensureColyseusLobbyRoom({
