@@ -29,6 +29,8 @@ export interface GameLogEntry {
 export interface GameRoomEvents {
   'player-joined': { oderId: string; username: string; color?: string }
   'player-left': { oderId: string; username: string }
+  'player-disconnected': { oderId: string }
+  'player-reconnected': { oderId: string }
   'lifecycle:update': LifecycleUpdatePayload
   ratingUpdate: { oderId: string; oldRating: number; newRating: number; ratingChange: number }
   'game-log:append': GameLogEntry
@@ -42,7 +44,12 @@ type EventMap = Map<string, Set<EventCallback<unknown>>>
 
 // Connection settings
 const RECONNECT_DELAY_MS = 1000
-const MAX_RECONNECT_ATTEMPTS = 5
+const RECONNECT_MAX_DELAY_MS = 3000
+// Capped backoff sums to ~33s (1+2+3 + 3×9), comfortably covering the server's default
+// reconnection grace window (RECONNECT_WINDOW_SECONDS = 30s) so the client keeps trying a
+// true reconnect for as long as the held seat is recoverable. Keep these in rough sync if
+// the server window changes.
+const MAX_RECONNECT_ATTEMPTS = 12
 
 // Canonical engine action shape, sent verbatim over the 'action' message to the
 // authoritative GameRoom (which forwards it to gameService.processGameAction). This is
@@ -135,6 +142,13 @@ class ColyseusService {
   private gameRoom: Room<SchemaGameState> | null = null
   private reconnectAttempts = 0
   private currentRoomId: string | null = null
+  // Captured after each successful (re)connect; lets a dropped client resume its seat
+  // via client.reconnect() instead of a fresh join. Survives onLeave (which nulls
+  // gameRoom/currentRoomId) so it's available during the reconnect attempt.
+  private reconnectionToken: string | null = null
+  // Handle for the pending reconnect attempt, so an intentional teardown (leaveRoom/
+  // disconnect) can cancel it before it resurrects the connection.
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private eventListeners: EventMap = new Map()
 
   /**
@@ -193,6 +207,7 @@ class ColyseusService {
    * Disconnect from all rooms and cleanup
    */
   disconnect(): void {
+    this.cancelReconnect()
     if (this.gameRoom) {
       this.gameRoom.leave()
       this.gameRoom = null
@@ -201,6 +216,21 @@ class ColyseusService {
     this.currentRoomId = null
     store.dispatch(setConnectionStatus('disconnected'))
     logger.info('[Colyseus] Disconnected')
+  }
+
+  /**
+   * Cancel any pending reconnect attempt and clear reconnect state. Called on intentional
+   * teardown so a queued doReconnect can't resurrect a connection the user is leaving —
+   * onLeave (unexpected drop) nulls gameRoom and schedules a reconnect timer, which a
+   * gameRoom-guarded teardown would otherwise miss.
+   */
+  private cancelReconnect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+    this.reconnectionToken = null
+    this.reconnectAttempts = 0
   }
 
   /**
@@ -264,16 +294,8 @@ class ColyseusService {
       })
 
       console.log('[Colyseus DEBUG] Join succeeded, setting up listeners')
-      this.currentRoomId = roomId
-      this.reconnectAttempts = 0
-      store.dispatch(setConnectionStatus('connected'))
+      this.afterConnected(roomId)
       console.log('[Colyseus DEBUG] Status set to connected')
-
-      // Setup state listeners
-      this.setupRoomListeners()
-
-      // Initial state sync
-      this.syncStateToRedux()
 
       logger.info('[Colyseus] Joined room successfully', { roomId })
       return true
@@ -293,6 +315,11 @@ class ColyseusService {
    * Leave the current room
    */
   async leaveRoom(): Promise<void> {
+    // Cancel any pending reconnect FIRST, outside the gameRoom guard: after an unexpected
+    // drop, onLeave has already nulled gameRoom and queued a reconnect timer, so a
+    // gameRoom-guarded teardown would miss it and a stale doReconnect could rejoin the
+    // room the user is intentionally leaving.
+    this.cancelReconnect()
     if (this.gameRoom) {
       logger.info('[Colyseus] Leaving room', { roomId: this.currentRoomId })
       await this.gameRoom.leave()
@@ -473,6 +500,16 @@ class ColyseusService {
     this.gameRoom.onMessage('player-eliminated', (data: { oderId: string; reason: string }) => {
       logger.info('[Colyseus] Player eliminated', { oderId: data.oderId, reason: data.reason })
       audioService.playEffect('eliminated')
+    })
+
+    this.gameRoom.onMessage('player-disconnected', (data: { oderId: string }) => {
+      logger.info('[Colyseus] Player disconnected', { oderId: data.oderId })
+      this.emitEvent('player-disconnected', data)
+    })
+
+    this.gameRoom.onMessage('player-reconnected', (data: { oderId: string }) => {
+      logger.info('[Colyseus] Player reconnected', { oderId: data.oderId })
+      this.emitEvent('player-reconnected', data)
     })
 
     this.gameRoom.onMessage('game-started', () => {
@@ -687,6 +724,7 @@ class ColyseusService {
   private attemptReconnect(roomId: string): void {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       logger.error('[Colyseus] Max reconnect attempts reached')
+      this.reconnectionToken = null
       if (this.shouldSurfaceConnectionIssues()) {
         toast.error('Lost connection to game server')
       }
@@ -694,16 +732,70 @@ class ColyseusService {
     }
 
     this.reconnectAttempts++
-    const delay = RECONNECT_DELAY_MS * this.reconnectAttempts
+    // Capped backoff so the cumulative budget covers the server's reconnection grace
+    // window (see MAX_RECONNECT_ATTEMPTS); we keep retrying a true reconnect until then.
+    const delay = Math.min(RECONNECT_DELAY_MS * this.reconnectAttempts, RECONNECT_MAX_DELAY_MS)
 
     logger.info('[Colyseus] Attempting reconnect', {
       attempt: this.reconnectAttempts,
       delay,
     })
 
-    setTimeout(() => {
-      this.joinRoom(roomId)
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
+      void this.doReconnect(roomId)
     }, delay)
+  }
+
+  /**
+   * Wire up a freshly (re)connected room: capture the reconnection token, reset
+   * reconnect bookkeeping, mark connected, and attach listeners + initial state sync.
+   * Shared by joinRoom and doReconnect.
+   */
+  private afterConnected(roomId: string): void {
+    if (!this.gameRoom) return
+    this.currentRoomId = roomId
+    this.reconnectAttempts = 0
+    this.reconnectionToken = this.gameRoom.reconnectionToken
+    store.dispatch(setConnectionStatus('connected'))
+    this.setupRoomListeners()
+    this.syncStateToRedux()
+  }
+
+  /**
+   * Reconnect after an unexpected drop. Prefer a true Colyseus reconnection —
+   * client.reconnect(reconnectionToken) resumes the reserved seat within the server's
+   * allowReconnection grace window, preserving turn/timer state and skipping a fresh
+   * onAuth/onJoin (which could race or re-seat). Fall back to a fresh join if the token
+   * is gone or the grace window has already elapsed.
+   */
+  private async doReconnect(roomId: string): Promise<void> {
+    if (this.client && this.reconnectionToken) {
+      try {
+        store.dispatch(setConnectionStatus('connecting'))
+        this.gameRoom = await this.client.reconnect<SchemaGameState>(this.reconnectionToken)
+        this.afterConnected(roomId)
+        logger.info('[Colyseus] Reconnected to room', { roomId })
+        return
+      } catch (error) {
+        logger.warn('[Colyseus] reconnect() attempt failed', {
+          attempt: this.reconnectAttempts,
+          error: error instanceof Error ? error.message : error,
+        })
+        // Keep the token and retry on the next scheduled attempt. A single transient
+        // matchmake error must NOT orphan a still-held seat with a fresh join (which
+        // creates a NEW seat and leaves the server's allowReconnection pending until it
+        // times out). Only after exhausting the budget — by which point the seat is
+        // surely released — do we fall back to a fresh join.
+        if (this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          this.attemptReconnect(roomId)
+          return
+        }
+        this.reconnectionToken = null
+      }
+    }
+    // Last resort: no token, or the grace window is spent → a fresh join.
+    await this.joinRoom(roomId)
   }
 
   private shouldSurfaceConnectionIssues(): boolean {
