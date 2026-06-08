@@ -2,8 +2,8 @@
  * ConquestK Server - Colyseus + Bun
  *
  * Single entry point that combines:
- * - Colyseus WebSocket server for real-time game rooms
- * - Express-compatible REST API routes via BunWebSockets transport
+ * - Colyseus WebSocket server (@colyseus/ws-transport) for real-time game rooms
+ * - Express REST API on Bun's native node:http (shared port with Colyseus)
  * - All middleware (CORS, helmet, session, rate limiting, etc.)
  */
 
@@ -89,9 +89,9 @@ try {
   logger.warn('Could not log JWT secret fingerprints', { error: (e as Error)?.message })
 }
 
-import { BunWebSockets } from '@colyseus/bun-websockets'
 import { RedisDriver } from '@colyseus/redis-driver'
 import { RedisPresence } from '@colyseus/redis-presence'
+import { WebSocketTransport } from '@colyseus/ws-transport'
 // Utility imports
 import { setEngine as setOddsEngine, setLogger as setOddsLogger } from '@conquestk/shared/odds'
 // Colyseus imports
@@ -101,6 +101,7 @@ import cors from 'cors'
 import type { Application, NextFunction, Request, Response } from 'express'
 import express from 'express'
 import helmet from 'helmet'
+import { createServer } from 'node:http'
 // Config imports
 import { getPool, initDatabase } from './config/database.js'
 import type { RedisClients } from './config/redis.js'
@@ -352,7 +353,9 @@ function configureExpressApp(app: Application) {
   // Trust proxy for Railway deployment
   app.set('trust proxy', 1)
 
-  // Polyfill req.ip for Bun runtime (bun-serve-express doesn't implement it)
+  // Resolve the real client IP from proxy headers (Cloudflare cf-connecting-ip /
+  // x-forwarded-for) — more reliable behind Cloudflare+Railway than Express's
+  // trust-proxy chain. Must run before rate-limiting and audit logging.
   app.use(bunIpPolyfill)
 
   // Canonical host redirect in production
@@ -679,13 +682,23 @@ function configureExpressApp(app: Application) {
         })
       })
 
-      // Handle all other routes for React Router
+      // Handle all other routes for React Router.
+      // IMPORTANT: only serve the SPA shell for GET/HEAD navigations, and never
+      // for Colyseus HTTP endpoints. The matchmaking seat-reservation request is
+      // POST /matchmake/<method>/<room>; if it falls through to here it gets
+      // index.html (200, text/html), and colyseus.js then reads `response.room.name`
+      // on parsed HTML and throws "Cannot read properties of undefined (reading 'name')"
+      // — surfacing as the persistent "Lost connection to game server" banner.
       app.use((req: Request, res: Response, next: NextFunction) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          return next()
+        }
         if (
           req.path.startsWith('/api') ||
           req.path.startsWith('/assets') ||
           req.path.startsWith('/uploads') ||
-          req.path.startsWith('/colyseus')
+          req.path.startsWith('/colyseus') ||
+          req.path.startsWith('/matchmake')
         ) {
           return next()
         }
@@ -783,7 +796,7 @@ async function getHealthData() {
   }
 }
 
-// Create Colyseus server with Bun transport
+// Create Colyseus server (ws-transport + Express on Bun's native node:http)
 async function createGameServer() {
   // Configure Redis for multi-instance scaling if available
   let presence: RedisPresence | undefined
@@ -799,8 +812,24 @@ async function createGameServer() {
     }
   }
 
-  // BunWebSockets handles Bun.serve() internally
-  const transport = new BunWebSockets({})
+  // Real Express on Bun's native node:http (replaces the fragile bun-serve-express
+  // shim that @colyseus/bun-websockets required). Ordering matters: create the HTTP
+  // server with `app` as its request listener BEFORE `new Server({ transport })`,
+  // so Colyseus's attachMatchMakingRoutes() captures and wraps the Express listener
+  // and intercepts POST /matchmake itself before Express ever sees it — which makes
+  // the old "SPA catch-all swallows /matchmake" failure structurally impossible.
+  const app: Application = express()
+  configureExpressApp(app)
+  const httpServer = createServer(app)
+  // maxPayload: @colyseus/ws-transport's source defaults this to 4KB and passes it
+  // to the `ws` WebSocketServer, where Node's `ws` would 1009-close any larger frame
+  // — fatal for board/schema syncs, which exceed 4KB. Verified empirically that
+  // Bun's built-in `ws` shim IGNORES maxPayload entirely (a 2MB frame round-trips
+  // even with a 1MB cap), so this is INERT on Bun today. We still set 1MB explicitly
+  // because (a) it's the correct value if this ever runs on Node's real `ws` (the
+  // 4KB default would silently break syncs) and (b) it documents intent. Do not rely
+  // on it as an abuse ceiling on Bun — Bun.serve's own ~16MB frame limit applies there.
+  const transport = new WebSocketTransport({ server: httpServer, maxPayload: 1024 * 1024 })
 
   const gameServer = new Server({
     presence,
@@ -812,12 +841,7 @@ async function createGameServer() {
   gameServer.define('game', GameRoom).filterBy(['gameId'])
   // gameServer.define('chat', ChatRoom) // TODO: Add ChatRoom later
 
-  // Configure Express app via BunWebSockets transport
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const app = (transport as any).expressApp as Application
-  configureExpressApp(app)
-
-  // Start listening
+  // Start listening (transport.listen() -> httpServer.listen(PORT))
   await gameServer.listen(PORT)
 
   return gameServer
