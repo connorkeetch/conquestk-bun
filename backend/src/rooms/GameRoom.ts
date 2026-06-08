@@ -68,6 +68,15 @@ interface ClientUserData {
   isHost: boolean
 }
 
+// How long (seconds) to hold a dropped player's seat so the client can
+// client.reconnect(reconnectionToken) without losing turn/timer/identity. Tunable via
+// env for tests/ops; defaults to 30s. Invalid/<=0 values fall back to the default
+// (a negative would make allowReconnection's timeout fire immediately, silently
+// disabling the grace window).
+const _reconnectWindowEnv = Number(process.env.COLYSEUS_RECONNECT_WINDOW_SECONDS)
+const RECONNECT_WINDOW_SECONDS =
+  Number.isFinite(_reconnectWindowEnv) && _reconnectWindowEnv > 0 ? _reconnectWindowEnv : 30
+
 export class GameRoom extends Room<GameState> {
   // Game engine for processing actions (deterministic, stateless)
   private engine: GameEngine = new GameEngine()
@@ -218,11 +227,16 @@ export class GameRoom extends Room<GameState> {
       return
     }
 
-    // Check if player already exists (reconnecting)
+    // Check if player already exists (reconnecting). This branch covers BOTH a true
+    // client.reconnect() and the fresh-join fallback (when reconnect() failed): in the
+    // fallback case the original allowReconnection promise stays pending until it times
+    // out, so we must announce the reconnection here or observers would only ever see
+    // the disconnect. (The onLeave reject branch is guarded to not contradict this.)
     const existingPlayer = this.state.players.get(userData.playerId)
     if (existingPlayer) {
       existingPlayer.isConnected = true
       logger.info('Player reconnected', { playerId: userData.playerId })
+      this.broadcast('player-reconnected', { oderId: userData.playerId })
       return
     }
 
@@ -253,35 +267,82 @@ export class GameRoom extends Room<GameState> {
     })
   }
 
-  onLeave(client: Client, consented: boolean) {
-    const userData = client.userData as ClientUserData
+  async onLeave(client: Client, consented: boolean) {
+    const userData = client.userData as ClientUserData | undefined
     logger.info('Client left', {
-      playerId: userData.playerId,
+      playerId: userData?.playerId,
       consented,
     })
 
-    if (userData.isSpectator) return
+    if (!userData || userData.isSpectator) return
 
     const player = this.state.players.get(userData.playerId)
     if (!player) return
 
     player.isConnected = false
 
-    // If game hasn't started, remove the player
-    if (this.state.phase === 'lobby') {
+    // Decide lobby vs in-progress from the AUTHORITATIVE state, NOT the schema's
+    // `this.state.phase` (which is never advanced on the delegating path — it stays
+    // 'lobby'). gameService.getGameState is cache-first with a durable game_states DB
+    // fallback, so it distinguishes "never started" (null) from "in progress but cache
+    // expired" (DB row present). FAIL SAFE: if the lookup errors (DB/cache unavailable),
+    // hold the seat rather than evict — a transient fault must not destroy an active
+    // player's seat mid-game.
+    let authoritativePhase: string | undefined
+    let lookupFailed = false
+    try {
+      const state = await this.gameService.getGameState(this.state.roomId)
+      authoritativePhase = state?.phase
+      // state === null → no cache AND no DB row → the game never started.
+      if (state === null) {
+        this.state.players.delete(userData.playerId)
+        this.broadcast('player-left', { oderId: userData.playerId })
+        return
+      }
+    } catch (error) {
+      lookupFailed = true
+      logger.warn('onLeave phase lookup failed; holding seat to be safe', {
+        roomId: this.state.roomId,
+        playerId: userData.playerId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+
+    // Confirmed still in lobby: free the seat (no game in progress yet).
+    if (!lookupFailed && authoritativePhase === 'lobby') {
       this.state.players.delete(userData.playerId)
       this.broadcast('player-left', { oderId: userData.playerId })
       return
     }
 
-    // If consented (intentional leave), handle as abandoned
-    if (consented && this.state.phase !== 'finished') {
-      // TODO: Start disconnect timer or convert to AI
-      logger.info('Player abandoned game', { playerId: userData.playerId })
+    // Game already finished, or an intentional leave: mark disconnected, no grace.
+    if (authoritativePhase === 'finished' || consented) {
+      this.broadcast('player-disconnected', { oderId: userData.playerId })
+      return
     }
 
-    // Broadcast disconnection
+    // Unexpected drop mid-game (or uncertain → fail safe): hold the seat for a grace
+    // window so the client can client.reconnect(reconnectionToken) and resume the SAME
+    // session, preserving turn/timer state. onAuth is NOT re-run on reconnection (the
+    // reserved seat is resumed), so the JWT-verified identity carries over.
     this.broadcast('player-disconnected', { oderId: userData.playerId })
+    try {
+      await this.allowReconnection(client, RECONNECT_WINDOW_SECONDS)
+      player.isConnected = true
+      logger.info('Player reconnected', { playerId: userData.playerId })
+      this.broadcast('player-reconnected', { oderId: userData.playerId })
+    } catch {
+      // Window elapsed without a return. Do NOT re-broadcast player-disconnected: the
+      // pre-await broadcast already told clients, and a fresh-join fallback may have
+      // already re-seated this player (in which case a second disconnect would be a
+      // stale, contradictory signal). Re-check before logging.
+      if (this.state.players.get(userData.playerId)?.isConnected) {
+        return
+      }
+      logger.info('Reconnection window elapsed; player remains disconnected', {
+        playerId: userData.playerId,
+      })
+    }
   }
 
   /**
