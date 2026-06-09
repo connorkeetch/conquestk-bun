@@ -1,22 +1,21 @@
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://tester:tester@localhost:5432/risk_game_test'
 
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, jest, mock, spyOn } from 'bun:test'
 import express from 'express'
 import request from 'supertest'
 
-jest.mock('../config/database', () => {
-  const queryMock = jest.fn()
-  return {
-    __esModule: true,
-    query: queryMock,
-    getPool: jest.fn().mockResolvedValue({ query: queryMock }),
-    getClient: jest.fn().mockResolvedValue({ query: queryMock, release: jest.fn() }),
-    transaction: jest.fn(),
-  }
-})
+const queryMock = jest.fn()
 
-jest.mock('../middleware/auth', () => ({
+mock.module('../config/database', () => ({
+  __esModule: true,
+  query: queryMock,
+  getPool: jest.fn().mockResolvedValue({ query: queryMock }),
+  getClient: jest.fn().mockResolvedValue({ query: queryMock, release: jest.fn() }),
+  transaction: jest.fn(),
+}))
+
+mock.module('../middleware/auth', () => ({
   authenticateToken: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     const headerUser = req.headers['x-test-user-id']
     req.userId = typeof headerUser === 'string' ? headerUser : 'test-user'
@@ -31,7 +30,7 @@ jest.mock('../middleware/auth', () => ({
 
 const logActivityMock = jest.fn()
 
-jest.mock('../middleware/adminAuth', () => ({
+mock.module('../middleware/adminAuth', () => ({
   requireAdmin: (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.headers['x-test-admin'] !== 'true') {
       res.status(403).json({ error: 'Admin access required' })
@@ -70,79 +69,70 @@ jest.mock('../middleware/adminAuth', () => ({
     },
 }))
 
-jest.mock('../services/mapPermissionService', () => {
-  const actual = jest.requireActual('../services/mapPermissionService')
-  return {
-    ...actual,
-    mapPermissionService: {
-      ...actual.mapPermissionService,
-      assertCanEditMap: jest.fn(),
-      getMapEditorContext: jest.fn(),
-    },
-  }
-})
-
-jest.mock('../services/adminService', () => ({
+mock.module('../services/adminService', () => ({
   adminService: {
     logAdminAction: jest.fn().mockResolvedValue(undefined),
     getActiveAdminUserIds: jest.fn().mockResolvedValue([]),
   },
 }))
 
-jest.mock('../services/notificationService', () => ({
+mock.module('../services/notificationService', () => ({
   __esModule: true,
   default: {
     createInAppNotification: jest.fn().mockResolvedValue(undefined),
   },
 }))
 
-jest.mock('../services/NotificationDispatcher', () => ({
+mock.module('../services/NotificationDispatcher', () => ({
   notificationDispatcher: {
     dispatch: jest.fn().mockResolvedValue([]),
   },
 }))
 
 // Ensure map validation does not fail tests that don't set up territories
-jest.mock('../services/mapService', () => ({
+mock.module('../services/mapService', () => ({
   mapService: {
     validateMapPlayable: jest.fn().mockResolvedValue({ isValid: true, errors: [] }),
   },
 }))
 
-const databaseModule = require('../config/database') as { query: jest.Mock }
-const queryMock = databaseModule.query
-
-const permissionsModule = require('../services/mapPermissionService') as {
+// Real mapPermissionService (keeps MapPermissionError and other exports the route
+// imports); spy on the two methods used for permission enforcement.
+const permissionsModule = (await import('../services/mapPermissionService')) as {
   mapPermissionService: { assertCanEditMap: jest.Mock; getMapEditorContext: jest.Mock }
   MapPermissionError: new (message?: string) => Error
 }
+spyOn(permissionsModule.mapPermissionService, 'assertCanEditMap')
+spyOn(permissionsModule.mapPermissionService, 'getMapEditorContext')
 
-const adminServiceModule = require('../services/adminService') as {
+const adminServiceModule = (await import('../services/adminService')) as {
   adminService: {
     logAdminAction: jest.Mock
     getActiveAdminUserIds: jest.Mock
   }
 }
 
-const notificationServiceModule = require('../services/notificationService').default as {
+const notificationServiceModule = (await import('../services/notificationService')).default as {
   createInAppNotification: jest.Mock
 }
 
-const notificationDispatcherModule = require('../services/NotificationDispatcher') as {
+const notificationDispatcherModule = (await import('../services/NotificationDispatcher')) as {
   notificationDispatcher: { dispatch: jest.Mock }
 }
 
 type MapWorkflowServiceInstance = typeof import('../services/mapWorkflowService.js').default
 
-const mapWorkflowServiceInstance = require('../services/mapWorkflowService')
+const mapWorkflowServiceInstance = (await import('../services/mapWorkflowService'))
   .default as MapWorkflowServiceInstance
+
+const { default: mapWorkflowRouter } = (await import('../routes/mapWorkflow')) as {
+  default: express.Router
+}
 
 const createApp = () => {
   const app = express()
   app.use(express.json())
-
-  const router = require('../routes/mapWorkflow').default as express.Router
-  app.use('/api/workflow', router)
+  app.use('/api/workflow', mapWorkflowRouter)
   return app
 }
 
@@ -310,9 +300,9 @@ describe('Map workflow authorization', () => {
       isCreator: true,
     })
 
-    const historySpy = jest
-      .spyOn(mapWorkflowServiceInstance, 'getMapHistory')
-      .mockResolvedValueOnce([{ action: 'submitted' }])
+    const historySpy = spyOn(mapWorkflowServiceInstance, 'getMapHistory').mockResolvedValueOnce([
+      { action: 'submitted' },
+    ])
 
     const response = await request(createApp())
       .get('/api/workflow/maps/66666666-6666-6666-6666-666666666666/history')

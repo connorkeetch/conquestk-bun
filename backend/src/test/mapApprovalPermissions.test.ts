@@ -1,158 +1,119 @@
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://tester:tester@localhost:5432/risk_game_test'
 
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, jest, mock, spyOn } from 'bun:test'
 import express from 'express'
 import request from 'supertest'
 
 const queryMock = jest.fn()
 
-jest.mock(
-  '../config/database.js',
-  () => ({
-    __esModule: true,
-    query: queryMock,
-    getPool: jest.fn().mockResolvedValue({ query: queryMock }),
-    getClient: jest.fn().mockResolvedValue({ query: queryMock, release: jest.fn() }),
-    transaction: jest.fn(),
-  }),
-  { virtual: true },
-)
+mock.module('../config/database.js', () => ({
+  __esModule: true,
+  query: queryMock,
+  getPool: jest.fn().mockResolvedValue({ query: queryMock }),
+  getClient: jest.fn().mockResolvedValue({ query: queryMock, release: jest.fn() }),
+  transaction: jest.fn(),
+}))
 
-jest.mock(
-  '../middleware/auth.js',
-  () => ({
-    authenticateToken: (
-      req: express.Request,
-      _res: express.Response,
-      next: express.NextFunction,
-    ) => {
-      const headerUser = req.headers['x-test-user-id']
-      req.userId = typeof headerUser === 'string' ? headerUser : 'test-user'
-      const isAdminHeader = req.headers['x-test-admin']
-      req.user = {
-        id: req.userId,
-        isAdmin: isAdminHeader === 'true',
-      }
-      next()
-    },
-  }),
-  { virtual: true },
-)
+mock.module('../middleware/auth.js', () => ({
+  authenticateToken: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    const headerUser = req.headers['x-test-user-id']
+    req.userId = typeof headerUser === 'string' ? headerUser : 'test-user'
+    const isAdminHeader = req.headers['x-test-admin']
+    req.user = {
+      id: req.userId,
+      isAdmin: isAdminHeader === 'true',
+    }
+    next()
+  },
+}))
 
 const logActivityMock = jest.fn()
 
-jest.mock(
-  '../middleware/adminAuth.js',
-  () => ({
-    requireAdmin: (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      if (req.headers['x-test-admin'] !== 'true') {
-        res.status(403).json({ error: 'Admin access required' })
-        return
-      }
+mock.module('../middleware/adminAuth.js', () => ({
+  requireAdmin: (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.headers['x-test-admin'] !== 'true') {
+      res.status(403).json({ error: 'Admin access required' })
+      return
+    }
 
+    const permissionsHeader = req.headers['x-test-permissions']
+    const permissions = typeof permissionsHeader === 'string' ? permissionsHeader.split(',') : []
+
+    req.adminUser = {
+      userId: req.userId,
+      roles: ['test-admin'],
+      permissions,
+      isSuperAdmin: permissions.includes('*'),
+    }
+
+    next()
+  },
+  requirePermission:
+    (permission: string) =>
+    (req: express.Request, res: express.Response, next: express.NextFunction) => {
       const permissionsHeader = req.headers['x-test-permissions']
       const permissions = typeof permissionsHeader === 'string' ? permissionsHeader.split(',') : []
 
-      req.adminUser = {
-        userId: req.userId,
-        roles: ['test-admin'],
-        permissions,
-        isSuperAdmin: permissions.includes('*'),
+      if (permissions.includes(permission) || permissions.includes('*')) {
+        next()
+        return
       }
 
+      res.status(403).json({ error: 'Insufficient permissions', required: permission })
+    },
+  logAdminActivity:
+    () => (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
+      logActivityMock()
       next()
     },
-    requirePermission:
-      (permission: string) =>
-      (req: express.Request, res: express.Response, next: express.NextFunction) => {
-        const permissionsHeader = req.headers['x-test-permissions']
-        const permissions =
-          typeof permissionsHeader === 'string' ? permissionsHeader.split(',') : []
+}))
 
-        if (permissions.includes(permission) || permissions.includes('*')) {
-          next()
-          return
-        }
+mock.module('../services/mapApprovalService.js', () => ({
+  __esModule: true,
+  default: {
+    getVersionHistory: jest.fn().mockResolvedValue([]),
+    getVersionById: jest.fn().mockResolvedValue({
+      id: 'version-1',
+      mapId: 'map-1',
+    }),
+    submitForApproval: jest.fn(),
+    getPendingApprovalRequests: jest.fn().mockResolvedValue([]),
+    assignReviewer: jest.fn(),
+    getReviewCriteria: jest.fn().mockResolvedValue([]),
+    submitReviewResults: jest.fn(),
+    publishVersion: jest.fn(),
+    archiveMap: jest.fn(),
+    getMapModerationHistory: jest.fn().mockResolvedValue([]),
+    getApprovalStats: jest
+      .fn()
+      .mockResolvedValue({ total_requests: 0, approved: 0, rejected: 0, pending: 0 }),
+  },
+}))
 
-        res.status(403).json({ error: 'Insufficient permissions', required: permission })
-      },
-    logAdminActivity:
-      () => (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
-        logActivityMock()
-        next()
-      },
-  }),
-  { virtual: true },
-)
+// errorHelpers is used as-is (real getErrorMessage is equivalent to the old mock,
+// and mocking it would drop its other exports like toKnownError).
 
-jest.mock('../services/mapPermissionService.js', () => {
-  class MapPermissionError extends Error {}
-  return {
-    mapPermissionService: {
-      assertCanEditMap: jest.fn(),
-      getMapEditorContext: jest.fn(),
-    },
-    MapPermissionError,
-  }
-})
-
-jest.mock(
-  '../services/mapApprovalService.js',
-  () => ({
-    __esModule: true,
-    default: {
-      getVersionHistory: jest.fn().mockResolvedValue([]),
-      getVersionById: jest.fn().mockResolvedValue({
-        id: 'version-1',
-        mapId: 'map-1',
-      }),
-      submitForApproval: jest.fn(),
-      getPendingApprovalRequests: jest.fn().mockResolvedValue([]),
-      assignReviewer: jest.fn(),
-      getReviewCriteria: jest.fn().mockResolvedValue([]),
-      submitReviewResults: jest.fn(),
-      publishVersion: jest.fn(),
-      archiveMap: jest.fn(),
-      getMapModerationHistory: jest.fn().mockResolvedValue([]),
-      getApprovalStats: jest
-        .fn()
-        .mockResolvedValue({ total_requests: 0, approved: 0, rejected: 0, pending: 0 }),
-    },
-  }),
-  { virtual: true },
-)
-
-const mapApprovalService = require('../services/mapApprovalService.js').default as {
+const mapApprovalService = (await import('../services/mapApprovalService.js')).default as {
   getVersionHistory: jest.Mock
   getPendingApprovalRequests: jest.Mock
+  getApprovalStats: jest.Mock
 }
 
-const { mapPermissionService } = require('../services/mapPermissionService.js') as {
-  mapPermissionService: {
-    assertCanEditMap: jest.Mock
-    getMapEditorContext: jest.Mock
-  }
-  MapPermissionError: new (message?: string) => Error
-}
+// Real mapPermissionService (keeps its error classes like MapNotFoundError that
+// the route imports); spy on the two methods the route uses for permission checks.
+const { mapPermissionService } = await import('../services/mapPermissionService.js')
+spyOn(mapPermissionService, 'assertCanEditMap')
+spyOn(mapPermissionService, 'getMapEditorContext')
 
-jest.mock(
-  '../utils/errorHelpers.js',
-  () => ({
-    __esModule: true,
-    getErrorMessage: jest.fn((error: unknown) =>
-      error instanceof Error ? error.message : String(error),
-    ),
-  }),
-  { virtual: true },
-)
+const { default: mapApprovalRouter } = (await import('../routes/mapApproval.js')) as {
+  default: express.Router
+}
 
 const createApp = () => {
   const app = express()
   app.use(express.json())
-
-  const router = require('../routes/mapApproval.js').default as express.Router
-  app.use('/api/map-approval', router)
+  app.use('/api/map-approval', mapApprovalRouter)
   return app
 }
 
