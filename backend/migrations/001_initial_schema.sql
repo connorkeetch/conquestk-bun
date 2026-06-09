@@ -12,6 +12,44 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE TYPE conversation_kind AS ENUM ('game', 'direct', 'group', 'team');
 CREATE TYPE conversation_member_role AS ENUM ('owner', 'admin', 'member');
 
+-- Sequences
+-- Must be created before the tables whose columns default to nextval(); the
+-- DEFAULT expression resolves '<name>'::regclass at table-creation time.
+CREATE SEQUENCE IF NOT EXISTS client_metrics_id_seq AS integer;
+CREATE SEQUENCE IF NOT EXISTS game_events_seq_seq AS bigint;
+CREATE SEQUENCE IF NOT EXISTS web_push_subscriptions_id_seq AS bigint;
+CREATE SEQUENCE IF NOT EXISTS game_room_code_seq START WITH 10000;
+
+-- Functions
+-- generate_ulid() backs conversation_messages.id (CHAR(26) DEFAULT generate_ulid()).
+-- Must exist before that table is created. Relies on pgcrypto's gen_random_bytes().
+CREATE OR REPLACE FUNCTION generate_ulid()
+RETURNS CHAR(26) AS $$
+DECLARE
+  timestamp_ms NUMERIC := floor(extract(epoch FROM clock_timestamp()) * 1000);
+  random_component BYTEA := gen_random_bytes(10);
+  base32_alphabet TEXT := '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+  ulid_value NUMERIC;
+  encoded TEXT := '';
+  i INT;
+  remainder INT;
+BEGIN
+  ulid_value := timestamp_ms * power(2::numeric, 80);
+
+  FOR i IN 0..9 LOOP
+    ulid_value := ulid_value + get_byte(random_component, i) * power(2::numeric, (9 - i) * 8);
+  END LOOP;
+
+  FOR i IN 1..26 LOOP
+    remainder := mod(ulid_value, 32)::INT;
+    encoded := substr(base32_alphabet, remainder + 1, 1) || encoded;
+    ulid_value := floor(ulid_value / 32);
+  END LOOP;
+
+  RETURN encoded::CHAR(26);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
 -- Tables
 CREATE TABLE achievements (
   id uuid DEFAULT uuid_generate_v4(),
@@ -900,17 +938,10 @@ CREATE TABLE room_players (
   PRIMARY KEY (id)
 );
 
-CREATE TABLE schema_migrations (
-  id uuid DEFAULT uuid_generate_v4(),
-  filename character varying(255) NOT NULL,
-  executed_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  status character varying(20) DEFAULT 'completed'::character varying NOT NULL,
-  checksum character varying(64) NOT NULL,
-  execution_time_ms integer DEFAULT 0 NOT NULL,
-  rollback_sql text,
-  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  PRIMARY KEY (id)
-);
+-- NOTE: schema_migrations is intentionally omitted from the baseline. It is the
+-- migration runner's own bookkeeping table, created and maintained by
+-- MigrationTracker.createTrackingTable(); including it here would conflict with
+-- that table (which already exists when the baseline runs).
 
 CREATE TABLE skill_leaderboard_cache (
   id uuid DEFAULT uuid_generate_v4(),
@@ -1110,7 +1141,7 @@ CREATE TABLE users (
   tagline text DEFAULT 'Commander of the Conquest Realms'::text,
   ranked_wins integer DEFAULT 0 NOT NULL,
   ranked_losses integer DEFAULT 0 NOT NULL,
-  total_ranked_games integer DEFAULT (ranked_wins + ranked_losses),
+  total_ranked_games integer GENERATED ALWAYS AS (ranked_wins + ranked_losses) STORED,
   highest_skill_rating integer DEFAULT 800 NOT NULL,
   last_ranked_game_at timestamp without time zone,
   current_tier character varying(32),
@@ -1134,6 +1165,13 @@ CREATE TABLE web_push_subscriptions (
   updated_at timestamp with time zone DEFAULT now() NOT NULL,
   PRIMARY KEY (id)
 );
+
+-- Sequence Ownership
+-- Tie SERIAL/BIGSERIAL-derived sequences to their columns so they drop with the
+-- table (game_room_code_seq is intentionally standalone, matching its origin).
+ALTER SEQUENCE client_metrics_id_seq OWNED BY client_metrics.id;
+ALTER SEQUENCE game_events_seq_seq OWNED BY game_events.seq;
+ALTER SEQUENCE web_push_subscriptions_id_seq OWNED BY web_push_subscriptions.id;
 
 -- Foreign Keys
 ALTER TABLE admin_activity_logs ADD CONSTRAINT admin_activity_logs_admin_user_id_fkey FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE CASCADE;
@@ -1471,9 +1509,6 @@ CREATE UNIQUE INDEX idx_room_players_unique_color ON public.room_players USING b
 CREATE INDEX idx_room_players_user_id ON public.room_players USING btree (user_id);
 CREATE UNIQUE INDEX room_players_room_id_player_order_key ON public.room_players USING btree (room_id, player_order);
 CREATE UNIQUE INDEX room_players_room_id_user_id_key ON public.room_players USING btree (room_id, user_id);
-CREATE INDEX idx_schema_migrations_filename ON public.schema_migrations USING btree (filename);
-CREATE INDEX idx_schema_migrations_status ON public.schema_migrations USING btree (status);
-CREATE UNIQUE INDEX schema_migrations_filename_key ON public.schema_migrations USING btree (filename);
 CREATE INDEX idx_skill_leaderboard_cache_rankings_gin ON public.skill_leaderboard_cache USING gin (rankings);
 CREATE UNIQUE INDEX skill_leaderboard_cache_period_type_period_start_period_end_key ON public.skill_leaderboard_cache USING btree (period_type, period_start, period_end);
 CREATE INDEX idx_territory_adjacencies_map_id ON public.territory_adjacencies USING btree (map_id);
