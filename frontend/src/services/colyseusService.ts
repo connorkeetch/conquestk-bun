@@ -653,7 +653,9 @@ class ColyseusService {
         turnTimer: state.turnTimerSeconds,
         teamMode: state.teamMode ? 'teams' : 'none',
       },
-      lastBattleResult: state.lastBattle ? this.convertBattleResult(state.lastBattle) : undefined,
+      ...(state.lastBattle
+        ? { lastBattleResult: this.convertBattleResult(state.lastBattle) }
+        : {}),
     }
 
     store.dispatch(setGameState(gameState))
@@ -667,9 +669,9 @@ class ColyseusService {
         userId: player.oderId,
         username: player.username,
         color: player.color as GamePlayer['color'],
-        teamId: player.teamId || undefined,
+        ...(player.teamId ? { teamId: player.teamId } : {}),
         isAi: player.isAi,
-        aiDifficulty: player.aiDifficulty as GamePlayer['aiDifficulty'],
+        aiDifficulty: (player.aiDifficulty as GamePlayer['aiDifficulty']) ?? null,
         isEliminated: player.isEliminated,
         armies: player.reinforcementArmies,
         cards: this.convertCards(player.cards),
