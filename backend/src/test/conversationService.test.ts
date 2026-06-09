@@ -694,7 +694,6 @@ describe('conversationService', () => {
       })
 
     await leaveConversation('conv-77', 'owner-1')
-
   })
 
   it('allows admins to remove members', async () => {
@@ -763,7 +762,6 @@ describe('conversationService', () => {
       conversationId: 'conv-88',
       targetUserId: 'member-3',
     })
-
   })
 
   it('propagates policy errors from ensureDirectConversation', async () => {
