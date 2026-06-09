@@ -1,6 +1,24 @@
 /**
  * Generate a clean schema SQL from current database using SQL queries
  * No pg_dump required - pure TypeScript/SQL approach
+ *
+ * The output is a single, runner-executable baseline (no psql meta-commands or
+ * SET statements like pg_dump emits). It is applied as one transactional script
+ * by MigrationRunner.executeBaselineInTransaction, so object ordering matters:
+ *   Extensions -> Enums -> Sequences -> Functions -> Tables
+ *     -> Sequence Ownership -> Foreign Keys -> Indexes
+ * Sequences and functions are emitted BEFORE tables because table column
+ * DEFAULTs reference them (e.g. nextval('client_metrics_id_seq'),
+ * generate_ulid()) and those references are resolved at table-creation time.
+ *
+ * Known residual gaps (intentionally NOT emitted — they are not bootstrap
+ * blockers, but this file is therefore not a 100% faithful schema dump):
+ *   - Triggers and trigger functions are only partially covered: plain
+ *     functions are emitted (pg_get_functiondef), but TRIGGERs themselves are
+ *     not. updated_at columns still default to now(), so inserts succeed.
+ *   - CHECK constraints are not emitted (they live in pg_constraint contype='c').
+ * If full fidelity is ever required, prefer pg_dump --schema-only and teach the
+ * runner to apply that file directly.
  */
 import { readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -13,6 +31,13 @@ dotenv.config()
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const migrationsDir = join(__dirname, '../../migrations')
 
+// Tables that are owned by the migration runner itself, not part of the
+// application schema. schema_migrations is created/maintained by
+// MigrationTracker.createTrackingTable(); emitting it here would conflict with
+// the table that already exists when the baseline runs. Anything related to it
+// (its sequence, indexes) is excluded too.
+const EXCLUDED_TABLES = new Set<string>(['schema_migrations'])
+
 async function generateCleanSchema() {
   const databaseUrl = process.env.DATABASE_URL
   if (!databaseUrl) {
@@ -20,10 +45,15 @@ async function generateCleanSchema() {
     process.exit(1)
   }
 
+  // Only negotiate SSL for managed/remote databases (Railway, production).
+  // Local Postgres (docker-compose) does not support SSL, and forcing it there
+  // makes regeneration/verification impossible.
+  const needsSsl = databaseUrl.includes('railway') || process.env.NODE_ENV === 'production'
+
   console.log('Connecting to database...')
   const pool = new Pool({
     connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
+    ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
     connectionTimeoutMillis: 30000,
     idleTimeoutMillis: 30000,
     max: 1,
@@ -68,6 +98,77 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
       sql += '\n'
     }
 
+    // Discover sequence ownership (deptype 'a' = sequence auto-owned by a column,
+    // i.e. the result of SERIAL/BIGSERIAL). Used both to skip sequences belonging
+    // to excluded tables and to re-emit ALTER SEQUENCE ... OWNED BY after tables.
+    const ownership = await pool.query(`
+      SELECT seq.relname AS sequence_name,
+             tab.relname AS table_name,
+             att.attname AS column_name
+      FROM pg_depend d
+      JOIN pg_class seq ON seq.oid = d.objid AND seq.relkind = 'S'
+      JOIN pg_class tab ON tab.oid = d.refobjid
+      JOIN pg_attribute att ON att.attrelid = d.refobjid AND att.attnum = d.refobjsubid
+      JOIN pg_namespace n ON n.oid = seq.relnamespace
+      WHERE d.deptype = 'a' AND n.nspname = 'public'
+    `)
+    const ownerBySequence = new Map<string, { table: string; column: string }>()
+    for (const row of ownership.rows) {
+      ownerBySequence.set(row.sequence_name, { table: row.table_name, column: row.column_name })
+    }
+
+    // Get sequences (must come before the tables whose column DEFAULTs call
+    // nextval()). Skip sequences owned by excluded tables.
+    console.log('Extracting sequences...')
+    const sequences = await pool.query(`
+      SELECT sequencename,
+             data_type::text AS data_type,
+             start_value,
+             increment_by
+      FROM pg_sequences
+      WHERE schemaname = 'public'
+      ORDER BY sequencename
+    `)
+
+    const emittedSequences = sequences.rows.filter((s) => {
+      const owner = ownerBySequence.get(s.sequencename)
+      return !owner || !EXCLUDED_TABLES.has(owner.table)
+    })
+
+    if (emittedSequences.length > 0) {
+      sql += '-- Sequences\n'
+      for (const s of emittedSequences) {
+        sql +=
+          `CREATE SEQUENCE IF NOT EXISTS ${s.sequencename} AS ${s.data_type} ` +
+          `START WITH ${s.start_value} INCREMENT BY ${s.increment_by};\n`
+      }
+      sql += '\n'
+    }
+
+    // Get user-defined functions (must come before tables when a column DEFAULT
+    // calls one, e.g. generate_ulid()). pg_get_functiondef emits complete,
+    // correctly dollar-quoted CREATE OR REPLACE FUNCTION statements. Extension-
+    // provided functions (deptype 'e') are excluded.
+    console.log('Extracting functions...')
+    const functions = await pool.query(`
+      SELECT pg_get_functiondef(p.oid) AS definition
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.prokind = 'f'
+        AND NOT EXISTS (
+          SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e'
+        )
+      ORDER BY p.proname
+    `)
+
+    if (functions.rows.length > 0) {
+      sql += '-- Functions\n'
+      for (const fn of functions.rows) {
+        sql += `${fn.definition};\n\n`
+      }
+    }
+
     // Get tables in dependency order (no FKs first, then tables with FKs)
     console.log('Extracting tables...')
     const tables = await pool.query(`
@@ -84,14 +185,20 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
     for (const table of tables.rows) {
       const tableName = table.table_name
+      if (EXCLUDED_TABLES.has(tableName)) {
+        continue
+      }
 
-      // Get columns
+      // Get columns. attgenerated = 's' marks a STORED generated column; for
+      // those the pg_attrdef expression is the generation expression, NOT a
+      // DEFAULT, and must be emitted as GENERATED ALWAYS AS (...) STORED.
       const cols = await pool.query(
         `
         SELECT
           a.attname as name,
           pg_catalog.format_type(a.atttypid, a.atttypmod) as type,
           a.attnotnull as notnull,
+          a.attgenerated as generated,
           (SELECT pg_get_expr(d.adbin, d.adrelid)
            FROM pg_attrdef d
            WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum) as default_val
@@ -123,11 +230,21 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
       const colDefs: string[] = []
       for (const col of cols.rows) {
         let def = `  ${col.name} ${col.type}`
-        if (col.default_val) {
-          def += ` DEFAULT ${col.default_val}`
-        }
-        if (col.notnull && !pkCols.includes(col.name)) {
-          def += ' NOT NULL'
+        if (col.generated === 's' && col.default_val) {
+          // STORED generated column. pg_get_expr already wraps the expression in
+          // parentheses, but guard in case it ever doesn't.
+          const expr = col.default_val.startsWith('(') ? col.default_val : `(${col.default_val})`
+          def += ` GENERATED ALWAYS AS ${expr} STORED`
+          if (col.notnull && !pkCols.includes(col.name)) {
+            def += ' NOT NULL'
+          }
+        } else {
+          if (col.default_val) {
+            def += ` DEFAULT ${col.default_val}`
+          }
+          if (col.notnull && !pkCols.includes(col.name)) {
+            def += ' NOT NULL'
+          }
         }
         colDefs.push(def)
       }
@@ -138,6 +255,20 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
       sql += colDefs.join(',\n')
       sql += '\n);\n\n'
+    }
+
+    // Re-attach SERIAL/BIGSERIAL sequence ownership now that the tables exist.
+    // Standalone sequences (no owner) and excluded tables are skipped.
+    const ownedToEmit = emittedSequences
+      .map((s) => ({ sequence: s.sequencename, owner: ownerBySequence.get(s.sequencename) }))
+      .filter((s) => s.owner && !EXCLUDED_TABLES.has(s.owner.table))
+
+    if (ownedToEmit.length > 0) {
+      sql += '-- Sequence Ownership\n'
+      for (const s of ownedToEmit) {
+        sql += `ALTER SEQUENCE ${s.sequence} OWNED BY ${s.owner?.table}.${s.owner?.column};\n`
+      }
+      sql += '\n'
     }
 
     // Get foreign keys
@@ -163,9 +294,13 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
       ORDER BY tc.table_name, tc.constraint_name
     `)
 
-    if (fks.rows.length > 0) {
+    const emittedFks = fks.rows.filter(
+      (fk) => !EXCLUDED_TABLES.has(fk.table_name) && !EXCLUDED_TABLES.has(fk.ref_table),
+    )
+
+    if (emittedFks.length > 0) {
       sql += '-- Foreign Keys\n'
-      for (const fk of fks.rows) {
+      for (const fk of emittedFks) {
         sql += `ALTER TABLE ${fk.table_name} ADD CONSTRAINT ${fk.constraint_name} `
         sql += `FOREIGN KEY (${fk.column_name}) REFERENCES ${fk.ref_table}(${fk.ref_column})`
         if (fk.delete_rule === 'CASCADE') {
@@ -182,6 +317,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
     console.log('Extracting indexes...')
     const indexes = await pool.query(`
       SELECT
+        tablename,
         indexname,
         indexdef
       FROM pg_indexes
@@ -190,9 +326,11 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
       ORDER BY tablename, indexname
     `)
 
-    if (indexes.rows.length > 0) {
+    const emittedIndexes = indexes.rows.filter((idx) => !EXCLUDED_TABLES.has(idx.tablename))
+
+    if (emittedIndexes.length > 0) {
       sql += '-- Indexes\n'
-      for (const idx of indexes.rows) {
+      for (const idx of emittedIndexes) {
         sql += `${idx.indexdef};\n`
       }
       sql += '\n'
@@ -215,8 +353,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
     console.log('\nResetting migration tracking...')
     await pool.query('DELETE FROM schema_migrations')
     await pool.query(`
-      INSERT INTO schema_migrations (filename, checksum, executed_at, status)
-      VALUES ('001_initial_schema.sql', 'squashed-${Date.now()}', NOW(), 'completed')
+      INSERT INTO schema_migrations (filename, checksum, executed_at, execution_time_ms, status)
+      VALUES ('001_initial_schema.sql', 'squashed-${Date.now()}', NOW(), 0, 'completed')
     `)
 
     console.log('\n🎉 Done! Migrations squashed into single file.')
