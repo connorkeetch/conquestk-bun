@@ -50,6 +50,151 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
+CREATE OR REPLACE FUNCTION public.grant_vip_status(target_user_id uuid, granting_admin_id uuid, reason text DEFAULT NULL::text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    UPDATE users
+    SET 
+        is_vip = true,
+        vip_granted_at = CURRENT_TIMESTAMP,
+        vip_granted_by = granting_admin_id,
+        vip_reason = reason
+    WHERE id = target_user_id;
+    
+    RETURN FOUND;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.log_feature_flag_change()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO feature_flag_audit (flag_name, changed_by, change_type, new_value)
+    VALUES (NEW.flag_name, NEW.created_by, 'created', row_to_json(NEW));
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF OLD.is_enabled != NEW.is_enabled THEN
+      INSERT INTO feature_flag_audit (flag_name, changed_by, change_type, old_value, new_value)
+      VALUES (NEW.flag_name, NEW.created_by, 'toggled', row_to_json(OLD), row_to_json(NEW));
+    ELSE
+      INSERT INTO feature_flag_audit (flag_name, changed_by, change_type, old_value, new_value)
+      VALUES (NEW.flag_name, NEW.created_by, 'updated', row_to_json(OLD), row_to_json(NEW));
+    END IF;
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO feature_flag_audit (flag_name, changed_by, change_type, old_value)
+    VALUES (OLD.flag_name, OLD.created_by, 'deleted', row_to_json(OLD));
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.recalc_user_is_admin(_user_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  UPDATE users u
+  SET is_admin = u.is_admin OR EXISTS (
+    SELECT 1
+    FROM user_admin_roles uar
+    WHERE uar.user_id = _user_id
+      AND COALESCE(uar.is_active, TRUE) = TRUE
+      AND (uar.expires_at IS NULL OR uar.expires_at > CURRENT_TIMESTAMP)
+  )
+  WHERE u.id = _user_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.revoke_vip_status(target_user_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    UPDATE users
+    SET 
+        is_vip = false,
+        vip_granted_at = NULL,
+        vip_granted_by = NULL,
+        vip_reason = NULL
+    WHERE id = target_user_id;
+    
+    RETURN FOUND;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.update_map_approval_requests_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+        BEGIN
+          NEW.updated_at = CURRENT_TIMESTAMP;
+          RETURN NEW;
+        END;
+        $function$;
+
+CREATE OR REPLACE FUNCTION public.update_map_reviews_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.update_user_preferences_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.update_web_push_subscriptions_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.user_admin_roles_sync_is_admin()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    PERFORM public.recalc_user_is_admin(NEW.user_id);
+  ELSIF TG_OP = 'UPDATE' THEN
+    -- If a record moved users, recalc both old and new
+    IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+      PERFORM public.recalc_user_is_admin(OLD.user_id);
+    END IF;
+    PERFORM public.recalc_user_is_admin(NEW.user_id);
+  ELSIF TG_OP = 'DELETE' THEN
+    PERFORM public.recalc_user_is_admin(OLD.user_id);
+  END IF;
+  RETURN NULL;
+END;
+$function$;
+
 -- Tables
 CREATE TABLE achievements (
   id uuid DEFAULT uuid_generate_v4(),
@@ -1173,6 +1318,75 @@ ALTER SEQUENCE client_metrics_id_seq OWNED BY client_metrics.id;
 ALTER SEQUENCE game_events_seq_seq OWNED BY game_events.seq;
 ALTER SEQUENCE web_push_subscriptions_id_seq OWNED BY web_push_subscriptions.id;
 
+-- CHECK Constraints
+ALTER TABLE achievements ADD CONSTRAINT achievements_points_non_negative CHECK ((points >= 0));
+ALTER TABLE achievements ADD CONSTRAINT achievements_rarity_check CHECK (((rarity)::text = ANY (ARRAY[('common'::character varying)::text, ('uncommon'::character varying)::text, ('rare'::character varying)::text, ('epic'::character varying)::text, ('legendary'::character varying)::text])));
+ALTER TABLE capital_eliminations ADD CONSTRAINT capital_eliminations_no_self CHECK ((eliminated_player_id <> conqueror_player_id));
+ALTER TABLE clan_applications ADD CONSTRAINT clan_applications_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text, 'withdrawn'::text])));
+ALTER TABLE clan_invitations ADD CONSTRAINT clan_invitations_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'revoked'::text, 'expired'::text])));
+ALTER TABLE clan_join_requests ADD CONSTRAINT clan_join_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text, 'withdrawn'::text, 'revoked'::text, 'expired'::text])));
+ALTER TABLE clan_join_requests ADD CONSTRAINT clan_join_requests_type_check CHECK ((type = ANY (ARRAY['application'::text, 'invite'::text])));
+ALTER TABLE clan_members ADD CONSTRAINT clan_members_status_check CHECK ((status = ANY (ARRAY['active'::text, 'banned'::text, 'left'::text, 'kicked'::text])));
+ALTER TABLE clan_war_matches ADD CONSTRAINT clan_war_matches_result_check CHECK ((result = ANY (ARRAY['win'::text, 'loss'::text, 'draw'::text])));
+ALTER TABLE clan_wars ADD CONSTRAINT clan_wars_status_check CHECK ((status = ANY (ARRAY['scheduled'::text, 'active'::text, 'completed'::text, 'cancelled'::text])));
+ALTER TABLE clans ADD CONSTRAINT clans_privacy_check CHECK ((privacy = ANY (ARRAY['public'::text, 'hidden'::text])));
+ALTER TABLE clans ADD CONSTRAINT clans_recruitment_policy_check CHECK ((recruitment_policy = ANY (ARRAY['open'::text, 'application'::text, 'invite'::text])));
+ALTER TABLE clans ADD CONSTRAINT clans_recruitment_status_check CHECK ((recruitment_status = ANY (ARRAY['active'::text, 'closed'::text])));
+ALTER TABLE events ADD CONSTRAINT events_type_check CHECK (((event_type)::text = ANY (ARRAY[('user_login'::character varying)::text, ('user_logout'::character varying)::text, ('user_registration'::character varying)::text, ('game_start'::character varying)::text, ('game_end'::character varying)::text, ('game_move'::character varying)::text, ('page_view'::character varying)::text, ('button_click'::character varying)::text, ('feature_use'::character varying)::text, ('error_occurred'::character varying)::text, ('purchase_initiated'::character varying)::text, ('purchase_completed'::character varying)::text, ('achievement_unlocked'::character varying)::text])));
+ALTER TABLE feature_flag_audit ADD CONSTRAINT feature_flag_audit_change_type_check CHECK (((change_type)::text = ANY (ARRAY[('created'::character varying)::text, ('updated'::character varying)::text, ('deleted'::character varying)::text, ('toggled'::character varying)::text])));
+ALTER TABLE feature_flags ADD CONSTRAINT feature_flags_access_level_check CHECK (((access_level)::text = ANY (ARRAY[('disabled'::character varying)::text, ('internal'::character varying)::text, ('beta'::character varying)::text, ('public'::character varying)::text])));
+ALTER TABLE feature_flags ADD CONSTRAINT feature_flags_rollout_percentage CHECK (((rollout_percentage >= 0) AND (rollout_percentage <= 100)));
+ALTER TABLE friendships ADD CONSTRAINT friendships_no_self CHECK ((user_id <> friend_id));
+ALTER TABLE friendships ADD CONSTRAINT friendships_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('accepted'::character varying)::text, ('blocked'::character varying)::text])));
+ALTER TABLE game_battle_logs ADD CONSTRAINT game_battle_logs_entry_type_check CHECK ((entry_type = ANY (ARRAY['BATTLE'::text, 'ENGAGEMENT_SUMMARY'::text])));
+ALTER TABLE game_moves ADD CONSTRAINT game_moves_turn_positive CHECK ((turn_number > 0));
+ALTER TABLE game_moves ADD CONSTRAINT game_moves_type_check CHECK (((move_type)::text = ANY (ARRAY['deploy'::text, 'attack'::text, 'fortify'::text, 'end_turn'::text, 'surrender'::text, 'trade_cards'::text, 'transfer_conquest'::text])));
+ALTER TABLE game_rooms ADD CONSTRAINT game_rooms_expires_after_created_check CHECK (((expires_at IS NULL) OR (expires_at >= created_at)));
+ALTER TABLE game_rooms ADD CONSTRAINT game_rooms_max_players_check CHECK (((max_players >= 2) AND (max_players <= 12)));
+ALTER TABLE game_rooms ADD CONSTRAINT game_rooms_mode_check CHECK (((game_mode)::text = ANY (ARRAY[('classic'::character varying)::text, ('capital'::character varying)::text, ('team'::character varying)::text])));
+ALTER TABLE game_rooms ADD CONSTRAINT game_rooms_name_length CHECK (((length((name)::text) >= 3) AND (length((name)::text) <= 50))) NOT VALID;
+ALTER TABLE game_rooms ADD CONSTRAINT game_rooms_status_check CHECK (((status)::text = ANY ((ARRAY['lobby'::character varying, 'initializing'::character varying, 'active'::character varying, 'completed'::character varying, 'paused'::character varying, 'abandoned'::character varying])::text[])));
+ALTER TABLE game_rooms ADD CONSTRAINT game_rooms_team_check CHECK ((((team_mode = false) AND (number_of_teams IS NULL)) OR ((team_mode = true) AND (number_of_teams >= 2) AND (number_of_teams <= 6))));
+ALTER TABLE game_rooms ADD CONSTRAINT game_rooms_turn_timer_check CHECK (((turn_timer >= 10) AND (turn_timer <= 86400)));
+ALTER TABLE game_states ADD CONSTRAINT game_states_phase_check CHECK (((game_phase)::text = ANY ((ARRAY['lobby'::character varying, 'reinforcement'::character varying, 'deployment'::character varying, 'attack'::character varying, 'fortify'::character varying, 'finished'::character varying])::text[])));
+ALTER TABLE game_states ADD CONSTRAINT game_states_turn_positive CHECK (((turn_number > 0) AND (round_number > 0)));
+ALTER TABLE map_collaborators ADD CONSTRAINT map_collaborators_role_check CHECK (((role)::text = ANY (ARRAY[('editor'::character varying)::text, ('viewer'::character varying)::text, ('owner'::character varying)::text, ('reviewer'::character varying)::text])));
+ALTER TABLE map_ratings ADD CONSTRAINT map_ratings_rating_range CHECK (((rating >= 1) AND (rating <= 5)));
+ALTER TABLE map_reviews ADD CONSTRAINT map_reviews_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text, ('needs_changes'::character varying)::text])));
+ALTER TABLE map_sectors ADD CONSTRAINT map_sectors_bonus_non_negative CHECK ((bonus_troops >= 0));
+ALTER TABLE map_submissions ADD CONSTRAINT map_submissions_review_status_check CHECK (((review_status)::text = ANY (ARRAY[('pending'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text, ('needs_changes'::character varying)::text])));
+ALTER TABLE map_territories ADD CONSTRAINT map_territories_name_length CHECK ((length((name)::text) >= 1));
+ALTER TABLE maps ADD CONSTRAINT maps_download_count_check CHECK ((download_count >= 0));
+ALTER TABLE maps ADD CONSTRAINT maps_min_premium_tier_check CHECK (((min_premium_tier)::text = ANY (ARRAY[(NULL::character varying)::text, ('free'::character varying)::text, ('premium'::character varying)::text, ('pro'::character varying)::text, ('enterprise'::character varying)::text])));
+ALTER TABLE maps ADD CONSTRAINT maps_name_length CHECK ((length((name)::text) >= 3));
+ALTER TABLE maps ADD CONSTRAINT maps_play_count_check CHECK ((play_count >= 0));
+ALTER TABLE maps ADD CONSTRAINT maps_player_count CHECK (((min_players >= 2) AND (max_players <= 12) AND (min_players <= max_players)));
+ALTER TABLE maps ADD CONSTRAINT maps_rating_average_check CHECK (((rating_average >= (1)::numeric) AND (rating_average <= (5)::numeric)));
+ALTER TABLE maps ADD CONSTRAINT maps_rating_count_check CHECK ((rating_count >= 0));
+ALTER TABLE maps ADD CONSTRAINT maps_status_check CHECK (((status)::text = ANY (ARRAY[('draft'::character varying)::text, ('pending_review'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text, ('archived'::character varying)::text])));
+ALTER TABLE maps ADD CONSTRAINT maps_version_check CHECK ((version >= 1));
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (((type)::text = ANY (ARRAY[('friend_request'::character varying)::text, ('game_invite'::character varying)::text, ('game_started'::character varying)::text, ('game_ended'::character varying)::text, ('achievement'::character varying)::text, ('system'::character varying)::text, ('admin'::character varying)::text, ('chat_message'::character varying)::text, ('map_submission'::character varying)::text, ('map_review'::character varying)::text, ('map_approved'::character varying)::text, ('map_rejected'::character varying)::text])));
+ALTER TABLE player_stats ADD CONSTRAINT player_stats_games_consistency CHECK ((games_played >= (games_won + games_lost)));
+ALTER TABLE player_stats ADD CONSTRAINT player_stats_non_negative CHECK (((games_played >= 0) AND (games_won >= 0) AND (games_lost >= 0) AND (total_eliminations >= 0) AND (total_territories_conquered >= 0) AND (longest_win_streak >= 0) AND (current_win_streak >= 0)));
+ALTER TABLE rating_history ADD CONSTRAINT rating_history_change_consistency CHECK (((new_rating - old_rating) = rating_change));
+ALTER TABLE room_players ADD CONSTRAINT room_players_ai_difficulty_check CHECK (((ai_difficulty IS NULL) OR ((ai_difficulty)::text = ANY (ARRAY[('recruit'::character varying)::text, ('commander'::character varying)::text, ('grandmaster'::character varying)::text]))));
+ALTER TABLE room_players ADD CONSTRAINT room_players_elimination_reason_check CHECK ((((elimination_reason)::text = ANY (ARRAY[('defeated'::character varying)::text, ('timeout'::character varying)::text, ('disconnected'::character varying)::text, ('abandoned'::character varying)::text])) OR (elimination_reason IS NULL)));
+ALTER TABLE skill_leaderboard_cache ADD CONSTRAINT leaderboard_period_check CHECK (((period_type)::text = ANY (ARRAY[('daily'::character varying)::text, ('weekly'::character varying)::text, ('monthly'::character varying)::text, ('all_time'::character varying)::text])));
+ALTER TABLE territory_adjacencies ADD CONSTRAINT territory_adjacencies_no_self CHECK (((territory_from)::text <> (territory_to)::text));
+ALTER TABLE territory_modifier_templates ADD CONSTRAINT duration_type_check CHECK (((duration_type)::text = ANY (ARRAY[('permanent'::character varying)::text, ('turns'::character varying)::text, ('rounds'::character varying)::text, ('game'::character varying)::text])));
+ALTER TABLE territory_modifier_templates ADD CONSTRAINT modifier_type_check CHECK (((modifier_type)::text = ANY (ARRAY[('bonus'::character varying)::text, ('penalty'::character varying)::text, ('special'::character varying)::text])));
+ALTER TABLE user_account_status ADD CONSTRAINT account_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('suspended'::character varying)::text, ('banned'::character varying)::text, ('under_review'::character varying)::text])));
+ALTER TABLE user_bans ADD CONSTRAINT user_bans_type_check CHECK (((ban_type)::text = ANY (ARRAY[('temporary'::character varying)::text, ('permanent'::character varying)::text, ('chat'::character varying)::text, ('game'::character varying)::text])));
+ALTER TABLE user_preferences ADD CONSTRAINT user_preferences_dm_policy_check CHECK ((dm_policy = ANY (ARRAY['everyone'::text, 'friends_only'::text, 'no_one'::text])));
+ALTER TABLE user_reports ADD CONSTRAINT reports_no_self CHECK ((reporter_id <> reported_user_id));
+ALTER TABLE user_reports ADD CONSTRAINT reports_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('investigating'::character varying)::text, ('resolved'::character varying)::text, ('dismissed'::character varying)::text])));
+ALTER TABLE user_sessions ADD CONSTRAINT user_sessions_duration_positive CHECK (((duration_seconds IS NULL) OR (duration_seconds >= 0)));
+ALTER TABLE users ADD CONSTRAINT users_premium_tier_check CHECK (((premium_tier)::text = ANY (ARRAY[('free'::character varying)::text, ('premium'::character varying)::text, ('pro'::character varying)::text, ('enterprise'::character varying)::text])));
+ALTER TABLE users ADD CONSTRAINT users_skill_rating_check CHECK (((skill_rating >= 0) AND (skill_rating <= 5000)));
+ALTER TABLE users ADD CONSTRAINT users_subscription_status_check CHECK (((subscription_status)::text = ANY (ARRAY[('free'::character varying)::text, ('premium_monthly'::character varying)::text, ('premium_yearly'::character varying)::text, ('lifetime'::character varying)::text])));
+ALTER TABLE users ADD CONSTRAINT users_username_length CHECK ((length((username)::text) >= 3));
+ALTER TABLE users ADD CONSTRAINT users_username_max_length CHECK ((length((username)::text) <= 20)) NOT VALID;
+
 -- Foreign Keys
 ALTER TABLE admin_activity_logs ADD CONSTRAINT admin_activity_logs_admin_user_id_fkey FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE CASCADE;
 ALTER TABLE admin_notifications ADD CONSTRAINT admin_notifications_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL;
@@ -1562,3 +1776,35 @@ CREATE UNIQUE INDEX users_username_key ON public.users USING btree (username);
 CREATE UNIQUE INDEX web_push_subscriptions_user_endpoint_idx ON public.web_push_subscriptions USING btree (user_id, endpoint);
 CREATE INDEX web_push_subscriptions_user_idx ON public.web_push_subscriptions USING btree (user_id);
 
+-- Triggers
+CREATE TRIGGER update_admin_roles_updated_at BEFORE UPDATE ON public.admin_roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_announcements_updated_at BEFORE UPDATE ON public.clan_announcements FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_applications_updated_at BEFORE UPDATE ON public.clan_applications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_invitations_updated_at BEFORE UPDATE ON public.clan_invitations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_join_requests_updated_at BEFORE UPDATE ON public.clan_join_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_members_updated_at BEFORE UPDATE ON public.clan_members FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_objectives_updated_at BEFORE UPDATE ON public.clan_objectives FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_roles_updated_at BEFORE UPDATE ON public.clan_roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_war_matches_updated_at BEFORE UPDATE ON public.clan_war_matches FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clan_wars_updated_at BEFORE UPDATE ON public.clan_wars FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clans_updated_at BEFORE UPDATE ON public.clans FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER conversation_members_set_updated_at BEFORE UPDATE ON public.conversation_members FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER conversation_messages_set_updated_at BEFORE UPDATE ON public.conversation_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER conversations_set_updated_at BEFORE UPDATE ON public.conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER feature_flag_audit_trigger AFTER INSERT OR DELETE OR UPDATE ON public.feature_flags FOR EACH ROW EXECUTE FUNCTION log_feature_flag_change();
+CREATE TRIGGER update_feature_flags_updated_at BEFORE UPDATE ON public.feature_flags FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_game_rooms_updated_at BEFORE UPDATE ON public.game_rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_map_approval_requests_updated_at BEFORE UPDATE ON public.map_approval_requests FOR EACH ROW EXECUTE FUNCTION update_map_approval_requests_updated_at();
+CREATE TRIGGER trg_map_drafts_updated_at BEFORE UPDATE ON public.map_drafts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_map_images_staging_updated_at BEFORE UPDATE ON public.map_images_staging FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_map_ratings_updated_at BEFORE UPDATE ON public.map_ratings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_map_reviews_updated_at BEFORE UPDATE ON public.map_reviews FOR EACH ROW EXECUTE FUNCTION update_map_reviews_updated_at();
+CREATE TRIGGER trg_map_submissions_updated_at BEFORE UPDATE ON public.map_submissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_maps_updated_at BEFORE UPDATE ON public.maps FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_player_stats_updated_at BEFORE UPDATE ON public.player_stats FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER user_admin_roles_sync_is_admin_trg AFTER INSERT OR DELETE OR UPDATE ON public.user_admin_roles FOR EACH ROW EXECUTE FUNCTION user_admin_roles_sync_is_admin();
+CREATE TRIGGER trg_user_clan_preferences_updated_at BEFORE UPDATE ON public.user_clan_preferences FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_user_preferences_updated_at BEFORE UPDATE ON public.user_preferences FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER user_preferences_updated_at BEFORE UPDATE ON public.user_preferences FOR EACH ROW EXECUTE FUNCTION update_user_preferences_updated_at();
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER web_push_subscriptions_updated_at BEFORE UPDATE ON public.web_push_subscriptions FOR EACH ROW EXECUTE FUNCTION update_web_push_subscriptions_updated_at();
