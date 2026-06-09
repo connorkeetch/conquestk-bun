@@ -33,6 +33,7 @@ import {
 import { logger } from '@/utils/logger'
 import AttackOddsPopup from './game/AttackOddsPopup'
 import ConquestTransferPopup from './game/ConquestTransferPopup'
+import { DiffOverlay } from './game/DiffOverlay'
 import InteractionOverlay from './game/InteractionOverlay'
 import MapCanvas from './game/MapCanvas'
 import TerritoryLayer from './game/TerritoryLayer'
@@ -670,7 +671,7 @@ export default function UnifiedMapDisplay({
         />
         {diffOverlayData && (
           <div className="absolute inset-0">
-            {React.createElement(require('./DiffOverlay').DiffOverlay, {
+            {React.createElement(DiffOverlay, {
               width: mapData.width,
               height: mapData.height,
               points: territories.map((t) => ({ id: t.id, x: t.x, y: t.y })),

@@ -9,9 +9,9 @@ use crate::battle::{
 use crate::dice::simulate_step as rb_simulate_step;
 use crate::dp::exact_win_probability;
 use crate::rng::Xoshiro128pp;
-use js_sys::{Float64Array, Uint16Array};
-use js_sys::Uint8Array;
 use js_sys::Uint32Array;
+use js_sys::Uint8Array;
+use js_sys::{Float64Array, Uint16Array};
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
@@ -188,11 +188,17 @@ pub fn init_eval_state(ids: JsValue) -> u32 {
     // Try to reuse an empty slot
     for (i, slot) in store.iter_mut().enumerate() {
         if slot.is_none() {
-            *slot = Some(EvalStateMeta { len: ids_vec.len(), ids: ids_vec });
+            *slot = Some(EvalStateMeta {
+                len: ids_vec.len(),
+                ids: ids_vec,
+            });
             return i as u32;
         }
     }
-    store.push(Some(EvalStateMeta { len: ids_vec.len(), ids: ids_vec }));
+    store.push(Some(EvalStateMeta {
+        len: ids_vec.len(),
+        ids: ids_vec,
+    }));
     (store.len() - 1) as u32
 }
 
@@ -227,7 +233,9 @@ pub fn ai_eval_attacks_with_handle(
     }
 
     let pairs_len = pairs.length();
-    if pairs_len % 2 != 0 { return Float64Array::new_with_length(0); }
+    if !pairs_len.is_multiple_of(2) {
+        return Float64Array::new_with_length(0);
+    }
     let n = (pairs_len / 2) as usize;
 
     let armies_vec = {

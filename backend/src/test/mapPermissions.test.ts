@@ -1,7 +1,7 @@
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://tester:tester@localhost:5432/risk_game_test'
 
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, jest, mock } from 'bun:test'
 import type { NextFunction, Request, Response } from 'express'
 import express from 'express'
 import request from 'supertest'
@@ -14,18 +14,17 @@ type TestRequest = Request & {
   }
 }
 
-jest.mock('../config/database', () => {
-  const queryMock = jest.fn()
-  return {
-    __esModule: true,
-    query: queryMock,
-    getPool: jest.fn().mockResolvedValue({ query: queryMock }),
-    getClient: jest.fn().mockResolvedValue({ query: queryMock, release: jest.fn() }),
-    transaction: jest.fn(),
-  }
-})
+const queryMock = jest.fn()
 
-jest.mock('../middleware/auth', () => ({
+mock.module('../config/database', () => ({
+  __esModule: true,
+  query: queryMock,
+  getPool: jest.fn().mockResolvedValue({ query: queryMock }),
+  getClient: jest.fn().mockResolvedValue({ query: queryMock, release: jest.fn() }),
+  transaction: jest.fn(),
+}))
+
+mock.module('../middleware/auth', () => ({
   authenticateToken: (req: TestRequest, _res: Response, next: NextFunction) => {
     const headerUser = req.headers['x-test-user-id']
     req.userId = typeof headerUser === 'string' ? headerUser : 'test-user'
@@ -38,26 +37,12 @@ jest.mock('../middleware/auth', () => ({
   },
 }))
 
-const databaseModule = require('../config/database') as {
-  query: jest.Mock
-}
-const queryMock = databaseModule.query
+const { default: mapsRouter } = (await import('../routes/maps')) as { default: express.Router }
 
 const createApp = () => {
   const app = express()
   app.use(express.json())
   app.use(express.urlencoded({ extended: true }))
-
-  let mapsRouter: express.Router | undefined
-  jest.isolateModules(() => {
-    const module = require('../routes/maps') as { default: express.Router }
-    mapsRouter = module.default
-  })
-
-  if (!mapsRouter) {
-    throw new Error('Failed to load maps router')
-  }
-
   app.use('/api/maps', mapsRouter)
   return app
 }
