@@ -54,7 +54,6 @@ describe('mapStagingService', () => {
   let tempDir: string
 
   beforeEach(() => {
-    jest.resetModules()
     mockCreateNotification.mockReset()
     mockGetActiveAdmins.mockResolvedValue(['admin-1'])
     mockLoggerError.mockReset()

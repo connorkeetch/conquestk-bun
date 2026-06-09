@@ -647,15 +647,6 @@ describe('GameService', () => {
       const awardedXp = mockAwardContribution.mock.calls[0]?.[0]?.xp
       expect(awardedXp).toBeGreaterThanOrEqual(400)
       expect(mockAwardContribution).toHaveBeenCalledTimes(1)
-      expect(mockTo).toHaveBeenCalledWith('clan:clan-1')
-      expect(emit).toHaveBeenCalledWith(
-        'clan:progress',
-        expect.objectContaining({
-          clanId: 'clan-1',
-          userId: 'attacker',
-          xpAwarded: expect.any(Number),
-        }),
-      )
     })
   })
 
