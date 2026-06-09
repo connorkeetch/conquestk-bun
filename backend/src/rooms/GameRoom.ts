@@ -27,6 +27,16 @@ import { logger } from '../utils/logger.js'
 import { BattleResult, GameState, Player, Territory } from './schemas/index.js'
 import { applyEngineStateToSchema, engineBattleResultToSchema } from './utils/stateConverter.js'
 
+/**
+ * Canonical UUID (8-4-4-4-12 hex). Used to reject an empty/garbage roomId before it
+ * reaches a uuid-typed column (match_frames.match_id, match_checksums.match_id). An
+ * empty string ('') would otherwise fail every frame/checksum insert with Postgres
+ * "invalid input syntax for type uuid".
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' && UUID_RE.test(value)
+
 // Action types from the game engine
 export type GameAction =
   | { type: 'deploy'; territoryId: string; armies: number }
@@ -129,10 +139,19 @@ export class GameRoom extends Room<GameState> {
     // Initialize game state
     this.setState(new GameState())
     const resolvedRoomId = options.roomId || options.gameId
-    if (!resolvedRoomId) {
-      logger.error('GameRoom created without roomId', { mapId: options.mapId })
+    if (!isUuid(resolvedRoomId)) {
+      // Abort room creation rather than proceeding with an empty/invalid roomId.
+      // persistFrame() binds roomId as match_id (a uuid column); an empty/garbage value
+      // would fail every frame/checksum insert. Colyseus treats a throw in onCreate as a
+      // failed createRoom (colyseusRoomService wraps matchMaker.createRoom in try/catch).
+      logger.error('GameRoom created with missing/invalid roomId — aborting room creation', {
+        roomId: options.roomId,
+        gameId: options.gameId,
+        mapId: options.mapId,
+      })
+      throw new Error('GameRoom requires a valid roomId (uuid)')
     }
-    this.state.roomId = resolvedRoomId || ''
+    this.state.roomId = resolvedRoomId
     this.state.mapId = options.mapId
     this.state.gameMode = options.gameMode || 'classic'
     this.state.fogOfWar = options.fogOfWar || false
@@ -520,6 +539,16 @@ export class GameRoom extends Room<GameState> {
     action: GameAction,
     engineState: EngineGameState,
   ): Promise<void> {
+    // Belt-and-suspenders: never attempt a frame/checksum insert with an invalid roomId
+    // (match_id is a uuid column). onCreate already rejects bad roomIds, but this
+    // legacy/AI/timeout path does not share handleAction's checks, so guard here too.
+    if (!isUuid(this.state.roomId)) {
+      logger.warn('Skipping frame persistence — roomId is not a valid uuid', {
+        roomId: this.state.roomId,
+      })
+      return
+    }
+
     // Increment frame sequence
     this.frameSeq++
     const seq = this.frameSeq
