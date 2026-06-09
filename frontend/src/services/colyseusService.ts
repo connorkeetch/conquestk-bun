@@ -9,7 +9,7 @@ import { Client, type Room } from 'colyseus.js'
 import { toast } from 'react-hot-toast'
 import { logger } from '@/utils/logger'
 import { store } from '../store'
-import { setError, setGameState } from '../store/gameSlice'
+import { fetchGameState, setError, setGameState } from '../store/gameSlice'
 import { addPlayerToRoom, removePlayerFromRoom, type LifecycleUpdatePayload } from '../store/roomSlice'
 import { addPing, setConnectionStatus } from '../store/uiRoomSlice'
 import type { BattleResult, Card, GamePlayer, GameState, Territory } from '../types/game'
@@ -29,6 +29,8 @@ export interface GameLogEntry {
 export interface GameRoomEvents {
   'player-joined': { oderId: string; username: string; color?: string }
   'player-left': { oderId: string; username: string }
+  'player-disconnected': { oderId: string }
+  'player-reconnected': { oderId: string }
   'lifecycle:update': LifecycleUpdatePayload
   ratingUpdate: { oderId: string; oldRating: number; newRating: number; ratingChange: number }
   'game-log:append': GameLogEntry
@@ -42,19 +44,23 @@ type EventMap = Map<string, Set<EventCallback<unknown>>>
 
 // Connection settings
 const RECONNECT_DELAY_MS = 1000
-const MAX_RECONNECT_ATTEMPTS = 5
+const RECONNECT_MAX_DELAY_MS = 3000
+// Capped backoff sums to ~33s (1+2+3 + 3×9), comfortably covering the server's default
+// reconnection grace window (RECONNECT_WINDOW_SECONDS = 30s) so the client keeps trying a
+// true reconnect for as long as the held seat is recoverable. Keep these in rough sync if
+// the server window changes.
+const MAX_RECONNECT_ATTEMPTS = 12
 
-// Action types matching the backend GameRoom
-export type GameAction =
-  | { type: 'deploy'; territoryId: string; armies: number }
-  | { type: 'attack'; from: string; to: string; dice: number }
-  | { type: 'fortify'; from: string; to: string; armies: number }
-  | { type: 'transfer_conquest'; armies: number }
-  | { type: 'end_turn' }
-  | { type: 'trade_cards'; cardIds: string[] }
-  | { type: 'undo_fortify' }
-  | { type: 'go_back_to_reinforcement' }
-  | { type: 'go_back_to_attack' }
+// Canonical engine action shape, sent verbatim over the 'action' message to the
+// authoritative GameRoom (which forwards it to gameService.processGameAction). This is
+// the SAME shape the REST path POSTs, so there is no lossy client-side translation
+// layer — the room normalizes roomId/playerId server-side regardless of what's sent.
+export type GameAction = {
+  type: string
+  roomId: string
+  playerId: string
+  payload?: unknown
+}
 
 // Schema types from server (simplified client-side versions)
 interface SchemaTerritory {
@@ -136,6 +142,13 @@ class ColyseusService {
   private gameRoom: Room<SchemaGameState> | null = null
   private reconnectAttempts = 0
   private currentRoomId: string | null = null
+  // Captured after each successful (re)connect; lets a dropped client resume its seat
+  // via client.reconnect() instead of a fresh join. Survives onLeave (which nulls
+  // gameRoom/currentRoomId) so it's available during the reconnect attempt.
+  private reconnectionToken: string | null = null
+  // Handle for the pending reconnect attempt, so an intentional teardown (leaveRoom/
+  // disconnect) can cancel it before it resurrects the connection.
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private eventListeners: EventMap = new Map()
 
   /**
@@ -194,6 +207,7 @@ class ColyseusService {
    * Disconnect from all rooms and cleanup
    */
   disconnect(): void {
+    this.cancelReconnect()
     if (this.gameRoom) {
       this.gameRoom.leave()
       this.gameRoom = null
@@ -202,6 +216,21 @@ class ColyseusService {
     this.currentRoomId = null
     store.dispatch(setConnectionStatus('disconnected'))
     logger.info('[Colyseus] Disconnected')
+  }
+
+  /**
+   * Cancel any pending reconnect attempt and clear reconnect state. Called on intentional
+   * teardown so a queued doReconnect can't resurrect a connection the user is leaving —
+   * onLeave (unexpected drop) nulls gameRoom and schedules a reconnect timer, which a
+   * gameRoom-guarded teardown would otherwise miss.
+   */
+  private cancelReconnect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+    this.reconnectionToken = null
+    this.reconnectAttempts = 0
   }
 
   /**
@@ -220,9 +249,10 @@ class ColyseusService {
       return false
     }
 
-    // Already in this room
-    if (this.gameRoom && this.currentRoomId === roomId) {
-      console.log('[Colyseus DEBUG] Already in room, skipping join')
+    // Already connected to this room (only skip if the socket is genuinely open;
+    // after an unexpected drop the room ref is cleared in onLeave, so this won't
+    // short-circuit a legitimate reconnect).
+    if (this.gameRoom && this.currentRoomId === roomId && this.gameRoom.connection?.isOpen) {
       logger.info('[Colyseus] Already in room', { roomId })
       return true
     }
@@ -264,16 +294,8 @@ class ColyseusService {
       })
 
       console.log('[Colyseus DEBUG] Join succeeded, setting up listeners')
-      this.currentRoomId = roomId
-      this.reconnectAttempts = 0
-      store.dispatch(setConnectionStatus('connected'))
+      this.afterConnected(roomId)
       console.log('[Colyseus DEBUG] Status set to connected')
-
-      // Setup state listeners
-      this.setupRoomListeners()
-
-      // Initial state sync
-      this.syncStateToRedux()
 
       logger.info('[Colyseus] Joined room successfully', { roomId })
       return true
@@ -293,6 +315,11 @@ class ColyseusService {
    * Leave the current room
    */
   async leaveRoom(): Promise<void> {
+    // Cancel any pending reconnect FIRST, outside the gameRoom guard: after an unexpected
+    // drop, onLeave has already nulled gameRoom and queued a reconnect timer, so a
+    // gameRoom-guarded teardown would miss it and a stale doReconnect could rejoin the
+    // room the user is intentionally leaving.
+    this.cancelReconnect()
     if (this.gameRoom) {
       logger.info('[Colyseus] Leaving room', { roomId: this.currentRoomId })
       await this.gameRoom.leave()
@@ -380,13 +407,27 @@ class ColyseusService {
   private setupRoomListeners(): void {
     if (!this.gameRoom) return
 
-    console.log('[Colyseus DEBUG] Setting up room listeners')
-
-    // State change listeners - Colyseus auto-syncs state
+    // State change listeners - Colyseus auto-syncs state (no-op until the room
+    // becomes authoritative; guarded in syncStateToRedux).
     this.gameRoom.onStateChange((state) => {
-      console.log('[Colyseus DEBUG] onStateChange triggered', { version: state.version, phase: state.phase })
       logger.debug('[Colyseus] State changed', { version: state.version })
       this.syncStateToRedux()
+    })
+
+    // Live-update bridge: the server broadcasts 'state:changed' whenever the
+    // authoritative (REST/cache) game state advances. Refetch it so moves appear
+    // for everyone in real time without a manual refresh.
+    this.gameRoom.onMessage('state:changed', (data: { version?: number }) => {
+      logger.debug('[Colyseus] state:changed nudge', { version: data?.version })
+      if (this.currentRoomId) {
+        // Preserve the spectate intent of the initial load — otherwise an admin
+        // spectator's nudge-driven refetch silently drops ?spectate=true and flips them
+        // into the fog-masked view for the rest of the game.
+        const allowSpectate =
+          typeof window !== 'undefined' &&
+          new URLSearchParams(window.location.search).get('spectate') === 'true'
+        store.dispatch(fetchGameState({ roomId: this.currentRoomId, allowSpectate }))
+      }
     })
 
     // Message handlers
@@ -459,6 +500,16 @@ class ColyseusService {
     this.gameRoom.onMessage('player-eliminated', (data: { oderId: string; reason: string }) => {
       logger.info('[Colyseus] Player eliminated', { oderId: data.oderId, reason: data.reason })
       audioService.playEffect('eliminated')
+    })
+
+    this.gameRoom.onMessage('player-disconnected', (data: { oderId: string }) => {
+      logger.info('[Colyseus] Player disconnected', { oderId: data.oderId })
+      this.emitEvent('player-disconnected', data)
+    })
+
+    this.gameRoom.onMessage('player-reconnected', (data: { oderId: string }) => {
+      logger.info('[Colyseus] Player reconnected', { oderId: data.oderId })
+      this.emitEvent('player-reconnected', data)
     })
 
     this.gameRoom.onMessage('game-started', () => {
@@ -539,11 +590,18 @@ class ColyseusService {
     // Connection events
     this.gameRoom.onLeave((code) => {
       logger.info('[Colyseus] Left room', { code })
+      // Drop the stale room reference so a reconnect actually re-joins.
+      // Previously gameRoom/currentRoomId were left set, so joinRoom's
+      // "already in this room" guard short-circuited every reconnect attempt and
+      // the connection status was stuck on 'disconnected' until a full page reload.
+      const previousRoomId = this.currentRoomId
+      this.gameRoom = null
+      this.currentRoomId = null
       store.dispatch(setConnectionStatus('disconnected'))
 
-      // Attempt reconnect on unexpected disconnect
-      if (code !== 1000 && this.currentRoomId) {
-        this.attemptReconnect(this.currentRoomId)
+      // Attempt reconnect on unexpected disconnect (code 1000 = normal closure)
+      if (code !== 1000 && previousRoomId) {
+        this.attemptReconnect(previousRoomId)
       }
     })
 
@@ -555,15 +613,26 @@ class ColyseusService {
 
   private syncStateToRedux(): void {
     if (!this.gameRoom?.state) {
-      console.log('[Colyseus DEBUG] syncStateToRedux called but no room state')
       return
     }
 
     const state = this.gameRoom.state
-    console.log('[Colyseus DEBUG] Syncing state to Redux', {
+
+    // The Colyseus room is only authoritative once its engine has been
+    // initialized/rehydrated with the live game (see GameRoom). Until then an
+    // active game's room schema has no territories, and syncing that empty state
+    // would clobber the board loaded via REST (fetchGameState), blanking the map.
+    // Skip until the room actually carries board data. (After the room becomes
+    // authoritative this condition is never true for a started game.)
+    if (!state.territories || state.territories.size === 0) {
+      logger.debug('[Colyseus] Skipping state sync — room has no board yet')
+      return
+    }
+
+    logger.debug('[Colyseus] Syncing state to Redux', {
       version: state.version,
       phase: state.phase,
-      turn: state.turn
+      turn: state.turn,
     })
 
     // Convert Colyseus Schema state to Redux-compatible GameState
@@ -588,7 +657,6 @@ class ColyseusService {
     }
 
     store.dispatch(setGameState(gameState))
-    console.log('[Colyseus DEBUG] State synced to Redux')
   }
 
   private convertPlayers(schemaPlayers: Map<string, SchemaPlayer>): GamePlayer[] {
@@ -656,6 +724,7 @@ class ColyseusService {
   private attemptReconnect(roomId: string): void {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       logger.error('[Colyseus] Max reconnect attempts reached')
+      this.reconnectionToken = null
       if (this.shouldSurfaceConnectionIssues()) {
         toast.error('Lost connection to game server')
       }
@@ -663,16 +732,70 @@ class ColyseusService {
     }
 
     this.reconnectAttempts++
-    const delay = RECONNECT_DELAY_MS * this.reconnectAttempts
+    // Capped backoff so the cumulative budget covers the server's reconnection grace
+    // window (see MAX_RECONNECT_ATTEMPTS); we keep retrying a true reconnect until then.
+    const delay = Math.min(RECONNECT_DELAY_MS * this.reconnectAttempts, RECONNECT_MAX_DELAY_MS)
 
     logger.info('[Colyseus] Attempting reconnect', {
       attempt: this.reconnectAttempts,
       delay,
     })
 
-    setTimeout(() => {
-      this.joinRoom(roomId)
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
+      void this.doReconnect(roomId)
     }, delay)
+  }
+
+  /**
+   * Wire up a freshly (re)connected room: capture the reconnection token, reset
+   * reconnect bookkeeping, mark connected, and attach listeners + initial state sync.
+   * Shared by joinRoom and doReconnect.
+   */
+  private afterConnected(roomId: string): void {
+    if (!this.gameRoom) return
+    this.currentRoomId = roomId
+    this.reconnectAttempts = 0
+    this.reconnectionToken = this.gameRoom.reconnectionToken
+    store.dispatch(setConnectionStatus('connected'))
+    this.setupRoomListeners()
+    this.syncStateToRedux()
+  }
+
+  /**
+   * Reconnect after an unexpected drop. Prefer a true Colyseus reconnection —
+   * client.reconnect(reconnectionToken) resumes the reserved seat within the server's
+   * allowReconnection grace window, preserving turn/timer state and skipping a fresh
+   * onAuth/onJoin (which could race or re-seat). Fall back to a fresh join if the token
+   * is gone or the grace window has already elapsed.
+   */
+  private async doReconnect(roomId: string): Promise<void> {
+    if (this.client && this.reconnectionToken) {
+      try {
+        store.dispatch(setConnectionStatus('connecting'))
+        this.gameRoom = await this.client.reconnect<SchemaGameState>(this.reconnectionToken)
+        this.afterConnected(roomId)
+        logger.info('[Colyseus] Reconnected to room', { roomId })
+        return
+      } catch (error) {
+        logger.warn('[Colyseus] reconnect() attempt failed', {
+          attempt: this.reconnectAttempts,
+          error: error instanceof Error ? error.message : error,
+        })
+        // Keep the token and retry on the next scheduled attempt. A single transient
+        // matchmake error must NOT orphan a still-held seat with a fresh join (which
+        // creates a NEW seat and leaves the server's allowReconnection pending until it
+        // times out). Only after exhausting the budget — by which point the seat is
+        // surely released — do we fall back to a fresh join.
+        if (this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          this.attemptReconnect(roomId)
+          return
+        }
+        this.reconnectionToken = null
+      }
+    }
+    // Last resort: no token, or the grace window is spent → a fresh join.
+    await this.joinRoom(roomId)
   }
 
   private shouldSurfaceConnectionIssues(): boolean {
@@ -681,8 +804,10 @@ class ColyseusService {
     if (roomStatus === 'initializing' || roomStatus === 'active' || roomStatus === 'paused') {
       return true
     }
+    // currentGame.phase is the in-game phase type (no 'lobby' — lobby is tracked by
+    // room.status above), so only 'finished' needs excluding here.
     const phase = state.game.currentGame?.phase
-    return Boolean(phase && phase !== 'lobby' && phase !== 'finished')
+    return Boolean(phase && phase !== 'finished')
   }
 }
 

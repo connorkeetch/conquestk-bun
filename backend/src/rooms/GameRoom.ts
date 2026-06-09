@@ -13,15 +13,29 @@ import { computeChecksum } from '@conquestk/shared/lockstep'
 import { type Client, Room } from 'colyseus'
 import { query } from '../config/database.js'
 import { GameEngine } from '../game/gameEngine.js'
+import { gameStateCache } from '../services/cacheService.js'
+import { GameService } from '../services/gameService.js'
 import { mapService } from '../services/mapService.js'
 import type {
+  GameAction as EngineGameAction,
   GameState as EngineGameState,
   Territory as EngineTerritory,
   GameConfiguration,
 } from '../types/game.js'
+import { verifyJwtWithAnySecret } from '../utils/jwtHelpers.js'
 import { logger } from '../utils/logger.js'
 import { BattleResult, GameState, Player, Territory } from './schemas/index.js'
 import { applyEngineStateToSchema, engineBattleResultToSchema } from './utils/stateConverter.js'
+
+/**
+ * Canonical UUID (8-4-4-4-12 hex). Used to reject an empty/garbage roomId before it
+ * reaches a uuid-typed column (match_frames.match_id, match_checksums.match_id). An
+ * empty string ('') would otherwise fail every frame/checksum insert with Postgres
+ * "invalid input syntax for type uuid".
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' && UUID_RE.test(value)
 
 // Action types from the game engine
 export type GameAction =
@@ -64,15 +78,43 @@ interface ClientUserData {
   isHost: boolean
 }
 
+// How long (seconds) to hold a dropped player's seat so the client can
+// client.reconnect(reconnectionToken) without losing turn/timer/identity. Tunable via
+// env for tests/ops; defaults to 30s. Invalid/<=0 values fall back to the default
+// (a negative would make allowReconnection's timeout fire immediately, silently
+// disabling the grace window).
+const _reconnectWindowEnv = Number(process.env.COLYSEUS_RECONNECT_WINDOW_SECONDS)
+const RECONNECT_WINDOW_SECONDS =
+  Number.isFinite(_reconnectWindowEnv) && _reconnectWindowEnv > 0 ? _reconnectWindowEnv : 30
+
 export class GameRoom extends Room<GameState> {
   // Game engine for processing actions (deterministic, stateless)
   private engine: GameEngine = new GameEngine()
+
+  // Authoritative gameplay service. handleAction() is the single WS entry point for
+  // gameplay and delegates the read-modify-write to gameService.processGameAction
+  // (cache → validate → engine → persist cache+DB → bump version), reusing the proven
+  // REST/cache logic instead of duplicating engine ownership in the room. The in-room
+  // engineState/processAction/persistFrame path below is legacy/dormant pending the
+  // later schema-driven cutover (it is only reached by the unused 'start-game'/AI/timeout
+  // paths today). GameService is stateless — it operates on roomId/userId/action.
+  private gameService = new GameService()
+
+  // Serializes authoritative action processing per room. Colyseus onMessage handlers
+  // are async and interleave at await points, so two rapid actions could both read
+  // version N from the cache and both write N+1 (lost update). Chaining every
+  // processGameAction through this promise guarantees one-at-a-time read-modify-write.
+  private actionQueue: Promise<unknown> = Promise.resolve()
 
   // Current engine state (kept in sync with schema state)
   private engineState: EngineGameState | null = null
 
   // Frame sequence for replay persistence
   private frameSeq: number = 0
+
+  // Last authoritative (REST/cache) state version we broadcast a nudge for.
+  // -1 = not yet seeded. See broadcastStateChangeIfAdvanced().
+  private lastBroadcastCacheVersion: number = -1
 
   // AI processing throttle
   private lastAiActionTime: number = 0
@@ -97,10 +139,19 @@ export class GameRoom extends Room<GameState> {
     // Initialize game state
     this.setState(new GameState())
     const resolvedRoomId = options.roomId || options.gameId
-    if (!resolvedRoomId) {
-      logger.error('GameRoom created without roomId', { mapId: options.mapId })
+    if (!isUuid(resolvedRoomId)) {
+      // Abort room creation rather than proceeding with an empty/invalid roomId.
+      // persistFrame() binds roomId as match_id (a uuid column); an empty/garbage value
+      // would fail every frame/checksum insert. Colyseus treats a throw in onCreate as a
+      // failed createRoom (colyseusRoomService wraps matchMaker.createRoom in try/catch).
+      logger.error('GameRoom created with missing/invalid roomId — aborting room creation', {
+        roomId: options.roomId,
+        gameId: options.gameId,
+        mapId: options.mapId,
+      })
+      throw new Error('GameRoom requires a valid roomId (uuid)')
     }
-    this.state.roomId = resolvedRoomId || ''
+    this.state.roomId = resolvedRoomId
     this.state.mapId = options.mapId
     this.state.gameMode = options.gameMode || 'classic'
     this.state.fogOfWar = options.fogOfWar || false
@@ -123,27 +174,49 @@ export class GameRoom extends Room<GameState> {
   }
 
   async onAuth(client: Client, options: JoinOptions): Promise<ClientUserData> {
-    // TODO: Validate JWT token
-    // For now, trust the provided userId
-    logger.info('Client authenticating', {
-      oderId: options.oderId,
-      username: options.username,
-      hasToken: !!options.token
-    })
+    // Verify the JWT and derive identity FROM the verified token — NEVER trust the
+    // client-supplied options.oderId. The room and its 'action' handler are registered
+    // unconditionally (server.ts), and handleAction now delegates to the authoritative
+    // gameService.processGameAction, so without this a non-browser WS client could join
+    // with a spoofed oderId and commit moves as whichever player's turn it is
+    // (COLYSEUS_AUTHORITATIVE only gates the legitimate browser's SEND, not this server
+    // handler). JWT verification + the engine's currentPlayer check together close that
+    // hole: an action only commits for the verified user, and only on their own turn.
+    let verifiedUserId: string
+    try {
+      const { payload } = verifyJwtWithAnySecret<{ userId?: string }>(options.token ?? '')
+      if (!payload || typeof payload.userId !== 'string' || !payload.userId) {
+        throw new Error('Invalid token payload')
+      }
+      verifiedUserId = payload.userId
+    } catch (error) {
+      logger.warn('GameRoom auth rejected: invalid or missing token', {
+        hasToken: !!options.token,
+        error: error instanceof Error ? error.message : error,
+      })
+      throw new Error('Authentication required')
+    }
 
-    if (!options.oderId || !options.username) {
-      logger.error('Missing required auth fields', { options })
-      throw new Error('Missing oderId or username')
+    if (!options.username) {
+      throw new Error('Missing username')
     }
 
     const userData: ClientUserData = {
-      playerId: options.oderId,
+      playerId: verifiedUserId,
       username: options.username,
       isSpectator: options.spectate || false,
       isHost: this.state.players.size === 0, // First player is host
     }
 
-    logger.info('Auth successful, returning userData', { userData })
+    // Colyseus assigns the onAuth return value to `client.auth`, NOT `client.userData`
+    // (see @colyseus/core Room.js: `client.auth = await this.onAuth(...)`). onJoin,
+    // onLeave and handleAction all read `client.userData`, so we must populate it
+    // explicitly here — otherwise every join fails with "Client userData is undefined
+    // in onJoin" and the client is kicked (ServerError 1000). This is required for the
+    // authoritative room to accept players at all.
+    client.userData = userData
+
+    logger.info('Auth successful', { userData })
     return userData
   }
 
@@ -173,11 +246,16 @@ export class GameRoom extends Room<GameState> {
       return
     }
 
-    // Check if player already exists (reconnecting)
+    // Check if player already exists (reconnecting). This branch covers BOTH a true
+    // client.reconnect() and the fresh-join fallback (when reconnect() failed): in the
+    // fallback case the original allowReconnection promise stays pending until it times
+    // out, so we must announce the reconnection here or observers would only ever see
+    // the disconnect. (The onLeave reject branch is guarded to not contradict this.)
     const existingPlayer = this.state.players.get(userData.playerId)
     if (existingPlayer) {
       existingPlayer.isConnected = true
       logger.info('Player reconnected', { playerId: userData.playerId })
+      this.broadcast('player-reconnected', { oderId: userData.playerId })
       return
     }
 
@@ -208,38 +286,114 @@ export class GameRoom extends Room<GameState> {
     })
   }
 
-  onLeave(client: Client, consented: boolean) {
-    const userData = client.userData as ClientUserData
+  async onLeave(client: Client, consented: boolean) {
+    const userData = client.userData as ClientUserData | undefined
     logger.info('Client left', {
-      playerId: userData.playerId,
+      playerId: userData?.playerId,
       consented,
     })
 
-    if (userData.isSpectator) return
+    if (!userData || userData.isSpectator) return
 
     const player = this.state.players.get(userData.playerId)
     if (!player) return
 
     player.isConnected = false
 
-    // If game hasn't started, remove the player
-    if (this.state.phase === 'lobby') {
+    // Decide lobby vs in-progress from the AUTHORITATIVE state, NOT the schema's
+    // `this.state.phase` (which is never advanced on the delegating path — it stays
+    // 'lobby'). gameService.getGameState is cache-first with a durable game_states DB
+    // fallback, so it distinguishes "never started" (null) from "in progress but cache
+    // expired" (DB row present). FAIL SAFE: if the lookup errors (DB/cache unavailable),
+    // hold the seat rather than evict — a transient fault must not destroy an active
+    // player's seat mid-game.
+    let authoritativePhase: string | undefined
+    let lookupFailed = false
+    try {
+      const state = await this.gameService.getGameState(this.state.roomId)
+      authoritativePhase = state?.phase
+      // state === null → no cache AND no DB row → the game never started.
+      if (state === null) {
+        this.state.players.delete(userData.playerId)
+        this.broadcast('player-left', { oderId: userData.playerId })
+        return
+      }
+    } catch (error) {
+      lookupFailed = true
+      logger.warn('onLeave phase lookup failed; holding seat to be safe', {
+        roomId: this.state.roomId,
+        playerId: userData.playerId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+
+    // Confirmed still in lobby: free the seat (no game in progress yet).
+    if (!lookupFailed && authoritativePhase === 'lobby') {
       this.state.players.delete(userData.playerId)
       this.broadcast('player-left', { oderId: userData.playerId })
       return
     }
 
-    // If consented (intentional leave), handle as abandoned
-    if (consented && this.state.phase !== 'finished') {
-      // TODO: Start disconnect timer or convert to AI
-      logger.info('Player abandoned game', { playerId: userData.playerId })
+    // Game already finished, or an intentional leave: mark disconnected, no grace.
+    if (authoritativePhase === 'finished' || consented) {
+      this.broadcast('player-disconnected', { oderId: userData.playerId })
+      return
     }
 
-    // Broadcast disconnection
+    // Unexpected drop mid-game (or uncertain → fail safe): hold the seat for a grace
+    // window so the client can client.reconnect(reconnectionToken) and resume the SAME
+    // session, preserving turn/timer state. onAuth is NOT re-run on reconnection (the
+    // reserved seat is resumed), so the JWT-verified identity carries over.
     this.broadcast('player-disconnected', { oderId: userData.playerId })
+    try {
+      await this.allowReconnection(client, RECONNECT_WINDOW_SECONDS)
+      player.isConnected = true
+      logger.info('Player reconnected', { playerId: userData.playerId })
+      this.broadcast('player-reconnected', { oderId: userData.playerId })
+    } catch {
+      // Window elapsed without a return. Do NOT re-broadcast player-disconnected: the
+      // pre-await broadcast already told clients, and a fresh-join fallback may have
+      // already re-seated this player (in which case a second disconnect would be a
+      // stale, contradictory signal). Re-check before logging.
+      if (this.state.players.get(userData.playerId)?.isConnected) {
+        return
+      }
+      logger.info('Reconnection window elapsed; player remains disconnected', {
+        playerId: userData.playerId,
+      })
+    }
   }
 
-  private async handleAction(client: Client, action: GameAction) {
+  /**
+   * Serialize a unit of authoritative work so concurrent WS messages can't interleave
+   * a cache read-modify-write. Each task waits for the previous to settle; the returned
+   * promise carries the task's real result/rejection, while the internal chain tail is
+   * kept non-rejecting so one failure doesn't poison subsequent actions.
+   */
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.actionQueue.then(() => task())
+    this.actionQueue = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
+  }
+
+  /**
+   * Authoritative WS gameplay entry point (the 'action' message). The room is the
+   * single authoritative writer: it normalizes identity server-side (never trusting the
+   * client's roomId/playerId), delegates the state mutation to the proven, HTTP-free
+   * gameService.processGameAction, and on commit immediately broadcasts a 'state:changed'
+   * nudge so every client refetches the fog-redacted board via REST (no manual refresh,
+   * no 1s tick latency, no fog leak). Turn-ownership is enforced authoritatively inside
+   * processGameAction.isValidAction against the cached state — NOT against the schema's
+   * currentPlayerId, which is not advanced on this delegating path.
+   *
+   * Note: while COLYSEUS_AUTHORITATIVE is false on the client, no browser sends this
+   * message, so this handler is dormant in production; it is exercised by the headless
+   * prototype and becomes live at the gated flip.
+   */
+  private async handleAction(client: Client, action: EngineGameAction) {
     const userData = client.userData as ClientUserData
     const playerId = userData.playerId
 
@@ -249,32 +403,40 @@ export class GameRoom extends Room<GameState> {
       return
     }
 
-    // Validate it's this player's turn (except for certain actions)
-    if (this.state.currentPlayerId !== playerId) {
-      const allowedOffTurn = ['resign']
-      if (!allowedOffTurn.includes(action.type)) {
-        client.send('error', { message: 'Not your turn' })
-        return
-      }
+    if (!this.state.roomId) {
+      client.send('error', { message: 'Game not ready' })
+      return
     }
 
-    // Process the action
+    // Server-authoritative identity: ignore any roomId/playerId the client supplied.
+    const normalized = {
+      ...action,
+      roomId: this.state.roomId,
+      playerId,
+    } as EngineGameAction
+
     try {
-      const result = await this.processAction(playerId, action)
+      const updated = await this.enqueue(() =>
+        this.gameService.processGameAction(normalized, playerId),
+      )
 
-      if (!result.success) {
-        client.send('error', { message: result.error })
-        return
+      // Push the live-update nudge immediately on commit. Record the version we just
+      // broadcast so the tick-poll fallback (broadcastStateChangeIfAdvanced) doesn't
+      // emit a duplicate nudge for the same advance.
+      const version = typeof updated.version === 'number' ? updated.version : undefined
+      if (typeof version === 'number' && version > this.lastBroadcastCacheVersion) {
+        this.lastBroadcastCacheVersion = version
       }
+      this.broadcast('state:changed', version !== undefined ? { version } : {})
 
-      // Acknowledge action (frame persistence already done in processAction)
-      client.send('action-ack', {
-        seq: this.frameSeq,
-        success: true,
-        version: this.state.version,
-      })
+      client.send('action-ack', { success: true, version })
     } catch (error) {
-      logger.error('Action processing error', { error, action, playerId })
+      logger.warn('WS action failed', {
+        roomId: this.state.roomId,
+        playerId,
+        actionType: (action as { type?: string })?.type,
+        error: error instanceof Error ? error.message : error,
+      })
       client.send('error', {
         message: error instanceof Error ? error.message : 'Action failed',
       })
@@ -377,6 +539,16 @@ export class GameRoom extends Room<GameState> {
     action: GameAction,
     engineState: EngineGameState,
   ): Promise<void> {
+    // Belt-and-suspenders: never attempt a frame/checksum insert with an invalid roomId
+    // (match_id is a uuid column). onCreate already rejects bad roomIds, but this
+    // legacy/AI/timeout path does not share handleAction's checks, so guard here too.
+    if (!isUuid(this.state.roomId)) {
+      logger.warn('Skipping frame persistence — roomId is not a valid uuid', {
+        roomId: this.state.roomId,
+      })
+      return
+    }
+
     // Increment frame sequence
     this.frameSeq++
     const seq = this.frameSeq
@@ -573,6 +745,12 @@ export class GameRoom extends Room<GameState> {
   }
 
   private tick() {
+    // Live-update bridge: while gameplay still runs on the REST/cache engine, nudge
+    // all joined clients to refetch whenever the authoritative cache state advances.
+    // Runs regardless of this room's own (currently uninitialized) phase, which is
+    // why it precedes the lobby/finished early-return below.
+    void this.broadcastStateChangeIfAdvanced()
+
     if (this.state.phase === 'finished' || this.state.phase === 'lobby') {
       return
     }
@@ -586,6 +764,42 @@ export class GameRoom extends Room<GameState> {
     const currentPlayer = this.state.players.get(this.state.currentPlayerId)
     if (currentPlayer?.isAi) {
       this.processAiTurn(currentPlayer)
+    }
+  }
+
+  /**
+   * Poll the authoritative game-state cache (written by the REST action path) and
+   * broadcast a 'state:changed' nudge to all joined clients when its version
+   * advances. Clients respond by refetching via fetchGameState — giving real-time
+   * updates without a manual refresh, while gameplay stays on the proven REST/cache
+   * engine. The first observation only seeds the baseline (no broadcast); clients
+   * load initial state via their own fetchGameState on mount.
+   */
+  private async broadcastStateChangeIfAdvanced(): Promise<void> {
+    if (!this.state.roomId) return
+    try {
+      const cached = await gameStateCache.getGameState<{ version?: number }>(this.state.roomId)
+      const version = cached?.version
+      if (typeof version !== 'number') return
+
+      // Broadcast on ANY advance above the highest version we've already nudged for —
+      // including the FIRST observation after room (re)creation. The previous code
+      // treated the first observation as "seed only, don't broadcast", which swallowed
+      // the nudge for a client that mounted (and fetched vN) just before an action
+      // advanced the cache to vN+1, leaving it on stale state until the next advance.
+      // `lastBroadcastCacheVersion` is a best-effort, monotonic de-dup hint shared with
+      // handleAction; it is intentionally NOT routed through the action queue, so the
+      // worst case under interleaving is one redundant (idempotent) nudge — never a
+      // missed nudge or lost state (the poll never writes game state).
+      if (version > this.lastBroadcastCacheVersion) {
+        this.lastBroadcastCacheVersion = version
+        this.broadcast('state:changed', { version })
+      }
+    } catch (error) {
+      logger.debug('State-change nudge poll failed', {
+        roomId: this.state.roomId,
+        error: error instanceof Error ? error.message : error,
+      })
     }
   }
 

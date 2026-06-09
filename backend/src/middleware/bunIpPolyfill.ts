@@ -1,11 +1,13 @@
 import type { NextFunction, Request, Response } from 'express'
 
 /**
- * Polyfills req.ip for Bun runtime where bun-serve-express doesn't implement it.
- * Must be applied BEFORE any middleware that uses req.ip.
+ * Resolves the real client IP from proxy headers and pins it onto `req.ip`.
  *
- * Note: We can't check `req.ip === undefined` because bun-serve-express has a
- * getter that throws when accessed. We always set it from headers instead.
+ * Behind Cloudflare + Railway the upstream chain is multi-hop, so Express's
+ * trust-proxy heuristic can record an edge/proxy IP. We prefer the explicit
+ * client-IP headers (Cloudflare `cf-connecting-ip`, then `x-forwarded-for` /
+ * `x-real-ip`) and fall back to the socket address. Must be applied BEFORE any
+ * middleware that reads `req.ip` (rate limiting, audit logging).
  */
 export function bunIpPolyfill(req: Request, _res: Response, next: NextFunction): void {
   let ip: string | undefined
