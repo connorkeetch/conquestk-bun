@@ -6,17 +6,21 @@
  * SET statements like pg_dump emits). It is applied as one transactional script
  * by MigrationRunner.executeBaselineInTransaction, so object ordering matters:
  *   Extensions -> Enums -> Sequences -> Functions -> Tables
- *     -> Sequence Ownership -> Foreign Keys -> Indexes
+ *     -> Sequence Ownership -> CHECK Constraints -> Foreign Keys -> Indexes -> Triggers
  * Sequences and functions are emitted BEFORE tables because table column
  * DEFAULTs reference them (e.g. nextval('client_metrics_id_seq'),
  * generate_ulid()) and those references are resolved at table-creation time.
+ * Triggers are emitted LAST because they depend on both their tables and their
+ * trigger functions (functions are part of the Functions section above).
  *
  * Known residual gaps (intentionally NOT emitted — they are not bootstrap
  * blockers, but this file is therefore not a 100% faithful schema dump):
- *   - Triggers and trigger functions are only partially covered: plain
- *     functions are emitted (pg_get_functiondef), but TRIGGERs themselves are
- *     not. updated_at columns still default to now(), so inserts succeed.
- *   - CHECK constraints are not emitted (they live in pg_constraint contype='c').
+ *   - Views / materialized views
+ *   - COMMENT ON ... statements
+ *   - EXCLUDE constraints and other non-CHECK/-FK constraints expressed only via
+ *     pg_constraint (UNIQUE constraints are emitted indirectly as their indexes)
+ *   - Row-Level Security policies and GRANT/REVOKE privileges
+ *   - Aggregates, operators, and casts (plain functions/procedures are emitted)
  * If full fidelity is ever required, prefer pg_dump --schema-only and teach the
  * runner to apply that file directly.
  */
@@ -273,6 +277,29 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
       sql += '\n'
     }
 
+    // Get table CHECK constraints (contype='c'). pg_get_constraintdef yields the
+    // full "CHECK (...)" body, including any trailing "NOT VALID". Emitted after the
+    // tables they constrain.
+    console.log('Extracting CHECK constraints...')
+    const checks = await pool.query(`
+      SELECT rel.relname AS table_name, con.conname AS name, pg_get_constraintdef(con.oid) AS definition
+      FROM pg_constraint con
+      JOIN pg_class rel ON rel.oid = con.conrelid
+      JOIN pg_namespace n ON n.oid = rel.relnamespace
+      WHERE con.contype = 'c' AND n.nspname = 'public'
+      ORDER BY rel.relname, con.conname
+    `)
+
+    const emittedChecks = checks.rows.filter((c) => !EXCLUDED_TABLES.has(c.table_name))
+
+    if (emittedChecks.length > 0) {
+      sql += '-- CHECK Constraints\n'
+      for (const c of emittedChecks) {
+        sql += `ALTER TABLE ${c.table_name} ADD CONSTRAINT ${c.name} ${c.definition};\n`
+      }
+      sql += '\n'
+    }
+
     // Get foreign keys
     console.log('Extracting foreign keys...')
     const fks = await pool.query(`
@@ -334,6 +361,28 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
       sql += '-- Indexes\n'
       for (const idx of emittedIndexes) {
         sql += `${idx.indexdef};\n`
+      }
+      sql += '\n'
+    }
+
+    // Get triggers last: they depend on both tables and their trigger functions
+    // (both emitted above). pg_get_triggerdef emits the complete CREATE TRIGGER.
+    console.log('Extracting triggers...')
+    const triggers = await pool.query(`
+      SELECT rel.relname AS table_name, pg_get_triggerdef(t.oid) AS definition
+      FROM pg_trigger t
+      JOIN pg_class rel ON rel.oid = t.tgrelid
+      JOIN pg_namespace n ON n.oid = rel.relnamespace
+      WHERE NOT t.tgisinternal AND n.nspname = 'public'
+      ORDER BY rel.relname, t.tgname
+    `)
+
+    const emittedTriggers = triggers.rows.filter((t) => !EXCLUDED_TABLES.has(t.table_name))
+
+    if (emittedTriggers.length > 0) {
+      sql += '-- Triggers\n'
+      for (const t of emittedTriggers) {
+        sql += `${t.definition};\n`
       }
       sql += '\n'
     }
