@@ -76,7 +76,7 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       name: territory.name,
       x: territory.armyPosition?.x ?? 0,
       y: territory.armyPosition?.y ?? 0,
-      sector: territory.sectorId,
+      ...(territory.sectorId ? { sector: territory.sectorId } : {}),
     }))
   }, [mapData])
 

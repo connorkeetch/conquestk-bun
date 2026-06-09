@@ -8,17 +8,12 @@ pub struct StepOutcome {
 
 #[inline]
 fn roll_die(rng: &mut Xoshiro128pp) -> u8 {
-    (rng.next_range_inclusive(1, 6) as u8)
-}
-
-#[inline]
-fn sort_desc(slice: &mut [u8]) {
-    slice.sort_unstable_by(|a, b| b.cmp(a));
+    rng.next_range_inclusive(1, 6) as u8
 }
 
 pub fn simulate_step(att_dice: u8, def_dice: u8, rng: &mut Xoshiro128pp) -> StepOutcome {
-    debug_assert!(att_dice >= 1 && att_dice <= 3);
-    debug_assert!(def_dice >= 1 && def_dice <= 2);
+    debug_assert!((1..=3).contains(&att_dice));
+    debug_assert!((1..=2).contains(&def_dice));
 
     // Counting sort approach: tally dice faces for each side (1..6)
     let mut ac = [0u8; 7];

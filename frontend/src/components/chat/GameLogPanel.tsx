@@ -22,7 +22,7 @@ type LogEntry = {
   focusTerritories?: string[]
   rich?: ReactNode
   id?: string
-  playerRefs?: Array<{ id?: string; name: string }>
+  playerRefs?: Array<{ id?: string | undefined; name: string }>
 }
 
 const LOG_KIND_PRIORITY: Record<string, number> = {
@@ -48,9 +48,9 @@ const compareLogEntries = (a: LogEntry, b: LogEntry): number => {
   return a.text.localeCompare(b.text)
 }
 
-const normalizePlayerRefs = (value: unknown): Array<{ id?: string; name: string }> => {
+const normalizePlayerRefs = (value: unknown): Array<{ id?: string | undefined; name: string }> => {
   if (!Array.isArray(value)) return []
-  const refs = new Map<string, { id?: string; name: string }>()
+  const refs = new Map<string, { id?: string | undefined; name: string }>()
   for (const entry of value) {
     if (!entry) continue
     let name: string | undefined
@@ -193,10 +193,13 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
   }, [game?.players, room?.players])
 
   const highlightText = useCallback(
-    (text: string, refs: Array<{ id?: string; name: string }>) => {
+    (text: string, refs: Array<{ id?: string | undefined; name: string }>) => {
       if (typeof text !== 'string' || text.length === 0 || refs.length === 0) return text
-      const resolved = new Map<string, { id?: string; name: string; color?: string | undefined }>()
-      const resolveColor = (ref: { id?: string; name: string }): string | undefined => {
+      const resolved = new Map<
+        string,
+        { id?: string | undefined; name: string; color?: string | undefined }
+      >()
+      const resolveColor = (ref: { id?: string | undefined; name: string }): string | undefined => {
         if (ref.id) {
           const direct = playerColor.get(ref.id)
           if (direct) return direct
@@ -224,7 +227,7 @@ export default function GameLogPanel({ gameId, className = '', onFocus }: Props)
       while (cursor < text.length) {
         let nextMatch: {
           index: number
-          ref: { id?: string; name: string; color?: string }
+          ref: { id?: string | undefined; name: string; color?: string | undefined }
         } | null = null
         for (const ref of refList) {
           const idx = text.indexOf(ref.name, cursor)

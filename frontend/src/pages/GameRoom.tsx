@@ -1561,8 +1561,8 @@ export default function GameRoom() {
       recordBattleResult({
         fromId,
         toId,
-        attackerId: attackerId ?? undefined,
-        defenderId: defenderId ?? undefined,
+        attackerId,
+        defenderId,
         attackerDice,
         defenderDice,
         attackerLosses: Math.max(0, Math.trunc(battleResult.attackerLosses ?? 0)),
