@@ -242,21 +242,26 @@ pub fn ai_eval_attacks_with_handle(
     };
 
     let mut out = vec![0f64; n];
-    for i in 0..n {
+    // `out` is pre-initialized to 0.0, so invalid pairs can simply `continue`.
+    for (i, out_val) in out.iter_mut().enumerate() {
         let from = pairs.get_index((i * 2) as u32);
         let to = pairs.get_index((i * 2 + 1) as u32);
         if from >= len || to >= len {
-            out[i] = 0.0; continue;
+            continue;
         }
         let f = from as usize;
         let t = to as usize;
         // Valid only if from is owned by current player and to is not owned by them
         let owned_ok = owned_vec[f] != 0 && owned_vec[t] == 0;
-        if !owned_ok { out[i] = 0.0; continue; }
+        if !owned_ok {
+            continue;
+        }
         let att = if armies_vec[f] > 0 { armies_vec[f].saturating_sub(1) } else { 0 };
         let def = armies_vec[t];
-        if att < 1 { out[i] = 0.0; continue; }
-        out[i] = exact_win_probability(att, def);
+        if att < 1 {
+            continue;
+        }
+        *out_val = exact_win_probability(att, def);
     }
     Float64Array::from(out.as_slice())
 }
