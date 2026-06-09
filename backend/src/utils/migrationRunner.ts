@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { query } from '../config/database.js'
+import { getClient, query } from '../config/database.js'
 import { logger } from './logger.js'
 import { type MigrationRecord, type MigrationStatus, MigrationTracker } from './migrationTracker.js'
 
@@ -94,11 +94,11 @@ export class MigrationRunner {
         (migration) => !appliedMigrations.includes(migration),
       )
 
-      // Special handling for baseline migrations: never execute them via the runner.
-      // Baselines are pg_dump outputs and may contain psql meta-commands (e.g. \restrict) and DROP statements.
-      const baselineFiles = pendingMigrations.filter((m) =>
-        /^001_.*(baseline|complete|initial).*\.sql$/i.test(m),
-      )
+      // Special handling for baseline migrations: when the schema already exists
+      // they are marked complete and skipped (never re-executed). On a truly
+      // empty database the recovery path below re-adds the baseline and it is
+      // applied as a single transactional script (see executeBaselineInTransaction).
+      const baselineFiles = pendingMigrations.filter((m) => this.isBaselineFile(m))
       if (baselineFiles.length > 0) {
         // If the DB already has key tables, just mark baseline(s) as completed and skip execution.
         // Even if the DB is empty, we still do not execute baseline via this runner to avoid accidental drops.
@@ -388,8 +388,17 @@ export class MigrationRunner {
 
       logger.info(`🔧 Executing migration: ${migrationFile}`)
 
-      // Execute migration in a transaction
-      await this.executeInTransaction(migrationSQL, migrationFile)
+      // Baseline/initial-schema files are single-session SQL scripts: they contain
+      // ordered DDL (sequences/functions before the tables that reference them) and
+      // dollar-quoted function bodies. Execute them as ONE script inside a real,
+      // pinned-client transaction instead of the line-based statement splitter,
+      // which both mis-parses dollar quotes and (via the pool) runs BEGIN/COMMIT on
+      // different connections — a fake transaction that leaves partial schema.
+      if (this.isBaselineFile(migrationFile)) {
+        await this.executeBaselineInTransaction(migrationSQL)
+      } else {
+        await this.executeInTransaction(migrationSQL, migrationFile)
+      }
 
       // Record successful migration
       const executionTime = Date.now() - startTime
@@ -533,6 +542,41 @@ export class MigrationRunner {
     )
 
     return convertedSQL
+  }
+
+  private isBaselineFile(filename: string): boolean {
+    return /^001_.*(baseline|complete|initial).*\.sql$/i.test(filename)
+  }
+
+  /**
+   * Apply a baseline/initial-schema file as a single transactional script.
+   *
+   * PostgreSQL's simple query protocol (a parameterless client.query) parses and
+   * executes a multi-statement string in one round trip, handling dollar-quoted
+   * function bodies natively. Running it on a single pinned client wrapped in
+   * BEGIN/COMMIT gives a REAL all-or-nothing transaction: either the whole schema
+   * is created or nothing is, with no fragile JS statement splitting and no
+   * silently-swallowed errors.
+   */
+  private async executeBaselineInTransaction(migrationSQL: string): Promise<void> {
+    const client = await getClient()
+    try {
+      await client.query('BEGIN')
+      // Required for uuid_generate_v4() defaults; harmless if already present.
+      await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+      await client.query(migrationSQL)
+      await client.query('COMMIT')
+      logger.info('  ✅ Baseline applied as a single transactional script')
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK')
+      } catch (rollbackError) {
+        logger.error('  ❌ Failed to roll back baseline transaction:', rollbackError)
+      }
+      throw error
+    } finally {
+      client.release()
+    }
   }
 
   private async executeInTransaction(migrationSQL: string, _migrationFile: string): Promise<void> {
