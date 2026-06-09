@@ -52,7 +52,6 @@ describe('mapWorkflowService.approveMap', () => {
   let mapWorkflowService: typeof import('../services/mapWorkflowService.js').default
 
   beforeEach(() => {
-    jest.resetModules()
     mockQuery = jest.fn()
     mockCreateMap.mockReset()
     mockDeleteStagingImage.mockReset()
@@ -120,7 +119,6 @@ describe('mapWorkflowService.publishDraft', () => {
   let mapWorkflowService: typeof import('../services/mapWorkflowService.js').default
 
   beforeEach(() => {
-    jest.resetModules()
     mockQuery = jest.fn()
     mockCreateMap.mockReset()
     mockDeleteStagingImage.mockReset()
