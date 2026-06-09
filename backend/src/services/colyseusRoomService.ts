@@ -15,9 +15,7 @@ export interface ColyseusLobbyRoomOptions {
   numberOfTeams?: number | null
 }
 
-export async function ensureColyseusLobbyRoom(
-  options: ColyseusLobbyRoomOptions,
-): Promise<void> {
+export async function ensureColyseusLobbyRoom(options: ColyseusLobbyRoomOptions): Promise<void> {
   if (process.env.NODE_ENV === 'test') return
   if (!options.roomId || !options.mapId) return
 

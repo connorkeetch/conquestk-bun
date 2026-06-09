@@ -89,6 +89,7 @@ try {
   logger.warn('Could not log JWT secret fingerprints', { error: (e as Error)?.message })
 }
 
+import { createServer } from 'node:http'
 import { RedisDriver } from '@colyseus/redis-driver'
 import { RedisPresence } from '@colyseus/redis-presence'
 import { WebSocketTransport } from '@colyseus/ws-transport'
@@ -101,7 +102,6 @@ import cors from 'cors'
 import type { Application, NextFunction, Request, Response } from 'express'
 import express from 'express'
 import helmet from 'helmet'
-import { createServer } from 'node:http'
 // Config imports
 import { getPool, initDatabase } from './config/database.js'
 import type { RedisClients } from './config/redis.js'
