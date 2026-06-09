@@ -13,8 +13,8 @@ import {
   PREMIUM_GAME_LIMIT_MESSAGE,
 } from '../constants/premium.js'
 import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom.js'
-import { logger } from '../utils/logger.js'
 import { ensureColyseusLobbyRoom } from './colyseusRoomService.js'
+import { logger } from '../utils/logger.js'
 
 type AIDifficultyOption = NonNullable<Player['aiDifficulty']>
 

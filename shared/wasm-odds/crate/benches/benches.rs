@@ -5,6 +5,10 @@ use wasm_odds::battle::{
 };
 use wasm_odds::rng::Xoshiro128pp; // re-exported via crate root
 
+fn bench_single_step(_c: &mut Criterion) {
+    // Kept simple; main cost is in battle/MC
+}
+
 fn bench_full_battle(c: &mut Criterion) {
     c.bench_function("full_battle_20v15", |b| {
         b.iter(|| {

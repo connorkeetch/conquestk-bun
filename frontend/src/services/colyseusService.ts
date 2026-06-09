@@ -10,11 +10,7 @@ import { toast } from 'react-hot-toast'
 import { logger } from '@/utils/logger'
 import { store } from '../store'
 import { fetchGameState, setError, setGameState } from '../store/gameSlice'
-import {
-  addPlayerToRoom,
-  type LifecycleUpdatePayload,
-  removePlayerFromRoom,
-} from '../store/roomSlice'
+import { addPlayerToRoom, removePlayerFromRoom, type LifecycleUpdatePayload } from '../store/roomSlice'
 import { addPing, setConnectionStatus } from '../store/uiRoomSlice'
 import type { BattleResult, Card, GamePlayer, GameState, Territory } from '../types/game'
 import audioService from './audioService'
@@ -241,11 +237,7 @@ class ColyseusService {
    * Join a game room by ID
    */
   async joinRoom(roomId: string): Promise<boolean> {
-    console.log('[Colyseus DEBUG] joinRoom called', {
-      roomId,
-      hasClient: !!this.client,
-      currentRoomId: this.currentRoomId,
-    })
+    console.log('[Colyseus DEBUG] joinRoom called', { roomId, hasClient: !!this.client, currentRoomId: this.currentRoomId })
 
     if (!this.client) {
       console.log('[Colyseus DEBUG] No client, calling connect()')
@@ -661,7 +653,9 @@ class ColyseusService {
         turnTimer: state.turnTimerSeconds,
         teamMode: state.teamMode ? 'teams' : 'none',
       },
-      ...(state.lastBattle ? { lastBattleResult: this.convertBattleResult(state.lastBattle) } : {}),
+      ...(state.lastBattle
+        ? { lastBattleResult: this.convertBattleResult(state.lastBattle) }
+        : {}),
     }
 
     store.dispatch(setGameState(gameState))

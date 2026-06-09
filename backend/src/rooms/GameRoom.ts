@@ -34,7 +34,8 @@ import { applyEngineStateToSchema, engineBattleResultToSchema } from './utils/st
  * "invalid input syntax for type uuid".
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID_RE.test(value)
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' && UUID_RE.test(value)
 
 // Action types from the game engine
 export type GameAction =
@@ -223,10 +224,7 @@ export class GameRoom extends Room<GameState> {
     const userData = client.userData as ClientUserData
 
     if (!userData) {
-      logger.error('Client userData is undefined in onJoin', {
-        clientId: client.sessionId,
-        options,
-      })
+      logger.error('Client userData is undefined in onJoin', { clientId: client.sessionId, options })
       client.send('error', { message: 'Authentication failed' })
       client.leave()
       return

@@ -27,7 +27,9 @@ fn dice_combos(n: usize) -> Vec<Vec<u8>> {
             break;
         }
         dice[i as usize] += 1;
-        dice[(i as usize + 1)..n].fill(1);
+        for j in (i as usize + 1)..n {
+            dice[j] = 1;
+        }
     }
     res
 }

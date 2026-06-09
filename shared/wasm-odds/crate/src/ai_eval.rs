@@ -1,8 +1,8 @@
 use crate::dp::exact_win_probability;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
-#[allow(non_snake_case)]
+#[derive(Deserialize)
+]#[allow(non_snake_case)]
 pub struct JsTerritory {
     pub id: String,
     pub ownerId: Option<String>,
@@ -17,14 +17,12 @@ pub enum JsCandidate {
     #[serde(rename = "deploy")]
     Deploy {
         territory: String,
-        #[allow(dead_code)]
         armies: Option<u16>,
     },
     #[serde(rename = "fortify")]
     Fortify {
         from: String,
         to: String,
-        #[allow(dead_code)]
         armies: Option<u16>,
     },
 }
@@ -69,8 +67,8 @@ pub fn evaluate_candidates(
                             0
                         };
                         let def = t.armies;
-                        if att >= 1 {
-                            exact_win_probability(att, def)
+                        if att >= 1 && def >= 0 {
+                            exact_win_probability(att as u16, def as u16)
                         } else {
                             0.0
                         }

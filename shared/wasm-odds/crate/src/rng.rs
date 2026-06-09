@@ -3,7 +3,7 @@
 
 #[inline]
 fn rotl32(x: u32, k: u32) -> u32 {
-    x.rotate_left(k)
+    (x << k) | (x >> (32 - k))
 }
 
 pub struct Xoshiro128pp {

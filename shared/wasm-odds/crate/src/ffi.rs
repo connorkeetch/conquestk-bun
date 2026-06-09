@@ -9,9 +9,9 @@ use crate::battle::{
 use crate::dice::simulate_step as rb_simulate_step;
 use crate::dp::exact_win_probability;
 use crate::rng::Xoshiro128pp;
-use js_sys::Uint32Array;
-use js_sys::Uint8Array;
 use js_sys::{Float64Array, Uint16Array};
+use js_sys::Uint8Array;
+use js_sys::Uint32Array;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
@@ -188,17 +188,11 @@ pub fn init_eval_state(ids: JsValue) -> u32 {
     // Try to reuse an empty slot
     for (i, slot) in store.iter_mut().enumerate() {
         if slot.is_none() {
-            *slot = Some(EvalStateMeta {
-                len: ids_vec.len(),
-                ids: ids_vec,
-            });
+            *slot = Some(EvalStateMeta { len: ids_vec.len(), ids: ids_vec });
             return i as u32;
         }
     }
-    store.push(Some(EvalStateMeta {
-        len: ids_vec.len(),
-        ids: ids_vec,
-    }));
+    store.push(Some(EvalStateMeta { len: ids_vec.len(), ids: ids_vec }));
     (store.len() - 1) as u32
 }
 
@@ -233,9 +227,7 @@ pub fn ai_eval_attacks_with_handle(
     }
 
     let pairs_len = pairs.length();
-    if !pairs_len.is_multiple_of(2) {
-        return Float64Array::new_with_length(0);
-    }
+    if pairs_len % 2 != 0 { return Float64Array::new_with_length(0); }
     let n = (pairs_len / 2) as usize;
 
     let armies_vec = {
@@ -250,32 +242,20 @@ pub fn ai_eval_attacks_with_handle(
     };
 
     let mut out = vec![0f64; n];
-    #[allow(clippy::needless_range_loop)]
     for i in 0..n {
         let from = pairs.get_index((i * 2) as u32);
         let to = pairs.get_index((i * 2 + 1) as u32);
         if from >= len || to >= len {
-            out[i] = 0.0;
-            continue;
+            out[i] = 0.0; continue;
         }
         let f = from as usize;
         let t = to as usize;
         // Valid only if from is owned by current player and to is not owned by them
         let owned_ok = owned_vec[f] != 0 && owned_vec[t] == 0;
-        if !owned_ok {
-            out[i] = 0.0;
-            continue;
-        }
-        let att = if armies_vec[f] > 0 {
-            armies_vec[f].saturating_sub(1)
-        } else {
-            0
-        };
+        if !owned_ok { out[i] = 0.0; continue; }
+        let att = if armies_vec[f] > 0 { armies_vec[f].saturating_sub(1) } else { 0 };
         let def = armies_vec[t];
-        if att < 1 {
-            out[i] = 0.0;
-            continue;
-        }
+        if att < 1 { out[i] = 0.0; continue; }
         out[i] = exact_win_probability(att, def);
     }
     Float64Array::from(out.as_slice())
