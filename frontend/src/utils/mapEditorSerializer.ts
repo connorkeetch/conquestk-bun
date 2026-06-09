@@ -45,21 +45,21 @@ export function serializePolygonEditorStateToDraft(
     id: c.id,
     name: c.name,
     bonusArmies: c.bonusArmies,
-    color: c.color,
+    ...(c.color !== undefined ? { color: c.color } : {}),
     territories: snapshot.territories.filter((t) => t.sectorId === c.id).map((t) => t.id),
   }))
 
   // Pass through territories and adjacencies as-is; backend will validate
   const payload: PolygonMapDraftPayload = {
-    name: snapshot.name,
-    description: snapshot.description,
+    ...(snapshot.name !== undefined ? { name: snapshot.name } : {}),
+    ...(snapshot.description !== undefined ? { description: snapshot.description } : {}),
     data: {
       editor: 'polygon',
       imageUrl: snapshot.imageUrl,
       imageWidth: snapshot.imageWidth,
       imageHeight: snapshot.imageHeight,
     },
-    imageUrl: snapshot.imageUrl,
+    ...(snapshot.imageUrl !== undefined ? { imageUrl: snapshot.imageUrl } : {}),
     imageWidth: snapshot.imageWidth,
     imageHeight: snapshot.imageHeight,
     territories: snapshot.territories.map((t) => ({

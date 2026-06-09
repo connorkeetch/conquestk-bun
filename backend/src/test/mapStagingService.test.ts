@@ -1,23 +1,23 @@
+import { beforeEach, describe, expect, it, jest, mock, spyOn } from 'bun:test'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import * as assetStorage from '../utils/assetStorage.js'
 
-let mockQuery: jest.Mock
+const mockQuery = jest.fn()
 const mockCreateNotification = jest.fn()
 const mockGetActiveAdmins = jest.fn().mockResolvedValue(['admin-1'])
-const mockDeleteAsset = jest.fn()
+// Spy on the real assetStorage.deleteAsset (keeps assetExists/uploadAsset real,
+// which the service also imports).
+const mockDeleteAsset = spyOn(assetStorage, 'deleteAsset')
 const mockLoggerError = jest.fn()
 const mockLoggerWarn = jest.fn()
 
-jest.mock('../config/database', () => {
-  mockQuery = jest.fn()
-  return {
-    query: (...args: unknown[]) => mockQuery(...args),
-  }
-})
+mock.module('../config/database', () => ({
+  query: (...args: unknown[]) => mockQuery(...args),
+}))
 
-jest.mock('../utils/logger', () => ({
+mock.module('../utils/logger', () => ({
   logger: {
     error: (...args: unknown[]) => mockLoggerError(...args),
     warn: (...args: unknown[]) => mockLoggerWarn(...args),
@@ -26,35 +26,25 @@ jest.mock('../utils/logger', () => ({
   },
 }))
 
-jest.mock('../services/notificationService', () => ({
+mock.module('../services/notificationService', () => ({
   __esModule: true,
   default: {
     createInAppNotification: (...args: unknown[]) => mockCreateNotification(...args),
   },
 }))
 
-jest.mock('../services/adminService', () => ({
+mock.module('../services/adminService', () => ({
   adminService: {
     getActiveAdminUserIds: (...args: unknown[]) => mockGetActiveAdmins(...args),
   },
 }))
 
-jest.mock('../utils/assetStorage.js', () => {
-  const actual = jest.requireActual(
-    '../utils/assetStorage.js',
-  ) as typeof import('../utils/assetStorage.js')
-  return {
-    ...actual,
-    deleteAsset: (...args: unknown[]) => mockDeleteAsset(...args),
-  }
-})
+const { mapStagingService } = await import('../services/mapStagingService.js')
 
 describe('mapStagingService', () => {
-  let mapStagingService: typeof import('../services/mapStagingService.js').mapStagingService
   let tempDir: string
 
   beforeEach(() => {
-    jest.resetModules()
     mockCreateNotification.mockReset()
     mockGetActiveAdmins.mockResolvedValue(['admin-1'])
     mockLoggerError.mockReset()
@@ -82,8 +72,6 @@ describe('mapStagingService', () => {
       }
     })
 
-    // Reload service after setting env
-    ;({ mapStagingService } = require('../services/mapStagingService'))
     mockQuery.mockReset()
   })
 
@@ -129,6 +117,10 @@ describe('mapStagingService', () => {
     const filename = 'reclaim.png'
     const filePath = path.join(tempDir, filename)
     fs.writeFileSync(filePath, Buffer.from('restore'))
+
+    // assetStorage reads MAP_UPLOADS_DIR at load time, so under per-file isolation
+    // the temp dir can't be re-read per test; assert the "file exists" precondition.
+    spyOn(assetStorage, 'assetExists').mockResolvedValueOnce(true)
 
     mockQuery
       // select staging image

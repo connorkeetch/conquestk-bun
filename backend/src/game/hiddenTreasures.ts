@@ -108,9 +108,16 @@ export function normalizeTreasureConfig(config?: Partial<TreasureConfig>): Treas
 /**
  * Draw a treasure according to configured probabilities.
  * Diamonds consume `diamondsPercent`; remaining probability mass is split evenly.
+ *
+ * Pass a deterministic RNG to make the draw reproducible (required if treasure
+ * draws are ever re-simulated for lockstep/replay). When omitted it falls back
+ * to Math.random() — the current server-authoritative behaviour.
  */
-export function drawTreasure(config: TreasureConfig): Metal {
-  const roll = Math.random()
+export function drawTreasure(
+  config: TreasureConfig,
+  rng?: { nextRange(minInclusive: number, maxExclusive: number): number },
+): Metal {
+  const roll = rng ? rng.nextRange(0, 1) : Math.random()
   if (roll < config.diamondsPercent) {
     return 'diamond'
   }
