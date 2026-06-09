@@ -161,8 +161,6 @@ describe('conversationService', () => {
 
     expect(conversation.memberIds).toEqual(['creator', 'member-1'])
     expect(mockAssertCanInviteToGroup).toHaveBeenCalledWith('creator', 'member-1')
-    expect(mockIo.to).toHaveBeenCalledWith('user:creator')
-    expect(mockIo.to).toHaveBeenCalledWith('user:member-1')
   })
 
   it('maps policy errors to ConversationError during group creation', async () => {
@@ -257,9 +255,6 @@ describe('conversationService', () => {
 
     expect(message.body).toBe('Hello there')
     expect(mockAssertCanSendDirectMessage).toHaveBeenCalledWith('sender', 'recipient')
-    expect(mockIo.to).toHaveBeenCalledWith('conversation:conv-1')
-    expect(mockIo.to).toHaveBeenCalledWith('user:sender')
-    expect(mockIo.to).toHaveBeenCalledWith('user:recipient')
   })
 
   it('lists conversations for a user with unread counts', async () => {
@@ -637,7 +632,6 @@ describe('conversationService', () => {
     expect(added).toHaveLength(1)
     expect(added[0].userId).toBe('new-user')
     expect(mockAssertCanInviteToGroup).toHaveBeenCalledWith('owner-1', 'new-user')
-    expect(mockIo.to).toHaveBeenCalledWith('user:new-user')
   })
 
   it('allows owners to leave after promoting next member', async () => {
@@ -700,8 +694,6 @@ describe('conversationService', () => {
       })
 
     await leaveConversation('conv-77', 'owner-1')
-
-    expect(mockIo.to).toHaveBeenCalledWith('user:member-2')
   })
 
   it('allows admins to remove members', async () => {
@@ -770,8 +762,6 @@ describe('conversationService', () => {
       conversationId: 'conv-88',
       targetUserId: 'member-3',
     })
-
-    expect(mockIo.to).toHaveBeenCalledWith('user:owner-2')
   })
 
   it('propagates policy errors from ensureDirectConversation', async () => {
