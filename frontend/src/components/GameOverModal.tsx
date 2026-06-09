@@ -309,11 +309,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
             {/* Player Debrief + Final Standings */}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <FinalStandings
-                className="h-full"
-                {...(roomId ? { roomId } : {})}
-                winnerIds={winnerIds}
-              />
+              <FinalStandings className="h-full" winnerIds={winnerIds} />
               {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
             </div>
 
@@ -363,7 +359,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
 const FinalStandings: React.FC<{
   className?: string
-  roomId?: string
   winnerIds?: string[]
 }> = ({ className, winnerIds }) => {
   const game = useAppSelector((s) => s.game.currentGame)
