@@ -67,7 +67,9 @@ export async function getReplaySummary(
   gameId: string,
   signal?: AbortSignal,
 ): Promise<ReplaySummary> {
-  const r = await apiClient.get(`/games/${encodeURIComponent(gameId)}/replay/summary`, { signal })
+  const r = await apiClient.get(`/games/${encodeURIComponent(gameId)}/replay/summary`, {
+    ...(signal ? { signal } : {}),
+  })
   return r.data as ReplaySummary
 }
 
@@ -79,7 +81,7 @@ export async function getReplayChunk(
 ): Promise<ReplayTurnItem[]> {
   const r = await apiClient.get(`/games/${encodeURIComponent(gameId)}/replay/chunk`, {
     params: { fromTurn, toTurn },
-    signal,
+    ...(signal ? { signal } : {}),
   })
   return r.data as ReplayTurnItem[]
 }
@@ -96,7 +98,7 @@ export async function getReplayFrameChunkWindow(
       limit,
       includeSnapshot: includeSnapshot ? 'true' : 'false',
     },
-    signal,
+    ...(signal ? { signal } : {}),
   })
   const payload = response.data?.data ?? response.data
   return {

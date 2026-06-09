@@ -853,7 +853,7 @@ export default function MapEditor() {
       const snapshot = {
         name: mapName,
         description: mapDescription,
-        imageUrl: state.imageUrl,
+        ...(state.imageUrl !== undefined ? { imageUrl: state.imageUrl } : {}),
         imageWidth: state.imageWidth,
         imageHeight: state.imageHeight,
         territories: state.territories.map((t) => ({
@@ -867,7 +867,7 @@ export default function MapEditor() {
           id: c.id,
           name: c.name,
           bonusArmies: c.bonusArmies,
-          color: c.color,
+          ...(c.color !== undefined ? { color: c.color } : {}),
         })),
         adjacencies: state.adjacencies.map((a) => ({ from: a.from, to: a.to })),
         isPublic,

@@ -68,10 +68,7 @@ export function MapCanvas({
   }, [imageUrl, imageWidth])
 
   // Optimized src with format auto-negotiation
-  const optimizedSrc = useMemo(
-    () => cfImage(imageUrl, { format: 'auto', quality: 85 }),
-    [imageUrl],
-  )
+  const optimizedSrc = useMemo(() => cfImage(imageUrl, { format: 'auto', quality: 85 }), [imageUrl])
 
   return (
     <div

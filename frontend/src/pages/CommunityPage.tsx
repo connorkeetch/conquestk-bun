@@ -97,7 +97,7 @@ const CommunityPage: React.FC = () => {
             username,
             rank,
             skillRating,
-            ratingGain: options?.expectRatingGain ? ratingGainValue : undefined,
+            ...(options?.expectRatingGain ? { ratingGain: ratingGainValue } : {}),
             wins,
             losses,
             gamesPlayed,

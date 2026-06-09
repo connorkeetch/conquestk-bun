@@ -196,7 +196,7 @@ export const ensureLockstepFrames = createAsyncThunk<
     states,
     finalSeq,
     totalFrames,
-    failure,
+    ...(failure ? { failure } : {}),
   }
 })
 
