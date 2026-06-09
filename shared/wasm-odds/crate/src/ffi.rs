@@ -241,11 +241,18 @@ pub fn ai_eval_attacks_with_handle(
         v
     };
 
+    // Copy `pairs` into Rust once to avoid a JS<->WASM boundary crossing per index.
+    let pairs_vec = {
+        let mut v = vec![0u32; pairs_len as usize];
+        pairs.copy_to(&mut v[..]);
+        v
+    };
+
     let mut out = vec![0f64; n];
     // `out` is pre-initialized to 0.0, so invalid pairs can simply `continue`.
     for (i, out_val) in out.iter_mut().enumerate() {
-        let from = pairs.get_index((i * 2) as u32);
-        let to = pairs.get_index((i * 2 + 1) as u32);
+        let from = pairs_vec[i * 2];
+        let to = pairs_vec[i * 2 + 1];
         if from >= len || to >= len {
             continue;
         }
@@ -256,7 +263,8 @@ pub fn ai_eval_attacks_with_handle(
         if !owned_ok {
             continue;
         }
-        let att = if armies_vec[f] > 0 { armies_vec[f].saturating_sub(1) } else { 0 };
+        // u16 saturating_sub already yields 0 when armies are 0, so no guard needed.
+        let att = armies_vec[f].saturating_sub(1);
         let def = armies_vec[t];
         if att < 1 {
             continue;
