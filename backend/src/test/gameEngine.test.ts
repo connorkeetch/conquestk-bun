@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from '@jest/globals'
+import { afterEach, describe, expect, it, jest, test } from '@jest/globals'
 
 jest.mock('../config/database', () => ({
   query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
