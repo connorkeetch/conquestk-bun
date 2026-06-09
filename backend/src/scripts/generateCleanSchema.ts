@@ -165,6 +165,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
     if (functions.rows.length > 0) {
       sql += '-- Functions\n'
       for (const fn of functions.rows) {
+        if (!fn.definition) continue
         sql += `${fn.definition};\n\n`
       }
     }
@@ -232,8 +233,9 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
         let def = `  ${col.name} ${col.type}`
         if (col.generated === 's' && col.default_val) {
           // STORED generated column. pg_get_expr already wraps the expression in
-          // parentheses, but guard in case it ever doesn't.
-          const expr = col.default_val.startsWith('(') ? col.default_val : `(${col.default_val})`
+          // parentheses, but trim + guard in case it ever doesn't.
+          const trimmedDefault = col.default_val.trim()
+          const expr = trimmedDefault.startsWith('(') ? trimmedDefault : `(${trimmedDefault})`
           def += ` GENERATED ALWAYS AS ${expr} STORED`
           if (col.notnull && !pkCols.includes(col.name)) {
             def += ' NOT NULL'
