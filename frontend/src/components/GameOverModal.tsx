@@ -309,7 +309,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
             {/* Player Debrief + Final Standings */}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <FinalStandings className="h-full" roomId={roomId} winnerIds={winnerIds} />
+              <FinalStandings
+                className="h-full"
+                {...(roomId ? { roomId } : {})}
+                winnerIds={winnerIds}
+              />
               {roomId && <KeyMomentsTimeline roomId={roomId} className="h-full" />}
             </div>
 
@@ -793,9 +797,9 @@ const KeyMomentsTimeline: React.FC<{ roomId: string; className?: string }> = ({
         const CHUNK = 25
         const items: Array<{
           turnNumber: number
-          stats?: Record<string, unknown>
-          preArmyMap?: Record<string, { ownerId: string | null; armies: number }>
-          postArmyMap?: Record<string, { ownerId: string | null; armies: number }>
+          stats?: Record<string, unknown> | undefined
+          preArmyMap?: Record<string, { ownerId: string | null; armies: number }> | undefined
+          postArmyMap?: Record<string, { ownerId: string | null; armies: number }> | undefined
         }> = []
         for (let from = 1; from <= total; from += CHUNK) {
           const to = Math.min(total, from + CHUNK - 1)

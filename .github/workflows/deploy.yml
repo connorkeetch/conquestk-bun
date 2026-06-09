@@ -127,7 +127,7 @@ jobs:
         run: npm ci
 
       - name: Check code formatting
-        run: npx biome format --check .
+        run: npx biome format .
 
   frontend-strict:
     name: Frontend Strict TypeCheck
