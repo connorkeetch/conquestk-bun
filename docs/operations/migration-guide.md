@@ -24,8 +24,8 @@ cd backend && npm run check:schema -- --skip-validation --export ../docs/operati
 
 ### Direct Database Access
 ```bash
-# Production connection
-postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+# Production connection (provide DATABASE_URL securely through your environment)
+psql "$DATABASE_URL"
 
 # Check database state / schema
 cd backend && npm run check:schema
