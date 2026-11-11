@@ -158,7 +158,7 @@ Check [root scripts](package.json), [backend scripts](backend/package.json), and
 | Why do images or uploads fail? | Check the asset configuration above. Bun uploads require remote storage. |
 | Can I deploy under my own domain? | Expect additional configuration and code review. Historical canonical-host, CORS, CDN, and Railway assumptions remain; the old deployment guide is not a generic turnkey recipe. |
 | How do I report a problem or propose a change? | Search [issues](https://github.com/connorkeetch/conquestk-bun/issues). Include OS/runtime versions, commands, reproduction steps, and redacted errors. PRs target `main`; review or replies are not guaranteed. |
-| What license applies? | `package.json` declares MIT, but no root `LICENSE` file is included. This discrepancy remains unresolved; this documentation update does not add or change licensing. Ask the owner to clarify reuse terms, including media. |
+| What license applies? | Project source code is available under the [MIT License](LICENSE). Third-party dependencies, assets, and services retain their own terms. |
 
 Do not post private credentials, databases, messages, or deployment logs containing secrets. If you retained a clone from before the public-source cleanup, use a fresh clone so old private history is not pushed back.
 
