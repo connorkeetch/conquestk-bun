@@ -81,7 +81,7 @@
     "@playwright/test": "^1.60.0",
     "@types/node": "^24.13.1",
     "concurrently": "^8.2.2",
-    "vitest": "3.2.4"
+    "vitest": "5.1.0"
   },
   "workspaces": [
     "frontend",
