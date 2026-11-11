@@ -1,225 +1,176 @@
-# ConquestK – Multiplayer Strategy Board Game
+# ConquestK — Bun + Colyseus snapshot
 
-<div align="center">
+A historical TypeScript implementation of a **Risk-inspired multiplayer strategy board game**, with a React/Vite frontend, an Express API, PostgreSQL persistence, custom maps, and real-time matches.
 
-[![Status](https://img.shields.io/badge/status-development--only-orange)](#-development-status)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D24.0-green)](https://nodejs.org)
-[![React](https://img.shields.io/badge/react-19.1-blue)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/typescript-5.9-blue)](https://www.typescriptlang.org)
-[![License](https://img.shields.io/badge/license-MIT-purple)](LICENSE)
+> **Maintenance status — November 11, 2026:** This is an inactive personal project, shared for reference and experimentation. No ongoing feature work, releases, or support response times are planned. Issues and pull requests may go unanswered.
 
-</div>
+This is the **conquestk-bun** repository, on branch **`main`**. It is separate from the later [Elixir/Phoenix ConquestK project](https://github.com/connorkeetch/conquestk) and from the [conquestk-typescript snapshot](https://github.com/connorkeetch/conquestk-typescript). The live ConquestK website is not a demo or deployment of this snapshot.
 
-ConquestK is an open-source, real-time strategy game inspired by *Risk*. The project pairs a modern
-React + TypeScript frontend with an Express/Socket.io backend to deliver multiplayer battles,
-community-built maps, and rich administrative tooling.
+## Which version is this?
 
-### About the Project
+| Repository | Runtime and transport | Default branch |
+|---|---|---|
+| [conquestk-typescript](https://github.com/connorkeetch/conquestk-typescript) | Node.js / Express / Socket.io; React frontend | `master` |
+| [conquestk-bun](https://github.com/connorkeetch/conquestk-bun) | Bun / Express / Colyseus; React frontend | `main` |
+| [conquestk](https://github.com/connorkeetch/conquestk) | Later Elixir/Phoenix implementation | Separate project; consult its own documentation |
 
-ConquestK is a passion project that aims to create a modern, web-based version of the classic
-strategy game *Risk*. The game is designed to be highly customizable, with support for custom
-maps, game modes, and rulesets. The project is built with a focus on performance, scalability,
-and maintainability, using a modern tech stack and best practices.
+The two TypeScript snapshots share historical documentation, but their real-time transports and backend/test scripts differ. Use the package manifests and entry point in **this** repository rather than mixing setup instructions.
 
-### Built With
+Bun runs the backend and its isolated tests. Node.js and npm are still required by the frontend and workspace tooling; the presence of Bun does not replace all npm scripts.
 
-The project is built with a modern tech stack that includes:
+## What is preserved?
 
-*   **Frontend**: React 19, Redux Toolkit, Tailwind CSS, Vite
-*   **Backend**: Node.js, Express, Socket.io, PostgreSQL, Redis
-*   **Tooling**: TypeScript, Biome, Jest, Vitest, Docker
+- Multiplayer gameplay, lobby/room flows, custom-map editing and import formats.
+- User accounts, profiles, community/chat interfaces, notifications, and administrative tooling.
+- Shared game types, deterministic/lockstep logic, and TypeScript plus Rust/WebAssembly combat-odds code.
+- Database migrations, optional Redis integrations, and a separate Go matchmaking/presence service.
+- Architecture notes, operational guides, experiments, and unfinished plans.
 
----
+These are source areas to explore, rather than a promise that every feature or old roadmap item is complete. See [documentation](docs/index.md) and the limitations below.
 
-## 🔗 Quick links
+## Local setup
 
-- **Documentation index:** [docs/index.md](docs/index.md)
-- **Architecture overview:** [docs/reference/architecture.md](docs/reference/architecture.md)
-- **Roadmap & follow-up tasks:** [docs/planning/roadmap.md](docs/planning/roadmap.md)
-- **Coding standards:** [docs/guides/coding-standards.md](docs/guides/coding-standards.md)
+The instructions below follow the checked-in scripts and configuration. A complete fresh installation, multiplayer session, and production build were **not** rerun for this documentation update.
 
----
+### Requirements
 
-## 📌 Development Status
+- **Node.js 24+ and npm 10+**, matching [package.json](package.json) and [.nvmrc](.nvmrc).
+- **Bun 1.3.14**, pinned in [.bun-version](.bun-version).
+- PostgreSQL and Redis. [docker-compose.yml](docker-compose.yml) provides PostgreSQL 17 and Redis 7.
+- Docker Compose for the commands below, or equivalent local services you manage yourself.
+- Rust and `wasm-pack` only when rebuilding the Rust/WASM odds engine. The default odds mode is TypeScript.
+- Go tooling only if developing [matchsvc](services/matchsvc/README.md); it can otherwise run through Docker.
 
-- ConquestK is in active development and is not publicly live. Access is limited to Connor and test accounts.
-- Breaking changes are expected. Prefer clean refactors over backward compatibility; migrations may be destructive and data can be reseeded locally.
-- Staging/production endpoints are used for internal testing only and may change without notice.
-- For assistant behavior expectations, see the development policy at `AGENTS.md` and `CLAUDE.md`.
-
----
-
-## 🚀 Getting started
-
-### Prerequisites
-
-- Node.js **24** or newer
-- npm **10** or newer
-- PostgreSQL **14+**
-- Redis **6+** (recommended for sessions, rate limiting, and Socket.io scaling)
-- Optional: Resend API key or SMTP credentials for transactional email
-
-### Installation
+### Install and create local configuration
 
 ```bash
-git clone https://github.com/connorkeetch/conquestk.git
-cd conquestk
-npm install
-npm run setup
+git clone https://github.com/connorkeetch/conquestk-bun.git
+cd conquestk-bun
+npm ci
+npm run setup:env
 ```
 
-### Environment configuration
+`npm ci` is the install path used by the checked-in CI workflow. A historical `bun.lock` is also preserved, but the workspace recipe above uses the npm lockfile. If the lockfile and your platform's dependencies disagree, investigate the install error instead of assuming a clean build has been verified.
 
-1. Copy the backend example environment file and update the secrets:
-   ```bash
-   cp backend/.env.example backend/.env
-   ```
-2. Update `DATABASE_URL`, `JWT_SECRET`, and `SESSION_SECRET` with secure values.
-3. Provide Redis credentials in `REDIS_URL` when running with real-time multiplayer or background
-   workers.
-4. Configure email settings (`RESEND_API_KEY` or SMTP fields) if you plan to test verification flows.
-
-#### Local database quick start
-
-- Using Docker (recommended):
-  ```bash
-  docker-compose up -d   # starts PostgreSQL (conquestk_local) and Redis
-  cd backend && npm run migrate
-  ```
-
-- Using native Postgres (WSL/macOS/Windows):
-  ```bash
-  # Ensure Postgres is installed and running
-  # Create user password and database (example shown for Linux/WSL)
-  sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'localpassword123';"
-  sudo -u postgres createdb conquestk_local
-
-  # In backend/.env set:
-  # DATABASE_URL=postgresql://postgres:localpassword123@127.0.0.1:5432/conquestk_local
-  cd backend && npm run migrate
-  ```
-
-### Running the app locally
-
-- `npm run dev` – launches the backend and frontend with the setup guard (requires PowerShell or
-  pwsh).
-- `npm run dev:manual` – cross-platform alternative that uses `concurrently` without PowerShell.
-- `npm run dev:frontend` / `npm run dev:backend` – start either service independently.
-- `npm run dev:quick` – skip the setup guard after the first successful run.
-
-Cross‑platform env setup (WSL/macOS/Linux):
-
-- `npm run setup:env` – creates `backend/.env.local` (local Postgres + Redis) and `frontend/.env` if missing.
-
-The frontend is served at [http://localhost:5173](http://localhost:5173) and the backend at
-[http://localhost:5001](http://localhost:5001).
-
-#### Running inside the OpenAI sandbox
-
-The OpenAI agent sandbox blocks outbound TCP traffic to the shared Railway database, so the backend
-must target a local PostgreSQL instance instead. Follow the dedicated
-[OpenAI sandbox deployment guide](docs/operations/openai-sandbox.md) to install PostgreSQL, copy the
-workspace environment files, and run migrations before starting the servers.
-
-### Useful workspace scripts
+`setup:env` creates `backend/.env.local` and `frontend/.env` if absent. **The backend entry point and migration script explicitly load `backend/.env`**, so on a fresh clone also copy the generated local file:
 
 ```bash
-npm test                 # Run backend (Jest) then frontend (Vitest) tests
-npm run test:backend     # Backend tests only
-npm run test:frontend    # Frontend tests only
-npm run lint             # Biome linting and formatting checks for every package
-npm run format           # Apply formatting fixes (Biome)
-npm run build            # Build backend and frontend bundles
-npm start                # Run migrations and start the production backend server
-cd backend && npm run migrate   # Apply database migrations
-cd backend && npm run seed:users # Populate demo accounts
-npm run check:services   # Check local Postgres/Redis health
-npm run check:services:start  # Try to start via Docker Compose if not running
+# Bash / macOS / Linux
+cp backend/.env.local backend/.env
 ```
 
-### Migrations (baseline + incremental)
-- The project maintains a single baseline SQL schema plus incremental migrations.
-- After generating the baseline (e.g. `backend/migrations/001_baseline_schema.sql`) and committing it, remove older migration files from the repo.
-- New environments bootstrap from the baseline; existing DBs only apply future incrementals.
-- For non‑prod resets you can `TRUNCATE schema_migrations;` and re‑apply the baseline to rebuild.
-
----
-
-## 🧱 Project structure
-
-```
-conquestk/
-├── backend/             # Express + Socket.io API, game engine, migrations, scripts
-├── frontend/            # React 19 app (Vite, Redux Toolkit, Tailwind v4)
-├── shared/              # Shared TypeScript types and utilities
-├── docs/                # Architecture, deployment, and planning guides
-├── scripts/             # PowerShell utilities for setup, deployment, and tooling
-├── package.json         # npm workspace configuration
-└── docker-compose.yml   # Local orchestration for PostgreSQL and Redis
+```powershell
+# Windows PowerShell
+Copy-Item backend/.env.local backend/.env
 ```
 
----
+Do not overwrite an existing environment file. Review the generated `backend/.env` and replace `JWT_SECRET` and `SESSION_SECRET` with separate random values of at least 32 characters. One way to generate each value is:
 
-## 🎮 Key features
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
 
-### Gameplay
-- Real-time multiplayer matches powered by Socket.io.
-- Custom map workflow with an in-browser editor, approvals, and publishing tools.
-- Lobby creation with private/public games, invite codes, and matchmaking filters.
-- Ranked and casual queues with ELO tracking and player statistics.
+The generated database URL matches the Compose development database. It is a disposable **local** setup; use your own credentials for any hosted installation. Existing shell variables take precedence over values loaded from the file.
 
-### Platform & community
-- Comprehensive admin dashboards for users, maps, and live games.
-- Email verification, password reset, and session management flows.
-- Installable PWA shell with gameplay push notifications; map approval and DM push fan-out are wrapping up.
-- Leaderboards, profiles, and community pages surfaced directly in the UI.
+| Backend setting | Local purpose |
+|---|---|
+| `DATABASE_URL` | Your PostgreSQL database; generated defaults target `conquestk_local` on loopback |
+| `JWT_SECRET`, `SESSION_SECRET` | Your own signing/session secrets |
+| `PORT` | `5001` |
+| `FRONTEND_URL`, `CORS_ORIGIN` | `http://localhost:5173` |
+| `REDIS_URL` | Local Redis, normally `redis://127.0.0.1:6379` |
+| `EMAIL_ENABLED`, `REQUIRE_EMAIL_VERIFICATION` | Keep `false` for the initial local setup |
+| `ODDS_ENGINE` | `ts` for TypeScript odds; advanced modes are documented separately |
+| `USE_MATCHSVC` | Keep `false` unless intentionally enabling the separate Go service |
 
-### Current focus
-- Finalize creator/moderator notification fan-out (web push + sockets).
-- Tune background purge worker thresholds for asset cleanup.
-- Re-run security checklist, tighten CI guardrails, add large file protections, and expand telemetry dashboards.
+`frontend/.env` uses `VITE_API_URL=http://localhost:5001/api` and `VITE_SOCKET_URL=http://localhost:5001`. All `VITE_*` values are public browser configuration; never put a secret there.
 
-### Engineering & tooling
-- End-to-end TypeScript across backend, frontend, and shared packages.
-- PostgreSQL-first data model with migrations, seeding scripts, and schema export utilities.
-- Redis integration for rate limiting, job queues (BullMQ), and socket scaling.
-- Automated linting, testing, and build commands wired through npm workspaces.
+The longer [backend environment example](backend/.env.example), [frontend example](frontend/.env.example), and [environment validation code](backend/src/config/validateEnv.ts) explain additional integrations. Historical examples contain old deployment domains and placeholder values; they are not credentials or infrastructure supplied to new users.
 
----
+### Start services and apply migrations
 
-## 🚢 Deployment notes
+From the repository root:
 
-- Production and staging environments are hosted on Railway; `npm run build` prepares the frontend
-  and backend bundles.
-- `npm start` runs migrations before booting the backend server. Ensure environment variables match
-  your target deployment before running this command.
-- See [docs/reference/deployment.md](docs/reference/deployment.md) for the full promotion checklist.
+```bash
+docker compose up -d postgres redis
+npm run check:services
+npm run build:shared
+npm --prefix shared/match-client run build
+npm --prefix backend run migrate
+```
 
----
+Use an empty local database you own. Migrations and seed/admin utilities write to the configured database; do not point them at the live ConquestK installation. Compose uses fixed container and volume names, so the two snapshots should not be run side by side against the same local services without deliberately separating their configuration.
 
-## 📚 Documentation
+### Start the backend and frontend
 
-All supporting guides, troubleshooting steps, and deep dives live in the `docs/` directory. Start
-with the [documentation index](docs/index.md) for a curated map of available resources.
+Run in separate terminals from the repository root:
 
----
+```bash
+npm run dev:backend
+```
 
-## 🤝 Contributing
+```bash
+npm run dev:frontend
+```
 
-1. Fork the repository and create a feature branch.
-2. Follow the [coding standards](docs/guides/coding-standards.md) and ensure new work is typed.
-3. Update or add documentation when behaviour changes.
-4. Run `npm run lint` and the relevant test suites before opening a pull request.
-5. Submit a PR targeting the `main` branch with a clear summary of your change.
+Open <http://localhost:5173>; the API uses <http://localhost:5001>. The combined `npm run dev` launcher requires Windows PowerShell; `npm run dev:manual` is the alternative shell-based combined script. Separate terminals make setup errors easier to locate.
 
----
+## Assets and optional services
 
-## 📄 License
+**Uploads require your own R2/S3-compatible storage configuration.** The current Bun asset uploader throws when remote storage is absent; older guides claiming uploads always fall back to the filesystem are stale.
 
-ConquestK is released under the [MIT License](LICENSE).
+For your own remote asset storage, configure `ASSET_BUCKET`, `ASSET_ENDPOINT`, `ASSET_ACCESS_KEY_ID`, `ASSET_SECRET_ACCESS_KEY`, and `ASSET_REGION` on the backend. `PUBLIC_ASSET_BASE_URL` and the frontend's `VITE_ASSET_BASE_URL` are public delivery URLs. Do not reuse another installation's bucket or keys.
 
----
+The full audio/background/hero media set is not bundled with this source snapshot. Some screens can therefore have missing media until you supply an asset base you control. Public URLs in old docs are historical references, not an included asset service or a statement of media reuse rights.
 
-## 📬 Maintainer
+Email delivery, browser push, external notifications, Sentry, and remote storage need your own configuration if enabled. Keep them disabled or unconfigured while first exploring locally. The Go service and Rust/WASM engine have their own instructions:
 
-Maintained by Connor Keetch · [support@conquestk.com](mailto:support@conquestk.com)
+- [matchsvc](services/matchsvc/README.md)
+- [WASM odds package](shared/wasm-odds/README.md)
+- [Odds engine notes](docs/tech/odds-engine.md)
+
+## Development commands
+
+| Command | Purpose |
+|---|---|
+| `npm run lint` | Biome checks |
+| `npm run typecheck` | Workspace type checks |
+| `npm run test:backend` | Bun isolated backend tests |
+| `npm run test:frontend` | Vitest frontend tests |
+| `npm test` | Backend then frontend tests |
+| `npm run build` | Shared packages, frontend, and backend build |
+| `npm --prefix backend run migrate` | Apply database migrations |
+| `npm --prefix backend run seed:users` | Write development users; inspect the script before using it |
+| `npm run odds:build` | Rebuild the WASM package; requires Rust/wasm-pack |
+
+Check [root scripts](package.json), [backend scripts](backend/package.json), and [frontend scripts](frontend/package.json) for exact behavior. Startup also attempts database migrations. Frontend build hooks generate assets and can publish them when remote-storage credentials are supplied; run builds in an isolated environment with your own services.
+
+## Common questions and limitations
+
+| Question | Answer |
+|---|---|
+| Is this the version running at conquestk.com? | No. This is an earlier source snapshot; the later Elixir/Phoenix codebase is a separate project. |
+| Is it actively maintained or production ready? | It is inactive, with no support/release commitment. A secrets cleanup or public repository does not certify runtime security, dependency health, or production readiness. |
+| Why do old guides say “active development,” mention a launch date, or name different servers? | They preserve the project's earlier development history. This README is the current statement of this snapshot's status. Planning documents do not promise future work. |
+| Does a clone include accounts, maps, all media, or cloud access? | It contains source and tracked examples, not a live database, private uploads, account access, or credentials. Supply your own data and services. |
+| Why do migrations report missing database settings after setup? | Confirm `backend/.env` exists. The scaffold creates `.env.local`, while the Node/dotenv entry points expect `.env`; check shell overrides and working directory too. |
+| Can I mix the Bun and Socket.io client/server versions? | No compatibility is promised. Keep each snapshot's backend, frontend, and shared packages together. |
+| Why do images or uploads fail? | Check the asset configuration above. Bun uploads require remote storage. |
+| Can I deploy under my own domain? | Expect additional configuration and code review. Historical canonical-host, CORS, CDN, and Railway assumptions remain; the old deployment guide is not a generic turnkey recipe. |
+| How do I report a problem or propose a change? | Search [issues](https://github.com/connorkeetch/conquestk-bun/issues). Include OS/runtime versions, commands, reproduction steps, and redacted errors. PRs target `main`; review or replies are not guaranteed. |
+| What license applies? | `package.json` declares MIT, but no root `LICENSE` file is included. This discrepancy remains unresolved; this documentation update does not add or change licensing. Ask the owner to clarify reuse terms, including media. |
+
+Do not post private credentials, databases, messages, or deployment logs containing secrets. If you retained a clone from before the public-source cleanup, use a fresh clone so old private history is not pushed back.
+
+## Find the code and deeper documentation
+
+| Path | Contents |
+|---|---|
+| [backend/src/server.ts](backend/src/server.ts) | Bun + Colyseus backend entry point |
+| [backend](backend) | API, game services, migrations, authentication, and admin utilities |
+| [frontend](frontend) | React UI, state, maps, and browser integration |
+| [shared](shared) | Types, game/lockstep utilities, odds engines, and match client |
+| [services/matchsvc](services/matchsvc) | Optional Go service |
+| [docs/index.md](docs/index.md) | Curated historical reference, guides, operations, and planning |
+
+Start with [architecture](docs/reference/architecture.md), [game options](docs/guides/game-options.md), [map format](docs/guides/map-format.md), or [troubleshooting](docs/operations/troubleshooting.md). Check source when a historical guide conflicts with this snapshot.

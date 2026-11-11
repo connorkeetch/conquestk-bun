@@ -1,11 +1,12 @@
 # 📚 ConquestK Documentation
 
- _Last updated: October 21, 2025_
+_Public-source status reviewed: November 11, 2026_
 
-Welcome! Every guide, decision record, and troubleshooting note lives in the `docs/` directory.
-Note: The project is currently development‑only and not publicly live. Expect breaking changes and destructive migrations during this phase.
-Use this index to jump directly to the information you need.
+> **Maintenance status — November 11, 2026:** This is an inactive personal project, shared for reference and experimentation. No ongoing feature work, releases, or support response times are planned. Issues and pull requests may go unanswered.
 
+This directory preserves historical guides and design notes for **conquestk-bun**. Start with the [current README](../README.md) for the correct runtime, repository/branch, local setup, required services, known gaps, licensing status, and support expectations. Old launch dates, “active” roadmaps, production/staging URLs, and environment examples do not describe an available deployment of this snapshot. Source code and package manifests take precedence when older guides disagree.
+
+Operational scripts are for databases and services you control. A fresh install does not need access to the original infrastructure.
 ---
 
 ## 🚀 Quick start checklist
@@ -19,7 +20,6 @@ Use this index to jump directly to the information you need.
 - AI assistant guidelines → [../CLAUDE.md](../CLAUDE.md)
  - Soft launch timeline → [planning/soft-launch-timeline.md](planning/soft-launch-timeline.md)
 - Roadmap & follow-up work → [planning/roadmap.md](planning/roadmap.md)
-- Codebase cleanup tracker → [planning/codebase-cleanup.md](planning/codebase-cleanup.md)
 
 ---
 
@@ -60,8 +60,7 @@ Use this index to jump directly to the information you need.
   - [frontend/map-schema.md](frontend/map-schema.md)
 
 ### Planning & status
-- [planning/roadmap.md](planning/roadmap.md) – live initiatives and backlog
-- [planning/codebase-cleanup.md](planning/codebase-cleanup.md) – technical debt tracker
+- [planning/roadmap.md](planning/roadmap.md) – historical initiatives and backlog
 - [planning/go-live-plan.md](planning/go-live-plan.md) – launch-blocker backlog and execution order
 - [planning/typing-roadmap.md](planning/typing-roadmap.md) – schedule for removing remaining `any` types
 - [planning/achievements-plan.md](planning/achievements-plan.md) – planned achievements milestones and dependencies
@@ -75,7 +74,7 @@ Use this index to jump directly to the information you need.
 - [planning/slack-discord-notification-plan.md](planning/slack-discord-notification-plan.md) – Slack/Discord notifications plan
 
 ### Analysis & audits
-- [analysis/documentation-audit-2025-10-21.md](analysis/documentation-audit-2025-10-21.md) – October 2025 documentation audit outcomes
+- [analysis/documentation-audit-2026-03-09.md](analysis/documentation-audit-2026-03-09.md) – March 2026 documentation audit outcomes
 
 ---
 
@@ -90,6 +89,6 @@ Use this index to jump directly to the information you need.
 
 ## 🔍 Need something else?
 
-If a topic is missing, add a stub document in the appropriate folder and link it above. Leaving a TODO section is better than letting knowledge live only in Slack or memory.
+Search the code, tests, and existing issues first. If you document a missing topic in a fork or pull request, distinguish observed behavior from a proposed design and link it here. Replies and documentation updates are not guaranteed.
 
 Looking for end-to-end or worker architecture details? See [reference/development.md](reference/development.md#playwright-smoke-tests) for the Playwright harness and [reference/architecture.md](reference/architecture.md#workers--queues) for BullMQ worker coverage.

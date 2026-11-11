@@ -1,8 +1,10 @@
 # AI Assistant Guide
 
-> Development‑Only Status (Important for Agents)
+> **Current snapshot status — November 11, 2026:** This repository is an inactive historical **Bun + Colyseus** snapshot, separate from the later Elixir/Phoenix project. No active roadmap or maintenance commitment applies. Read [README.md](README.md) first. The policies, launch dates, and deployment references below are historical context; work only against your own isolated services and do not infer permission to change any live ConquestK deployment.
+
+> Historical development-only policy
 >
-> ConquestK is currently in an active development phase. The service is not publicly live; only Connor and test accounts use it. When choosing between a clean, breaking change and maintaining backwards compatibility, prefer the clean refactor. Migrations can be destructive, legacy shims are unnecessary, and we can reset data as needed during local or staging work.
+> During the original development phase, this snapshot was used by Connor and test accounts. That description is historical, not a statement about the later live application. When choosing between a clean, breaking change and maintaining backwards compatibility, prefer the clean refactor. Migrations can be destructive, legacy shims are unnecessary, and we can reset data as needed during local or staging work.
 
 Agent checklist (read before coding):
 - Open and review `docs/guides/coding-standards.md` before writing or editing any code.
@@ -139,12 +141,12 @@ For detailed information on coding standards, see the [coding standards guide](d
 ## Database & admin utilities
 Database migrations are handled with SQL files in `backend/migrations`. Use the provided npm scripts for seeding and admin tasks.
 
-For more details, see the [database management guide](docs/guides/database-management.md).
+For more details, see the [database management guide](docs/operations/migration-guide.md).
 
 ## Testing strategy
 The project uses Jest for backend testing and Vitest for frontend testing. Mocking is used for external services like Socket.io.
 
-For more details, see the [testing strategy guide](docs/guides/testing-strategy.md).
+For more details, see the [testing strategy guide](docs/reference/development.md).
 
 ## Common gotchas
 Be aware of common issues like port conflicts, database connectivity, and correct configuration of environment variables.
@@ -163,7 +165,7 @@ For a detailed list of common issues and fixes, see the [troubleshooting guide](
 - `docs/guides/hidden-treasures.md` – Hidden Treasures ruleset and configuration.
 - `docs/operations/troubleshooting.md` – common operational fixes.
 - `docs/planning/roadmap.md` & `docs/planning/go-live-plan.md` – active priorities and launch blockers.
-- `docs/planning/codebase-cleanup.md` – technical-debt backlog.
+- `docs/planning/roadmap.md` – technical-debt backlog.
 - `docs/planning/game-room-plan.md` – canonical Game Room UI/UX plan; consult when implementing room, lobby, phases, and timers.
 
 ## Game Replay (development)
